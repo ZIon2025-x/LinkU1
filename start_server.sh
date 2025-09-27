@@ -7,6 +7,10 @@ echo "工作目录: $(pwd)"
 echo "环境变量 PORT: $PORT"
 echo "Python 版本: $(python --version)"
 
+# 设置默认端口
+export PORT=${PORT:-8000}
+echo "使用端口: $PORT"
+
 # 检查文件
 echo "=== 文件检查 ==="
 ls -la app/
