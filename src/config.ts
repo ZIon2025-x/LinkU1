@@ -1,17 +1,17 @@
 // API配置
 const isProduction = process.env.NODE_ENV === 'production';
 
-// 如果在 Railway 上运行，使用相对路径避免 CORS 问题
+// 如果在 Railway 上运行，使用后端域名
 const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production';
 
 export const API_BASE_URL = isRailway
-  ? ''  // 使用相对路径，同域请求
+  ? 'https://linku1.railway.app'  // 使用后端域名
   : isProduction
   ? process.env.REACT_APP_API_URL || 'https://linku1.railway.app'
   : 'http://localhost:8000';
 
 export const WS_BASE_URL = isRailway
-  ? `wss://${window.location.host}`  // 使用当前域名
+  ? 'wss://linku1.railway.app'  // 使用后端域名
   : isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://linku1.railway.app'
   : 'ws://localhost:8000';
