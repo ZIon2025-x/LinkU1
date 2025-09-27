@@ -634,7 +634,13 @@ def read_root():
 @app.get("/health")
 def health_check():
     """健康检查端点 - 不依赖数据库"""
-    return {"status": "healthy", "message": "LinkU API is running"}
+    import os
+    return {
+        "status": "healthy", 
+        "message": "LinkU API is running",
+        "port": os.environ.get("PORT", "8000"),
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @app.get("/test-db")
