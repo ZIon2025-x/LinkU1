@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getUserProfile, fetchCurrentUser } from '../api';
 
-interface UserProfile {
+interface UserProfileType {
   user: {
     id: string;  // 现在ID是字符串类型
     name: string;
@@ -44,7 +44,7 @@ interface UserProfile {
 
 const UserProfile: React.FC = () => {
   const { userId } = useParams();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);

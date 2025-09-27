@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSystemSettings, updateSystemSettings } from '../api';
 
-interface SystemSettings {
+interface SystemSettingsType {
   vip_enabled: boolean;
   super_vip_enabled: boolean;
   vip_task_threshold: number;
@@ -20,7 +20,7 @@ interface SystemSettings {
 }
 
 const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [settings, setSettings] = useState<SystemSettings>({
+  const [settings, setSettings] = useState<SystemSettingsType>({
     vip_enabled: true,
     super_vip_enabled: true,
     vip_task_threshold: 5,
