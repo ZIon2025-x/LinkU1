@@ -51,8 +51,10 @@ app.add_middleware(
         "https://link-u1.vercel.app",  # Vercel 生产环境
         "https://link-u1-22kv.vercel.app",  # 之前的 Vercel 域名
         "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-pyq4.vercel.app",  # 当前 Vercel 域名
+        "https://link-u1-pyq4.vercel.app",  # 之前的 Vercel 域名
+        "https://link-u1-1pcs.vercel.app",  # 当前 Vercel 域名
         "https://*.vercel.app",  # 所有 Vercel 子域名
+        "https://link-u1-*.vercel.app",  # 所有 link-u1 子域名
     ],
     allow_credentials=True,
     allow_methods=["*"],
