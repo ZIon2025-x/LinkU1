@@ -47,6 +47,9 @@ async def login(
 ):
     """用户登录（返回JWT Token对）- 支持ID或邮箱登录"""
     try:
+        # 调试信息
+        logger.info(f"登录请求: email={user_credentials.email}, password_length={len(user_credentials.password)}")
+        
         # 判断输入是ID还是邮箱
         username = user_credentials.email  # 这里email字段实际是用户名（可能是ID或邮箱）
         user = None
@@ -57,18 +60,28 @@ async def login(
         
         # 如果ID查找失败，尝试作为邮箱查找
         if not user:
+            logger.info(f"尝试通过邮箱查找用户: {username}")
             user = await async_crud.async_user_crud.get_user_by_email(db, username)
+            if user:
+                logger.info(f"通过邮箱找到用户: {user.id}, {user.name}")
+            else:
+                logger.warning(f"通过邮箱未找到用户: {username}")
         
         # 验证用户和密码
-        if not user or not verify_password(
-            user_credentials.password, user.hashed_password
-        ):
+        if not user:
+            logger.warning(f"用户不存在: {username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+            )
+        
+        if not verify_password(user_credentials.password, user.hashed_password):
+            logger.warning(f"密码验证失败: {username}")
             client_ip = get_client_ip(request)
             log_security_event(
-                "LOGIN_FAILED", username, client_ip, "无效的用户名或密码"
+                "LOGIN_FAILED", username, client_ip, "密码错误"
             )
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的用户名或密码"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误"
             )
 
         # 检查用户状态
