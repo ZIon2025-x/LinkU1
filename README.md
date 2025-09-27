@@ -1,150 +1,99 @@
-# LinkU平台完整部署包
+# 前端应用
 
-这是一个包含前端、后端和所有必要配置文件的完整部署包。
+这是任务管理平台的前端React应用。
 
-## 📁 目录结构
+## 功能特性
 
-```
-deployment-package/
-├── backend/                    # 后端代码 (Railway部署)
-│   ├── app/                   # FastAPI应用
-│   ├── alembic/              # 数据库迁移
-│   ├── requirements.txt      # Python依赖
-│   └── ...
-├── frontend/                  # 前端代码 (Vercel部署)
-│   ├── src/                  # React应用
-│   ├── public/               # 静态资源
-│   ├── package.json          # Node.js依赖
-│   └── ...
-├── 配置文件
-│   ├── railway.json          # Railway配置
-│   ├── vercel.json           # Vercel配置
-│   ├── nixpacks.toml         # Railway构建配置
-│   └── ...
-├── 环境变量模板
-│   ├── railway.env.template  # Railway环境变量
-│   └── vercel.env.template   # Vercel环境变量
-├── 部署脚本
-│   ├── deploy-local.bat      # Windows本地部署
-│   └── deploy-local.sh       # Linux/Mac本地部署
-└── 部署指南
-    ├── DEPLOYMENT_GUIDE.md   # 完整部署指南
-    ├── RAILWAY_DEPLOYMENT.md # Railway部署指南
-    └── VERCEL_DEPLOYMENT.md  # Vercel部署指南
-```
+- 用户注册和登录
+- 任务发布和管理
+- 实时聊天系统
+- 客服系统
+- 管理员面板
+- 响应式设计
 
-## 🚀 快速开始
+## 技术栈
 
-### 1. 本地测试部署
+- React 18
+- TypeScript
+- React Router
+- Axios
+- WebSocket
+- CSS3
 
-**Windows用户**：
+## 快速开始
+
+### 本地开发
+
+1. 安装依赖：
 ```bash
-# 双击运行
-deploy-local.bat
+npm install
 ```
 
-**Linux/Mac用户**：
+2. 启动开发服务器：
 ```bash
-# 给脚本执行权限
-chmod +x deploy-local.sh
-# 运行脚本
-./deploy-local.sh
+npm start
 ```
 
-### 2. 生产环境部署
+应用将在 http://localhost:3000 启动
 
-#### 后端部署到Railway
-1. 访问 https://railway.app
-2. 创建新项目
-3. 上传backend文件夹或连接GitHub
-4. 配置环境变量（参考railway.env.template）
-5. 添加PostgreSQL和Redis服务
+### 构建生产版本
 
-#### 前端部署到Vercel
-1. 访问 https://vercel.com
-2. 创建新项目
-3. 上传frontend文件夹或连接GitHub
-4. 配置环境变量（参考vercel.env.template）
-
-## 📋 环境变量配置
-
-### Railway后端环境变量
-```env
-SECRET_KEY=your-super-secure-random-secret-key
-DATABASE_URL=postgresql://username:password@host:port/database
-REDIS_URL=redis://host:port/0
-USE_REDIS=true
-COOKIE_SECURE=true
-COOKIE_SAMESITE=strict
-ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+```bash
+npm run build
 ```
 
-### Vercel前端环境变量
-```env
-REACT_APP_API_URL=https://your-railway-app.railway.app
-REACT_APP_WS_URL=wss://your-railway-app.railway.app
+### Docker部署
+
+1. 构建镜像：
+```bash
+docker build -t task-platform-frontend .
 ```
 
-## 🔧 技术栈
+2. 运行容器：
+```bash
+docker run -p 3000:80 task-platform-frontend
+```
 
-### 后端
-- **框架**: FastAPI
-- **数据库**: PostgreSQL + SQLAlchemy
-- **缓存**: Redis
-- **认证**: JWT + CSRF
-- **部署**: Railway
+### Docker Compose部署
 
-### 前端
-- **框架**: React + TypeScript
-- **UI库**: Ant Design
-- **路由**: React Router
-- **HTTP客户端**: Axios
-- **部署**: Vercel
+```bash
+docker-compose up -d
+```
 
-## 📚 详细文档
+## 环境变量
 
-- [完整部署指南](DEPLOYMENT_GUIDE.md) - 详细的部署步骤和配置说明
-- [Railway部署指南](RAILWAY_DEPLOYMENT.md) - 后端部署到Railway的详细步骤
-- [Vercel部署指南](VERCEL_DEPLOYMENT.md) - 前端部署到Vercel的详细步骤
+- `REACT_APP_API_URL`: 后端API地址
+- `REACT_APP_WS_URL`: WebSocket地址
 
-## 🚨 常见问题
+## 部署到生产环境
 
-### 1. 本地部署失败
-- 检查Node.js和Python是否正确安装
-- 检查端口8000和3000是否被占用
-- 查看错误日志进行排查
+1. 设置环境变量：
+```bash
+export REACT_APP_API_URL=https://your-backend-domain.com
+export REACT_APP_WS_URL=wss://your-backend-domain.com
+```
 
-### 2. Railway部署失败
-- 检查环境变量配置
-- 查看Railway构建日志
-- 确保数据库服务正常运行
+2. 构建生产版本：
+```bash
+npm run build
+```
 
-### 3. Vercel部署失败
-- 检查环境变量配置
-- 查看Vercel构建日志
-- 确保API URL配置正确
+3. 部署到Web服务器（Nginx、Apache等）
 
-### 4. API调用失败
-- 检查CORS配置
-- 检查API URL是否正确
-- 查看浏览器控制台错误
+## 与后端通信
 
-## 🎯 下一步
+前端通过以下方式与后端通信：
+- REST API（通过Axios）
+- WebSocket（实时聊天）
+- Cookie认证
 
-1. **完成部署** - 按照指南完成Railway和Vercel部署
-2. **配置域名** - 设置自定义域名（可选）
-3. **监控设置** - 配置应用监控和告警
-4. **性能优化** - 根据使用情况优化性能
-5. **安全加固** - 定期更新依赖和检查安全配置
+## 项目结构
 
-## 📞 技术支持
-
-如果遇到问题，请：
-1. 查看相关部署指南
-2. 检查环境变量配置
-3. 查看服务日志
-4. 参考常见问题解决方案
-
----
-
-**注意**: 这是一个完整的生产就绪部署包，包含了所有必要的配置和文档。请按照指南进行部署，并确保在生产环境中使用强密码和安全配置。
+```
+src/
+├── components/     # 可复用组件
+├── pages/         # 页面组件
+├── config.ts      # 配置文件
+├── api.ts         # API客户端
+└── App.tsx        # 主应用组件
+```
