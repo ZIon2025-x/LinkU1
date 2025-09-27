@@ -77,7 +77,7 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
-  const handleInputChange = (field: keyof SystemSettings, value: any) => {
+  const handleInputChange = (field: keyof SystemSettingsType, value: any) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
