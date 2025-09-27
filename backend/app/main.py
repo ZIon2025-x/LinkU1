@@ -65,9 +65,29 @@ app.add_middleware(
 #     return await check_security_middleware(request, call_next)
 
 @app.middleware("http")
-async def security_headers_middleware(request: Request, call_next):
-    """添加安全响应头"""
+async def custom_cors_middleware(request: Request, call_next):
+    """自定义CORS中间件，覆盖Railway默认设置"""
+    # 处理OPTIONS预检请求
+    if request.method == "OPTIONS":
+        response = Response(status_code=200)
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    
     response = await call_next(request)
+    
+    # 强制设置CORS头
+    origin = request.headers.get("origin")
+    if origin and any(origin.startswith(domain) for domain in [
+        "https://link-u1", "http://localhost"
+    ]):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
     add_security_headers(response)
     return response
 
