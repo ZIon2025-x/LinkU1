@@ -74,7 +74,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         await api.post('/api/users/register', {
           email: formData.email,
           password: formData.password,
-          username: formData.username,
+          name: formData.username,  // 改为 name
           phone: formData.phone
         });
         

@@ -808,7 +808,7 @@ export const login = async (email: string, password: string) => {
 export const register = async (userData: {
   email: string;
   password: string;
-  username: string;
+  name: string;  // 改为 name
   phone: string;
 }) => {
   const res = await api.post('/api/users/register', userData);
