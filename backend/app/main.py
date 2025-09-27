@@ -49,6 +49,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # 开发环境
         "https://link-u1.vercel.app",  # Vercel 生产环境
+        "https://link-u1-22kv.vercel.app",  # 当前 Vercel 域名
+        "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
         "https://*.vercel.app",  # 所有 Vercel 子域名
     ],
     allow_credentials=True,
