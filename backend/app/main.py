@@ -46,7 +46,11 @@ app = FastAPI(
 # 添加CORS中间件 - 必须在安全中间件之前
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # 前端服务器地址
+    allow_origins=[
+        "http://localhost:3000",  # 开发环境
+        "https://link-u1.vercel.app",  # Vercel 生产环境
+        "https://*.vercel.app",  # 所有 Vercel 子域名
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
