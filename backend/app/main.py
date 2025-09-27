@@ -684,9 +684,22 @@ def read_root():
 
 
 @app.get("/health")
-def health_check():
+def health_check(request: Request):
     """健康检查端点 - 不依赖数据库"""
-    return {"status": "healthy"}
+    response = {"status": "healthy"}
+    
+    # 直接设置CORS头
+    origin = request.headers.get("origin")
+    if origin and any(origin.startswith(allowed) for allowed in ["https://link-u1", "http://localhost"]):
+        from fastapi import Response
+        response_obj = Response(content='{"status": "healthy"}', media_type="application/json")
+        response_obj.headers["Access-Control-Allow-Origin"] = origin
+        response_obj.headers["Access-Control-Allow-Credentials"] = "true"
+        response_obj.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response_obj.headers["Access-Control-Allow-Headers"] = "*"
+        return response_obj
+    
+    return response
 
 @app.get("/ping")
 def ping():
