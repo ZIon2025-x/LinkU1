@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_WS_URL=ws://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # 如果需要独立部署，可以注释掉backend服务
+  # backend:
+  #   image: task-platform-backend:latest
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - DATABASE_URL=sqlite:///./app/database.db
+  #     - SECRET_KEY=your-secret-key-here
+  #     - USE_REDIS=false
+  #   volumes:
+  #     - ./uploads:/app/uploads
+  #     - ./app/database.db:/app/app/database.db
+  #   restart: unless-stopped

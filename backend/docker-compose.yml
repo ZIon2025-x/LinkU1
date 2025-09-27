@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./app/database.db
+      - SECRET_KEY=your-secret-key-here
+      - USE_REDIS=false
+    volumes:
+      - ./uploads:/app/uploads
+      - ./app/database.db:/app/app/database.db
+    restart: unless-stopped
+
+  # 如果需要Redis，可以取消注释以下配置
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   restart: unless-stopped

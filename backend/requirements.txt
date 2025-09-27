@@ -1,0 +1,30 @@
+# LinkU平台核心依赖
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# 数据库相关
+sqlalchemy[asyncio]>=2.0.0
+pydantic>=2.0.0
+alembic>=1.16.0
+asyncpg>=0.29.0
+aiopg>=1.4.0
+
+# 认证和安全
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+redis>=4.5.0
+PyJWT>=2.8.0
+slowapi>=0.1.9
+
+# 邮件服务
+fastapi-mail>=1.4.0
+
+# 支付服务
+stripe>=7.0.0
+
+# 时区处理
+pytz>=2023.3
+
+# 其他工具
+python-dotenv>=1.0.0
