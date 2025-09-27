@@ -414,7 +414,7 @@ def set_secure_cookies(
         "max_age": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         "httponly": SecurityConfig.COOKIE_HTTPONLY,
         "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": SecurityConfig.COOKIE_SAMESITE,
+        "samesite": "none",  # 改为none，允许跨域Cookie
         "path": "/",
     }
     # 不设置domain，让浏览器使用默认的域名
@@ -429,7 +429,7 @@ def set_secure_cookies(
         "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         "httponly": SecurityConfig.COOKIE_HTTPONLY,
         "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": SecurityConfig.COOKIE_SAMESITE,
+        "samesite": "none",  # 改为none，允许跨域Cookie
         "path": "/",  # 改为根路径，让所有端点都能访问
     }
     # 不设置domain，让浏览器使用默认的域名
