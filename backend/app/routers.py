@@ -67,12 +67,24 @@ def admin_required(current_user=Depends(get_current_admin_user)):
     return current_user
 
 
+@router.post("/register/test")
+def register_test(user: schemas.UserCreate):
+    """测试注册数据格式"""
+    return {
+        "message": "数据格式正确",
+        "data": user.dict(),
+        "validation": "passed"
+    }
+
 @router.post("/register", response_model=schemas.UserOut)
 def register(
     user: schemas.UserCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # 调试信息
+    print(f"注册请求数据: name={user.name}, email={user.email}, password_length={len(user.password) if user.password else 0}")
+    print(f"用户数据: {user.dict()}")
     # 检查邮箱
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
