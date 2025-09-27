@@ -76,6 +76,16 @@ def register_test(user: schemas.UserCreate):
         "validation": "passed"
     }
 
+@router.post("/register/debug")
+def register_debug(request_data: dict):
+    """调试注册数据 - 接受原始JSON"""
+    return {
+        "message": "收到原始数据",
+        "data": request_data,
+        "keys": list(request_data.keys()),
+        "types": {k: type(v).__name__ for k, v in request_data.items()}
+    }
+
 @router.post("/register", response_model=schemas.UserOut)
 def register(
     user: schemas.UserCreate,
