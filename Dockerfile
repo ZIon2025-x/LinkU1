@@ -19,12 +19,13 @@ RUN npm run build
 # 安装 serve 来提供静态文件
 RUN npm install -g serve
 
-# 暴露端口
-EXPOSE 3000
-
 # 设置环境变量
 ENV NODE_ENV=production
 ENV RAILWAY_ENVIRONMENT=production
+ENV PORT=3000
+
+# 暴露端口
+EXPOSE $PORT
 
 # 启动命令 - 使用 Railway 的 PORT 环境变量
-CMD ["sh", "-c", "serve -s build -l ${PORT:-3000}"]
+CMD ["sh", "-c", "echo 'Starting frontend on port:' $PORT && serve -s build -l $PORT"]
