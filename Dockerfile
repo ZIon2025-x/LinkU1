@@ -26,5 +26,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV RAILWAY_ENVIRONMENT=production
 
-# 启动命令
-CMD ["serve", "-s", "build", "-l", "3000"]
+# 启动命令 - 使用 Railway 的 PORT 环境变量
+CMD ["sh", "-c", "serve -s build -l ${PORT:-3000}"]
