@@ -31,5 +31,8 @@ RUN mkdir -p uploads/images
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令 - 使用环境变量或默认端口
-CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# 复制迁移脚本
+COPY migrate_railway.py .
+
+# 启动命令 - 先运行迁移，然后启动服务
+CMD ["sh", "-c", "python migrate_railway.py && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
