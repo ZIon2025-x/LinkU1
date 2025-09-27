@@ -58,18 +58,31 @@ allowed_origins = [
 
 print(f"CORS allowed origins: {allowed_origins}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 暂时禁用 FastAPI 的 CORS 中间件，使用自定义中间件
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=allowed_origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 # 添加自定义CORS中间件来覆盖可能的默认设置
 @app.middleware("http")
 async def custom_cors_middleware(request: Request, call_next):
     """自定义CORS中间件"""
+    # 处理 OPTIONS 预检请求
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin")
+        if origin and any(origin.startswith(allowed) for allowed in ["https://link-u1", "http://localhost"]):
+            from fastapi import Response
+            response = Response(status_code=200)
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
+    
     response = await call_next(request)
     
     # 强制设置CORS头
