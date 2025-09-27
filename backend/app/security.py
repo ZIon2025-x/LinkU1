@@ -61,12 +61,12 @@ token_blacklist = set()
 class SecurityConfig:
     """安全配置类"""
 
-    # Cookie配置
+    # Cookie配置 - 使用与config.py一致的配置
     COOKIE_SECURE = (
-        os.getenv("COOKIE_SECURE", "false").lower() == "true"
-    )  # 开发环境设为false，生产环境设为true
+        os.getenv("COOKIE_SECURE", "true").lower() == "true"
+    )  # 生产环境设为true
     COOKIE_HTTPONLY = True  # 防止XSS攻击
-    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")  # 开发环境使用lax，生产环境使用strict
+    COOKIE_SAMESITE = "none"  # 跨域Cookie使用none
     COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
 
     # CORS配置
@@ -407,6 +407,9 @@ def set_secure_cookies(
     response: Response, access_token: str, refresh_token: str
 ) -> None:
     """设置安全的HTTP Cookie"""
+    # 调试信息
+    print(f"🍪 设置Cookie - secure: {SecurityConfig.COOKIE_SECURE}, samesite: {SecurityConfig.COOKIE_SAMESITE}")
+    
     # 设置access token cookie（短期）
     cookie_kwargs = {
         "key": "access_token",
@@ -414,13 +417,14 @@ def set_secure_cookies(
         "max_age": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         "httponly": SecurityConfig.COOKIE_HTTPONLY,
         "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": "none",  # 改为none，允许跨域Cookie
+        "samesite": SecurityConfig.COOKIE_SAMESITE,
         "path": "/",
     }
     # 不设置domain，让浏览器使用默认的域名
     # if SecurityConfig.COOKIE_DOMAIN:
     #     cookie_kwargs["domain"] = SecurityConfig.COOKIE_DOMAIN
     response.set_cookie(**cookie_kwargs)
+    print(f"🍪 设置access_token Cookie: {cookie_kwargs}")
 
     # 设置refresh token cookie（长期）
     refresh_cookie_kwargs = {
@@ -429,13 +433,14 @@ def set_secure_cookies(
         "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         "httponly": SecurityConfig.COOKIE_HTTPONLY,
         "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": "none",  # 改为none，允许跨域Cookie
+        "samesite": SecurityConfig.COOKIE_SAMESITE,
         "path": "/",  # 改为根路径，让所有端点都能访问
     }
     # 不设置domain，让浏览器使用默认的域名
     # if SecurityConfig.COOKIE_DOMAIN:
     #     refresh_cookie_kwargs["domain"] = SecurityConfig.COOKIE_DOMAIN
     response.set_cookie(**refresh_cookie_kwargs)
+    print(f"🍪 设置refresh_token Cookie: {refresh_cookie_kwargs}")
 
 
 def clear_secure_cookies(response: Response) -> None:
