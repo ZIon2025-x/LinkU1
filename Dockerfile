@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements文件
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
-COPY . .
+# 复制后端应用代码
+COPY backend/ .
 
 # 创建上传目录
 RUN mkdir -p uploads/images
