@@ -22,10 +22,9 @@ RUN npm install -g serve
 # 设置环境变量
 ENV NODE_ENV=production
 ENV RAILWAY_ENVIRONMENT=production
-ENV PORT=3000
 
 # 暴露端口
-EXPOSE $PORT
+EXPOSE 3000
 
-# 启动命令 - 使用 Railway 的 PORT 环境变量
-CMD sh -c "echo 'Starting frontend on port:' $PORT && serve -s build -l $PORT"
+# 启动命令 - 直接使用 serve
+CMD ["serve", "-s", "build", "-l", "3000"]
