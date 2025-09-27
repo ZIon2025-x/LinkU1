@@ -628,19 +628,18 @@ async def websocket_chat(
 @app.get("/")
 def read_root():
     """根路径 - 不依赖数据库，用于基本健康检查"""
-    return {"message": "Welcome to LinkU!", "status": "running"}
+    return {"status": "ok", "message": "Welcome to LinkU!"}
 
 
 @app.get("/health")
 def health_check():
     """健康检查端点 - 不依赖数据库"""
-    import os
-    return {
-        "status": "healthy", 
-        "message": "LinkU API is running",
-        "port": os.environ.get("PORT", "8000"),
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy"}
+
+@app.get("/ping")
+def ping():
+    """简单的ping端点 - 用于健康检查"""
+    return "pong"
 
 
 @app.get("/test-db")
