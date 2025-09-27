@@ -5,15 +5,15 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isRailway = process.env.RAILWAY_ENVIRONMENT === 'production';
 
 export const API_BASE_URL = isRailway
-  ? 'https://linku1.railway.app'  // 使用后端域名
+  ? 'https://linku1-production.up.railway.app'  // 使用正确的后端域名
   : isProduction
-  ? process.env.REACT_APP_API_URL || 'https://linku1.railway.app'
+  ? process.env.REACT_APP_API_URL || 'https://linku1-production.up.railway.app'
   : 'http://localhost:8000';
 
 export const WS_BASE_URL = isRailway
-  ? 'wss://linku1.railway.app'  // 使用后端域名
+  ? 'wss://linku1-production.up.railway.app'  // 使用正确的后端域名
   : isProduction
-  ? process.env.REACT_APP_WS_URL || 'wss://linku1.railway.app'
+  ? process.env.REACT_APP_WS_URL || 'wss://linku1-production.up.railway.app'
   : 'ws://localhost:8000';
 
 // 调试信息 - 触发重新部署
