@@ -46,18 +46,15 @@ app = FastAPI(
 # 添加CORS中间件 - 必须在安全中间件之前
 import os
 
-# 直接从环境变量获取允许的源
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-if allowed_origins_env:
-    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
-else:
-    allowed_origins = [
-        "http://localhost:3000",  # 开发环境
-        "https://link-u1.vercel.app",  # Vercel 生产环境
-        "https://link-u1-pl8v23y2h-zion2025-xs-projects.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-k73u.vercel.app",  # 当前 Vercel 域名
-    ]
+# 强制设置允许的源
+allowed_origins = [
+    "http://localhost:3000",  # 开发环境
+    "https://link-u1.vercel.app",  # Vercel 生产环境
+    "https://link-u1-pl8v23y2h-zion2025-xs-projects.vercel.app",  # 之前的 Vercel 域名
+    "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
+    "https://link-u1-k73u.vercel.app",  # 当前 Vercel 域名
+    "https://*.vercel.app",  # 所有 Vercel 子域名
+]
 
 print(f"CORS allowed origins: {allowed_origins}")
 
@@ -68,6 +65,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 添加自定义CORS中间件来覆盖可能的默认设置
+@app.middleware("http")
+async def custom_cors_middleware(request: Request, call_next):
+    """自定义CORS中间件"""
+    response = await call_next(request)
+    
+    # 强制设置CORS头
+    origin = request.headers.get("origin")
+    if origin and any(origin.startswith(allowed) for allowed in ["https://link-u1", "http://localhost"]):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # 安全中间件 - 必须在CORS中间件之后（暂时禁用以解决异步/同步混用问题）
 # @app.middleware("http")
