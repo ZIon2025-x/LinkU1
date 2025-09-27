@@ -529,10 +529,16 @@ class SyncCookieHTTPBearer(HTTPBearer):
     def __call__(
         self, request: Request
     ) -> Optional[HTTPAuthorizationCredentials]:
+        # 调试信息
+        print(f"🔍 Cookie调试 - URL: {request.url}")
+        print(f"🔍 Cookie调试 - Headers: {dict(request.headers)}")
+        print(f"🔍 Cookie调试 - Cookies: {dict(request.cookies)}")
+        
         # 首先尝试从Authorization头获取
         authorization_header = request.headers.get("Authorization")
         if authorization_header and authorization_header.startswith("Bearer "):
             token = authorization_header.split(" ")[1]
+            print(f"🔍 从Authorization头获取token: {token[:20]}...")
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=token
             )
@@ -540,9 +546,12 @@ class SyncCookieHTTPBearer(HTTPBearer):
         # 如果Authorization头没有，尝试从Cookie获取
         access_token = request.cookies.get("access_token")
         if access_token:
+            print(f"🔍 从Cookie获取token: {access_token[:20]}...")
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=access_token
             )
+        
+        print("🔍 未找到认证信息")
         if self.auto_error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
