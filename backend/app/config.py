@@ -30,7 +30,7 @@ class Config:
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
-    USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"  # 默认使用Redis
+    USE_REDIS = os.getenv("USE_REDIS", "false").lower() == "true"  # 默认禁用Redis，避免连接问题
 
     # Cookie配置
     COOKIE_SECURE = (
