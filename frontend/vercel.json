@@ -20,6 +20,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://your-app-name.railway.app"
+    "REACT_APP_API_URL": "https://linku1-production.up.railway.app"
   }
 }
