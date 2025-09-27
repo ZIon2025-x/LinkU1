@@ -45,18 +45,21 @@ app = FastAPI(
 
 # 添加CORS中间件 - 必须在安全中间件之前
 import os
-from app.config import Config
 
-# 获取允许的源
-config = Config()
-allowed_origins = config.ALLOWED_ORIGINS if hasattr(config, 'ALLOWED_ORIGINS') else [
-    "http://localhost:3000",  # 开发环境
-    "https://link-u1.vercel.app",  # Vercel 生产环境
-    "https://link-u1-pl8v23y2h-zion2025-xs-projects.vercel.app",  # 之前的 Vercel 域名
-    "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
-    "https://link-u1-k73u.vercel.app",  # 当前 Vercel 域名
-    "https://*.vercel.app",  # 所有 Vercel 子域名
-]
+# 直接从环境变量获取允许的源
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+else:
+    allowed_origins = [
+        "http://localhost:3000",  # 开发环境
+        "https://link-u1.vercel.app",  # Vercel 生产环境
+        "https://link-u1-pl8v23y2h-zion2025-xs-projects.vercel.app",  # 之前的 Vercel 域名
+        "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
+        "https://link-u1-k73u.vercel.app",  # 当前 Vercel 域名
+    ]
+
+print(f"CORS allowed origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
