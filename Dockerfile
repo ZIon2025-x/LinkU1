@@ -31,8 +31,9 @@ RUN mkdir -p uploads/images
 # 暴露端口
 EXPOSE 8000
 
-# 复制数据库初始化脚本
+# 复制测试和初始化脚本
+COPY test_env.py .
 COPY init_db_railway.py .
 
-# 启动命令 - 先初始化数据库，然后启动服务
-CMD ["sh", "-c", "python init_db_railway.py && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# 启动命令 - 先测试环境变量，然后初始化数据库，最后启动服务
+CMD ["sh", "-c", "python test_env.py && python init_db_railway.py && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
