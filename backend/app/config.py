@@ -30,12 +30,12 @@ class Config:
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
-    USE_REDIS = os.getenv("USE_REDIS", "false").lower() == "true"  # 默认禁用Redis，避免连接问题
+    USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"  # 默认使用Redis
 
     # Cookie配置
     COOKIE_SECURE = (
-        os.getenv("COOKIE_SECURE", "false").lower() == "true"
-    )  # 开发环境设为false
+        os.getenv("COOKIE_SECURE", "true").lower() == "true"
+    )  # 生产环境设为true
     COOKIE_HTTPONLY = True
     COOKIE_SAMESITE = "lax"  # 改为lax，允许跨站请求携带Cookie
     COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
