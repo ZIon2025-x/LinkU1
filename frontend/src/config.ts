@@ -9,9 +9,10 @@ export const WS_BASE_URL = isProduction
   ? process.env.REACT_APP_WS_URL || 'wss://linku1.railway.app'
   : 'ws://localhost:8000';
 
-// 调试信息
+// 调试信息 - 触发重新部署
 console.log('API_BASE_URL:', API_BASE_URL);
 console.log('WS_BASE_URL:', WS_BASE_URL);
+console.log('Environment:', process.env.NODE_ENV);
 
 // 导出API端点
 export const API_ENDPOINTS = {
