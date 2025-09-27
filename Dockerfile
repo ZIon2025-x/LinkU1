@@ -28,4 +28,4 @@ ENV PORT=3000
 EXPOSE $PORT
 
 # 启动命令 - 使用 Railway 的 PORT 环境变量
-CMD ["sh", "-c", "echo 'Starting frontend on port:' $PORT && serve -s build -l $PORT"]
+CMD sh -c "echo 'Starting frontend on port:' $PORT && serve -s build -l $PORT"
