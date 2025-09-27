@@ -194,7 +194,29 @@ def run_background_task():
 # 启动后台任务
 @app.on_event("startup")
 async def startup_event():
-    """应用启动时启动后台任务"""
+    """应用启动时初始化数据库并启动后台任务"""
+    logger.info("应用启动中...")
+    
+    # 初始化数据库表
+    try:
+        from app.database import sync_engine
+        from app.models import Base
+        
+        logger.info("正在创建数据库表...")
+        Base.metadata.create_all(bind=sync_engine)
+        logger.info("数据库表创建完成！")
+        
+        # 验证表是否创建成功
+        from sqlalchemy import inspect
+        inspector = inspect(sync_engine)
+        tables = inspector.get_table_names()
+        logger.info(f"已创建的表: {tables}")
+        
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {e}")
+        import traceback
+        traceback.print_exc()
+    
     logger.info("启动后台任务：自动取消过期任务")
     background_thread = threading.Thread(target=run_background_task, daemon=True)
     background_thread.start()
