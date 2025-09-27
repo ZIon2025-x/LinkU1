@@ -10,18 +10,20 @@ from pathlib import Path
 backend_dir = Path(__file__).parent / "backend"
 sys.path.insert(0, str(backend_dir))
 
+# 切换到 backend 目录
+os.chdir(backend_dir)
+
 from alembic.config import Config
 from alembic import command
 
 def main():
     """运行数据库迁移"""
     print("🚀 开始 Railway 数据库迁移...")
-    
-    # 设置环境变量
-    os.environ.setdefault("DATABASE_URL", "postgresql+psycopg2://postgres:QbdrNRMqSmYAakBjspTHIVfBQlSpvCar@postgres.railway.internal:5432/railway")
+    print(f"当前工作目录: {os.getcwd()}")
+    print(f"DATABASE_URL: {os.getenv('DATABASE_URL', 'Not set')}")
     
     # 创建 Alembic 配置
-    alembic_cfg = Config("backend/alembic.ini")
+    alembic_cfg = Config("alembic.ini")
     
     try:
         # 运行迁移
@@ -31,6 +33,8 @@ def main():
         
     except Exception as e:
         print(f"❌ 迁移失败: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
