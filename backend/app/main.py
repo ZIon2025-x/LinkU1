@@ -627,7 +627,14 @@ async def websocket_chat(
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to LinkU!"}
+    """根路径 - 不依赖数据库，用于基本健康检查"""
+    return {"message": "Welcome to LinkU!", "status": "running"}
+
+
+@app.get("/health")
+def health_check():
+    """健康检查端点 - 不依赖数据库"""
+    return {"status": "healthy", "message": "LinkU API is running"}
 
 
 @app.get("/test-db")

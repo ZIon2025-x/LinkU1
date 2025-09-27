@@ -30,5 +30,5 @@ RUN mkdir -p uploads/images
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 启动命令 - 使用环境变量PORT
+CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
