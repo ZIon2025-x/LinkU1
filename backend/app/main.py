@@ -49,8 +49,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # 开发环境
         "https://link-u1.vercel.app",  # Vercel 生产环境
-        "https://link-u1-22kv.vercel.app",  # 当前 Vercel 域名
+        "https://link-u1-22kv.vercel.app",  # 之前的 Vercel 域名
         "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
+        "https://link-u1-pyq4.vercel.app",  # 当前 Vercel 域名
         "https://*.vercel.app",  # 所有 Vercel 子域名
     ],
     allow_credentials=True,
@@ -70,10 +71,14 @@ async def custom_cors_middleware(request: Request, call_next):
     # 处理OPTIONS预检请求
     if request.method == "OPTIONS":
         response = Response(status_code=200)
-        response.headers["Access-Control-Allow-Origin"] = request.headers.get("origin", "*")
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        origin = request.headers.get("origin")
+        if origin and any(origin.startswith(domain) for domain in [
+            "https://link-u1", "http://localhost"
+        ]):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma"
         return response
     
     response = await call_next(request)
@@ -86,7 +91,7 @@ async def custom_cors_middleware(request: Request, call_next):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma"
     
     add_security_headers(response)
     return response
