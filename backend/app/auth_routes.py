@@ -53,11 +53,11 @@ def login(
         
         # 首先尝试作为ID查找（8位数字）
         if username.isdigit() and len(username) == 8:
-            user = await async_crud.async_user_crud.get_user_by_id(db, username)
+            user = crud.get_user_by_id(db, username)
         
         # 如果ID查找失败，尝试作为邮箱查找
         if not user:
-            user = await async_crud.async_user_crud.get_user_by_email(db, username)
+            user = crud.get_user_by_email(db, username)
         
         # 验证用户和密码
         if not user or not verify_password(
