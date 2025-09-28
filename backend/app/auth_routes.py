@@ -29,6 +29,11 @@ from app.security import (
     set_secure_cookies,
     verify_password,
 )
+from app.secure_auth import (
+    SecureAuthManager,
+    SecureCookieManager,
+    get_device_fingerprint,
+)
 from app.rate_limiting import rate_limit
 
 logger = logging.getLogger(__name__)
@@ -90,12 +95,29 @@ def login(
                 status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
             )
 
-        # 创建token对
-        access_token = create_access_token({"sub": user.id})
-        refresh_token = create_refresh_token({"sub": user.id})
-
-        # 设置安全Cookie
-        set_secure_cookies(response, access_token, refresh_token)
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        
+        # 创建新会话（使用新的安全认证系统）
+        session = SecureAuthManager.create_session(
+            user_id=user.id,
+            device_fingerprint=device_fingerprint,
+            ip_address=client_ip,
+            user_agent=user_agent
+        )
+        
+        # 生成刷新令牌
+        refresh_token = SecureAuthManager.generate_refresh_token()
+        
+        # 设置安全Cookie（使用新的Cookie管理器）
+        SecureCookieManager.set_secure_cookies(
+            response=response,
+            session_id=session.session_id,
+            refresh_token=refresh_token,
+            user_id=user.id
+        )
 
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -118,9 +140,8 @@ def login(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
             },
-            "access_token": access_token,  # 仅用于调试，生产环境应移除
-            "token_type": "bearer",
-            "expires_in": 900,  # 15分钟
+            "session_id": session.session_id,  # 仅用于调试
+            "expires_in": 300,  # 5分钟
         }
 
     except HTTPException:
@@ -182,13 +203,13 @@ async def logout(
     response: Response,
     current_user: models.User = Depends(get_current_user_secure_sync),
 ):
-    """用户登出（撤销所有Token）"""
+    """用户登出（撤销当前会话）"""
     try:
-        # 撤销用户的所有token
-        revoke_all_user_tokens(current_user.id)
+        # 撤销用户的所有会话（使用新的安全认证系统）
+        SecureAuthManager.revoke_user_sessions(current_user.id)
 
-        # 清除安全Cookie
-        clear_secure_cookies(response)
+        # 清除安全Cookie（使用新的Cookie管理器）
+        SecureCookieManager.clear_secure_cookies(response)
 
         # 添加安全响应头
         add_security_headers(response)
