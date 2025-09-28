@@ -23,6 +23,25 @@ logger = logging.getLogger(__name__)
 # 密码加密上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# 密码验证和哈希函数
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """生成密码哈希"""
+    return pwd_context.hash(password)
+
+
+def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+    """解码访问令牌（兼容旧系统）"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.InvalidTokenError:
+        return None
+
 # JWT配置
 # 开发环境使用固定密钥，生产环境必须设置环境变量
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -61,13 +80,12 @@ token_blacklist = set()
 class SecurityConfig:
     """安全配置类"""
 
-    # Cookie配置 - 使用与config.py一致的配置
-    COOKIE_SECURE = (
-        os.getenv("COOKIE_SECURE", "true").lower() == "true"
-    )  # 生产环境设为true
-    COOKIE_HTTPONLY = True  # 防止XSS攻击
-    COOKIE_SAMESITE = "none"  # 跨域Cookie使用none
-    COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
+    # Cookie配置 - 统一使用config.py的配置
+    from app.config import Config
+    COOKIE_SECURE = Config.COOKIE_SECURE
+    COOKIE_HTTPONLY = Config.COOKIE_HTTPONLY
+    COOKIE_SAMESITE = Config.COOKIE_SAMESITE
+    COOKIE_DOMAIN = Config.COOKIE_DOMAIN
 
     # CORS配置
     ALLOWED_ORIGINS = os.getenv(
@@ -403,65 +421,7 @@ def add_to_blacklist(jti: str, ttl: int) -> bool:
         return False
 
 
-def set_secure_cookies(
-    response: Response, access_token: str, refresh_token: str
-) -> None:
-    """设置安全的HTTP Cookie"""
-    # 调试信息
-    print(f"🍪 设置Cookie - secure: {SecurityConfig.COOKIE_SECURE}, samesite: {SecurityConfig.COOKIE_SAMESITE}")
-    
-    # 设置access token cookie（短期）
-    cookie_kwargs = {
-        "key": "access_token",
-        "value": access_token,
-        "max_age": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "httponly": SecurityConfig.COOKIE_HTTPONLY,
-        "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": SecurityConfig.COOKIE_SAMESITE,
-        "path": "/",
-    }
-    # 不设置domain，让浏览器使用默认的域名
-    # if SecurityConfig.COOKIE_DOMAIN:
-    #     cookie_kwargs["domain"] = SecurityConfig.COOKIE_DOMAIN
-    response.set_cookie(**cookie_kwargs)
-    print(f"🍪 设置access_token Cookie: {cookie_kwargs}")
-
-    # 设置refresh token cookie（长期）
-    refresh_cookie_kwargs = {
-        "key": "refresh_token",
-        "value": refresh_token,
-        "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        "httponly": SecurityConfig.COOKIE_HTTPONLY,
-        "secure": SecurityConfig.COOKIE_SECURE,
-        "samesite": SecurityConfig.COOKIE_SAMESITE,
-        "path": "/",  # 改为根路径，让所有端点都能访问
-    }
-    # 不设置domain，让浏览器使用默认的域名
-    # if SecurityConfig.COOKIE_DOMAIN:
-    #     refresh_cookie_kwargs["domain"] = SecurityConfig.COOKIE_DOMAIN
-    response.set_cookie(**refresh_cookie_kwargs)
-    print(f"🍪 设置refresh_token Cookie: {refresh_cookie_kwargs}")
-
-
-def clear_secure_cookies(response: Response) -> None:
-    """清除安全的HTTP Cookie"""
-    response.delete_cookie(
-        key="access_token",
-        httponly=SecurityConfig.COOKIE_HTTPONLY,
-        secure=SecurityConfig.COOKIE_SECURE,
-        samesite=SecurityConfig.COOKIE_SAMESITE,
-        domain=SecurityConfig.COOKIE_DOMAIN,
-        path="/",
-    )
-
-    response.delete_cookie(
-        key="refresh_token",
-        httponly=SecurityConfig.COOKIE_HTTPONLY,
-        secure=SecurityConfig.COOKIE_SECURE,
-        samesite=SecurityConfig.COOKIE_SAMESITE,
-        domain=SecurityConfig.COOKIE_DOMAIN,
-        path="/api/auth/refresh",
-    )
+# 已弃用的Cookie函数已移除，请使用 app.cookie_manager.CookieManager
 
 
 def add_security_headers(response: Response) -> None:

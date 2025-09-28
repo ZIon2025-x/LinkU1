@@ -8,13 +8,18 @@ from itsdangerous import URLSafeTimedSerializer
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "linku_email_secret")
+# 使用统一配置
+from app.config import Config
+
+SECRET_KEY = Config.SECRET_KEY
 SALT = "email-confirm"
-EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@linku.com")
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.163.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASS = os.getenv("SMTP_PASS", "")
+EMAIL_FROM = Config.EMAIL_FROM
+SMTP_SERVER = Config.SMTP_SERVER
+SMTP_PORT = Config.SMTP_PORT
+SMTP_USER = Config.SMTP_USER
+SMTP_PASS = Config.SMTP_PASS
+SMTP_USE_TLS = Config.SMTP_USE_TLS
+SMTP_USE_SSL = Config.SMTP_USE_SSL
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
@@ -38,12 +43,25 @@ def send_email(to_email, subject, body):
         msg["Subject"] = subject
         msg["From"] = EMAIL_FROM
         msg["To"] = to_email
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
+        
+        # 根据配置选择SMTP连接方式
+        if SMTP_USE_SSL:
+            # 使用SSL连接
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
+        else:
+            # 使用TLS连接
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                if SMTP_USE_TLS:
+                    server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
+        
         print("Email sent successfully")
     except Exception as e:
         print(f"Email send failed: {e}")
+        raise e
 
 
 def send_confirmation_email(

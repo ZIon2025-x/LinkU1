@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -22,7 +23,7 @@ from fastapi.websockets import WebSocketState
 from sqlalchemy.orm import Session
 
 from app import crud
-from app.auth_routes import auth_router
+# auth_routes 已移除，使用 secure_auth_routes 替代
 from app.secure_auth_routes import secure_auth_router
 from app.cs_auth_routes import cs_auth_router
 from app.admin_auth_routes import admin_auth_router
@@ -33,6 +34,14 @@ from app.deps import get_db
 from app.routers import router as user_router
 from app.security import add_security_headers
 from app.security_monitoring import check_security_middleware
+from app.error_handlers import (
+    http_exception_handler,
+    validation_exception_handler,
+    security_exception_handler,
+    business_exception_handler,
+    general_exception_handler
+)
+from app.error_handlers import SecurityError, ValidationError, BusinessError
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -44,22 +53,15 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# 添加CORS中间件 - 必须在安全中间件之前
+# 添加CORS中间件 - 使用安全配置
+from app.config import Config
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # 开发环境
-        "https://link-u1.vercel.app",  # Vercel 生产环境
-        "https://link-u1-22kv.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-mgkv.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-pyq4.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-1pcs.vercel.app",  # 之前的 Vercel 域名
-        "https://link-u1-5k2a.vercel.app",  
-        "https://link-u1-*.vercel.app",  # 所有 link-u1 子域名
-    ],
+    allow_origins=Config.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=Config.ALLOWED_METHODS,
+    allow_headers=Config.ALLOWED_HEADERS,
 )
 
 # 安全中间件 - 必须在CORS中间件之后（暂时禁用以解决异步/同步混用问题）
@@ -101,7 +103,7 @@ async def custom_cors_middleware(request: Request, call_next):
 
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
-# app.include_router(auth_router, tags=["用户认证"])  # 暂时禁用旧认证系统
+# auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
 app.include_router(cs_auth_router, tags=["客服认证"])
 app.include_router(admin_auth_router, tags=["管理员认证"])
@@ -109,6 +111,14 @@ app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
 # 暂时禁用安全监控路由以解决异步/同步混用问题
 # app.include_router(security_monitoring_router, tags=["安全监控"])
+
+# 注册全局异常处理器
+from fastapi.exceptions import RequestValidationError
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(SecurityError, security_exception_handler)
+app.add_exception_handler(BusinessError, business_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # 添加任务相关的路由（不需要/users前缀）
 from app.routers import router as task_router
@@ -245,6 +255,17 @@ async def startup_event():
     """应用启动时初始化数据库并启动后台任务"""
     logger.info("应用启动中...")
     
+    # 环境检测和配置信息
+    environment = os.getenv("ENVIRONMENT", "development")
+    debug_mode = os.getenv("DEBUG", "true").lower() == "true"
+    use_redis = os.getenv("USE_REDIS", "true").lower() == "true"
+    cookie_secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    
+    logger.info(f"环境: {environment}")
+    logger.info(f"调试模式: {debug_mode}")
+    logger.info(f"使用Redis: {use_redis}")
+    logger.info(f"Cookie安全模式: {cookie_secure}")
+    
     # 初始化数据库表
     try:
         from app.database import sync_engine
@@ -300,7 +321,7 @@ async def websocket_chat(
 
     # 验证JWT token
     try:
-        from app.auth import decode_access_token
+        from app.security import decode_access_token
 
         payload = decode_access_token(token)
 
@@ -393,7 +414,7 @@ async def websocket_chat(
                     continue
 
                 # 检查用户是否为客服账号
-                from app.auth import decode_access_token
+                from app.security import decode_access_token
                 from app.id_generator import (
                     is_admin_id,
                     is_customer_service_id,
@@ -532,7 +553,7 @@ async def websocket_chat(
                     # 处理普通消息（向后兼容）
                     if is_customer_service:
                         # 客服账号只能发送客服会话消息
-                        if not data.get("session_id"):
+                        if not isinstance(data, dict) or not data.get("session_id"):
                             await websocket.send_text(
                                 json.dumps({"error": "客服账号只能发送客服会话消息"})
                             )

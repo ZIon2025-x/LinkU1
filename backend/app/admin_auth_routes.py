@@ -191,9 +191,8 @@ async def admin_logout(
     """
     try:
         # 清除cookie
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
-        response.delete_cookie("csrf_token")
+        from app.cookie_manager import CookieManager
+        CookieManager.clear_all_cookies(response)
         
         logger.info(f"管理员登出成功：{current_admin.username} (ID: {current_admin.id})")
         

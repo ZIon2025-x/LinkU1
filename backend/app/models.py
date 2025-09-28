@@ -341,3 +341,24 @@ Index("ix_tasks_type_status", Task.task_type, Task.status)
 Index("ix_tasks_level_status", Task.task_level, Task.status)
 Index("ix_messages_sender_receiver", Message.sender_id, Message.receiver_id)
 Index("ix_notifications_user_read", Notification.user_id, Notification.is_read)
+
+
+class PendingUser(Base):
+    """待验证用户模型"""
+    __tablename__ = "pending_users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False)
+    email = Column(String(120), unique=True, nullable=False)
+    hashed_password = Column(String(128), nullable=False)
+    phone = Column(String(20), nullable=True)
+    verification_token = Column(String(64), unique=True, nullable=False)
+    created_at = Column(DateTime, default=get_uk_time)
+    expires_at = Column(DateTime, nullable=False)
+    
+    # 索引
+    __table_args__ = (
+        Index("ix_pending_users_email", email),
+        Index("ix_pending_users_token", verification_token),
+        Index("ix_pending_users_expires", expires_at),
+    )

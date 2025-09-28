@@ -216,9 +216,8 @@ async def cs_logout(
     """
     try:
         # 清除cookie
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
-        response.delete_cookie("csrf_token")
+        from app.cookie_manager import CookieManager
+        CookieManager.clear_all_cookies(response)
         
         logger.info(f"客服登出成功：{current_cs.email} (ID: {current_cs.id})")
         

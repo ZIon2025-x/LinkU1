@@ -47,7 +47,7 @@ const Login: React.FC = () => {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const res = await api.post('/api/auth/login', {
+      const res = await api.post('/api/secure-auth/login', {
         email: values.email,
         password: values.password,
       });

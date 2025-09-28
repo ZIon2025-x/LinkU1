@@ -358,10 +358,10 @@ const JoinUs: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="phone"
-                    label="手机号"
-                    rules={[{ required: true, message: '请输入您的手机号' }]}
+                    label="手机号（可选）"
+                    rules={[]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="请输入您的手机号" />
+                    <Input prefix={<PhoneOutlined />} placeholder="请输入您的手机号（可选）" />
                   </Form.Item>
                 </Col>
               </Row>

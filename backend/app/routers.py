@@ -34,7 +34,7 @@ import stripe
 from pydantic import BaseModel
 from sqlalchemy import or_
 
-from app.auth import verify_password
+from app.security import verify_password
 from app.security import create_access_token
 from app.deps import (
     check_admin_user_status,
@@ -58,7 +58,7 @@ from app.email_utils import (
 )
 from app.models import CustomerService, User
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_...yourkey...")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_replace_with_real_key")
 
 router = APIRouter()
 
@@ -86,37 +86,113 @@ def register_debug(request_data: dict):
         "types": {k: type(v).__name__ for k, v in request_data.items()}
     }
 
-@router.post("/register", response_model=schemas.UserOut)
+@router.post("/register")
 def register(
     user: schemas.UserCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    """用户注册 - 需要邮箱验证"""
+    from app.validators import UserValidator, validate_input
+    from app.email_verification import EmailVerificationManager, send_verification_email_with_token
+    
+    # 使用验证器验证输入数据
+    try:
+        validated_data = validate_input(user.dict(), UserValidator)
+    except HTTPException as e:
+        raise e
+    
     # 调试信息
-    print(f"注册请求数据: name={user.name}, email={user.email}, password_length={len(user.password) if user.password else 0}")
-    print(f"用户数据: {user.dict()}")
-    # 检查邮箱
-    db_user = db.query(User).filter(User.email == user.email).first()
+    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}")
+    
+    # 检查邮箱是否已被注册（正式用户）
+    db_user = db.query(User).filter(User.email == validated_data['email']).first()
     if db_user:
         raise HTTPException(status_code=400, detail="This email is already registered.")
-    # 检查用户名
-    db_name = db.query(User).filter(User.name == user.name).first()
+    
+    # 检查用户名是否已被注册（正式用户）
+    db_name = db.query(User).filter(User.name == validated_data['name']).first()
     if db_name:
         raise HTTPException(status_code=400, detail="This name is already taken.")
 
     # 检查用户名是否包含客服相关关键词，防止用户注册客服账号
     customer_service_keywords = ["客服", "customer", "service", "support", "help"]
-    if any(keyword in user.name.lower() for keyword in customer_service_keywords):
+    if any(keyword in validated_data['name'].lower() for keyword in customer_service_keywords):
         raise HTTPException(status_code=400, detail="用户名不能包含客服相关关键词")
 
-    new_user = crud.create_user(db, user)
-    new_user.is_verified = 0
-    new_user.is_customer_service = 0  # 确保新注册用户不是客服
-    db.commit()
-    db.refresh(new_user)
-    token = generate_confirmation_token(new_user.email)
-    send_confirmation_email(background_tasks, new_user.email, token)
-    return new_user
+    # 生成验证令牌
+    verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
+    
+    # 创建待验证用户
+    user_data = schemas.UserCreate(**validated_data)
+    pending_user = EmailVerificationManager.create_pending_user(db, user_data, verification_token)
+    
+    # 发送验证邮件
+    send_verification_email_with_token(background_tasks, validated_data['email'], verification_token)
+    
+    return {
+        "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
+        "email": validated_data['email'],
+        "verification_required": True
+    }
+
+
+@router.get("/verify-email/{token}")
+def verify_email(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    """验证用户邮箱"""
+    from app.email_verification import EmailVerificationManager
+    
+    # 验证用户
+    user = EmailVerificationManager.verify_user(db, token)
+    
+    if not user:
+        raise HTTPException(
+            status_code=400, 
+            detail="验证失败。令牌无效或已过期，请重新注册。"
+        )
+    
+    return {
+        "message": "邮箱验证成功！您现在可以正常使用平台了。",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_verified": user.is_verified
+        }
+    }
+
+
+@router.post("/resend-verification")
+def resend_verification_email(
+    email: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """重新发送验证邮件"""
+    from app.email_verification import EmailVerificationManager
+    
+    # 检查邮箱格式
+    from app.validators import StringValidator
+    try:
+        validated_email = StringValidator.validate_email(email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    # 重新发送验证邮件
+    success = EmailVerificationManager.resend_verification_email(db, validated_email, background_tasks)
+    
+    if not success:
+        raise HTTPException(
+            status_code=400, 
+            detail="未找到待验证的用户，请先注册。"
+        )
+    
+    return {
+        "message": "验证邮件已重新发送，请检查您的邮箱。"
+    }
 
 
 @router.post("/login")
@@ -139,6 +215,13 @@ def login(
     
     if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    # 检查用户是否已验证邮箱
+    if not db_user.is_verified:
+        raise HTTPException(
+            status_code=400, 
+            detail="请先验证您的邮箱。请检查您的邮箱并点击验证链接。"
+        )
 
     # 使用security.py中的函数创建token
     from app.security import create_access_token, create_refresh_token, set_secure_cookies
@@ -285,7 +368,7 @@ def reset_password(
     user = crud.get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    from app.auth import get_password_hash
+    from app.security import get_password_hash
 
     user.hashed_password = get_password_hash(new_password)
     db.commit()

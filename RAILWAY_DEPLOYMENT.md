@@ -20,13 +20,29 @@
 在Railway控制台的Variables标签页添加：
 
 ```env
+# 环境设置
+ENVIRONMENT=production
+
+# 安全密钥 (必须更改)
 SECRET_KEY=your-super-secure-random-secret-key-here
+
+# 数据库配置 (Railway会自动提供)
 DATABASE_URL=postgresql://username:password@host:port/database
+ASYNC_DATABASE_URL=postgresql+asyncpg://username:password@host:port/database
+
+# Redis配置 (Railway会自动提供)
 REDIS_URL=redis://host:port/0
 USE_REDIS=true
+
+# Cookie配置 - Railway生产环境
 COOKIE_SECURE=true
-COOKIE_SAMESITE=strict
-ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+COOKIE_SAMESITE=none
+COOKIE_DOMAIN=your-railway-domain.railway.app
+
+# CORS配置
+ALLOWED_ORIGINS=https://your-vercel-app.vercel.app,https://your-domain.com
+
+# JWT配置
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=30
 ```

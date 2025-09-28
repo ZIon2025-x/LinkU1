@@ -16,11 +16,11 @@ console.log('isProduction:', isProduction);
 
 // 导出API端点
 export const API_ENDPOINTS = {
-  // 认证相关
-  LOGIN: '/api/auth/login',
-  REGISTER: '/api/auth/register',
-  REFRESH: '/api/auth/refresh',
-  LOGOUT: '/api/auth/logout',
+  // 认证相关 - 使用新的安全认证系统
+  LOGIN: '/api/secure-auth/login',
+  REGISTER: '/api/users/register',
+  REFRESH: '/api/secure-auth/refresh',
+  LOGOUT: '/api/secure-auth/logout',
   
   // 客服认证
   CS_LOGIN: '/api/cs/login',

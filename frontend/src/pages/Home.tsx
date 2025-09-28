@@ -6,6 +6,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
 import Footer from '../components/Footer';
+import HamburgerMenu from '../components/HamburgerMenu';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -269,9 +270,8 @@ const Home: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.notification-container') && !target.closest('.bell-icon') && !target.closest('.avatar-menu')) {
+      if (!target.closest('.notification-container') && !target.closest('.hamburger-menu')) {
         setShowNotifications(false);
-        setShowMenu(false);
       }
     };
 
@@ -283,330 +283,180 @@ const Home: React.FC = () => {
 
   return (
     <div>
-      {/* 顶部导航栏 */}
+      {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
-        <div style={{display: 'flex', alignItems: 'center', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo */}
           <div style={{fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>LinkU</div>
-          <nav style={{marginLeft: 40, flex: 1}}>
-            <button onClick={() => navigate('/tasks')} style={{marginRight: 24, color: '#A67C52', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit'}}>任务大厅</button>
-            <button onClick={() => navigate('/publish')} style={{marginRight: 24, color: '#A67C52', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit'}}>发布任务</button>
-            <button onClick={() => navigate('/join-us')} style={{marginRight: 24, color: '#A67C52', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit'}}>加入我们</button>
-            <button onClick={() => navigate('/about')} style={{marginRight: 24, color: '#A67C52', fontWeight: 600, textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit'}}>关于我们</button>
-          </nav>
-          {/* 登录/注册 或 头像下拉菜单 */}
-          <div style={{position: 'relative', display: 'flex', alignItems: 'center', gap: 16}}>
-            {user ? (
-              <>
-                {/* 可爱的卡通铃铛图标 */}
-                <div className="bell-icon" style={{position: 'relative', cursor: 'pointer'}} onClick={() => { setShowNotifications(prev => !prev); setShowMenu(false); }}>
-                  <div style={{
-                    width: 40,
-                    height: 40,
-                    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 6px 12px rgba(255, 215, 0, 0.4), inset 0 2px 4px rgba(255,255,255,0.3)',
-                    border: '3px solid #FFF',
-                    position: 'relative',
-                    animation: unreadCount > 0 ? 'bellShake 2s infinite' : 'none',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.15) rotate(5deg)';
-                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(255, 215, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = unreadCount > 0 ? 'scale(1)' : 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 6px 12px rgba(255, 215, 0, 0.4), inset 0 2px 4px rgba(255,255,255,0.3)';
-                  }}
-                  >
-                    <div style={{
-                      fontSize: 20,
-                      color: '#8B4513',
-                      fontWeight: 'bold',
-                      textShadow: '2px 2px 4px rgba(255,255,255,0.9)',
-                      filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.1))'
-                    }}>
-                      🔔
-                    </div>
-                    {/* 铃铛的装饰小点 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 3,
-                      right: 3,
-                      width: 5,
-                      height: 5,
-                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
-                      borderRadius: '50%',
-                      boxShadow: '0 0 6px rgba(255, 107, 107, 0.8), inset 0 1px 2px rgba(255,255,255,0.3)',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    {/* 铃铛的光晕效果 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: -2,
-                      left: -2,
-                      right: -2,
-                      bottom: -2,
-                      background: 'radial-gradient(circle, rgba(255,215,0,0.2) 0%, transparent 70%)',
-                      borderRadius: '50%',
-                      animation: unreadCount > 0 ? 'pulse 3s infinite' : 'none'
-                    }} />
-                  </div>
-                  
-                  {unreadCount > 0 && (
-                    <div style={{
-                      position: 'absolute',
-                      top: -6,
-                      right: -6,
-                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: 22,
-                      height: 22,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 11,
-                      fontWeight: 'bold',
-                      border: '3px solid #fff',
-                      boxShadow: '0 3px 6px rgba(255, 107, 107, 0.4), 0 0 0 2px rgba(255, 107, 107, 0.2)',
-                      animation: 'pulse 1.5s infinite'
-                    }}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </div>
-                  )}
-                </div>
-                
-                {/* 可爱的通知弹窗 */}
-                {showNotifications && (
-                  <div className="notification-container" style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 48,
-                    background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 4px 8px rgba(255, 215, 0, 0.1)',
-                    borderRadius: 16,
-                    minWidth: 320,
-                    maxWidth: 400,
-                    maxHeight: 400,
-                    overflowY: 'auto',
-                    zIndex: 1000,
-                    border: '2px solid rgba(255, 215, 0, 0.2)',
-                    animation: 'bounce 0.5s ease-out'
-                  }}>
-                    <div style={{
-                      padding: '16px 20px',
-                      borderBottom: '2px solid rgba(255, 215, 0, 0.2)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, rgba(255, 215, 0, 0.1) 100%)'
-                    }}>
-                      <span style={{
-                        fontWeight: 700, 
-                        color: '#A67C52',
-                        fontSize: 16,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                      }}>
-                        🔔 通知
-                      </span>
-                                             <div style={{display: 'flex', gap: 8}}>
-                         {unreadCount > 0 && (
-                           <button
-                             onClick={handleMarkAllRead}
-                             style={{
-                               background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                               border: 'none',
-                               color: 'white',
-                               fontSize: 12,
-                               cursor: 'pointer',
-                               padding: '6px 12px',
-                               borderRadius: 12,
-                               fontWeight: 600,
-                               boxShadow: '0 2px 4px rgba(110, 193, 228, 0.3)',
-                               transition: 'all 0.2s ease'
-                             }}
-                             onMouseEnter={(e) => {
-                               e.currentTarget.style.transform = 'scale(1.05)';
-                               e.currentTarget.style.boxShadow = '0 4px 8px rgba(110, 193, 228, 0.4)';
-                             }}
-                             onMouseLeave={(e) => {
-                               e.currentTarget.style.transform = 'scale(1)';
-                               e.currentTarget.style.boxShadow = '0 2px 4px rgba(110, 193, 228, 0.3)';
-                             }}
-                           >
-                             ✓ 全部已读
-                           </button>
-                         )}
-                       </div>
-                    </div>
-                    
-                    {notifications.length === 0 ? (
-                      <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>
-                        暂无通知
-                      </div>
-                    ) : (
-                      <div>
-                        {notifications.map(notification => (
-                          <div
-                            key={notification.id}
-                            onClick={() => handleNotificationClick(notification)}
-                            style={{
-                              padding: '12px 16px',
-                              borderBottom: '1px solid #f0f0f0',
-                              cursor: 'default', // 改为默认光标，表示不可点击跳转
-                              background: notification.is_read === 0 ? '#f8fbff' : 'transparent',
-                              transition: 'background-color 0.2s',
-                              position: 'relative'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = notification.is_read === 0 ? '#f0f8ff' : '#f9f9f9'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notification.is_read === 0 ? '#f8fbff' : 'transparent'}
-                          >
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-start',
-                              marginBottom: 4
-                            }}>
-                              <div style={{
-                                fontWeight: notification.is_read === 0 ? 600 : 500,
-                                color: '#333',
-                                fontSize: 14
-                              }}>
-                                {notification.title}
-                              </div>
-                              {notification.is_read === 0 && (
-                                <div style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: '#ff4757',
-                                  flexShrink: 0,
-                                  marginTop: 4
-                                }} />
-                              )}
-                            </div>
-                            <div style={{
-                              color: '#666',
-                              fontSize: 12,
-                              lineHeight: 1.4,
-                              marginBottom: 4
-                            }}>
-                              {notification.content}
-                            </div>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}>
-                              <div style={{
-                                color: '#999',
-                                fontSize: 11
-                              }}>
-                                {dayjs(notification.created_at).tz('Europe/London').format('YYYY/MM/DD HH:mm:ss')} (英国时间)
-                              </div>
-                              <div style={{
-                                color: '#ccc',
-                                fontSize: 10,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4
-                              }}>
-                                <span>👁️</span>
-                                <span>仅查看</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <img
-                  src={user.avatar || '/avatar1.png'}
-                  alt="头像"
-                  style={{width: 38, height: 38, borderRadius: '50%', border: '2px solid #8b5cf6', background: '#f8fbff', objectFit: 'cover', verticalAlign: 'middle', cursor: 'pointer'}}
-                  onClick={() => { setShowMenu(prev => !prev); setShowNotifications(false); }}
-                />
-                {showMenu && (
-                  <div className="avatar-menu" style={{position: 'absolute', right: 0, top: 48, background: '#fff', boxShadow: '0 2px 8px #e6f7ff', borderRadius: 8, minWidth: 160, zIndex: 999}}>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#A67C52', fontWeight: 600}} onClick={() => { setShowMenu(false); navigate('/my-tasks'); }}>我的任务</div>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#A67C52', fontWeight: 600}} onClick={() => { setShowMenu(false); navigate('/message'); }}>我的信息</div>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#A67C52', fontWeight: 600}} onClick={() => { setShowMenu(false); navigate('/profile'); }}>个人主页</div>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#A67C52', fontWeight: 600}} onClick={() => { setShowMenu(false); navigate('/wallet'); }}>💰 我的钱包</div>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#A67C52', fontWeight: 600}} onClick={() => { setShowMenu(false); navigate('/settings'); }}>⚙️ 设置</div>
-                    <div style={{padding: '10px 20px', cursor: 'pointer', color: '#d32f2f', fontWeight: 600, borderTop: '1px solid #eee'}} onClick={async () => { 
-                      setShowMenu(false); 
-                      // 调用后端登出接口清除HttpOnly Cookie
-                      try {
-                        await api.post('/api/users/logout');
-                      } catch (error) {
-                        console.log('登出请求失败:', error);
-                      }
-                      window.location.reload(); 
-                    }}>退出登录</div>
-                  </div>
-                )}
-                
-                {/* VIP按钮 - 根据系统设置显示 */}
-                {systemSettings.vip_button_visible && (
-                  <button 
-                    onClick={() => navigate('/vip')} 
-                    style={{
-                      padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)',
-                      transition: 'all 0.3s ease',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 215, 0, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 215, 0, 0.3)';
-                    }}
-                  >
-                    ✨ VIP
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={() => setShowLoginModal(true)}
-                  style={{
-                    color: '#A67C52', 
-                    fontWeight: 600, 
-                    background: 'none', 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    fontSize: 'inherit'
-                  }}
-                >
-                  登录
-                </button>
-              </>
-            )}
-          </div>
+          
+          {/* 汉堡菜单 */}
+          <HamburgerMenu
+            user={user}
+            unreadCount={unreadCount}
+            onNotificationClick={() => setShowNotifications(prev => !prev)}
+            onLogout={async () => {
+              try {
+                await api.post('/api/users/logout');
+              } catch (error) {
+                console.log('登出请求失败:', error);
+              }
+              window.location.reload();
+            }}
+            onLoginClick={() => setShowLoginModal(true)}
+            systemSettings={systemSettings}
+          />
         </div>
       </header>
       {/* 占位，防止内容被导航栏遮挡 */}
       <div style={{height: 60}} />
+      
+      {/* 通知弹窗 - 独立显示 */}
+      {showNotifications && user && (
+        <div className="notification-container" style={{
+          position: 'fixed',
+          right: '24px',
+          top: '80px',
+          background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 4px 8px rgba(255, 215, 0, 0.1)',
+          borderRadius: 16,
+          minWidth: 320,
+          maxWidth: 400,
+          maxHeight: 400,
+          overflowY: 'auto',
+          zIndex: 1000,
+          border: '2px solid rgba(255, 215, 0, 0.2)',
+          animation: 'bounce 0.5s ease-out'
+        }}>
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '2px solid rgba(255, 215, 0, 0.2)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, rgba(255, 215, 0, 0.1) 100%)'
+          }}>
+            <span style={{
+              fontWeight: 700, 
+              color: '#A67C52',
+              fontSize: 16,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              🔔 通知
+            </span>
+            <div style={{display: 'flex', gap: 8}}>
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    padding: '6px 12px',
+                    borderRadius: 12,
+                    fontWeight: 600,
+                    boxShadow: '0 2px 4px rgba(110, 193, 228, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(110, 193, 228, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(110, 193, 228, 0.3)';
+                  }}
+                >
+                  ✓ 全部已读
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {notifications.length === 0 ? (
+            <div style={{padding: '20px', textAlign: 'center', color: '#888'}}>
+              暂无通知
+            </div>
+          ) : (
+            <div>
+              {notifications.map(notification => (
+                <div
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid #f0f0f0',
+                    cursor: 'default',
+                    background: notification.is_read === 0 ? '#f8fbff' : 'transparent',
+                    transition: 'background-color 0.2s',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = notification.is_read === 0 ? '#f0f8ff' : '#f9f9f9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notification.is_read === 0 ? '#f8fbff' : 'transparent'}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 4
+                  }}>
+                    <div style={{
+                      fontWeight: notification.is_read === 0 ? 600 : 500,
+                      color: '#333',
+                      fontSize: 14
+                    }}>
+                      {notification.title}
+                    </div>
+                    {notification.is_read === 0 && (
+                      <div style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: '#ff4757',
+                        flexShrink: 0,
+                        marginTop: 4
+                      }} />
+                    )}
+                  </div>
+                  <div style={{
+                    color: '#666',
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    marginBottom: 4
+                  }}>
+                    {notification.content}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{
+                      color: '#999',
+                      fontSize: 11
+                    }}>
+                      {dayjs(notification.created_at).tz('Europe/London').format('YYYY/MM/DD HH:mm:ss')} (英国时间)
+                    </div>
+                    <div style={{
+                      color: '#ccc',
+                      fontSize: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      <span>👁️</span>
+                      <span>仅查看</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* 英雄区域 - 重新设计 */}
       <section style={{

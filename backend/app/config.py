@@ -32,19 +32,58 @@ class Config:
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
     USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"  # 默认使用Redis
 
-    # Cookie配置
+    # Cookie配置 - 智能环境检测
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    IS_PRODUCTION = ENVIRONMENT == "production"
+    
+    # 根据环境自动设置Cookie安全配置
     COOKIE_SECURE = (
-        os.getenv("COOKIE_SECURE", "true").lower() == "true"
-    )  # 生产环境设为true
+        os.getenv("COOKIE_SECURE", "true" if IS_PRODUCTION else "false").lower() == "true"
+    )
     COOKIE_HTTPONLY = True
-    COOKIE_SAMESITE = "lax"  # 改为lax，允许跨站请求携带Cookie
+    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "none" if IS_PRODUCTION else "lax")
     COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
+    
+    # 开发环境配置
+    DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
-    # CORS配置
+    # CORS配置 - 安全配置
     ALLOWED_ORIGINS = os.getenv(
         "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080"
     ).split(",")
+    
+    # 过滤空字符串
+    ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+    
+    # 如果没有配置，使用默认安全配置
+    if not ALLOWED_ORIGINS or ALLOWED_ORIGINS == [""]:
+        ALLOWED_ORIGINS = ["http://localhost:3000"]  # 默认只允许本地开发
+    
+    # 允许的HTTP方法
+    ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    
+    # 允许的请求头
+    ALLOWED_HEADERS = [
+        "Content-Type", 
+        "Authorization", 
+        "X-CSRF-Token",
+        "X-Requested-With",
+        "Accept",
+        "Origin"
+    ]
 
+    # 邮箱配置
+    EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@linku.com")
+    SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER = os.getenv("SMTP_USER", "")
+    SMTP_PASS = os.getenv("SMTP_PASS", "")
+    SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+    SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
+    
+    # 邮箱验证配置
+    EMAIL_VERIFICATION_EXPIRE_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
+    
     # 安全配置
     SECURITY_HEADERS = {
         "X-Content-Type-Options": "nosniff",

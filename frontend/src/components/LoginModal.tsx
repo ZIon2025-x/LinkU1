@@ -51,7 +51,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     try {
       if (isLogin) {
         // 登录逻辑 - 使用与Login.tsx相同的格式
-        const res = await api.post('/api/auth/login', {
+        const res = await api.post('/api/secure-auth/login', {
           email: formData.email,
           password: formData.password,
         });

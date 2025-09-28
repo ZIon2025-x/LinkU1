@@ -167,7 +167,7 @@ api.interceptors.response.use(
         
         // 根据用户类型选择正确的refresh端点
         const userInfo = localStorage.getItem('userInfo');
-        let refreshEndpoint = '/api/auth/refresh'; // 默认用户refresh端点
+        let refreshEndpoint = '/api/secure-auth/refresh'; // 默认用户refresh端点
         
         if (userInfo) {
           try {
@@ -800,7 +800,7 @@ export const checkCustomerServiceAvailability = async () => {
 
 // 用户登录
 export const login = async (email: string, password: string) => {
-  const res = await api.post('/api/auth/login', { email, password });
+  const res = await api.post('/api/secure-auth/login', { email, password });
   return res.data;
 };
 

@@ -30,10 +30,15 @@ const Register: React.FC = () => {
 
   const onFinish = async (values: any) => {
     try {
-      await api.post('/api/users/register', values);
+      const res = await api.post('/api/users/register', values);
       setErrorMsg(''); // 注册成功清空错误
-      message.success('Registration successful! Please check your email to verify your account.');
-      navigate('/login');
+      
+      if (res.data.verification_required) {
+        message.success(`注册成功！我们已向 ${res.data.email} 发送了验证邮件，请检查您的邮箱并点击验证链接完成注册。`);
+      } else {
+        message.success('注册成功！');
+        navigate('/login');
+      }
     } catch (err: any) {
       let msg = '注册失败';
       if (err?.response?.data?.detail) {

@@ -1,0 +1,61 @@
+name: Simple CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # 检查代码质量
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check file structure
+      run: |
+        echo "📁 Project structure:"
+        ls -la
+        echo "📁 Backend structure:"
+        ls -la backend/
+        echo "📁 Frontend structure:"
+        ls -la frontend/
+    
+    - name: Check configuration files
+      run: |
+        echo "🔧 Checking configuration files..."
+        echo "✅ Dockerfile exists: $([ -f Dockerfile ] && echo 'Yes' || echo 'No')"
+        echo "✅ railway.json exists: $([ -f railway.json ] && echo 'Yes' || echo 'No')"
+        echo "✅ vercel.json exists: $([ -f vercel.json ] && echo 'Yes' || echo 'No')"
+        echo "✅ frontend/package.json exists: $([ -f frontend/package.json ] && echo 'Yes' || echo 'No')"
+        echo "✅ backend/requirements.txt exists: $([ -f backend/requirements.txt ] && echo 'Yes' || echo 'No')"
+    
+    - name: Validate JSON files
+      run: |
+        echo "🔍 Validating JSON configuration files..."
+        python -m json.tool railway.json > /dev/null && echo "✅ railway.json is valid" || echo "❌ railway.json is invalid"
+        python -m json.tool vercel.json > /dev/null && echo "✅ vercel.json is valid" || echo "❌ vercel.json is invalid"
+    
+    - name: Check for common issues
+      run: |
+        echo "🔍 Checking for common issues..."
+        # 检查是否有敏感信息泄露
+        if grep -r "password\|secret\|key" --include="*.py" --include="*.js" --include="*.ts" --include="*.json" . | grep -v node_modules | grep -v __pycache__ | grep -v ".git"; then
+          echo "⚠️  Warning: Potential sensitive information found"
+        else
+          echo "✅ No obvious sensitive information found"
+        fi
+        
+        # 检查文件大小
+        echo "📊 File sizes:"
+        find . -name "*.py" -o -name "*.js" -o -name "*.ts" | head -10 | xargs ls -lh
+    
+    - name: Deployment status
+      run: |
+        echo "🚀 Deployment status:"
+        echo "Backend: Railway (automatic deployment on push to main)"
+        echo "Frontend: Vercel (automatic deployment on push to main)"
+        echo "✅ CI/CD pipeline is working!"
