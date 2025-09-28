@@ -101,8 +101,8 @@ async def custom_cors_middleware(request: Request, call_next):
 
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
-app.include_router(auth_router, tags=["用户认证"])
-app.include_router(secure_auth_router, tags=["安全认证"])
+# app.include_router(auth_router, tags=["用户认证"])  # 暂时禁用旧认证系统
+app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
 app.include_router(cs_auth_router, tags=["客服认证"])
 app.include_router(admin_auth_router, tags=["管理员认证"])
 app.include_router(csrf_router, tags=["CSRF保护"])
