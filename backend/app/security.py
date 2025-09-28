@@ -510,11 +510,11 @@ class CookieHTTPBearer(HTTPBearer):
         if authorization:
             return authorization
 
-        # 如果Authorization头没有，尝试从Cookie获取
-        access_token = request.cookies.get("access_token")
-        if access_token:
+        # 如果Authorization头没有，尝试从Cookie获取session_id
+        session_id = request.cookies.get("session_id")
+        if session_id:
             return HTTPAuthorizationCredentials(
-                scheme="Bearer", credentials=access_token
+                scheme="Bearer", credentials=session_id
             )
         if self.auto_error:
             raise HTTPException(
@@ -548,12 +548,12 @@ class SyncCookieHTTPBearer(HTTPBearer):
                 scheme="Bearer", credentials=token
             )
 
-        # 如果Authorization头没有，尝试从Cookie获取
-        access_token = request.cookies.get("access_token")
-        if access_token:
-            print(f"🔍 从Cookie获取token: {access_token[:20]}...")
+        # 如果Authorization头没有，尝试从Cookie获取session_id
+        session_id = request.cookies.get("session_id")
+        if session_id:
+            print(f"🔍 从Cookie获取session_id: {session_id[:20]}...")
             return HTTPAuthorizationCredentials(
-                scheme="Bearer", credentials=access_token
+                scheme="Bearer", credentials=session_id
             )
         
         print("🔍 未找到认证信息")

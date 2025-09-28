@@ -77,6 +77,37 @@ async def get_current_user_async(
     return user
 
 
+# 通用会话认证函数
+def authenticate_with_session(request: Request, db: Session) -> Optional[models.User]:
+    """使用会话认证获取用户"""
+    from app.secure_auth import validate_session
+    
+    session = validate_session(request)
+    if session:
+        user = crud.get_user_by_id(db, session.user_id)
+        if user:
+            # 检查用户状态
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "SUSPENDED_USER_ACCESS", user.id, client_ip, "被暂停用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "BANNED_USER_ACCESS", user.id, client_ip, "被封禁用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+            
+            return user
+    return None
+
 # 新的安全认证依赖
 async def get_current_user_secure(
     request: Request,
@@ -84,6 +115,35 @@ async def get_current_user_secure(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(cookie_bearer),
 ) -> models.User:
     """安全的用户认证（支持Cookie和Header）"""
+    # 首先尝试使用会话认证
+    from app.secure_auth import validate_session
+    
+    session = validate_session(request)
+    if session:
+        user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
+        if user:
+            # 检查用户状态
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "SUSPENDED_USER_ACCESS", user.id, client_ip, "被暂停用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "BANNED_USER_ACCESS", user.id, client_ip, "被封禁用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+            
+            return user
+    
+    # 如果会话认证失败，回退到JWT认证
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
@@ -146,6 +206,12 @@ def get_current_user_secure_sync(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer),
 ) -> models.User:
     """同步版本的安全用户认证"""
+    # 首先尝试使用会话认证
+    user = authenticate_with_session(request, db)
+    if user:
+        return user
+    
+    # 如果会话认证失败，回退到JWT认证
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
@@ -293,6 +359,12 @@ def get_current_customer_service_or_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer)
 ):
     """获取当前用户（可能是普通用户或客服）- 支持Cookie认证"""
+    # 首先尝试使用会话认证
+    user = authenticate_with_session(request, db)
+    if user:
+        return user
+    
+    # 如果会话认证失败，回退到JWT认证
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
