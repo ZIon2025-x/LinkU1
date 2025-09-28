@@ -1,46 +1,50 @@
-# Vercel前端部署指南
+# Vercel 部署指南
+
+## 📋 概述
+
+本项目使用 Vercel 部署前端，Railway 部署后端。前端和后端分离部署，通过 API 进行通信。
 
 ## 🚀 部署步骤
 
-### 1. 准备代码
-确保frontend目录包含所有必要文件：
-- src/ (React应用源码)
-- public/ (静态资源)
-- package.json (Node.js依赖)
-- vercel.json (Vercel配置)
+### 1. 准备环境
 
-### 2. 创建Vercel项目
-1. 访问 https://vercel.com
+确保你有以下账户：
+- [Vercel](https://vercel.com) 账户
+- [GitHub](https://github.com) 账户（用于代码托管）
+
+### 2. 连接 GitHub 仓库
+
+1. 登录 [Vercel Dashboard](https://vercel.com/dashboard)
 2. 点击 "New Project"
-3. 选择 "Import Git Repository" 或 "Browse All Templates"
-4. 如果选择GitHub，连接你的仓库
-5. 选择frontend目录作为根目录
+3. 选择你的 GitHub 仓库 `ZIon2025-x/LinkU1`
+4. 点击 "Import"
 
-### 3. 配置环境变量
-在Vercel控制台的Environment Variables标签页添加：
+### 3. 配置项目设置
 
-```env
-REACT_APP_API_URL=https://your-railway-app.railway.app
-REACT_APP_WS_URL=wss://your-railway-app.railway.app
+Vercel 会自动检测到 `vercel.json` 配置文件，但你需要确认以下设置：
+
+#### 构建设置
+- **Framework Preset**: Create React App
+- **Root Directory**: `frontend` (重要！)
+- **Build Command**: `npm run build`
+- **Output Directory**: `build`
+
+#### 环境变量
+在 Vercel 项目设置中添加以下环境变量：
+
+```bash
+REACT_APP_API_URL=https://linku1-production.up.railway.app
+REACT_APP_WS_URL=wss://linku1-production.up.railway.app
+NODE_ENV=production
 ```
 
-### 4. 配置构建设置
-- **Framework Preset**: Create React App
-- **Root Directory**: frontend
-- **Build Command**: npm run build
-- **Output Directory**: build
+### 4. 部署
 
-### 5. 部署
-1. 点击 "Deploy" 开始部署
+1. 点击 "Deploy" 按钮
 2. 等待构建完成
-3. 检查部署日志确保没有错误
+3. 访问生成的 Vercel URL
 
-### 6. 测试部署
-1. 访问提供的Vercel URL
-2. 测试登录功能
-3. 测试API调用
-
-## 🔧 配置说明
+## 🔧 配置文件说明
 
 ### vercel.json
 ```json
@@ -48,7 +52,7 @@ REACT_APP_WS_URL=wss://your-railway-app.railway.app
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
+      "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build"
@@ -58,57 +62,85 @@ REACT_APP_WS_URL=wss://your-railway-app.railway.app
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://your-railway-app.railway.app/api/$1"
+      "dest": "https://linku1-production.up.railway.app/api/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/frontend/$1"
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://your-railway-app.railway.app"
+    "REACT_APP_API_URL": "https://linku1-production.up.railway.app",
+    "REACT_APP_WS_URL": "wss://linku1-production.up.railway.app"
   }
 }
 ```
 
-### package.json
-确保包含正确的脚本：
-```json
-{
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  }
-}
-```
+**配置说明：**
+- `builds`: 指定从 `frontend/package.json` 构建
+- `routes`: API 请求代理到 Railway 后端
+- `env`: 设置环境变量
 
-## 🚨 故障排除
+## 🌐 域名配置
 
-### 常见错误
-1. **Build failed**: 检查package.json和依赖
-2. **API calls failed**: 检查REACT_APP_API_URL
-3. **CORS error**: 检查后端ALLOWED_ORIGINS
-4. **404 on refresh**: 检查路由配置
+### 自定义域名
+1. 在 Vercel 项目设置中点击 "Domains"
+2. 添加你的自定义域名
+3. 配置 DNS 记录
 
-### 查看日志
-1. 在Vercel控制台点击Deployments
-2. 选择最新的部署
-3. 查看Function Logs和Build Logs
-
-### 重新部署
-1. 在Vercel控制台点击Deployments
-2. 点击 "Redeploy" 重新部署
+### 子域名
+- 生产环境：`https://your-domain.com`
+- 预览环境：`https://your-project-git-branch.vercel.app`
 
 ## 🔄 自动部署
 
-### GitHub集成
-1. 连接GitHub仓库
-2. 选择frontend目录
-3. 每次push到main分支自动部署
+Vercel 会自动：
+- 监听 `main` 分支的推送
+- 自动触发重新部署
+- 为每个 PR 创建预览环境
 
-### 手动部署
-1. 在Vercel控制台点击 "Deploy"
-2. 选择要部署的提交
-3. 等待部署完成
+## 🐛 故障排除
+
+### 构建失败
+1. 检查 `frontend/package.json` 是否存在
+2. 确认 Node.js 版本兼容性
+3. 查看构建日志中的错误信息
+
+### API 连接问题
+1. 确认 `REACT_APP_API_URL` 环境变量正确
+2. 检查 Railway 后端是否正常运行
+3. 验证 CORS 配置
+
+### 路由问题
+1. 确认 `vercel.json` 中的路由配置
+2. 检查前端路由是否与 Vercel 路由冲突
+
+## 📊 监控和日志
+
+- **部署日志**: Vercel Dashboard → Functions → View Function Logs
+- **性能监控**: Vercel Analytics
+- **错误追踪**: Vercel 内置错误监控
+
+## 🔐 安全配置
+
+### 环境变量安全
+- 敏感信息使用 Vercel 环境变量
+- 不要在前端代码中硬编码 API 密钥
+
+### CORS 配置
+后端已配置允许 Vercel 域名的 CORS 请求。
+
+## 📝 更新部署
+
+每次推送代码到 `main` 分支时，Vercel 会自动重新部署。你也可以：
+
+1. 手动触发部署：Vercel Dashboard → Deployments → Redeploy
+2. 预览部署：创建 Pull Request 时会自动生成预览链接
+
+## 🆘 支持
+
+如果遇到问题：
+1. 查看 Vercel 构建日志
+2. 检查 GitHub 仓库状态
+3. 确认环境变量配置
+4. 验证后端 API 可用性
