@@ -225,25 +225,33 @@ def get_current_user_or_cs_or_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer_readonly),
 ) -> Union[models.User, models.CustomerService, models.AdminUser]:
     """获取当前用户、客服或管理员（多角色支持）"""
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供认证信息"
-        )
+    # 首先尝试使用会话认证
+    from app.secure_auth import validate_session
     
-    try:
-        payload = verify_token(credentials.credentials)
-        user_id = payload.get("sub")
-        if user_id is None:
+    session = validate_session(request)
+    if session:
+        user_id = session.user_id
+    else:
+        # 如果会话认证失败，回退到JWT认证
+        if not credentials:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的token"
+                detail="未提供认证信息"
             )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token验证失败"
-        )
+        
+        try:
+            payload = verify_token(credentials.credentials)
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="无效的token"
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token验证失败"
+            )
     
     # 按优先级查找：管理员 > 客服 > 用户
     admin = db.query(models.AdminUser).filter(models.AdminUser.id == user_id).first()

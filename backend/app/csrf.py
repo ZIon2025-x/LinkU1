@@ -83,9 +83,9 @@ class CSRFProtectedHTTPBearer(HTTPBearer):
                 scheme="Bearer", credentials=token
             )
         
-        # 如果从Cookie获取token，需要CSRF保护
-        access_token = request.cookies.get("access_token")
-        if access_token:
+        # 如果从Cookie获取session_id，需要CSRF保护
+        session_id = request.cookies.get("session_id")
+        if session_id:
             if self.require_csrf and request.method in ["POST", "PUT", "PATCH", "DELETE"]:
                 if not CSRFProtection.verify_csrf_token(request):
                     raise HTTPException(
@@ -94,7 +94,7 @@ class CSRFProtectedHTTPBearer(HTTPBearer):
                     )
             
             return HTTPAuthorizationCredentials(
-                scheme="Bearer", credentials=access_token
+                scheme="Bearer", credentials=session_id
             )
         
         if self.auto_error:
@@ -123,9 +123,9 @@ class SyncCSRFProtectedHTTPBearer(HTTPBearer):
                 scheme="Bearer", credentials=token
             )
         
-        # 如果从Cookie获取token，需要CSRF保护
-        access_token = request.cookies.get("access_token")
-        if access_token:
+        # 如果从Cookie获取session_id，需要CSRF保护
+        session_id = request.cookies.get("session_id")
+        if session_id:
             if self.require_csrf and request.method in ["POST", "PUT", "PATCH", "DELETE"]:
                 if not CSRFProtection.verify_csrf_token(request):
                     raise HTTPException(
@@ -134,7 +134,7 @@ class SyncCSRFProtectedHTTPBearer(HTTPBearer):
                     )
             
             return HTTPAuthorizationCredentials(
-                scheme="Bearer", credentials=access_token
+                scheme="Bearer", credentials=session_id
             )
         
         if self.auto_error:
