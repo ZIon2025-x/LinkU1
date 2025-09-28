@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import crud
 from app.auth_routes import auth_router
+from app.secure_auth_routes import secure_auth_router
 from app.cs_auth_routes import cs_auth_router
 from app.admin_auth_routes import admin_auth_router
 from app.csrf_routes import router as csrf_router
@@ -80,7 +81,7 @@ async def custom_cors_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token"
         return response
     
     response = await call_next(request)
@@ -93,7 +94,7 @@ async def custom_cors_middleware(request: Request, call_next):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token"
     
     add_security_headers(response)
     return response
@@ -101,6 +102,7 @@ async def custom_cors_middleware(request: Request, call_next):
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
 app.include_router(auth_router, tags=["用户认证"])
+app.include_router(secure_auth_router, tags=["安全认证"])
 app.include_router(cs_auth_router, tags=["客服认证"])
 app.include_router(admin_auth_router, tags=["管理员认证"])
 app.include_router(csrf_router, tags=["CSRF保护"])
@@ -224,6 +226,19 @@ def run_background_task():
             time.sleep(60)  # 出错时等待1分钟后重试
 
 
+def run_session_cleanup_task():
+    """运行会话清理任务"""
+    while True:
+        try:
+            from app.secure_auth import SecureAuthManager
+            SecureAuthManager.cleanup_expired_sessions()
+            # 每5分钟清理一次过期会话
+            time.sleep(300)
+        except Exception as e:
+            logger.error(f"会话清理任务出错: {e}")
+            time.sleep(300)  # 出错时等待5分钟后重试
+
+
 # 启动后台任务
 @app.on_event("startup")
 async def startup_event():
@@ -253,6 +268,11 @@ async def startup_event():
     logger.info("启动后台任务：自动取消过期任务")
     background_thread = threading.Thread(target=run_background_task, daemon=True)
     background_thread.start()
+    
+    # 启动会话清理任务
+    logger.info("启动后台任务：清理过期会话")
+    session_cleanup_thread = threading.Thread(target=run_session_cleanup_task, daemon=True)
+    session_cleanup_thread.start()
 
 
 @app.websocket("/ws/chat/{user_id}")
