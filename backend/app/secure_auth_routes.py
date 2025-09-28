@@ -3,6 +3,7 @@
 使用短有效期JWT + 可撤销机制 + 会话管理
 """
 
+import json
 import logging
 from typing import Any, Dict
 from datetime import datetime
@@ -284,16 +285,37 @@ def get_active_sessions(
         
         # 获取用户的所有活跃会话
         user_sessions = []
-        for session in SecureAuthManager.active_sessions.values():
-            if session.user_id == current_session.user_id and session.is_active:
-                user_sessions.append({
-                    "session_id": session.session_id[:8] + "...",
-                    "device_fingerprint": session.device_fingerprint,
-                    "ip_address": session.ip_address,
-                    "created_at": session.created_at.isoformat(),
-                    "last_activity": session.last_activity.isoformat(),
-                    "is_current": session.session_id == current_session.session_id
-                })
+        
+        if SecureAuthManager.USE_REDIS and SecureAuthManager.redis_client:
+            # 从 Redis 获取用户会话
+            user_sessions_key = f"user_sessions:{current_session.user_id}"
+            session_ids = SecureAuthManager.redis_client.smembers(user_sessions_key)
+            
+            for session_id in session_ids:
+                session_data = SecureAuthManager.redis_client.get(f"session:{session_id}")
+                if session_data:
+                    data = json.loads(session_data)
+                    if data.get("is_active", False):
+                        user_sessions.append({
+                            "session_id": session_id[:8] + "...",
+                            "device_fingerprint": data["device_fingerprint"],
+                            "ip_address": data["ip_address"],
+                            "created_at": data["created_at"],
+                            "last_activity": data["last_activity"],
+                            "is_current": session_id == current_session.session_id
+                        })
+        else:
+            # 从内存获取用户会话
+            for session in SecureAuthManager.active_sessions.values():
+                if session.user_id == current_session.user_id and session.is_active:
+                    user_sessions.append({
+                        "session_id": session.session_id[:8] + "...",
+                        "device_fingerprint": session.device_fingerprint,
+                        "ip_address": session.ip_address,
+                        "created_at": session.created_at.isoformat(),
+                        "last_activity": session.last_activity.isoformat(),
+                        "is_current": session.session_id == current_session.session_id
+                    })
         
         return {
             "sessions": user_sessions,
@@ -399,4 +421,38 @@ def get_auth_status(
         return {
             "authenticated": False,
             "message": "获取状态失败"
+        }
+
+@secure_auth_router.get("/redis-status")
+def get_redis_status():
+    """获取 Redis 连接状态"""
+    try:
+        from app.secure_auth import USE_REDIS, redis_client
+        
+        if not USE_REDIS or not redis_client:
+            return {
+                "redis_enabled": False,
+                "message": "Redis 未启用或连接失败"
+            }
+        
+        # 测试 Redis 连接
+        redis_client.ping()
+        
+        # 获取 Redis 信息
+        info = redis_client.info()
+        
+        return {
+            "redis_enabled": True,
+            "redis_version": info.get("redis_version", "unknown"),
+            "connected_clients": info.get("connected_clients", 0),
+            "used_memory": info.get("used_memory_human", "unknown"),
+            "uptime_in_seconds": info.get("uptime_in_seconds", 0),
+            "message": "Redis 连接正常"
+        }
+        
+    except Exception as e:
+        logger.error(f"Redis 状态检查失败: {e}")
+        return {
+            "redis_enabled": False,
+            "message": f"Redis 连接失败: {str(e)}"
         }
