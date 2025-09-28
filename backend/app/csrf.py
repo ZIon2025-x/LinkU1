@@ -29,13 +29,16 @@ class CSRFProtection:
     @staticmethod
     def set_csrf_cookie(response: Response, token: str) -> None:
         """设置CSRF token到Cookie"""
+        import os
+        is_production = os.getenv("RAILWAY_ENVIRONMENT") == "production"
+        
         response.set_cookie(
             key=CSRF_COOKIE_NAME,
             value=token,
             max_age=CSRF_COOKIE_MAX_AGE,
             httponly=False,  # 需要JavaScript访问
-            secure=False,    # 开发环境，生产环境应为True
-            samesite="lax",
+            secure=is_production,  # 生产环境使用HTTPS
+            samesite="none" if is_production else "lax",  # 跨域需要none
             path="/"
         )
     
