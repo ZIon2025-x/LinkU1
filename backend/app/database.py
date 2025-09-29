@@ -25,15 +25,26 @@ except ImportError:
     ASYNC_AVAILABLE = False
     print("⚠️  asyncpg not available, using sync mode only")
 
-# 连接池配置
-POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
-MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
-POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
-POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))
-POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
+# 连接池配置 - 根据环境优化
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+IS_PRODUCTION = ENVIRONMENT == "production"
 
-# 查询超时配置
-QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
+if IS_PRODUCTION:
+    # 生产环境配置
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "30"))
+    POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # 30分钟
+    POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
+    QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
+else:
+    # 开发环境配置
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
+    POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # 1小时
+    POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
+    QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
 
 # 创建异步引擎（仅在asyncpg可用时）
 if ASYNC_AVAILABLE:

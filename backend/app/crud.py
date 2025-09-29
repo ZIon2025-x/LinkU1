@@ -357,17 +357,22 @@ def count_tasks(
 def list_all_tasks(db: Session, skip: int = 0, limit: int = 1000):
     """获取所有任务（用于客服管理，不进行状态过滤）"""
     from app.models import Task, User
+    from sqlalchemy.orm import selectinload
 
-    # 获取所有任务，不进行状态过滤
+    # 使用预加载避免N+1查询问题
     tasks = (
-        db.query(Task).order_by(Task.created_at.desc()).offset(skip).limit(limit).all()
+        db.query(Task)
+        .options(selectinload(Task.poster))  # 预加载发布者信息
+        .order_by(Task.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
     )
 
-    # 为每个任务添加发布者时区信息
+    # 为每个任务添加发布者时区信息（现在poster已经预加载）
     for task in tasks:
-        poster = db.query(User).filter(User.id == task.poster_id).first()
-        if poster:
-            task.poster_timezone = poster.timezone if poster.timezone else "UTC"
+        if task.poster:
+            task.poster_timezone = task.poster.timezone if task.poster.timezone else "UTC"
         else:
             task.poster_timezone = "UTC"
 
