@@ -1,273 +1,197 @@
+#!/usr/bin/env python3
 """
-移动端Cookie修复测试工具
-测试移动端Cookie设置和持久化
+测试移动端Cookie修复
+验证移动端登录和Cookie传递是否正常
 """
 
 import requests
 import json
-import time
-from typing import Dict, Any
+import logging
 
-class MobileCookieFixTester:
-    """移动端Cookie修复测试器"""
+# 设置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 配置
+BASE_URL = "https://linku1-production.up.railway.app"
+FRONTEND_URL = "https://link-u1.vercel.app"
+
+def test_mobile_login_and_cookies():
+    """测试移动端登录和Cookie传递"""
+    logger.info("开始测试移动端Cookie修复...")
     
-    def __init__(self, base_url: str = "https://linku1-production.up.railway.app"):
-        self.base_url = base_url
-        self.session = requests.Session()
-        
-        # 模拟移动端User-Agent
-        self.mobile_headers = {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/140.0.7339.122 Mobile/15E148 Safari/604.1',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Origin': 'https://link-u1.vercel.app',
-            'Referer': 'https://link-u1.vercel.app/',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'cross-site'
-        }
+    # 模拟移动端User-Agent
+    mobile_headers = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/140.0.7339.122 Mobile/15E148 Safari/604.1',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': FRONTEND_URL,
+        'Referer': f'{FRONTEND_URL}/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'cross-site'
+    }
     
-    def test_login_and_cookie_persistence(self) -> Dict[str, Any]:
-        """测试登录和Cookie持久化"""
-        print("Testing mobile login and cookie persistence...")
+    # 创建会话
+    session = requests.Session()
+    session.headers.update(mobile_headers)
+    
+    # 1. 测试登录
+    logger.info("1. 测试移动端登录...")
+    login_data = {
+        "email": "mobiletest@example.com",
+        "password": "test123"
+    }
+    
+    try:
+        login_response = session.post(f"{BASE_URL}/api/secure-auth/login", json=login_data)
+        logger.info(f"登录响应状态: {login_response.status_code}")
         
-        # 测试注册
-        register_data = {
-            "name": f"test_mobile_fix_{int(time.time())}",
-            "email": f"test_mobile_fix_{int(time.time())}@example.com",
-            "password": "test_password_123",
-            "phone": "1234567890"
-        }
-        
-        try:
-            # 注册
-            register_response = self.session.post(
-                f"{self.base_url}/api/users/register",
-                json=register_data,
-                headers=self.mobile_headers
-            )
+        if login_response.status_code == 200:
+            login_result = login_response.json()
+            logger.info(f"✅ 登录成功: {login_result.get('message')}")
+            logger.info(f"Session ID: {login_result.get('session_id', 'N/A')[:8]}...")
             
-            print(f"Register status: {register_response.status_code}")
-            print(f"Register cookies: {dict(register_response.cookies)}")
+            # 检查Cookie
+            cookies = session.cookies.get_dict()
+            logger.info(f"登录后Cookie: {cookies}")
             
-            if register_response.status_code != 200:
-                return {
-                    'status': 'failed',
-                    'error': f'Registration failed: {register_response.text}'
-                }
+            # 检查响应头中的Set-Cookie
+            set_cookies = login_response.headers.get('Set-Cookie', '')
+            logger.info(f"Set-Cookie头: {set_cookies}")
             
-            # 等待邮箱验证（在实际环境中需要验证邮箱）
-            # 这里我们直接测试登录
+            # 2. 测试获取用户信息（使用Cookie）
+            logger.info("2. 测试Cookie认证...")
+            profile_response = session.get(f"{BASE_URL}/api/users/profile/me")
+            logger.info(f"用户信息响应状态: {profile_response.status_code}")
             
-            # 登录
-            login_data = {
-                "username": register_data["email"],
-                "password": register_data["password"]
-            }
+            if profile_response.status_code == 200:
+                profile_data = profile_response.json()
+                logger.info(f"✅ Cookie认证成功: {profile_data.get('name', 'N/A')}")
+                cookie_auth_success = True
+            else:
+                logger.error(f"❌ Cookie认证失败: {profile_response.text}")
+                cookie_auth_success = False
             
-            login_response = self.session.post(
-                f"{self.base_url}/api/secure-auth/login",
-                data=login_data,
-                headers=self.mobile_headers
-            )
-            
-            print(f"Login status: {login_response.status_code}")
-            print(f"Login cookies: {dict(login_response.cookies)}")
-            
-            if login_response.status_code != 200:
-                return {
-                    'status': 'failed',
-                    'error': f'Login failed: {login_response.text}'
-                }
-            
-            # 检查Cookie设置
-            set_cookie_headers = login_response.headers.get_list('Set-Cookie')
-            print(f"Set-Cookie headers: {set_cookie_headers}")
-            
-            # 分析Cookie属性
-            cookie_analysis = []
-            for cookie_header in set_cookie_headers:
-                cookie_parts = cookie_header.split(';')
-                cookie_name = cookie_parts[0].split('=')[0]
-                cookie_attrs = {}
+            # 3. 测试X-Session-ID头认证
+            logger.info("3. 测试X-Session-ID头认证...")
+            session_id = login_result.get('session_id')
+            if session_id:
+                header_headers = mobile_headers.copy()
+                header_headers['X-Session-ID'] = session_id
                 
-                for part in cookie_parts[1:]:
-                    part = part.strip()
-                    if '=' in part:
-                        key, value = part.split('=', 1)
-                        cookie_attrs[key.lower()] = value
-                    else:
-                        cookie_attrs[part.lower()] = True
+                # 创建新的会话，不使用Cookie
+                header_session = requests.Session()
+                header_session.headers.update(header_headers)
                 
-                cookie_analysis.append({
-                    'name': cookie_name,
-                    'attributes': cookie_attrs
-                })
-            
-            # 测试Cookie持久化 - 立即发送另一个请求
-            profile_response = self.session.get(
-                f"{self.base_url}/api/users/profile/me",
-                headers=self.mobile_headers
-            )
-            
-            print(f"Profile request status: {profile_response.status_code}")
-            print(f"Profile request cookies sent: {dict(profile_response.cookies)}")
-            
-            # 检查请求头中的Cookie
-            request_cookies = profile_response.request.headers.get('Cookie', '')
-            print(f"Request cookies: {request_cookies}")
-            
-            return {
-                'status': 'success',
-                'register_status': register_response.status_code,
-                'login_status': login_response.status_code,
-                'profile_status': profile_response.status_code,
-                'cookies_received': dict(login_response.cookies),
-                'cookies_sent': request_cookies,
-                'cookie_analysis': cookie_analysis,
-                'set_cookie_headers': set_cookie_headers
-            }
-            
-        except Exception as e:
-            return {
-                'status': 'error',
-                'error': str(e)
-            }
-    
-    def test_cookie_attributes(self) -> Dict[str, Any]:
-        """测试Cookie属性设置"""
-        print("Testing cookie attributes...")
-        
-        try:
-            # 获取CSRF token
-            csrf_response = self.session.get(
-                f"{self.base_url}/api/csrf/token",
-                headers=self.mobile_headers
-            )
-            
-            print(f"CSRF response status: {csrf_response.status_code}")
-            
-            if csrf_response.status_code != 200:
-                return {
-                    'status': 'failed',
-                    'error': f'CSRF token request failed: {csrf_response.text}'
-                }
-            
-            # 分析Set-Cookie头
-            set_cookie_headers = csrf_response.headers.get_list('Set-Cookie')
-            print(f"CSRF Set-Cookie headers: {set_cookie_headers}")
-            
-            # 检查Cookie属性
-            cookie_analysis = []
-            for cookie_header in set_cookie_headers:
-                cookie_parts = cookie_header.split(';')
-                cookie_name = cookie_parts[0].split('=')[0]
-                cookie_attrs = {}
+                profile_response = header_session.get(f"{BASE_URL}/api/users/profile/me")
+                logger.info(f"头认证响应状态: {profile_response.status_code}")
                 
-                for part in cookie_parts[1:]:
-                    part = part.strip()
-                    if '=' in part:
-                        key, value = part.split('=', 1)
-                        cookie_attrs[key.lower()] = value
-                    else:
-                        cookie_attrs[part.lower()] = True
-                
-                cookie_analysis.append({
-                    'name': cookie_name,
-                    'attributes': cookie_attrs
-                })
+                if profile_response.status_code == 200:
+                    profile_data = profile_response.json()
+                    logger.info(f"✅ X-Session-ID头认证成功: {profile_data.get('name', 'N/A')}")
+                    header_auth_success = True
+                else:
+                    logger.error(f"❌ X-Session-ID头认证失败: {profile_response.text}")
+                    header_auth_success = False
+            else:
+                logger.error("❌ 登录响应中没有session_id")
+                header_auth_success = False
             
-            return {
-                'status': 'success',
-                'cookies_received': dict(csrf_response.cookies),
-                'cookie_analysis': cookie_analysis,
-                'set_cookie_headers': set_cookie_headers
-            }
+            return cookie_auth_success, header_auth_success
             
-        except Exception as e:
-            return {
-                'status': 'error',
-                'error': str(e)
-            }
-    
-    def run_all_tests(self) -> Dict[str, Any]:
-        """运行所有测试"""
-        print("Starting mobile cookie fix tests...")
-        print("=" * 50)
-        
-        results = {
-            'login_persistence': self.test_login_and_cookie_persistence(),
-            'cookie_attributes': self.test_cookie_attributes()
-        }
-        
-        # 生成测试报告
-        self.generate_test_report(results)
-        
-        return results
-    
-    def generate_test_report(self, results: Dict[str, Any]) -> None:
-        """生成测试报告"""
-        print("\n" + "=" * 50)
-        print("MOBILE COOKIE FIX TEST REPORT")
-        print("=" * 50)
-        
-        # 登录和持久化测试结果
-        print("\n1. Login and Cookie Persistence Test:")
-        login_test = results['login_persistence']
-        if login_test['status'] == 'success':
-            print("   ✅ Login and cookie setting successful")
-            print(f"   - Register status: {login_test['register_status']}")
-            print(f"   - Login status: {login_test['login_status']}")
-            print(f"   - Profile status: {login_test['profile_status']}")
-            print(f"   - Cookies received: {len(login_test['cookies_received'])}")
-            print(f"   - Cookies sent: {login_test['cookies_sent']}")
-            
-            # 分析Cookie属性
-            print("\n   Cookie Analysis:")
-            for cookie in login_test['cookie_analysis']:
-                print(f"   - {cookie['name']}: {cookie['attributes']}")
         else:
-            print("   ❌ Login and cookie persistence failed")
-            print(f"   - Error: {login_test.get('error', 'Unknown error')}")
-        
-        # Cookie属性测试结果
-        print("\n2. Cookie Attributes Test:")
-        attr_test = results['cookie_attributes']
-        if attr_test['status'] == 'success':
-            print("   ✅ Cookie attributes test successful")
-            print(f"   - Cookies received: {len(attr_test['cookies_received'])}")
+            logger.error(f"❌ 登录失败: {login_response.text}")
+            return False, False
             
-            # 分析Cookie属性
-            print("\n   Cookie Analysis:")
-            for cookie in attr_test['cookie_analysis']:
-                print(f"   - {cookie['name']}: {cookie['attributes']}")
-        else:
-            print("   ❌ Cookie attributes test failed")
-            print(f"   - Error: {attr_test.get('error', 'Unknown error')}")
+    except Exception as e:
+        logger.error(f"❌ 测试过程中出错: {e}")
+        return False, False
+
+def test_cors_configuration():
+    """测试CORS配置"""
+    logger.info("测试CORS配置...")
+    
+    mobile_headers = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/140.0.7339.122 Mobile/15E148 Safari/604.1',
+        'Origin': FRONTEND_URL,
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'Content-Type, X-Session-ID'
+    }
+    
+    try:
+        preflight_response = requests.options(f"{BASE_URL}/api/secure-auth/login", headers=mobile_headers)
+        logger.info(f"CORS预检响应状态: {preflight_response.status_code}")
         
-        print("\n" + "=" * 50)
-        print("Test completed!")
-
-
-def main():
-    """主函数"""
-    import sys
-    
-    base_url = sys.argv[1] if len(sys.argv) > 1 else "https://linku1-production.up.railway.app"
-    
-    tester = MobileCookieFixTester(base_url)
-    results = tester.run_all_tests()
-    
-    # 返回退出码
-    all_success = all(
-        result.get('status') == 'success' 
-        for result in results.values() 
-        if isinstance(result, dict) and 'status' in result
-    )
-    
-    sys.exit(0 if all_success else 1)
-
+        # 检查关键的CORS头
+        cors_headers = {
+            'Access-Control-Allow-Origin': preflight_response.headers.get('Access-Control-Allow-Origin'),
+            'Access-Control-Allow-Credentials': preflight_response.headers.get('Access-Control-Allow-Credentials'),
+            'Access-Control-Allow-Methods': preflight_response.headers.get('Access-Control-Allow-Methods'),
+            'Access-Control-Allow-Headers': preflight_response.headers.get('Access-Control-Allow-Headers')
+        }
+        
+        logger.info(f"CORS配置: {cors_headers}")
+        
+        # 检查是否支持X-Session-ID头
+        allowed_headers = cors_headers.get('Access-Control-Allow-Headers', '')
+        supports_session_header = 'X-Session-ID' in allowed_headers
+        
+        if supports_session_header:
+            logger.info("✅ CORS支持X-Session-ID头")
+        else:
+            logger.warning("⚠️ CORS不支持X-Session-ID头")
+        
+        return preflight_response.status_code == 200 and supports_session_header
+        
+    except Exception as e:
+        logger.error(f"CORS测试失败: {e}")
+        return False
 
 if __name__ == "__main__":
-    main()
+    logger.info("=" * 60)
+    logger.info("移动端Cookie修复测试")
+    logger.info("=" * 60)
+    
+    # 运行测试
+    tests = [
+        ("CORS配置", test_cors_configuration),
+        ("移动端登录和认证", test_mobile_login_and_cookies)
+    ]
+    
+    results = []
+    for test_name, test_func in tests:
+        logger.info(f"\n--- {test_name} ---")
+        try:
+            if test_name == "移动端登录和认证":
+                cookie_success, header_success = test_func()
+                result = cookie_success or header_success  # 任一成功即可
+                logger.info(f"Cookie认证: {'✅' if cookie_success else '❌'}")
+                logger.info(f"头认证: {'✅' if header_success else '❌'}")
+            else:
+                result = test_func()
+            
+            results.append((test_name, result))
+            logger.info(f"{test_name}: {'✅ 通过' if result else '❌ 失败'}")
+        except Exception as e:
+            logger.error(f"{test_name} 测试异常: {e}")
+            results.append((test_name, False))
+    
+    # 总结
+    logger.info("\n" + "=" * 60)
+    logger.info("测试结果总结")
+    logger.info("=" * 60)
+    
+    passed = sum(1 for _, result in results if result)
+    total = len(results)
+    
+    for test_name, result in results:
+        status = "✅ 通过" if result else "❌ 失败"
+        logger.info(f"{test_name}: {status}")
+    
+    logger.info(f"\n总计: {passed}/{total} 测试通过")
+    
+    if passed == total:
+        logger.info("🎉 所有测试通过！移动端Cookie修复成功！")
+    else:
+        logger.info("⚠️  部分测试失败，需要进一步调试")

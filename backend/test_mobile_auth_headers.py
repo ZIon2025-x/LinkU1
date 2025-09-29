@@ -74,6 +74,12 @@ def test_mobile_auth_with_headers():
             print(f"   移动端认证: {mobile_auth}")
             print(f"   认证头: {auth_headers}")
             
+            # 检查响应头中的移动端标识
+            print(f"   响应头中的移动端标识:")
+            for header, value in login_response.headers.items():
+                if 'mobile' in header.lower() or 'auth' in header.lower():
+                    print(f"     {header}: {value}")
+            
         except json.JSONDecodeError:
             print("   无法解析登录响应")
             return

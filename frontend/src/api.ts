@@ -103,6 +103,12 @@ export function clearCSRFToken(): void {
 }
 
 api.interceptors.request.use(async config => {
+  // 添加移动端认证支持 - 从localStorage获取session_id
+  const sessionId = localStorage.getItem('session_id');
+  if (sessionId) {
+    config.headers['X-Session-ID'] = sessionId;
+  }
+  
   // 对于写操作，添加CSRF token
   // 但跳过登录相关的请求，因为它们不需要CSRF保护
   if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
@@ -801,6 +807,13 @@ export const checkCustomerServiceAvailability = async () => {
 // 用户登录
 export const login = async (email: string, password: string) => {
   const res = await api.post('/api/secure-auth/login', { email, password });
+  
+  // 保存session_id到localStorage（移动端认证支持）
+  if (res.data.session_id) {
+    localStorage.setItem('session_id', res.data.session_id);
+    console.log('Session ID已保存到localStorage:', res.data.session_id);
+  }
+  
   return res.data;
 };
 
@@ -819,6 +832,21 @@ export const register = async (userData: {
 export const forgotPassword = async (email: string) => {
   const res = await api.post('/api/users/forgot-password', { email });
   return res.data;
+};
+
+// 用户登出
+export const logout = async () => {
+  try {
+    await api.post('/api/secure-auth/logout');
+  } catch (error) {
+    console.warn('登出请求失败:', error);
+  } finally {
+    // 清理localStorage
+    localStorage.removeItem('session_id');
+    localStorage.removeItem('userInfo');
+    clearCSRFToken();
+    console.log('用户已登出，localStorage已清理');
+  }
 };
 
 export default api; 
