@@ -110,12 +110,13 @@ def secure_login(
         # 生成刷新令牌
         refresh_token = SecureAuthManager.generate_refresh_token()
         
-        # 设置安全Cookie
+        # 设置安全Cookie（传递User-Agent用于移动端检测）
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
-            user_id=user.id
+            user_id=user.id,
+            user_agent=user_agent
         )
         
         # 记录成功登录

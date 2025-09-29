@@ -87,7 +87,8 @@ async def cs_login(
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CSRFProtection.set_csrf_cookie(response, csrf_token)
+        user_agent = request.headers.get("user-agent", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
         
         # 添加安全响应头
         from app.security import add_security_headers
@@ -181,7 +182,8 @@ async def cs_refresh_token(
         # 生成并设置新的CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        CSRFProtection.set_csrf_cookie(response, csrf_token)
+        user_agent = request.headers.get("user-agent", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
         
         # 添加安全响应头
         from app.security import add_security_headers

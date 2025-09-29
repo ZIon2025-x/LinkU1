@@ -27,10 +27,10 @@ class CSRFProtection:
         return secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
     
     @staticmethod
-    def set_csrf_cookie(response: Response, token: str) -> None:
+    def set_csrf_cookie(response: Response, token: str, user_agent: str = "") -> None:
         """设置CSRF token到Cookie"""
         from app.cookie_manager import CookieManager
-        CookieManager.set_csrf_cookie(response, token)
+        CookieManager.set_csrf_cookie(response, token, user_agent)
     
     @staticmethod
     def get_csrf_token_from_cookie(request: Request) -> Optional[str]:

@@ -51,13 +51,17 @@ class Config:
         os.getenv("COOKIE_SECURE", "true" if IS_PRODUCTION else "false").lower() == "true"
     )
     COOKIE_HTTPONLY = True
-    # 修复移动端Cookie问题：生产环境使用lax而不是none
-    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax" if IS_PRODUCTION else "lax")
+    # 移动端兼容性：使用strict而不是lax，避免跨站请求问题
+    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "strict" if IS_PRODUCTION else "lax")
     COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
     
     # 移动端兼容性配置
     COOKIE_PATH = "/"
     COOKIE_MAX_AGE = 24 * 60 * 60  # 24小时
+    
+    # 移动端特殊配置
+    MOBILE_COOKIE_SAMESITE = "none"  # 移动端需要none以支持跨域
+    MOBILE_COOKIE_SECURE = True      # none必须配合secure
     
     # 开发环境配置
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
