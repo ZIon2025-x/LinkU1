@@ -110,21 +110,26 @@ class CookieManager:
         secure_value = CookieManager._get_secure_value(user_agent)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
-        # 移动端特殊处理：使用更宽松的Cookie设置
+        # 移动端特殊处理：使用最宽松的Cookie设置
         if is_mobile:
-            # 移动端：不设置domain，使用更宽松的path
+            # 移动端：完全移除domain限制，使用根路径
             cookie_domain = None
             cookie_path = "/"
+            # 移动端使用更短的过期时间，避免浏览器限制
+            session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
+            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
         else:
             # 桌面端：使用配置的domain和path
             cookie_domain = Config.COOKIE_DOMAIN
             cookie_path = Config.COOKIE_PATH
+            session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
         
         # 设置会话ID Cookie（短期，用于API调用）
         response.set_cookie(
             key="session_id",
             value=session_id,
-            max_age=Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            max_age=session_max_age,
             httponly=Config.COOKIE_HTTPONLY,
             secure=secure_value,
             samesite=samesite_value,
@@ -136,7 +141,7 @@ class CookieManager:
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
-            max_age=Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            max_age=refresh_max_age,
             httponly=Config.COOKIE_HTTPONLY,
             secure=secure_value,
             samesite=samesite_value,
@@ -148,13 +153,39 @@ class CookieManager:
         response.set_cookie(
             key="user_id",
             value=user_id,
-            max_age=Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            max_age=refresh_max_age,
             httponly=False,  # 前端需要访问
             secure=secure_value,
             samesite=samesite_value,
             path=cookie_path,
             domain=cookie_domain
         )
+        
+        # 移动端额外设置：尝试多种Cookie配置
+        if is_mobile:
+            # 设置备用Cookie（不同的属性组合）
+            response.set_cookie(
+                key="mobile_session_id",
+                value=session_id,
+                max_age=session_max_age,
+                httponly=True,
+                secure=False,  # 尝试非Secure
+                samesite="lax",  # 尝试lax
+                path="/",
+                domain=None
+            )
+            
+            # 设置非HttpOnly的Cookie（用于JavaScript访问）
+            response.set_cookie(
+                key="js_session_id",
+                value=session_id,
+                max_age=session_max_age,
+                httponly=False,
+                secure=secure_value,
+                samesite=samesite_value,
+                path="/",
+                domain=None
+            )
         
         logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     

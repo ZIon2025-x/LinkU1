@@ -353,7 +353,13 @@ def get_device_fingerprint(request: Request) -> str:
 
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话"""
-    session_id = request.cookies.get("session_id")
+    # 尝试多种Cookie名称（移动端兼容性）
+    session_id = (
+        request.cookies.get("session_id") or
+        request.cookies.get("mobile_session_id") or
+        request.cookies.get("js_session_id")
+    )
+    
     if not session_id:
         return None
     
