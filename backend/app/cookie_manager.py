@@ -118,6 +118,9 @@ class CookieManager:
             # 移动端使用更短的过期时间，避免浏览器限制
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
+            # 移动端必须使用特定的SameSite和Secure设置
+            samesite_value = "none"  # 移动端跨域需要none
+            secure_value = True      # none必须配合secure
         else:
             # 桌面端：使用配置的domain和path
             cookie_domain = Config.COOKIE_DOMAIN
@@ -169,8 +172,8 @@ class CookieManager:
                 value=session_id,
                 max_age=session_max_age,
                 httponly=True,
-                secure=False,  # 尝试非Secure
-                samesite="lax",  # 尝试lax
+                secure=True,   # 移动端必须使用Secure
+                samesite="none",  # 移动端必须使用none
                 path="/",
                 domain=None
             )
@@ -181,8 +184,8 @@ class CookieManager:
                 value=session_id,
                 max_age=session_max_age,
                 httponly=False,
-                secure=secure_value,
-                samesite=samesite_value,
+                secure=True,   # 移动端必须使用Secure
+                samesite="none",  # 移动端必须使用none
                 path="/",
                 domain=None
             )
