@@ -11,7 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.deps import get_sync_db
 from app import models, schemas, crud
-from app.security import create_access_token, create_refresh_token, verify_password, get_password_hash, set_secure_cookies
+from app.security import create_access_token, create_refresh_token, verify_password, get_password_hash
+from app.cookie_manager import CookieManager
 from app.role_deps import get_current_customer_service_secure_sync
 from app.rate_limiting import rate_limit
 from app.role_management import UserRole
@@ -81,7 +82,7 @@ async def cs_login(
         refresh_token = create_refresh_token(data={"sub": cs.id, "role": "cs"})
         
         # 设置安全cookie
-        set_secure_cookies(response, access_token, refresh_token)
+        CookieManager.set_auth_cookies(response, access_token, refresh_token)
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -175,7 +176,7 @@ async def cs_refresh_token(
         new_refresh_token = create_refresh_token(data={"sub": cs.id, "role": "cs"})
         
         # 设置新的安全cookie
-        set_secure_cookies(response, new_access_token, new_refresh_token)
+        CookieManager.set_auth_cookies(response, new_access_token, new_refresh_token)
         
         # 生成并设置新的CSRF token
         from app.csrf import CSRFProtection

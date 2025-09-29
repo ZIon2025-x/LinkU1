@@ -11,7 +11,8 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.deps import get_sync_db
 from app import models, schemas, crud
-from app.security import create_access_token, create_refresh_token, verify_password, get_password_hash, set_secure_cookies
+from app.security import create_access_token, create_refresh_token, verify_password, get_password_hash
+from app.cookie_manager import CookieManager
 from app.role_deps import get_current_admin_secure_sync, get_current_super_admin_secure_sync
 from app.rate_limiting import rate_limit
 from app.role_management import UserRole
@@ -72,7 +73,7 @@ async def admin_login(
         refresh_token = create_refresh_token(data={"sub": admin.id, "role": role})
         
         # 设置安全cookie
-        set_secure_cookies(response, access_token, refresh_token)
+        CookieManager.set_auth_cookies(response, access_token, refresh_token)
         
         # 更新最后登录时间
         admin.last_login = datetime.utcnow()
@@ -159,7 +160,7 @@ async def admin_refresh_token(
         new_refresh_token = create_refresh_token(data={"sub": admin.id, "role": role})
         
         # 设置新的安全cookie
-        set_secure_cookies(response, new_access_token, new_refresh_token)
+        CookieManager.set_auth_cookies(response, new_access_token, new_refresh_token)
         
         logger.info(f"管理员token刷新成功：{admin.username} (ID: {admin.id})")
         

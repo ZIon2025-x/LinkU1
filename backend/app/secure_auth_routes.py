@@ -15,11 +15,11 @@ from app import crud, models, schemas
 from app.deps import get_sync_db
 from app.secure_auth import (
     SecureAuthManager,
-    SecureCookieManager,
     get_client_ip,
     get_device_fingerprint,
     validate_session
 )
+from app.cookie_manager import CookieManager
 from app.security import get_password_hash, verify_password, log_security_event
 from app.rate_limiting import rate_limit
 
@@ -111,7 +111,7 @@ def secure_login(
         refresh_token = SecureAuthManager.generate_refresh_token()
         
         # 设置安全Cookie
-        SecureCookieManager.set_secure_cookies(
+        CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
             refresh_token=refresh_token,
@@ -187,7 +187,7 @@ def refresh_session(
         refresh_token = SecureAuthManager.generate_refresh_token()
         
         # 设置新的安全Cookie
-        SecureCookieManager.set_secure_cookies(
+        CookieManager.set_session_cookies(
             response=response,
             session_id=new_session.session_id,
             refresh_token=refresh_token,
@@ -225,14 +225,14 @@ def secure_logout(
             logger.info(f"用户登出 - 会话: {session.session_id[:8]}...")
         
         # 清除Cookie
-        SecureCookieManager.clear_secure_cookies(response)
+        CookieManager.clear_all_cookies(response)
         
         return {"message": "登出成功"}
 
     except Exception as e:
         logger.error(f"安全登出失败: {e}")
         # 即使出错也要清除Cookie
-        SecureCookieManager.clear_secure_cookies(response)
+        CookieManager.clear_all_cookies(response)
         return {"message": "登出成功"}
 
 @secure_auth_router.post("/logout-all")
@@ -254,7 +254,7 @@ def logout_all_sessions(
         revoked_count = SecureAuthManager.revoke_user_sessions(session.user_id)
         
         # 清除Cookie
-        SecureCookieManager.clear_secure_cookies(response)
+        CookieManager.clear_all_cookies(response)
         
         logger.info(f"用户登出所有会话 - 用户: {session.user_id}, 撤销: {revoked_count} 个会话")
         

@@ -114,6 +114,7 @@ app.include_router(rate_limit_router, tags=["速率限制"])
 
 # 注册全局异常处理器
 from fastapi.exceptions import RequestValidationError
+from fastapi import HTTPException
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(SecurityError, security_exception_handler)
