@@ -40,7 +40,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         # 设置refresh_token cookie（长期）
@@ -51,7 +52,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         # 如果提供了user_id，设置用户ID Cookie（非敏感，用于前端显示）
@@ -63,7 +65,8 @@ class CookieManager:
                 httponly=False,  # 前端需要访问
                 secure=Config.COOKIE_SECURE,
                 samesite=samesite_value,
-                path="/"
+                path=Config.COOKIE_PATH,
+                domain=Config.COOKIE_DOMAIN
             )
         
         logger.info(f"设置认证Cookie - user_id: {user_id}")
@@ -86,7 +89,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
@@ -97,7 +101,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         # 设置用户ID Cookie（非敏感，用于前端显示）
@@ -108,7 +113,8 @@ class CookieManager:
             httponly=False,  # 前端需要访问
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}")
@@ -125,7 +131,8 @@ class CookieManager:
             httponly=False,  # 需要JavaScript访问
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path=Config.COOKIE_PATH,
+            domain=Config.COOKIE_DOMAIN
         )
         
         logger.info("设置CSRF Cookie")
