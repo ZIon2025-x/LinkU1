@@ -30,7 +30,15 @@ class MobileCookieDebugger:
     
     def analyze_set_cookie_headers(self, response: requests.Response) -> List[Dict[str, Any]]:
         """分析Set-Cookie响应头"""
-        set_cookie_headers = response.headers.get_list('Set-Cookie')
+        # requests库的headers是CaseInsensitiveDict，需要特殊处理
+        set_cookie_headers = []
+        if 'Set-Cookie' in response.headers:
+            set_cookie_value = response.headers['Set-Cookie']
+            if isinstance(set_cookie_value, list):
+                set_cookie_headers = set_cookie_value
+            else:
+                set_cookie_headers = [set_cookie_value]
+        
         analysis = []
         
         for cookie_header in set_cookie_headers:
@@ -58,7 +66,7 @@ class MobileCookieDebugger:
     
     def test_login_flow(self) -> Dict[str, Any]:
         """测试登录流程"""
-        print("🔍 开始移动端登录流程测试...")
+        print("开始移动端登录流程测试...")
         
         # 1. 获取CSRF token
         print("\n1. 获取CSRF token...")
@@ -114,7 +122,7 @@ class MobileCookieDebugger:
         success = profile_response.status_code == 200
         cookies_persisted = len(dict(profile_response.cookies)) > 0 or bool(request_cookies)
         
-        print(f"\n📊 测试结果:")
+        print(f"\n测试结果:")
         print(f"   - 登录成功: {login_response.status_code == 200}")
         print(f"   - Cookie持久化: {cookies_persisted}")
         print(f"   - 认证成功: {success}")
@@ -135,7 +143,7 @@ class MobileCookieDebugger:
     
     def test_multiple_requests(self) -> Dict[str, Any]:
         """测试多次请求的Cookie持久化"""
-        print("\n🔄 测试多次请求Cookie持久化...")
+        print("\n测试多次请求Cookie持久化...")
         
         results = []
         for i in range(3):
@@ -161,7 +169,7 @@ class MobileCookieDebugger:
     
     def run_comprehensive_test(self) -> Dict[str, Any]:
         """运行综合测试"""
-        print("🚀 开始移动端Cookie综合测试")
+        print("开始移动端Cookie综合测试")
         print("=" * 60)
         
         # 测试登录流程
@@ -181,35 +189,35 @@ class MobileCookieDebugger:
     def generate_comprehensive_report(self, login_result: Dict[str, Any], persistence_result: List[Dict[str, Any]]) -> None:
         """生成综合测试报告"""
         print("\n" + "=" * 60)
-        print("📋 移动端Cookie综合测试报告")
+        print("移动端Cookie综合测试报告")
         print("=" * 60)
         
         # 登录测试结果
-        print(f"\n🔐 登录测试:")
-        print(f"   CSRF Token: {'✅' if login_result['csrf_status'] == 200 else '❌'} ({login_result['csrf_status']})")
-        print(f"   登录请求: {'✅' if login_result['login_status'] == 200 else '❌'} ({login_result['login_status']})")
-        print(f"   认证请求: {'✅' if login_result['profile_status'] == 200 else '❌'} ({login_result['profile_status']})")
+        print(f"\n登录测试:")
+        print(f"   CSRF Token: {'成功' if login_result['csrf_status'] == 200 else '失败'} ({login_result['csrf_status']})")
+        print(f"   登录请求: {'成功' if login_result['login_status'] == 200 else '失败'} ({login_result['login_status']})")
+        print(f"   认证请求: {'成功' if login_result['profile_status'] == 200 else '失败'} ({login_result['profile_status']})")
         
         # Cookie分析
-        print(f"\n🍪 Cookie分析:")
+        print(f"\nCookie分析:")
         print(f"   CSRF Cookies: {len(login_result['csrf_cookies'])}")
         print(f"   登录Cookies: {len(login_result['login_cookies'])}")
-        print(f"   请求Cookie: {'✅' if login_result['request_cookies'] else '❌'}")
+        print(f"   请求Cookie: {'是' if login_result['request_cookies'] else '否'}")
         
         # 详细Cookie信息
         if login_result['login_analysis']:
-            print(f"\n📝 登录Cookie详情:")
+            print(f"\n登录Cookie详情:")
             for cookie in login_result['login_analysis']:
                 print(f"   {cookie['name']}:")
                 for attr, value in cookie['attributes'].items():
                     print(f"     - {attr}: {value}")
         
         # 持久化测试结果
-        print(f"\n🔄 持久化测试:")
+        print(f"\n持久化测试:")
         for result in persistence_result:
-            status_icon = '✅' if result['status'] == 200 else '❌'
-            cookie_icon = '✅' if result['request_cookie'] else '❌'
-            print(f"   请求{result['request_num']}: {status_icon} 状态={result['status']}, {cookie_icon} Cookie={bool(result['request_cookie'])}")
+            status_text = '成功' if result['status'] == 200 else '失败'
+            cookie_text = '是' if result['request_cookie'] else '否'
+            print(f"   请求{result['request_num']}: {status_text} 状态={result['status']}, Cookie={cookie_text}")
         
         # 总体评估
         overall_success = (
@@ -218,10 +226,10 @@ class MobileCookieDebugger:
             any(r['status'] == 200 for r in persistence_result)
         )
         
-        print(f"\n🎯 总体评估: {'✅ 成功' if overall_success else '❌ 失败'}")
+        print(f"\n总体评估: {'成功' if overall_success else '失败'}")
         
         if not overall_success:
-            print(f"\n🔧 建议修复:")
+            print(f"\n建议修复:")
             if not login_result['cookies_persisted']:
                 print("   - Cookie未持久化，检查SameSite和Secure设置")
             if not login_result['success']:

@@ -12,12 +12,11 @@ router = APIRouter(prefix="/api/csrf", tags=["CSRF"])
 @router.get("/token")
 async def get_csrf_token(
     request: Request,
-    response: Response,
-    current_user = Depends(get_current_user_or_cs_or_admin)
+    response: Response
 ):
     """
     获取CSRF token
-    用户必须已登录才能获取CSRF token
+    无需认证，用于登录前的CSRF保护
     """
     try:
         # 生成新的CSRF token
