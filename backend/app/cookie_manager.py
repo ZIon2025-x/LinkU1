@@ -28,13 +28,13 @@ class CookieManager:
         """获取有效的SameSite值，移动端使用特殊配置"""
         # 检测移动端
         if CookieManager._is_mobile_user_agent(user_agent):
-            return Config.MOBILE_COOKIE_SAMESITE
+            return Config.MOBILE_COOKIE_SAMESITE  # type: ignore
         
         # 桌面端使用默认配置
         samesite_value = Config.COOKIE_SAMESITE
         if samesite_value not in ["lax", "strict", "none"]:
             samesite_value = "lax"
-        return samesite_value
+        return samesite_value  # type: ignore
     
     @staticmethod
     def _get_secure_value(user_agent: str = "") -> bool:
@@ -108,6 +108,17 @@ class CookieManager:
         """设置会话相关的Cookie（新安全系统）"""
         samesite_value = CookieManager._get_samesite_value(user_agent)
         secure_value = CookieManager._get_secure_value(user_agent)
+        is_mobile = CookieManager._is_mobile_user_agent(user_agent)
+        
+        # 移动端特殊处理：使用更宽松的Cookie设置
+        if is_mobile:
+            # 移动端：不设置domain，使用更宽松的path
+            cookie_domain = None
+            cookie_path = "/"
+        else:
+            # 桌面端：使用配置的domain和path
+            cookie_domain = Config.COOKIE_DOMAIN
+            cookie_path = Config.COOKIE_PATH
         
         # 设置会话ID Cookie（短期，用于API调用）
         response.set_cookie(
@@ -117,8 +128,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=secure_value,
             samesite=samesite_value,
-            path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            path=cookie_path,
+            domain=cookie_domain
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
@@ -129,8 +140,8 @@ class CookieManager:
             httponly=Config.COOKIE_HTTPONLY,
             secure=secure_value,
             samesite=samesite_value,
-            path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            path=cookie_path,
+            domain=cookie_domain
         )
         
         # 设置用户ID Cookie（非敏感，用于前端显示）
@@ -141,18 +152,26 @@ class CookieManager:
             httponly=False,  # 前端需要访问
             secure=secure_value,
             samesite=samesite_value,
-            path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            path=cookie_path,
+            domain=cookie_domain
         )
         
-        is_mobile = CookieManager._is_mobile_user_agent(user_agent)
-        logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, SameSite: {samesite_value}, Secure: {secure_value}")
+        logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     
     @staticmethod
     def set_csrf_cookie(response: Response, token: str, user_agent: str = "") -> None:
         """设置CSRF token Cookie"""
         samesite_value = CookieManager._get_samesite_value(user_agent)
         secure_value = CookieManager._get_secure_value(user_agent)
+        is_mobile = CookieManager._is_mobile_user_agent(user_agent)
+        
+        # 移动端特殊处理
+        if is_mobile:
+            cookie_domain = None
+            cookie_path = "/"
+        else:
+            cookie_domain = Config.COOKIE_DOMAIN
+            cookie_path = Config.COOKIE_PATH
         
         response.set_cookie(
             key="csrf_token",
@@ -161,8 +180,8 @@ class CookieManager:
             httponly=False,  # 需要JavaScript访问
             secure=secure_value,
             samesite=samesite_value,
-            path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            path=cookie_path,
+            domain=cookie_domain
         )
         
         logger.info("设置CSRF Cookie")
