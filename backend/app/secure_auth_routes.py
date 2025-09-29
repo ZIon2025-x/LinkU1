@@ -121,6 +121,19 @@ def secure_login(
         
         # 记录成功登录
         log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户安全登录成功")
+        
+        # 检测是否为移动端
+        is_mobile = any(keyword in user_agent.lower() for keyword in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        # 为移动端添加特殊的响应头
+        if is_mobile:
+            response.headers["X-Session-ID"] = session.session_id
+            response.headers["X-User-ID"] = user.id
+            response.headers["X-Auth-Status"] = "authenticated"
+            response.headers["X-Mobile-Auth"] = "true"
 
         return {
             "message": "登录成功",
@@ -131,8 +144,14 @@ def secure_login(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
             },
-            "session_id": session.session_id,  # 仅用于调试
+            "session_id": session.session_id,  # 移动端需要这个值
             "expires_in": 300,  # 5分钟
+            "mobile_auth": is_mobile,  # 标识是否为移动端
+            "auth_headers": {
+                "X-Session-ID": session.session_id,
+                "X-User-ID": user.id,
+                "X-Auth-Status": "authenticated"
+            } if is_mobile else None
         }
 
     except HTTPException:
