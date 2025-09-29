@@ -31,6 +31,25 @@ except:
     USE_REDIS = False
     redis_client = None
 
+def safe_redis_get(key: str) -> Optional[dict]:
+    """安全地从 Redis 获取 JSON 数据"""
+    if not redis_client:
+        return None
+    
+    data = redis_client.get(key)
+    if not data:
+        return None
+    
+    # 确保 data 是字符串
+    if isinstance(data, bytes):
+        data = data.decode('utf-8')
+    
+    try:
+        return json.loads(data)
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        logger.error(f"Failed to decode Redis data for key {key}: {e}")
+        return None
+
 # 内存存储（Redis不可用时的备选方案）
 active_sessions: Dict[str, 'SessionInfo'] = {}
 refresh_token_blacklist: Set[str] = set()
@@ -112,9 +131,8 @@ class SecureAuthManager:
                 # 获取最旧的会话并删除
                 oldest_sessions = []
                 for sid in user_sessions:
-                    session_data = redis_client.get(f"session:{sid}")
-                    if session_data:
-                        data = json.loads(session_data)
+                    data = safe_redis_get(f"session:{sid}")
+                    if data:
                         oldest_sessions.append((data["last_activity"], sid))
                 
                 # 按最后活动时间排序，删除最旧的
@@ -140,11 +158,9 @@ class SecureAuthManager:
         """获取会话信息"""
         if USE_REDIS and redis_client:
             # 从 Redis 获取会话
-            session_data = redis_client.get(f"session:{session_id}")
-            if not session_data:
+            data = safe_redis_get(f"session:{session_id}")
+            if not data:
                 return None
-            
-            data = json.loads(session_data)
             session = SessionInfo(
                 user_id=data["user_id"],
                 session_id=data["session_id"],
@@ -168,11 +184,11 @@ class SecureAuthManager:
             
             # 更新最后活动时间
             session.last_activity = datetime.utcnow()
-            session_data["last_activity"] = session.last_activity.isoformat()
+            data["last_activity"] = session.last_activity.isoformat()
             redis_client.setex(
                 f"session:{session_id}",
                 SESSION_EXPIRE_HOURS * 3600,
-                json.dumps(session_data)
+                json.dumps(data)
             )
             
             return session
@@ -196,9 +212,8 @@ class SecureAuthManager:
         """撤销会话"""
         if USE_REDIS and redis_client:
             # 从 Redis 撤销会话
-            session_data = redis_client.get(f"session:{session_id}")
-            if session_data:
-                data = json.loads(session_data)
+            data = safe_redis_get(f"session:{session_id}")
+            if data:
                 data["is_active"] = False
                 redis_client.setex(
                     f"session:{session_id}",
@@ -226,9 +241,8 @@ class SecureAuthManager:
             count = 0
             
             for session_id in user_sessions:
-                session_data = redis_client.get(f"session:{session_id}")
-                if session_data:
-                    data = json.loads(session_data)
+                data = safe_redis_get(f"session:{session_id}")
+                if data:
                     data["is_active"] = False
                     redis_client.setex(
                         f"session:{session_id}",
