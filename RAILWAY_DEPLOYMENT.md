@@ -31,6 +31,8 @@ DATABASE_URL=postgresql://username:password@host:port/database
 ASYNC_DATABASE_URL=postgresql+asyncpg://username:password@host:port/database
 
 # Redis配置 (Railway会自动提供)
+# 注意：需要先在Railway中添加Redis服务
+# 如果没有Redis服务，请设置 USE_REDIS=false
 REDIS_URL=redis://host:port/0
 USE_REDIS=true
 
@@ -101,8 +103,22 @@ cmd = "python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 ### 常见错误
 1. **ModuleNotFoundError**: 检查requirements.txt
 2. **Database connection failed**: 检查DATABASE_URL
-3. **CORS error**: 检查ALLOWED_ORIGINS
-4. **Port binding error**: 确保使用$PORT环境变量
+3. **Redis连接失败**: 检查是否添加了Redis服务，或设置USE_REDIS=false
+4. **CORS error**: 检查ALLOWED_ORIGINS
+5. **Port binding error**: 确保使用$PORT环境变量
+
+### Redis连接问题
+如果看到 "Redis连接失败，使用内存缓存" 错误：
+
+**方案1：添加Redis服务（推荐）**
+1. 在Railway项目中添加Redis服务
+2. 复制REDIS_URL到环境变量
+3. 重新部署
+
+**方案2：禁用Redis（临时）**
+1. 设置环境变量：`USE_REDIS=false`
+2. 重新部署
+3. 应用将使用内存缓存
 
 ### 查看日志
 1. 在Railway控制台点击Deployments

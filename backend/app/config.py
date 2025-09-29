@@ -31,6 +31,16 @@ class Config:
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
     REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
     USE_REDIS = os.getenv("USE_REDIS", "true").lower() == "true"  # 默认使用Redis
+    
+    # Railway Redis配置检测
+    if os.getenv("RAILWAY_ENVIRONMENT"):
+        # 在Railway环境中，优先使用REDIS_URL
+        if REDIS_URL and not REDIS_URL.startswith("redis://localhost"):
+            # 使用Railway提供的Redis URL
+            pass
+        else:
+            # 如果没有有效的Redis URL，禁用Redis
+            USE_REDIS = False
 
     # Cookie配置 - 智能环境检测
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
