@@ -31,17 +31,30 @@ class RedisCache:
         
         if REDIS_AVAILABLE and settings.USE_REDIS:
             try:
-                self.redis_client = redis.Redis(
-                    host=settings.REDIS_HOST,
-                    port=settings.REDIS_PORT,
-                    db=settings.REDIS_DB,
-                    password=settings.REDIS_PASSWORD,
-                    decode_responses=False,  # 使用二进制模式以支持pickle
-                    socket_connect_timeout=5,
-                    socket_timeout=5,
-                    retry_on_timeout=True,
-                    health_check_interval=30
-                )
+                # 优先使用REDIS_URL，如果不可用则使用单独的环境变量
+                if settings.REDIS_URL and not settings.REDIS_URL.startswith("redis://localhost"):
+                    # 使用REDIS_URL连接
+                    self.redis_client = redis.from_url(
+                        settings.REDIS_URL,
+                        decode_responses=False,  # 使用二进制模式以支持pickle
+                        socket_connect_timeout=5,
+                        socket_timeout=5,
+                        retry_on_timeout=True,
+                        health_check_interval=30
+                    )
+                else:
+                    # 使用单独的环境变量连接
+                    self.redis_client = redis.Redis(
+                        host=settings.REDIS_HOST,
+                        port=settings.REDIS_PORT,
+                        db=settings.REDIS_DB,
+                        password=settings.REDIS_PASSWORD,
+                        decode_responses=False,  # 使用二进制模式以支持pickle
+                        socket_connect_timeout=5,
+                        socket_timeout=5,
+                        retry_on_timeout=True,
+                        health_check_interval=30
+                    )
                 # 测试连接
                 self.redis_client.ping()
                 self.enabled = True
@@ -234,3 +247,7 @@ def invalidate_tasks_cache():
     """使任务相关缓存失效"""
     redis_cache.delete_pattern(f"{CACHE_PREFIXES['TASKS']}:*")
     redis_cache.delete_pattern(f"{CACHE_PREFIXES['TASK_DETAIL']}:*")
+
+def get_redis_client():
+    """获取Redis客户端实例"""
+    return redis_cache.redis_client if redis_cache.enabled else None
