@@ -2,13 +2,13 @@ import datetime
 from datetime import timezone
 from typing import Optional
 
-from passlib.context import CryptContext
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 密码加密上下文已移至 app.security 模块
+# 请使用: from app.security import pwd_context
 
 
 def get_uk_time():
@@ -21,12 +21,12 @@ def get_uk_time():
     return datetime.now(uk_tz)
 
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+# 密码哈希函数已移至 app.security 模块
+# 请使用: from app.security import get_password_hash
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+# 密码验证函数已移至 app.security 模块
+# 请使用: from app.security import verify_password
 
 
 def get_user_by_email(db: Session, email: str):
@@ -83,6 +83,7 @@ def create_user(db: Session, user: schemas.UserCreate):
 
     from app.id_generator import format_user_id
 
+    from app.security import get_password_hash
     hashed_password = get_password_hash(user.password)
 
     # 生成唯一的用户ID
@@ -1201,6 +1202,7 @@ def update_user_by_admin(db: Session, user_id: str, user_update: dict):
 def create_customer_service_by_admin(db: Session, cs_data: dict):
     """管理员创建客服账号"""
     # 创建用户账号
+    from app.security import get_password_hash
     hashed_password = get_password_hash(cs_data["password"])
     user = models.User(
         name=cs_data["name"],
@@ -1376,6 +1378,7 @@ def authenticate_customer_service(db: Session, cs_id: str, password: str):
     cs = get_customer_service_by_id(db, cs_id)
     if not cs:
         return False
+    from app.security import verify_password
     if not verify_password(password, cs.hashed_password):
         return False
     return cs
@@ -1383,6 +1386,7 @@ def authenticate_customer_service(db: Session, cs_id: str, password: str):
 
 def create_customer_service_with_login(db: Session, cs_data: dict):
     """创建客服账号（包含登录信息）"""
+    from app.security import get_password_hash
     hashed_password = get_password_hash(cs_data["password"])
     cs = models.CustomerService(
         id=cs_data["id"],  # 使用提供的客服ID
@@ -1422,6 +1426,7 @@ def authenticate_admin_user(db: Session, username: str, password: str):
         return False
     if not admin.is_active:
         return False
+    from app.security import verify_password
     if not verify_password(password, admin.hashed_password):
         return False
     return admin
@@ -1433,6 +1438,7 @@ def create_admin_user(db: Session, admin_data: dict):
 
     from app.id_generator import format_admin_id
 
+    from app.security import get_password_hash
     hashed_password = get_password_hash(admin_data["password"])
 
     # 生成唯一的ID
