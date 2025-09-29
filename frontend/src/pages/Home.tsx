@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -296,7 +296,7 @@ const Home: React.FC = () => {
             onNotificationClick={() => setShowNotifications(prev => !prev)}
             onLogout={async () => {
               try {
-                await api.post('/api/users/logout');
+                await logout();
               } catch (error) {
                 console.log('登出请求失败:', error);
               }

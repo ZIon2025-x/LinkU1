@@ -32,15 +32,31 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
   return (
     <div className="hamburger-menu">
-      {/* 汉堡菜单按钮 */}
-      <button
-        className={`hamburger-btn ${isOpen ? 'hidden' : ''}`}
-        onClick={toggleMenu}
-      >
-        <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-        <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-        <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
-      </button>
+      <div className="menu-controls">
+        {/* 通知按钮 - 独立显示 */}
+        {user && (
+          <button
+            className="notification-btn"
+            onClick={onNotificationClick}
+            aria-label="通知"
+          >
+            <span className="notification-icon">🔔</span>
+            {unreadCount > 0 && (
+              <span className="notification-badge">{unreadCount}</span>
+            )}
+          </button>
+        )}
+
+        {/* 汉堡菜单按钮 */}
+        <button
+          className={`hamburger-btn ${isOpen ? 'hidden' : ''}`}
+          onClick={toggleMenu}
+        >
+          <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+          <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+          <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+        </button>
+      </div>
 
       {/* 展开的菜单 */}
       {isOpen && (
@@ -109,22 +125,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               {/* 用户相关功能 */}
               {user ? (
                 <div className="menu-user-section">
-                  {/* 通知按钮 */}
-                  <button
-                    className="menu-item menu-item-notification"
-                    onClick={() => {
-                      onNotificationClick();
-                      setIsOpen(false);
-                    }}
-                  >
-                    <span className="menu-icon">🔔</span>
-                    通知
-                    {unreadCount > 0 && (
-                      <div className="notification-badge">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </div>
-                    )}
-                  </button>
 
                   {/* 用户头像和信息 */}
                   <div className="user-info">
@@ -221,6 +221,56 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             box-sizing: border-box;
           }
 
+          /* 菜单控制区域 */
+          .menu-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+          }
+
+          /* 通知按钮 */
+          .notification-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            position: relative;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+          }
+
+          .notification-btn:hover {
+            background-color: #f5f5f5;
+          }
+
+          .notification-icon {
+            font-size: 20px;
+            color: #666;
+          }
+
+          .notification-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #FF6B6B, #FF4757);
+            color: white;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            line-height: 1;
+          }
+
           /* 汉堡菜单按钮 */
           .hamburger-btn {
             background: none;
@@ -234,7 +284,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             padding: 0;
             z-index: 1002;
             position: relative;
-            margin-left: auto; /* 放在最右侧 */
           }
 
           .hamburger-line {
