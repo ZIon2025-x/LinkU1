@@ -60,8 +60,8 @@ class Config:
     COOKIE_MAX_AGE = 24 * 60 * 60  # 24小时
     
     # 移动端特殊配置
-    MOBILE_COOKIE_SAMESITE = "lax"   # 移动端使用lax提高兼容性
-    MOBILE_COOKIE_SECURE = False     # 移动端不使用secure避免HTTPS问题
+    MOBILE_COOKIE_SAMESITE = "none"  # 移动端跨域需要none
+    MOBILE_COOKIE_SECURE = True      # none必须配合secure
     
     # 开发环境配置
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"

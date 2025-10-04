@@ -110,7 +110,7 @@ class CookieManager:
         secure_value = CookieManager._get_secure_value(user_agent)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
-        # 移动端特殊处理：使用兼容性更好的Cookie设置
+        # 移动端特殊处理：使用最宽松的Cookie设置
         if is_mobile:
             # 移动端：完全移除domain限制，使用根路径
             cookie_domain = None
@@ -118,9 +118,9 @@ class CookieManager:
             # 移动端使用更短的过期时间，避免浏览器限制
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
-            # 移动端使用更兼容的SameSite和Secure设置
-            samesite_value = "lax"   # 移动端使用lax而不是none，提高兼容性
-            secure_value = False     # 移动端不使用secure，避免HTTPS问题
+            # 移动端使用最宽松的Cookie设置
+            samesite_value = "none"  # 移动端跨域需要none
+            secure_value = True      # none必须配合secure
         else:
             # 桌面端：开发环境不设置domain，生产环境使用配置的domain
             if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
