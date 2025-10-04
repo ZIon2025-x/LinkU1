@@ -21,8 +21,10 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import crud, models, schemas
+from app.database import get_async_db
 from app.rate_limiting import rate_limit
 from app.deps import get_current_user_secure_sync_csrf
 
@@ -87,10 +89,10 @@ def register_debug(request_data: dict):
     }
 
 @router.post("/register")
-def register(
+async def register(
     user: schemas.UserCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """用户注册 - 根据配置决定是否需要邮箱验证"""
     from app.validators import UserValidator, validate_input
@@ -98,6 +100,7 @@ def register(
     from app.config import Config
     from app.security import get_password_hash
     from datetime import datetime
+    from app.async_crud import async_user_crud
     
     # 使用验证器验证输入数据
     try:
@@ -109,7 +112,7 @@ def register(
     print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}")
     
     # 检查邮箱是否已被注册（正式用户）
-    db_user = db.query(User).filter(User.email == validated_data['email']).first()
+    db_user = await async_user_crud.get_user_by_email(db, validated_data['email'])
     if db_user:
         raise HTTPException(
             status_code=400, 
@@ -117,7 +120,7 @@ def register(
         )
     
     # 检查用户名是否已被注册（正式用户）
-    db_name = db.query(User).filter(User.name == validated_data['name']).first()
+    db_name = await async_user_crud.get_user_by_name(db, validated_data['name'])
     if db_name:
         raise HTTPException(
             status_code=400, 
@@ -137,16 +140,23 @@ def register(
     if Config.SKIP_EMAIL_VERIFICATION:
         print("开发环境：跳过邮件验证，直接创建用户")
         
-        # 使用crud.create_user函数创建用户（会自动生成ID）
+        # 使用异步CRUD创建用户
         user_data = schemas.UserCreate(**validated_data)
-        new_user = crud.create_user(db, user_data)
+        new_user = await async_user_crud.create_user(db, user_data)
         
         # 更新用户状态为已验证和激活
-        new_user.is_verified = 1
-        new_user.is_active = 1
-        new_user.user_level = "normal"
-        db.commit()
-        db.refresh(new_user)
+        from sqlalchemy import update
+        await db.execute(
+            update(User)
+            .where(User.id == new_user.id)
+            .values(
+                is_verified=1,
+                is_active=1,
+                user_level="normal"
+            )
+        )
+        await db.commit()
+        await db.refresh(new_user)
         
         print(f"开发环境：用户 {new_user.email} 注册成功，无需邮箱验证")
         
@@ -163,9 +173,16 @@ def register(
         # 生成验证令牌
         verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
         
-        # 创建待验证用户
+        # 创建待验证用户（这里需要同步操作，因为EmailVerificationManager使用同步数据库）
         user_data = schemas.UserCreate(**validated_data)
-        pending_user = EmailVerificationManager.create_pending_user(db, user_data, verification_token)
+        
+        # 临时使用同步数据库操作创建待验证用户
+        from app.database import SessionLocal
+        sync_db = SessionLocal()
+        try:
+            pending_user = EmailVerificationManager.create_pending_user(sync_db, user_data, verification_token)
+        finally:
+            sync_db.close()
         
         # 发送验证邮件
         send_verification_email_with_token(background_tasks, validated_data['email'], verification_token)
