@@ -7,6 +7,11 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
 
+// 移动端检测函数
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 // 配置dayjs插件
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,7 +28,7 @@ const formatTimeWithUserTimezone = (time: string | Date, serverTimezone: string 
 
 const getTimezoneInfo = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/users/timezone/info');
+    const response = await fetch(`${API_BASE_URL}/api/users/timezone/info`);
     return await response.json();
   } catch (error) {
     console.error('获取时区信息失败:', error);
@@ -109,6 +114,8 @@ const MessagePage: React.FC = () => {
   const [ratingChatId, setRatingChatId] = useState<string | null>(null);
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(false);
   const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showContactsList, setShowContactsList] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -177,7 +184,7 @@ const MessagePage: React.FC = () => {
       console.log('开始上传图片:', selectedImage.name, '大小:', selectedImage.size);
       
       // 上传图片到服务器
-      const uploadResponse = await fetch('http://localhost:8000/api/upload/image', {
+      const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/image`, {
         method: 'POST',
         credentials: 'include',  // 使用Cookie认证
         body: formData
@@ -235,7 +242,7 @@ const MessagePage: React.FC = () => {
       } else {
         // WebSocket未连接，使用HTTP API
         if (isServiceMode && currentChat) {
-          const response = await fetch(`http://localhost:8000/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
+          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -468,7 +475,7 @@ const MessagePage: React.FC = () => {
         console.log('WebSocket未连接，状态:', ws ? ws.readyState : 'null');
         // WebSocket未连接，使用HTTP API作为备用
         if (isServiceMode && currentChat) {
-          const response = await fetch(`http://localhost:8000/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
+          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -524,6 +531,16 @@ const MessagePage: React.FC = () => {
       setInput(messageContent); // 恢复输入内容
     }
   };
+
+  // 检测移动端设备
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(isMobileDevice());
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 获取当前用户信息
   useEffect(() => {
@@ -646,7 +663,7 @@ const MessagePage: React.FC = () => {
           // 对话未结束，验证对话是否仍然有效
           console.log('验证对话是否仍然有效...');
           try {
-            const response = await fetch(`http://localhost:8000/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
               headers: {
     credentials: 'include'  // 使用Cookie认证
               }
@@ -838,7 +855,7 @@ const MessagePage: React.FC = () => {
 
       const connectWebSocket = () => {
         // 使用Cookie认证，无需在URL中传递token
-        const wsUrl = `ws://localhost:8000/ws/chat/${user.id}`;
+        const wsUrl = `${WS_BASE_URL}/ws/chat/${user.id}`;
         socket = new WebSocket(wsUrl);
         
         socket.onopen = () => {
@@ -963,7 +980,7 @@ const MessagePage: React.FC = () => {
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
       if (chatId) {
         console.log('使用客服对话API加载消息');
-        const response = await fetch(`http://localhost:8000/api/users/customer-service/chat/${chatId}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatId}/messages`, {
           credentials: 'include'  // 使用Cookie认证
         });
         
@@ -1052,7 +1069,7 @@ const MessagePage: React.FC = () => {
           // 对话未结束，验证对话是否仍然有效
           console.log('验证对话是否仍然有效...');
           try {
-            const response = await fetch(`http://localhost:8000/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
               headers: {
     credentials: 'include'  // 使用Cookie认证
               }
@@ -1236,7 +1253,7 @@ const MessagePage: React.FC = () => {
     
     try {
       console.log('正在调用 endCustomerServiceChat API...');
-      const response = await fetch(`http://localhost:8000/api/users/customer-service/end-chat/${currentChatId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/customer-service/end-chat/${currentChatId}`, {
         method: 'POST',
         credentials: 'include'  // 使用Cookie认证
       });
@@ -1313,7 +1330,7 @@ const MessagePage: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/users/customer-service/rate/${ratingChatId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/customer-service/rate/${ratingChatId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1447,39 +1464,49 @@ const MessagePage: React.FC = () => {
         
         {/* 左侧联系人列表 */}
         <div style={{ 
-          width: '350px', 
-          borderRight: '1px solid #e2e8f0', 
+          width: isMobile ? (showContactsList ? '100%' : '0') : '350px', 
+          borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          position: isMobile ? 'absolute' : 'relative',
+          zIndex: isMobile ? 1000 : 'auto',
+          transition: 'all 0.3s ease',
+          overflow: isMobile ? 'hidden' : 'visible'
         }}>
           {/* 头部标题 */}
           <div style={{ 
-            padding: '30px 24px', 
+            padding: isMobile ? '20px 16px' : '30px 24px', 
             textAlign: 'center', 
             fontWeight: '800', 
-            fontSize: '24px',
+            fontSize: isMobile ? '20px' : '24px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
             color: '#fff',
             position: 'relative'
           }}>
             <div style={{ 
               position: 'absolute', 
-              left: '20px', 
+              left: isMobile ? '16px' : '20px', 
               top: '50%', 
               transform: 'translateY(-50%)',
               background: 'rgba(255,255,255,0.2)',
               border: 'none',
               color: '#fff',
-              padding: '8px 16px',
+              padding: isMobile ? '6px 12px' : '8px 16px',
               borderRadius: '20px',
               cursor: 'pointer',
-              fontSize: '14px',
+              fontSize: isMobile ? '12px' : '14px',
               fontWeight: '600',
               backdropFilter: 'blur(10px)',
               transition: 'all 0.3s ease'
             }}
-            onClick={() => navigate('/')}
+            onClick={() => {
+              if (isMobile) {
+                setShowContactsList(false);
+              } else {
+                navigate('/');
+              }
+            }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
               e.currentTarget.style.transform = 'translateY(-50%) scale(1.05)';
@@ -1489,14 +1516,14 @@ const MessagePage: React.FC = () => {
               e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
             }}
           >
-            ← 返回
+            {isMobile ? '← 关闭' : '← 返回'}
         </div>
             💬 消息中心
           </div>
 
           {/* 搜索框 */}
           <div style={{ 
-            padding: '20px 24px',
+            padding: isMobile ? '16px' : '20px 24px',
             borderBottom: '1px solid #e2e8f0'
           }}>
             <div style={{ 
@@ -1883,11 +1910,13 @@ const MessagePage: React.FC = () => {
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
-          background: '#fff'
+          background: '#fff',
+          width: isMobile ? '100%' : 'auto',
+          position: isMobile ? 'relative' : 'static'
         }}>
           {/* 聊天头部 */}
         <div style={{ 
-            padding: '24px 30px', 
+            padding: isMobile ? '16px' : '24px 30px', 
             borderBottom: '1px solid #e2e8f0', 
             background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
@@ -1895,6 +1924,27 @@ const MessagePage: React.FC = () => {
             gap: '16px',
             minHeight: '80px'
           }}>
+            {/* 移动端菜单按钮 */}
+            {isMobile && (
+              <button
+                onClick={() => setShowContactsList(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                ☰ 联系人
+              </button>
+            )}
             {isServiceMode ? (
               <>
                 <div style={{ 
@@ -2067,7 +2117,7 @@ const MessagePage: React.FC = () => {
           <div style={{ 
             flex: 1, 
             overflowY: 'auto', 
-            padding: '30px', 
+            padding: isMobile ? '16px' : '30px', 
             background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
             display: 'flex', 
             flexDirection: 'column'
@@ -2444,7 +2494,7 @@ const MessagePage: React.FC = () => {
 
           {/* 输入区域 */}
           <div style={{ 
-            padding: '24px 30px', 
+            padding: isMobile ? '16px' : '24px 30px', 
             borderTop: '1px solid #e2e8f0', 
             background: '#fff',
             position: 'relative'
@@ -2849,12 +2899,12 @@ const MessagePage: React.FC = () => {
                 }
                 style={{ 
                   flex: 1, 
-                  padding: '16px 20px', 
+                  padding: isMobile ? '12px 16px' : '16px 20px', 
                   borderRadius: '25px', 
                   border: '2px solid #e2e8f0',
                   background: '#fff',
                   color: '#1e293b',
-                  fontSize: '16px',
+                  fontSize: isMobile ? '14px' : '16px',
                   fontFamily: 'inherit',
                   transition: 'all 0.3s ease',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
