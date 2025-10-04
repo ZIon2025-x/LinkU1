@@ -99,6 +99,13 @@ def get_safe_error_message(error_code: str, original_message: str = None) -> str
     if os.getenv("ENVIRONMENT", "development") == "development":
         return original_message or "未知错误"
     
+    # 对于用户注册相关的错误，返回具体信息
+    if original_message and any(keyword in original_message for keyword in [
+        "该邮箱已被注册", "该用户名已被使用", "用户名不能包含", "密码至少需要", 
+        "密码必须包含", "邮箱格式不正确", "用户名至少", "用户名不能超过"
+    ]):
+        return original_message
+    
     # 生产环境返回通用错误信息
     return "操作失败，请稍后重试"
 
