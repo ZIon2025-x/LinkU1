@@ -535,6 +535,18 @@ class SyncCookieHTTPBearer(HTTPBearer):
                 scheme="Bearer", credentials=session_id
             )
         
+        # 移动端特殊处理：检查是否为移动端且没有Cookie
+        user_agent = request.headers.get("user-agent", "")
+        is_mobile = any(keyword in user_agent.lower() for keyword in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        if is_mobile:
+            print(f"[DEBUG] 移动端检测到Cookie缺失 - User-Agent: {user_agent}")
+            print(f"[DEBUG] 移动端Cookie问题 - 可能是SameSite/Secure设置问题")
+            print(f"[DEBUG] 建议检查移动端Cookie设置")
+        
         print("[DEBUG] 未找到认证信息")
         if self.auto_error:
             print("[DEBUG] 抛出401错误 - 未提供认证信息")
