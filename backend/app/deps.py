@@ -406,7 +406,6 @@ def get_current_customer_service_or_user(
             print(f"[DEBUG] 移动端备用认证 - 从Authorization头获取token: {token[:20]}...")
             
             # 验证token
-            from app.security import verify_token
             payload = verify_token(token, "access")
             if payload and "sub" in payload:
                 user_id = payload["sub"]
