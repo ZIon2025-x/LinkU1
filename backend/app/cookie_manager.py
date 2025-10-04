@@ -122,8 +122,11 @@ class CookieManager:
             samesite_value = "none"  # 移动端跨域需要none
             secure_value = True      # none必须配合secure
         else:
-            # 桌面端：使用配置的domain和path
-            cookie_domain = Config.COOKIE_DOMAIN
+            # 桌面端：开发环境不设置domain，生产环境使用配置的domain
+            if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
+                cookie_domain = Config.COOKIE_DOMAIN
+            else:
+                cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
             session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
@@ -204,7 +207,11 @@ class CookieManager:
             cookie_domain = None
             cookie_path = "/"
         else:
-            cookie_domain = Config.COOKIE_DOMAIN
+            # 开发环境不设置domain，生产环境使用配置的domain
+            if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
+                cookie_domain = Config.COOKIE_DOMAIN
+            else:
+                cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
         
         response.set_cookie(

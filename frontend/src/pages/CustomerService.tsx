@@ -1481,8 +1481,7 @@ const CustomerService: React.FC = () => {
                   <td>{task.title}</td>
                   <td>
                     <span className={`status-badge ${task.status}`}>
-                      {task.status === 'open' && '开放'}
-                      {task.status === 'taken' && '已接受'}
+                      {(task.status === 'open' || task.status === 'taken') && '开放'}
                       {task.status === 'in_progress' && '进行中'}
                       {task.status === 'completed' && '已完成'}
                       {task.status === 'cancelled' && '已取消'}

@@ -80,27 +80,23 @@ def update_user_statistics(db: Session, user_id: str):
 
 def create_user(db: Session, user: schemas.UserCreate):
     import random
-
-    from app.id_generator import format_user_id
-
     from app.security import get_password_hash
     hashed_password = get_password_hash(user.password)
 
-    # 生成唯一的用户ID
+    # 生成唯一的8位用户ID
     while True:
-        # 生成一个随机的6位数字作为基础ID
-        base_id = random.randint(1, 999999)
-        formatted_id = format_user_id(base_id)
+        # 生成一个随机的8位数字作为用户ID
+        user_id = str(random.randint(10000000, 99999999))
 
         # 检查ID是否已存在
         existing_user = (
-            db.query(models.User).filter(models.User.id == formatted_id).first()
+            db.query(models.User).filter(models.User.id == user_id).first()
         )
         if not existing_user:
             break
 
     db_user = models.User(
-        id=formatted_id,
+        id=user_id,
         name=user.name,
         email=user.email,
         phone=user.phone,
@@ -152,13 +148,15 @@ def get_user_reviews(db: Session, user_id: str, limit: int = 5):
 
 def get_reviews_received_by_user(db: Session, user_id: str, limit: int = 5):
     """获取用户收到的评价（其他用户对该用户的评价）"""
-    from app.models import Review, Task
+    from app.models import Review, Task, User
 
-    # 通过任务关系找到用户收到的评价
+    # 通过任务关系找到用户收到的评价，并包含评价者信息
     # 用户收到的评价是指：用户作为任务的poster或taker，而评价者是任务的另一个参与者
     reviews = (
-        db.query(Review)
-        .join(Task)
+        db.query(Review, User)
+        .select_from(Review)
+        .join(Task, Review.task_id == Task.id)
+        .join(User, Review.user_id == User.id)
         .filter(
             ((Task.poster_id == user_id) & (Review.user_id == Task.taker_id))
             | ((Task.taker_id == user_id) & (Review.user_id == Task.poster_id))
@@ -574,8 +572,23 @@ def create_review(
 
 
 def get_task_reviews(db: Session, task_id: int):
-    """获取任务评价 - 现在返回空列表，因为评价不会显示在任务上"""
-    return []
+    """获取任务评价 - 只返回实名评价，匿名评价不显示在任务页面"""
+    from app.models import Review
+    return db.query(Review).filter(Review.task_id == task_id, Review.is_anonymous == 0).all()
+
+
+def get_user_received_reviews(db: Session, user_id: str):
+    """获取用户收到的所有评价（包括匿名评价），用于个人主页显示"""
+    from app.models import Review, Task
+    return (
+        db.query(Review)
+        .join(Task, Review.task_id == Task.id)
+        .filter(
+            (Task.poster_id == user_id) | (Task.taker_id == user_id),
+            Review.user_id != user_id  # 排除自己给自己的评价
+        )
+        .all()
+    )
 
 
 def add_task_history(
@@ -696,7 +709,7 @@ def create_notification(
     content: str,
     related_id: str = None,
 ):
-    from app.models import Notification, get_uk_time
+    from app.models import Notification, get_uk_time_naive
     from sqlalchemy.exc import IntegrityError
 
     try:
@@ -762,6 +775,37 @@ def get_unread_notification_count(db: Session, user_id: str):
         .filter(Notification.user_id == user_id, Notification.is_read == 0)
         .count()
     )
+
+
+def get_notifications_with_recent_read(db: Session, user_id: str, recent_read_limit: int = 10):
+    """获取所有未读通知和最近N条已读通知"""
+    from app.models import Notification
+    
+    # 获取所有未读通知
+    unread_notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.is_read == 0)
+        .order_by(Notification.created_at.desc())
+        .all()
+    )
+    
+    # 获取最近N条已读通知
+    recent_read_notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id, Notification.is_read == 1)
+        .order_by(Notification.created_at.desc())
+        .limit(recent_read_limit)
+        .all()
+    )
+    
+    # 合并并重新排序（按创建时间降序）
+    all_notifications = unread_notifications + recent_read_notifications
+    all_notifications.sort(
+        key=lambda x: x.created_at.timestamp() if x.created_at else 0, 
+        reverse=True
+    )
+    
+    return all_notifications
 
 
 def mark_notification_read(db: Session, notification_id: int, user_id: str):

@@ -211,7 +211,8 @@ def refresh_session(
             response=response,
             session_id=new_session.session_id,
             refresh_token=refresh_token,
-            user_id=user.id
+            user_id=user.id,
+            user_agent=request.headers.get("user-agent", "")
         )
         
         logger.info(f"会话刷新成功 - 用户: {user.id}, 新会话: {new_session.session_id[:8]}...")

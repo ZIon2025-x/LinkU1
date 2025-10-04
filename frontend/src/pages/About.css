@@ -1,7 +1,7 @@
 /* 关于我们页面样式 */
 .about-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: white;
 }
 
 /* 英雄区域 */
@@ -11,6 +11,7 @@
   color: white;
   position: relative;
   overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .hero-section::before {

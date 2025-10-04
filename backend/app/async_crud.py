@@ -14,6 +14,8 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 
 from app import models, schemas
+from app.security import get_password_hash
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +64,21 @@ class AsyncUserCRUD:
     async def create_user(db: AsyncSession, user: schemas.UserCreate) -> models.User:
         """创建用户"""
         try:
+            # 生成用户ID
+            user_id = str(uuid.uuid4())[:8]
+            
+            # 哈希密码
+            hashed_password = get_password_hash(user.password)
+            
             db_user = models.User(
-                id=user.id,
+                id=user_id,
                 name=user.name,
                 email=user.email,
-                hashed_password=user.hashed_password,
+                hashed_password=hashed_password,
                 phone=user.phone,
-                avatar=user.avatar,
-                user_level=user.user_level,
-                timezone=user.timezone,
+                avatar=user.avatar or "",
+                user_level="normal",
+                timezone="Europe/London",
             )
             db.add(db_user)
             await db.commit()
@@ -119,7 +127,7 @@ class AsyncUserCRUD:
                 .limit(limit)
                 .order_by(models.User.created_at.desc())
             )
-            return result.scalars().all()
+            return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Error getting users: {e}")
             return []
@@ -167,7 +175,8 @@ class AsyncTaskCRUD:
             super_vip_price_threshold = 50.0
             
             # 任务等级分配逻辑
-            if user.user_level == "super":
+            user_level = str(user.user_level) if user.user_level is not None else "normal"
+            if user_level == "super":
                 task_level = "vip"
             elif task.reward >= super_vip_price_threshold:
                 task_level = "super"
@@ -245,11 +254,11 @@ class AsyncTaskCRUD:
                 .where(models.Task.status == "open")
             )
 
-            if task_type and task_type not in ['全部类型', '全部']:
+            if task_type and task_type not in ['全部类型', '全部', 'all']:
                 query = query.where(models.Task.task_type == task_type)
-            if location and location not in ['全部城市', '全部']:
+            if location and location not in ['全部城市', '全部', 'all']:
                 query = query.where(models.Task.location == location)
-            if status and status not in ['全部状态', '全部']:
+            if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
             # 添加关键词搜索
@@ -269,17 +278,21 @@ class AsyncTaskCRUD:
                 query = query.order_by(models.Task.created_at.desc())
             elif sort_by == "oldest":
                 query = query.order_by(models.Task.created_at.asc())
-            elif sort_by == "reward_high":
+            elif sort_by == "reward_high" or sort_by == "reward_desc":
                 query = query.order_by(models.Task.reward.desc())
-            elif sort_by == "reward_low":
+            elif sort_by == "reward_low" or sort_by == "reward_asc":
                 query = query.order_by(models.Task.reward.asc())
+            elif sort_by == "deadline_asc":
+                query = query.order_by(models.Task.deadline.asc())
+            elif sort_by == "deadline_desc":
+                query = query.order_by(models.Task.deadline.desc())
             else:
                 query = query.order_by(models.Task.created_at.desc())
 
             result = await db.execute(
                 query.offset(skip).limit(limit)
             )
-            tasks = result.scalars().all()
+            tasks = list(result.scalars().all())
             
             # 缓存查询结果
             cache_tasks_list(cache_params, tasks)
@@ -302,9 +315,23 @@ class AsyncTaskCRUD:
         """获取任务列表和总数（带过滤条件）"""
         try:
             from sqlalchemy import or_, func
+            from datetime import datetime
+            import pytz
             
-            # 构建基础查询
-            base_query = select(models.Task).where(models.Task.status == "open")
+            # 获取当前英国时间并转换为UTC时间进行比较
+            uk_tz = pytz.timezone('Europe/London')
+            now_local = datetime.now(uk_tz)
+            now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+            
+            # 构建基础查询 - 显示开放和已接收但未同意的任务，且未过期
+            base_query = select(models.Task).where(
+                or_(
+                    models.Task.status == "open",
+                    models.Task.status == "taken"
+                )
+            ).where(
+                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+            )
 
             if task_type and task_type not in ['全部类型', '全部']:
                 base_query = base_query.where(models.Task.task_type == task_type)
@@ -341,19 +368,23 @@ class AsyncTaskCRUD:
                 query = query.order_by(models.Task.created_at.desc())
             elif sort_by == "oldest":
                 query = query.order_by(models.Task.created_at.asc())
-            elif sort_by == "reward_high":
+            elif sort_by == "reward_high" or sort_by == "reward_desc":
                 query = query.order_by(models.Task.reward.desc())
-            elif sort_by == "reward_low":
+            elif sort_by == "reward_low" or sort_by == "reward_asc":
                 query = query.order_by(models.Task.reward.asc())
+            elif sort_by == "deadline_asc":
+                query = query.order_by(models.Task.deadline.asc())
+            elif sort_by == "deadline_desc":
+                query = query.order_by(models.Task.deadline.desc())
             else:
                 query = query.order_by(models.Task.created_at.desc())
 
             result = await db.execute(
                 query.offset(skip).limit(limit)
             )
-            tasks = result.scalars().all()
+            tasks = list(result.scalars().all())
             
-            return tasks, total
+            return tasks, total or 0
         except Exception as e:
             logger.error(f"Error getting tasks with total: {e}")
             return [], 0
@@ -378,43 +409,197 @@ class AsyncTaskCRUD:
                 .where(models.Task.taker_id == user_id)
                 .order_by(models.Task.created_at.desc())
             )
-            taken_tasks = taken_result.scalars().all()
+            taken_tasks = list(taken_result.scalars().all())
 
-            return {"posted": posted_tasks, "taken": taken_tasks}
+            return {"posted": list(posted_tasks), "taken": taken_tasks}
         except Exception as e:
             logger.error(f"Error getting user tasks for {user_id}: {e}")
             return {"posted": [], "taken": []}
 
     @staticmethod
-    async def accept_task(
-        db: AsyncSession, task_id: int, taker_id: str
-    ) -> Optional[models.Task]:
-        """接受任务"""
+    async def apply_for_task(
+        db: AsyncSession, task_id: int, applicant_id: str, message: Optional[str] = None
+    ) -> Optional[models.TaskApplication]:
+        """申请任务"""
         try:
-            result = await db.execute(
-                update(models.Task)
+            # 首先检查任务是否存在
+            task_query = select(models.Task).where(models.Task.id == task_id)
+            existing_task = await db.execute(task_query)
+            task = existing_task.scalar_one_or_none()
+            
+            if not task:
+                print(f"DEBUG: 任务 {task_id} 不存在")
+                return None
+            
+            print(f"DEBUG: 任务 {task_id} 当前状态: {task.status}")
+            
+            # 检查任务状态是否允许申请
+            if task.status not in ["open", "taken"]:
+                print(f"DEBUG: 任务 {task_id} 状态 {task.status} 不允许申请")
+                return None
+            
+
+            # 检查用户等级是否满足任务等级要求
+            user_query = select(models.User).where(models.User.id == applicant_id)
+            user_result = await db.execute(user_query)
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                print(f"DEBUG: 用户 {applicant_id} 不存在")
+                return None
+            
+            # 等级匹配检查
+            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+            user_level_str = str(user.user_level) if user.user_level is not None else "normal"
+            task_level_str = str(task.task_level) if task.task_level is not None else "normal"
+            user_level_value = level_hierarchy.get(user_level_str, 1)
+            task_level_value = level_hierarchy.get(task_level_str, 1)
+            
+            if user_level_value < task_level_value:
+                print(f"DEBUG: 用户等级 {user.user_level} 不足以申请 {task.task_level} 任务")
+                return None
+            
+            # 检查是否已经申请过
+            existing_application = await db.execute(
+                select(models.TaskApplication)
                 .where(
                     and_(
-                        models.Task.id == task_id,
-                        models.Task.status == "open",
-                        models.Task.taker_id.is_(None),
+                        models.TaskApplication.task_id == task_id,
+                        models.TaskApplication.applicant_id == applicant_id
                     )
                 )
+            )
+            if existing_application.scalar_one_or_none():
+                print(f"DEBUG: 用户 {applicant_id} 已经申请过任务 {task_id}")
+                return None
+            
+            # 创建申请记录
+            application = models.TaskApplication(
+                task_id=task_id,
+                applicant_id=applicant_id,
+                message=message,
+                status="pending"
+            )
+            db.add(application)
+            
+            # 更新任务状态为taken（如果有申请者）
+            await db.execute(
+                update(models.Task)
+                .where(models.Task.id == task_id)
+                .values(status="taken")
+            )
+            
+            # 自动发送消息给任务发布者
+            try:
+                from app.models import Message
+                
+                # 创建自动消息
+                auto_message = Message(
+                    sender_id=applicant_id,
+                    receiver_id=task.poster_id,
+                    content=f"我申请了您的任务：{task.title}。{f'申请留言：{message}' if message else ''}"
+                )
+                db.add(auto_message)
+                print(f"DEBUG: 已添加申请消息到数据库")
+            except Exception as e:
+                print(f"DEBUG: 添加自动消息失败: {e}")
+                # 不影响申请流程，只记录错误
+                logger.error(f"Failed to add auto message for task application: {e}")
+            
+            await db.commit()
+            await db.refresh(application)
+            print(f"DEBUG: 成功申请任务 {task_id}，申请者: {applicant_id}")
+            
+            return application
+            
+        except Exception as e:
+            print(f"DEBUG: 申请任务时发生错误: {e}")
+            await db.rollback()
+            logger.error(f"Error applying for task {task_id}: {e}")
+            return None
+
+    @staticmethod
+    async def get_task_applications(
+        db: AsyncSession, task_id: int
+    ) -> List[models.TaskApplication]:
+        """获取任务的申请者列表"""
+        try:
+            result = await db.execute(
+                select(models.TaskApplication)
+                .where(models.TaskApplication.task_id == task_id)
+                .where(models.TaskApplication.status == "pending")
+                .order_by(models.TaskApplication.created_at.desc())
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error getting task applications for {task_id}: {e}")
+            return []
+
+    @staticmethod
+    async def approve_application(
+        db: AsyncSession, task_id: int, applicant_id: str
+    ) -> Optional[models.Task]:
+        """批准申请者"""
+        try:
+            # 获取申请记录
+            application = await db.execute(
+                select(models.TaskApplication)
+                .where(
+                    and_(
+                        models.TaskApplication.task_id == task_id,
+                        models.TaskApplication.applicant_id == applicant_id,
+                        models.TaskApplication.status == "pending"
+                    )
+                )
+            )
+            application = application.scalar_one_or_none()
+            
+            if not application:
+                print(f"DEBUG: 申请记录不存在: task_id={task_id}, applicant_id={applicant_id}")
+                return None
+            
+            # 更新申请状态为已批准
+            setattr(application, 'status', "approved")
+            
+            # 更新任务状态和接收者
+            result = await db.execute(
+                update(models.Task)
+                .where(models.Task.id == task_id)
                 .values(
-                    taker_id=taker_id,
+                    taker_id=applicant_id,
                     status="in_progress",
-                    accepted_at=datetime.utcnow(),
+                    accepted_at=datetime.utcnow()
                 )
                 .returning(models.Task)
             )
             task = result.scalar_one_or_none()
+            
             if task:
+                # 拒绝其他申请
+                await db.execute(
+                    update(models.TaskApplication)
+                    .where(
+                        and_(
+                            models.TaskApplication.task_id == task_id,
+                            models.TaskApplication.applicant_id != applicant_id,
+                            models.TaskApplication.status == "pending"
+                        )
+                    )
+                    .values(status="rejected")
+                )
+                
                 await db.commit()
                 await db.refresh(task)
-            return task
+                print(f"DEBUG: 成功批准申请: task_id={task_id}, applicant_id={applicant_id}")
+                return task
+            else:
+                print(f"DEBUG: 更新任务失败: task_id={task_id}")
+                return None
+                
         except Exception as e:
+            print(f"DEBUG: 批准申请时发生错误: {e}")
             await db.rollback()
-            logger.error(f"Error accepting task {task_id}: {e}")
+            logger.error(f"Error approving application: {e}")
             return None
 
 
@@ -458,7 +643,7 @@ class AsyncMessageCRUD:
                 .offset(skip)
                 .limit(limit)
             )
-            return result.scalars().all()
+            return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Error getting messages for user {user_id}: {e}")
             return []
@@ -487,7 +672,7 @@ class AsyncMessageCRUD:
                 .offset(skip)
                 .limit(limit)
             )
-            return result.scalars().all()
+            return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Error getting conversation messages: {e}")
             return []
@@ -546,7 +731,7 @@ class AsyncNotificationCRUD:
                 .offset(skip)
                 .limit(limit)
             )
-            return result.scalars().all()
+            return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Error getting notifications for user {user_id}: {e}")
             return []

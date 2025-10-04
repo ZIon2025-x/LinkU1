@@ -16,16 +16,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('ProtectedRoute: 开始检查认证状态...');
         // 直接尝试获取用户信息，HttpOnly Cookie会自动发送
         const response = await api.get('/api/users/profile/me');
-        console.log('用户认证成功:', response.data);
+        console.log('ProtectedRoute: 用户认证成功:', response.data);
         setIsAuthenticated(true);
       } catch (error: any) {
         // 认证失败，用户未登录
-        console.log('用户未登录或认证失败:', error);
-        console.log('错误详情:', error.response?.status, error.response?.data);
+        console.log('ProtectedRoute: 用户未登录或认证失败:', error);
+        console.log('ProtectedRoute: 错误详情:', error.response?.status, error.response?.data);
         setIsAuthenticated(false);
       } finally {
+        console.log('ProtectedRoute: 认证检查完成，设置loading为false');
         setLoading(false);
       }
     };
@@ -53,17 +55,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!isAuthenticated) {
     // 未登录，直接显示登录弹窗
+    console.log('ProtectedRoute: 用户未认证，显示登录弹窗');
     return (
       <LoginModal 
         isOpen={true}
         onClose={() => {
+          console.log('ProtectedRoute: 用户关闭登录弹窗，重定向到首页');
           // 关闭弹窗时重定向到首页
           window.location.href = '/';
         }}
         onSuccess={() => {
+          console.log('ProtectedRoute: 用户登录成功，重新加载页面');
           window.location.reload();
         }}
         onReopen={() => {
+          console.log('ProtectedRoute: 重新打开登录弹窗');
           setShowLoginModal(true);
         }}
         showForgotPassword={showForgotPasswordModal}

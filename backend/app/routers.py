@@ -92,9 +92,12 @@ def register(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """用户注册 - 需要邮箱验证"""
+    """用户注册 - 根据配置决定是否需要邮箱验证"""
     from app.validators import UserValidator, validate_input
     from app.email_verification import EmailVerificationManager, send_verification_email_with_token
+    from app.config import Config
+    from app.security import get_password_hash
+    from datetime import datetime
     
     # 使用验证器验证输入数据
     try:
@@ -108,33 +111,70 @@ def register(
     # 检查邮箱是否已被注册（正式用户）
     db_user = db.query(User).filter(User.email == validated_data['email']).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="This email is already registered.")
+        raise HTTPException(
+            status_code=400, 
+            detail="该邮箱已被注册，请使用其他邮箱或直接登录"
+        )
     
     # 检查用户名是否已被注册（正式用户）
     db_name = db.query(User).filter(User.name == validated_data['name']).first()
     if db_name:
-        raise HTTPException(status_code=400, detail="This name is already taken.")
+        raise HTTPException(
+            status_code=400, 
+            detail="该用户名已被使用，请选择其他用户名"
+        )
 
     # 检查用户名是否包含客服相关关键词，防止用户注册客服账号
     customer_service_keywords = ["客服", "customer", "service", "support", "help"]
-    if any(keyword in validated_data['name'].lower() for keyword in customer_service_keywords):
-        raise HTTPException(status_code=400, detail="用户名不能包含客服相关关键词")
+    name_lower = validated_data['name'].lower()
+    if any(keyword.lower() in name_lower for keyword in customer_service_keywords):
+        raise HTTPException(
+            status_code=400, 
+            detail="用户名不能包含客服相关关键词"
+        )
 
-    # 生成验证令牌
-    verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
-    
-    # 创建待验证用户
-    user_data = schemas.UserCreate(**validated_data)
-    pending_user = EmailVerificationManager.create_pending_user(db, user_data, verification_token)
-    
-    # 发送验证邮件
-    send_verification_email_with_token(background_tasks, validated_data['email'], verification_token)
-    
-    return {
-        "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
-        "email": validated_data['email'],
-        "verification_required": True
-    }
+    # 检查是否跳过邮件验证（开发环境）
+    if Config.SKIP_EMAIL_VERIFICATION:
+        print("开发环境：跳过邮件验证，直接创建用户")
+        
+        # 使用crud.create_user函数创建用户（会自动生成ID）
+        user_data = schemas.UserCreate(**validated_data)
+        new_user = crud.create_user(db, user_data)
+        
+        # 更新用户状态为已验证和激活
+        new_user.is_verified = 1
+        new_user.is_active = 1
+        new_user.user_level = "normal"
+        db.commit()
+        db.refresh(new_user)
+        
+        print(f"开发环境：用户 {new_user.email} 注册成功，无需邮箱验证")
+        
+        return {
+            "message": "注册成功！（开发环境：已跳过邮箱验证）",
+            "email": validated_data['email'],
+            "verification_required": False,
+            "user_id": new_user.id
+        }
+    else:
+        # 生产环境：需要邮箱验证
+        print("生产环境：需要邮箱验证")
+        
+        # 生成验证令牌
+        verification_token = EmailVerificationManager.generate_verification_token(validated_data['email'])
+        
+        # 创建待验证用户
+        user_data = schemas.UserCreate(**validated_data)
+        pending_user = EmailVerificationManager.create_pending_user(db, user_data, verification_token)
+        
+        # 发送验证邮件
+        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token)
+        
+        return {
+            "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
+            "email": validated_data['email'],
+            "verification_required": True
+        }
 
 
 @router.get("/verify-email/{token}")
@@ -460,6 +500,14 @@ def accept_task(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
+    print(f"[DEBUG] accept_task - 开始处理接收任务请求，任务ID: {task_id}")
+    print(f"[DEBUG] accept_task - 当前用户: {current_user.id if current_user else 'None'}")
+    
+    # 如果current_user为None，说明认证失败
+    if not current_user:
+        print("[DEBUG] accept_task - 认证失败，current_user为None")
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         print(
             f"DEBUG: accept_task called for task_id={task_id}, user_id={current_user.id}"
@@ -725,6 +773,12 @@ def get_task_reviews(task_id: int, db: Session = Depends(get_db)):
     return crud.get_task_reviews(db, task_id)
 
 
+@router.get("/users/{user_id}/received-reviews", response_model=list[schemas.ReviewOut])
+def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
+    """获取用户收到的所有评价（包括匿名评价），用于个人主页显示"""
+    return crud.get_user_received_reviews(db, user_id)
+
+
 @router.get(
     "/users/{user_id}/reviews", response_model=list[schemas.ReviewWithReviewerInfo]
 )
@@ -762,19 +816,22 @@ def complete_task(
     db.commit()
     db.refresh(db_task)
 
-    # 创建通知给任务发布者
+    # 发送任务完成通知和邮件给发布者
     if background_tasks:
         try:
-            crud.create_notification(
-                db,
-                db_task.poster_id,
-                "task_pending_confirmation",
-                "任务等待确认",
-                f"您的任务 '{db_task.title}' 已被用户 {current_user.name} 完成，请确认任务是否满足要求",
-                current_user.id,
-            )
+            from app.task_notifications import send_task_completion_notification
+            
+            # 获取发布者信息
+            poster = crud.get_user_by_id(db, db_task.poster_id)
+            if poster:
+                send_task_completion_notification(
+                    db=db,
+                    background_tasks=background_tasks,
+                    task=db_task,
+                    taker=current_user
+                )
         except Exception as e:
-            print(f"Failed to create notification: {e}")
+            print(f"Failed to send task completion notification: {e}")
 
     # 检查任务接受者是否满足VIP晋升条件
     try:
@@ -805,28 +862,22 @@ def confirm_task_completion(
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)
 
-    # 创建通知给任务接受者
-    if task.taker_id:
-        crud.create_notification(
-            db,
-            task.taker_id,
-            "task_confirmed",
-            "任务已确认完成",
-            f"您完成的任务 '{task.title}' 已被发布者确认",
-            task_id,
-        )
-
-    # 邮件通知接受者
-    if task.taker_id:
-        from app.models import User
-
-        taker = crud.get_user_by_email(
-            db, db.query(User).filter(User.id == task.taker_id).first().email
-        )
-        if taker:
-            subject = f"Task '{task.title}' has been confirmed as completed"
-            body = f"<p>Task '<b>{task.title}</b>' has been confirmed as completed by the poster.</p>"
-            send_task_update_email(background_tasks, taker.email, subject, body)
+    # 发送任务确认完成通知和邮件给接收者
+    if task.taker_id and background_tasks:
+        try:
+            from app.task_notifications import send_task_confirmation_notification
+            
+            # 获取接收者信息
+            taker = crud.get_user_by_id(db, task.taker_id)
+            if taker:
+                send_task_confirmation_notification(
+                    db=db,
+                    background_tasks=background_tasks,
+                    task=task,
+                    taker=taker
+                )
+        except Exception as e:
+            print(f"Failed to send task confirmation notification: {e}")
 
     # 自动更新相关用户的统计信息
     crud.update_user_statistics(db, task.poster_id)
@@ -951,17 +1002,34 @@ def get_my_profile(
 ):
     print("Authorization header:", request.headers.get("authorization"))
 
-    # 创建格式化后的用户对象
-    formatted_user = current_user.__dict__.copy()
-    formatted_user["id"] = current_user.id  # 数据库已经存储格式化ID
-    
-    # 为客服添加user_type字段
-    if hasattr(current_user, 'email') and hasattr(current_user, 'id') and current_user.id.startswith('CS'):
-        formatted_user["user_type"] = "customer_service"
-    else:
-        formatted_user["user_type"] = "normal_user"
-    
-    return formatted_user
+    # 安全地创建用户对象，避免SQLAlchemy内部属性
+    try:
+        # 检查是否为客服
+        if hasattr(current_user, 'email') and hasattr(current_user, 'id') and current_user.id.startswith('CS'):
+            formatted_user = {
+                "id": current_user.id,
+                "name": getattr(current_user, 'name', ''),
+                "email": getattr(current_user, 'email', ''),
+                "user_type": "customer_service"
+            }
+        else:
+            # 普通用户
+            formatted_user = {
+                "id": current_user.id,
+                "name": getattr(current_user, 'name', ''),
+                "email": getattr(current_user, 'email', ''),
+                "phone": getattr(current_user, 'phone', ''),
+                "is_verified": getattr(current_user, 'is_verified', False),
+                "user_level": getattr(current_user, 'user_level', 1),
+                "avatar": getattr(current_user, 'avatar', ''),
+                "created_at": getattr(current_user, 'created_at', None),
+                "user_type": "normal_user"
+            }
+        
+        return formatted_user
+    except Exception as e:
+        print(f"Error in get_my_profile: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/my-tasks", response_model=list[schemas.TaskOut])
@@ -1086,9 +1154,9 @@ def user_profile(
                 "created_at": r.created_at,
                 "task_id": r.task_id,
                 "is_anonymous": bool(r.is_anonymous),
-                "reviewer_name": "匿名用户" if r.is_anonymous else r.user.name,
+                "reviewer_name": "匿名用户" if r.is_anonymous else user.name,
             }
-            for r in reviews
+            for r, user in reviews
         ],
     }
 
@@ -1222,9 +1290,9 @@ def send_message_api(
 @router.get("/messages/history/{user_id}", response_model=list[schemas.MessageOut])
 def get_chat_history_api(
     user_id: str,
-    current_user=Depends(check_user_status),
+    current_user=Depends(get_current_user_secure_sync),
     db: Session = Depends(get_db),
-    limit: int = 10,
+    limit: int = 20,  # 增加默认加载数量
     offset: int = 0,
     session_id: int = None,
 ):
@@ -1281,6 +1349,16 @@ def get_unread_notifications_api(
     current_user=Depends(check_user_status), db: Session = Depends(get_db)
 ):
     return crud.get_unread_notifications(db, current_user.id)
+
+
+@router.get("/notifications/with-recent-read", response_model=list[schemas.NotificationOut])
+def get_notifications_with_recent_read_api(
+    current_user=Depends(check_user_status), 
+    db: Session = Depends(get_db),
+    recent_read_limit: int = 10
+):
+    """获取所有未读通知和最近N条已读通知"""
+    return crud.get_notifications_with_recent_read(db, current_user.id, recent_read_limit)
 
 
 @router.get("/notifications/unread/count")
@@ -1776,90 +1854,102 @@ def admin_get_payments(
 
 @router.get("/contacts")
 def get_contacts(current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)):
-    from sqlalchemy import func
+    try:
+        from app.models import Message, User
+        
+        print(f"DEBUG: 开始获取联系人，用户ID: {current_user.id}")
 
-    from app.models import Message, User
+        # 简化版本：直接获取所有与当前用户有消息往来的用户
+        # 获取发送的消息
+        sent_contacts = db.query(Message.receiver_id).filter(
+            Message.sender_id == current_user.id
+        ).distinct().all()
+        
+        # 获取接收的消息
+        received_contacts = db.query(Message.sender_id).filter(
+            Message.receiver_id == current_user.id
+        ).distinct().all()
 
-    # 使用更高效的SQL查询，直接获取所有与当前用户有消息往来的用户
-    # 这个查询相当于您提供的SQL：
-    # SELECT DISTINCT
-    #     CASE
-    #         WHEN sender_id = :my_id THEN receiver_id
-    #         ELSE sender_id
-    #     END AS contact_id
-    # FROM messages
-    # WHERE sender_id = :my_id OR receiver_id = :my_id;
-    # 获取所有与当前用户有消息往来的用户ID
-    sent_contacts = (
-        db.query(Message.receiver_id)
-        .filter(Message.sender_id == current_user.id)
-        .distinct()
-    )
+        # 合并并去重
+        contact_ids = set()
+        for result in sent_contacts:
+            if result[0]:
+                contact_ids.add(result[0])
+        for result in received_contacts:
+            if result[0]:
+                contact_ids.add(result[0])
 
-    received_contacts = (
-        db.query(Message.sender_id)
-        .filter(Message.receiver_id == current_user.id)
-        .distinct()
-    )
+        # 排除自己
+        contact_ids.discard(current_user.id)
+        
+        print(f"DEBUG: 找到 {len(contact_ids)} 个联系人ID: {list(contact_ids)}")
 
-    # 合并并去重
-    contact_ids = set()
-    for result in sent_contacts:
-        contact_ids.add(result[0])
-    for result in received_contacts:
-        contact_ids.add(result[0])
+        if not contact_ids:
+            print("DEBUG: 没有找到联系人，返回空列表")
+            return []
 
-    # 排除自己
-    contact_ids.discard(current_user.id)
-
-    if not contact_ids:
-        return []
-
-    # 获取用户详细信息，并包含最新消息时间
-    contacts_with_last_message = []
-    for contact_id in contact_ids:
-        user = db.query(User).filter(User.id == contact_id).first()
-        if user:
-            # 获取与该用户的最新消息时间
-            latest_message = (
-                db.query(Message)
-                .filter(
-                    (
-                        (Message.sender_id == current_user.id)
-                        & (Message.receiver_id == contact_id)
-                    )
-                    | (
-                        (Message.sender_id == contact_id)
-                        & (Message.receiver_id == current_user.id)
-                    )
-                )
-                .order_by(Message.created_at.desc())
-                .first()
+        # 使用一次查询获取所有用户信息和最新消息时间
+        from sqlalchemy import func, case
+        
+        # 构建联系人ID列表用于IN查询
+        contact_id_list = list(contact_ids)
+        
+        # 一次性查询所有用户信息
+        users_query = db.query(User).filter(User.id.in_(contact_id_list)).all()
+        users_dict = {user.id: user for user in users_query}
+        
+        # 一次性查询所有最新消息时间
+        latest_messages = db.query(
+            case(
+                (Message.sender_id == current_user.id, Message.receiver_id),
+                else_=Message.sender_id
+            ).label('contact_id'),
+            func.max(Message.created_at).label('last_message_time')
+        ).filter(
+            ((Message.sender_id == current_user.id) & (Message.receiver_id.in_(contact_id_list))) |
+            ((Message.receiver_id == current_user.id) & (Message.sender_id.in_(contact_id_list)))
+        ).group_by(
+            case(
+                (Message.sender_id == current_user.id, Message.receiver_id),
+                else_=Message.sender_id
             )
-
-            contacts_with_last_message.append(
-                {
+        ).all()
+        
+        latest_messages_dict = {msg.contact_id: msg.last_message_time for msg in latest_messages}
+        
+        # 构建联系人信息
+        contacts_with_last_message = []
+        for contact_id in contact_id_list:
+            user = users_dict.get(contact_id)
+            if user:
+                contact_info = {
                     "id": user.id,
-                    "name": user.name or f"用户{user.id}",  # 如果名称为空，使用默认名称
-                    "avatar": user.avatar
-                    or "/avatar1.png",  # 如果头像为空，使用默认头像
-                    "email": user.email,  # 添加邮箱信息
-                    "user_level": user.user_level,  # 添加用户等级
-                    "task_count": user.task_count or 0,  # 添加任务数量
-                    "avg_rating": user.avg_rating or 0.0,  # 添加平均评分
-                    "last_message_time": (
-                        latest_message.created_at if latest_message else None
-                    ),  # 最新消息时间
-                    "is_verified": user.is_verified or False,  # 添加认证状态
+                    "name": getattr(user, 'name', None) or f"用户{user.id}",
+                    "avatar": getattr(user, 'avatar', None) or "/avatar1.png",
+                    "email": getattr(user, 'email', None),
+                    "user_level": 1,  # 默认等级
+                    "task_count": 0,
+                    "avg_rating": 0.0,
+                    "last_message_time": latest_messages_dict.get(contact_id),
+                    "is_verified": False
                 }
-            )
+                contacts_with_last_message.append(contact_info)
+                print(f"DEBUG: 添加联系人: {contact_info['name']} (ID: {contact_info['id']})")
+        
+        # 按最新消息时间排序
+        contacts_with_last_message.sort(
+            key=lambda x: x["last_message_time"] or "1970-01-01T00:00:00", 
+            reverse=True
+        )
 
-    # 按最新消息时间排序（最新的在前）
-    contacts_with_last_message.sort(
-        key=lambda x: x["last_message_time"] or "1970-01-01T00:00:00", reverse=True
-    )
-
-    return contacts_with_last_message
+        print(f"DEBUG: 成功获取 {len(contacts_with_last_message)} 个联系人")
+        return contacts_with_last_message
+        
+    except Exception as e:
+        print(f"DEBUG: contacts API发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
 
 @router.get("/users/shared-tasks/{other_user_id}")

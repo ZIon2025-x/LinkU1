@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import api from '../api';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
@@ -30,6 +31,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     username: '',
     phone: ''
   });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -71,15 +73,37 @@ const LoginModal: React.FC<LoginModalProps> = ({
           return;
         }
         
-        await api.post('/api/users/register', {
+        if (!agreedToTerms) {
+          setError('请先同意用户协议和隐私政策');
+          setLoading(false);
+          return;
+        }
+        
+        const res = await api.post('/api/users/register', {
           email: formData.email,
           password: formData.password,
           name: formData.username,  // 改为 name
           phone: formData.phone
         });
         
-        alert('注册成功！请登录');
-        setIsLogin(true);
+        // 处理注册成功后的逻辑，与独立注册页面保持一致
+        if (res.data.verification_required) {
+          message.success(`注册成功！我们已向 ${res.data.email} 发送了验证邮件，请检查您的邮箱并点击验证链接完成注册。`);
+          // 3秒后跳转到重发验证邮件页面
+          setTimeout(() => {
+            navigate('/resend-verification');
+            onClose(); // 关闭弹窗
+          }, 3000);
+        } else {
+          message.success(res.data.message || '注册成功！');
+          // 开发环境：直接跳转到登录页面
+          setTimeout(() => {
+            navigate('/login');
+            onClose(); // 关闭弹窗
+          }, 1500);
+        }
+        
+        // 清空表单数据
         setFormData({
           email: '',
           password: '',
@@ -89,20 +113,45 @@ const LoginModal: React.FC<LoginModalProps> = ({
         });
       }
     } catch (err: any) {
+      console.error('注册/登录错误:', err);
+      console.error('错误响应:', err?.response?.data);
+      
       let msg = isLogin ? '登录失败' : '注册失败';
-      if (err?.response?.data?.detail) {
-        if (typeof err.response.data.detail === 'string') {
-          msg = err.response.data.detail;
-        } else if (Array.isArray(err.response.data.detail)) {
-          msg = err.response.data.detail.map((item: any) => item.msg).join('；');
-        } else if (typeof err.response.data.detail === 'object' && err.response.data.detail.msg) {
-          msg = err.response.data.detail.msg;
-        } else {
-          msg = JSON.stringify(err.response.data.detail);
+      
+      // 优先处理HTTP响应错误
+      if (err?.response?.data) {
+        const responseData = err.response.data;
+        
+        // 处理detail字段
+        if (responseData.detail) {
+          if (typeof responseData.detail === 'string') {
+            msg = responseData.detail;
+          } else if (Array.isArray(responseData.detail)) {
+            msg = responseData.detail.map((item: any) => item.msg || item).join('；');
+          } else if (typeof responseData.detail === 'object' && responseData.detail.msg) {
+            msg = responseData.detail.msg;
+          } else {
+            msg = JSON.stringify(responseData.detail);
+          }
         }
-      } else if (err?.message) {
-        msg = err.message;
+        // 处理message字段
+        else if (responseData.message) {
+          msg = responseData.message;
+        }
+        // 处理其他错误信息
+        else if (responseData.error) {
+          msg = responseData.error;
+        }
       }
+      // 处理网络错误或其他错误
+      else if (err?.message) {
+        if (err.message.includes('Request failed with status code')) {
+          msg = '网络请求失败，请检查网络连接';
+        } else {
+          msg = err.message;
+        }
+      }
+      
       setError(msg);
     } finally {
       setLoading(false);
@@ -307,8 +356,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="请输入手机号"
-                  required
+                  placeholder="请输入手机号（可选）"
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -331,41 +379,21 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
           {/* 密码输入 */}
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#333'
-              }}>
-                密码
-              </label>
-              {isLogin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onShowForgotPassword) {
-                      onShowForgotPassword();
-                    }
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#3b82f6',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  忘记密码？
-                </button>
-              )}
-            </div>
+            <label style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#333',
+              marginBottom: '8px'
+            }}>
+              密码
+            </label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              placeholder="请输入密码"
+              placeholder={isLogin ? "请输入密码" : "至少8位，包含字母和数字"}
               required
               style={{
                 width: '100%',
@@ -383,6 +411,58 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 e.target.style.borderColor = '#ddd';
               }}
             />
+            {/* 忘记密码链接 - 放在密码输入框右下角 */}
+            {isLogin && (
+              <div style={{ textAlign: 'right', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onShowForgotPassword) {
+                      onShowForgotPassword();
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#3b82f6',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: '0'
+                  }}
+                >
+                  忘记密码？
+                </button>
+              </div>
+            )}
+            {/* 注册时显示密码要求 */}
+            {!isLogin && (
+              <div style={{
+                marginTop: '8px',
+                fontSize: '12px',
+                color: '#666',
+                lineHeight: '1.4'
+              }}>
+                <div style={{ marginBottom: '4px' }}>密码要求：</div>
+                <div style={{ 
+                  color: formData.password.length >= 8 ? '#52c41a' : '#d9d9d9',
+                  marginBottom: '2px'
+                }}>
+                  ✓ 至少8个字符
+                </div>
+                <div style={{ 
+                  color: /[A-Za-z]/.test(formData.password) ? '#52c41a' : '#d9d9d9',
+                  marginBottom: '2px'
+                }}>
+                  ✓ 包含至少一个字母
+                </div>
+                <div style={{ 
+                  color: /\d/.test(formData.password) ? '#52c41a' : '#d9d9d9'
+                }}>
+                  ✓ 包含至少一个数字
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 注册时显示确认密码 */}
@@ -423,18 +503,63 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
-          {/* 用户协议 */}
-          <div style={{
-            fontSize: '12px',
-            color: '#666',
-            marginBottom: '24px',
-            lineHeight: '1.4'
-          }}>
-            我已阅读并同意
-            <a href="#" style={{ color: '#3b82f6', textDecoration: 'underline' }}>用户协议</a>、
-            <a href="#" style={{ color: '#3b82f6', textDecoration: 'underline' }}>隐私政策</a>，
-            并接收短信通知。标准短信费率可能适用。
-          </div>
+          {/* 用户协议 - 只在注册时显示 */}
+          {!isLogin && (
+            <div style={{
+              fontSize: '12px',
+              color: '#666',
+              marginBottom: '24px',
+              lineHeight: '1.4',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px'
+            }}>
+              <div style={{
+                position: 'relative',
+                marginTop: '2px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    accentColor: '#52c41a',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                我已阅读并同意
+                <a 
+                  href="/terms" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/terms');
+                  }}
+                >
+                  用户协议
+                </a>、
+                <a 
+                  href="/privacy" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/privacy');
+                  }}
+                >
+                  隐私政策
+                </a>，
+                并接收短信通知。标准短信费率可能适用。
+              </div>
+            </div>
+          )}
 
           {/* 提交按钮 */}
           <button
@@ -471,7 +596,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <button
               type="button"
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setAgreedToTerms(false); // 切换时重置同意状态
+                setError(''); // 清空错误信息
+              }}
               style={{
                 background: 'none',
                 border: 'none',

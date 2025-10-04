@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TASK_TYPES, CITIES } from './Home';
+import { TASK_TYPES, CITIES } from './Tasks';
 import api from '../api';
 
 const PublishTask: React.FC = () => {

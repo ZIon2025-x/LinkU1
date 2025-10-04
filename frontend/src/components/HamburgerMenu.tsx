@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface HamburgerMenuProps {
   user: any;
-  unreadCount: number;
-  onNotificationClick: () => void;
   onLogout: () => void;
   onLoginClick: () => void;
   systemSettings: any;
@@ -12,14 +11,13 @@ interface HamburgerMenuProps {
 
 const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   user,
-  unreadCount,
-  onNotificationClick,
   onLogout,
   onLoginClick,
   systemSettings
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -33,20 +31,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   return (
     <div className="hamburger-menu">
       <div className="menu-controls">
-        {/* 通知按钮 - 独立显示 */}
-        {user && (
-          <button
-            className="notification-btn"
-            onClick={onNotificationClick}
-            aria-label="通知"
-          >
-            <span className="notification-icon">🔔</span>
-            {unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount}</span>
-            )}
-          </button>
-        )}
-
         {/* 汉堡菜单按钮 */}
         <button
           className={`hamburger-btn ${isOpen ? 'hidden' : ''}`}
@@ -91,7 +75,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   onClick={() => handleNavigation('/tasks')}
                 >
                   <span className="menu-icon">🏠</span>
-                  我的任务大厅
+                  {t('hamburgerMenu.myTasks')}
                 </button>
 
                 <button
@@ -99,7 +83,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   onClick={() => handleNavigation('/publish')}
                 >
                   <span className="menu-icon">✨</span>
-                  发布任务
+                  {t('hamburgerMenu.publish')}
                 </button>
 
                 <button
@@ -107,7 +91,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   onClick={() => handleNavigation('/join-us')}
                 >
                   <span className="menu-icon">🤝</span>
-                  加入我们
+                  {t('hamburgerMenu.joinUs')}
                 </button>
 
                 <button
@@ -115,7 +99,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   onClick={() => handleNavigation('/about')}
                 >
                   <span className="menu-icon">ℹ️</span>
-                  关于我们
+                  {t('hamburgerMenu.about')}
                 </button>
               </div>
 
@@ -130,7 +114,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   <div className="user-info">
                     <img
                       src={user.avatar || '/avatar1.png'}
-                      alt="头像"
+                      alt={t('common.avatar')}
                       className="user-avatar"
                     />
                     <div className="user-details">
@@ -145,7 +129,15 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     onClick={() => handleNavigation('/my-tasks')}
                   >
                     <span className="menu-icon">📋</span>
-                    我的任务
+                    {t('hamburgerMenu.myPersonalTasks')}
+                  </button>
+
+                  <button
+                    className="menu-item"
+                    onClick={() => handleNavigation('/message')}
+                  >
+                    <span className="menu-icon">💬</span>
+                    {t('hamburgerMenu.messages')}
                   </button>
 
                   <button
@@ -153,7 +145,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     onClick={() => handleNavigation('/profile')}
                   >
                     <span className="menu-icon">👤</span>
-                    个人资料
+                    {t('hamburgerMenu.myProfile')}
                   </button>
 
                   <button
@@ -161,7 +153,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     onClick={() => handleNavigation('/settings')}
                   >
                     <span className="menu-icon">⚙️</span>
-                    设置
+                    {t('hamburgerMenu.mySettings')}
                   </button>
 
                   <button
@@ -169,16 +161,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     onClick={() => handleNavigation('/wallet')}
                   >
                     <span className="menu-icon">💰</span>
-                    钱包
-                  </button>
-
-                  {/* VIP按钮 */}
-                  <button
-                    className="menu-item vip-button"
-                    onClick={() => handleNavigation('/vip')}
-                  >
-                    <span className="menu-icon">👑</span>
-                    VIP会员
+                    {t('hamburgerMenu.myWallet')}
                   </button>
 
                   {/* 登出按钮 */}
@@ -190,7 +173,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     }}
                   >
                     <span className="menu-icon">🚪</span>
-                    登出
+                    {t('hamburgerMenu.logout')}
                   </button>
                 </div>
               ) : (
@@ -204,7 +187,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                     }}
                   >
                     <span className="menu-icon">🔑</span>
-                    登录/注册
+                    {t('hamburgerMenu.login')}/{t('hamburgerMenu.register')}
                   </button>
                 </div>
               )}
@@ -229,47 +212,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             margin-left: auto;
           }
 
-          /* 通知按钮 */
-          .notification-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            position: relative;
-            border-radius: 50%;
-            transition: background-color 0.2s ease;
-          }
-
-          .notification-btn:hover {
-            background-color: #f5f5f5;
-          }
-
-          .notification-icon {
-            font-size: 20px;
-            color: #666;
-          }
-
-          .notification-badge {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: linear-gradient(135deg, #FF6B6B, #FF4757);
-            color: white;
-            border-radius: 50%;
-            min-width: 18px;
-            height: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-            line-height: 1;
-          }
 
           /* 汉堡菜单按钮 */
           .hamburger-btn {
@@ -482,33 +424,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             flex: 1;
           }
 
-          /* 通知按钮 */
-          .menu-item-notification {
-            position: relative;
-            /* 允许文本换行，但限制在一行内 */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            justify-content: center; /* 确保内容居中 */
-            gap: 1rem; /* 固定距离 */
-          }
-
-          .notification-badge {
-            position: absolute;
-            right: 1.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(135deg, #FF6B6B, #FF4757);
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6875rem;
-            font-weight: bold;
-          }
 
           /* 用户信息 */
           .user-info {
@@ -555,20 +470,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           }
 
           /* 特殊按钮样式 */
-          .vip-button {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: #8B4513;
-            margin: 1rem 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
-            justify-content: center; /* 确保VIP按钮内容居中 */
-            gap: 1rem; /* 固定距离 */
-          }
-
-          .vip-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
-          }
 
           .logout-button {
             color: #e53e3e;
@@ -645,7 +546,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               padding: 1rem 1.5rem;
             }
             
-            .vip-button,
             .login-button {
               margin: 0.75rem 1.5rem;
             }

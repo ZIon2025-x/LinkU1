@@ -1,6 +1,9 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Footer: React.FC = () => {
+  const { t } = useLanguage();
+  
   return (
     <footer style={{
       background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
@@ -10,7 +13,7 @@ const Footer: React.FC = () => {
     }}>
       <div style={{maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
         {/* 上半部分 - 主要内容 */}
-        <div style={{
+        <div className="footer-main-content" style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
           gap: '60px',
@@ -24,7 +27,7 @@ const Footer: React.FC = () => {
               marginBottom: '20px',
               color: '#fff'
             }}>
-              LinkU Review
+              {t('footer.companyName')}
             </h3>
             <p style={{
               fontSize: '16px',
@@ -32,12 +35,12 @@ const Footer: React.FC = () => {
               lineHeight: '1.6',
               marginBottom: '20px'
             }}>
-              英国留学生互助平台，连接你我，共创美好留学体验
+              {t('footer.description')}
             </p>
           </div>
           
           {/* 中列 - 链接导航 */}
-          <div style={{
+          <div className="footer-links" style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '40px'
@@ -49,7 +52,7 @@ const Footer: React.FC = () => {
                 marginBottom: '16px',
                 color: '#fff'
               }}>
-                帮助中心
+                {t('footer.support')}
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                 <a href="#" style={{
@@ -72,7 +75,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  隐私政策
+                  {t('footer.privacyPolicy')}
                 </a>
                 <a href="#" style={{
                   color: 'rgba(255,255,255,0.8)',
@@ -83,7 +86,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  服务条款
+                  {t('footer.termsOfService')}
                 </a>
               </div>
             </div>
@@ -125,7 +128,7 @@ const Footer: React.FC = () => {
           </div>
           
           {/* 右列 - 联系信息和下载 */}
-          <div>
+          <div className="footer-contact">
             <h4 style={{
               fontSize: '16px',
               fontWeight: '600',
@@ -190,7 +193,7 @@ const Footer: React.FC = () => {
             </div>
             
             {/* 应用下载按钮 */}
-            <div style={{marginTop: '24px'}}>
+            <div className="footer-download" style={{marginTop: '24px'}}>
               <p style={{
                 fontSize: '14px',
                 color: 'rgba(255,255,255,0.8)',
@@ -198,7 +201,7 @@ const Footer: React.FC = () => {
               }}>
                 下载我们的应用
               </p>
-              <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+              <div className="download-buttons" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                 <button style={{
                   background: 'rgba(255,255,255,0.1)',
                   border: '1px solid rgba(255,255,255,0.2)',
@@ -261,7 +264,7 @@ const Footer: React.FC = () => {
         }} />
         
         {/* 下半部分 - 版权和社交媒体 */}
-        <div style={{
+        <div className="footer-bottom" style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -313,7 +316,7 @@ const Footer: React.FC = () => {
           </div>
           
           {/* 右侧 - 社交媒体 */}
-          <div style={{
+          <div className="footer-social" style={{
             display: 'flex',
             gap: '16px',
             alignItems: 'center'
@@ -450,6 +453,134 @@ const Footer: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          /* 移动端适配 */
+          @media (max-width: 768px) {
+            .footer-main-content {
+              grid-template-columns: 1fr !important;
+              gap: 40px !important;
+              text-align: center;
+            }
+            
+            .footer-links {
+              grid-template-columns: 1fr !important;
+              gap: 30px !important;
+              text-align: center;
+            }
+            
+            .footer-contact {
+              text-align: center;
+            }
+            
+            .footer-download {
+              text-align: center;
+            }
+            
+            .download-buttons {
+              flex-direction: row !important;
+              justify-content: center;
+              gap: 12px !important;
+            }
+            
+            .download-buttons button {
+              flex: 1;
+              max-width: 150px;
+              font-size: 11px !important;
+              padding: 6px 8px !important;
+            }
+            
+            .footer-bottom {
+              flex-direction: column !important;
+              text-align: center;
+              gap: 30px !important;
+            }
+            
+            .footer-social {
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            
+            /* 调整内边距 */
+            footer {
+              padding: 40px 0 20px !important;
+            }
+            
+            /* 调整字体大小 */
+            .footer-main-content h3 {
+              font-size: 20px !important;
+            }
+            
+            .footer-main-content p {
+              font-size: 14px !important;
+            }
+            
+            .footer-main-content h4 {
+              font-size: 14px !important;
+            }
+            
+            .footer-main-content a {
+              font-size: 13px !important;
+            }
+          }
+          
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            .footer-main-content {
+              gap: 30px !important;
+            }
+            
+            .download-buttons {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+            
+            .download-buttons button {
+              max-width: none !important;
+              width: 100% !important;
+            }
+            
+            .footer-social {
+              gap: 12px !important;
+            }
+            
+            .footer-social a {
+              width: 28px !important;
+              height: 28px !important;
+              font-size: 12px !important;
+            }
+            
+            /* 调整容器内边距 */
+            footer > div {
+              padding: 0 16px !important;
+            }
+            
+            /* 调整分割线 */
+            .footer-main-content + div {
+              margin: 30px 0 20px !important;
+            }
+          }
+          
+          /* 中等屏幕优化 */
+          @media (min-width: 769px) and (max-width: 1024px) {
+            .footer-main-content {
+              grid-template-columns: 1fr 1fr !important;
+              gap: 40px !important;
+            }
+            
+            .footer-contact {
+              grid-column: 1 / -1;
+              margin-top: 20px;
+            }
+            
+            .footer-links {
+              grid-template-columns: 1fr 1fr !important;
+            }
+          }
+        `}
+      </style>
     </footer>
   );
 };

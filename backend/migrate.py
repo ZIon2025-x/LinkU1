@@ -37,7 +37,7 @@ def run_command(command, description):
 
 def check_database_connection():
     """检查数据库连接"""
-    print("🔍 检查数据库连接...")
+    print("[DEBUG] 检查数据库连接...")
     
     try:
         from app.database import engine
@@ -89,7 +89,7 @@ def show_pending_migrations():
 
 def validate_migrations():
     """验证迁移文件"""
-    print("🔍 验证迁移文件...")
+    print("[DEBUG] 验证迁移文件...")
     
     # 检查迁移文件语法
     versions_dir = Path("alembic/versions")

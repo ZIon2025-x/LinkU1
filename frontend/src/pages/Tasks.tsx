@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
+import React, { useEffect, useState, useCallback } from 'react';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -54,6 +58,143 @@ if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
   styleElement.textContent = bellStyles;
   document.head.appendChild(styleElement);
+  
+  // 添加自定义下拉菜单样式
+  const dropdownStyles = `
+    /* 自定义下拉菜单样式 */
+    .custom-select {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .custom-select select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background: transparent;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+    
+    .custom-select select option {
+      background: #ffffff;
+      color: #374151;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-select select option:hover {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+    
+    .custom-select select option:checked {
+      background: #3b82f6;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    
+    /* 美化select下拉箭头 */
+    .custom-select::after {
+      content: '▼';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 12px;
+      pointer-events: none;
+      transition: color 0.3s ease;
+    }
+    
+    .custom-select:hover::after {
+      color: #6b7280;
+    }
+    
+    /* 自定义下拉菜单容器 */
+    .custom-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .custom-dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      margin-top: 4px;
+      overflow: hidden;
+      min-width: 200px;
+    }
+    
+    .custom-dropdown-content.show {
+      display: block;
+      animation: dropdownFadeIn 0.2s ease-out;
+    }
+    
+    .custom-dropdown-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .custom-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    
+    .custom-dropdown-item:hover {
+      background: #f8fafc;
+      color: #1f2937;
+    }
+    
+    .custom-dropdown-item.selected {
+      background: #3b82f6;
+      color: #ffffff;
+    }
+    
+    .custom-dropdown-item .icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    
+    @keyframes dropdownFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  `;
+  
+  const dropdownStyleElement = document.createElement('style');
+  dropdownStyleElement.textContent = dropdownStyles;
+  document.head.appendChild(dropdownStyleElement);
 }
 
 interface Notification {
@@ -67,35 +208,37 @@ interface Notification {
 }
 
 // 剩余时间计算函数 - 使用本地时间
-function getRemainTime(deadline: string) {
+function getRemainTime(deadline: string, t: (key: string) => string) {
   const now = dayjs();
   const end = dayjs(deadline).local();
   const diff = end.diff(now, 'minute');
   
-  if (diff <= 0) return "已过期";
+  if (diff <= 0) return t('home.taskExpired');
   
   const hours = Math.floor(diff / 60);
   const minutes = diff % 60;
   
   if (hours > 0) {
-    return `${hours}小时${minutes}分钟`;
+    return `${hours}${t('home.hours')}${minutes}${t('home.minutes')}`;
   }
-  return `${minutes}分钟`;
+  return `${minutes}${t('home.minutes')}`;
 }
 
-// 检查是否即将过期 - 使用本地时间
+// 检查是否即将过期 - 正确处理UTC时间
 function isExpiringSoon(deadline: string) {
   const now = dayjs();
-  const end = dayjs(deadline).local();
+  // 假设deadline是UTC时间，先解析为UTC，再转换为本地时间进行比较
+  const end = dayjs.utc(deadline).local();
   const oneDayLater = now.add(1, 'day');
   
   return now.isBefore(end) && end.isBefore(oneDayLater);
 }
 
-// 检查是否已过期 - 使用本地时间
+// 检查是否已过期 - 正确处理UTC时间
 function isExpired(deadline: string) {
   const now = dayjs();
-  const end = dayjs(deadline).local();
+  // 假设deadline是UTC时间，先解析为UTC，再转换为本地时间进行比较
+  const end = dayjs.utc(deadline).local();
   return now.isAfter(end);
 }
 
@@ -104,20 +247,55 @@ export const TASK_TYPES = [
 ];
 
 export const CITIES = [
-  "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
+  "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
 ];
 
 const Tasks: React.FC = () => {
+  const { t } = useLanguage();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState('全部类型');
-  const [city, setCity] = useState('全部城市');
+  const [type, setType] = useState('all');
+  const [city, setCity] = useState('all');
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
   const [total, setTotal] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [sortBy, setSortBy] = useState('latest'); // latest, reward_asc, reward_desc, deadline_asc, deadline_desc
+  const [rewardSort, setRewardSort] = useState(''); // '', 'asc', 'desc'
+  const [deadlineSort, setDeadlineSort] = useState(''); // '', 'asc', 'desc'
+  const [showRewardDropdown, setShowRewardDropdown] = useState(false);
+  const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
+  const [showLevelDropdown, setShowLevelDropdown] = useState(false);
+  const [taskLevel, setTaskLevel] = useState('all');
+
+  // 处理金额排序变化
+  const handleRewardSortChange = (value: string) => {
+    setRewardSort(value);
+    setDeadlineSort(''); // 清除截止日期排序
+    if (value === '') {
+      setSortBy('latest');
+    } else {
+      setSortBy(`reward_${value}`);
+    }
+  };
+
+  // 处理截止日期排序变化
+  const handleDeadlineSortChange = (value: string) => {
+    setDeadlineSort(value);
+    setRewardSort(''); // 清除金额排序
+    if (value === '') {
+      setSortBy('latest');
+    } else {
+      setSortBy(`deadline_${value}`);
+    }
+  };
+
+  // 处理任务等级变化
+  const handleLevelChange = (newLevel: string) => {
+    setTaskLevel(newLevel);
+    setShowLevelDropdown(false);
+  };
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   
@@ -135,6 +313,13 @@ const Tasks: React.FC = () => {
   // 登录弹窗状态
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 任务详情弹窗状态
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  
+  // 已申请任务状态
+  const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
   
   const navigate = useNavigate();
 
@@ -168,15 +353,15 @@ const Tasks: React.FC = () => {
     const loadNotificationsAndSettings = async () => {
       if (user) {
         try {
-          // 加载通知
+          // 加载通知 - 获取所有未读通知和最近10条已读通知
           const [notificationsData, unreadCountData, settingsData] = await Promise.all([
-            getNotifications(),
+            getNotificationsWithRecentRead(10),
             getUnreadNotificationCount(),
             getPublicSystemSettings()
           ]);
           
           setNotifications(notificationsData);
-          setUnreadCount(unreadCountData.count);
+          setUnreadCount(unreadCountData.unread_count);
           setSystemSettings(settingsData);
         } catch (error) {
           console.error('加载通知或系统设置失败:', error);
@@ -188,17 +373,20 @@ const Tasks: React.FC = () => {
   }, [user]);
 
   // 加载任务列表
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
         page: page,
         page_size: pageSize,
-        ...(type !== '全部类型' && { task_type: type }),
-        ...(city !== '全部城市' && { location: city }),
+        ...(type !== 'all' && { task_type: type }),
+        ...(city !== 'all' && { location: city }),
         ...(keyword && { keyword }),
         sort_by: sortBy,
       };
+      
+      console.log('Tasks页面请求参数:', params);
+      console.log('当前城市状态:', city);
       
       const response = await api.get('/api/tasks', { params });
       const data = response.data;
@@ -210,33 +398,45 @@ const Tasks: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, type, city, keyword, sortBy]);
 
   useEffect(() => {
     loadTasks();
-  }, [page, type, city, keyword, sortBy]);
+  }, [page, type, city, keyword, sortBy, loadTasks]);
 
-  // 点击外部关闭位置下拉菜单
+  // 点击外部关闭下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('[data-location-dropdown]')) {
         setShowLocationDropdown(false);
       }
+      if (!target.closest('.reward-dropdown-container')) {
+        setShowRewardDropdown(false);
+      }
+      if (!target.closest('.deadline-dropdown-container')) {
+        setShowDeadlineDropdown(false);
+      }
+      if (!target.closest('.level-dropdown-container')) {
+        setShowLevelDropdown(false);
+      }
     };
 
-    if (showLocationDropdown) {
+    if (showLocationDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLocationDropdown]);
+  }, [showLocationDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
 
   // 处理位置切换
   const handleLocationChange = (newLocation: string) => {
-    setUserLocation(newLocation);
+    setCity(newLocation); // 更新城市筛选状态
+    if (newLocation !== 'all') {
+      setUserLocation(newLocation); // 只有非"all"时才更新用户位置显示
+    }
     setShowLocationDropdown(false);
     // 可以根据位置重新加载任务
     setPage(1);
@@ -289,25 +489,44 @@ const Tasks: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        alert('任务接受成功！');
+        alert(t('tasks.acceptSuccess'));
+        // 将任务添加到已申请列表，隐藏申请按钮
+        setAppliedTasks(prev => new Set([...Array.from(prev), taskId]));
         loadTasks(); // 重新加载任务列表
       } else {
-        alert(data.detail || '接受任务失败');
+        alert(data.detail || t('tasks.acceptFailed'));
       }
     } catch (error) {
       console.error('接受任务失败:', error);
-      alert('接受任务失败');
+      alert(t('tasks.acceptFailed'));
     }
   };
 
   // 处理任务详情查看
   const handleViewTask = (taskId: number) => {
-    navigate(`/tasks/${taskId}`);
+    setSelectedTaskId(taskId);
+    setShowTaskDetailModal(true);
   };
 
   // 处理联系发布者
   const handleContactPoster = (taskId: number) => {
     navigate(`/message?uid=${taskId}`);
+  };
+
+  // 检查用户是否可以查看/申请任务（等级匹配）
+  const canViewTask = (user: any, task: any) => {
+    if (!task) return false;
+    
+    // 如果用户未登录，只能查看普通任务
+    if (!user) {
+      return task.task_level === 'normal';
+    }
+    
+    const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
+    const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
+    const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
+    
+    return userLevelValue >= taskLevelValue;
   };
 
   // 获取任务等级颜色
@@ -327,14 +546,61 @@ const Tasks: React.FC = () => {
   const getTaskLevelLabel = (taskLevel: string) => {
     switch (taskLevel) {
       case 'super':
-        return '超级VIP';
+        return t('home.superTask');
       case 'vip':
-        return 'VIP';
+        return t('home.vipTask');
       case 'normal':
       default:
-        return '普通';
+        return t('home.normalTask');
     }
   };
+
+  // 任务等级筛选逻辑
+  const getFilteredTasks = () => {
+    let filtered = [...tasks];
+
+    // 按任务等级筛选
+    if (taskLevel !== 'all') {
+      const levelMap: { [key: string]: string } = {
+        [t('home.normalTask')]: 'normal',
+        [t('home.vipTask')]: 'vip',
+        [t('home.superTask')]: 'super'
+      };
+      
+      const targetLevel = levelMap[taskLevel];
+      if (targetLevel) {
+        filtered = filtered.filter(task => task.task_level === targetLevel);
+      }
+    }
+
+    // 按城市筛选
+    if (city !== 'all') {
+      filtered = filtered.filter(task => task.location === city);
+    }
+
+    // 按类型筛选
+    if (type !== 'all') {
+      filtered = filtered.filter(task => task.task_type === type);
+    }
+
+    // 按搜索关键词筛选
+    if (keyword.trim()) {
+      const query = keyword.toLowerCase();
+      filtered = filtered.filter(task => 
+        task.title.toLowerCase().includes(query) ||
+        task.description.toLowerCase().includes(query) ||
+        task.location.toLowerCase().includes(query)
+      );
+    }
+
+    // 注意：排序应该在服务端进行，这里只进行筛选
+    // 客户端排序会破坏服务端的分页排序逻辑
+
+    return filtered;
+  };
+
+  // 获取筛选后的任务列表
+  const filteredTasks = getFilteredTasks();
 
   return (
     <div style={{ 
@@ -360,6 +626,13 @@ const Tasks: React.FC = () => {
           margin: '0 auto',
           gap: '8px',
           minHeight: '44px'
+        }}>
+          {/* Logo和位置信息 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            flexShrink: 0
         }}>
           {/* Logo */}
             <div 
@@ -389,47 +662,11 @@ const Tasks: React.FC = () => {
               LinkU
           </div>
 
-          {/* 搜索框 */}
-          <div className="search-container" style={{
-            position: 'relative',
-            flex: '1',
-            maxWidth: '400px',
-            margin: '0 8px',
-            minWidth: '120px'
-          }}>
-            <input
-              type="text"
-              placeholder="搜索任务..."
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              style={{ 
-                width: '100%',
-                padding: '10px 16px 10px 40px',
-                border: '1px solid #e5e7eb',
-                borderRadius: '20px',
-                fontSize: '14px',
-                background: '#f9fafb',
-                outline: 'none'
-              }}
-            />
-            <div style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#6b7280',
-              fontSize: '16px'
-            }}>
-              🔍
-            </div>
-          </div>
-
           {/* 位置信息 */}
           <div 
             className="location-container"
             style={{
               position: 'relative',
-              marginRight: '8px',
               flexShrink: 0
             }}
             data-location-dropdown
@@ -439,31 +676,37 @@ const Tasks: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                  gap: '6px',
                 color: '#6b7280',
                 fontSize: '14px',
                 cursor: 'pointer',
                 padding: '8px 12px',
-                borderRadius: '6px',
+                  borderRadius: '8px',
                 transition: 'all 0.2s ease',
-                background: showLocationDropdown ? '#f3f4f6' : 'transparent'
+                  background: showLocationDropdown ? '#f3f4f6' : 'transparent',
+                  border: '1px solid #e5e7eb'
               }}
               onMouseEnter={(e) => {
                 if (!showLocationDropdown) {
-                  e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#d1d5db';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!showLocationDropdown) {
                   e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                 }
               }}
             >
-              <span>📍</span>
-              <span>{userLocation}</span>
+                <span style={{ fontSize: '16px' }}>📍</span>
+                <span style={{ fontWeight: '500' }}>
+                  {city === 'all' ? t('home.allCities') : userLocation}
+                </span>
               <span style={{
                 transform: showLocationDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease'
+                  transition: 'transform 0.2s ease',
+                  fontSize: '12px'
               }}>▼</span>
             </div>
             
@@ -481,8 +724,29 @@ const Tasks: React.FC = () => {
                 zIndex: 1000,
                 marginTop: '4px',
                 maxHeight: '200px',
-                overflowY: 'auto'
+                  overflowY: 'auto',
+                  minWidth: '150px'
               }}>
+                <div
+                  onClick={() => handleLocationChange('all')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#374151',
+                    borderBottom: '1px solid #f3f4f6',
+                    transition: 'background 0.2s ease',
+                    fontWeight: '600'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {t('home.allCities')}
+                </div>
                 {CITIES.map((cityName) => (
                   <div
                     key={cityName}
@@ -507,24 +771,30 @@ const Tasks: React.FC = () => {
                 ))}
               </div>
             )}
+            </div>
           </div>
 
-          {/* 汉堡菜单 */}
-          <HamburgerMenu
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => setShowNotifications(prev => !prev)}
-            onLogout={async () => {
-                      try {
-                        await logout();
-                      } catch (error) {
-                        console.log('登出请求失败:', error);
-                      }
-                      window.location.reload(); 
-            }}
-            onLoginClick={() => setShowLoginModal(true)}
-            systemSettings={systemSettings}
-          />
+          {/* 通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                        try {
+                          await logout();
+                        } catch (error) {
+                          console.log('登出请求失败:', error);
+                        }
+                        window.location.reload();
+                      }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
         </div>
       </header>
 
@@ -606,50 +876,745 @@ const Tasks: React.FC = () => {
             </div>
           </div>
 
-          {/* 排序按钮行 */}
+          {/* 排序按钮和搜索框行 */}
           <div style={{
             background: '#fff',
             borderRadius: '12px',
             padding: '16px',
             marginBottom: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
+            flexWrap: 'wrap'
           }}>
-            <div className="sort-buttons" style={{
+            {/* 排序控制区域 - 重新设计 */}
+            <div className="sort-controls" style={{
               display: 'flex',
               gap: '12px',
-              overflowX: 'auto',
-              paddingBottom: '8px'
+              flex: '1',
+              minWidth: '0',
+              alignItems: 'center',
+              flexWrap: 'wrap'
             }}>
-              {[
-                { key: 'latest', label: '最新发布', icon: '🕒' },
-                { key: 'reward_desc', label: '金额降序', icon: '💰' },
-                { key: 'reward_asc', label: '金额升序', icon: '💰' },
-                { key: 'deadline_asc', label: '截止时间升序', icon: '⏰' },
-                { key: 'deadline_desc', label: '截止时间降序', icon: '⏰' }
-              ].map((sortOption) => (
-                <button
-                  key={sortOption.key}
-                  onClick={() => setSortBy(sortOption.key)}
+              {/* 任务等级下拉菜单 */}
+              <div className="level-dropdown-container" style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setShowLevelDropdown(!showLevelDropdown)}
                   style={{
-                    background: sortBy === sortOption.key ? '#3b82f6' : '#f3f4f6',
-                    color: sortBy === sortOption.key ? '#fff' : '#374151',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
+                    background: taskLevel !== t('tasks.levels.all') 
+                      ? taskLevel === t('tasks.levels.vip') 
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : taskLevel === t('tasks.levels.super')
+                        ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                        : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+                      : '#ffffff',
+                    color: taskLevel !== t('tasks.levels.all') ? '#ffffff' : '#374151',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '16px',
+                    padding: '12px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    flexShrink: 0,
+                    boxShadow: taskLevel !== t('tasks.levels.all') 
+                      ? taskLevel === t('tasks.levels.vip')
+                        ? '0 8px 25px rgba(245, 158, 11, 0.3)'
+                        : taskLevel === t('tasks.levels.super')
+                        ? '0 8px 25px rgba(139, 92, 246, 0.3)'
+                        : '0 8px 25px rgba(107, 114, 128, 0.3)'
+                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    transform: taskLevel !== t('tasks.levels.all') ? 'translateY(-2px)' : 'translateY(0)',
+                    minWidth: '140px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (taskLevel === t('tasks.levels.all')) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (taskLevel === t('tasks.levels.all')) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+                    }
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: taskLevel !== t('tasks.levels.all') 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : '#f3f4f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>
+                    {taskLevel === t('tasks.levels.vip') ? '👑' : taskLevel === t('tasks.levels.super') ? '⭐' : '📋'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {taskLevel}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                      {taskLevel !== t('tasks.levels.all') ? t('tasks.levels.taskLevel') : t('tasks.levels.selectLevel')}
+                    </div>
+                  </div>
+                  <div style={{
+                    color: taskLevel !== t('tasks.levels.all') ? '#ffffff' : '#9ca3af',
+                    fontSize: '12px',
+                    transition: 'color 0.3s ease',
+                    transform: showLevelDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>
+                    ▼
+                  </div>
+                </div>
+                
+                {/* 自定义下拉菜单 */}
+                {showLevelDropdown && (
+                  <div className="custom-dropdown-content show" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                    zIndex: 1000,
+                    marginTop: '4px',
+                    overflow: 'hidden',
+                    minWidth: '200px'
+                  }}>
+                    <div 
+                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.all') ? 'selected' : ''}`}
+                      onClick={() => handleLevelChange(t('tasks.levels.all'))}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                     fontSize: '14px',
                     fontWeight: '500',
+                        color: taskLevel === t('tasks.levels.all') ? '#ffffff' : '#374151',
+                        background: taskLevel === t('tasks.levels.all') ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        📋
+                      </div>
+                      <span>{t('tasks.levels.all')}</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.normal') ? 'selected' : ''}`}
+                      onClick={() => handleLevelChange(t('tasks.levels.normal'))}
+                      style={{
+                        padding: '12px 16px',
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: taskLevel === t('tasks.levels.normal') ? '#ffffff' : '#374151',
+                        background: taskLevel === t('tasks.levels.normal') ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        📋
+                      </div>
+                      <span>{t('tasks.levels.normal')}</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.vip') ? 'selected' : ''}`}
+                      onClick={() => handleLevelChange(t('tasks.levels.vip'))}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: taskLevel === t('tasks.levels.vip') ? '#ffffff' : '#374151',
+                        background: taskLevel === t('tasks.levels.vip') ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        👑
+                      </div>
+                      <span>{t('tasks.levels.vip')}</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.super') ? 'selected' : ''}`}
+                      onClick={() => handleLevelChange(t('tasks.levels.super'))}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: taskLevel === t('tasks.levels.super') ? '#ffffff' : '#374151',
+                        background: taskLevel === t('tasks.levels.super') ? '#3b82f6' : 'transparent'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        ⭐
+                      </div>
+                      <span>{t('tasks.levels.super')}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 排序标签 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#6b7280',
+                fontSize: '14px',
+                fontWeight: '500',
+                flexShrink: 0
+              }}>
+                <span>排序:</span>
+              </div>
+
+              {/* 最新发布卡片 */}
+              <div
+                onClick={() => {
+                  setSortBy('latest');
+                  setRewardSort('');
+                  setDeadlineSort('');
+                }}
+                  style={{
+                  background: sortBy === 'latest' 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                    : '#ffffff',
+                  color: sortBy === 'latest' ? '#ffffff' : '#374151',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '16px',
+                  padding: '12px 20px',
+                    cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                  gap: '8px',
+                  flexShrink: 0,
+                  boxShadow: sortBy === 'latest' 
+                    ? '0 8px 25px rgba(102, 126, 234, 0.3)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                  transform: sortBy === 'latest' ? 'translateY(-2px)' : 'translateY(0)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (sortBy !== 'latest') {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (sortBy !== 'latest') {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+                  }
+                }}
+              >
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: sortBy === 'latest' 
+                    ? 'rgba(255, 255, 255, 0.2)' 
+                    : '#f3f4f6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px'
+                }}>
+                  🕒
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600' }}>最新发布</div>
+                  <div style={{ fontSize: '11px', opacity: 0.8 }}>按时间排序</div>
+                </div>
+              </div>
+
+              {/* 金额排序卡片 */}
+              <div className="reward-dropdown-container" style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setShowRewardDropdown(!showRewardDropdown)}
+                  style={{
+                    background: rewardSort 
+                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' 
+                      : '#ffffff',
+                    color: rewardSort ? '#ffffff' : '#374151',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '16px',
+                    padding: '12px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    flexShrink: 0,
+                    boxShadow: rewardSort 
+                      ? '0 8px 25px rgba(240, 147, 251, 0.3)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    transform: rewardSort ? 'translateY(-2px)' : 'translateY(0)',
+                    minWidth: '140px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!rewardSort) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!rewardSort) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+                    }
                   }}
                 >
-                  <span>{sortOption.icon}</span>
-                  <span>{sortOption.label}</span>
-                </button>
-              ))}
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: rewardSort 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : '#fef3c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>
+                    💰
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {rewardSort === 'desc' ? '金额降序' : 
+                       rewardSort === 'asc' ? '金额升序' : '金额排序'}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                      {rewardSort ? '按金额排序' : '选择排序方式'}
+                    </div>
+                  </div>
+                  <div style={{
+                    color: rewardSort ? '#ffffff' : '#9ca3af',
+                    fontSize: '12px',
+                    transition: 'color 0.3s ease',
+                    transform: showRewardDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>
+                    ▼
+                  </div>
+                </div>
+                
+                {/* 自定义下拉菜单 */}
+                {showRewardDropdown && (
+                  <div className="custom-dropdown-content show" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                    zIndex: 1000,
+                    marginTop: '4px',
+                    overflow: 'hidden',
+                    minWidth: '200px'
+                  }}>
+                    <div 
+                      className={`custom-dropdown-item ${rewardSort === '' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleRewardSortChange('');
+                        setShowRewardDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                        color: rewardSort === '' ? '#ffffff' : '#374151',
+                        background: rewardSort === '' ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        💰
+                      </div>
+                      <span>金额排序</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleRewardSortChange('desc');
+                        setShowRewardDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: rewardSort === 'desc' ? '#ffffff' : '#374151',
+                        background: rewardSort === 'desc' ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        💰
+                      </div>
+                      <span>金额降序</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleRewardSortChange('asc');
+                        setShowRewardDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: rewardSort === 'asc' ? '#ffffff' : '#374151',
+                        background: rewardSort === 'asc' ? '#3b82f6' : 'transparent'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        💰
+                      </div>
+                      <span>金额升序</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 截止日期排序卡片 */}
+              <div className="deadline-dropdown-container" style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setShowDeadlineDropdown(!showDeadlineDropdown)}
+                  style={{
+                    background: deadlineSort 
+                      ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' 
+                      : '#ffffff',
+                    color: deadlineSort ? '#ffffff' : '#374151',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '16px',
+                    padding: '12px 20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    flexShrink: 0,
+                    boxShadow: deadlineSort 
+                      ? '0 8px 25px rgba(79, 172, 254, 0.3)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    transform: deadlineSort ? 'translateY(-2px)' : 'translateY(0)',
+                    minWidth: '160px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!deadlineSort) {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!deadlineSort) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+                    }
+                  }}
+                >
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: deadlineSort 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : '#fef3c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>
+                    ⏰
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {deadlineSort === 'asc' ? '截止升序' : 
+                       deadlineSort === 'desc' ? '截止降序' : '截止时间排序'}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                      {deadlineSort ? '按截止时间排序' : '选择排序方式'}
+                    </div>
+                  </div>
+                  <div style={{
+                    color: deadlineSort ? '#ffffff' : '#9ca3af',
+                    fontSize: '12px',
+                    transition: 'color 0.3s ease',
+                    transform: showDeadlineDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>
+                    ▼
+                  </div>
+                </div>
+                
+                {/* 自定义下拉菜单 */}
+                {showDeadlineDropdown && (
+                  <div className="custom-dropdown-content show" style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                    zIndex: 1000,
+                    marginTop: '4px',
+                    overflow: 'hidden',
+                    minWidth: '200px'
+                  }}>
+                    <div 
+                      className={`custom-dropdown-item ${deadlineSort === '' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleDeadlineSortChange('');
+                        setShowDeadlineDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: deadlineSort === '' ? '#ffffff' : '#374151',
+                        background: deadlineSort === '' ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        ⏰
+                      </div>
+                      <span>截止时间排序</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleDeadlineSortChange('asc');
+                        setShowDeadlineDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: deadlineSort === 'asc' ? '#ffffff' : '#374151',
+                        background: deadlineSort === 'asc' ? '#3b82f6' : 'transparent',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        ⏰
+                      </div>
+                      <span>截止时间升序</span>
+                    </div>
+                    <div 
+                      className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
+                      onClick={() => {
+                        handleDeadlineSortChange('desc');
+                        setShowDeadlineDropdown(false);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: deadlineSort === 'desc' ? '#ffffff' : '#374151',
+                        background: deadlineSort === 'desc' ? '#3b82f6' : 'transparent'
+                      }}
+                    >
+                      <div className="icon" style={{
+                        width: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px'
+                      }}>
+                        ⏰
+                      </div>
+                      <span>截止时间降序</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 搜索框区域 */}
+            <div className="search-section" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexShrink: 0,
+              minWidth: '300px'
+            }}>
+              <div className="search-input-container" style={{
+                position: 'relative',
+                minWidth: '250px',
+                maxWidth: '400px'
+              }}>
+                <input
+                  type="text"
+                  placeholder="搜索任务..."
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  style={{ 
+                    width: '100%',
+                    padding: '8px 12px 8px 35px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    background: '#f9fafb',
+                    outline: 'none',
+                    transition: 'all 0.3s ease',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.background = '#fff';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                    e.target.style.background = '#f9fafb';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#6b7280',
+                  fontSize: '16px'
+                }}>
+                  🔍
+                </div>
+              </div>
+              
+              {/* 搜索统计信息 */}
+              <div style={{
+                color: '#6b7280',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                minWidth: '80px'
+              }}>
+                {keyword ? `${tasks.length}个结果` : `${tasks.length}个任务`}
+              </div>
             </div>
           </div>
 
@@ -671,6 +1636,61 @@ const Tasks: React.FC = () => {
             </span>
           </div>
 
+          {/* 任务统计信息 */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '20px',
+            marginBottom: '12px',
+            padding: '0 4px'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              fontWeight: '500'
+            }}>
+              找到 <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> 个任务
+              {tasks.length !== filteredTasks.length && (
+                <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
+                  (共 {tasks.length} 个)
+                </span>
+              )}
+            </div>
+            {taskLevel !== '全部等级' && (
+              <div style={{
+                fontSize: '12px',
+                color: '#6b7280',
+                background: '#f3f4f6',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>筛选:</span>
+                <span style={{ fontWeight: '500' }}>{taskLevel}</span>
+                <button
+                  onClick={() => setTaskLevel('全部等级')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    padding: '2px',
+                    borderRadius: '2px',
+                    transition: 'color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#6b7280'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* 任务列表 */}
           <div className="tasks-grid" style={{
             display: 'grid',
@@ -687,7 +1707,7 @@ const Tasks: React.FC = () => {
                 <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
                 <div>加载中...</div>
               </div>
-            ) : tasks.length === 0 ? (
+            ) : filteredTasks.length === 0 ? (
               <div style={{ 
                 gridColumn: '1 / -1',
                 textAlign: 'center', 
@@ -695,10 +1715,17 @@ const Tasks: React.FC = () => {
                 color: '#6b7280'
               }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
-                <div>暂无任务</div>
+                <div>
+                  {tasks.length === 0 ? '暂无任务' : '没有找到符合条件的任务'}
+                </div>
+                {tasks.length > 0 && (
+                  <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
+                    尝试调整筛选条件
+                  </div>
+                )}
               </div>
             ) : (
-              tasks.map(task => (
+              filteredTasks.map(task => (
                 <div
                   key={task.id}
                   className="task-card"
@@ -793,7 +1820,9 @@ const Tasks: React.FC = () => {
                       fontSize: '12px',
                       color: '#6b7280'
                     }}>
-                      <span>📍 {task.location}</span>
+                      <span>
+                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
+                      </span>
                       <span>•</span>
                       <span>🏷️ {task.task_type}</span>
                     </div>
@@ -830,8 +1859,8 @@ const Tasks: React.FC = () => {
                         color: isExpired(task.deadline) ? '#ef4444' : 
                                isExpiringSoon(task.deadline) ? '#f59e0b' : '#6b7280'
                       }}>
-                        {isExpired(task.deadline) ? '已过期' : 
-                         isExpiringSoon(task.deadline) ? '即将过期' : getRemainTime(task.deadline)}
+                        {isExpired(task.deadline) ? t('home.taskExpired') : 
+                         isExpiringSoon(task.deadline) ? t('home.taskExpiringSoon') : getRemainTime(task.deadline, t)}
                       </div>
                     </div>
                     
@@ -866,7 +1895,7 @@ const Tasks: React.FC = () => {
                         查看详情
                       </button>
                       
-                      {task.status === 'open' && user && user.id !== task.poster_id && (
+                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && canViewTask(user, task) && !appliedTasks.has(task.id) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -891,8 +1920,25 @@ const Tasks: React.FC = () => {
                             e.currentTarget.style.background = '#10b981';
                           }}
                         >
-                          接受任务
+                          申请任务
                         </button>
+                      )}
+                      
+                      {/* 等级不足提示 */}
+                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && !canViewTask(user, task) && (
+                        <div style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: '#f3f4f6',
+                          color: '#6b7280',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          textAlign: 'center',
+                          border: '1px solid #d1d5db'
+                        }}>
+                          🔒 需要{task.task_level === 'vip' ? 'VIP' : '超级VIP'}用户
+                        </div>
                       )}
                     </div>
                   </div>
@@ -987,170 +2033,24 @@ const Tasks: React.FC = () => {
       </div>
       
       {/* 通知弹窗 */}
-      {showNotifications && (
-        <div className="notification-container" style={{
-          position: 'fixed',
-          right: '20px',
-          top: '80px',
-          background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 4px 8px rgba(255, 215, 0, 0.1)',
-          borderRadius: 16,
-          minWidth: 320,
-          maxWidth: 400,
-          maxHeight: 400,
-          overflowY: 'auto',
-          zIndex: 1000,
-          border: '2px solid rgba(255, 215, 0, 0.2)',
-          animation: 'bounce 0.5s ease-out'
-        }}>
-          <div style={{
-            padding: '16px 20px',
-            borderBottom: '2px solid rgba(255, 215, 0, 0.2)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, rgba(255, 215, 0, 0.1) 100%)'
-          }}>
-            <span style={{
-              fontWeight: 700, 
-              color: '#A67C52',
-              fontSize: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              🔔 通知
-            </span>
-            <div style={{display: 'flex', gap: 8}}>
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllRead}
-                  style={{
-                    background: 'linear-gradient(135deg, #6EC1E4, #4A90E2)',
-                    border: 'none',
-                    color: 'white',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: 12,
-                    fontWeight: 600,
-                    boxShadow: '0 2px 4px rgba(110, 193, 228, 0.3)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(110, 193, 228, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(110, 193, 228, 0.3)';
-                  }}
-                >
-                  全部已读
-                </button>
-              )}
-              <button
-                onClick={() => setShowNotifications(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#A67C52',
-                  fontSize: 18,
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: 4,
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(166, 124, 82, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div style={{maxHeight: 300, overflowY: 'auto'}}>
-            {notifications.length === 0 ? (
-              <div style={{
-                padding: '40px 20px',
-                textAlign: 'center',
-                color: '#888',
-                fontSize: 14
-              }}>
-                <div style={{fontSize: 32, marginBottom: 8}}>🔔</div>
-                暂无通知
-              </div>
-            ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  onClick={() => {
-                    if (notification.is_read === 0) {
-                      handleMarkAsRead(notification.id);
-                    }
-                  }}
-                  style={{
-                    padding: '16px 20px',
-                    borderBottom: '1px solid #f0f0f0',
-                    cursor: 'pointer',
-                    background: notification.is_read === 0 ? 'rgba(255, 215, 0, 0.05)' : 'transparent',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = notification.is_read === 0 ? 'rgba(255, 215, 0, 0.1)' : 'rgba(0,0,0,0.02)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = notification.is_read === 0 ? 'rgba(255, 215, 0, 0.05)' : 'transparent';
-                  }}
-                >
-                  {notification.is_read === 0 && (
-                    <div style={{
-                      position: 'absolute',
-                      left: 8,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 8,
-                      height: 8,
-                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
-                      borderRadius: '50%',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                  )}
-                  <div style={{
-                    fontWeight: notification.is_read === 0 ? 700 : 500,
-                    color: '#333',
-                    fontSize: 14,
-                    marginBottom: 4,
-                    paddingLeft: notification.is_read === 0 ? 16 : 0
-                  }}>
-                    {notification.title}
-                  </div>
-                  <div style={{
-                    color: '#666',
-                    fontSize: 12,
-                    lineHeight: 1.4,
-                    paddingLeft: notification.is_read === 0 ? 16 : 0
-                  }}>
-                    {notification.content}
-                  </div>
-                  <div style={{
-                    color: '#999',
-                    fontSize: 11,
-                    marginTop: 6,
-                    paddingLeft: notification.is_read === 0 ? 16 : 0
-                  }}>
-                    {dayjs(notification.created_at).tz('Europe/London').format('MM-DD HH:mm')} (英国时间)
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+      
+      {/* 任务详情弹窗 */}
+      <TaskDetailModal
+        isOpen={showTaskDetailModal}
+        onClose={() => {
+          setShowTaskDetailModal(false);
+          setSelectedTaskId(null);
+        }}
+        taskId={selectedTaskId}
+      />
       
       {/* 登录弹窗 */}
       <LoginModal 
@@ -1189,16 +2089,33 @@ const Tasks: React.FC = () => {
               flex-shrink: 0 !important;
             }
             
-            .search-container {
-              margin: 0 4px !important;
-              min-width: 80px !important;
-              flex: 1 !important;
-              max-width: 200px !important;
+            /* 排序和搜索区域移动端优化 */
+            .sort-controls {
+              flex-direction: column !important;
+              gap: 16px !important;
+              width: 100% !important;
             }
             
-            .search-container input {
-              font-size: 12px !important;
-              padding: 8px 12px 8px 32px !important;
+            .sort-controls > div {
+              width: 100% !important;
+              min-width: 100% !important;
+            }
+            
+            .search-section {
+              flex-direction: column !important;
+              gap: 8px !important;
+              min-width: 100% !important;
+              margin-top: 12px !important;
+            }
+            
+            .search-input-container {
+              min-width: 100% !important;
+              max-width: 100% !important;
+            }
+            
+            .search-input-container input {
+              font-size: 14px !important;
+              padding: 10px 14px 10px 40px !important;
             }
             
             .location-container {
@@ -1357,14 +2274,13 @@ const Tasks: React.FC = () => {
               font-size: 18px !important;
             }
             
-            .search-container {
-              min-width: 60px !important;
-              max-width: 150px !important;
+            .search-section {
+              margin-top: 8px !important;
             }
             
-            .search-container input {
-              font-size: 11px !important;
-              padding: 6px 10px 6px 28px !important;
+            .search-input-container input {
+              font-size: 13px !important;
+              padding: 8px 12px 8px 35px !important;
             }
             
             .location-container > div {
@@ -1399,14 +2315,13 @@ const Tasks: React.FC = () => {
               padding: 8px 12px !important;
             }
             
-            .search-container {
-              min-width: 50px !important;
-              max-width: 120px !important;
+            .search-section {
+              margin-top: 6px !important;
             }
             
-            .search-container input {
-              font-size: 10px !important;
-              padding: 4px 8px 4px 24px !important;
+            .search-input-container input {
+              font-size: 12px !important;
+              padding: 6px 10px 6px 30px !important;
             }
             
             .location-container > div {

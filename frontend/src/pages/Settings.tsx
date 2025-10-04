@@ -193,7 +193,7 @@ const Settings: React.FC = () => {
                 
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px' }}>
                   <img
-                    src={user?.avatar || '/avatar1.png'}
+                    src={user?.avatar || '/avatar2.png'}
                     alt="头像"
                     style={{
                       width: '80px',

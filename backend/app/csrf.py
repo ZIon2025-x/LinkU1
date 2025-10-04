@@ -48,6 +48,8 @@ class CSRFProtection:
         cookie_token = CSRFProtection.get_csrf_token_from_cookie(request)
         header_token = CSRFProtection.get_csrf_token_from_header(request)
         
+        logger.debug(f"CSRF验证 - Cookie token: {cookie_token[:8] if cookie_token else None}..., Header token: {header_token[:8] if header_token else None}...")
+        
         if not cookie_token or not header_token:
             logger.warning("CSRF token missing from cookie or header")
             return False
@@ -82,7 +84,7 @@ class CSRFProtectedHTTPBearer(HTTPBearer):
             if self.require_csrf and request.method in ["POST", "PUT", "PATCH", "DELETE"]:
                 if not CSRFProtection.verify_csrf_token(request):
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="CSRF token验证失败"
                     )
             
@@ -122,7 +124,7 @@ class SyncCSRFProtectedHTTPBearer(HTTPBearer):
             if self.require_csrf and request.method in ["POST", "PUT", "PATCH", "DELETE"]:
                 if not CSRFProtection.verify_csrf_token(request):
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="CSRF token验证失败"
                     )
             

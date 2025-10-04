@@ -85,6 +85,7 @@ const MessagePage: React.FC = () => {
   }, []);
   const [user, setUser] = useState<any>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState<boolean>(false);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -562,24 +563,39 @@ const MessagePage: React.FC = () => {
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
     console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search });
-    if (user && contacts.length > 0) {
+    if (user) {
       const urlParams = new URLSearchParams(location.search);
       const targetUserId = urlParams.get('uid');
       
-      console.log('当前联系人列表:', contacts.map(c => ({ id: c.id, name: c.name })));
-      
       if (targetUserId) {
         console.log('从URL参数获取目标用户ID:', targetUserId);
-        // 查找对应的联系人
+        
+        // 首先尝试在现有联系人中查找
         const targetContact = contacts.find(contact => contact.id === targetUserId);
         if (targetContact) {
-          console.log('找到目标联系人:', targetContact);
+          console.log('在现有联系人中找到目标联系人:', targetContact);
           setActiveContact(targetContact);
           setIsServiceMode(false);
           setMessages([]); // 清空消息列表，准备加载新的聊天历史
         } else {
-          console.log('未找到对应的联系人，用户ID:', targetUserId);
-          console.log('可用联系人ID列表:', contacts.map(c => c.id));
+          console.log('未在现有联系人中找到，创建临时联系人信息');
+          // 如果不在现有联系人中，创建一个临时的联系人信息
+          const tempContact: Contact = {
+            id: targetUserId,
+            name: `用户${targetUserId}`,
+            avatar: "/avatar1.png",
+            email: "",
+            user_level: 1, // 1 = normal, 2 = vip, 3 = super
+            task_count: 0,
+            avg_rating: 0.0,
+            last_message_time: null,
+            is_verified: false
+          };
+          
+          console.log('创建临时联系人:', tempContact);
+          setActiveContact(tempContact);
+          setIsServiceMode(false);
+          setMessages([]); // 清空消息列表，准备加载新的聊天历史
         }
       }
     }
@@ -688,14 +704,18 @@ const MessagePage: React.FC = () => {
   const loadContacts = async () => {
     try {
       console.log('开始加载联系人列表...');
+      setContactsLoading(true);
       const contactsData = await getContacts();
       console.log('联系人API响应:', contactsData);
       setContacts(contactsData || []);
       console.log('联系人列表已更新，数量:', (contactsData || []).length);
-    } catch (error) {
+    } catch (error: any) {
       console.error('加载联系人失败:', error);
-      // API调用失败时显示空列表
+      console.error('错误详情:', error.response?.data || error.message);
+      // API调用失败时显示空列表，但不影响URL参数处理
       setContacts([]);
+    } finally {
+      setContactsLoading(false);
     }
   };
 
@@ -976,7 +996,15 @@ const MessagePage: React.FC = () => {
       // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
       if (!chatId && !isServiceMode && !serviceConnected) {
         console.log('使用普通聊天API加载消息');
-        const chatData = await getChatHistory(contactId);
+        // 显示加载状态
+        setMessages([{
+          id: -1, // 使用负数ID表示加载状态
+          from: '系统',
+          content: '正在加载历史消息...',
+          created_at: new Date().toISOString()
+        }]);
+        
+        const chatData = await getChatHistory(contactId, 20); // 增加加载数量
         const formattedMessages = chatData.map((msg: any) => ({
           id: msg.id,
           from: String(msg.sender_id) === String(user.id) ? '我' : (msg.is_admin_msg === 1 ? '系统' : '对方'),
@@ -1654,7 +1682,25 @@ const MessagePage: React.FC = () => {
             </div>
 
             {/* 联系人列表 */}
-            {contacts.length === 0 ? (
+            {contactsLoading ? (
+              <div style={{ 
+                color: '#64748b', 
+                textAlign: 'center', 
+                padding: '60px 24px',
+                fontSize: '16px'
+              }}>
+                <div style={{ 
+                  fontSize: '48px', 
+                  marginBottom: '16px',
+                  opacity: 0.5,
+                  animation: 'pulse 1.5s ease-in-out infinite'
+                }}>⏳</div>
+                <div style={{ fontWeight: '600', marginBottom: '8px' }}>正在加载联系人...</div>
+                <div style={{ fontSize: '14px', opacity: 0.7 }}>
+                  请稍候
+                </div>
+              </div>
+            ) : contacts.length === 0 ? (
               <div style={{ 
                 color: '#64748b', 
                 textAlign: 'center', 

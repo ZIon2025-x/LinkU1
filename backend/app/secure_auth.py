@@ -128,17 +128,25 @@ class SecureAuthManager:
             # 清理用户的旧会话
             user_sessions = redis_client.smembers(user_sessions_key)
             if len(user_sessions) > MAX_ACTIVE_SESSIONS:
-                # 获取最旧的会话并删除
+                # 获取最旧的会话并标记为不活跃
                 oldest_sessions = []
                 for sid in user_sessions:
                     data = safe_redis_get(f"session:{sid}")
-                    if data:
+                    if data and data.get("is_active", True):  # 只考虑活跃会话
                         oldest_sessions.append((data["last_activity"], sid))
                 
-                # 按最后活动时间排序，删除最旧的
+                # 按最后活动时间排序，标记最旧的为不活跃
                 oldest_sessions.sort()
                 for _, old_sid in oldest_sessions[:-MAX_ACTIVE_SESSIONS]:
-                    redis_client.delete(f"session:{old_sid}")
+                    # 标记为不活跃而不是删除
+                    data = safe_redis_get(f"session:{old_sid}")
+                    if data:
+                        data["is_active"] = False
+                        redis_client.setex(
+                            f"session:{old_sid}",
+                            SESSION_EXPIRE_HOURS * 3600,
+                            json.dumps(data)
+                        )
                     redis_client.srem(user_sessions_key, old_sid)
         else:
             # 使用内存存储
@@ -154,12 +162,15 @@ class SecureAuthManager:
         return session
     
     @staticmethod
-    def get_session(session_id: str) -> Optional[SessionInfo]:
+    def get_session(session_id: str, update_activity: bool = True) -> Optional[SessionInfo]:
         """获取会话信息"""
+        logger.info(f"[DEBUG] get_session - session_id: {session_id[:8]}...")
         if USE_REDIS and redis_client:
             # 从 Redis 获取会话
             data = safe_redis_get(f"session:{session_id}")
+            logger.info(f"[DEBUG] get_session - Redis data: {data}")
             if not data:
+                logger.info(f"[DEBUG] get_session - 未找到Redis数据")
                 return None
             session = SessionInfo(
                 user_id=data["user_id"],
@@ -182,14 +193,18 @@ class SecureAuthManager:
                 redis_client.srem(f"user_sessions:{session.user_id}", session_id)
                 return None
             
-            # 更新最后活动时间
-            session.last_activity = datetime.utcnow()
-            data["last_activity"] = session.last_activity.isoformat()
-            redis_client.setex(
-                f"session:{session_id}",
-                SESSION_EXPIRE_HOURS * 3600,
-                json.dumps(data)
-            )
+            # 只有在需要更新活动时间时才更新（避免频繁更新导致token刷新）
+            if update_activity:
+                # 检查是否真的需要更新（避免过于频繁的更新）
+                time_since_last_activity = datetime.utcnow() - session.last_activity
+                if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
+                    session.last_activity = datetime.utcnow()
+                    data["last_activity"] = session.last_activity.isoformat()
+                    redis_client.setex(
+                        f"session:{session_id}",
+                        SESSION_EXPIRE_HOURS * 3600,
+                        json.dumps(data)
+                    )
             
             return session
         else:
@@ -203,10 +218,49 @@ class SecureAuthManager:
                 session.is_active = False
                 return None
             
-            # 更新最后活动时间
-            session.last_activity = datetime.utcnow()
+            # 只有在需要更新活动时间时才更新
+            if update_activity:
+                # 检查是否真的需要更新（避免过于频繁的更新）
+                time_since_last_activity = datetime.utcnow() - session.last_activity
+                if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
+                    session.last_activity = datetime.utcnow()
+            
             return session
     
+    @staticmethod
+    def update_session(session_id: str, session: SessionInfo) -> bool:
+        """更新会话信息"""
+        try:
+            if USE_REDIS and redis_client:
+                # 更新 Redis 中的会话
+                session_data = {
+                    "user_id": session.user_id,
+                    "session_id": session.session_id,
+                    "device_fingerprint": session.device_fingerprint,
+                    "created_at": session.created_at.isoformat(),
+                    "last_activity": session.last_activity.isoformat(),
+                    "ip_address": session.ip_address,
+                    "user_agent": session.user_agent,
+                    "is_active": session.is_active
+                }
+                redis_client.setex(
+                    f"session:{session_id}",
+                    SESSION_EXPIRE_HOURS * 3600,
+                    json.dumps(session_data)
+                )
+                logger.info(f"会话已更新: {session_id[:8]}...")
+                return True
+            else:
+                # 更新内存中的会话
+                if session_id in active_sessions:
+                    active_sessions[session_id] = session
+                    logger.info(f"会话已更新: {session_id[:8]}...")
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"更新会话失败: {e}")
+            return False
+
     @staticmethod
     def revoke_session(session_id: str) -> bool:
         """撤销会话"""
@@ -305,7 +359,7 @@ class SecureTokenBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super().__init__(auto_error=auto_error)
     
-    def __call__(self, request: Request) -> Optional[HTTPAuthorizationCredentials]:
+    async def __call__(self, request: Request) -> Optional[HTTPAuthorizationCredentials]:
         # 首先尝试从Authorization头获取
         authorization_header = request.headers.get("Authorization")
         if authorization_header and authorization_header.startswith("Bearer "):
@@ -351,8 +405,27 @@ def get_device_fingerprint(request: Request) -> str:
     # 生成哈希指纹
     return hashlib.sha256(device_string.encode()).hexdigest()[:16]
 
+def is_fingerprint_similar(original: str, current: str, threshold: float = 0.7) -> bool:
+    """检查两个设备指纹是否相似"""
+    if not original or not current:
+        return False
+    
+    # 计算字符串相似度（简单的字符匹配）
+    if len(original) != len(current):
+        return False
+    
+    matches = sum(1 for a, b in zip(original, current) if a == b)
+    similarity = matches / len(original)
+    
+    logger.debug(f"设备指纹相似度: {similarity:.2f} (阈值: {threshold})")
+    return similarity >= threshold
+
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话"""
+    logger.info(f"[DEBUG] validate_session - URL: {request.url}")
+    logger.info(f"[DEBUG] validate_session - Cookies: {dict(request.cookies)}")
+    logger.info(f"[DEBUG] validate_session - Headers: {dict(request.headers)}")
+    
     # 1. 尝试多种Cookie名称（移动端兼容性）
     session_id = (
         request.cookies.get("session_id") or
@@ -371,18 +444,35 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
             session_id = auth_header[7:]  # 移除 "Bearer " 前缀
     
     if not session_id:
+        logger.info("[DEBUG] 未找到session_id")
         return None
     
-    session = SecureAuthManager.get_session(session_id)
+    logger.info(f"[DEBUG] 找到session_id: {session_id[:8]}...")
+    
+    session = SecureAuthManager.get_session(session_id, update_activity=False)  # 不更新活动时间
     if not session:
+        logger.info(f"[DEBUG] 会话验证失败: {session_id[:8]}...")
         return None
     
-    # 验证设备指纹（可选，用于检测会话劫持）
+    logger.info(f"[DEBUG] 会话验证成功: {session_id[:8]}..., 用户: {session.user_id}")
+    
+    # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = get_device_fingerprint(request)
     if session.device_fingerprint != current_fingerprint:
         logger.warning(f"设备指纹不匹配 - session: {session_id[:8]}...")
-        # 可以选择是否撤销会话
-        # SecureAuthManager.revoke_session(session_id)
-        # return None
+        logger.warning(f"原始指纹: {session.device_fingerprint}")
+        logger.warning(f"当前指纹: {current_fingerprint}")
+        
+        # 检查指纹差异是否在可接受范围内（允许部分变化）
+        if is_fingerprint_similar(session.device_fingerprint, current_fingerprint):
+            logger.info("设备指纹相似，允许访问但记录警告")
+            # 更新会话的设备指纹为新的指纹
+            session.device_fingerprint = current_fingerprint
+            SecureAuthManager.update_session(session_id, session)
+        else:
+            logger.error("设备指纹差异过大，可能存在会话劫持，拒绝访问")
+            # 撤销可疑会话
+            SecureAuthManager.revoke_session(session_id)
+            return None
     
     return session

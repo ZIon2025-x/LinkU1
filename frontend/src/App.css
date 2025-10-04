@@ -36,3 +36,40 @@
     transform: rotate(360deg);
   }
 }
+
+/* 通知面板动画 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* 通知按钮悬停效果 */
+.notification-btn:hover {
+  background-color: #f0f0f0 !important;
+  transform: scale(1.05);
+}
+
+/* 通知面板滚动条样式 */
+.notification-panel div:last-child::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notification-panel div:last-child::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+.notification-panel div:last-child::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.notification-panel div:last-child::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

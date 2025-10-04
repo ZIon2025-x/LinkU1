@@ -131,7 +131,7 @@ class Message(Base):
     )  # 允许为NULL，用于系统消息
     receiver_id = Column(String(8), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime, default=get_uk_time_naive)
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
 
 
@@ -146,7 +146,7 @@ class Notification(Base):
     content = Column(Text, nullable=False)
     related_id = Column(Integer, nullable=True)  # 相关ID（用户ID、任务ID、公告ID等）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime, default=get_uk_time_naive)
     __table_args__ = (
         UniqueConstraint("user_id", "type", "related_id", name="uix_user_type_related"),
     )
@@ -361,4 +361,24 @@ class PendingUser(Base):
         Index("ix_pending_users_email", email),
         Index("ix_pending_users_token", verification_token),
         Index("ix_pending_users_expires", expires_at),
+    )
+
+
+class TaskApplication(Base):
+    """任务申请表"""
+    __tablename__ = "task_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    applicant_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    status = Column(String(20), default="pending")  # pending, approved, rejected
+    created_at = Column(DateTime, default=get_uk_time_naive)
+    message = Column(Text, nullable=True)  # 申请时的留言
+    
+    # 确保同一用户不能重复申请同一任务
+    __table_args__ = (
+        UniqueConstraint('task_id', 'applicant_id', name='unique_task_applicant'),
+        Index("ix_task_applications_task_id", task_id),
+        Index("ix_task_applications_applicant_id", applicant_id),
+        Index("ix_task_applications_status", status),
     )

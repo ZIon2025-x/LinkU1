@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Row, Col, Typography, Space, Avatar, Divider } from 'antd';
 import { 
   TeamOutlined, 
@@ -7,85 +8,244 @@ import {
   GlobalOutlined,
   TrophyOutlined,
   BulbOutlined,
-  SafetyOutlined,
-  ThunderboltOutlined
+  SafetyOutlined
 } from '@ant-design/icons';
+import { fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
+import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import Footer from '../components/Footer';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import LoginModal from '../components/LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 import './About.css';
 
 const { Title, Paragraph, Text } = Typography;
 
+interface Notification {
+  id: number;
+  content: string;
+  is_read: number;
+  created_at: string;
+  type?: string;
+}
+
 const About: React.FC = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [systemSettings, setSystemSettings] = useState({});
+
+  // 加载用户数据和通知
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        console.log('获取用户资料成功:', userData);
+        setUser(userData);
+        
+        // 加载通知数据
+        if (userData) {
+          try {
+            const [notificationsData, unreadCountData] = await Promise.all([
+              getNotificationsWithRecentRead(10),
+              getUnreadNotificationCount()
+            ]);
+            setNotifications(notificationsData);
+            setUnreadCount(unreadCountData.unread_count);
+          } catch (error) {
+            console.log('获取通知失败:', error);
+          }
+        }
+      } catch (error: any) {
+        console.log('获取用户资料失败:', error);
+        setUser(null);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+
+  // 标记通知为已读
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await markNotificationRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, is_read: 1 }
+            : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      console.log('通知标记为已读成功');
+    } catch (error) {
+      console.error('标记通知已读失败:', error);
+      alert(t('notificationPanel.markAsReadFailed'));
+    }
+  };
+
+  // 标记所有通知为已读
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, is_read: 1 }))
+      );
+      setUnreadCount(0);
+      console.log('所有通知标记为已读成功');
+    } catch (error) {
+      console.error('标记所有通知已读失败:', error);
+      alert(t('notificationPanel.markAllReadFailed'));
+    }
+  };
+
   const teamMembers = [
     {
-      name: "张小明",
-      role: "创始人 & CEO",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhang",
-      description: "10年互联网产品经验，专注于用户体验设计"
+      name: t('about.teamMembers.founder.name'),
+      role: t('about.teamMembers.founder.role'),
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangzixiong&gender=male",
+      description: t('about.teamMembers.founder.description')
     },
     {
-      name: "李小红",
-      role: "技术总监",
+      name: t('about.teamMembers.cto.name'),
+      role: t('about.teamMembers.cto.role'),
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=li",
-      description: "资深全栈工程师，热爱技术创新"
+      description: t('about.teamMembers.cto.description')
     },
     {
-      name: "王小强",
-      role: "运营总监",
+      name: t('about.teamMembers.coo.name'),
+      role: t('about.teamMembers.coo.role'),
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=wang",
-      description: "社区运营专家，致力于构建活跃的用户生态"
+      description: t('about.teamMembers.coo.description')
     },
     {
-      name: "赵小美",
-      role: "产品经理",
+      name: t('about.teamMembers.pm.name'),
+      role: t('about.teamMembers.pm.role'),
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhao",
-      description: "用户体验设计师，关注产品细节和用户需求"
+      description: t('about.teamMembers.pm.description')
     }
   ];
 
   const values = [
     {
       icon: <HeartOutlined className="value-icon" />,
-      title: "用户至上",
-      description: "我们始终将用户需求放在首位，致力于提供最优质的服务体验"
+      title: t('about.userFirst'),
+      description: t('about.userFirstDesc')
     },
     {
       icon: <BulbOutlined className="value-icon" />,
-      title: "创新驱动",
-      description: "持续创新是我们的核心动力，用技术改变生活"
+      title: t('about.innovationDriven'),
+      description: t('about.innovationDrivenDesc')
     },
     {
       icon: <SafetyOutlined className="value-icon" />,
-      title: "安全可靠",
-      description: "严格的安全标准和可靠的技术架构，保护每一位用户"
+      title: t('about.safeReliable'),
+      description: t('about.safeReliableDesc')
     },
     {
       icon: <TeamOutlined className="value-icon" />,
-      title: "团队协作",
-      description: "相信团队的力量，共同创造更大的价值"
+      title: t('about.teamCollaboration'),
+      description: t('about.teamCollaborationDesc')
     }
   ];
 
   const stats = [
-    { number: "50,000+", label: "注册用户" },
-    { number: "100,000+", label: "完成任务" },
-    { number: "98%", label: "用户满意度" },
-    { number: "24/7", label: "在线服务" }
+    { number: "50,000+", label: t('about.registeredUsers') },
+    { number: "100,000+", label: t('about.completedTasks') },
+    { number: "98%", label: t('about.userSatisfaction') },
+    { number: "24/7", label: t('about.onlineService') }
   ];
 
   return (
     <div className="about-page">
+      {/* 顶部导航栏 */}
+      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo */}
+          <div 
+            style={{
+              fontWeight: 'bold', 
+              fontSize: 24, 
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              WebkitBackgroundClip: 'text', 
+              WebkitTextFillColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              padding: '4px 8px',
+              borderRadius: '8px',
+              flexShrink: 0
+            }}
+            onClick={() => navigate('/')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+          >
+            LinkU
+          </div>
+          
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  // await logout();
+                } catch (error) {
+                  console.log('登出请求失败:', error);
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
+        </div>
+      </header>
+      
+      {/* 占位，防止内容被导航栏遮挡 */}
+      <div style={{height: 60}} />
+      
+      {/* 通知弹窗 */}
+      <NotificationPanel
+        isOpen={showNotifications && !!user}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+      
       {/* 英雄区域 */}
       <div className="hero-section">
         <div className="hero-content">
           <Title level={1} className="hero-title">
-            关于 LinkU
+            {t('about.title')}
           </Title>
           <Paragraph className="hero-subtitle">
-            连接全球人才，创造无限可能
+            {t('about.subtitle')}
           </Paragraph>
           <Paragraph className="hero-description">
-            LinkU 是一个创新的任务平台，致力于连接有技能的人才和有需求的用户，
-            通过技术的力量让工作变得更加高效、灵活和有意义。
+            {t('about.missionText')}
           </Paragraph>
         </div>
       </div>
@@ -129,7 +289,7 @@ const About: React.FC = () => {
             <div className="story-image">
               <img 
                 src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                alt="我们的团队" 
+                alt={t('about.ourTeam')} 
                 className="story-img"
               />
             </div>
@@ -140,9 +300,9 @@ const About: React.FC = () => {
       {/* 我们的价值观 */}
       <div className="values-section">
         <div className="section-header">
-          <Title level={2}>我们的价值观</Title>
+          <Title level={2}>{t('about.valuesSection.title')}</Title>
           <Paragraph className="section-subtitle">
-            这些核心价值观指导着我们的每一个决策和行动
+            {t('about.valuesSection.subtitle')}
           </Paragraph>
         </div>
         <Row gutter={[32, 32]}>
@@ -163,9 +323,9 @@ const About: React.FC = () => {
       {/* 我们的团队 */}
       <div className="team-section">
         <div className="section-header">
-          <Title level={2}>我们的团队</Title>
+          <Title level={2}>{t('about.teamSection.title')}</Title>
           <Paragraph className="section-subtitle">
-            一群充满激情和创造力的专业人士
+            {t('about.teamSection.subtitle')}
           </Paragraph>
         </div>
         <Row gutter={[32, 32]} justify="center">
@@ -191,34 +351,34 @@ const About: React.FC = () => {
             <div className="vision-image">
               <img 
                 src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                alt="我们的愿景" 
+                alt={t('about.vision')} 
                 className="vision-img"
               />
             </div>
           </Col>
           <Col xs={24} lg={12}>
             <div className="vision-content">
-              <Title level={2}>我们的愿景</Title>
+              <Title level={2}>{t('about.visionSection.title')}</Title>
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <div className="vision-item">
                   <RocketOutlined className="vision-icon" />
                   <div>
-                    <Title level={4}>成为全球领先的任务平台</Title>
-                    <Paragraph>连接全球数亿用户，创造数千万个就业机会</Paragraph>
+                    <Title level={4}>{t('about.visionSection.goals.platform.title')}</Title>
+                    <Paragraph>{t('about.visionSection.goals.platform.description')}</Paragraph>
                   </div>
                 </div>
                 <div className="vision-item">
                   <GlobalOutlined className="vision-icon" />
                   <div>
-                    <Title level={4}>推动工作方式的变革</Title>
-                    <Paragraph>让远程工作、灵活就业成为主流工作模式</Paragraph>
+                    <Title level={4}>{t('about.visionSection.goals.workStyle.title')}</Title>
+                    <Paragraph>{t('about.visionSection.goals.workStyle.description')}</Paragraph>
                   </div>
                 </div>
                 <div className="vision-item">
                   <TrophyOutlined className="vision-icon" />
                   <div>
-                    <Title level={4}>创造社会价值</Title>
-                    <Paragraph>通过技术赋能，让每个人都能发挥自己的价值</Paragraph>
+                    <Title level={4}>{t('about.visionSection.goals.socialValue.title')}</Title>
+                    <Paragraph>{t('about.visionSection.goals.socialValue.description')}</Paragraph>
                   </div>
                 </div>
               </Space>
@@ -227,36 +387,18 @@ const About: React.FC = () => {
         </Row>
       </div>
 
-      {/* 联系我们 */}
-      <div className="contact-section">
-        <Card className="contact-card">
-          <div className="contact-content">
-            <Title level={2}>联系我们</Title>
-            <Paragraph>
-              如果您有任何问题或建议，我们很乐意听到您的声音。
-              让我们一起创造更美好的未来！
-            </Paragraph>
-            <Space size="large">
-              <div className="contact-item">
-                <ThunderboltOutlined className="contact-icon" />
-                <div>
-                  <Text strong>邮箱</Text>
-                  <br />
-                  <Text>contact@linku.com</Text>
-                </div>
-              </div>
-              <div className="contact-item">
-                <TeamOutlined className="contact-icon" />
-                <div>
-                  <Text strong>客服热线</Text>
-                  <br />
-                  <Text>400-888-8888</Text>
-                </div>
-              </div>
-            </Space>
-          </div>
-        </Card>
-      </div>
+      {/* 页脚 */}
+      <Footer />
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

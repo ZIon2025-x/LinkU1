@@ -70,9 +70,12 @@ const ResetPassword: React.FC = () => {
           <Form.Item 
             label="New Password" 
             name="password" 
-            rules={[{ required: true, min: 6, message: 'Please enter a new password (min 6 chars)' }]}
+            rules={[
+              { required: true, min: 8, message: '密码至少8个字符' },
+              { pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,}$/, message: '密码必须包含字母和数字' }
+            ]}
           > 
-            <Input.Password placeholder="Enter your new password (min 6 chars)" />
+            <Input.Password placeholder="Enter your new password (min 8 chars, must contain letters and numbers)" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block>Reset Password</Button>

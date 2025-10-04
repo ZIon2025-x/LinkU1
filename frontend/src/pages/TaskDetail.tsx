@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api, { fetchCurrentUser, acceptTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage } from '../api';
+import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -28,6 +28,10 @@ const TaskDetail: React.FC = () => {
   const [showReviews, setShowReviews] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [userApplication, setUserApplication] = useState<any>(null);
+  const [hasApplied, setHasApplied] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +46,7 @@ const TaskDetail: React.FC = () => {
         if (res.data.status === 'completed') {
           loadTaskReviews();
         }
+        
       })
       .catch((error) => {
         console.error('获取任务详情失败:', error);
@@ -51,6 +56,40 @@ const TaskDetail: React.FC = () => {
       .finally(() => setLoading(false));
     fetchCurrentUser().then(setUser).catch(() => setUser(null));
   }, [id]);
+
+  // 当用户信息加载后，如果是任务发布者，加载申请者列表
+  useEffect(() => {
+    if (user && task && task.poster_id === user.id) {
+      loadApplications();
+    }
+  }, [user, task]);
+
+  // 检查当前用户是否已经申请了此任务
+  useEffect(() => {
+    if (user && task) {
+      checkUserApplication();
+    }
+  }, [user, task]);
+
+  // 检查用户申请状态
+  const checkUserApplication = async () => {
+    if (!user || !task || user.id === task.poster_id) {
+      console.log('不是申请者或没有登录，跳过申请状态检查');
+      return; // 不是申请者或没有登录
+    }
+    
+    console.log('开始检查用户申请状态...', { userId: user.id, taskId: task.id });
+    try {
+      // 获取用户的所有申请记录
+      const userApplications = await getUserApplications();
+      console.log('用户申请记录:', userApplications);
+      const userApp = userApplications.find((app: any) => app.task_id === task.id);
+      console.log('当前任务的申请状态:', userApp);
+      setUserApplication(userApp);
+    } catch (error) {
+      console.error('检查用户申请状态失败:', error);
+    }
+  };
 
   // 检查用户等级是否满足任务等级要求
   const canViewTask = (user: any, task: any) => {
@@ -75,10 +114,53 @@ const TaskDetail: React.FC = () => {
 
   const loadTaskReviews = async () => {
     try {
+      console.log('开始加载任务评价数据，任务ID:', id);
       const reviewsData = await getTaskReviews(Number(id));
+      console.log('评价数据加载成功:', reviewsData);
       setReviews(reviewsData);
     } catch (error) {
       console.error('加载评价失败:', error);
+    }
+  };
+
+  const loadApplications = async () => {
+    if (!user || !task || user.id !== task.poster_id) {
+      console.log('不是任务发布者，跳过加载申请者列表');
+      return;
+    }
+    
+    console.log('开始加载申请者列表...');
+    setLoadingApplications(true);
+    try {
+      const res = await getTaskApplications(Number(id));
+      console.log('申请者列表加载成功:', res);
+      setApplications(res);
+    } catch (error) {
+      console.error('加载申请者列表失败:', error);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
+
+  const handleApproveApplication = async (applicantId: string) => {
+    if (!window.confirm('确定要批准这个申请者吗？批准后其他申请者将被自动拒绝。')) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await approveApplication(Number(id), applicantId);
+      alert('申请者批准成功！');
+      
+      // 重新加载任务信息和申请者列表
+      const res = await api.get(`/api/tasks/${id}`);
+      setTask(res.data);
+      await loadApplications();
+    } catch (error: any) {
+      console.error('批准申请者失败:', error);
+      alert(error.response?.data?.detail || '批准申请者失败');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -118,10 +200,13 @@ const TaskDetail: React.FC = () => {
     setActionLoading(true);
     try {
       console.log('开始接受任务...', { taskId: id, currentStatus: task?.status });
-      const result = await acceptTask(Number(id));
+      const result = await applyForTask(Number(id));
       console.log('接受任务API调用成功:', result);
       
-      alert('任务接受成功！\n\n请等待任务发布者同意您接受此任务，然后您就可以开始执行任务了。');
+      alert('任务申请成功！\n\n请等待任务发布者审核您的申请，审核通过后您就可以开始执行任务了。');
+      
+      // 隐藏申请按钮
+      setHasApplied(true);
       
       // 重新获取任务信息
       console.log('重新获取任务信息...');
@@ -272,6 +357,7 @@ const TaskDetail: React.FC = () => {
     try {
       await createReview(Number(id), reviewRating, reviewComment, isAnonymous);
       alert('评价提交成功！');
+      // 评价提交成功，重新加载评价数据
       setShowReviewModal(false);
       setReviewRating(5);
       setReviewComment('');
@@ -298,8 +384,14 @@ const TaskDetail: React.FC = () => {
     return (task.poster_id === user.id || task.taker_id === user.id) && task.status === 'completed';
   };
 
-  const hasReviewed = () => {
-    if (!user || !reviews.length) return false;
+  const hasUserReviewed = () => {
+    if (!user) return false;
+    console.log('hasUserReviewed检查:', {
+      userId: user.id,
+      reviewsLength: reviews.length,
+      reviews: reviews,
+      hasReviewed: reviews.some(review => review.user_id === user.id)
+    });
     return reviews.some(review => review.user_id === user.id);
   };
 
@@ -308,12 +400,17 @@ const TaskDetail: React.FC = () => {
 
   const isTaskPoster = user && user.id === task.poster_id;
   const isTaskTaker = user && user.id === task.taker_id;
-  const canAcceptTask = user && user.id !== task.poster_id && task.status === 'open' && canViewTask(user, task);
+  const canAcceptTask = user && 
+    user.id !== task.poster_id && 
+    (task.status === 'open' || task.status === 'taken') && 
+    canViewTask(user, task) &&
+    !userApplication && // 如果已经申请过，不能再次申请
+    !hasApplied; // 如果已经申请过，隐藏按钮
 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'open': return '开放中';
-      case 'taken': return '已接受';
+      case 'taken': return '开放中';  // 在任务大厅中显示为开放中
       case 'in_progress': return '进行中';
       case 'pending_confirmation': return '待确认';
       case 'completed': return '已完成';
@@ -494,16 +591,13 @@ const TaskDetail: React.FC = () => {
                 borderRadius: '16px',
                 fontSize: '12px',
                 fontWeight: '600',
-                background: task.status === 'open' ? '#d1fae5' : 
-                           task.status === 'taken' ? '#fef3c7' :
+                background: (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
-                color: task.status === 'open' ? '#065f46' : 
-                       task.status === 'taken' ? '#92400e' :
+                color: (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
-                border: `1px solid ${task.status === 'open' ? '#a7f3d0' : 
-                                   task.status === 'taken' ? '#fde68a' :
+                border: `1px solid ${(task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
               }}>
@@ -534,15 +628,25 @@ const TaskDetail: React.FC = () => {
           </div>
           
           <div style={{
-            background: '#f8fafc',
+            background: task.location === 'Online' ? '#e6f3ff' : '#f8fafc',
             padding: '20px',
             borderRadius: '16px',
-            border: '2px solid #e2e8f0',
+            border: task.location === 'Online' ? '2px solid #93c5fd' : '2px solid #e2e8f0',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>📍</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>所在城市</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{task.location}</div>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>
+              {task.location === 'Online' ? '🌐' : '📍'}
+            </div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
+              {task.location === 'Online' ? '任务类型' : '所在城市'}
+            </div>
+            <div style={{ 
+              fontSize: '16px', 
+              fontWeight: '600', 
+              color: task.location === 'Online' ? '#2563eb' : '#1e293b' 
+            }}>
+              {task.location}
+            </div>
           </div>
           
           <div style={{
@@ -711,7 +815,7 @@ const TaskDetail: React.FC = () => {
               fontWeight: '700',
               color: '#059669'
             }}>£{task.reward.toFixed(2)}</span>
-            {isTaskPoster && task.status === 'open' && (
+            {isTaskPoster && (task.status === 'open' || task.status === 'taken') && (
               <button
                 onClick={() => setShowPriceEdit(true)}
                 style={{
@@ -877,13 +981,84 @@ const TaskDetail: React.FC = () => {
               ) : (
                 <>
                   <span>✅</span>
-                  接受任务
+                  申请任务
                 </>
               )}
           </button>
         )}
 
-          {task.status === 'taken' && isTaskTaker && (
+          {/* 显示申请状态 */}
+          {user && user.id !== task.poster_id && userApplication && (
+            <div style={{
+              background: userApplication.status === 'pending' 
+                ? 'linear-gradient(135deg, #fef3c7, #fde68a)' 
+                : userApplication.status === 'approved'
+                ? (task.status === 'pending_confirmation' 
+                    ? 'linear-gradient(135deg, #e0e7ff, #c7d2fe)'
+                    : 'linear-gradient(135deg, #d1fae5, #a7f3d0)')
+                : 'linear-gradient(135deg, #fee2e2, #fecaca)',
+              border: userApplication.status === 'pending'
+                ? '2px solid #f59e0b'
+                : userApplication.status === 'approved'
+                ? (task.status === 'pending_confirmation' 
+                    ? '2px solid #6366f1'
+                    : '2px solid #10b981')
+                : '2px solid #ef4444',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              color: userApplication.status === 'pending'
+                ? '#92400e'
+                : userApplication.status === 'approved'
+                ? (task.status === 'pending_confirmation' 
+                    ? '#3730a3'
+                    : '#065f46')
+                : '#991b1b',
+              fontSize: '16px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              maxWidth: '600px',
+              margin: '0 auto',
+              boxShadow: userApplication.status === 'pending'
+                ? '0 4px 12px rgba(245, 158, 11, 0.2)'
+                : userApplication.status === 'approved'
+                ? (task.status === 'pending_confirmation'
+                    ? '0 4px 12px rgba(99, 102, 241, 0.2)'
+                    : '0 4px 12px rgba(16, 185, 129, 0.2)')
+                : '0 4px 12px rgba(239, 68, 68, 0.2)'
+            }}>
+              <div style={{fontSize: '32px'}}>
+                {userApplication.status === 'pending' ? '⏳' : 
+                 userApplication.status === 'approved' ? 
+                   (task.status === 'pending_confirmation' ? '⏰' : '✅') : '❌'}
+              </div>
+              <div>
+                <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '18px'}}>
+                  {userApplication.status === 'pending' ? '等待发布者审核' :
+                   userApplication.status === 'approved' ? 
+                     (task.status === 'pending_confirmation' ? '任务已完成' : '申请已通过') : 
+                   '申请被拒绝'}
+                </div>
+                <div style={{fontSize: '14px', fontWeight: 'normal', lineHeight: 1.5}}>
+                  {userApplication.status === 'pending' ? '您已成功申请此任务，请等待任务发布者审核您的申请。' :
+                   userApplication.status === 'approved' ? 
+                     (task.status === 'pending_confirmation' ? 
+                       '恭喜！您已完成任务，请等待发布者确认任务完成。' : 
+                       '恭喜！您的申请已通过，现在可以开始执行任务了。') :
+                   '很抱歉，您的申请被拒绝了。'}
+                </div>
+                {userApplication.message && (
+                  <div style={{fontSize: '12px', marginTop: '8px', fontStyle: 'italic'}}>
+                    申请留言：{userApplication.message}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 兼容旧的显示逻辑 */}
+          {task.status === 'taken' && isTaskTaker && !userApplication && (
             <div style={{
               background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
               border: '2px solid #f59e0b',
@@ -911,43 +1086,98 @@ const TaskDetail: React.FC = () => {
             </div>
           )}
 
-        {task.status === 'taken' && isTaskPoster && (
-          <>
-            <button
-              onClick={handleApproveTaker}
-              disabled={actionLoading}
-              style={{
-                background: '#28a745',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading ? 0.6 : 1
-              }}
-            >
-              {actionLoading ? '处理中...' : '同意'}
-            </button>
-            <button
-              onClick={handleRejectTaker}
-              disabled={actionLoading}
-              style={{
-                background: '#dc3545',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading ? 0.6 : 1
-              }}
-            >
-              {actionLoading ? '处理中...' : '拒绝'}
-            </button>
-          </>
+        {/* 申请者列表 - 仅任务发布者可见 */}
+        {isTaskPoster && (task.status === 'taken' || task.status === 'open') && (
+          <div style={{
+            marginTop: '20px',
+            padding: '20px',
+            background: '#f8f9fa',
+            borderRadius: '12px',
+            border: '1px solid #e9ecef'
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+              申请者列表 ({applications.length})
+            </h3>
+            
+            {loadingApplications ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                加载中...
+              </div>
+            ) : applications.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '20px', 
+                color: '#666',
+                background: '#fff',
+                borderRadius: '8px',
+                border: '1px solid #e9ecef'
+              }}>
+                暂无申请者
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {applications.map((app) => (
+                  <div key={app.id} style={{
+                    background: '#fff',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #e9ecef',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#333', marginBottom: '4px' }}>
+                        {app.applicant_name}
+                      </div>
+                      {app.message && (
+                        <div style={{ color: '#666', fontSize: '14px', marginBottom: '4px' }}>
+                          "{app.message}"
+                        </div>
+                      )}
+                      <div style={{ color: '#999', fontSize: '12px' }}>
+                        申请时间: {new Date(app.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => navigate(`/message?uid=${app.applicant_id}`)}
+                        style={{
+                          background: '#007bff',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        联系
+                      </button>
+                      <button
+                        onClick={() => handleApproveApplication(app.applicant_id)}
+                        disabled={actionLoading}
+                        style={{
+                          background: '#28a745',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 16px',
+                          fontWeight: '600',
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          opacity: actionLoading ? 0.6 : 1,
+                          fontSize: '14px'
+                        }}
+                      >
+                        {actionLoading ? '处理中...' : '批准'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
 
@@ -968,6 +1198,26 @@ const TaskDetail: React.FC = () => {
             }}
           >
             {actionLoading ? '处理中...' : '标记完成'}
+          </button>
+        )}
+
+        {/* 任务进行中时，发布者可以联系接收者 */}
+        {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
+          <button
+            onClick={() => navigate(`/message?uid=${task.taker_id}`)}
+            style={{
+              background: '#007bff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 32px',
+              fontWeight: 700,
+              fontSize: 18,
+              cursor: 'pointer',
+              marginRight: '16px'
+            }}
+          >
+            💬 联系接收者
           </button>
         )}
 
@@ -1010,25 +1260,9 @@ const TaskDetail: React.FC = () => {
           </button>
         )}
 
-        {user && user.id === task.poster_id && (task.status === 'taken' || task.status === 'pending_confirmation') && (
-          <button
-            onClick={() => navigate(`/message?uid=${task.taker_id}`)}
-            style={{
-              background: '#007bff',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 32px',
-              fontWeight: 700,
-              fontSize: 18
-            }}
-          >
-            联系接受者
-          </button>
-        )}
 
         {/* 评价按钮 */}
-        {canReview() && !hasReviewed() && (
+        {canReview() && !hasUserReviewed() && (
           <button
             onClick={() => setShowReviewModal(true)}
             style={{

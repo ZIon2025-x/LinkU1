@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   Row, 
@@ -30,15 +31,103 @@ import {
   HeartOutlined,
   TrophyOutlined
 } from '@ant-design/icons';
+import { fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
+import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import Footer from '../components/Footer';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import LoginModal from '../components/LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 import './JoinUs.css';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
+interface Notification {
+  id: number;
+  content: string;
+  is_read: number;
+  created_at: string;
+  type?: string;
+}
+
 const JoinUs: React.FC = () => {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [systemSettings, setSystemSettings] = useState({});
+
+  // 加载用户数据和通知
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        console.log('获取用户资料成功:', userData);
+        setUser(userData);
+        
+        // 加载通知数据
+        if (userData) {
+          try {
+            const [notificationsData, unreadCountData] = await Promise.all([
+              getNotificationsWithRecentRead(10),
+              getUnreadNotificationCount()
+            ]);
+            setNotifications(notificationsData);
+            setUnreadCount(unreadCountData.unread_count);
+          } catch (error) {
+            console.log('获取通知失败:', error);
+          }
+        }
+      } catch (error: any) {
+        console.log('获取用户资料失败:', error);
+        setUser(null);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+
+  // 标记通知为已读
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await markNotificationRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, is_read: 1 }
+            : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      console.log('通知标记为已读成功');
+    } catch (error) {
+      console.error('标记通知已读失败:', error);
+      alert('标记通知为已读失败，请重试');
+    }
+  };
+
+  // 标记所有通知为已读
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, is_read: 1 }))
+      );
+      setUnreadCount(0);
+      console.log('所有通知标记为已读成功');
+    } catch (error) {
+      console.error('标记所有通知已读失败:', error);
+      alert('标记所有通知为已读失败，请重试');
+    }
+  };
 
   const positions = [
     {
@@ -142,55 +231,55 @@ const JoinUs: React.FC = () => {
   const benefits = [
     {
       icon: <RocketOutlined className="benefit-icon" />,
-      title: "快速成长",
-      description: "参与从0到1的产品建设，快速提升个人能力"
+      title: t('joinUs.benefits.rapidGrowth'),
+      description: t('joinUs.benefits.rapidGrowthDesc')
     },
     {
       icon: <TeamOutlined className="benefit-icon" />,
-      title: "优秀团队",
-      description: "与行业顶尖人才共事，学习最前沿的技术和理念"
+      title: t('joinUs.benefits.excellentTeam'),
+      description: t('joinUs.benefits.excellentTeamDesc')
     },
     {
       icon: <HeartOutlined className="benefit-icon" />,
-      title: "弹性工作",
-      description: "灵活的工作时间和远程办公选项，平衡工作与生活"
+      title: t('joinUs.benefits.flexibleWork'),
+      description: t('joinUs.benefits.flexibleWorkDesc')
     },
     {
       icon: <TrophyOutlined className="benefit-icon" />,
-      title: "股权激励",
-      description: "早期员工享有股权激励，分享公司成长红利"
+      title: t('joinUs.benefits.equityIncentive'),
+      description: t('joinUs.benefits.equityIncentiveDesc')
     }
   ];
 
   const processSteps = [
     {
-      title: "投递简历",
-      description: "通过我们的招聘页面投递简历",
+      title: t('joinUs.processSteps.submitResume'),
+      description: t('joinUs.processSteps.submitResumeDesc'),
       icon: <FileTextOutlined />
     },
     {
-      title: "简历筛选",
-      description: "HR会在3个工作日内回复",
+      title: t('joinUs.processSteps.resumeScreening'),
+      description: t('joinUs.processSteps.resumeScreeningDesc'),
       icon: <UserOutlined />
     },
     {
-      title: "面试安排",
-      description: "通过电话或视频进行初步面试",
+      title: t('joinUs.processSteps.interviewArrangement'),
+      description: t('joinUs.processSteps.interviewArrangementDesc'),
       icon: <PhoneOutlined />
     },
     {
-      title: "技术面试",
-      description: "技术团队进行专业能力评估",
+      title: t('joinUs.processSteps.technicalInterview'),
+      description: t('joinUs.processSteps.technicalInterviewDesc'),
       icon: <CheckCircleOutlined />
     },
     {
-      title: "最终面试",
-      description: "与团队负责人进行最终面试",
+      title: t('joinUs.processSteps.finalInterview'),
+      description: t('joinUs.processSteps.finalInterviewDesc'),
       icon: <ClockCircleOutlined />
     },
     {
-      title: "入职通知",
-      description: "面试通过后3个工作日内发放offer",
+      title: t('joinUs.processSteps.offerNotification'),
+      description: t('joinUs.processSteps.offerNotificationDesc'),
       icon: <SendOutlined />
     }
   ];
@@ -211,19 +300,89 @@ const JoinUs: React.FC = () => {
 
   return (
     <div className="join-us-page">
+      {/* 顶部导航栏 */}
+      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo */}
+          <div 
+            style={{
+              fontWeight: 'bold', 
+              fontSize: 24, 
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              WebkitBackgroundClip: 'text', 
+              WebkitTextFillColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              padding: '4px 8px',
+              borderRadius: '8px',
+              flexShrink: 0
+            }}
+            onClick={() => navigate('/')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+          >
+            LinkU
+          </div>
+          
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  // await logout();
+                } catch (error) {
+                  console.log('登出请求失败:', error);
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
+        </div>
+      </header>
+      
+      {/* 占位，防止内容被导航栏遮挡 */}
+      <div style={{height: 60}} />
+      
+      {/* 通知弹窗 */}
+      <NotificationPanel
+        isOpen={showNotifications && !!user}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+      
       {/* 英雄区域 */}
       <div className="hero-section">
         <div className="hero-content">
           <Title level={1} className="hero-title">
-            加入我们
+            {t('joinUs.title')}
           </Title>
           <Paragraph className="hero-subtitle">
-            与我们一起创造未来
+            {t('joinUs.subtitle')}
           </Paragraph>
           <Paragraph className="hero-description">
-            我们正在寻找有激情、有才华的伙伴加入我们的团队。
-            如果你想要在一个快速发展的公司中发挥自己的价值，
-            如果你想要参与改变世界的产品建设，那么这里就是你的舞台！
+            {t('joinUs.description')}
           </Paragraph>
         </div>
       </div>
@@ -231,9 +390,9 @@ const JoinUs: React.FC = () => {
       {/* 为什么选择我们 */}
       <div className="benefits-section">
         <div className="section-header">
-          <Title level={2}>为什么选择我们</Title>
+          <Title level={2}>{t('joinUs.whyChooseUs')}</Title>
           <Paragraph className="section-subtitle">
-            我们为每一位员工提供最好的发展平台和福利待遇
+            {t('joinUs.whyChooseUsSubtitle')}
           </Paragraph>
         </div>
         <Row gutter={[32, 32]}>
@@ -254,9 +413,9 @@ const JoinUs: React.FC = () => {
       {/* 招聘流程 */}
       <div className="process-section">
         <div className="section-header">
-          <Title level={2}>招聘流程</Title>
+          <Title level={2}>{t('joinUs.recruitmentProcess')}</Title>
           <Paragraph className="section-subtitle">
-            简单透明的招聘流程，让您轻松加入我们
+            {t('joinUs.recruitmentProcessSubtitle')}
           </Paragraph>
         </div>
         <div className="process-timeline">
@@ -280,9 +439,9 @@ const JoinUs: React.FC = () => {
       {/* 职位列表 */}
       <div className="positions-section">
         <div className="section-header">
-          <Title level={2}>开放职位</Title>
+          <Title level={2}>{t('joinUs.openPositions')}</Title>
           <Paragraph className="section-subtitle">
-            我们正在寻找这些职位的优秀人才
+            {t('joinUs.openPositionsSubtitle')}
           </Paragraph>
         </div>
         <Row gutter={[24, 24]}>
@@ -322,7 +481,7 @@ const JoinUs: React.FC = () => {
                   </ul>
                 </div>
                 <Button type="primary" size="large" className="apply-button">
-                  立即申请
+                  {t('joinUs.buttons.applyNow')}
                 </Button>
               </Card>
             </Col>
@@ -334,10 +493,9 @@ const JoinUs: React.FC = () => {
       <div className="apply-section">
         <Card className="apply-card">
           <div className="apply-content">
-            <Title level={2}>投递简历</Title>
+            <Title level={2}>{t('joinUs.submitResume')}</Title>
             <Paragraph>
-              没有找到合适的职位？没关系！我们欢迎有才华的你主动投递简历。
-              请填写以下信息，我们会根据您的背景为您推荐合适的职位。
+              {t('joinUs.submitResumeDescription')}
             </Paragraph>
             <Form
               form={form}
@@ -349,19 +507,19 @@ const JoinUs: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="name"
-                    label="姓名"
-                    rules={[{ required: true, message: '请输入您的姓名' }]}
+                    label={t('joinUs.formLabels.name')}
+                    rules={[{ required: true, message: t('joinUs.formPlaceholders.enterName') }]}
                   >
-                    <Input prefix={<UserOutlined />} placeholder="请输入您的姓名" />
+                    <Input prefix={<UserOutlined />} placeholder={t('joinUs.formPlaceholders.enterName')} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="phone"
-                    label="手机号（可选）"
+                    label={t('joinUs.formLabels.phone')}
                     rules={[]}
                   >
-                    <Input prefix={<PhoneOutlined />} placeholder="请输入您的手机号（可选）" />
+                    <Input prefix={<PhoneOutlined />} placeholder={t('joinUs.formPlaceholders.enterPhone')} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -369,22 +527,22 @@ const JoinUs: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="email"
-                    label="邮箱"
+                    label={t('joinUs.formLabels.email')}
                     rules={[
-                      { required: true, message: '请输入您的邮箱' },
+                      { required: true, message: t('joinUs.formPlaceholders.enterEmail') },
                       { type: 'email', message: '请输入有效的邮箱地址' }
                     ]}
                   >
-                    <Input prefix={<MailOutlined />} placeholder="请输入您的邮箱" />
+                    <Input prefix={<MailOutlined />} placeholder={t('joinUs.formPlaceholders.enterEmail')} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
                   <Form.Item
                     name="position"
-                    label="意向职位"
-                    rules={[{ required: true, message: '请选择意向职位' }]}
+                    label={t('joinUs.formLabels.position')}
+                    rules={[{ required: true, message: t('joinUs.formPlaceholders.selectPosition') }]}
                   >
-                    <Select placeholder="请选择意向职位">
+                    <Select placeholder={t('joinUs.formPlaceholders.selectPosition')}>
                       {positions.map((pos, index) => (
                         <Option key={index} value={pos.title}>{pos.title}</Option>
                       ))}
@@ -394,38 +552,38 @@ const JoinUs: React.FC = () => {
               </Row>
               <Form.Item
                 name="experience"
-                label="工作经验"
-                rules={[{ required: true, message: '请选择工作经验' }]}
+                label={t('joinUs.formLabels.experience')}
+                rules={[{ required: true, message: t('joinUs.formPlaceholders.selectExperience') }]}
               >
-                <Select placeholder="请选择您的工作经验">
-                  <Option value="应届毕业生">应届毕业生</Option>
-                  <Option value="1年以下">1年以下</Option>
-                  <Option value="1-3年">1-3年</Option>
-                  <Option value="3-5年">3-5年</Option>
-                  <Option value="5年以上">5年以上</Option>
+                <Select placeholder={t('joinUs.formPlaceholders.selectExperience')}>
+                  <Option value="freshGraduate">{t('joinUs.experienceOptions.freshGraduate')}</Option>
+                  <Option value="lessThan1Year">{t('joinUs.experienceOptions.lessThan1Year')}</Option>
+                  <Option value="oneToThreeYears">{t('joinUs.experienceOptions.oneToThreeYears')}</Option>
+                  <Option value="threeToFiveYears">{t('joinUs.experienceOptions.threeToFiveYears')}</Option>
+                  <Option value="moreThanFiveYears">{t('joinUs.experienceOptions.moreThanFiveYears')}</Option>
                 </Select>
               </Form.Item>
               <Form.Item
                 name="resume"
-                label="简历文件"
-                rules={[{ required: true, message: '请上传您的简历' }]}
+                label={t('joinUs.formLabels.resume')}
+                rules={[{ required: true, message: t('joinUs.formPlaceholders.uploadResume') }]}
               >
                 <Upload
                   beforeUpload={() => false}
                   maxCount={1}
                   accept=".pdf,.doc,.docx"
                 >
-                  <Button icon={<UploadOutlined />}>上传简历</Button>
+                  <Button icon={<UploadOutlined />}>{t('joinUs.buttons.uploadResume')}</Button>
                 </Upload>
               </Form.Item>
               <Form.Item
                 name="introduction"
-                label="自我介绍"
-                rules={[{ required: true, message: '请输入自我介绍' }]}
+                label={t('joinUs.formLabels.introduction')}
+                rules={[{ required: true, message: t('joinUs.formPlaceholders.enterIntroduction') }]}
               >
                 <TextArea
                   rows={4}
-                  placeholder="请简单介绍一下您的背景、技能和为什么想要加入我们..."
+                  placeholder={t('joinUs.formPlaceholders.enterIntroduction')}
                 />
               </Form.Item>
               <Form.Item>
@@ -437,7 +595,7 @@ const JoinUs: React.FC = () => {
                   icon={<SendOutlined />}
                   className="submit-button"
                 >
-                  {loading ? '投递中...' : '投递简历'}
+                  {loading ? t('joinUs.buttons.submitting') : t('joinUs.buttons.submitResume')}
                 </Button>
               </Form.Item>
             </Form>
@@ -445,33 +603,18 @@ const JoinUs: React.FC = () => {
         </Card>
       </div>
 
-      {/* 联系我们 */}
-      <div className="contact-section">
-        <div className="contact-content">
-          <Title level={2}>联系我们</Title>
-          <Paragraph>
-            如果您有任何问题，欢迎随时联系我们
-          </Paragraph>
-          <Space size="large">
-            <div className="contact-item">
-              <MailOutlined className="contact-icon" />
-              <div>
-                <Text strong>招聘邮箱</Text>
-                <br />
-                <Text>hr@linku.com</Text>
-              </div>
-            </div>
-            <div className="contact-item">
-              <PhoneOutlined className="contact-icon" />
-              <div>
-                <Text strong>招聘热线</Text>
-                <br />
-                <Text>400-888-8888</Text>
-              </div>
-            </div>
-          </Space>
-        </div>
-      </div>
+      {/* 页脚 */}
+      <Footer />
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

@@ -117,6 +117,7 @@ class UserOut(UserBase):
 
 
 QS_TOP100_CITIES = [
+    "Online",
     "London",
     "Edinburgh",
     "Manchester",

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前后端城市筛选测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        button { margin: 5px; padding: 10px 15px; }
+        select { margin: 5px; padding: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>前后端城市筛选功能测试</h1>
+    
+    <div class="test-section">
+        <h3>测试步骤</h3>
+        <button onclick="testAllCities()">1. 测试全部城市</button>
+        <button onclick="testLondon()">2. 测试London</button>
+        <button onclick="testEdinburgh()">3. 测试Edinburgh</button>
+        <button onclick="testOnline()">4. 测试Online</button>
+        <button onclick="runAllTests()">运行所有测试</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>测试结果</h3>
+        <div id="result" class="result">点击按钮开始测试</div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:8000';
+        
+        async function testCity(cityName, displayName) {
+            const resultDiv = document.getElementById('result');
+            const log = [];
+            
+            try {
+                log.push(`<div class="info">测试城市: ${displayName} (${cityName})</div>`);
+                
+                // 测试API调用
+                const url = cityName === 'all' ? 
+                    `${baseUrl}/api/tasks` : 
+                    `${baseUrl}/api/tasks?location=${cityName}`;
+                
+                log.push(`<div class="info">请求URL: ${url}</div>`);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log.push(`<div class="success">✓ API调用成功</div>`);
+                    log.push(`<div class="info">总任务数: ${data.total || 0}</div>`);
+                    log.push(`<div class="info">返回任务数: ${data.tasks ? data.tasks.length : 0}</div>`);
+                    
+                    if (data.tasks && data.tasks.length > 0) {
+                        log.push(`<div class="success">✓ 找到任务</div>`);
+                        log.push(`<div class="info">前3个任务:</div>`);
+                        data.tasks.slice(0, 3).forEach((task, index) => {
+                            log.push(`<div class="info">  ${index + 1}. ${task.title} - ${task.location}</div>`);
+                        });
+                    } else {
+                        log.push(`<div class="error">✗ 没有找到任务</div>`);
+                    }
+                } else {
+                    log.push(`<div class="error">✗ API调用失败: ${response.status}</div>`);
+                }
+                
+            } catch (error) {
+                log.push(`<div class="error">✗ 测试失败: ${error.message}</div>`);
+            }
+            
+            resultDiv.innerHTML = log.join('');
+            return response.ok && data.tasks && data.tasks.length > 0;
+        }
+        
+        async function testAllCities() {
+            await testCity('all', '全部城市');
+        }
+        
+        async function testLondon() {
+            await testCity('London', 'London');
+        }
+        
+        async function testEdinburgh() {
+            await testCity('Edinburgh', 'Edinburgh');
+        }
+        
+        async function testOnline() {
+            await testCity('Online', 'Online');
+        }
+        
+        async function runAllTests() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">开始运行所有测试...</div>';
+            
+            const tests = [
+                { name: '全部城市', city: 'all' },
+                { name: 'London', city: 'London' },
+                { name: 'Edinburgh', city: 'Edinburgh' },
+                { name: 'Online', city: 'Online' }
+            ];
+            
+            const results = [];
+            
+            for (const test of tests) {
+                const success = await testCity(test.city, test.name);
+                results.push({ name: test.name, success });
+                await new Promise(resolve => setTimeout(resolve, 500)); // 等待500ms
+            }
+            
+            // 显示总结
+            const summary = results.map(r => 
+                `<div class="${r.success ? 'success' : 'error'}">${r.success ? '✓' : '✗'} ${r.name}</div>`
+            ).join('');
+            
+            resultDiv.innerHTML += `<div class="info"><h4>测试总结:</h4>${summary}</div>`;
+        }
+        
+        // 页面加载时自动运行测试
+        window.onload = function() {
+            runAllTests();
+        };
+    </script>
+</body>
+</html>

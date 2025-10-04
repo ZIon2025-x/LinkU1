@@ -60,7 +60,7 @@ class StringValidator(BaseValidator):
     def validate_password(password: str) -> str:
         """验证密码强度"""
         if len(password) < 8:
-            raise ValueError("密码至少8个字符")
+            raise ValueError("密码至少需要8个字符")
         
         if len(password) > 128:
             raise ValueError("密码不能超过128个字符")
@@ -142,12 +142,10 @@ class TaskValidator(BaseValidator):
     
     @validator('task_type')
     def validate_task_type(cls, v):
-        allowed_types = [
-            "writing", "translation", "design", "programming", 
-            "marketing", "data_entry", "customer_service", "other"
-        ]
-        if v not in allowed_types:
-            raise ValueError(f"任务类型必须是以下之一: {', '.join(allowed_types)}")
+        # 使用与前端一致的任务类型列表
+        from app.schemas import TASK_TYPES
+        if v not in TASK_TYPES:
+            raise ValueError(f"任务类型必须是以下之一: {', '.join(TASK_TYPES)}")
         return v
 
 
@@ -232,9 +230,21 @@ def validate_input(data: Dict[str, Any], validator_class: BaseValidator) -> Dict
         validated_data = validator_class(**data)
         return validated_data.dict()
     except Exception as e:
+        # 提取具体的验证错误信息
+        error_message = str(e)
+        if "String should have at least" in error_message:
+            error_message = "密码至少需要8个字符"
+        elif "Value error" in error_message:
+            if "至少一个字母" in error_message:
+                error_message = "密码必须包含至少一个字母"
+            elif "至少一个数字" in error_message:
+                error_message = "密码必须包含至少一个数字"
+            elif "邮箱格式不正确" in error_message:
+                error_message = "邮箱格式不正确，请输入有效的邮箱地址"
+        
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"输入验证失败: {str(e)}"
+            detail=error_message
         )
 
 

@@ -495,33 +495,53 @@ class SyncCookieHTTPBearer(HTTPBearer):
         self, request: Request
     ) -> Optional[HTTPAuthorizationCredentials]:
         # 调试信息
-        print(f"🔍 Cookie调试 - URL: {request.url}")
-        print(f"🔍 Cookie调试 - Headers: {dict(request.headers)}")
-        print(f"🔍 Cookie调试 - Cookies: {dict(request.cookies)}")
+        print(f"[DEBUG] SyncCookieHTTPBearer - URL: {request.url}")
+        print(f"[DEBUG] SyncCookieHTTPBearer - Headers: {dict(request.headers)}")
+        print(f"[DEBUG] SyncCookieHTTPBearer - Cookies: {dict(request.cookies)}")
         
         # 首先尝试从Authorization头获取
         authorization_header = request.headers.get("Authorization")
         if authorization_header and authorization_header.startswith("Bearer "):
             token = authorization_header.split(" ")[1]
-            print(f"🔍 从Authorization头获取token: {token[:20]}...")
+            print(f"[DEBUG] 从Authorization头获取token: {token[:20]}...")
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=token
             )
 
-        # 如果Authorization头没有，尝试从Cookie获取session_id
-        session_id = request.cookies.get("session_id")
+        # 如果Authorization头没有，尝试从X-Session-ID头获取
+        session_id = request.headers.get("X-Session-ID")
         if session_id:
-            print(f"🔍 从Cookie获取session_id: {session_id[:20]}...")
+            print(f"[DEBUG] 从X-Session-ID头获取session_id: {session_id[:20]}...")
             return HTTPAuthorizationCredentials(
                 scheme="Bearer", credentials=session_id
             )
         
-        print("🔍 未找到认证信息")
+        # 如果X-Session-ID头没有，尝试从Cookie获取session_id
+        session_id = request.cookies.get("session_id")
+        if session_id:
+            print(f"[DEBUG] 从Cookie获取session_id: {session_id[:20]}...")
+            return HTTPAuthorizationCredentials(
+                scheme="Bearer", credentials=session_id
+            )
+        
+        # 尝试从其他Cookie名称获取
+        session_id = (
+            request.cookies.get("mobile_session_id") or
+            request.cookies.get("js_session_id")
+        )
+        if session_id:
+            print(f"[DEBUG] 从其他Cookie获取session_id: {session_id[:20]}...")
+            return HTTPAuthorizationCredentials(
+                scheme="Bearer", credentials=session_id
+            )
+        
+        print("[DEBUG] 未找到认证信息")
         if self.auto_error:
+            print("[DEBUG] 抛出401错误 - 未提供认证信息")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
             )
-
+        
         return None
 
 

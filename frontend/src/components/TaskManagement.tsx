@@ -16,7 +16,7 @@ const TASK_TYPES = [
 ];
 
 const CITIES = [
-  "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", 
+  "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", 
   "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", 
   "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", 
   "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", 

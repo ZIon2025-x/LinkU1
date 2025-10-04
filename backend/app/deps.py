@@ -1,9 +1,12 @@
 from typing import Optional
+import logging
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app import async_crud, crud, models
 from app.security import verify_token
@@ -82,10 +85,15 @@ def authenticate_with_session(request: Request, db: Session) -> Optional[models.
     """使用会话认证获取用户"""
     from app.secure_auth import validate_session
     
+    print(f"[DEBUG] authenticate_with_session - URL: {request.url}")
+    print(f"[DEBUG] authenticate_with_session - Cookies: {dict(request.cookies)}")
+    
     session = validate_session(request)
     if session:
+        print(f"[DEBUG] 会话验证成功，用户ID: {session.user_id}")
         user = crud.get_user_by_id(db, session.user_id)
         if user:
+            print(f"[DEBUG] 用户查询成功: {user.id}")
             # 检查用户状态
             if hasattr(user, "is_suspended") and user.is_suspended:
                 client_ip = get_client_ip(request)
@@ -105,7 +113,12 @@ def authenticate_with_session(request: Request, db: Session) -> Optional[models.
                     status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
                 )
             
+            print(f"[DEBUG] 会话认证成功，返回用户: {user.id}")
             return user
+        else:
+            print(f"[DEBUG] 用户查询失败，用户ID: {session.user_id}")
+    else:
+        print(f"[DEBUG] 会话验证失败")
     return None
 
 # 新的安全认证依赖
@@ -118,8 +131,12 @@ async def get_current_user_secure(
     # 首先尝试使用会话认证
     from app.secure_auth import validate_session
     
+    print(f"[DEBUG] get_current_user_secure - URL: {request.url}")
+    print(f"[DEBUG] get_current_user_secure - Cookies: {dict(request.cookies)}")
+    
     session = validate_session(request)
     if session:
+        print(f"[DEBUG] 会话认证成功，用户ID: {session.user_id}")
         user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
         if user:
             # 检查用户状态
@@ -206,65 +223,75 @@ def get_current_user_secure_sync(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer),
 ) -> models.User:
     """同步版本的安全用户认证"""
-    # 首先尝试使用会话认证
-    user = authenticate_with_session(request, db)
-    if user:
-        return user
+    print(f"[DEBUG] get_current_user_secure_sync - URL: {request.url}")
+    print(f"[DEBUG] get_current_user_secure_sync - credentials: {credentials}")
     
-    # 如果会话认证失败，回退到JWT认证
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
-        )
-
+    # 首先尝试使用会话认证
     try:
-        # 验证token
-        payload = verify_token(credentials.credentials, "access")
-        user_id = payload.get("sub")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-            )
-
-        # 获取用户信息
-        user = crud.get_user_by_id(db, user_id)
-        if not user:
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "INVALID_USER", user_id, client_ip, "Token中的用户不存在"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-            )
-
-        # 检查用户状态
-        if hasattr(user, "is_suspended") and user.is_suspended:
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-            )
-
-        if hasattr(user, "is_banned") and user.is_banned:
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-            )
-
-        return user
-
-    except HTTPException:
-        raise
+        user = authenticate_with_session(request, db)
+        if user:
+            print(f"[DEBUG] 会话认证成功，用户: {user.id}")
+            return user
     except Exception as e:
-        client_ip = get_client_ip(request)
-        log_security_event("AUTH_ERROR", "unknown", client_ip, f"认证错误: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
+        print(f"[DEBUG] 会话认证失败: {str(e)}")
+    
+    # 如果会话认证失败，检查是否有JWT token（不是session_id）
+    if credentials and len(credentials.credentials) > 50:  # JWT token通常很长
+        # 这看起来像是一个真正的JWT token，尝试JWT认证
+        try:
+            payload = verify_token(credentials.credentials, "access")
+            user_id = payload.get("sub")
+
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
+                )
+
+            # 获取用户信息
+            user = crud.get_user_by_id(db, user_id)
+            if not user:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "INVALID_USER", user_id, client_ip, "Token中的用户不存在"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
+                )
+
+            # 检查用户状态
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+
+            print(f"[DEBUG] JWT认证成功，用户: {user.id}")
+            return user
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            client_ip = get_client_ip(request)
+            log_security_event("AUTH_ERROR", "unknown", client_ip, f"JWT认证错误: {str(e)}")
+            print(f"[DEBUG] JWT认证失败: {str(e)}")
+    
+    # 如果都失败了，抛出401错误
+    print(f"[DEBUG] 所有认证方式都失败，抛出401错误")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
+    )
 
 
 def get_current_user_optional(
@@ -433,6 +460,36 @@ def get_current_user_secure_sync_csrf(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_csrf_cookie_bearer),
 ) -> models.User:
     """CSRF保护的安全用户认证（同步版本）"""
+    # 首先尝试使用会话认证
+    from app.secure_auth import validate_session
+    
+    session = validate_session(request)
+    if session:
+        user_id = session.user_id
+        user = crud.get_user_by_id(db, user_id)
+        if user:
+            # 检查用户状态
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                client_ip = get_client_ip(request)
+                log_security_event(
+                    "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+            
+            return user
+    
+    # 如果会话认证失败，回退到JWT认证
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"

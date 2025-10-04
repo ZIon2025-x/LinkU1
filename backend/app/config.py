@@ -103,6 +103,12 @@ class Config:
     # 邮箱验证配置
     EMAIL_VERIFICATION_EXPIRE_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
     
+    # 开发环境配置 - 跳过邮件验证
+    SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "true").lower() == "true"
+    
+    # 基础URL配置
+    BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+    
     # 安全配置
     SECURITY_HEADERS = {
         "X-Content-Type-Options": "nosniff",

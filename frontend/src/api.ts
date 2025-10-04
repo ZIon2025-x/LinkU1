@@ -17,6 +17,12 @@ let refreshPromise: Promise<any> | null = null;
 const requestCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 const pendingRequests = new Map<string, Promise<any>>();
 
+// 重试计数器，防止无限重试
+const retryCounters = new Map<string, number>();
+const MAX_RETRY_ATTEMPTS = 2; // 减少最大重试次数
+const GLOBAL_RETRY_COUNTER = new Map<string, number>(); // 全局重试计数器
+const MAX_GLOBAL_RETRIES = 5; // 全局最大重试次数
+
 // 缓存配置
 const CACHE_TTL = {
   USER_INFO: 5 * 60 * 1000,    // 用户信息缓存5分钟
@@ -90,6 +96,7 @@ export async function getCSRFToken(): Promise<string> {
     if (!csrfToken) {
       throw new Error('CSRF token为空');
     }
+    console.log('获取到新的CSRF token:', csrfToken.substring(0, 8) + '...');
     return csrfToken;
   } catch (error) {
     console.error('获取CSRF token失败:', error);
@@ -135,6 +142,13 @@ api.interceptors.request.use(async config => {
   return config;
 });
 
+// 清理重试计数器的函数
+function clearRetryCounters() {
+  retryCounters.clear();
+  GLOBAL_RETRY_COUNTER.clear();
+  console.log('已清理所有重试计数器');
+}
+
 // 响应拦截器 - 处理认证失败、token刷新和CSRF错误
 api.interceptors.response.use(
   response => {
@@ -143,17 +157,124 @@ api.interceptors.response.use(
       url: response.config.url,
       data: response.data
     });
+    
+    // 成功响应后清理重试计数器
+    if (response.status >= 200 && response.status < 300) {
+      const globalKey = 'global_401_retry';
+      if (GLOBAL_RETRY_COUNTER.has(globalKey)) {
+        GLOBAL_RETRY_COUNTER.delete(globalKey);
+        console.log('成功响应，清理全局重试计数器');
+      }
+    }
+    
     return response;
   },
   async error => {
     console.log('请求错误:', {
       status: error.response?.status,
       url: error.config?.url,
+      method: error.config?.method,
       message: error.message,
-      data: error.response?.data
+      data: error.response?.data,
+      headers: error.config?.headers
     });
     
+    // 首先检查是否是CSRF token验证失败
+    if ((error.response?.status === 401 || error.response?.status === 403) && 
+        error.response?.data?.detail?.includes('CSRF token验证失败')) {
+      
+      const requestKey = `${error.config?.method}_${error.config?.url}`;
+      const currentRetryCount = retryCounters.get(requestKey) || 0;
+      
+      console.log(`CSRF验证失败 - 请求: ${requestKey}, 重试次数: ${currentRetryCount}, 错误详情:`, error.response?.data);
+      
+      if (currentRetryCount >= MAX_RETRY_ATTEMPTS) {
+        console.error('CSRF token重试次数已达上限，停止重试');
+        retryCounters.delete(requestKey);
+        return Promise.reject(error);
+      }
+      
+      // 对于接收任务等关键操作，减少重试次数
+      const isCriticalOperation = error.config?.url?.includes('/accept') || 
+                                 error.config?.url?.includes('/complete') ||
+                                 error.config?.url?.includes('/cancel');
+      
+      if (isCriticalOperation && currentRetryCount >= 1) {
+        console.error('关键操作CSRF验证失败，减少重试次数');
+        retryCounters.delete(requestKey);
+        return Promise.reject(error);
+      }
+      
+      console.log(`CSRF token验证失败，尝试重新获取token并重试请求 (第${currentRetryCount + 1}次)`);
+      retryCounters.set(requestKey, currentRetryCount + 1);
+      
+      try {
+        // 清除旧的CSRF token
+        clearCSRFToken();
+        
+        // 重新获取CSRF token
+        const newToken = await getCSRFToken();
+        console.log('获取到新的CSRF token:', newToken.substring(0, 8) + '...');
+        
+        // 重试原始请求
+        const retryConfig = {
+          ...error.config,
+          headers: {
+            ...error.config.headers,
+            'X-CSRF-Token': newToken
+          }
+        };
+        
+        console.log('重试请求配置:', retryConfig);
+        const result = await api.request(retryConfig);
+        // 成功后清除重试计数
+        retryCounters.delete(requestKey);
+        console.log('重试请求成功');
+        return result;
+      } catch (retryError) {
+        console.error('重试请求失败:', retryError);
+        return Promise.reject(retryError);
+      }
+    }
+    
+    // 处理其他401错误（token过期等）
     if (error.response?.status === 401) {
+      // 对于某些API，不尝试刷新token，直接返回错误
+      const skipRefreshApis = [
+        '/api/users/profile/me',
+        '/api/secure-auth/refresh',
+        '/api/cs/refresh',
+        '/api/admin/refresh'
+      ];
+      
+      if (skipRefreshApis.some(api => error.config?.url?.includes(api))) {
+        console.log('跳过token刷新，直接返回401错误:', error.config?.url);
+        return Promise.reject(error);
+      }
+      
+      // 全局重试控制 - 防止无限循环
+      const globalKey = 'global_401_retry';
+      const globalRetryCount = GLOBAL_RETRY_COUNTER.get(globalKey) || 0;
+      
+      if (globalRetryCount >= MAX_GLOBAL_RETRIES) {
+        console.error('全局401重试次数已达上限，停止所有重试');
+        GLOBAL_RETRY_COUNTER.delete(globalKey);
+        // 清理所有重试计数器
+        retryCounters.clear();
+        return Promise.reject(error);
+      }
+      
+      // 检查是否是接收任务API，如果是则限制重试次数
+      const isAcceptTaskApi = error.config?.url?.includes('/accept');
+      const requestKey = `${error.config?.method}_${error.config?.url}`;
+      const currentRetryCount = retryCounters.get(requestKey) || 0;
+      
+      if (isAcceptTaskApi && currentRetryCount >= 1) {
+        console.error('接收任务API重试次数已达上限，停止重试');
+        retryCounters.delete(requestKey);
+        return Promise.reject(error);
+      }
+      
       // 避免重复刷新token
       if (isRefreshing) {
         // 如果正在刷新，等待刷新完成
@@ -161,11 +282,17 @@ api.interceptors.response.use(
           try {
             await refreshPromise;
             // 刷新完成后重试原始请求
+            if (isAcceptTaskApi) {
+              retryCounters.set(requestKey, currentRetryCount + 1);
+            }
             return api.request(error.config);
           } catch (refreshError) {
             console.log('等待token刷新失败');
             return Promise.reject(error);
           }
+        } else {
+          // 如果没有刷新promise，直接返回错误
+          return Promise.reject(error);
         }
       } else {
         // 开始刷新token
@@ -194,45 +321,26 @@ api.interceptors.response.use(
           const refreshResponse = await refreshPromise;
           console.log('Token刷新成功，重试原始请求');
           
+          // 增加全局重试计数
+          GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
+          
           // 重试原始请求
+          if (isAcceptTaskApi) {
+            retryCounters.set(requestKey, currentRetryCount + 1);
+          }
           return api.request(error.config);
         } catch (refreshError) {
           console.log('Token刷新失败，用户需要重新登录');
+          // 增加全局重试计数
+          GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
           // HttpOnly Cookie会自动处理，无需手动清理
           // 让各个组件自己处理认证失败的情况
+          return Promise.reject(error);
         } finally {
           // 重置刷新状态
           isRefreshing = false;
           refreshPromise = null;
         }
-      }
-    }
-    
-    // 处理CSRF token验证失败
-    if (error.response?.status === 403 && 
-        error.response?.data?.detail?.includes('CSRF token验证失败')) {
-      console.log('CSRF token验证失败，尝试重新获取token并重试请求');
-      
-      try {
-        // 清除旧的CSRF token
-        clearCSRFToken();
-        
-        // 重新获取CSRF token
-        const newToken = await getCSRFToken();
-        
-        // 重试原始请求
-        const retryConfig = {
-          ...error.config,
-          headers: {
-            ...error.config.headers,
-            'X-CSRF-Token': newToken
-          }
-        };
-        
-        return api.request(retryConfig);
-      } catch (retryError) {
-        console.error('重试请求失败:', retryError);
-        return Promise.reject(retryError);
       }
     }
     
@@ -248,8 +356,8 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10 
   pageSize?: number;
 }) {
   const params: Record<string, any> = {};
-  if (type && type !== '全部类型') params.task_type = type;
-  if (city && city !== '全部城市') params.location = city;
+  if (type && type !== 'all' && type !== '全部类型') params.task_type = type;
+  if (city && city !== 'all' && city !== '全部城市') params.location = city;
   if (keyword) params.keyword = keyword;
   params.page = page;
   params.page_size = pageSize;
@@ -336,7 +444,7 @@ export async function markMessageRead(messageId: number) {
 
 // 获取用户通知列表
 export async function getNotifications(limit: number = 20) {
-  const res = await api.get('/api/users/notifications', {
+  const res = await api.get('/api/notifications', {
     params: { limit }
   });
   return res.data;
@@ -344,31 +452,57 @@ export async function getNotifications(limit: number = 20) {
 
 // 获取未读通知列表
 export async function getUnreadNotifications() {
-  const res = await api.get('/api/users/notifications/unread');
+  const res = await api.get('/api/notifications/unread');
+  return res.data;
+}
+
+// 获取所有未读通知和最近N条已读通知
+export async function getNotificationsWithRecentRead(recentReadLimit: number = 10) {
+  const res = await api.get('/api/notifications/with-recent-read', {
+    params: { recent_read_limit: recentReadLimit }
+  });
   return res.data;
 }
 
 // 获取未读通知数量
 export async function getUnreadNotificationCount() {
-  const res = await api.get('/api/users/notifications/unread/count');
+  const res = await api.get('/api/notifications/unread/count');
   return res.data.unread_count;
 }
 
 // 标记通知为已读
 export async function markNotificationRead(notificationId: number) {
-  const res = await api.post(`/api/users/notifications/${notificationId}/read`);
+  const res = await api.post(`/api/notifications/${notificationId}/read`);
   return res.data;
 }
 
 // 标记所有通知为已读
 export async function markAllNotificationsRead() {
-  const res = await api.post('/api/users/notifications/read-all');
+  const res = await api.post('/api/notifications/read-all');
   return res.data;
 }
 
-// 接受任务
-export async function acceptTask(taskId: number) {
-  const res = await api.post(`/api/tasks/${taskId}/accept`);
+// 申请任务
+export async function applyForTask(taskId: number, message?: string) {
+  const res = await api.post(`/api/tasks/${taskId}/apply`, { message });
+  return res.data;
+}
+
+// 获取任务申请者列表
+export async function getTaskApplications(taskId: number) {
+  const res = await api.get(`/api/tasks/${taskId}/applications`);
+  return res.data;
+}
+
+// 获取用户申请记录
+export async function getUserApplications() {
+  const res = await api.get(`/api/my-applications`);
+  return res.data;
+}
+
+// 批准申请者
+export async function approveApplication(taskId: number, applicantId: string) {
+  const res = await api.post(`/api/tasks/${taskId}/approve/${applicantId}`);
   return res.data;
 }
 
@@ -449,6 +583,12 @@ export async function createReview(taskId: number, rating: number, comment?: str
 // 获取任务评价列表
 export async function getTaskReviews(taskId: number) {
   const res = await api.get(`/api/tasks/${taskId}/reviews`);
+  return res.data;
+}
+
+// 获取用户收到的评价（包括匿名评价）
+export async function getUserReceivedReviews(userId: string) {
+  const res = await api.get(`/api/users/${userId}/received-reviews`);
   return res.data;
 }
 
@@ -554,7 +694,7 @@ export async function setTaskLevel(taskId: number, level: string) {
 }
 
 export async function sendAnnouncement(title: string, content: string) {
-  const res = await api.post('/api/users/notifications/send-announcement', {
+  const res = await api.post('/api/notifications/send-announcement', {
     title,
     content
   });
@@ -845,7 +985,9 @@ export const logout = async () => {
     localStorage.removeItem('session_id');
     localStorage.removeItem('userInfo');
     clearCSRFToken();
-    console.log('用户已登出，localStorage已清理');
+    // 清理重试计数器
+    clearRetryCounters();
+    console.log('用户已登出，localStorage和重试计数器已清理');
   }
 };
 

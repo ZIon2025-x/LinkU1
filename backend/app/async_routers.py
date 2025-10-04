@@ -6,10 +6,11 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, BackgroundTasks
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app import async_crud, models, schemas
 from app.database import check_database_health, get_pool_status
@@ -279,19 +280,251 @@ async def create_task_async(
         raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
 
 
-@async_router.post("/tasks/{task_id}/accept", response_model=schemas.TaskOut)
-async def accept_task(
+@async_router.post("/tasks/{task_id}/apply", response_model=dict)
+async def apply_for_task(
     task_id: int,
-    current_user: models.User = Depends(get_current_user_async),
+    message: str = None,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+):
+    """申请任务（异步版本）"""
+    print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}")
+    application = await async_crud.async_task_crud.apply_for_task(
+        db, task_id, current_user.id, message
+    )
+    print(f"DEBUG: 申请结果: {application}")
+    if not application:
+        # 检查是否是等级不匹配的问题
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if task:
+            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+            user_level_value = level_hierarchy.get(current_user.user_level, 1)
+            task_level_value = level_hierarchy.get(task.task_level, 1)
+            
+            if user_level_value < task_level_value:
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"您的用户等级不足以申请此任务。此任务需要{task.task_level.upper()}用户才能申请。"
+                )
+        
+        raise HTTPException(
+            status_code=400, detail="Task not available or already applied"
+        )
+    
+    # 申请成功后发送通知和邮件给发布者
+    try:
+        print(f"DEBUG: 开始发送任务申请通知，任务ID: {task_id}")
+        # 获取任务和发布者信息
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if task:
+            print(f"DEBUG: 找到任务: {task.title}")
+            # 获取发布者信息
+            poster_query = select(models.User).where(models.User.id == task.poster_id)
+            poster_result = await db.execute(poster_query)
+            poster = poster_result.scalar_one_or_none()
+            
+            if poster:
+                print(f"DEBUG: 找到发布者: {poster.name}")
+                # 发送通知和邮件
+                from app.task_notifications import send_task_application_notification
+                from app.database import get_db
+                
+                # 创建同步数据库会话用于通知
+                sync_db = next(get_db())
+                try:
+                    print(f"DEBUG: 调用通知函数")
+                    send_task_application_notification(
+                        db=sync_db,
+                        background_tasks=background_tasks,
+                        task=task,
+                        applicant=current_user,
+                        application_message=message
+                    )
+                    print(f"DEBUG: 通知函数调用完成")
+                finally:
+                    sync_db.close()
+            else:
+                print(f"DEBUG: 未找到发布者")
+                    
+    except Exception as e:
+        # 通知发送失败不影响申请流程
+        logger.error(f"Failed to send task application notification: {e}")
+    
+    return {
+        "message": "申请成功，请等待发布者审核",
+        "application_id": application.id,
+        "status": application.status
+    }
+
+
+
+@async_router.get("/my-applications", response_model=List[dict])
+async def get_user_applications(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """接受任务（异步版本）"""
-    task = await async_crud.async_task_crud.accept_task(db, task_id, current_user.id)
-    if not task:
-        raise HTTPException(
-            status_code=400, detail="Task not available or already taken"
+    """获取当前用户的申请记录"""
+    try:
+        # 获取用户的所有申请记录
+        applications_query = select(models.TaskApplication).where(
+            models.TaskApplication.applicant_id == current_user.id
+        ).order_by(models.TaskApplication.created_at.desc())
+        
+        applications_result = await db.execute(applications_query)
+        applications = applications_result.scalars().all()
+        
+        # 获取每个申请对应的任务信息
+        result = []
+        for app in applications:
+            task_query = select(models.Task).where(models.Task.id == app.task_id)
+            task_result = await db.execute(task_query)
+            task = task_result.scalar_one_or_none()
+            
+            if task:
+                result.append({
+                    "id": app.id,
+                    "task_id": app.task_id,
+                    "task_title": task.title,
+                    "task_reward": task.reward,
+                    "task_location": task.location,
+                    "status": app.status,
+                    "message": app.message,
+                    "created_at": app.created_at.isoformat(),
+                    "task_poster_id": task.poster_id
+                })
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error getting user applications: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get applications")
+
+@async_router.get("/tasks/{task_id}/applications", response_model=List[dict])
+async def get_task_applications(
+    task_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务的申请者列表（仅任务发布者可查看）"""
+    try:
+        print(f"[DEBUG] 获取任务 {task_id} 的申请列表，用户: {current_user.id}")
+        
+        # 检查是否为任务发布者
+        task = await db.execute(
+            select(models.Task).where(models.Task.id == task_id)
         )
-    return task
+        task = task.scalar_one_or_none()
+        
+        if not task:
+            print(f"[DEBUG] 任务 {task_id} 不存在")
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        print(f"[DEBUG] 任务 {task_id} 发布者: {task.poster_id}, 当前用户: {current_user.id}")
+        
+        if task.poster_id != current_user.id:
+            print(f"[DEBUG] 用户 {current_user.id} 不是任务 {task_id} 的发布者")
+            raise HTTPException(status_code=403, detail="Only task poster can view applications")
+        
+        print(f"[DEBUG] 开始获取任务 {task_id} 的申请列表")
+        applications = await async_crud.async_task_crud.get_task_applications(db, task_id)
+        print(f"[DEBUG] 找到 {len(applications)} 个申请")
+    
+        # 获取申请者详细信息
+        result = []
+        for app in applications:
+            print(f"[DEBUG] 处理申请 {app.id}, 申请者: {app.applicant_id}")
+            user = await db.execute(
+                select(models.User).where(models.User.id == app.applicant_id)
+            )
+            user = user.scalar_one_or_none()
+            
+            if user:
+                print(f"[DEBUG] 找到申请者用户: {user.name}")
+                result.append({
+                    "id": app.id,
+                    "applicant_id": app.applicant_id,
+                    "applicant_name": user.name,
+                    "message": app.message,
+                    "created_at": app.created_at,
+                    "status": app.status
+                })
+            else:
+                print(f"[DEBUG] 申请者用户 {app.applicant_id} 不存在")
+        
+        print(f"[DEBUG] 返回 {len(result)} 个申请结果")
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] 获取任务申请列表失败: {e}")
+        logger.error(f"Error getting task applications for {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get applications: {str(e)}")
+
+
+@async_router.post("/tasks/{task_id}/approve/{applicant_id}", response_model=schemas.TaskOut)
+async def approve_application(
+    task_id: int,
+    applicant_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+):
+    """批准申请者（仅任务发布者可操作）"""
+    # 检查是否为任务发布者
+    task = await db.execute(
+        select(models.Task).where(models.Task.id == task_id)
+    )
+    task = task.scalar_one_or_none()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if task.poster_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only task poster can approve applications")
+    
+    approved_task = await async_crud.async_task_crud.approve_application(
+        db, task_id, applicant_id
+    )
+    
+    if not approved_task:
+        raise HTTPException(
+            status_code=400, detail="Failed to approve application"
+        )
+    
+    # 批准成功后发送通知和邮件给接收者
+    try:
+        # 获取接收者信息
+        applicant_query = select(models.User).where(models.User.id == applicant_id)
+        applicant_result = await db.execute(applicant_query)
+        applicant = applicant_result.scalar_one_or_none()
+        
+        if applicant:
+            # 发送通知和邮件
+            from app.task_notifications import send_task_approval_notification
+            from app.database import get_db
+            
+            # 创建同步数据库会话用于通知
+            sync_db = next(get_db())
+            try:
+                send_task_approval_notification(
+                    db=sync_db,
+                    background_tasks=background_tasks,
+                    task=approved_task,
+                    applicant=applicant
+                )
+            finally:
+                sync_db.close()
+                
+    except Exception as e:
+        # 通知发送失败不影响批准流程
+        logger.error(f"Failed to send task approval notification: {e}")
+    
+    return approved_task
 
 
 @async_router.get("/users/{user_id}/tasks", response_model=dict)
@@ -360,7 +593,7 @@ async def get_notifications(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     unread_only: bool = Query(False),
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取用户通知（异步版本）"""

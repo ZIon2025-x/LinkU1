@@ -20,6 +20,14 @@ class QueryOptimizer:
     @staticmethod
     def get_tasks_with_relations(db: Session, skip: int = 0, limit: int = 100, **filters) -> List[models.Task]:
         """获取任务列表，预加载关联数据，避免N+1查询"""
+        from datetime import datetime
+        import pytz
+        
+        # 获取当前英国时间并转换为UTC时间进行比较
+        uk_tz = pytz.timezone('Europe/London')
+        now_local = datetime.now(uk_tz)
+        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        
         query = (
             db.query(models.Task)
             .options(
@@ -27,7 +35,15 @@ class QueryOptimizer:
                 selectinload(models.Task.taker),   # 预加载接受者信息
                 selectinload(models.Task.reviews)  # 预加载评论
             )
-            .filter(models.Task.status == "open")
+            .filter(
+                or_(
+                    models.Task.status == "open",
+                    models.Task.status == "taken"
+                )
+            )
+            .filter(
+                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+            )
         )
         
         # 应用过滤条件
@@ -80,8 +96,23 @@ class QueryOptimizer:
     @staticmethod
     def get_tasks_with_pagination_info(db: Session, **filters) -> Dict[str, Any]:
         """获取任务列表和分页信息，一次查询完成"""
-        # 构建基础查询
-        base_query = db.query(models.Task).filter(models.Task.status == "open")
+        from datetime import datetime
+        import pytz
+        
+        # 获取当前英国时间并转换为UTC时间进行比较
+        uk_tz = pytz.timezone('Europe/London')
+        now_local = datetime.now(uk_tz)
+        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        
+        # 构建基础查询 - 显示开放和已接收但未同意的任务，且未过期
+        base_query = db.query(models.Task).filter(
+            or_(
+                models.Task.status == "open",
+                models.Task.status == "taken"
+            )
+        ).filter(
+            models.Task.deadline > now_utc  # 使用UTC时间进行比较
+        )
         
         # 应用过滤条件
         if filters.get('task_type') and filters['task_type'] not in ['全部类型', '全部']:
@@ -209,6 +240,14 @@ class AsyncQueryOptimizer:
         **filters
     ) -> List[models.Task]:
         """异步获取任务列表，预加载关联数据"""
+        from datetime import datetime
+        import pytz
+        
+        # 获取当前英国时间并转换为UTC时间进行比较
+        uk_tz = pytz.timezone('Europe/London')
+        now_local = datetime.now(uk_tz)
+        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        
         query = (
             select(models.Task)
             .options(
@@ -216,7 +255,15 @@ class AsyncQueryOptimizer:
                 selectinload(models.Task.taker),
                 selectinload(models.Task.reviews)
             )
-            .filter(models.Task.status == "open")
+            .filter(
+                or_(
+                    models.Task.status == "open",
+                    models.Task.status == "taken"
+                )
+            )
+            .filter(
+                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+            )
         )
         
         # 应用过滤条件

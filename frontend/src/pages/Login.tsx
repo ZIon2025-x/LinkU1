@@ -4,6 +4,8 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -26,6 +28,7 @@ const ErrorMsg = styled.div`
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -35,12 +38,12 @@ const Login: React.FC = () => {
     api.get('/api/users/profile/me')
       .then(() => {
         // 用户已登录，重定向到首页
-        message.info('您已登录，正在跳转到首页...');
+        message.info(t('auth.alreadyLoggedIn'));
         navigate('/');
       })
       .catch(() => {
         // 用户未登录，继续显示登录页面
-        console.log('用户未登录');
+        console.log(t('auth.notLoggedIn'));
       });
   }, [navigate]);
 
@@ -53,13 +56,13 @@ const Login: React.FC = () => {
       });
       // HttpOnly Cookie已由后端自动设置，无需手动存储
       setErrorMsg(''); // 登录成功清空错误
-      message.success('登录成功！');
+      message.success(t('auth.loginSuccess'));
       // 添加短暂延迟确保Cookie设置完成
       setTimeout(() => {
         navigate('/');
       }, 100);
     } catch (err: any) {
-      let msg = '登录失败';
+      let msg = t('auth.loginError');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
           msg = err.response.data.detail;
@@ -81,22 +84,30 @@ const Login: React.FC = () => {
 
   return (
     <Wrapper>
-      <StyledCard title="Login to LinkU">
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <LanguageSwitcher />
+      </div>
+      <StyledCard title={t('auth.loginTitle')}>
         {errorMsg && <ErrorMsg>{errorMsg}</ErrorMsg>}
         <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}> 
-            <Input placeholder="Enter your email" />
+          <Form.Item label={t('common.email')} name="email" rules={[{ required: true, type: 'email' }]}> 
+            <Input placeholder={t('common.email')} />
           </Form.Item>
-          <Form.Item label="Password" name="password" rules={[{ required: true }]}> 
-            <Input.Password placeholder="Enter your password" />
+          <Form.Item label={t('common.password')} name="password" rules={[{ required: true }]}> 
+            <Input.Password placeholder={t('common.password')} />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>Login</Button>
+            <Button type="primary" htmlType="submit" block loading={loading}>{t('common.login')}</Button>
           </Form.Item>
         </Form>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-          <Button type="link" onClick={() => navigate('/forgot-password')}>Forgot Password?</Button>
-          <Button type="link" onClick={() => navigate('/register')}>Register</Button>
+          <Button type="link" onClick={() => navigate('/forgot-password')}>{t('auth.forgotPassword')}</Button>
+          <Button type="link" onClick={() => navigate('/register')}>{t('common.register')}</Button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <Button type="link" onClick={() => navigate('/resend-verification')}>
+            重发验证邮件
+          </Button>
         </div>
       </StyledCard>
     </Wrapper>

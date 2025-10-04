@@ -106,9 +106,9 @@ async def debug_cookie_middleware(request: Request, call_next):
     """调试Cookie中间件 - 帮助诊断移动端认证问题"""
     # 只对特定路径进行调试
     if request.url.path in ["/api/users/profile/me", "/api/secure-auth/refresh", "/api/secure-auth/login"]:
-        logger.info(f"🔍 Cookie调试 - URL: {request.url}")
-        logger.info(f"🔍 Cookie调试 - Headers: {dict(request.headers)}")
-        logger.info(f"🔍 Cookie调试 - Cookies: {dict(request.cookies)}")
+        logger.info(f"[DEBUG] Cookie调试 - URL: {request.url}")
+        logger.info(f"[DEBUG] Cookie调试 - Headers: {dict(request.headers)}")
+        logger.info(f"[DEBUG] Cookie调试 - Cookies: {dict(request.cookies)}")
         
         # 检查移动端User-Agent
         user_agent = request.headers.get("user-agent", "")
@@ -116,14 +116,14 @@ async def debug_cookie_middleware(request: Request, call_next):
             'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
             'windows phone', 'opera mini', 'iemobile'
         ])
-        logger.info(f"🔍 移动端检测: {is_mobile}")
+        logger.info(f"[DEBUG] 移动端检测: {is_mobile}")
         
         # 检查X-Session-ID头
         session_header = request.headers.get("X-Session-ID")
         if session_header:
-            logger.info(f"🔍 找到X-Session-ID头: {session_header[:8]}...")
+            logger.info(f"[DEBUG] 找到X-Session-ID头: {session_header[:8]}...")
         else:
-            logger.info("🔍 未找到X-Session-ID头")
+            logger.info("[DEBUG] 未找到X-Session-ID头")
     
     response = await call_next(request)
     return response
@@ -328,47 +328,45 @@ async def startup_event():
 async def websocket_chat(
     websocket: WebSocket, user_id: str, db: Session = Depends(get_db)
 ):
-    # 首先尝试从Cookie中获取token
-    token = None
+    # 首先尝试从Cookie中获取session_id
+    session_id = None
     cookies = websocket.cookies
     
-    # 检查access_token cookie
-    if "access_token" in cookies:
-        token = cookies["access_token"]
-        logger.info(f"Found access_token in cookies for user {user_id}")
+    # 检查session_id cookie
+    if "session_id" in cookies:
+        session_id = cookies["session_id"]
+        logger.info(f"Found session_id in cookies for user {user_id}")
     
-    # 如果Cookie中没有token，尝试从查询参数获取（向后兼容）
-    if not token:
-        token = websocket.query_params.get("token")
-        if token:
-            logger.info(f"Found token in query params for user {user_id}")
+    # 如果Cookie中没有session_id，尝试从查询参数获取（向后兼容）
+    if not session_id:
+        session_id = websocket.query_params.get("session_id")
+        if session_id:
+            logger.info(f"Found session_id in query params for user {user_id}")
     
-    if not token:
-        await websocket.close(code=1008, reason="Missing authentication token")
+    if not session_id:
+        await websocket.close(code=1008, reason="Missing session_id")
         return
 
-    # 验证JWT token
+    # 验证会话
     try:
-        from app.security import decode_access_token
-
-        payload = decode_access_token(token)
-
-        # 验证JWT token中的用户ID与WebSocket路径中的user_id是否匹配
-        if not payload:
-            logger.error("Invalid token payload")
-            await websocket.close(code=1008, reason="Invalid token")
+        from app.secure_auth import SecureAuthManager
+        
+        session = SecureAuthManager.get_session(session_id, update_activity=False)
+        if not session:
+            logger.error(f"Invalid session for user {user_id}")
+            await websocket.close(code=1008, reason="Invalid session")
             return
 
-        token_user_id = payload.get("sub")  # JWT token中使用sub字段存储用户ID
-        if token_user_id != user_id:
-            logger.error(f"User ID mismatch: token={token_user_id}, path={user_id}")
+        # 验证会话中的用户ID与WebSocket路径中的user_id是否匹配
+        if session.user_id != user_id:
+            logger.error(f"User ID mismatch: session={session.user_id}, path={user_id}")
             await websocket.close(code=1008, reason="User ID mismatch")
             return
 
         logger.info(f"WebSocket authentication successful for user {user_id}")
     except Exception as e:
         logger.error(f"WebSocket authentication failed for user {user_id}: {e}")
-        await websocket.close(code=1008, reason="Invalid authentication token")
+        await websocket.close(code=1008, reason="Invalid session")
         return
 
     await websocket.accept()

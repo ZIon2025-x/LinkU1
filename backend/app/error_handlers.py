@@ -76,7 +76,15 @@ SECURITY_ERROR_MESSAGES = {
     "RESOURCE_NOT_FOUND": "请求的资源不存在",
     "DUPLICATE_RESOURCE": "资源已存在",
     "OPERATION_FAILED": "操作失败",
-    "SERVER_ERROR": "服务器内部错误"
+    "SERVER_ERROR": "服务器内部错误",
+    # 注册相关错误
+    "EMAIL_ALREADY_EXISTS": "该邮箱已被注册，请使用其他邮箱或直接登录",
+    "USERNAME_ALREADY_EXISTS": "该用户名已被使用，请选择其他用户名",
+    "PASSWORD_TOO_WEAK": "密码强度不够，请确保密码至少8个字符且包含字母和数字",
+    "INVALID_EMAIL_FORMAT": "邮箱格式不正确，请输入有效的邮箱地址",
+    "INVALID_USERNAME_FORMAT": "用户名格式不正确，只能包含字母、数字、下划线和连字符，且不能以数字开头",
+    "USERNAME_CONTAINS_KEYWORDS": "用户名不能包含客服相关关键词",
+    "VALIDATION_ERROR": "输入数据验证失败"
 }
 
 
