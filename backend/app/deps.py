@@ -391,6 +391,30 @@ def get_current_customer_service_or_user(
     if user:
         return user
     
+    # 移动端特殊处理：如果Cookie认证失败，尝试从Authorization头获取token
+    user_agent = request.headers.get("user-agent", "")
+    is_mobile = any(keyword in user_agent.lower() for keyword in [
+        'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+        'windows phone', 'opera mini', 'iemobile'
+    ])
+    
+    if is_mobile and not credentials:
+        # 移动端Cookie缺失时，尝试从Authorization头获取token
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            print(f"[DEBUG] 移动端备用认证 - 从Authorization头获取token: {token[:20]}...")
+            
+            # 验证token
+            from app.security import verify_token
+            payload = verify_token(token, "access")
+            if payload and "sub" in payload:
+                user_id = payload["sub"]
+                user = crud.get_user_by_id(db, user_id)
+                if user:
+                    print(f"[DEBUG] 移动端备用认证成功 - 用户: {user.id}")
+                    return user
+    
     # 如果会话认证失败，回退到JWT认证
     if not credentials:
         raise HTTPException(
