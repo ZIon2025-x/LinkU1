@@ -109,11 +109,28 @@ export function clearCSRFToken(): void {
   csrfToken = null;
 }
 
+// 检测是否为移动端
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 api.interceptors.request.use(async config => {
-  // 添加移动端认证支持 - 从localStorage获取session_id
-  const sessionId = localStorage.getItem('session_id');
-  if (sessionId) {
-    config.headers['X-Session-ID'] = sessionId;
+  const isMobile = isMobileDevice();
+  
+  if (isMobile) {
+    // 移动端使用Authorization头认证
+    const accessToken = localStorage.getItem('access_token');
+    if (accessToken) {
+      config.headers['Authorization'] = `Bearer ${accessToken}`;
+      console.log('移动端使用Authorization头认证');
+    }
+  } else {
+    // 桌面端使用Cookie + X-Session-ID认证
+    const sessionId = localStorage.getItem('session_id');
+    if (sessionId) {
+      config.headers['X-Session-ID'] = sessionId;
+      console.log('桌面端使用X-Session-ID认证');
+    }
   }
   
   // 对于写操作，添加CSRF token
@@ -137,7 +154,8 @@ api.interceptors.request.use(async config => {
     method: config.method,
     url: config.url,
     headers: config.headers,
-    withCredentials: config.withCredentials
+    withCredentials: config.withCredentials,
+    isMobile: isMobile
   });
   return config;
 });
@@ -983,6 +1001,7 @@ export const logout = async () => {
   } finally {
     // 清理localStorage
     localStorage.removeItem('session_id');
+    localStorage.removeItem('access_token'); // 清理移动端token
     localStorage.removeItem('userInfo');
     clearCSRFToken();
     // 清理重试计数器

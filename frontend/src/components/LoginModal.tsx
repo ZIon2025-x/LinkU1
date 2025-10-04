@@ -58,8 +58,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: formData.password,
         });
         
-        // HttpOnly Cookie已由后端自动设置，无需手动存储
-        // 添加短暂延迟确保Cookie设置完成
+        // 检测是否为移动端，如果是则保存access_token
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && res.data.access_token) {
+          localStorage.setItem('access_token', res.data.access_token);
+          console.log('移动端登录成功，已保存access_token');
+        }
+        
+        // 保存session_id（桌面端和移动端都需要）
+        if (res.data.session_id) {
+          localStorage.setItem('session_id', res.data.session_id);
+          console.log('已保存session_id');
+        }
+        
+        // 添加短暂延迟确保认证信息设置完成
         setTimeout(() => {
           onSuccess?.();
           onClose();
