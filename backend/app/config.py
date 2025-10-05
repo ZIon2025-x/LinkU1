@@ -115,6 +115,10 @@ class Config:
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
     USE_SENDGRID = os.getenv("USE_SENDGRID", "false").lower() == "true"
     
+    # Resend配置
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+    USE_RESEND = os.getenv("USE_RESEND", "false").lower() == "true"
+    
     # 开发环境配置 - 跳过邮件验证
     SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "false").lower() == "true"
     

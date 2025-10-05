@@ -19,6 +19,13 @@ try:
 except ImportError:
     SENDGRID_AVAILABLE = False
 
+# 尝试导入Resend
+try:
+    import resend
+    RESEND_AVAILABLE = True
+except ImportError:
+    RESEND_AVAILABLE = False
+
 SECRET_KEY = Config.SECRET_KEY
 SALT = "email-confirm"
 EMAIL_FROM = Config.EMAIL_FROM
@@ -69,6 +76,31 @@ def send_email_sendgrid(to_email, subject, body):
         print("回退到SMTP发送")
         return send_email_smtp(to_email, subject, body)
 
+def send_email_resend(to_email, subject, body):
+    """使用Resend发送邮件"""
+    if not RESEND_AVAILABLE:
+        print("Resend库未安装，回退到SMTP")
+        return send_email_smtp(to_email, subject, body)
+    
+    try:
+        resend.api_key = Config.RESEND_API_KEY
+        
+        params = {
+            "from": Config.EMAIL_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "html": body,
+        }
+        
+        email = resend.Emails.send(params)
+        print(f"Resend邮件发送成功: {email}")
+        return True
+        
+    except Exception as e:
+        print(f"Resend邮件发送失败: {e}")
+        print("回退到SMTP发送")
+        return send_email_smtp(to_email, subject, body)
+
 def send_email_smtp(to_email, subject, body):
     """使用SMTP发送邮件"""
     print(f"send_email_smtp called: to={to_email}, subject={subject}")
@@ -107,8 +139,13 @@ def send_email_smtp(to_email, subject, body):
         return False
 
 def send_email(to_email, subject, body):
-    """智能邮件发送 - 优先使用SendGrid"""
+    """智能邮件发送 - 优先使用Resend，然后SendGrid，最后SMTP"""
     print(f"send_email called: to={to_email}, subject={subject}")
+    
+    # 检查是否使用Resend
+    if Config.USE_RESEND and Config.RESEND_API_KEY:
+        print("使用Resend发送邮件")
+        return send_email_resend(to_email, subject, body)
     
     # 检查是否使用SendGrid
     if Config.USE_SENDGRID and Config.SENDGRID_API_KEY:
