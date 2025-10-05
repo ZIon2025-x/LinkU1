@@ -19,6 +19,7 @@ slowapi>=0.1.9
 
 # 邮件服务
 fastapi-mail>=1.4.0
+sendgrid>=6.10.0
 
 # 支付服务
 stripe>=7.0.0

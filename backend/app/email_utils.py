@@ -11,6 +11,14 @@ load_dotenv()
 # 使用统一配置
 from app.config import Config
 
+# 尝试导入SendGrid
+try:
+    import sendgrid
+    from sendgrid.helpers.mail import Mail, Email, To, Content
+    SENDGRID_AVAILABLE = True
+except ImportError:
+    SENDGRID_AVAILABLE = False
+
 SECRET_KEY = Config.SECRET_KEY
 SALT = "email-confirm"
 EMAIL_FROM = Config.EMAIL_FROM
@@ -36,14 +44,40 @@ def confirm_token(token, expiration=3600 * 24):
     return email
 
 
-def send_email(to_email, subject, body):
-    print(f"send_email called: to={to_email}, subject={subject}")
+def send_email_sendgrid(to_email, subject, body):
+    """使用SendGrid发送邮件"""
+    if not SENDGRID_AVAILABLE:
+        print("SendGrid库未安装，回退到SMTP")
+        return send_email_smtp(to_email, subject, body)
+    
+    try:
+        sg = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
+        
+        from_email = Email(Config.EMAIL_FROM)
+        to_email = To(to_email)
+        subject = subject
+        content = Content("text/html", body)
+        
+        mail = Mail(from_email, to_email, subject, content)
+        
+        response = sg.send(mail)
+        print(f"SendGrid邮件发送成功: {response.status_code}")
+        return True
+        
+    except Exception as e:
+        print(f"SendGrid邮件发送失败: {e}")
+        print("回退到SMTP发送")
+        return send_email_smtp(to_email, subject, body)
+
+def send_email_smtp(to_email, subject, body):
+    """使用SMTP发送邮件"""
+    print(f"send_email_smtp called: to={to_email}, subject={subject}")
     
     # 检查SMTP配置是否完整
     if not SMTP_USER or not SMTP_PASS:
         print("SMTP配置不完整，跳过邮件发送")
         print(f"验证链接: {Config.BASE_URL}/api/users/verify-email/[token]")
-        return
+        return False
     
     try:
         msg = MIMEText(body, "html")
@@ -65,12 +99,25 @@ def send_email(to_email, subject, body):
                 server.login(SMTP_USER, SMTP_PASS)
                 server.sendmail(EMAIL_FROM, [to_email], msg.as_string())
         
-        print("Email sent successfully")
+        print("SMTP邮件发送成功")
+        return True
     except Exception as e:
-        print(f"Email send failed: {e}")
+        print(f"SMTP邮件发送失败: {e}")
         print("在开发环境中，这是正常的。请检查SMTP配置或设置SKIP_EMAIL_VERIFICATION=true")
-        # 在开发环境中不抛出异常，避免影响注册流程
-        # raise e
+        return False
+
+def send_email(to_email, subject, body):
+    """智能邮件发送 - 优先使用SendGrid"""
+    print(f"send_email called: to={to_email}, subject={subject}")
+    
+    # 检查是否使用SendGrid
+    if Config.USE_SENDGRID and Config.SENDGRID_API_KEY:
+        print("使用SendGrid发送邮件")
+        return send_email_sendgrid(to_email, subject, body)
+    
+    # 回退到SMTP
+    print("使用SMTP发送邮件")
+    return send_email_smtp(to_email, subject, body)
 
 
 def send_confirmation_email(

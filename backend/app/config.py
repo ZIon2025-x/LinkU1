@@ -111,6 +111,10 @@ class Config:
     # 邮箱验证配置
     EMAIL_VERIFICATION_EXPIRE_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
     
+    # SendGrid配置
+    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+    USE_SENDGRID = os.getenv("USE_SENDGRID", "false").lower() == "true"
+    
     # 开发环境配置 - 跳过邮件验证
     SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "false").lower() == "true"
     
