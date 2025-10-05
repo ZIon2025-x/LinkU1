@@ -24,16 +24,29 @@ class CookieManager:
         return any(keyword in user_agent for keyword in mobile_keywords)
     
     @staticmethod
+    def _is_private_mode_user_agent(user_agent: str) -> bool:
+        """检测是否为隐私模式User-Agent"""
+        private_mode_keywords = [
+            'Incognito', 'Private', 'InPrivate', 'Private Browsing'
+        ]
+        return any(keyword in user_agent for keyword in private_mode_keywords)
+    
+    @staticmethod
     def _get_samesite_value(user_agent: str = "") -> Literal["lax", "strict", "none"]:
-        """获取有效的SameSite值，移动端使用特殊配置"""
+        """获取有效的SameSite值，考虑隐私模式兼容性"""
         # 检测移动端
         if CookieManager._is_mobile_user_agent(user_agent):
             return Config.MOBILE_COOKIE_SAMESITE  # type: ignore
         
-        # 桌面端使用默认配置
+        # 桌面端：优先使用lax以提高隐私模式兼容性
         samesite_value = Config.COOKIE_SAMESITE
         if samesite_value not in ["lax", "strict", "none"]:
             samesite_value = "lax"
+        
+        # 隐私模式兼容性：优先使用lax而不是none
+        if samesite_value == "none":
+            samesite_value = "lax"  # 隐私模式下none可能被阻止
+        
         return samesite_value  # type: ignore
     
     @staticmethod
@@ -110,6 +123,9 @@ class CookieManager:
         secure_value = CookieManager._get_secure_value(user_agent)
         is_mobile = CookieManager._is_mobile_user_agent(user_agent)
         
+        # 检测隐私模式
+        is_private_mode = CookieManager._is_private_mode_user_agent(user_agent)
+        
         # 移动端特殊处理：使用兼容性最好的Cookie设置
         if is_mobile:
             # 移动端：完全移除domain限制，使用根路径
@@ -118,9 +134,19 @@ class CookieManager:
             # 移动端使用更短的过期时间，避免浏览器限制
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
-            # 移动端使用兼容性最好的Cookie设置
-            samesite_value = "lax"   # 移动端使用lax提高兼容性
-            secure_value = False     # 移动端不使用secure避免HTTPS问题
+            # 移动端使用统一的Cookie设置，避免冲突
+            samesite_value = "none"  # 移动端使用none支持跨域
+            secure_value = True      # 移动端必须使用secure（HTTPS环境）
+        elif is_private_mode:
+            # 隐私模式特殊处理：使用最兼容的Cookie设置
+            cookie_domain = None  # 隐私模式下不设置domain
+            cookie_path = "/"
+            # 隐私模式使用更短的过期时间
+            session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
+            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
+            # 隐私模式使用lax提高兼容性
+            samesite_value = "lax"   # 隐私模式下lax兼容性更好
+            secure_value = True      # HTTPS环境必须使用secure
         else:
             # 桌面端：开发环境不设置domain，生产环境使用配置的domain
             if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
@@ -167,18 +193,18 @@ class CookieManager:
             domain=cookie_domain
         )
         
-        # 移动端额外设置：尝试多种Cookie配置
+        # 移动端额外设置：使用统一的Cookie配置
         if is_mobile:
-            # 设置备用Cookie（不同的属性组合）
+            # 设置备用Cookie（与主要Cookie保持一致的属性）
             response.set_cookie(
                 key="mobile_session_id",
                 value=session_id,
                 max_age=session_max_age,
                 httponly=True,
-                secure=True,   # 移动端必须使用Secure
-                samesite="none",  # 移动端必须使用none
-                path="/",
-                domain=None
+                secure=secure_value,   # 使用统一的secure设置
+                samesite=samesite_value,  # 使用统一的samesite设置
+                path=cookie_path,
+                domain=cookie_domain
             )
             
             # 设置非HttpOnly的Cookie（用于JavaScript访问）
@@ -187,13 +213,13 @@ class CookieManager:
                 value=session_id,
                 max_age=session_max_age,
                 httponly=False,
-                secure=True,   # 移动端必须使用Secure
-                samesite="none",  # 移动端必须使用none
-                path="/",
-                domain=None
+                secure=secure_value,   # 使用统一的secure设置
+                samesite=samesite_value,  # 使用统一的samesite设置
+                path=cookie_path,
+                domain=cookie_domain
             )
         
-        logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
+        logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     
     @staticmethod
     def set_csrf_cookie(response: Response, token: str, user_agent: str = "") -> None:

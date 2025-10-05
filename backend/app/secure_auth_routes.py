@@ -5,6 +5,7 @@
 
 import json
 import logging
+import os
 from typing import Any, Dict
 from datetime import datetime
 
@@ -455,31 +456,91 @@ def get_redis_status():
     """获取 Redis 连接状态"""
     try:
         from app.secure_auth import USE_REDIS, redis_client
+        from app.config import Config
+        
+        # 基础信息
+        status = {
+            "timestamp": datetime.now().isoformat(),
+            "railway_environment": os.getenv("RAILWAY_ENVIRONMENT", "false"),
+            "redis_url_set": bool(Config.REDIS_URL),
+            "redis_url_preview": Config.REDIS_URL[:20] + "..." if Config.REDIS_URL else None,
+            "use_redis_config": Config.USE_REDIS,
+            "secure_auth_use_redis": USE_REDIS,
+            "redis_client_available": bool(redis_client)
+        }
         
         if not USE_REDIS or not redis_client:
-            return {
+            status.update({
                 "redis_enabled": False,
-                "message": "Redis 未启用或连接失败"
-            }
+                "message": "Redis 未启用或连接失败",
+                "details": {
+                    "config_use_redis": Config.USE_REDIS,
+                    "secure_auth_use_redis": USE_REDIS,
+                    "redis_client_exists": bool(redis_client)
+                }
+            })
+            return status
         
         # 测试 Redis 连接
-        redis_client.ping()
+        try:
+            redis_client.ping()
+            status["ping_success"] = True
+        except Exception as ping_error:
+            status.update({
+                "redis_enabled": False,
+                "message": f"Redis ping 失败: {str(ping_error)}",
+                "ping_success": False
+            })
+            return status
         
         # 获取 Redis 信息
-        info = redis_client.info()
+        try:
+            info = redis_client.info()
+            status.update({
+                "redis_enabled": True,
+                "redis_version": info.get("redis_version", "unknown"),
+                "connected_clients": info.get("connected_clients", 0),
+                "used_memory": info.get("used_memory_human", "unknown"),
+                "uptime_in_seconds": info.get("uptime_in_seconds", 0),
+                "message": "Redis 连接正常"
+            })
+        except Exception as info_error:
+            status.update({
+                "redis_enabled": True,
+                "message": f"Redis 连接正常，但获取信息失败: {str(info_error)}"
+            })
         
-        return {
-            "redis_enabled": True,
-            "redis_version": info.get("redis_version", "unknown"),
-            "connected_clients": info.get("connected_clients", 0),
-            "used_memory": info.get("used_memory_human", "unknown"),
-            "uptime_in_seconds": info.get("uptime_in_seconds", 0),
-            "message": "Redis 连接正常"
-        }
+        # 测试会话存储
+        try:
+            test_session_id = "test_railway_redis"
+            test_data = {"test": "railway_redis_check", "timestamp": datetime.now().isoformat()}
+            
+            # 存储测试数据
+            redis_client.setex(f"session:{test_session_id}", 60, json.dumps(test_data))
+            
+            # 获取测试数据
+            retrieved = redis_client.get(f"session:{test_session_id}")
+            if retrieved:
+                parsed = json.loads(retrieved)
+                if parsed.get("test") == "railway_redis_check":
+                    status["session_storage_test"] = "✅ 成功"
+                else:
+                    status["session_storage_test"] = "❌ 数据不匹配"
+                # 清理测试数据
+                redis_client.delete(f"session:{test_session_id}")
+            else:
+                status["session_storage_test"] = "❌ 获取失败"
+                
+        except Exception as session_error:
+            status["session_storage_test"] = f"❌ 测试失败: {str(session_error)}"
+        
+        return status
         
     except Exception as e:
         logger.error(f"Redis 状态检查失败: {e}")
         return {
             "redis_enabled": False,
-            "message": f"Redis 连接失败: {str(e)}"
+            "message": f"Redis 连接失败: {str(e)}",
+            "error_details": str(e),
+            "timestamp": datetime.now().isoformat()
         }

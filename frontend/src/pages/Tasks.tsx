@@ -268,6 +268,39 @@ const Tasks: React.FC = () => {
   const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
   const [taskLevel, setTaskLevel] = useState('all');
+  const [isMobile, setIsMobile] = useState(false);
+  const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // 点击外部区域关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showLocationDropdown && !target.closest('[data-location-dropdown]')) {
+        setShowLocationDropdown(false);
+      }
+    };
+
+    if (showLocationDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLocationDropdown]);
 
   // 处理金额排序变化
   const handleRewardSortChange = (value: string) => {
@@ -296,8 +329,16 @@ const Tasks: React.FC = () => {
     setTaskLevel(newLevel);
     setShowLevelDropdown(false);
   };
-  const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+
+  // 处理城市选择变化
+  const handleLocationChange = (newCity: string) => {
+    setCity(newCity); // 更新城市筛选状态
+    if (newCity !== 'all') {
+      setUserLocation(newCity); // 只有非"all"时才更新用户位置显示
+    }
+    setShowLocationDropdown(false);
+    setPage(1); // 重置到第一页
+  };
   
   // 用户菜单和通知相关状态
   const [showMenu, setShowMenu] = useState(false);
@@ -431,16 +472,6 @@ const Tasks: React.FC = () => {
     };
   }, [showLocationDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
 
-  // 处理位置切换
-  const handleLocationChange = (newLocation: string) => {
-    setCity(newLocation); // 更新城市筛选状态
-    if (newLocation !== 'all') {
-      setUserLocation(newLocation); // 只有非"all"时才更新用户位置显示
-    }
-    setShowLocationDropdown(false);
-    // 可以根据位置重新加载任务
-    setPage(1);
-  };
 
   // 处理通知标记为已读
   const handleMarkAsRead = async (notificationId: number) => {
@@ -712,21 +743,24 @@ const Tasks: React.FC = () => {
             
             {/* 位置下拉菜单 */}
             {showLocationDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: '0',
-                right: '0',
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                zIndex: 1000,
-                marginTop: '4px',
-                maxHeight: '200px',
+              <div 
+                className="location-dropdown"
+                style={{
+                  position: isMobile ? 'fixed' : 'absolute',
+                  top: isMobile ? '70px' : '100%',
+                  left: isMobile ? '10px' : '0',
+                  right: isMobile ? '10px' : '0',
+                  background: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  zIndex: 9999,
+                  marginTop: isMobile ? '8px' : '4px',
+                  maxHeight: '200px',
                   overflowY: 'auto',
-                  minWidth: '150px'
-              }}>
+                  minWidth: '150px',
+                  maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none'
+                }}>
                 <div
                   onClick={() => handleLocationChange('all')}
                   style={{
@@ -2126,6 +2160,26 @@ const Tasks: React.FC = () => {
             .location-container > div {
               font-size: 12px !important;
               padding: 6px 8px !important;
+            }
+            
+            /* 手机端下拉菜单优化 */
+            .location-container [data-location-dropdown] {
+              position: relative !important;
+            }
+            
+            .location-dropdown {
+              position: fixed !important;
+              top: 70px !important;
+              left: 10px !important;
+              right: 10px !important;
+              width: auto !important;
+              max-width: calc(100vw - 20px) !important;
+              z-index: 99999 !important;
+              margin-top: 8px !important;
+              box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+              border-radius: 12px !important;
+              max-height: 60vh !important;
+              overflow-y: auto !important;
             }
             
             /* 任务网格移动端优化 */
