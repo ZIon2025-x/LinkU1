@@ -161,6 +161,13 @@ class CookieManager:
             cookie_path = Config.COOKIE_PATH
             session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+            
+            # 桌面端Cookie设置
+            samesite_value = CookieManager._get_samesite_value(user_agent)
+            secure_value = CookieManager._get_secure_value(user_agent)
+            
+            # 记录桌面端Cookie设置
+            logger.info(f"桌面端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
         
         # 设置会话ID Cookie（短期，用于API调用）
         response.set_cookie(
@@ -312,12 +319,37 @@ class CookieManager:
         """清除会话相关的Cookie"""
         samesite_value = CookieManager._get_samesite_value()
         
-        # 清除session_id
+        # 清除主要会话Cookie
         response.delete_cookie(
             key="session_id",
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
+            path="/"
+        )
+        
+        # 清除移动端特殊Cookie
+        response.delete_cookie(
+            key="mobile_session_id",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/"
+        )
+        
+        response.delete_cookie(
+            key="js_session_id",
+            httponly=False,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/"
+        )
+        
+        response.delete_cookie(
+            key="mobile_strict_session_id",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite="strict",
             path="/"
         )
         
@@ -339,7 +371,7 @@ class CookieManager:
             path="/"
         )
         
-        logger.info("清除会话Cookie")
+        logger.info("清除会话Cookie（包括移动端特殊Cookie）")
     
     @staticmethod
     def clear_csrf_cookie(response: Response) -> None:

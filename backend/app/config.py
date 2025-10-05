@@ -61,7 +61,7 @@ class Config:
     
     # 移动端特殊配置
     MOBILE_COOKIE_SAMESITE = "lax"   # 移动端使用lax提高兼容性
-    MOBILE_COOKIE_SECURE = False     # 移动端不使用secure避免HTTPS问题
+    MOBILE_COOKIE_SECURE = True      # 移动端使用secure（HTTPS环境）
     
     # 开发环境配置
     DEBUG = os.getenv("DEBUG", "true").lower() == "true"
