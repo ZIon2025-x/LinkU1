@@ -2,6 +2,7 @@
 Redis缓存模块
 提供高性能的缓存服务，显著提升API响应速度
 """
+import os
 import json
 import logging
 import pickle
