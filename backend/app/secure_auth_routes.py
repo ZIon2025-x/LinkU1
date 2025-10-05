@@ -165,8 +165,10 @@ def secure_login(
         raise
     except Exception as e:
         logger.error(f"安全登录失败: {e}")
+        # 提供更详细的错误信息用于调试
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="登录失败"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"登录失败: {str(e)}"
         )
 
 @secure_auth_router.post("/refresh", response_model=Dict[str, Any])

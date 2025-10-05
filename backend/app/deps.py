@@ -289,6 +289,9 @@ def get_current_user_secure_sync(
     
     # 如果都失败了，抛出401错误
     print(f"[DEBUG] 所有认证方式都失败，抛出401错误")
+    print(f"[DEBUG] 请求URL: {request.url}")
+    print(f"[DEBUG] 请求头: {dict(request.headers)}")
+    print(f"[DEBUG] Cookie: {dict(request.cookies)}")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
     )
@@ -398,7 +401,10 @@ def get_current_customer_service_or_user(
         'windows phone', 'opera mini', 'iemobile'
     ])
     
-    if is_mobile and not credentials:
+    if is_mobile:
+        print(f"[DEBUG] 移动端检测: {is_mobile}")
+        print(f"[DEBUG] 移动端User-Agent: {user_agent}")
+        
         # 移动端Cookie缺失时，尝试从Authorization头获取token
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
@@ -406,13 +412,26 @@ def get_current_customer_service_or_user(
             print(f"[DEBUG] 移动端备用认证 - 从Authorization头获取token: {token[:20]}...")
             
             # 验证token
-            payload = verify_token(token, "access")
-            if payload and "sub" in payload:
-                user_id = payload["sub"]
-                user = crud.get_user_by_id(db, user_id)
-                if user:
-                    print(f"[DEBUG] 移动端备用认证成功 - 用户: {user.id}")
-                    return user
+            try:
+                payload = verify_token(token, "access")
+                if payload and "sub" in payload:
+                    user_id = payload["sub"]
+                    user = crud.get_user_by_id(db, user_id)
+                    if user:
+                        print(f"[DEBUG] 移动端备用认证成功 - 用户: {user.id}")
+                        # 记录移动端认证成功
+                        print(f"[DEBUG] 移动端认证方式: JWT token (Cookie不可用)")
+                        return user
+                    else:
+                        print(f"[DEBUG] 移动端备用认证失败 - 用户不存在: {user_id}")
+                else:
+                    print(f"[DEBUG] 移动端备用认证失败 - token无效")
+            except Exception as e:
+                print(f"[DEBUG] 移动端备用认证异常: {e}")
+        else:
+            print(f"[DEBUG] 移动端未找到Authorization头")
+    else:
+        print(f"[DEBUG] 非移动端设备")
     
     # 如果会话认证失败，回退到JWT认证
     if not credentials:

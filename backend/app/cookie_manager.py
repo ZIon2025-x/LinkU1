@@ -134,9 +134,14 @@ class CookieManager:
             # 移动端使用更短的过期时间，避免浏览器限制
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
-            # 移动端使用统一的Cookie设置，避免冲突
-            samesite_value = "none"  # 移动端使用none支持跨域
-            secure_value = True      # 移动端必须使用secure（HTTPS环境）
+            
+            # 移动端Cookie兼容性优化
+            # 尝试多种SameSite设置以提高兼容性
+            samesite_value = "lax"  # 移动端优先使用lax，兼容性更好
+            secure_value = True     # 移动端必须使用secure（HTTPS环境）
+            
+            # 记录移动端Cookie设置
+            logger.info(f"移动端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
         elif is_private_mode:
             # 隐私模式特殊处理：使用最兼容的Cookie设置
             cookie_domain = None  # 隐私模式下不设置domain
@@ -218,6 +223,21 @@ class CookieManager:
                 path=cookie_path,
                 domain=cookie_domain
             )
+            
+            # 移动端特殊Cookie：尝试不同的SameSite设置
+            # 设置strict Cookie作为备用
+            response.set_cookie(
+                key="mobile_strict_session_id",
+                value=session_id,
+                max_age=session_max_age,
+                httponly=True,
+                secure=secure_value,
+                samesite="strict",  # 使用strict作为备用
+                path=cookie_path,
+                domain=cookie_domain
+            )
+            
+            logger.info(f"移动端Cookie设置完成: 主要={samesite_value}, 备用=strict")
         
         logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     

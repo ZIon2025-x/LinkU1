@@ -430,18 +430,22 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     session_id = (
         request.cookies.get("session_id") or
         request.cookies.get("mobile_session_id") or
-        request.cookies.get("js_session_id")
+        request.cookies.get("js_session_id") or
+        request.cookies.get("mobile_strict_session_id")  # 新增移动端strict Cookie
     )
     
     # 2. 如果Cookie中没有，尝试从请求头获取（移动端备用方案）
     if not session_id:
         session_id = request.headers.get("X-Session-ID")
+        if session_id:
+            logger.info(f"[DEBUG] 从X-Session-ID头获取session_id: {session_id[:8]}...")
     
     # 3. 如果还是没有，尝试从Authorization头获取
     if not session_id:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             session_id = auth_header[7:]  # 移除 "Bearer " 前缀
+            logger.info(f"[DEBUG] 从Authorization头获取session_id: {session_id[:8]}...")
     
     if not session_id:
         logger.info("[DEBUG] 未找到session_id")
