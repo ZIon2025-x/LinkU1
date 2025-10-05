@@ -38,10 +38,10 @@ class RedisCache:
                     self.redis_client = redis.from_url(
                         settings.REDIS_URL,
                         decode_responses=False,  # 使用二进制模式以支持pickle
-                        socket_connect_timeout=5,
-                        socket_timeout=5,
+                        socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
+                        socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
                         retry_on_timeout=True,
-                        health_check_interval=30
+                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30"))
                     )
                 else:
                     # 使用单独的环境变量连接
@@ -51,10 +51,10 @@ class RedisCache:
                         db=settings.REDIS_DB,
                         password=settings.REDIS_PASSWORD,
                         decode_responses=False,  # 使用二进制模式以支持pickle
-                        socket_connect_timeout=5,
-                        socket_timeout=5,
+                        socket_connect_timeout=int(os.getenv("REDIS_CONNECT_TIMEOUT", "5")),
+                        socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
                         retry_on_timeout=True,
-                        health_check_interval=30
+                        health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30"))
                     )
                 # 测试连接
                 self.redis_client.ping()

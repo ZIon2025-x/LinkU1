@@ -3,7 +3,10 @@
 """
 
 import os
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -11,15 +14,15 @@ class Config:
 
     # 数据库配置
     DATABASE_URL = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg2://postgres:123123@localhost:5432/linku_db"
+        "DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
     )
     ASYNC_DATABASE_URL = os.getenv(
         "ASYNC_DATABASE_URL",
-        "postgresql+asyncpg://postgres:123123@localhost:5432/linku_db",
+        "postgresql+asyncpg://postgres:password@localhost:5432/linku_db",
     )
 
     # JWT配置
-    SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
     REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
     CLOCK_SKEW_TOLERANCE = int(os.getenv("CLOCK_SKEW_TOLERANCE", "300"))

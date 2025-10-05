@@ -16,11 +16,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# 配置
-ACCESS_TOKEN_EXPIRE_MINUTES = 5  # 访问令牌5分钟过期
-REFRESH_TOKEN_EXPIRE_DAYS = 7    # 刷新令牌7天过期
-SESSION_EXPIRE_HOURS = 24        # 会话24小时过期
-MAX_ACTIVE_SESSIONS = 5          # 每个用户最多5个活跃会话
+# 配置 - 从环境变量读取
+from app.config import get_settings
+settings = get_settings()
+
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
+SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))
+MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
 # 会话存储
 try:
