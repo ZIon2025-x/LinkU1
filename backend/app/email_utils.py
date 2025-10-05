@@ -76,7 +76,7 @@ def send_email(to_email, subject, body):
 def send_confirmation_email(
     background_tasks: BackgroundTasks, to_email: str, token: str
 ):
-    confirm_url = f"http://localhost:8000/api/users/confirm/{token}"
+    confirm_url = f"{Config.BASE_URL}/api/users/verify-email/{token}"
     subject = "LinkU Email Confirmation"
     body = (
         "<p>Welcome to LinkU! Please confirm your email by clicking the link below:</p>"
@@ -98,7 +98,7 @@ def confirm_reset_token(token, expiration=3600 * 2):
 
 
 def send_reset_email(background_tasks: BackgroundTasks, to_email: str, token: str):
-    reset_url = f"http://localhost:3000/reset-password/{token}"  # 改为前端页面地址
+    reset_url = f"{Config.FRONTEND_URL}/reset-password/{token}"  # 使用配置的前端URL
     subject = "LinkU Password Reset"
     body = "<p>To reset your password, click the link below:</p>"
     body += f'<p><a href="{reset_url}">{reset_url}</a></p>'

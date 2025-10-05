@@ -112,10 +112,11 @@ class Config:
     EMAIL_VERIFICATION_EXPIRE_HOURS = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
     
     # 开发环境配置 - 跳过邮件验证
-    SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "true").lower() == "true"
+    SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "false").lower() == "true"
     
     # 基础URL配置
     BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
     
     # 安全配置
     SECURITY_HEADERS = {
