@@ -10,10 +10,10 @@ load_dotenv()
 
 # 异步数据库URL
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:123123@localhost:5432/linku_db"
+    "DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
 )
 ASYNC_DATABASE_URL = os.getenv(
-    "ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:123123@localhost:5432/linku_db"
+    "ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/linku_db"
 )
 
 # 检查asyncpg是否可用

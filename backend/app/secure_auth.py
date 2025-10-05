@@ -3,6 +3,7 @@
 实现短有效期JWT + 可撤销机制 + 会话管理
 """
 
+import os
 import json
 import secrets
 import hashlib

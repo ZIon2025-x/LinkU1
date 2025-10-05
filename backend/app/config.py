@@ -97,7 +97,7 @@ class Config:
     ]
 
     # 邮箱配置
-    EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@linku.com")
+    EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@yourdomain.com")
     SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER = os.getenv("SMTP_USER", "")
