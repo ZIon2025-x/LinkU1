@@ -37,9 +37,11 @@ class Config:
         # 在Railway环境中，优先使用REDIS_URL
         if REDIS_URL and not REDIS_URL.startswith("redis://localhost"):
             # 使用Railway提供的Redis URL
-            pass
+            logger.info(f"[DEBUG] Railway Redis配置 - REDIS_URL: {REDIS_URL[:20]}...")
+            logger.info(f"[DEBUG] Railway Redis配置 - USE_REDIS: {USE_REDIS}")
         else:
             # 如果没有有效的Redis URL，禁用Redis
+            logger.warning(f"[DEBUG] Railway Redis配置 - 没有有效的Redis URL，禁用Redis")
             USE_REDIS = False
 
     # Cookie配置 - 智能环境检测

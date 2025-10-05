@@ -27,7 +27,9 @@ try:
     from app.redis_cache import get_redis_client
     redis_client = get_redis_client()
     USE_REDIS = redis_client is not None
-except:
+    logger.info(f"[DEBUG] Redis连接状态 - USE_REDIS: {USE_REDIS}, redis_client: {redis_client is not None}")
+except Exception as e:
+    logger.error(f"[DEBUG] Redis连接异常: {e}")
     USE_REDIS = False
     redis_client = None
 

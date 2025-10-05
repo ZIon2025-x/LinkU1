@@ -34,6 +34,7 @@ class RedisCache:
                 # 优先使用REDIS_URL，如果不可用则使用单独的环境变量
                 if settings.REDIS_URL and not settings.REDIS_URL.startswith("redis://localhost"):
                     # 使用REDIS_URL连接
+                    logger.info(f"[DEBUG] Redis连接 - 使用REDIS_URL: {settings.REDIS_URL[:20]}...")
                     self.redis_client = redis.from_url(
                         settings.REDIS_URL,
                         decode_responses=False,  # 使用二进制模式以支持pickle
@@ -61,7 +62,13 @@ class RedisCache:
                 logger.info("Redis缓存已启用")
             except Exception as e:
                 logger.warning(f"Redis连接失败，使用内存缓存: {e}")
+                self.redis_client = None
                 self.enabled = False
+                # 在Railway环境中，如果Redis连接失败，记录详细信息
+                if settings.RAILWAY_ENVIRONMENT:
+                    logger.error(f"Railway Redis连接失败 - REDIS_URL: {settings.REDIS_URL}")
+                    logger.error(f"Railway Redis连接失败 - USE_REDIS: {settings.USE_REDIS}")
+                    logger.error(f"Railway Redis连接失败 - REDIS_AVAILABLE: {REDIS_AVAILABLE}")
         else:
             logger.info("Redis未配置，使用内存缓存")
     
