@@ -136,9 +136,9 @@ class CookieManager:
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
             
             # 移动端Cookie兼容性优化
-            # 尝试多种SameSite设置以提高兼容性
-            samesite_value = "lax"  # 移动端优先使用lax，兼容性更好
-            secure_value = True     # 移动端必须使用secure（HTTPS环境）
+            # 跨域请求必须使用SameSite=none
+            samesite_value = "none"  # 移动端跨域请求必须使用none
+            secure_value = True      # 移动端必须使用secure（HTTPS环境）
             
             # 记录移动端Cookie设置
             logger.info(f"移动端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
