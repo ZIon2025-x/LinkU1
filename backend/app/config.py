@@ -124,7 +124,7 @@ class Config:
     
     # 基础URL配置
     BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
     
     # 安全配置
     SECURITY_HEADERS = {
