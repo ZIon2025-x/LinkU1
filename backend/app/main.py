@@ -78,7 +78,7 @@ async def custom_cors_middleware(request: Request, call_next):
         response = Response(status_code=200)
         origin = request.headers.get("origin")
         if origin and any(origin.startswith(domain) for domain in [
-            "https://link-u1", "http://localhost"
+            "https://link-u1", "http://localhost", "https://www.link2ur.com"
         ]):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
@@ -91,7 +91,7 @@ async def custom_cors_middleware(request: Request, call_next):
     # 强制设置CORS头
     origin = request.headers.get("origin")
     if origin and any(origin.startswith(domain) for domain in [
-        "https://link-u1", "http://localhost"
+        "https://link-u1", "http://localhost", "https://www.link2ur.com"
     ]):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"

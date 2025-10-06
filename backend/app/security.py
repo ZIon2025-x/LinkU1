@@ -89,7 +89,7 @@ class SecurityConfig:
 
     # CORS配置
     ALLOWED_ORIGINS = os.getenv(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080"
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080,https://www.link2ur.com"
     ).split(",")
 
     # 安全头配置
