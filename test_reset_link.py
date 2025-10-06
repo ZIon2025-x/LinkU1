@@ -31,9 +31,9 @@ def test_reset_link():
     
     # 检查链接格式
     if reset_url.startswith("https://www.link2ur.com"):
-        print("✅ 链接格式正确")
+        print("链接格式正确")
     else:
-        print("❌ 链接格式错误")
+        print("链接格式错误")
     
     # 检查前端路由
     print(f"\n前端路由检查:")
@@ -53,7 +53,7 @@ def test_reset_link():
 def check_frontend_routes():
     print(f"\n前端路由检查:")
     print(f"确保 App.tsx 中有以下路由:")
-    print(f'<Route path="/reset-password/:token" element={<ResetPassword />} />')
+    print('<Route path="/reset-password/:token" element={<ResetPassword />} />')
     
     print(f"\nResetPassword 组件应该:")
     print(f"1. 从 URL 参数获取 token")

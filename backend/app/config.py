@@ -76,7 +76,7 @@ class Config:
 
     # CORS配置 - 安全配置
     ALLOWED_ORIGINS = os.getenv(
-        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080,https://www.link2ur.com"
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080,https://www.link2ur.com,https://api.link2ur.com"
     ).split(",")
     
     # 过滤空字符串
@@ -123,7 +123,7 @@ class Config:
     SKIP_EMAIL_VERIFICATION = os.getenv("SKIP_EMAIL_VERIFICATION", "false").lower() == "true"
     
     # 基础URL配置
-    BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+    BASE_URL = os.getenv("BASE_URL", "https://api.link2ur.com")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.link2ur.com")
     
     # 安全配置

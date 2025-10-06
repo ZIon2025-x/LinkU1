@@ -12,7 +12,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://linku1-production.up.railway.app/api/$1"
+      "dest": "https://api.link2ur.com/api/$1"
     },
     {
       "src": "/static/(.*)",
@@ -24,7 +24,7 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://linku1-production.up.railway.app",
-    "REACT_APP_WS_URL": "wss://linku1-production.up.railway.app"
+    "REACT_APP_API_URL": "https://api.link2ur.com",
+    "REACT_APP_WS_URL": "wss://api.link2ur.com"
   }
 }
