@@ -533,7 +533,6 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             phone=pending_user.phone,
             is_verified=1,
             is_active=1,
-            is_customer_service=0,
             user_level="normal",
             created_at=datetime.utcnow()
         )
