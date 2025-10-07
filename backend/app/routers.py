@@ -1457,6 +1457,14 @@ def update_avatar(
     db.refresh(user)
     logger.info(f"[DEBUG] 刷新后用户头像: {user.avatar}")
     
+    # 清除用户缓存，确保获取最新数据
+    try:
+        from app.redis_cache import clear_user_cache
+        clear_user_cache(current_user.id)
+        logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
+    except Exception as e:
+        logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
+    
     # 重新查询用户以获取最新数据，避免refresh问题
     updated_user = crud.get_user_by_id(db, current_user.id)
     logger.info(f"[DEBUG] 重新查询后用户对象: {updated_user}")
