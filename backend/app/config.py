@@ -52,7 +52,12 @@ class Config:
 
     # Cookie配置 - 智能环境检测
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    IS_PRODUCTION = ENVIRONMENT == "production"
+    # 检测是否为生产环境：Railway环境或明确设置为production
+    IS_PRODUCTION = (
+        ENVIRONMENT == "production" or 
+        os.getenv("RAILWAY_ENVIRONMENT") is not None or
+        os.getenv("RAILWAY_PROJECT_ID") is not None
+    )
     
     # 根据环境自动设置Cookie安全配置
     COOKIE_SECURE = (
