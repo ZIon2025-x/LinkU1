@@ -149,12 +149,10 @@ app.add_exception_handler(BusinessError, business_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # 添加任务相关的路由（不需要/users前缀）
-from app.routers import router as task_router
 from app.async_routers import async_router
 
 # 先注册异步路由，确保优先级
 app.include_router(async_router, prefix="/api", tags=["async"])
-app.include_router(task_router, prefix="/api", tags=["tasks"])
 
 # 创建上传目录
 UPLOAD_DIR = Path("uploads")
