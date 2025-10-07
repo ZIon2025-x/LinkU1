@@ -59,8 +59,8 @@ class Config:
         os.getenv("COOKIE_SECURE", "true" if IS_PRODUCTION else "false").lower() == "true"
     )
     COOKIE_HTTPONLY = True
-    # 移动端兼容性：使用strict而不是lax，避免跨站请求问题
-    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "strict" if IS_PRODUCTION else "lax")
+    # 跨子域名兼容性：生产环境使用lax而不是strict，允许跨子域名Cookie
+    COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
     COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", None)
     
     # 移动端兼容性配置
