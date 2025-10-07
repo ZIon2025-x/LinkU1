@@ -395,6 +395,17 @@ def get_user_info(
     }
 
 
+@router.get("/debug/config")
+def debug_config():
+    """调试配置信息"""
+    from app.config import Config
+    return {
+        "SECRET_KEY": Config.SECRET_KEY[:20] + "..." if len(Config.SECRET_KEY) > 20 else Config.SECRET_KEY,
+        "SKIP_EMAIL_VERIFICATION": Config.SKIP_EMAIL_VERIFICATION,
+        "BASE_URL": Config.BASE_URL,
+        "FRONTEND_URL": Config.FRONTEND_URL
+    }
+
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
