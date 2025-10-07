@@ -90,9 +90,14 @@ class EmailVerificationManager:
         
         # 如果旧格式失败，尝试SHA256格式token验证
         if not email:
-            email = EmailVerificationManager._verify_sha256_token(db, token)
-            if email:
-                logger.info(f"使用SHA256格式token验证成功: {email}")
+            try:
+                email = EmailVerificationManager._verify_sha256_token(db, token)
+                if email:
+                    logger.info(f"使用SHA256格式token验证成功: {email}")
+            except Exception as e:
+                logger.error(f"SHA256 token验证异常: {e}")
+                import traceback
+                logger.error(f"详细错误: {traceback.format_exc()}")
         
         # 如果还是失败，尝试查找PendingUser表
         if not email:
@@ -177,32 +182,41 @@ class EmailVerificationManager:
         try:
             # 检查token是否为64位十六进制字符串
             if len(token) != 64 or not all(c in '0123456789abcdef' for c in token):
+                logger.debug(f"Token格式不正确: {len(token)}位，不是64位十六进制")
                 return None
             
             # 尝试通过数据库查找匹配的token
-            # 这里需要根据实际的token生成逻辑来实现
-            # 由于我们不知道具体的生成方式，先尝试一些常见的方法
-            
-            # 方法1: 直接查找所有用户，尝试匹配token
             from app import crud
+            
+            # 查找所有未验证的用户
             users = db.query(models.User).filter(models.User.is_verified == 0).all()
+            logger.info(f"找到 {len(users)} 个未验证用户")
             
             for user in users:
+                logger.debug(f"检查用户: {user.email} (ID: {user.id})")
+                
                 # 尝试不同的token生成方式
                 test_tokens = [
                     hashlib.sha256(user.email.encode()).hexdigest(),
                     hashlib.sha256(f"{user.email}:{user.created_at}".encode()).hexdigest(),
                     hashlib.sha256(f"{user.email}:{user.id}".encode()).hexdigest(),
+                    hashlib.sha256(f"{user.id}:{user.email}".encode()).hexdigest(),
                 ]
                 
-                if token in test_tokens:
-                    logger.info(f"SHA256 token匹配成功: {user.email}")
-                    return user.email
+                for i, test_token in enumerate(test_tokens):
+                    if test_token == token:
+                        logger.info(f"SHA256 token匹配成功: {user.email} (方法{i+1})")
+                        return user.email
+                    else:
+                        logger.debug(f"方法{i+1}不匹配: {test_token[:20]}...")
             
+            logger.warning(f"没有找到匹配的SHA256 token: {token[:20]}...")
             return None
             
         except Exception as e:
             logger.error(f"SHA256 token验证异常: {e}")
+            import traceback
+            logger.error(f"详细错误: {traceback.format_exc()}")
             return None
     
     @staticmethod
