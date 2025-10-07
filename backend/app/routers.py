@@ -443,6 +443,11 @@ def debug_simple_test():
     """最简单的测试端点"""
     return {"message": "Simple test works", "status": "ok"}
 
+@router.get("/debug/test-reviews/{user_id}")
+def debug_test_reviews(user_id: str):
+    """测试reviews端点是否工作"""
+    return {"message": f"Reviews endpoint works for user {user_id}", "status": "ok"}
+
 @router.get("/debug/session-status")
 def debug_session_status(request: Request, db: Session = Depends(get_db)):
     """调试会话状态"""
@@ -1006,8 +1011,10 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
 @router.get("/users/{user_id}/reviews")
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的评价（用于个人主页显示）"""
+    logger.info(f"[DEBUG] get_user_reviews called with user_id: {user_id}")
     try:
         reviews = crud.get_user_reviews_with_reviewer_info(db, user_id)
+        logger.info(f"[DEBUG] get_user_reviews returning {len(reviews)} reviews")
         return reviews
     except Exception as e:
         import traceback
