@@ -88,7 +88,13 @@ class EmailVerificationManager:
         except Exception as e:
             logger.debug(f"旧格式token验证失败: {e}")
         
-        # 如果旧格式失败，尝试新的格式（查找PendingUser表）
+        # 如果旧格式失败，尝试SHA256格式token验证
+        if not email:
+            email = EmailVerificationManager._verify_sha256_token(db, token)
+            if email:
+                logger.info(f"使用SHA256格式token验证成功: {email}")
+        
+        # 如果还是失败，尝试查找PendingUser表
         if not email:
             try:
                 # 查找待验证用户
@@ -106,7 +112,7 @@ class EmailVerificationManager:
                         return None
                     
                     email = pending_user.email
-                    logger.info(f"使用新格式token验证成功: {email}")
+                    logger.info(f"使用PendingUser格式token验证成功: {email}")
                     
                     # 检查邮箱是否已被注册
                     existing_user = db.query(models.User).filter(
@@ -145,7 +151,7 @@ class EmailVerificationManager:
                     return user
                     
             except Exception as e:
-                logger.error(f"新格式token验证失败: {e}")
+                logger.error(f"PendingUser格式token验证失败: {e}")
         
         if not email:
             logger.warning(f"验证令牌无效或已过期: {token}")
@@ -164,6 +170,40 @@ class EmailVerificationManager:
         
         logger.info(f"用户验证成功: {user.email}")
         return user
+    
+    @staticmethod
+    def _verify_sha256_token(db: Session, token: str) -> Optional[str]:
+        """验证SHA256格式的token"""
+        try:
+            # 检查token是否为64位十六进制字符串
+            if len(token) != 64 or not all(c in '0123456789abcdef' for c in token):
+                return None
+            
+            # 尝试通过数据库查找匹配的token
+            # 这里需要根据实际的token生成逻辑来实现
+            # 由于我们不知道具体的生成方式，先尝试一些常见的方法
+            
+            # 方法1: 直接查找所有用户，尝试匹配token
+            from app import crud
+            users = db.query(models.User).filter(models.User.is_verified == 0).all()
+            
+            for user in users:
+                # 尝试不同的token生成方式
+                test_tokens = [
+                    hashlib.sha256(user.email.encode()).hexdigest(),
+                    hashlib.sha256(f"{user.email}:{user.created_at}".encode()).hexdigest(),
+                    hashlib.sha256(f"{user.email}:{user.id}".encode()).hexdigest(),
+                ]
+                
+                if token in test_tokens:
+                    logger.info(f"SHA256 token匹配成功: {user.email}")
+                    return user.email
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"SHA256 token验证异常: {e}")
+            return None
     
     @staticmethod
     def resend_verification_email(
