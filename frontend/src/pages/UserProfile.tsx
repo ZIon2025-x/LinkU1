@@ -238,7 +238,7 @@ const UserProfile: React.FC = () => {
                 display: 'inline-block'
               }}>
                 <img
-                  src={profile.user.avatar || '/static/avatar1.png'}
+                  src={profile.user.avatar || 'https://via.placeholder.com/140x140/4A90E2/FFFFFF?text=1'}
                   alt="头像"
                   style={{
                     width: 140,

@@ -5,11 +5,11 @@ import api from '../api';
 import LoginModal from '../components/LoginModal';
 
 const AVATARS = [
-  '/static/avatar1.png',
-  '/static/avatar2.png', 
-  '/static/avatar3.png',
-  '/static/avatar4.png',
-  '/static/avatar5.png'
+  'https://via.placeholder.com/120x120/4A90E2/FFFFFF?text=1',
+  'https://via.placeholder.com/120x120/7ED321/FFFFFF?text=2', 
+  'https://via.placeholder.com/120x120/F5A623/FFFFFF?text=3',
+  'https://via.placeholder.com/120x120/BD10E0/FFFFFF?text=4',
+  'https://via.placeholder.com/120x120/50E3C2/FFFFFF?text=5'
 ];
 
 interface User {
@@ -212,7 +212,7 @@ const Profile: React.FC = () => {
           <div style={{ marginBottom: '30px' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <img
-                src={user.avatar || '/static/avatar1.png'}
+                src={user.avatar || 'https://via.placeholder.com/120x120/4A90E2/FFFFFF?text=1'}
                 alt="头像"
                 style={{
                   width: '120px',
