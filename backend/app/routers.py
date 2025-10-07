@@ -467,6 +467,27 @@ def fix_avatar_null(db: Session = Depends(get_db)):
         logger.error(f"[DEBUG] 修复头像字段失败: {e}")
         return {"error": str(e)}
 
+@router.get("/debug/check-user-avatar/{user_id}")
+def check_user_avatar(user_id: str, db: Session = Depends(get_db)):
+    """检查指定用户的头像数据"""
+    try:
+        # 直接从数据库查询
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            return {
+                "user_id": user_id,
+                "avatar_from_db": user.avatar,
+                "user_found": True
+            }
+        else:
+            return {
+                "user_id": user_id,
+                "user_found": False
+            }
+    except Exception as e:
+        logger.error(f"[DEBUG] 检查用户头像失败: {e}")
+        return {"error": str(e)}
+
 @router.get("/debug/test-reviews/{user_id}")
 def debug_test_reviews(user_id: str):
     """测试reviews端点是否工作"""
