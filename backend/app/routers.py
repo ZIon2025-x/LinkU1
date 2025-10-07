@@ -1415,8 +1415,10 @@ def update_avatar(
     # 更新头像
     user.avatar = data.avatar
     db.commit()
-    db.refresh(user)
-    return {"avatar": user.avatar}
+    
+    # 重新查询用户以获取最新数据，避免refresh问题
+    updated_user = crud.get_user_by_id(db, current_user.id)
+    return {"avatar": updated_user.avatar if updated_user else data.avatar}
 
 
 @router.post("/admin/user/{user_id}/set_level")
