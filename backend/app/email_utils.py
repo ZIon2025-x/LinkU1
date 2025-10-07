@@ -160,7 +160,7 @@ def send_email(to_email, subject, body):
 def send_confirmation_email(
     background_tasks: BackgroundTasks, to_email: str, token: str
 ):
-    confirm_url = f"{Config.BASE_URL}/api/users/verify-email/{token}"
+    confirm_url = f"{Config.BASE_URL}/api/users/confirm/{token}"
     subject = "LinkU Email Confirmation"
     body = (
         "<p>Welcome to LinkU! Please confirm your email by clicking the link below:</p>"

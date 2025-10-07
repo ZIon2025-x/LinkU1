@@ -26,15 +26,9 @@ class EmailVerificationManager:
     
     @staticmethod
     def generate_verification_token(email: str) -> str:
-        """生成邮箱验证令牌"""
-        # 使用时间戳和随机字符串生成令牌
-        timestamp = str(int(datetime.utcnow().timestamp()))
-        random_string = secrets.token_urlsafe(32)
-        data = f"{email}:{timestamp}:{random_string}"
-        
-        # 使用SHA256生成令牌
-        token = hashlib.sha256(data.encode()).hexdigest()
-        return token
+        """生成邮箱验证令牌 - 使用与旧系统兼容的方式"""
+        from app.email_utils import generate_confirmation_token
+        return generate_confirmation_token(email)
     
     @staticmethod
     def create_pending_user(
@@ -80,54 +74,24 @@ class EmailVerificationManager:
     
     @staticmethod
     def verify_user(db: Session, token: str) -> Optional[models.User]:
-        """验证用户邮箱"""
-        # 查找待验证用户
-        pending_user = db.query(models.PendingUser).filter(
-            models.PendingUser.verification_token == token
-        ).first()
+        """验证用户邮箱 - 使用与旧系统兼容的方式"""
+        from app.email_utils import confirm_token
+        from app import crud
         
-        if not pending_user:
-            logger.warning(f"验证令牌不存在: {token}")
+        # 使用旧的token验证方式
+        email = confirm_token(token)
+        if not email:
+            logger.warning(f"验证令牌无效或已过期: {token}")
             return None
         
-        # 检查令牌是否过期
-        if pending_user.expires_at < datetime.utcnow():
-            logger.warning(f"验证令牌已过期: {token}")
-            # 删除过期的待验证用户
-            db.delete(pending_user)
-            db.commit()
+        # 查找用户
+        user = crud.get_user_by_email(db, email)
+        if not user:
+            logger.warning(f"用户不存在: {email}")
             return None
         
-        # 检查邮箱是否已被注册
-        existing_user = db.query(models.User).filter(
-            models.User.email == pending_user.email
-        ).first()
-        
-        if existing_user:
-            logger.warning(f"邮箱已被注册: {pending_user.email}")
-            # 删除待验证用户
-            db.delete(pending_user)
-            db.commit()
-            return None
-        
-        # 创建正式用户
-        user = models.User(
-            name=pending_user.name,
-            email=pending_user.email,
-            hashed_password=pending_user.hashed_password,
-            phone=pending_user.phone,
-            is_verified=1,  # 已验证
-            is_active=1,    # 激活
-            is_customer_service=0,
-            user_level="normal",
-            created_at=datetime.utcnow()
-        )
-        
-        db.add(user)
-        
-        # 删除待验证用户
-        db.delete(pending_user)
-        
+        # 更新用户验证状态
+        user.is_verified = 1
         db.commit()
         db.refresh(user)
         
@@ -196,8 +160,8 @@ def send_verification_email_with_token(
     """发送包含验证链接的邮件"""
     from app.config import Config
     
-    # 构建验证链接
-    verification_url = f"{Config.BASE_URL}/api/users/verify-email/{token}"
+    # 构建验证链接 - 使用旧的confirm端点以确保兼容性
+    verification_url = f"{Config.BASE_URL}/api/users/confirm/{token}"
     
     subject = "LinkU 邮箱验证"
     body = f"""
