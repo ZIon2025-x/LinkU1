@@ -1653,8 +1653,17 @@ const MessagePage: React.FC = () => {
                   border: '3px solid #f59e0b', 
                   background: '#fffbe6', 
                   objectFit: 'cover',
-                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
-                }} />
+                  boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                  transition: 'none' // 禁用过渡效果，防止形变
+                }} 
+                onLoad={(e) => {
+                  console.log('客服头像加载成功:', e.currentTarget.src);
+                }}
+                onError={(e) => {
+                  console.error('客服头像加载失败:', e.currentTarget.src);
+                  e.currentTarget.src = '/static/avatar1.png'; // 备用头像
+                }}
+                />
                 <div style={{
                   position: 'absolute',
                   bottom: '2px',
@@ -1973,7 +1982,15 @@ const MessagePage: React.FC = () => {
                       border: '3px solid #f59e0b', 
                       cursor: 'pointer',
                       objectFit: 'cover',
-                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                      transition: 'none' // 禁用过渡效果，防止形变
+                    }}
+                    onLoad={(e) => {
+                      console.log('客服头像加载成功:', e.currentTarget.src);
+                    }}
+                    onError={(e) => {
+                      console.error('客服头像加载失败:', e.currentTarget.src);
+                      e.currentTarget.src = '/static/avatar1.png'; // 备用头像
                     }}
                   />
                   <div style={{
