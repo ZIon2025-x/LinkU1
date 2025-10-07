@@ -1443,8 +1443,19 @@ def update_avatar(
     
     # 更新头像
     user.avatar = data.avatar
-    db.commit()
-    logger.info(f"[DEBUG] 头像已更新并提交到数据库")
+    logger.info(f"[DEBUG] 设置头像为: {user.avatar}")
+    
+    try:
+        db.commit()
+        logger.info(f"[DEBUG] 数据库提交成功")
+    except Exception as e:
+        logger.error(f"[DEBUG] 数据库提交失败: {e}")
+        db.rollback()
+        raise
+    
+    # 立即检查更新是否生效
+    db.refresh(user)
+    logger.info(f"[DEBUG] 刷新后用户头像: {user.avatar}")
     
     # 重新查询用户以获取最新数据，避免refresh问题
     updated_user = crud.get_user_by_id(db, current_user.id)
