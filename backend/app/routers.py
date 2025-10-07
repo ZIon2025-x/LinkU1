@@ -1448,9 +1448,13 @@ def update_avatar(
     
     # 重新查询用户以获取最新数据，避免refresh问题
     updated_user = crud.get_user_by_id(db, current_user.id)
+    logger.info(f"[DEBUG] 重新查询后用户对象: {updated_user}")
     logger.info(f"[DEBUG] 重新查询后用户头像: {updated_user.avatar if updated_user else 'None'}")
     
-    return {"avatar": updated_user.avatar if updated_user else data.avatar}
+    result_avatar = updated_user.avatar if updated_user else data.avatar
+    logger.info(f"[DEBUG] 最终返回的头像: {result_avatar}")
+    
+    return {"avatar": result_avatar}
 
 
 @router.post("/admin/user/{user_id}/set_level")
