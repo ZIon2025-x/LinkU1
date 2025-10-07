@@ -443,6 +443,37 @@ def debug_simple_test():
     """最简单的测试端点"""
     return {"message": "Simple test works", "status": "ok"}
 
+@router.get("/debug/session-status")
+def debug_session_status(request: Request, db: Session = Depends(get_db)):
+    """调试会话状态"""
+    from app.secure_auth import validate_session
+    
+    result = {
+        "url": str(request.url),
+        "cookies": dict(request.cookies),
+        "headers": dict(request.headers),
+        "session_validation": None,
+        "user_agent": request.headers.get("user-agent", ""),
+    }
+    
+    # 尝试验证会话
+    try:
+        session = validate_session(request)
+        if session:
+            result["session_validation"] = {
+                "success": True,
+                "user_id": session.user_id,
+                "session_id": session.session_id[:8] + "...",
+                "is_active": session.is_active,
+                "last_activity": session.last_activity.isoformat() if session.last_activity else None
+            }
+        else:
+            result["session_validation"] = {"success": False, "reason": "No valid session found"}
+    except Exception as e:
+        result["session_validation"] = {"success": False, "error": str(e)}
+    
+    return result
+
 @router.get("/debug/check-pending/{email}")
 def debug_check_pending(email: str, db: Session = Depends(get_db)):
     """检查PendingUser表中的用户"""
