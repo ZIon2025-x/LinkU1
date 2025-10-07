@@ -13,6 +13,7 @@ import MessagePage from './pages/Message';
 import TaskDetail from './pages/TaskDetail';
 import TaskDetailTest from './pages/TaskDetailTest';
 import TaskDetailSimple from './pages/TaskDetailSimple';
+import TestPage from './pages/TestPage';
 import MyTasks from './pages/MyTasks';
 import Tasks from './pages/Tasks';
 import UserProfile from './pages/UserProfile';
@@ -66,7 +67,7 @@ function App() {
               <MessagePage />
             </ProtectedRoute>
           } />
-          <Route path="/tasks/:id" element={<TaskDetailSimple />} />
+          <Route path="/tasks/:id" element={<TestPage />} />
           <Route path="/my-tasks" element={
             <ProtectedRoute>
               <MyTasks />
