@@ -446,7 +446,7 @@ def debug_simple_test():
 @router.get("/debug/session-status")
 def debug_session_status(request: Request, db: Session = Depends(get_db)):
     """调试会话状态"""
-    from app.secure_auth import validate_session
+    from app.secure_auth import validate_session, SecureAuthManager
     
     result = {
         "url": str(request.url),
@@ -456,9 +456,16 @@ def debug_session_status(request: Request, db: Session = Depends(get_db)):
         "user_agent": request.headers.get("user-agent", ""),
     }
     
-    # 尝试验证会话
-    try:
-        session = validate_session(request)
+    # 获取session_id
+    session_id = (
+        request.cookies.get("session_id") or
+        request.headers.get("X-Session-ID")
+    )
+    
+    if session_id:
+        result["session_id"] = session_id[:8] + "..."
+        # 直接检查会话是否存在
+        session = SecureAuthManager.get_session(session_id, update_activity=False)
         if session:
             result["session_validation"] = {
                 "success": True,
@@ -468,9 +475,9 @@ def debug_session_status(request: Request, db: Session = Depends(get_db)):
                 "last_activity": session.last_activity.isoformat() if session.last_activity else None
             }
         else:
-            result["session_validation"] = {"success": False, "reason": "No valid session found"}
-    except Exception as e:
-        result["session_validation"] = {"success": False, "error": str(e)}
+            result["session_validation"] = {"success": False, "reason": "Session not found in storage"}
+    else:
+        result["session_validation"] = {"success": False, "reason": "No session_id provided"}
     
     return result
 
