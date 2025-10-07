@@ -425,8 +425,7 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         
         # 如果旧方式失败，尝试在PendingUser表中查找
         try:
-            # 手动解码token获取邮箱
-            from app.email_utils import confirm_token
+            # 重新尝试解码token获取邮箱（因为上面的email可能为None）
             email = confirm_token(token)
             
             if email:
