@@ -2163,7 +2163,7 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync), db: Session
                 contact_info = {
                     "id": user.id,
                     "name": getattr(user, 'name', None) or f"用户{user.id}",
-                    "avatar": getattr(user, 'avatar', None) or "/avatar1.png",
+                    "avatar": getattr(user, 'avatar', None) or "/static/avatar1.png",
                     "email": getattr(user, 'email', None),
                     "user_level": 1,  # 默认等级
                     "task_count": 0,
@@ -2373,7 +2373,7 @@ def assign_customer_service(
             "service": {
                 "id": service.id,
                 "name": service.name,
-                "avatar": "/service.png",
+                "avatar": "/static/service.png",
                 "avg_rating": service.avg_rating,
                 "total_ratings": service.total_ratings,
             },
@@ -2525,7 +2525,7 @@ def get_customer_service_chats(
                     "chat_id": chat["chat_id"],
                     "user_id": user.id,
                     "user_name": user.name,
-                    "user_avatar": user.avatar or "/avatar1.png",
+                    "user_avatar": user.avatar or "/static/avatar1.png",
                     "created_at": chat["created_at"],
                     "last_message_at": chat["last_message_at"],
                     "is_ended": chat["is_ended"],
