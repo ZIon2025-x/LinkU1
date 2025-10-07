@@ -500,7 +500,7 @@ def debug_test_confirm_simple():
 
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
-    """邮箱验证端点（简化版本）"""
+    """邮箱验证端点（最简版本）"""
     try:
         from app.email_utils import confirm_token
         from app.models import PendingUser
@@ -510,28 +510,19 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         # 解析token获取邮箱
         email = confirm_token(token)
         if not email:
-            return JSONResponse(
-                status_code=400,
-                content={"error": True, "message": "Invalid token", "error_code": "INVALID_TOKEN"}
-            )
+            return {"error": True, "message": "Invalid token"}
         
         # 在PendingUser表中查找
         pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
         
         if not pending_user:
-            return JSONResponse(
-                status_code=404,
-                content={"error": True, "message": "User not found", "error_code": "USER_NOT_FOUND"}
-            )
+            return {"error": True, "message": "User not found"}
         
         # 检查是否已过期
         if pending_user.expires_at < datetime.utcnow():
             db.delete(pending_user)
             db.commit()
-            return JSONResponse(
-                status_code=400,
-                content={"error": True, "message": "验证链接已过期，请重新注册", "error_code": "TOKEN_EXPIRED"}
-            )
+            return {"error": True, "message": "验证链接已过期"}
         
         # 创建正式用户
         user = models.User(
@@ -566,10 +557,7 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         logger.error(f"confirm_email异常: {e}")
         import traceback
         logger.error(f"详细错误: {traceback.format_exc()}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": True, "message": "Internal server error", "error_code": "SERVER_ERROR"}
-        )
+        return {"error": True, "message": f"Internal server error: {str(e)}"}
 
 
 @router.post("/forgot_password")
