@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
+import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -509,7 +510,7 @@ const Tasks: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/tasks/${taskId}/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

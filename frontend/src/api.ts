@@ -476,7 +476,7 @@ export async function getUnreadNotifications() {
 
 // 获取所有未读通知和最近N条已读通知
 export async function getNotificationsWithRecentRead(recentReadLimit: number = 10) {
-  const res = await api.get('/api/notifications/with-recent-read', {
+  const res = await api.get('/api/users/notifications/with-recent-read', {
     params: { recent_read_limit: recentReadLimit }
   });
   return res.data;
@@ -484,7 +484,7 @@ export async function getNotificationsWithRecentRead(recentReadLimit: number = 1
 
 // 获取未读通知数量
 export async function getUnreadNotificationCount() {
-  const res = await api.get('/api/notifications/unread/count');
+  const res = await api.get('/api/users/notifications/unread/count');
   return res.data.unread_count;
 }
 
