@@ -1295,9 +1295,9 @@ def get_my_profile(
             }
         else:
             # 普通用户 - 强制从数据库重新查询以获取最新数据
-            from app.redis_cache import clear_user_cache
+            from app.redis_cache import invalidate_user_cache
             try:
-                clear_user_cache(current_user.id)
+                invalidate_user_cache(current_user.id)
                 logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
             except Exception as e:
                 logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
