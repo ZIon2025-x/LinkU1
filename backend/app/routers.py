@@ -1433,47 +1433,28 @@ def update_avatar(
 ):
     logger.info(f"[DEBUG] 头像更新请求 - 用户ID: {current_user.id}, 新头像: {data.avatar}")
     
-    # 从数据库重新获取用户对象，确保它在当前会话中
-    user = crud.get_user_by_id(db, current_user.id)
-    if not user:
-        logger.error(f"[DEBUG] 用户未找到: {current_user.id}")
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    logger.info(f"[DEBUG] 更新前用户头像: {user.avatar}")
-    
-    # 更新头像
-    user.avatar = data.avatar
-    logger.info(f"[DEBUG] 设置头像为: {user.avatar}")
-    
     try:
+        # 直接更新数据库，简单直接
+        db.query(models.User).filter(models.User.id == current_user.id).update({
+            "avatar": data.avatar
+        })
         db.commit()
-        logger.info(f"[DEBUG] 数据库提交成功")
+        logger.info(f"[DEBUG] 头像更新成功: {data.avatar}")
+        
+        # 清除用户缓存
+        try:
+            from app.redis_cache import clear_user_cache
+            clear_user_cache(current_user.id)
+            logger.info(f"[DEBUG] 已清除用户缓存")
+        except Exception as e:
+            logger.warning(f"[DEBUG] 清除缓存失败: {e}")
+        
+        return {"avatar": data.avatar}
+        
     except Exception as e:
-        logger.error(f"[DEBUG] 数据库提交失败: {e}")
+        logger.error(f"[DEBUG] 头像更新失败: {e}")
         db.rollback()
-        raise
-    
-    # 立即检查更新是否生效
-    db.refresh(user)
-    logger.info(f"[DEBUG] 刷新后用户头像: {user.avatar}")
-    
-    # 清除用户缓存，确保获取最新数据
-    try:
-        from app.redis_cache import clear_user_cache
-        clear_user_cache(current_user.id)
-        logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
-    except Exception as e:
-        logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
-    
-    # 重新查询用户以获取最新数据，避免refresh问题
-    updated_user = crud.get_user_by_id(db, current_user.id)
-    logger.info(f"[DEBUG] 重新查询后用户对象: {updated_user}")
-    logger.info(f"[DEBUG] 重新查询后用户头像: {updated_user.avatar if updated_user else 'None'}")
-    
-    result_avatar = updated_user.avatar if updated_user else data.avatar
-    logger.info(f"[DEBUG] 最终返回的头像: {result_avatar}")
-    
-    return {"avatar": result_avatar}
+        raise HTTPException(status_code=500, detail="头像更新失败")
 
 
 @router.post("/admin/user/{user_id}/set_level")
