@@ -399,33 +399,66 @@ def get_user_info(
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
     try:
-        from app.email_verification import EmailVerificationManager
+        # 首先尝试旧的验证方式
+        from app.email_utils import confirm_token
+        from app import crud
         
-        # 使用统一的验证逻辑
-        user = EmailVerificationManager.verify_user(db, token)
+        email = confirm_token(token)
+        if email:
+            # 使用旧方式验证
+            user = crud.get_user_by_email(db, email)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            user.is_verified = 1
+            db.commit()
+            
+            return {
+                "message": "Email confirmed successfully!",
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "is_verified": user.is_verified
+                }
+            }
         
-        if not user:
+        # 如果旧方式失败，尝试新方式
+        try:
+            from app.email_verification import EmailVerificationManager
+            user = EmailVerificationManager.verify_user(db, token)
+            
+            if not user:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="验证失败。令牌无效或已过期，请重新注册。"
+                )
+            
+            return {
+                "message": "Email confirmed successfully!",
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "is_verified": user.is_verified
+                }
+            }
+        except ImportError as e:
+            logger.error(f"导入EmailVerificationManager失败: {e}")
             raise HTTPException(
                 status_code=400, 
                 detail="验证失败。令牌无效或已过期，请重新注册。"
             )
         
-        return {
-            "message": "Email confirmed successfully!",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "is_verified": user.is_verified
-            }
-        }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"邮箱验证异常 (confirm): {e}")
+        import traceback
+        logger.error(f"详细错误: {traceback.format_exc()}")
         raise HTTPException(
             status_code=400, 
-            detail=f"验证失败：{str(e)}"
+            detail="验证失败。令牌无效或已过期，请重新注册。"
         )
 
 
