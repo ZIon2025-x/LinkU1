@@ -600,7 +600,7 @@ const MessagePage: React.FC = () => {
           const tempContact: Contact = {
             id: targetUserId,
             name: `用户${targetUserId}`,
-            avatar: "https://via.placeholder.com/50x50/4A90E2/FFFFFF?text=1",
+            avatar: "/static/avatar1.png",
             email: "",
             user_level: 1, // 1 = normal, 2 = vip, 3 = super
             task_count: 0,
@@ -1812,7 +1812,7 @@ const MessagePage: React.FC = () => {
                       height: '50px'
                     }}>
                       <img 
-                        src={c.avatar || 'https://via.placeholder.com/50x50/4A90E2/FFFFFF?text=1'} 
+                        src={c.avatar || '/static/avatar1.png'} 
                         alt="头像" 
                         style={{ 
                           width: '50px', 
@@ -2024,7 +2024,7 @@ const MessagePage: React.FC = () => {
                   height: '60px'
                 }}>
             <img 
-              src={activeContact.avatar || 'https://via.placeholder.com/60x60/4A90E2/FFFFFF?text=1'} 
+              src={activeContact.avatar || '/static/avatar1.png'} 
               alt="头像" 
               style={{ 
                       width: '60px', 
