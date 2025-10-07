@@ -437,6 +437,11 @@ def debug_test_token(token: str):
     
     return result
 
+@router.get("/debug/simple-test")
+def debug_simple_test():
+    """最简单的测试端点"""
+    return {"message": "Simple test works", "status": "ok"}
+
 @router.get("/debug/check-pending/{email}")
 def debug_check_pending(email: str, db: Session = Depends(get_db)):
     """检查PendingUser表中的用户"""
@@ -495,58 +500,37 @@ def debug_test_confirm_simple():
 
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
-    """邮箱验证端点（支持多种token格式）"""
-    from app.email_utils import confirm_token
-    from app import crud
-    from app.models import PendingUser
-    from datetime import datetime
-    import uuid
-    from app.config import Config
-    
-    # 解析token获取邮箱
-    logger.info(f"开始解析token: {token[:20]}...")
-    logger.info(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
-    logger.info(f"SECRET_KEY长度: {len(Config.SECRET_KEY)}")
-    
-    email = confirm_token(token)
-    logger.info(f"confirm_token解析结果: {email}")
-    
-    if not email:
-        logger.error(f"无法从token解析出邮箱: {token}")
-        logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
-        logger.error(f"SECRET_KEY是否等于默认值: {Config.SECRET_KEY == 'change-this-secret-key-in-production'}")
-        return JSONResponse(
-            status_code=400,
-            content={"error": True, "message": "Invalid token", "error_code": "INVALID_TOKEN"}
-        )
-    
-    logger.info(f"从token解析出邮箱: {email}")
-    
-    # 直接在PendingUser表中查找（未验证的用户都在这里）
-    pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
-    
-    if pending_user:
-        logger.info(f"在PendingUser表中找到用户: {email}")
+    """邮箱验证端点（简化版本）"""
+    try:
+        from app.email_utils import confirm_token
+        from app.models import PendingUser
+        from datetime import datetime
+        import uuid
+        
+        # 解析token获取邮箱
+        email = confirm_token(token)
+        if not email:
+            return JSONResponse(
+                status_code=400,
+                content={"error": True, "message": "Invalid token", "error_code": "INVALID_TOKEN"}
+            )
+        
+        # 在PendingUser表中查找
+        pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
+        
+        if not pending_user:
+            return JSONResponse(
+                status_code=404,
+                content={"error": True, "message": "User not found", "error_code": "USER_NOT_FOUND"}
+            )
         
         # 检查是否已过期
         if pending_user.expires_at < datetime.utcnow():
-            logger.warning(f"PendingUser已过期: {email}")
             db.delete(pending_user)
             db.commit()
             return JSONResponse(
                 status_code=400,
                 content={"error": True, "message": "验证链接已过期，请重新注册", "error_code": "TOKEN_EXPIRED"}
-            )
-        
-        # 检查邮箱是否已被注册
-        existing_user = crud.get_user_by_email(db, email)
-        if existing_user:
-            logger.warning(f"邮箱已被注册: {email}")
-            db.delete(pending_user)
-            db.commit()
-            return JSONResponse(
-                status_code=400,
-                content={"error": True, "message": "邮箱已被注册", "error_code": "EMAIL_ALREADY_REGISTERED"}
             )
         
         # 创建正式用户
@@ -556,22 +540,17 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             email=pending_user.email,
             hashed_password=pending_user.hashed_password,
             phone=pending_user.phone,
-            is_verified=1,  # 已验证
-            is_active=1,    # 激活
+            is_verified=1,
+            is_active=1,
             is_customer_service=0,
             user_level="normal",
             created_at=datetime.utcnow()
         )
         
         db.add(user)
-        
-        # 删除PendingUser
         db.delete(pending_user)
-        
         db.commit()
         db.refresh(user)
-        
-        logger.info(f"用户验证成功: {user.email}")
         
         return {
             "message": "Email confirmed successfully!",
@@ -582,11 +561,14 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
                 "is_verified": user.is_verified
             }
         }
-    else:
-        logger.warning(f"在PendingUser表中未找到用户: {email}")
+        
+    except Exception as e:
+        logger.error(f"confirm_email异常: {e}")
+        import traceback
+        logger.error(f"详细错误: {traceback.format_exc()}")
         return JSONResponse(
-            status_code=404,
-            content={"error": True, "message": "User not found", "error_code": "USER_NOT_FOUND"}
+            status_code=500,
+            content={"error": True, "message": "Internal server error", "error_code": "SERVER_ERROR"}
         )
 
 
