@@ -11,6 +11,7 @@ import PublishTask from './pages/PublishTask';
 import Profile from './pages/Profile';
 import MessagePage from './pages/Message';
 import TaskDetail from './pages/TaskDetail';
+import TaskDetailTest from './pages/TaskDetailTest';
 import MyTasks from './pages/MyTasks';
 import Tasks from './pages/Tasks';
 import UserProfile from './pages/UserProfile';
