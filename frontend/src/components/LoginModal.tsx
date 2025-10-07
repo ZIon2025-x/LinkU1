@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api from '../api';
 import ForgotPasswordModal from './ForgotPasswordModal';
+import VerificationModal from './VerificationModal';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   isOpen, 
   onClose, 
   onSuccess, 
-  onReopen, 
+  onReopen,
   showForgotPassword = false, 
   onShowForgotPassword, 
   onHideForgotPassword 
@@ -34,6 +35,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,14 +101,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
           phone: formData.phone
         });
         
-        // 处理注册成功后的逻辑，与独立注册页面保持一致
+        // 处理注册成功后的逻辑
         if (res.data.verification_required) {
           message.success(`注册成功！我们已向 ${res.data.email} 发送了验证邮件，请检查您的邮箱并点击验证链接完成注册。`);
-          // 3秒后跳转到重发验证邮件页面
-          setTimeout(() => {
-            navigate('/resend-verification');
-            onClose(); // 关闭弹窗
-          }, 3000);
+          // 显示验证弹窗而不是跳转页面
+          setRegisteredEmail(res.data.email);
+          setShowVerificationModal(true);
         } else {
           message.success(res.data.message || '注册成功！');
           // 开发环境：直接跳转到登录页面
@@ -707,6 +708,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
         onBackToLogin={() => {
           if (onHideForgotPassword) {
             onHideForgotPassword();
+          }
+        }}
+      />
+
+      {/* 验证邮件弹窗 */}
+      <VerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        email={registeredEmail}
+        onLogin={() => {
+          setShowVerificationModal(false);
+          setIsLogin(true);
+          if (onReopen) {
+            onReopen();
           }
         }}
       />
