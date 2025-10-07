@@ -406,6 +406,37 @@ def debug_config():
         "FRONTEND_URL": Config.FRONTEND_URL
     }
 
+@router.get("/debug/test-token/{token}")
+def debug_test_token(token: str):
+    """调试token解析"""
+    from app.email_utils import confirm_token
+    from app.config import Config
+    from itsdangerous import URLSafeTimedSerializer
+    
+    result = {
+        "token": token[:20] + "...",
+        "current_secret_key": Config.SECRET_KEY[:20] + "...",
+        "secret_key_length": len(Config.SECRET_KEY),
+        "is_default_secret": Config.SECRET_KEY == "change-this-secret-key-in-production"
+    }
+    
+    # 测试当前配置
+    try:
+        email = confirm_token(token)
+        result["current_config_result"] = email
+    except Exception as e:
+        result["current_config_error"] = str(e)
+    
+    # 测试手动解析
+    try:
+        serializer = URLSafeTimedSerializer(Config.SECRET_KEY)
+        email = serializer.loads(token, salt="email-confirm", max_age=3600*24)
+        result["manual_parse_result"] = email
+    except Exception as e:
+        result["manual_parse_error"] = str(e)
+    
+    return result
+
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
@@ -418,22 +449,18 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         
         # 解析token获取邮箱
         logger.info(f"开始解析token: {token[:20]}...")
+        from app.config import Config
+        logger.info(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
+        logger.info(f"SECRET_KEY长度: {len(Config.SECRET_KEY)}")
+        
         email = confirm_token(token)
         logger.info(f"confirm_token解析结果: {email}")
         
-        # 如果当前SECRET_KEY解析失败，尝试使用默认SECRET_KEY
         if not email:
-            logger.warning(f"当前SECRET_KEY解析失败，尝试默认SECRET_KEY")
-            from itsdangerous import URLSafeTimedSerializer
-            default_serializer = URLSafeTimedSerializer("change-this-secret-key-in-production")
-            try:
-                email = default_serializer.loads(token, salt="email-confirm", max_age=3600*24)
-                logger.info(f"默认SECRET_KEY解析成功: {email}")
-            except Exception as e:
-                logger.error(f"默认SECRET_KEY也解析失败: {e}")
-                from app.config import Config
-                logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
-                raise HTTPException(status_code=400, detail="Invalid token")
+            logger.error(f"无法从token解析出邮箱: {token}")
+            logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
+            logger.error(f"SECRET_KEY是否等于默认值: {Config.SECRET_KEY == 'change-this-secret-key-in-production'}")
+            raise HTTPException(status_code=400, detail="Invalid token")
         
         logger.info(f"从token解析出邮箱: {email}")
         
