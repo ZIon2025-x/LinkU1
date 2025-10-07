@@ -238,7 +238,7 @@ const UserProfile: React.FC = () => {
                 display: 'inline-block'
               }}>
                 <img
-                  src={profile.user.avatar || '/avatar1.png'}
+                  src={profile.user.avatar || '/static/avatar1.png'}
                   alt="头像"
                   style={{
                     width: 140,

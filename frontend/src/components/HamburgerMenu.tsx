@@ -113,7 +113,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   {/* 用户头像和信息 */}
                   <div className="user-info">
                     <img
-                      src={user.avatar || '/avatar1.png'}
+                      src={user.avatar || '/static/avatar1.png'}
                       alt={t('common.avatar')}
                       className="user-avatar"
                     />
