@@ -10,28 +10,43 @@ const TaskDetailTest: React.FC = () => {
 
   useEffect(() => {
     console.log('TaskDetailTest: 任务ID:', id);
+    console.log('TaskDetailTest: 组件开始渲染');
     setLoading(true);
+    setError('');
     
+    if (!id) {
+      console.error('TaskDetailTest: 没有任务ID');
+      setError('没有提供任务ID');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('TaskDetailTest: 开始API调用');
     api.get(`/api/tasks/${id}`)
       .then(res => {
-        console.log('TaskDetailTest: API响应:', res.data);
+        console.log('TaskDetailTest: API响应成功:', res.data);
         setTask(res.data);
         setError('');
       })
       .catch((error) => {
         console.error('TaskDetailTest: API错误:', error);
+        console.error('TaskDetailTest: 错误详情:', error.response?.data);
         setError('获取任务失败: ' + (error.response?.data?.detail || error.message));
       })
       .finally(() => {
+        console.log('TaskDetailTest: API调用完成');
         setLoading(false);
       });
   }, [id]);
+
+  console.log('TaskDetailTest: 渲染状态 - loading:', loading, 'error:', error, 'task:', task);
 
   if (loading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h2>加载中...</h2>
         <p>任务ID: {id}</p>
+        <p>时间: {new Date().toLocaleString()}</p>
       </div>
     );
   }
