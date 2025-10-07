@@ -8,6 +8,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 from app import crud, models
 from app.email_utils import send_email
+from app.config import Config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def send_task_application_notification(
                 <p>请登录 LinkU 平台查看申请详情并决定是否同意该用户接受任务。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
                        style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
@@ -132,7 +133,7 @@ def send_task_approval_notification(
                 <p>请按照任务要求完成工作，完成后记得标记任务完成。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
                        style="background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
@@ -198,7 +199,7 @@ def send_task_completion_notification(
                 <p>请检查任务完成情况，如果满意请确认完成以释放奖励。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
                        style="background: #ff9800; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
@@ -266,7 +267,7 @@ def send_task_confirmation_notification(
                 <p>感谢您使用 LinkU 平台！继续寻找更多任务机会吧。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/tasks" 
+                    <a href="{Config.FRONTEND_URL}/tasks" 
                        style="background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看更多任务
                     </a>
@@ -332,7 +333,7 @@ def send_task_rejection_notification(
                 <p>不要灰心！还有很多其他任务机会等着您。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/tasks" 
+                    <a href="{Config.FRONTEND_URL}/tasks" 
                        style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看更多任务
                     </a>

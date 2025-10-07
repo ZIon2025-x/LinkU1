@@ -1646,7 +1646,7 @@ const MessagePage: React.FC = () => {
                 width: '50px',
                 height: '50px'
               }}>
-                <img src={'/service.png'} alt="客服" style={{ 
+                <img src={'/static/service.png'} alt="客服" style={{ 
                   width: '50px', 
                   height: '50px', 
                   borderRadius: '50%', 
@@ -1964,7 +1964,7 @@ const MessagePage: React.FC = () => {
                   height: '60px'
                 }}>
                   <img 
-                    src="/service.png" 
+                    src="/static/service.png" 
                     alt="客服头像" 
                     style={{ 
                       width: '60px', 

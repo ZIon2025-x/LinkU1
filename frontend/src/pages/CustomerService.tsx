@@ -1239,7 +1239,7 @@ const CustomerService: React.FC = () => {
           <div className="status-header">
             <div className="service-avatar">
               <img 
-                src="/service.png"
+                src="/static/service.png"
                 alt="客服头像" 
                 className="avatar-image"
               />
@@ -1813,7 +1813,7 @@ const CustomerService: React.FC = () => {
                 gap: 12
               }}>
                 <img 
-                  src="/service.png"
+                  src="/static/service.png"
                   alt="客服头像" 
                   style={{ 
                     width: 40, 
