@@ -543,6 +543,7 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             is_verified=1,
             is_active=1,
             user_level="normal",
+            avatar="",  # 默认空头像，前端会显示默认头像
             created_at=datetime.utcnow()
         )
         
