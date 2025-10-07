@@ -65,7 +65,7 @@ def send_task_application_notification(
                 <p>请登录 Link2Ur 平台查看申请详情并决定是否同意该用户接受任务。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/tasks/{task.id}" 
                        style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
@@ -133,7 +133,7 @@ def send_task_approval_notification(
                 <p>请按照任务要求完成工作，完成后记得标记任务完成。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/tasks/{task.id}" 
                        style="background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
@@ -199,7 +199,7 @@ def send_task_completion_notification(
                 <p>请检查任务完成情况，如果满意请确认完成以释放奖励。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{Config.FRONTEND_URL}/task/{task.id}" 
+                    <a href="{Config.FRONTEND_URL}/tasks/{task.id}" 
                        style="background: #ff9800; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                         查看任务详情
                     </a>
