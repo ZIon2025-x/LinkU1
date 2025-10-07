@@ -1008,7 +1008,7 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
     return crud.get_user_received_reviews(db, user_id)
 
 
-@router.get("/users/{user_id}/reviews")
+@router.get("/{user_id}/reviews")
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的评价（用于个人主页显示）"""
     logger.info(f"[DEBUG] get_user_reviews called with user_id: {user_id}")
