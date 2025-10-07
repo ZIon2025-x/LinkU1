@@ -406,9 +406,15 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         import uuid
         
         # 解析token获取邮箱
+        logger.info(f"开始解析token: {token[:20]}...")
         email = confirm_token(token)
+        logger.info(f"confirm_token解析结果: {email}")
+        
         if not email:
             logger.warning(f"无法从token解析出邮箱: {token}")
+            # 添加更详细的错误信息
+            from app.config import Config
+            logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
             raise HTTPException(status_code=400, detail="Invalid token")
         
         logger.info(f"从token解析出邮箱: {email}")
