@@ -524,9 +524,18 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             db.commit()
             return {"error": True, "message": "验证链接已过期"}
         
+        # 生成唯一的8位数字用户ID
+        import random
+        while True:
+            user_id = str(random.randint(10000000, 99999999))
+            # 检查ID是否已存在
+            existing_user = db.query(models.User).filter(models.User.id == user_id).first()
+            if not existing_user:
+                break
+        
         # 创建正式用户
         user = models.User(
-            id=str(uuid.uuid4())[:8],
+            id=user_id,
             name=pending_user.name,
             email=pending_user.email,
             hashed_password=pending_user.hashed_password,
