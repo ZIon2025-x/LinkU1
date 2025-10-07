@@ -463,7 +463,12 @@ const MessagePage: React.FC = () => {
           created_at: new Date().toISOString(),
           is_admin_msg: 0
         };
-        setMessages(prev => [...prev, newMessage]);
+        console.log('发送消息前，当前消息数量:', messages.length);
+        setMessages(prev => {
+          const newMessages = [...prev, newMessage];
+          console.log('发送消息后，新消息数量:', newMessages.length);
+          return newMessages;
+        });
         
         // 更新联系人排序（如果是普通聊天模式）
         if (activeContact && !isServiceMode) {
@@ -906,6 +911,9 @@ const MessagePage: React.FC = () => {
                 
                 // 检查是否已经存在相同的消息（避免重复显示）
                 setMessages(prev => {
+                  console.log('WebSocket收到消息，当前消息数量:', prev.length);
+                  console.log('收到消息内容:', msg.content, 'from:', fromName);
+                  
                   // 检查是否已经存在相同内容、相同发送者、时间相近的消息
                   const exists = prev.some(m => 
                     m.content === msg.content.trim() && 
@@ -919,12 +927,14 @@ const MessagePage: React.FC = () => {
                   }
                   
                   console.log('添加新消息:', msg.content, 'from:', fromName);
-                  return [...prev, {
+                  const newMessages = [...prev, {
                     id: messageId,
                     from: fromName,
                     content: msg.content.trim(), 
                     created_at: msg.created_at 
                   }];
+                  console.log('添加消息后，新消息数量:', newMessages.length);
+                  return newMessages;
                 });
                 
                 // 如果是接收到的消息（不是自己发送的），更新联系人排序
@@ -1031,6 +1041,7 @@ const MessagePage: React.FC = () => {
         
         // 按时间排序（最新的在最后）
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         setMessages(formattedMessages);
       }
     } catch (error) {
