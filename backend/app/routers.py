@@ -485,6 +485,14 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
     
     return result
 
+@router.get("/debug/test-confirm-simple")
+def debug_test_confirm_simple():
+    """简单的确认测试端点"""
+    return {
+        "message": "confirm endpoint is working",
+        "status": "ok"
+    }
+
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
@@ -514,29 +522,7 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
     
     logger.info(f"从token解析出邮箱: {email}")
     
-    # 首先在User表中查找
-    user = crud.get_user_by_email(db, email)
-    if user:
-        # 用户已存在，更新验证状态
-        from sqlalchemy import update
-        db.execute(
-            update(models.User)
-            .where(models.User.id == user.id)
-            .values(is_verified=1)
-        )
-        db.commit()
-        
-        return {
-            "message": "Email confirmed successfully!",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "is_verified": user.is_verified
-            }
-        }
-    
-    # 如果User表中没有，尝试在PendingUser表中查找
+    # 直接在PendingUser表中查找（未验证的用户都在这里）
     pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
     
     if pending_user:
