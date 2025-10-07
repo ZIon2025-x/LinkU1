@@ -996,12 +996,17 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
     return crud.get_user_received_reviews(db, user_id)
 
 
-@router.get(
-    "/users/{user_id}/reviews", response_model=list[schemas.ReviewWithReviewerInfo]
-)
+@router.get("/users/{user_id}/reviews")
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的评价（用于个人主页显示）"""
-    return crud.get_user_reviews_with_reviewer_info(db, user_id)
+    try:
+        reviews = crud.get_user_reviews_with_reviewer_info(db, user_id)
+        return reviews
+    except Exception as e:
+        import traceback
+        logger.error(f"获取用户评价失败: {e}")
+        logger.error(traceback.format_exc())
+        return []
 
 
 @router.post("/tasks/{task_id}/complete", response_model=schemas.TaskOut)
