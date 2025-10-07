@@ -399,17 +399,24 @@ def get_user_info(
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
     try:
-        # 首先尝试旧的验证方式
         from app.email_utils import confirm_token
         from app import crud
+        from app.models import PendingUser
+        from datetime import datetime
+        import uuid
         
+        # 解析token获取邮箱
         email = confirm_token(token)
-        if email:
-            # 使用旧方式验证
-            user = crud.get_user_by_email(db, email)
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-            
+        if not email:
+            logger.warning(f"无法从token解析出邮箱: {token}")
+            raise HTTPException(status_code=400, detail="Invalid token")
+        
+        logger.info(f"从token解析出邮箱: {email}")
+        
+        # 首先在User表中查找
+        user = crud.get_user_by_email(db, email)
+        if user:
+            # 用户已存在，更新验证状态
             user.is_verified = 1
             db.commit()
             
@@ -423,98 +430,71 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
                 }
             }
         
-        # 如果旧方式失败，尝试在PendingUser表中查找
-        try:
-            # 重新尝试解码token获取邮箱（因为上面的email可能为None）
-            email = confirm_token(token)
-            
-            if email:
-                logger.info(f"从token解析出邮箱: {email}")
-                
-                # 在PendingUser表中查找
-                from app.models import PendingUser
-                pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
-                
-                if pending_user:
-                    logger.info(f"在PendingUser表中找到用户: {email}")
-                    
-                    # 检查是否已过期
-                    from datetime import datetime
-                    if pending_user.expires_at < datetime.utcnow():
-                        logger.warning(f"PendingUser已过期: {email}")
-                        db.delete(pending_user)
-                        db.commit()
-                        raise HTTPException(status_code=400, detail="验证链接已过期，请重新注册")
-                    
-                    # 检查邮箱是否已被注册
-                    existing_user = crud.get_user_by_email(db, email)
-                    if existing_user:
-                        logger.warning(f"邮箱已被注册: {email}")
-                        db.delete(pending_user)
-                        db.commit()
-                        raise HTTPException(status_code=400, detail="邮箱已被注册")
-                    
-                    # 创建正式用户
-                    import uuid
-                    from app.security import get_password_hash
-                    
-                    user = models.User(
-                        id=str(uuid.uuid4())[:8],
-                        name=pending_user.name,
-                        email=pending_user.email,
-                        hashed_password=pending_user.hashed_password,
-                        phone=pending_user.phone,
-                        is_verified=1,  # 已验证
-                        is_active=1,    # 激活
-                        is_customer_service=0,
-                        user_level="normal",
-                        created_at=datetime.utcnow()
-                    )
-                    
-                    db.add(user)
-                    
-                    # 删除PendingUser
-                    db.delete(pending_user)
-                    
-                    db.commit()
-                    db.refresh(user)
-                    
-                    logger.info(f"用户验证成功: {user.email}")
-                    
-                    return {
-                        "message": "Email confirmed successfully!",
-                        "user": {
-                            "id": user.id,
-                            "name": user.name,
-                            "email": user.email,
-                            "is_verified": user.is_verified
-                        }
-                    }
-                else:
-                    logger.warning(f"在PendingUser表中未找到用户: {email}")
-                    raise HTTPException(status_code=404, detail="User not found")
-            else:
-                logger.warning(f"无法从token解析出邮箱: {token}")
-                raise HTTPException(status_code=400, detail="Invalid token")
-                
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"PendingUser验证异常: {e}")
-            import traceback
-            logger.error(f"详细错误: {traceback.format_exc()}")
-            raise HTTPException(status_code=400, detail="验证失败")
+        # 如果User表中没有，尝试在PendingUser表中查找
+        pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
         
+        if pending_user:
+            logger.info(f"在PendingUser表中找到用户: {email}")
+            
+            # 检查是否已过期
+            if pending_user.expires_at < datetime.utcnow():
+                logger.warning(f"PendingUser已过期: {email}")
+                db.delete(pending_user)
+                db.commit()
+                raise HTTPException(status_code=400, detail="验证链接已过期，请重新注册")
+            
+            # 检查邮箱是否已被注册
+            existing_user = crud.get_user_by_email(db, email)
+            if existing_user:
+                logger.warning(f"邮箱已被注册: {email}")
+                db.delete(pending_user)
+                db.commit()
+                raise HTTPException(status_code=400, detail="邮箱已被注册")
+            
+            # 创建正式用户
+            user = models.User(
+                id=str(uuid.uuid4())[:8],
+                name=pending_user.name,
+                email=pending_user.email,
+                hashed_password=pending_user.hashed_password,
+                phone=pending_user.phone,
+                is_verified=1,  # 已验证
+                is_active=1,    # 激活
+                is_customer_service=0,
+                user_level="normal",
+                created_at=datetime.utcnow()
+            )
+            
+            db.add(user)
+            
+            # 删除PendingUser
+            db.delete(pending_user)
+            
+            db.commit()
+            db.refresh(user)
+            
+            logger.info(f"用户验证成功: {user.email}")
+            
+            return {
+                "message": "Email confirmed successfully!",
+                "user": {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "is_verified": user.is_verified
+                }
+            }
+        else:
+            logger.warning(f"在PendingUser表中未找到用户: {email}")
+            raise HTTPException(status_code=404, detail="User not found")
+            
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"邮箱验证异常 (confirm): {e}")
         import traceback
         logger.error(f"详细错误: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=400, 
-            detail="验证失败。令牌无效或已过期，请重新注册。"
-        )
+        raise HTTPException(status_code=400, detail="验证失败")
 
 
 @router.post("/forgot_password")
