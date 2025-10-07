@@ -391,6 +391,7 @@ def get_user_info(
         "id": current_user.id,  # 数据库已经存储格式化ID
         "name": current_user.name,
         "email": current_user.email,
+        "avatar": getattr(current_user, 'avatar', ''),
         "user_type": "normal_user",
     }
 
