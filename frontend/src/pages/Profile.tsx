@@ -55,6 +55,8 @@ const Profile: React.FC = () => {
     try {
       setLoading(true);
       const userInfo = await fetchCurrentUser();
+      console.log('Profile页面加载的用户数据:', userInfo);
+      console.log('用户头像字段:', userInfo.avatar);
       setUser(userInfo);
       
       // 加载用户评价数据
@@ -214,6 +216,13 @@ const Profile: React.FC = () => {
               <img
                 src={user.avatar || '/static/avatar1.png'}
                 alt="头像"
+                onError={(e) => {
+                  console.error('头像加载失败:', e.currentTarget.src);
+                  e.currentTarget.src = '/static/avatar1.png';
+                }}
+                onLoad={(e) => {
+                  console.log('头像加载成功:', e.currentTarget.src);
+                }}
                 style={{
                   width: '120px',
                   height: '120px',
