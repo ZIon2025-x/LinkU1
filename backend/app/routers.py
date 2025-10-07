@@ -518,7 +518,12 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
     user = crud.get_user_by_email(db, email)
     if user:
         # 用户已存在，更新验证状态
-        user.is_verified = 1
+        from sqlalchemy import update
+        db.execute(
+            update(models.User)
+            .where(models.User.id == user.id)
+            .values(is_verified=1)
+        )
         db.commit()
         
         return {
