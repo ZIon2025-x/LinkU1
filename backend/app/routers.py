@@ -397,20 +397,18 @@ def get_user_info(
 
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
-    """旧的邮箱验证端点（向后兼容）"""
+    """邮箱验证端点（支持多种token格式）"""
     try:
-        from app.email_utils import confirm_token
+        from app.email_verification import EmailVerificationManager
         
-        email = confirm_token(token)
-        if not email:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
+        # 使用统一的验证逻辑
+        user = EmailVerificationManager.verify_user(db, token)
         
-        user = crud.get_user_by_email(db, email)
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        user.is_verified = 1
-        db.commit()
+            raise HTTPException(
+                status_code=400, 
+                detail="验证失败。令牌无效或已过期，请重新注册。"
+            )
         
         return {
             "message": "Email confirmed successfully!",
@@ -421,6 +419,8 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
                 "is_verified": user.is_verified
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"邮箱验证异常 (confirm): {e}")
         raise HTTPException(

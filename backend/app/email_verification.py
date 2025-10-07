@@ -74,17 +74,84 @@ class EmailVerificationManager:
     
     @staticmethod
     def verify_user(db: Session, token: str) -> Optional[models.User]:
-        """验证用户邮箱 - 使用与旧系统兼容的方式"""
+        """验证用户邮箱 - 支持多种token格式"""
         from app.email_utils import confirm_token
         from app import crud
         
-        # 使用旧的token验证方式
-        email = confirm_token(token)
+        email = None
+        
+        # 首先尝试旧的token验证方式（URLSafeTimedSerializer格式）
+        try:
+            email = confirm_token(token)
+            if email:
+                logger.info(f"使用旧格式token验证成功: {email}")
+        except Exception as e:
+            logger.debug(f"旧格式token验证失败: {e}")
+        
+        # 如果旧格式失败，尝试新的格式（查找PendingUser表）
+        if not email:
+            try:
+                # 查找待验证用户
+                pending_user = db.query(models.PendingUser).filter(
+                    models.PendingUser.verification_token == token
+                ).first()
+                
+                if pending_user:
+                    # 检查令牌是否过期
+                    if pending_user.expires_at < datetime.utcnow():
+                        logger.warning(f"验证令牌已过期: {token}")
+                        # 删除过期的待验证用户
+                        db.delete(pending_user)
+                        db.commit()
+                        return None
+                    
+                    email = pending_user.email
+                    logger.info(f"使用新格式token验证成功: {email}")
+                    
+                    # 检查邮箱是否已被注册
+                    existing_user = db.query(models.User).filter(
+                        models.User.email == email
+                    ).first()
+                    
+                    if existing_user:
+                        logger.warning(f"邮箱已被注册: {email}")
+                        # 删除待验证用户
+                        db.delete(pending_user)
+                        db.commit()
+                        return None
+                    
+                    # 创建正式用户
+                    user = models.User(
+                        name=pending_user.name,
+                        email=pending_user.email,
+                        hashed_password=pending_user.hashed_password,
+                        phone=pending_user.phone,
+                        is_verified=1,  # 已验证
+                        is_active=1,    # 激活
+                        is_customer_service=0,
+                        user_level="normal",
+                        created_at=datetime.utcnow()
+                    )
+                    
+                    db.add(user)
+                    
+                    # 删除待验证用户
+                    db.delete(pending_user)
+                    
+                    db.commit()
+                    db.refresh(user)
+                    
+                    logger.info(f"用户验证成功: {user.email}")
+                    return user
+                    
+            except Exception as e:
+                logger.error(f"新格式token验证失败: {e}")
+        
         if not email:
             logger.warning(f"验证令牌无效或已过期: {token}")
             return None
         
-        # 查找用户
+        # 对于旧格式的token，查找并更新现有用户
         user = crud.get_user_by_email(db, email)
         if not user:
             logger.warning(f"用户不存在: {email}")
