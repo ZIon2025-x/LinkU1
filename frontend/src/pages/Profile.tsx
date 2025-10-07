@@ -79,10 +79,13 @@ const Profile: React.FC = () => {
   const handleAvatarChange = async (newAvatar: string) => {
     if (!user) return;
     
+    console.log('开始更新头像:', newAvatar);
     setSaving(true);
     try {
-      await updateAvatar(newAvatar);
+      const result = await updateAvatar(newAvatar);
+      console.log('头像更新API返回结果:', result);
       setUser({ ...user, avatar: newAvatar });
+      console.log('前端用户状态已更新:', { ...user, avatar: newAvatar });
       setShowAvatars(false);
     } catch (error) {
       console.error('更新头像失败:', error);

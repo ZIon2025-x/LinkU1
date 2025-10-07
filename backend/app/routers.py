@@ -1407,17 +1407,25 @@ def update_avatar(
     current_user=Depends(get_current_user_secure_sync),
     db: Session = Depends(get_db),
 ):
+    logger.info(f"[DEBUG] 头像更新请求 - 用户ID: {current_user.id}, 新头像: {data.avatar}")
+    
     # 从数据库重新获取用户对象，确保它在当前会话中
     user = crud.get_user_by_id(db, current_user.id)
     if not user:
+        logger.error(f"[DEBUG] 用户未找到: {current_user.id}")
         raise HTTPException(status_code=404, detail="User not found")
+    
+    logger.info(f"[DEBUG] 更新前用户头像: {user.avatar}")
     
     # 更新头像
     user.avatar = data.avatar
     db.commit()
+    logger.info(f"[DEBUG] 头像已更新并提交到数据库")
     
     # 重新查询用户以获取最新数据，避免refresh问题
     updated_user = crud.get_user_by_id(db, current_user.id)
+    logger.info(f"[DEBUG] 重新查询后用户头像: {updated_user.avatar if updated_user else 'None'}")
+    
     return {"avatar": updated_user.avatar if updated_user else data.avatar}
 
 
