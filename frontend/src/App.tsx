@@ -67,7 +67,7 @@ function App() {
               <MessagePage />
             </ProtectedRoute>
           } />
-          <Route path="/tasks/:id" element={<TestPage />} />
+          <Route path="/tasks/:id" element={<TaskDetailSimple />} />
           <Route path="/my-tasks" element={
             <ProtectedRoute>
               <MyTasks />
