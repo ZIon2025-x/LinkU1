@@ -437,6 +437,54 @@ def debug_test_token(token: str):
     
     return result
 
+@router.get("/debug/check-pending/{email}")
+def debug_check_pending(email: str, db: Session = Depends(get_db)):
+    """检查PendingUser表中的用户"""
+    from app.models import PendingUser
+    from datetime import datetime
+    
+    result = {
+        "email": email,
+        "current_time": datetime.utcnow().isoformat()
+    }
+    
+    try:
+        # 查找PendingUser
+        pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
+        if pending_user:
+            result["pending_user_found"] = True
+            result["pending_user_data"] = {
+                "id": pending_user.id,
+                "name": pending_user.name,
+                "email": pending_user.email,
+                "created_at": pending_user.created_at.isoformat(),
+                "expires_at": pending_user.expires_at.isoformat(),
+                "is_expired": pending_user.expires_at < datetime.utcnow()
+            }
+        else:
+            result["pending_user_found"] = False
+            
+        # 查找User表
+        from app import crud
+        user = crud.get_user_by_email(db, email)
+        if user:
+            result["user_found"] = True
+            result["user_data"] = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "is_verified": user.is_verified
+            }
+        else:
+            result["user_found"] = False
+            
+    except Exception as e:
+        result["error"] = str(e)
+        import traceback
+        result["traceback"] = traceback.format_exc()
+    
+    return result
+
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
     """邮箱验证端点（支持多种token格式）"""
