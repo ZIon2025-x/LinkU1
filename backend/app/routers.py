@@ -443,6 +443,30 @@ def debug_simple_test():
     """最简单的测试端点"""
     return {"message": "Simple test works", "status": "ok"}
 
+@router.post("/debug/fix-avatar-null")
+def fix_avatar_null(db: Session = Depends(get_db)):
+    """修复数据库中avatar字段为NULL的用户"""
+    try:
+        # 查找所有avatar为NULL的用户
+        users_with_null_avatar = db.query(models.User).filter(models.User.avatar.is_(None)).all()
+        logger.info(f"[DEBUG] 找到 {len(users_with_null_avatar)} 个avatar为NULL的用户")
+        
+        # 为这些用户设置默认头像
+        for user in users_with_null_avatar:
+            user.avatar = "/static/avatar1.png"
+            logger.info(f"[DEBUG] 为用户 {user.id} 设置默认头像")
+        
+        db.commit()
+        logger.info(f"[DEBUG] 已修复 {len(users_with_null_avatar)} 个用户的头像字段")
+        
+        return {
+            "message": f"已修复 {len(users_with_null_avatar)} 个用户的头像字段",
+            "fixed_count": len(users_with_null_avatar)
+        }
+    except Exception as e:
+        logger.error(f"[DEBUG] 修复头像字段失败: {e}")
+        return {"error": str(e)}
+
 @router.get("/debug/test-reviews/{user_id}")
 def debug_test_reviews(user_id: str):
     """测试reviews端点是否工作"""
