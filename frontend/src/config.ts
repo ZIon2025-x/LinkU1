@@ -2,11 +2,11 @@
 const isProduction = process.env.NODE_ENV === 'production';
 
 export const API_BASE_URL = isProduction 
-  ? process.env.REACT_APP_API_URL || 'https://linku1-production.up.railway.app'
+  ? process.env.REACT_APP_API_URL || 'https://api.link2ur.com'
   : 'http://localhost:8000';
 
 export const WS_BASE_URL = isProduction
-  ? process.env.REACT_APP_WS_URL || 'wss://linku1-production.up.railway.app'
+  ? process.env.REACT_APP_WS_URL || 'wss://api.link2ur.com'
   : 'ws://localhost:8000';
 
 // 调试信息
