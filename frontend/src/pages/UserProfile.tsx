@@ -249,23 +249,6 @@ const UserProfile: React.FC = () => {
                     boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
                   }}
                 />
-                {profile.user.is_verified === 1 && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 10,
-                    right: 10,
-                    width: 32,
-                    height: 32,
-                    background: 'linear-gradient(45deg, #4CAF50, #45a049)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                  }}>
-                    <span style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✓</span>
-                  </div>
-                )}
               </div>
             </div>
             

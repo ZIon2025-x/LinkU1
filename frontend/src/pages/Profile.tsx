@@ -318,15 +318,6 @@ const Profile: React.FC = () => {
             marginBottom: '8px'
           }}>
             {user.name || `用户${user.id}`}
-            {user.is_verified === 1 && (
-              <span style={{ 
-                color: '#10b981', 
-                marginLeft: '12px',
-                fontSize: '24px'
-              }}>
-                ✓
-              </span>
-            )}
           </h1>
           
           {/* 用户ID显示 */}

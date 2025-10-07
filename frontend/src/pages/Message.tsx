@@ -1664,24 +1664,6 @@ const MessagePage: React.FC = () => {
                   e.currentTarget.src = '/static/avatar1.png'; // 备用头像
                 }}
                 />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '2px',
-                  right: '2px',
-                  width: '16px',
-                  height: '16px',
-                  background: '#10b981',
-                  borderRadius: '50%',
-                  border: '2px solid #fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '8px',
-                  color: '#fff',
-                  fontWeight: 'bold'
-                }}>
-                  ✓
-                </div>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>
@@ -1849,24 +1831,6 @@ const MessagePage: React.FC = () => {
                           navigate(`/user/${c.id}`);
                         }}
                       />
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '2px',
-                        right: '2px',
-                        width: '16px',
-                        height: '16px',
-                        background: '#10b981',
-                        borderRadius: '50%',
-                        border: '2px solid #fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '8px',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                      }}>
-                        ✓
-                      </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ 
@@ -1878,12 +1842,6 @@ const MessagePage: React.FC = () => {
                         gap: '8px'
                       }}>
                         {c.name || `用户${c.id}`}
-                        {c.is_verified && (
-                          <span style={{ 
-                            color: '#10b981',
-                            fontSize: '14px'
-                          }}>✓</span>
-                        )}
                       </div>
                       <div style={{ 
                         fontSize: '12px', 
@@ -1993,23 +1951,6 @@ const MessagePage: React.FC = () => {
                       e.currentTarget.src = '/static/avatar1.png'; // 备用头像
                     }}
                   />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '2px',
-                    right: '2px',
-                    width: '18px',
-                    height: '18px',
-                    background: '#10b981',
-                    borderRadius: '50%',
-                    border: '3px solid #fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    color: '#fff'
-                  }}>
-                    ✓
-                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ 
@@ -2022,10 +1963,6 @@ const MessagePage: React.FC = () => {
                     gap: '8px'
                   }}>
                     客服中心
-                    <span style={{ 
-                      color: '#10b981',
-                      fontSize: '16px'
-                    }}>✓</span>
                   </div>
                   <div style={{ 
                     fontSize: '14px', 
@@ -2065,23 +2002,6 @@ const MessagePage: React.FC = () => {
               }}
               onClick={() => navigate(`/user/${activeContact.id}`)}
             />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '2px',
-                    right: '2px',
-                    width: '18px',
-                    height: '18px',
-                    background: '#10b981',
-                    borderRadius: '50%',
-                    border: '3px solid #fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    color: '#fff'
-                  }}>
-                    ✓
-                  </div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ 
@@ -2094,12 +2014,6 @@ const MessagePage: React.FC = () => {
                     gap: '8px'
                   }}>
                     {activeContact.name || `用户${activeContact.id}`}
-                    {activeContact.is_verified && (
-                      <span style={{ 
-                        color: '#10b981',
-                        fontSize: '16px'
-                      }}>✓</span>
-                    )}
         </div>
                   <div style={{ 
                     fontSize: '14px', 
@@ -2181,7 +2095,7 @@ const MessagePage: React.FC = () => {
                     fontWeight: '600',
                     lineHeight: '1.4'
                   }}>
-                    请通过平台内完成交易保障资金安全，平台外支付出现纠纷，平台概不负责。
+                    请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
                   </div>
                         <button
                     onClick={() => {
