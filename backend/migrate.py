@@ -143,7 +143,7 @@ def main():
     args = parser.parse_args()
     
     print("=" * 60)
-    print("🗄️  LinkU数据库迁移管理工具")
+    print("🗄️  Link2Ur数据库迁移管理工具")
     print("=" * 60)
     
     # 检查数据库连接

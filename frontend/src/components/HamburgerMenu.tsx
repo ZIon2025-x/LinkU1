@@ -56,7 +56,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             {/* 顶部导航栏区域 */}
             <div className="menu-header">
               <div className="menu-logo">
-                LinkU
+                Link2Ur
               </div>
               <button
                 className="menu-close-btn"

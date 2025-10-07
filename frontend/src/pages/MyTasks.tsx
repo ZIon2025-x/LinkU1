@@ -492,7 +492,7 @@ const MyTasks: React.FC = () => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            LinkU
+            Link2Ur
           </div>
 
           {/* 通知按钮和汉堡菜单 */}

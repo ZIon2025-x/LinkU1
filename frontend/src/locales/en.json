@@ -85,7 +85,7 @@
     "notLoggedIn": "User not logged in"
   },
   "home": {
-    "welcome": "Welcome to LinkU Review",
+    "welcome": "Welcome to Link2Ur Review",
     "subtitle": "Connect, Collaborate, Create",
     "getStarted": "Get Started",
     "learnMore": "Learn More",
@@ -132,7 +132,7 @@
     "page": "Page",
     "of": "of",
     "totalTasks": "Total Tasks",
-    "newUserGuide": "How to use LinkU for beginners?",
+    "newUserGuide": "How to use Link2Ur for beginners?",
     "step1": "Register/Login",
     "step1Desc": "Quickly register an account, complete personal information",
     "step2": "Browse/Filter Tasks",
@@ -208,13 +208,13 @@
     "profileUpdateError": "Failed to update profile. Please try again."
   },
   "about": {
-    "title": "About LinkU Review",
+    "title": "About Link2Ur Review",
     "subtitle": "Connecting Talents, Creating Opportunities",
     "mission": "Our Mission",
     "missionText": "To create a platform where talented individuals can connect, collaborate, and create amazing projects together. We believe in the power of community and the potential of every individual.",
     "vision": "Our Vision",
     "ourStory": "Our Story",
-    "ourStoryText": "LinkU Review was born from a simple idea: to help everyone find their own opportunities. We believe that regardless of background, everyone has unique talents and value.",
+    "ourStoryText": "Link2Ur Review was born from a simple idea: to help everyone find their own opportunities. We believe that regardless of background, everyone has unique talents and value.",
     "ourValues": "Our Values",
     "userFirst": "User First",
     "userFirstDesc": "We always put user needs first, committed to providing the best service experience",
@@ -288,13 +288,13 @@
     "address": "Address"
   },
   "footer": {
-    "companyName": "LinkU Review",
+    "companyName": "Link2Ur Review",
     "description": "Connecting talents, creating opportunities. Join our community and discover amazing projects.",
     "quickLinks": "Quick Links",
     "support": "Support",
     "legal": "Legal",
     "followUs": "Follow Us",
-    "copyright": "© 2024 LinkU Review. All rights reserved.",
+    "copyright": "© 2024 Link2Ur Review. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
     "cookiePolicy": "Cookie Policy"

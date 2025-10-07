@@ -294,7 +294,7 @@ const Footer: React.FC = () => {
                 color: '#fff',
                 lineHeight: '1'
               }}>
-                LinkU
+                Link2Ur
               </div>
               <div style={{
                 fontSize: '12px',
@@ -312,7 +312,7 @@ const Footer: React.FC = () => {
             color: 'rgba(255,255,255,0.8)',
             textAlign: 'center'
           }}>
-            Copyright © 2025 LinkU
+            Copyright © 2025 Link2Ur
           </div>
           
           {/* 右侧 - 社交媒体 */}

@@ -56,7 +56,7 @@ const TermsOfService: React.FC = () => {
             }}
             onClick={() => navigate('/')}
           >
-            LinkU
+            Link2Ur
           </div>
           
           {/* 语言切换器和汉堡菜单 */}
@@ -125,14 +125,14 @@ const TermsOfService: React.FC = () => {
                 1. 服务条款
               </h2>
               <p>
-                欢迎使用LinkU平台（以下简称"本平台"）。本用户协议（以下简称"本协议"）是您与LinkU之间关于您使用本平台服务所订立的协议。
+                欢迎使用Link2Ur平台（以下简称"本平台"）。本用户协议（以下简称"本协议"）是您与Link2Ur之间关于您使用本平台服务所订立的协议。
               </p>
 
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
                 2. 服务内容
               </h2>
               <p>
-                LinkU是一个连接个人用户和企业用户的平台，提供以下服务：
+                Link2Ur是一个连接个人用户和企业用户的平台，提供以下服务：
               </p>
               <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
                 <li>任务发布和接取服务</li>

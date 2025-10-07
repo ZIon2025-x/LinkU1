@@ -41,7 +41,7 @@ def send_task_application_notification(
         print(f"DEBUG: 通知创建结果: {notification}")
         
         # 发送邮件
-        email_subject = f"LinkU - 新任务申请：{task.title}"
+        email_subject = f"Link2Ur - 新任务申请：{task.title}"
         email_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -62,7 +62,7 @@ def send_task_application_notification(
                 
                 {f'<p><strong>申请留言：</strong>{application_message}</p>' if application_message else ''}
                 
-                <p>请登录 LinkU 平台查看申请详情并决定是否同意该用户接受任务。</p>
+                <p>请登录 Link2Ur 平台查看申请详情并决定是否同意该用户接受任务。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{Config.FRONTEND_URL}/task/{task.id}" 
@@ -73,7 +73,7 @@ def send_task_application_notification(
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 12px; color: #666;">
-                    此邮件由 LinkU 平台自动发送，请勿回复。
+                    此邮件由 Link2Ur 平台自动发送，请勿回复。
                 </p>
             </div>
         </body>
@@ -111,7 +111,7 @@ def send_task_approval_notification(
         )
         
         # 发送邮件
-        email_subject = f"LinkU - 任务申请已同意：{task.title}"
+        email_subject = f"Link2Ur - 任务申请已同意：{task.title}"
         email_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -141,7 +141,7 @@ def send_task_approval_notification(
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 12px; color: #666;">
-                    此邮件由 LinkU 平台自动发送，请勿回复。
+                    此邮件由 Link2Ur 平台自动发送，请勿回复。
                 </p>
             </div>
         </body>
@@ -177,7 +177,7 @@ def send_task_completion_notification(
         )
         
         # 发送邮件
-        email_subject = f"LinkU - 任务已完成：{task.title}"
+        email_subject = f"Link2Ur - 任务已完成：{task.title}"
         email_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -207,7 +207,7 @@ def send_task_completion_notification(
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 12px; color: #666;">
-                    此邮件由 LinkU 平台自动发送，请勿回复。
+                    此邮件由 Link2Ur 平台自动发送，请勿回复。
                 </p>
             </div>
         </body>
@@ -245,7 +245,7 @@ def send_task_confirmation_notification(
         )
         
         # 发送邮件
-        email_subject = f"LinkU - 任务已确认完成：{task.title}"
+        email_subject = f"Link2Ur - 任务已确认完成：{task.title}"
         email_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -264,7 +264,7 @@ def send_task_confirmation_notification(
                     <p><strong>获得奖励：</strong>£{task.reward}</p>
                 </div>
                 
-                <p>感谢您使用 LinkU 平台！继续寻找更多任务机会吧。</p>
+                <p>感谢您使用 Link2Ur 平台！继续寻找更多任务机会吧。</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
                     <a href="{Config.FRONTEND_URL}/tasks" 
@@ -275,7 +275,7 @@ def send_task_confirmation_notification(
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 12px; color: #666;">
-                    此邮件由 LinkU 平台自动发送，请勿回复。
+                    此邮件由 Link2Ur 平台自动发送，请勿回复。
                 </p>
             </div>
         </body>
@@ -311,7 +311,7 @@ def send_task_rejection_notification(
         )
         
         # 发送邮件
-        email_subject = f"LinkU - 任务申请被拒绝：{task.title}"
+        email_subject = f"Link2Ur - 任务申请被拒绝：{task.title}"
         email_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -341,7 +341,7 @@ def send_task_rejection_notification(
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 <p style="font-size: 12px; color: #666;">
-                    此邮件由 LinkU 平台自动发送，请勿回复。
+                    此邮件由 Link2Ur 平台自动发送，请勿回复。
                 </p>
             </div>
         </body>

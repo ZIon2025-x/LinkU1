@@ -284,15 +284,15 @@ def send_verification_email_with_token(
     # 构建验证链接 - 使用旧的confirm端点以确保兼容性
     verification_url = f"{Config.BASE_URL}/api/users/confirm/{token}"
     
-    subject = "LinkU 邮箱验证"
+    subject = "Link2Ur 邮箱验证"
     body = f"""
-    <h2>欢迎注册 LinkU 平台！</h2>
+    <h2>欢迎注册 Link2Ur 平台！</h2>
     <p>请点击下面的链接验证您的邮箱地址：</p>
     <p><a href="{verification_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">验证邮箱</a></p>
     <p>或者复制以下链接到浏览器中打开：</p>
     <p>{verification_url}</p>
     <p><strong>注意：</strong>此链接24小时内有效，请及时验证。</p>
-    <p>如果您没有注册 LinkU 账户，请忽略此邮件。</p>
+    <p>如果您没有注册 Link2Ur 账户，请忽略此邮件。</p>
     """
     
     from app.email_utils import send_email

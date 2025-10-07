@@ -56,7 +56,7 @@ const PrivacyPolicy: React.FC = () => {
             }}
             onClick={() => navigate('/')}
           >
-            LinkU
+            Link2Ur
           </div>
           
           {/* 语言切换器和汉堡菜单 */}
@@ -125,7 +125,7 @@ const PrivacyPolicy: React.FC = () => {
                 1. 引言
               </h2>
               <p>
-                LinkU平台（以下简称"我们"）非常重视您的隐私保护。本隐私政策详细说明了我们如何收集、使用、存储和保护您的个人信息。请您仔细阅读本政策，如有疑问请及时联系我们。
+                Link2Ur平台（以下简称"我们"）非常重视您的隐私保护。本隐私政策详细说明了我们如何收集、使用、存储和保护您的个人信息。请您仔细阅读本政策，如有疑问请及时联系我们。
               </p>
 
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
@@ -266,7 +266,7 @@ const PrivacyPolicy: React.FC = () => {
                 border: '1px solid #e9ecef'
               }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#6c757d' }}>
-                  <strong>重要提示：</strong>本隐私政策是您与LinkU之间关于个人信息处理的协议。我们承诺按照本政策保护您的隐私权益。
+                  <strong>重要提示：</strong>本隐私政策是您与Link2Ur之间关于个人信息处理的协议。我们承诺按照本政策保护您的隐私权益。
                 </p>
               </div>
             </div>

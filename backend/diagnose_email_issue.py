@@ -23,7 +23,7 @@ def test_direct_smtp_connection():
         
         # 创建测试邮件
         msg = MIMEText("这是一封测试邮件，用于验证SMTP连接。", "plain", "utf-8")
-        msg["Subject"] = "LinkU SMTP连接测试"
+        msg["Subject"] = "Link2Ur SMTP连接测试"
         msg["From"] = test_email
         msg["To"] = test_email
         
@@ -144,7 +144,7 @@ def analyze_email_issue():
     print("  6. 点击 '应用专用密码'")
     print("  7. 选择应用类型: '邮件'")
     print("  8. 选择设备: '其他（自定义名称）'")
-    print("  9. 输入设备名称: 'LinkU App'")
+    print("  9. 输入设备名称: 'Link2Ur App'")
     print("  10. 点击 '生成'")
     print("  11. 复制生成的16位密码")
     print("  12. 在Railway控制台设置 SMTP_PASS=生成的密码")
