@@ -423,32 +423,88 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
                 }
             }
         
-        # 如果旧方式失败，尝试新方式
+        # 如果旧方式失败，尝试在PendingUser表中查找
         try:
-            from app.email_verification import EmailVerificationManager
-            user = EmailVerificationManager.verify_user(db, token)
+            # 手动解码token获取邮箱
+            from app.email_utils import confirm_token
+            email = confirm_token(token)
             
-            if not user:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="验证失败。令牌无效或已过期，请重新注册。"
-                )
-            
-            return {
-                "message": "Email confirmed successfully!",
-                "user": {
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email,
-                    "is_verified": user.is_verified
-                }
-            }
-        except ImportError as e:
-            logger.error(f"导入EmailVerificationManager失败: {e}")
-            raise HTTPException(
-                status_code=400, 
-                detail="验证失败。令牌无效或已过期，请重新注册。"
-            )
+            if email:
+                logger.info(f"从token解析出邮箱: {email}")
+                
+                # 在PendingUser表中查找
+                from app.models import PendingUser
+                pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
+                
+                if pending_user:
+                    logger.info(f"在PendingUser表中找到用户: {email}")
+                    
+                    # 检查是否已过期
+                    from datetime import datetime
+                    if pending_user.expires_at < datetime.utcnow():
+                        logger.warning(f"PendingUser已过期: {email}")
+                        db.delete(pending_user)
+                        db.commit()
+                        raise HTTPException(status_code=400, detail="验证链接已过期，请重新注册")
+                    
+                    # 检查邮箱是否已被注册
+                    existing_user = crud.get_user_by_email(db, email)
+                    if existing_user:
+                        logger.warning(f"邮箱已被注册: {email}")
+                        db.delete(pending_user)
+                        db.commit()
+                        raise HTTPException(status_code=400, detail="邮箱已被注册")
+                    
+                    # 创建正式用户
+                    import uuid
+                    from app.security import get_password_hash
+                    
+                    user = models.User(
+                        id=str(uuid.uuid4())[:8],
+                        name=pending_user.name,
+                        email=pending_user.email,
+                        hashed_password=pending_user.hashed_password,
+                        phone=pending_user.phone,
+                        is_verified=1,  # 已验证
+                        is_active=1,    # 激活
+                        is_customer_service=0,
+                        user_level="normal",
+                        created_at=datetime.utcnow()
+                    )
+                    
+                    db.add(user)
+                    
+                    # 删除PendingUser
+                    db.delete(pending_user)
+                    
+                    db.commit()
+                    db.refresh(user)
+                    
+                    logger.info(f"用户验证成功: {user.email}")
+                    
+                    return {
+                        "message": "Email confirmed successfully!",
+                        "user": {
+                            "id": user.id,
+                            "name": user.name,
+                            "email": user.email,
+                            "is_verified": user.is_verified
+                        }
+                    }
+                else:
+                    logger.warning(f"在PendingUser表中未找到用户: {email}")
+                    raise HTTPException(status_code=404, detail="User not found")
+            else:
+                logger.warning(f"无法从token解析出邮箱: {token}")
+                raise HTTPException(status_code=400, detail="Invalid token")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"PendingUser验证异常: {e}")
+            import traceback
+            logger.error(f"详细错误: {traceback.format_exc()}")
+            raise HTTPException(status_code=400, detail="验证失败")
         
     except HTTPException:
         raise
