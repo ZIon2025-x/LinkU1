@@ -421,12 +421,19 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
         email = confirm_token(token)
         logger.info(f"confirm_token解析结果: {email}")
         
+        # 如果当前SECRET_KEY解析失败，尝试使用默认SECRET_KEY
         if not email:
-            logger.warning(f"无法从token解析出邮箱: {token}")
-            # 添加更详细的错误信息
-            from app.config import Config
-            logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
-            raise HTTPException(status_code=400, detail="Invalid token")
+            logger.warning(f"当前SECRET_KEY解析失败，尝试默认SECRET_KEY")
+            from itsdangerous import URLSafeTimedSerializer
+            default_serializer = URLSafeTimedSerializer("change-this-secret-key-in-production")
+            try:
+                email = default_serializer.loads(token, salt="email-confirm", max_age=3600*24)
+                logger.info(f"默认SECRET_KEY解析成功: {email}")
+            except Exception as e:
+                logger.error(f"默认SECRET_KEY也解析失败: {e}")
+                from app.config import Config
+                logger.error(f"当前SECRET_KEY: {Config.SECRET_KEY[:20]}...")
+                raise HTTPException(status_code=400, detail="Invalid token")
         
         logger.info(f"从token解析出邮箱: {email}")
         
