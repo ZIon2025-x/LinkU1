@@ -1279,7 +1279,7 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/profile/me", response_model=schemas.UserOut)
 def get_my_profile(
-    request: Request, current_user=Depends(get_current_customer_service_or_user)
+    request: Request, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
 ):
     print("Authorization header:", request.headers.get("authorization"))
 
@@ -1294,7 +1294,21 @@ def get_my_profile(
                 "user_type": "customer_service"
             }
         else:
-            # 普通用户
+            # 普通用户 - 强制从数据库重新查询以获取最新数据
+            from app.redis_cache import clear_user_cache
+            try:
+                clear_user_cache(current_user.id)
+                logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
+            except Exception as e:
+                logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
+            
+            # 直接从数据库查询最新数据
+            from app import crud
+            fresh_user = crud.get_user_by_id(db, current_user.id)
+            if fresh_user:
+                current_user = fresh_user
+                logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
+            
             formatted_user = {
                 "id": current_user.id,
                 "name": getattr(current_user, 'name', ''),
