@@ -2077,6 +2077,66 @@ const MessagePage: React.FC = () => {
             )}
           </div>
 
+          {/* 用户聊天模式下的系统提示 */}
+          {activeContact && !isServiceMode && showSystemWarning && (
+            <div style={{
+              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+              border: '2px solid #f59e0b',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              margin: '16px',
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
+              position: 'sticky',
+              top: '0',
+              zIndex: 15
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  color: '#92400e'
+                }}>
+                  ⚠️
+                </div>
+                <div style={{
+                  flex: 1,
+                  color: '#92400e',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  lineHeight: '1.4'
+                }}>
+                  请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSystemWarning(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#92400e',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* 消息显示区域 */}
           <div style={{ 
             flex: 1, 
@@ -2089,65 +2149,6 @@ const MessagePage: React.FC = () => {
             maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
             position: 'relative'
           }}>
-            {/* 用户聊天模式下的系统提示 */}
-            {activeContact && !isServiceMode && showSystemWarning && (
-              <div style={{
-                background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-                border: '2px solid #f59e0b',
-                borderRadius: '12px',
-                padding: '16px 20px',
-                marginBottom: '20px',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
-                position: 'sticky',
-                top: '0',
-                zIndex: 15
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <div style={{
-                    fontSize: '20px',
-                    color: '#92400e'
-                  }}>
-                    ⚠️
-                  </div>
-                  <div style={{
-                    flex: 1,
-                    color: '#92400e',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    lineHeight: '1.4'
-                  }}>
-                    请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
-                  </div>
-                        <button
-                    onClick={() => {
-                      setShowSystemWarning(false);
-                    }}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                      color: '#92400e',
-                      fontSize: '16px',
-                            cursor: 'pointer',
-                      padding: '4px',
-                      borderRadius: '4px',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'none';
-                    }}
-                  >
-                    ✕
-                        </button>
-                    </div>
-                    </div>
-            )}
           {isServiceMode ? (
               <div style={{ 
                 display: 'flex', 
