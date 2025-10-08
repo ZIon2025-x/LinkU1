@@ -907,7 +907,7 @@ const MessagePage: React.FC = () => {
                   const exists = prev.some(m => 
                     m.content === msg.content.trim() && 
                     m.from === fromName && 
-                    Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000 // 2秒内的消息认为是重复的
+                    Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000 // 5秒内的消息认为是重复的
                   );
                   
                   if (exists) {
@@ -1464,7 +1464,7 @@ const MessagePage: React.FC = () => {
         
         {/* 左侧联系人列表 */}
         <div style={{ 
-          width: isMobile ? (showContactsList ? '100%' : '0') : '350px', 
+          width: isMobile ? '100%' : '350px', 
           borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
@@ -1895,7 +1895,8 @@ const MessagePage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
             gap: '16px',
-            minHeight: '80px'
+            minHeight: '80px',
+            flexShrink: 0
           }}>
             {/* 移动端菜单按钮 */}
             {isMobile && (
@@ -2058,8 +2059,8 @@ const MessagePage: React.FC = () => {
             background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
             display: 'flex', 
             flexDirection: 'column',
-            minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
-            maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none'
+            minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
+            maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none'
           }}>
             {/* 用户聊天模式下的系统提示 */}
             {activeContact && !isServiceMode && showSystemWarning && (
