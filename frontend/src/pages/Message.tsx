@@ -1918,7 +1918,7 @@ const MessagePage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
             gap: '16px',
-            minHeight: '80px',
+            minHeight: isMobile ? '60px' : '80px',
             flexShrink: 0,
             position: isMobile ? 'sticky' : 'static',
             top: isMobile ? '0' : 'auto',
@@ -2087,7 +2087,7 @@ const MessagePage: React.FC = () => {
               margin: '16px',
               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
               position: isMobile ? 'sticky' : 'relative',
-              top: isMobile ? '100px' : '0',
+              top: isMobile ? '80px' : '0',
               zIndex: 15
             }}>
               <div style={{
@@ -2148,7 +2148,7 @@ const MessagePage: React.FC = () => {
             minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
             maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
             position: 'relative',
-            paddingTop: isMobile ? '140px' : '30px'
+            paddingTop: isMobile ? '120px' : '30px'
           }}>
           {isServiceMode ? (
               <div style={{ 
