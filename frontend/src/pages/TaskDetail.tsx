@@ -277,9 +277,20 @@ const TaskDetail: React.FC = () => {
     try {
       await confirmTaskCompletion(Number(id));
       alert('任务已确认完成！');
-      // 重新获取任务信息
+      
+      // 立即刷新任务信息
       const res = await api.get(`/api/tasks/${id}`);
       setTask(res.data);
+      
+      // 延迟再次刷新，确保状态已更新
+      setTimeout(async () => {
+        try {
+          const res = await api.get(`/api/tasks/${id}`);
+          setTask(res.data);
+        } catch (error) {
+          console.error('延迟刷新失败:', error);
+        }
+      }, 1000);
     } catch (error: any) {
       alert(error.response?.data?.detail || '操作失败');
     } finally {

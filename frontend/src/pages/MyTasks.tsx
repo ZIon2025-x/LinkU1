@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
+import api from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -137,10 +138,16 @@ const MyTasks: React.FC = () => {
     }
   };
 
-  const loadTasks = async () => {
+  const loadTasks = async (forceRefresh = false) => {
     setLoading(true);
     try {
-      const tasksData = await getMyTasks();
+      // 如果需要强制刷新，添加时间戳参数
+      const tasksData = forceRefresh 
+        ? await api.get('/api/users/my-tasks', { 
+            params: { _t: Date.now() } 
+          }).then((res: any) => res.data)
+        : await getMyTasks();
+        
       setTasks(tasksData);
       setTotalTasks(tasksData.length);
       
@@ -209,7 +216,14 @@ const MyTasks: React.FC = () => {
     try {
       await confirmTaskCompletion(taskId);
       alert(t('myTasks.alerts.taskConfirmedComplete'));
-      loadTasks();
+      
+      // 强制刷新任务列表，避免缓存
+      await loadTasks(true);
+      
+      // 额外延迟刷新，确保后端状态已更新
+      setTimeout(async () => {
+        await loadTasks(true);
+      }, 1000);
     } catch (error: any) {
       alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
     } finally {
