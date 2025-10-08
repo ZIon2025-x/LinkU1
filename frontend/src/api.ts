@@ -751,6 +751,12 @@ export const markChatMessagesAsRead = async (contactId: string) => {
   return response.data;
 };
 
+// 获取每个联系人的未读消息数量
+export const getContactUnreadCounts = async () => {
+  const response = await api.get('/api/users/messages/unread/by-contact');
+  return response.data;
+};
+
 export const sendCustomerServiceMessage = async (chatId: string, content: string) => {
   const response = await api.post(`/api/users/customer-service/send-message/${chatId}`, { content });
   return response.data;

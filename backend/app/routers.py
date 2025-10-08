@@ -1629,6 +1629,30 @@ def get_unread_count_api(
     return {"unread_count": len(crud.get_unread_messages(db, current_user.id))}
 
 
+@router.get("/messages/unread/by-contact")
+def get_unread_count_by_contact_api(
+    current_user=Depends(check_user_status), db: Session = Depends(get_db)
+):
+    """获取每个联系人的未读消息数量"""
+    from app.models import Message
+    
+    # 查询所有未读消息，按发送者分组
+    unread_messages = (
+        db.query(Message)
+        .filter(Message.receiver_id == current_user.id, Message.is_read == 0)
+        .all()
+    )
+    
+    # 按发送者ID分组计数
+    contact_counts = {}
+    for msg in unread_messages:
+        sender_id = msg.sender_id
+        if sender_id:
+            contact_counts[sender_id] = contact_counts.get(sender_id, 0) + 1
+    
+    return {"contact_unread_counts": contact_counts}
+
+
 @router.post("/messages/{msg_id}/read", response_model=schemas.MessageOut)
 def mark_message_read_api(
     msg_id: int, current_user=Depends(check_user_status), db: Session = Depends(get_db)

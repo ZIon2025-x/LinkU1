@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead } from '../api';
+import { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -132,6 +132,7 @@ const MessagePage: React.FC = () => {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [showImagePreviewModal, setShowImagePreviewModal] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
+  const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -972,6 +973,8 @@ const MessagePage: React.FC = () => {
       
       // 同时加载未读消息数量
       await loadUnreadCount();
+      // 加载每个联系人的未读消息数量
+      await loadContactUnreadCounts();
     } catch (error: any) {
       console.error('加载联系人失败:', error);
       console.error('错误详情:', error.response?.data || error.message);
@@ -1156,16 +1159,30 @@ const MessagePage: React.FC = () => {
     }
   }, [user]);
 
+  // 加载每个联系人的未读消息数量
+  const loadContactUnreadCounts = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const data = await getContactUnreadCounts();
+      console.log('📊 联系人未读消息数量:', data.contact_unread_counts);
+      setContactUnreadCounts(data.contact_unread_counts || {});
+    } catch (error) {
+      console.error('加载联系人未读消息数量失败:', error);
+    }
+  }, [user]);
+
   // 定期更新未读消息数量（每30秒检查一次）
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
       loadUnreadCount();
+      loadContactUnreadCounts();
     }, 30000); // 30秒检查一次
 
     return () => clearInterval(interval);
-  }, [user, loadUnreadCount]);
+  }, [user, loadUnreadCount, loadContactUnreadCounts]);
 
   // 页面可见性变化时更新未读消息数量
   useEffect(() => {
@@ -1173,6 +1190,7 @@ const MessagePage: React.FC = () => {
       if (!document.hidden && user) {
         // 页面变为可见时，重新加载未读消息数量
         loadUnreadCount();
+        loadContactUnreadCounts();
       }
     };
 
@@ -1180,7 +1198,7 @@ const MessagePage: React.FC = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, loadUnreadCount]);
+  }, [user, loadUnreadCount, loadContactUnreadCounts]);
 
   // WebSocket连接 - 实时接收消息
   useEffect(() => {
@@ -1287,6 +1305,12 @@ const MessagePage: React.FC = () => {
                     }
                     return newCount;
                   });
+                  
+                  // 更新该联系人的未读消息数量
+                  setContactUnreadCounts(prev => ({
+                    ...prev,
+                    [msg.from]: (prev[msg.from] || 0) + 1
+                  }));
                   
                   // 显示桌面通知
                   if ('Notification' in window && Notification.permission === 'granted') {
@@ -1435,9 +1459,16 @@ const MessagePage: React.FC = () => {
               }
               return newCount;
             });
+            
+            // 更新该联系人的未读消息数量为0
+            setContactUnreadCounts(prev => ({
+              ...prev,
+              [contactId]: 0
+            }));
           } else {
             // 如果无法获取具体数量，重新加载
             await loadUnreadCount();
+            await loadContactUnreadCounts();
           }
         } catch (error) {
           console.error('标记普通聊天消息为已读失败:', error);
@@ -2259,6 +2290,30 @@ const MessagePage: React.FC = () => {
                           navigate(`/user/${c.id}`);
                         }}
                       />
+                      {/* 未读消息红点 */}
+                      {contactUnreadCounts[c.id] && contactUnreadCounts[c.id] > 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-2px',
+                          right: '-2px',
+                          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                          borderRadius: '50%',
+                          minWidth: '20px',
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '11px',
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                          animation: 'pulse 2s infinite',
+                          border: '2px solid #fff',
+                          zIndex: 10
+                        }}>
+                          {contactUnreadCounts[c.id] > 99 ? '99+' : contactUnreadCounts[c.id]}
+                        </div>
+                      )}
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ 
