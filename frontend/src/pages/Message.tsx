@@ -2086,8 +2086,8 @@ const MessagePage: React.FC = () => {
               padding: '16px 20px',
               margin: '16px',
               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
-              position: 'sticky',
-              top: '0',
+              position: isMobile ? 'sticky' : 'relative',
+              top: isMobile ? '80px' : '0',
               zIndex: 15
             }}>
               <div style={{
@@ -2147,7 +2147,8 @@ const MessagePage: React.FC = () => {
             flexDirection: 'column',
             minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
             maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
-            position: 'relative'
+            position: 'relative',
+            paddingTop: isMobile ? '120px' : '30px'
           }}>
           {isServiceMode ? (
               <div style={{ 
