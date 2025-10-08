@@ -1482,7 +1482,7 @@ const MessagePage: React.FC = () => {
         
         {/* 左侧联系人列表 */}
         <div style={{ 
-          width: isMobile ? '100%' : '350px', 
+          width: isMobile ? (showContactsList ? '100%' : '0') : '350px', 
           borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
@@ -1794,6 +1794,11 @@ const MessagePage: React.FC = () => {
                       setActiveContact(c); 
                       setIsServiceMode(false); 
                       setMessages([]); // 清空消息列表，准备加载新的聊天历史
+                      
+                      // 移动端点击联系人后自动关闭联系人列表
+                      if (isMobile) {
+                        setShowContactsList(false);
+                      }
                     }}
                     style={{ 
                       display: 'flex', 
