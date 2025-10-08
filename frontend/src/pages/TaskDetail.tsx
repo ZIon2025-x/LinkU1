@@ -95,16 +95,26 @@ const TaskDetail: React.FC = () => {
   const canViewTask = (user: any, task: any) => {
     if (!task) return false;
     
-    // 如果用户未登录，只能查看普通任务
+    // 如果用户未登录，只能查看任务大厅中显示的普通任务
     if (!user) {
-      return task.task_level === 'normal';
+      // 未登录用户只能查看：普通任务 + 开放状态的任务
+      return task.task_level === 'normal' && 
+             (task.status === 'open' || task.status === 'taken');
     }
     
+    // 登录用户：任务相关的人（发布者、接收者）可以查看所有状态的任务
+    const isTaskRelated = user.id === task.poster_id || user.id === task.taker_id;
+    if (isTaskRelated) {
+      return true;
+    }
+    
+    // 非任务相关的人：只能查看开放状态的任务，且需要满足等级要求
     const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
     const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
     const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
     
-    return userLevelValue >= taskLevelValue;
+    return (task.status === 'open' || task.status === 'taken') && 
+           userLevelValue >= taskLevelValue;
   };
 
   // 检查用户是否已接受任务
@@ -464,7 +474,11 @@ const TaskDetail: React.FC = () => {
           {!user ? '需要登录' : '权限不足'}
         </h2>
         <p style={{fontSize: 16, color: '#666', marginBottom: 20}}>
-          {!user ? '此任务需要登录后才能查看' : `此任务需要${task.task_level === 'vip' ? 'VIP' : '超级VIP'}用户才能查看`}
+          {!user ? 
+            (task.status === 'cancelled' ? '此任务已取消，需要登录后才能查看' :
+             task.status === 'completed' ? '此任务已完成，需要登录后才能查看' :
+             '此任务需要登录后才能查看') : 
+            `此任务需要${task.task_level === 'vip' ? 'VIP' : '超级VIP'}用户才能查看`}
         </p>
         {user && (
           <p style={{fontSize: 14, color: '#999', marginBottom: 30}}>
