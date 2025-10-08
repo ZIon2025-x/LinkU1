@@ -462,7 +462,7 @@ export async function markMessageRead(messageId: number) {
 
 // 获取用户通知列表
 export async function getNotifications(limit: number = 20) {
-  const res = await api.get('/api/notifications', {
+  const res = await api.get('/api/users/notifications', {
     params: { limit }
   });
   return res.data;
@@ -470,7 +470,7 @@ export async function getNotifications(limit: number = 20) {
 
 // 获取未读通知列表
 export async function getUnreadNotifications() {
-  const res = await api.get('/api/notifications/unread');
+  const res = await api.get('/api/users/notifications/unread');
   return res.data;
 }
 
@@ -490,13 +490,13 @@ export async function getUnreadNotificationCount() {
 
 // 标记通知为已读
 export async function markNotificationRead(notificationId: number) {
-  const res = await api.post(`/api/notifications/${notificationId}/read`);
+  const res = await api.post(`/api/users/notifications/${notificationId}/read`);
   return res.data;
 }
 
 // 标记所有通知为已读
 export async function markAllNotificationsRead() {
-  const res = await api.post('/api/notifications/read-all');
+  const res = await api.post('/api/users/notifications/read-all');
   return res.data;
 }
 
@@ -712,7 +712,7 @@ export async function setTaskLevel(taskId: number, level: string) {
 }
 
 export async function sendAnnouncement(title: string, content: string) {
-  const res = await api.post('/api/notifications/send-announcement', {
+  const res = await api.post('/api/users/notifications/send-announcement', {
     title,
     content
   });
