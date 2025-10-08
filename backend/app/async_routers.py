@@ -667,6 +667,76 @@ async def get_task_reviews_async(
         raise HTTPException(status_code=500, detail=f"Failed to get task reviews: {str(e)}")
 
 
+@async_router.post("/tasks/{task_id}/review", response_model=schemas.ReviewOut)
+async def create_review_async(
+    task_id: int,
+    review: schemas.ReviewCreate,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """创建任务评价（异步版本）"""
+    try:
+        # 检查任务是否存在且已确认完成
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        if task.status != "completed":
+            raise HTTPException(status_code=400, detail="Task must be completed to create review")
+        
+        # 检查用户是否是任务的参与者（发布者或接受者）
+        if task.poster_id != current_user.id and task.taker_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only task participants can create reviews")
+        
+        # 检查用户是否已经评价过这个任务
+        existing_review_query = select(models.Review).where(
+            models.Review.task_id == task_id,
+            models.Review.user_id == current_user.id
+        )
+        existing_review_result = await db.execute(existing_review_query)
+        existing_review = existing_review_result.scalar_one_or_none()
+        
+        if existing_review:
+            raise HTTPException(status_code=400, detail="You have already reviewed this task")
+        
+        # 创建评价
+        db_review = models.Review(
+            user_id=current_user.id,
+            task_id=task_id,
+            rating=review.rating,
+            comment=review.comment,
+            is_anonymous=1 if review.is_anonymous else 0,
+        )
+        
+        db.add(db_review)
+        await db.commit()
+        await db.refresh(db_review)
+        
+        # 自动更新被评价用户的平均评分和统计信息
+        # 确定被评价的用户（不是评价者）
+        reviewed_user_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
+        if reviewed_user_id:
+            # 使用同步数据库会话来更新统计信息
+            from app import crud
+            from app.database import get_db
+            sync_db = next(get_db())
+            try:
+                crud.update_user_statistics(sync_db, reviewed_user_id)
+            finally:
+                sync_db.close()
+        
+        return db_review
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating review for task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create review: {str(e)}")
+
+
 @async_router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
 async def confirm_task_completion_async(
     task_id: int,
