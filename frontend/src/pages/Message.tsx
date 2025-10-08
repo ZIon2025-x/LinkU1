@@ -529,7 +529,9 @@ const MessagePage: React.FC = () => {
   // 检测移动端设备
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(isMobileDevice());
+      const mobile = isMobileDevice();
+      console.log('检测移动端设备:', mobile);
+      setIsMobile(mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -792,8 +794,13 @@ const MessagePage: React.FC = () => {
         // setService(null); // 已移除service状态
       }
       
-      // 加载聊天记录
-      loadChatHistory(activeContact.id);
+      // 只有在消息列表为空时才加载聊天记录，避免覆盖现有消息
+      if (messages.length === 0) {
+        console.log('消息列表为空，加载聊天记录');
+        loadChatHistory(activeContact.id);
+      } else {
+        console.log('消息列表不为空，跳过加载聊天记录，当前消息数量:', messages.length);
+      }
       // 切换到新联系人时重新显示系统提示
       setShowSystemWarning(true);
     }
@@ -1035,8 +1042,14 @@ const MessagePage: React.FC = () => {
       }
     } catch (error) {
       console.error('加载聊天历史失败:', error);
-      // API调用失败时显示空消息列表
-      setMessages([]);
+      // API调用失败时不清空现有消息，只显示错误提示
+      const errorMessage: Message = {
+        id: Date.now(),
+        from: '系统',
+        content: '加载聊天历史失败，请刷新页面重试',
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   }, [isServiceMode, serviceConnected, user]);
 
@@ -1885,8 +1898,25 @@ const MessagePage: React.FC = () => {
           width: isMobile ? '100%' : 'auto',
           position: isMobile ? 'relative' : 'static',
           height: isMobile ? '100vh' : 'auto',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          zIndex: isMobile ? 1 : 'auto',
+          visibility: isMobile ? (showContactsList ? 'hidden' : 'visible') : 'visible'
         }}>
+          {/* 调试信息 */}
+          {isMobile && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '5px',
+              fontSize: '12px',
+              zIndex: 9999
+            }}>
+              移动端: {isMobile ? '是' : '否'}, 显示联系人: {showContactsList ? '是' : '否'}, 活跃联系人: {activeContact ? activeContact.name : '无'}
+            </div>
+          )}
           {/* 聊天头部 */}
         <div style={{ 
             padding: isMobile ? '16px' : '24px 30px', 
