@@ -2087,16 +2087,15 @@ const MessagePage: React.FC = () => {
           {/* 用户聊天模式下的系统提示 */}
           {activeContact && !isServiceMode && showSystemWarning && (
             <div style={{
-              background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-              border: '2px solid #f59e0b',
-              borderRadius: '12px',
+              background: isMobile ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'transparent',
+              border: isMobile ? '2px solid #f59e0b' : 'none',
+              borderRadius: isMobile ? '12px' : '0',
               padding: '16px 20px',
               margin: '16px',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
+              boxShadow: isMobile ? '0 4px 12px rgba(245, 158, 11, 0.2)' : 'none',
               position: isMobile ? 'sticky' : 'relative',
               top: isMobile ? '160px' : '0',
-              zIndex: 15,
-              backgroundClip: 'padding-box'
+              zIndex: 15
             }}>
               <div style={{
                 display: 'flex',
