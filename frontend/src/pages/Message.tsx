@@ -1906,7 +1906,9 @@ const MessagePage: React.FC = () => {
           flexDirection: 'column',
           background: '#fff',
           width: isMobile ? '100%' : 'auto',
-          position: isMobile ? 'relative' : 'static'
+          position: isMobile ? 'relative' : 'static',
+          height: isMobile ? '100vh' : 'auto',
+          overflow: 'hidden'
         }}>
           {/* 聊天头部 */}
         <div style={{ 
@@ -1917,7 +1919,10 @@ const MessagePage: React.FC = () => {
           alignItems: 'center',
             gap: '16px',
             minHeight: '80px',
-            flexShrink: 0
+            flexShrink: 0,
+            position: isMobile ? 'sticky' : 'static',
+            top: isMobile ? '0' : 'auto',
+            zIndex: isMobile ? 10 : 'auto'
           }}>
             {/* 移动端菜单按钮 */}
             {isMobile && (
@@ -2081,7 +2086,8 @@ const MessagePage: React.FC = () => {
             display: 'flex', 
             flexDirection: 'column',
             minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
-            maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none'
+            maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
+            position: 'relative'
           }}>
             {/* 用户聊天模式下的系统提示 */}
             {activeContact && !isServiceMode && showSystemWarning && (
