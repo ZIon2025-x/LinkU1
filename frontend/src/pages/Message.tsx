@@ -1475,15 +1475,19 @@ const MessagePage: React.FC = () => {
         
         {/* 左侧联系人列表 */}
         <div style={{ 
-          width: isMobile ? (showContactsList ? '100%' : '0') : '350px', 
+          width: isMobile ? '100%' : '350px', 
           borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
           flexDirection: 'column',
           position: isMobile ? 'absolute' : 'relative',
           zIndex: isMobile ? 1000 : 'auto',
-          transition: 'all 0.3s ease',
-          overflow: isMobile ? 'hidden' : 'visible'
+          transition: isMobile ? 'transform 0.3s ease-in-out' : 'all 0.3s ease',
+          overflow: isMobile ? 'hidden' : 'visible',
+          transform: isMobile ? (showContactsList ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          left: isMobile ? '0' : 'auto',
+          top: isMobile ? '0' : 'auto',
+          height: isMobile ? '100vh' : 'auto'
         }}>
           {/* 头部标题 */}
           <div style={{ 
@@ -2846,10 +2850,12 @@ const MessagePage: React.FC = () => {
                   border: '2px solid #e2e8f0',
                   background: '#fff',
                   color: '#1e293b',
-                  fontSize: isMobile ? '14px' : '16px',
+                  fontSize: isMobile ? '16px' : '16px', // 移动端使用16px防止缩放
                   fontFamily: 'inherit',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  WebkitAppearance: 'none', // 移除iOS默认样式
+                  appearance: 'none'
                 }}
                 disabled={!activeContact && !(isServiceMode && serviceConnected)}
               />
