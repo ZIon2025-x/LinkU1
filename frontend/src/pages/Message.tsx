@@ -1911,7 +1911,7 @@ const MessagePage: React.FC = () => {
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
-          background: '#fff',
+          background: isMobile ? '#fff' : 'transparent',
           width: isMobile ? '100%' : 'auto',
           position: isMobile ? 'relative' : 'static',
           height: isMobile ? '100vh' : 'auto',
@@ -1921,7 +1921,7 @@ const MessagePage: React.FC = () => {
         <div style={{ 
             padding: isMobile ? '16px' : '24px 30px', 
             borderBottom: '1px solid #e2e8f0', 
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            background: isMobile ? 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' : 'transparent',
           display: 'flex',
           alignItems: 'center',
             gap: '16px',
