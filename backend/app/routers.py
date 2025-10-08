@@ -3808,12 +3808,34 @@ def get_chat_timeout_status(
         raise HTTPException(status_code=500, detail=f"操作失败: {str(e)}")
 
 
+# 文件上传配置 - 支持Railway部署
+import os
+from app.config import Config
+
+# 检测部署环境
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+USE_CLOUD_STORAGE = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
+
 # 图片上传相关配置
-UPLOAD_DIR = Path("uploads/images")
+if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
+    # Railway环境：使用持久化卷或临时存储
+    UPLOAD_DIR = Path("/data/uploads/images")  # Railway Volume挂载点
+    FILE_UPLOAD_DIR = Path("/data/uploads/files")
+else:
+    # 本地开发或云存储
+    UPLOAD_DIR = Path("uploads/images")
+    FILE_UPLOAD_DIR = Path("uploads/files")
+
+# 确保目录存在
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+FILE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+# 危险文件扩展名（不允许上传）
+DANGEROUS_EXTENSIONS = {".exe", ".bat", ".cmd", ".com", ".pif", ".scr", ".vbs", ".js", ".jar", ".sh", ".ps1"}
+MAX_FILE_SIZE_LARGE = 10 * 1024 * 1024  # 10MB
 
 
 @router.post("/upload/image")
@@ -3849,8 +3871,8 @@ async def upload_image(
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        # 生成访问URL
-        base_url = "http://localhost:8000"  # 可以根据需要修改
+        # 生成访问URL - 支持Railway部署
+        base_url = Config.BASE_URL
         image_url = f"{base_url}/uploads/images/{filename}"
 
         logger.info(f"用户 {current_user.id} 上传图片: {filename}")
@@ -3891,3 +3913,81 @@ async def get_image(filename: str):
     except Exception as e:
         logger.error(f"获取图片失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取图片失败: {str(e)}")
+
+
+@router.post("/upload/file")
+async def upload_file(
+    file: UploadFile = File(...), current_user: models.User = Depends(get_current_user_secure_sync)
+):
+    """
+    上传文件
+    """
+    try:
+        # 检查文件扩展名
+        file_extension = Path(file.filename).suffix.lower()
+        if file_extension in DANGEROUS_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不允许上传此类型的文件。危险文件类型: {', '.join(DANGEROUS_EXTENSIONS)}",
+            )
+
+        # 检查文件大小
+        content = await file.read()
+        if len(content) > MAX_FILE_SIZE_LARGE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE_LARGE // (1024*1024)}MB",
+            )
+
+        # 生成唯一文件名
+        file_id = str(uuid.uuid4())
+        filename = f"{file_id}{file_extension}"
+        file_path = FILE_UPLOAD_DIR / filename
+
+        # 保存文件
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+
+        # 生成访问URL - 支持Railway部署
+        base_url = Config.BASE_URL
+        file_url = f"{base_url}/uploads/files/{filename}"
+
+        logger.info(f"用户 {current_user.id} 上传文件: {filename}")
+
+        return JSONResponse(
+            content={
+                "success": True,
+                "url": file_url,
+                "filename": filename,
+                "size": len(content),
+                "original_name": file.filename,
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"文件上传失败: {e}")
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
+@router.get("/uploads/files/{filename}")
+async def get_file(filename: str):
+    """
+    获取上传的文件
+    """
+    try:
+        file_path = FILE_UPLOAD_DIR / filename
+
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="文件不存在")
+
+        from fastapi.responses import FileResponse
+
+        return FileResponse(path=file_path, filename=filename)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取文件失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取文件失败: {str(e)}")
