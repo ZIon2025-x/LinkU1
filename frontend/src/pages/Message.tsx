@@ -2550,35 +2550,37 @@ const MessagePage: React.FC = () => {
                   color: '#64748b',
                   fontSize: '18px',
                   flexDirection: 'column',
-                  gap: '20px',
-                  padding: '40px'
+                  gap: isMobile ? '12px' : '20px',
+                  padding: isMobile ? '20px' : '40px'
                 }}>
                   <div style={{ 
-                    fontSize: '80px', 
+                    fontSize: isMobile ? '60px' : '80px', 
                     opacity: 0.3,
-                    marginBottom: '10px'
+                    marginBottom: isMobile ? '8px' : '10px'
                   }}>💬</div>
                   <div style={{
-                    fontSize: '20px',
+                    fontSize: isMobile ? '18px' : '20px',
                     fontWeight: '600',
                     color: '#374151',
-                    marginBottom: '8px'
+                    marginBottom: isMobile ? '6px' : '8px'
                   }}>
                     欢迎使用消息中心
                   </div>
                   <div style={{
-                    fontSize: '16px',
+                    fontSize: isMobile ? '14px' : '16px',
                     color: '#6b7280',
                     textAlign: 'center',
                     lineHeight: '1.5',
-                    maxWidth: '300px'
+                    maxWidth: isMobile ? '280px' : '300px'
                   }}>
                     从左侧选择联系人或客服中心开始对话
                     </div>
                   <div style={{
                     display: 'flex',
-                    gap: '12px',
-                    marginTop: '20px'
+                    gap: isMobile ? '8px' : '12px',
+                    marginTop: isMobile ? '16px' : '20px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    alignItems: 'center'
                   }}>
                     <div style={{
                           padding: '8px 16px',
@@ -2916,6 +2918,7 @@ const MessagePage: React.FC = () => {
             {/* 隐藏的文件输入 */}
             <input
               type="file"
+              accept=".pdf,.doc,.docx,.txt,.zip,.rar,.7z,.xlsx,.xls,.ppt,.pptx"
               onChange={handleFileSelect}
               style={{ display: 'none' }}
               id="file-upload"
@@ -2969,8 +2972,9 @@ const MessagePage: React.FC = () => {
                   src={imagePreview}
                   alt="预览"
                   style={{
-                    maxWidth: '200px',
-                    maxHeight: '200px',
+                    maxWidth: isMobile ? '100%' : '200px',
+                    maxHeight: isMobile ? '300px' : '200px',
+                    width: isMobile ? '100%' : 'auto',
                     borderRadius: '8px',
                     objectFit: 'cover'
                   }}
