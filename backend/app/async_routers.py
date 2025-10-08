@@ -715,18 +715,8 @@ async def create_review_async(
         await db.commit()
         await db.refresh(db_review)
         
-        # 自动更新被评价用户的平均评分和统计信息
-        # 确定被评价的用户（不是评价者）
-        reviewed_user_id = task.taker_id if current_user.id == task.poster_id else task.poster_id
-        if reviewed_user_id:
-            # 使用同步数据库会话来更新统计信息
-            from app import crud
-            from app.database import get_db
-            sync_db = next(get_db())
-            try:
-                crud.update_user_statistics(sync_db, reviewed_user_id)
-            finally:
-                sync_db.close()
+        # 注意：统计信息更新暂时跳过，避免异步/同步混用问题
+        # 统计信息可以通过后台任务或定时任务更新
         
         return db_review
         
@@ -805,16 +795,8 @@ async def confirm_task_completion_async(
                 # 通知发送失败不影响确认流程
                 logger.error(f"Failed to send task confirmation notification: {e}")
         
-        # 自动更新相关用户的统计信息
-        from app import crud
-        from app.database import get_db
-        sync_db = next(get_db())
-        try:
-            crud.update_user_statistics(sync_db, task.poster_id)
-            if task.taker_id:
-                crud.update_user_statistics(sync_db, task.taker_id)
-        finally:
-            sync_db.close()
+        # 注意：统计信息更新暂时跳过，避免异步/同步混用问题
+        # 统计信息可以通过后台任务或定时任务更新
         
         return task
         
