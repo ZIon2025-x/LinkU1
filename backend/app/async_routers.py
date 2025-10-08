@@ -646,6 +646,94 @@ async def get_database_pool_status():
     return pool_status
 
 
+@async_router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
+async def confirm_task_completion_async(
+    task_id: int,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """任务发布者确认任务完成（异步版本）"""
+    try:
+        # 获取任务信息
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        # 检查权限
+        if task.poster_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only task poster can confirm completion")
+        
+        # 检查任务状态
+        if task.status != "pending_confirmation":
+            raise HTTPException(status_code=400, detail="Task is not pending confirmation")
+        
+        # 更新任务状态为已完成
+        task.status = "completed"
+        await db.commit()
+        
+        # 添加任务历史记录
+        from app import crud
+        from app.database import get_db
+        sync_db = next(get_db())
+        try:
+            crud.add_task_history(sync_db, task_id, current_user.id, "confirmed_completion")
+        finally:
+            sync_db.close()
+        
+        await db.refresh(task)
+        
+        # 发送任务确认完成通知和邮件给接收者
+        if task.taker_id:
+            try:
+                # 获取接收者信息
+                taker_query = select(models.User).where(models.User.id == task.taker_id)
+                taker_result = await db.execute(taker_query)
+                taker = taker_result.scalar_one_or_none()
+                
+                if taker:
+                    # 发送通知和邮件
+                    from app.task_notifications import send_task_confirmation_notification
+                    from app.database import get_db
+                    
+                    # 创建同步数据库会话用于通知
+                    sync_db = next(get_db())
+                    try:
+                        send_task_confirmation_notification(
+                            db=sync_db,
+                            background_tasks=background_tasks,
+                            task=task,
+                            taker=taker
+                        )
+                    finally:
+                        sync_db.close()
+            except Exception as e:
+                # 通知发送失败不影响确认流程
+                logger.error(f"Failed to send task confirmation notification: {e}")
+        
+        # 自动更新相关用户的统计信息
+        from app import crud
+        from app.database import get_db
+        sync_db = next(get_db())
+        try:
+            crud.update_user_statistics(sync_db, task.poster_id)
+            if task.taker_id:
+                crud.update_user_statistics(sync_db, task.taker_id)
+        finally:
+            sync_db.close()
+        
+        return task
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error confirming task completion: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to confirm task completion: {str(e)}")
+
+
 # 批量操作路由
 @async_router.post("/notifications/batch")
 async def batch_create_notifications(
