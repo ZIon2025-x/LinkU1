@@ -126,6 +126,9 @@ const MessagePage: React.FC = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -175,6 +178,29 @@ const MessagePage: React.FC = () => {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // 处理文件选择
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 检查文件大小（限制为10MB）
+      if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+      }
+      
+      setSelectedFile(file);
+      
+      // 创建文件信息预览
+      const fileInfo = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      };
+      setFilePreview(JSON.stringify(fileInfo));
     }
   };
 
@@ -360,6 +386,96 @@ const MessagePage: React.FC = () => {
     setImagePreview(null);
   };
 
+  // 发送文件
+  const sendFile = async () => {
+    if (!selectedFile) return;
+    
+    setUploadingFile(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      console.log('开始上传文件:', selectedFile.name, '大小:', selectedFile.size);
+      
+      // 上传文件到服务器
+      const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/file`, {
+        method: 'POST',
+        credentials: 'include',  // 使用Cookie认证
+        body: formData
+      });
+      
+      console.log('上传响应状态:', uploadResponse.status);
+      
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('上传失败响应:', errorText);
+        throw new Error(`文件上传失败: ${uploadResponse.status} - ${errorText}`);
+      }
+      
+      const uploadResult = await uploadResponse.json();
+      console.log('上传成功结果:', uploadResult);
+      
+      if (!uploadResult.url) {
+        throw new Error('服务器未返回文件URL');
+      }
+      
+      const fileUrl = uploadResult.url;
+      
+      // 发送包含文件URL的消息
+      const messageContent = `[文件] ${selectedFile.name} - ${fileUrl}`;
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        if (isServiceMode && currentChat) {
+          ws.send(JSON.stringify({
+            type: 'message',
+            chat_id: currentChat.chat_id,
+            content: messageContent
+          }));
+        } else if (activeContact) {
+          ws.send(JSON.stringify({
+            type: 'message',
+            to: activeContact.id,
+            content: messageContent
+          }));
+        }
+        
+        // 添加消息到本地状态
+        const newMessage: Message = {
+          from: user?.id || 'me',
+          content: messageContent,
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, newMessage]);
+        
+        // 更新联系人排序
+        if (activeContact && !isServiceMode) {
+          updateContactOrder(activeContact.id);
+        }
+        
+        // 清除文件选择
+        setSelectedFile(null);
+        setFilePreview(null);
+        
+        console.log('文件发送成功');
+      } else {
+        throw new Error('WebSocket未连接');
+      }
+      
+    } catch (error) {
+      console.error('发送文件失败:', error);
+      alert(`发送文件失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的文件。`);
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  // 取消文件选择
+  const cancelFileSelection = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+  };
+
   // 渲染消息内容（支持图片）
   const renderMessageContent = (content: string) => {
     // 检查是否是图片消息
@@ -415,6 +531,72 @@ const MessagePage: React.FC = () => {
               `;
             }}
           />
+        </div>
+      );
+    }
+    
+    // 检查是否是文件消息
+    if (content.startsWith('[文件] ')) {
+      const fileData = content.replace('[文件] ', '');
+      const parts = fileData.split(' - ');
+      const fileName = parts[0];
+      const fileUrl = parts[1];
+      
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '14px', opacity: 0.8 }}>
+            📎 文件
+          </div>
+          <div style={{
+            padding: '12px',
+            background: '#f0fdf4',
+            borderRadius: '8px',
+            border: '1px solid #bbf7d0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onClick={() => {
+            if (fileUrl) {
+              window.open(fileUrl, '_blank');
+            }
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#dcfce7';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#f0fdf4';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          >
+            <div style={{ fontSize: '24px' }}>📎</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: '600', 
+                color: '#166534',
+                marginBottom: '2px'
+              }}>
+                {fileName}
+              </div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#6b7280' 
+              }}>
+                点击下载文件
+              </div>
+            </div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#6b7280',
+              opacity: 0.7
+            }}>
+              →
+            </div>
+          </div>
         </div>
       );
     }
@@ -2558,6 +2740,40 @@ const MessagePage: React.FC = () => {
                 📷
                     </button>
 
+              {/* 文件按钮 */}
+                    <button
+                onClick={() => {
+                  const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+                  if (fileInput) {
+                    fileInput.click();
+                  }
+                }}
+                      style={{
+                  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+                  border: '2px solid #e2e8f0',
+                  fontSize: '18px',
+                        cursor: 'pointer',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                  e.currentTarget.style.borderColor = '#10b981';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                }}
+              >
+                📎
+                    </button>
+
               {/* 客服模式专用按钮 */}
               {isServiceMode && (
                 <>
@@ -2697,6 +2913,14 @@ const MessagePage: React.FC = () => {
               id="image-upload"
             />
 
+            {/* 隐藏的文件输入 */}
+            <input
+              type="file"
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+              id="file-upload"
+            />
+
             {/* 图片预览区域 */}
             {imagePreview && (
               <div style={{
@@ -2772,6 +2996,84 @@ const MessagePage: React.FC = () => {
                     }}
                   >
                     {uploadingImage ? '发送中...' : '发送图片'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 文件预览区域 */}
+            {filePreview && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '12px',
+                background: '#f0fdf4',
+                borderRadius: '12px',
+                border: '2px solid #bbf7d0'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#166534'
+                  }}>
+                    📎 文件预览
+                  </span>
+                  <button
+                    onClick={cancelFileSelection}
+                    style={{
+                      background: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕ 取消
+                  </button>
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  {(() => {
+                    try {
+                      const fileInfo = JSON.parse(filePreview);
+                      const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(2);
+                      return `${fileInfo.name} (${sizeInMB} MB)`;
+                    } catch {
+                      return '文件信息解析失败';
+                    }
+                  })()}
+                </div>
+                <div style={{
+                  marginTop: '8px',
+                  display: 'flex',
+                  gap: '8px'
+                }}>
+                  <button
+                    onClick={sendFile}
+                    disabled={uploadingFile}
+                    style={{
+                      background: uploadingFile ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: uploadingFile ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {uploadingFile ? '发送中...' : '发送文件'}
                   </button>
                 </div>
               </div>
