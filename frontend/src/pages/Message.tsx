@@ -434,6 +434,21 @@ const MessagePage: React.FC = () => {
     const messageContent = input.trim();
     setInput('');
     
+    // 立即添加消息到本地状态以提供即时反馈
+    const newMessage = {
+      id: Date.now(), // 临时ID
+      from: '我',
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      is_admin_msg: 0
+    };
+    console.log('发送消息前，当前消息数量:', messages.length);
+    setMessages(prev => {
+      const newMessages = [...prev, newMessage];
+      console.log('发送消息后，新消息数量:', newMessages.length);
+      return newMessages;
+    });
+    
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
         if (isServiceMode && currentChat) {
@@ -454,21 +469,6 @@ const MessagePage: React.FC = () => {
           console.log('用户发送普通消息:', messageData);
           ws.send(JSON.stringify(messageData));
         }
-        
-        // 立即添加消息到本地状态以提供即时反馈
-        const newMessage = {
-          id: Date.now(), // 临时ID
-          from: '我',
-          content: messageContent,
-          created_at: new Date().toISOString(),
-          is_admin_msg: 0
-        };
-        console.log('发送消息前，当前消息数量:', messages.length);
-        setMessages(prev => {
-          const newMessages = [...prev, newMessage];
-          console.log('发送消息后，新消息数量:', newMessages.length);
-          return newMessages;
-        });
         
         // 更新联系人排序（如果是普通聊天模式）
         if (activeContact && !isServiceMode) {
@@ -493,15 +493,6 @@ const MessagePage: React.FC = () => {
             throw new Error('发送消息失败');
           }
           
-          // 立即添加消息到本地状态
-          const newMessage = {
-            id: Date.now(), // 临时ID
-            from: '我',
-            content: messageContent,
-            created_at: new Date().toISOString(),
-            is_admin_msg: 0
-          };
-          setMessages(prev => [...prev, newMessage]);
           console.log('客服消息发送成功，已添加到本地状态');
         } else if (activeContact) {
           const response = await sendMessage({
@@ -511,14 +502,10 @@ const MessagePage: React.FC = () => {
           
           // 使用服务器返回的消息数据，避免重复
           if (response) {
-            const newMessage = {
-              id: response.id,
-              from: '我',
-              content: response.content,
-              created_at: response.created_at,
-              is_admin_msg: 0
-            };
-            setMessages(prev => [...prev, newMessage]);
+            // 更新本地消息的ID为服务器返回的ID
+            setMessages(prev => prev.map(msg => 
+              msg.id === newMessage.id ? { ...msg, id: response.id } : msg
+            ));
             
             // 更新联系人排序（如果是普通聊天模式）
             if (activeContact && !isServiceMode) {
@@ -534,13 +521,17 @@ const MessagePage: React.FC = () => {
       console.error('发送消息失败:', error);
       alert('发送消息失败，请重试');
       setInput(messageContent); // 恢复输入内容
+      // 移除失败的消息
+      setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
     }
   };
 
   // 检测移动端设备
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(isMobileDevice());
+      const mobile = isMobileDevice();
+      console.log('检测移动端设备:', mobile);
+      setIsMobile(mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -803,8 +794,13 @@ const MessagePage: React.FC = () => {
         // setService(null); // 已移除service状态
       }
       
-      // 加载聊天记录
-      loadChatHistory(activeContact.id);
+      // 只有在消息列表为空时才加载聊天记录，避免覆盖现有消息
+      if (messages.length === 0) {
+        console.log('消息列表为空，加载聊天记录');
+        loadChatHistory(activeContact.id);
+      } else {
+        console.log('消息列表不为空，跳过加载聊天记录，当前消息数量:', messages.length);
+      }
       // 切换到新联系人时重新显示系统提示
       setShowSystemWarning(true);
     }
@@ -918,7 +914,7 @@ const MessagePage: React.FC = () => {
                   const exists = prev.some(m => 
                     m.content === msg.content.trim() && 
                     m.from === fromName && 
-                    Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000 // 2秒内的消息认为是重复的
+                    Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000 // 5秒内的消息认为是重复的
                   );
                   
                   if (exists) {
@@ -1046,8 +1042,14 @@ const MessagePage: React.FC = () => {
       }
     } catch (error) {
       console.error('加载聊天历史失败:', error);
-      // API调用失败时显示空消息列表
-      setMessages([]);
+      // API调用失败时不清空现有消息，只显示错误提示
+      const errorMessage: Message = {
+        id: Date.now(),
+        from: '系统',
+        content: '加载聊天历史失败，请刷新页面重试',
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   }, [isServiceMode, serviceConnected, user]);
 
@@ -1894,8 +1896,27 @@ const MessagePage: React.FC = () => {
           flexDirection: 'column',
           background: '#fff',
           width: isMobile ? '100%' : 'auto',
-          position: isMobile ? 'relative' : 'static'
+          position: isMobile ? 'relative' : 'static',
+          height: isMobile ? '100vh' : 'auto',
+          overflow: 'hidden',
+          zIndex: isMobile ? 1 : 'auto',
+          visibility: isMobile ? (showContactsList ? 'hidden' : 'visible') : 'visible'
         }}>
+          {/* 调试信息 */}
+          {isMobile && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '5px',
+              fontSize: '12px',
+              zIndex: 9999
+            }}>
+              移动端: {isMobile ? '是' : '否'}, 显示联系人: {showContactsList ? '是' : '否'}, 活跃联系人: {activeContact ? activeContact.name : '无'}
+            </div>
+          )}
           {/* 聊天头部 */}
         <div style={{ 
             padding: isMobile ? '16px' : '24px 30px', 
@@ -1904,7 +1925,8 @@ const MessagePage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
             gap: '16px',
-            minHeight: '80px'
+            minHeight: '80px',
+            flexShrink: 0
           }}>
             {/* 移动端菜单按钮 */}
             {isMobile && (
@@ -2066,7 +2088,9 @@ const MessagePage: React.FC = () => {
             padding: isMobile ? '16px' : '30px', 
             background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
             display: 'flex', 
-            flexDirection: 'column'
+            flexDirection: 'column',
+            minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
+            maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none'
           }}>
             {/* 用户聊天模式下的系统提示 */}
             {activeContact && !isServiceMode && showSystemWarning && (
@@ -2443,7 +2467,9 @@ const MessagePage: React.FC = () => {
             padding: isMobile ? '16px' : '24px 30px', 
             borderTop: '1px solid #e2e8f0', 
             background: '#fff',
-            position: 'relative'
+            position: 'relative',
+            flexShrink: 0,
+            minHeight: isMobile ? '80px' : 'auto'
           }}>
             {/* 功能按钮行 */}
             <div style={{ 
