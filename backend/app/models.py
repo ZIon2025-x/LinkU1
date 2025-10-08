@@ -107,7 +107,7 @@ class Review(Base):
     rating = Column(Float, nullable=False)  # 改为Float以支持0.5星间隔
     comment = Column(Text, nullable=True)
     is_anonymous = Column(Integer, default=0)  # 0=实名, 1=匿名
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime, default=get_uk_time_naive)
     # 关系
     task = relationship("Task", back_populates="reviews")
     user = relationship("User", back_populates="reviews")
