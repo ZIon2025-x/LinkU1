@@ -1140,11 +1140,13 @@ const MessagePage: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setTotalUnreadCount(data.unread_count || 0);
+        const newCount = data.unread_count || 0;
+        console.log('📊 未读消息数量更新:', newCount);
+        setTotalUnreadCount(newCount);
         
         // 更新页面标题
-        if (data.unread_count > 0) {
-          document.title = `(${data.unread_count}) 消息中心 - Link2Ur`;
+        if (newCount > 0) {
+          document.title = `(${newCount}) 消息中心 - Link2Ur`;
         } else {
           document.title = '消息中心 - Link2Ur';
         }
@@ -1163,6 +1165,21 @@ const MessagePage: React.FC = () => {
     }, 30000); // 30秒检查一次
 
     return () => clearInterval(interval);
+  }, [user, loadUnreadCount]);
+
+  // 页面可见性变化时更新未读消息数量
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user) {
+        // 页面变为可见时，重新加载未读消息数量
+        loadUnreadCount();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [user, loadUnreadCount]);
 
   // WebSocket连接 - 实时接收消息
@@ -1259,17 +1276,16 @@ const MessagePage: React.FC = () => {
                   // 播放提示音
                   playMessageSound();
                   
-                  // 更新未读消息数量
-                  setTotalUnreadCount(prev => prev + 1);
-                  
-                  // 更新页面标题
+                  // 更新未读消息数量（避免重复更新）
                   setTotalUnreadCount(prev => {
-                    if (prev > 0) {
-                      document.title = `(${prev}) 消息中心 - Link2Ur`;
+                    const newCount = prev + 1;
+                    // 更新页面标题
+                    if (newCount > 0) {
+                      document.title = `(${newCount}) 消息中心 - Link2Ur`;
                     } else {
                       document.title = '消息中心 - Link2Ur';
                     }
-                    return prev;
+                    return newCount;
                   });
                   
                   // 显示桌面通知
@@ -1404,11 +1420,25 @@ const MessagePage: React.FC = () => {
         
         // 标记普通聊天的未读消息为已读
         try {
-          await markChatMessagesAsRead(contactId);
-          console.log('普通聊天消息已标记为已读');
+          const result = await markChatMessagesAsRead(contactId);
+          console.log('普通聊天消息已标记为已读:', result);
           
-          // 重新加载未读消息数量
-          await loadUnreadCount();
+          // 立即更新未读消息数量（减少已标记的数量）
+          if (result && result.marked_count) {
+            setTotalUnreadCount(prev => {
+              const newCount = Math.max(0, prev - result.marked_count);
+              // 更新页面标题
+              if (newCount > 0) {
+                document.title = `(${newCount}) 消息中心 - Link2Ur`;
+              } else {
+                document.title = '消息中心 - Link2Ur';
+              }
+              return newCount;
+            });
+          } else {
+            // 如果无法获取具体数量，重新加载
+            await loadUnreadCount();
+          }
         } catch (error) {
           console.error('标记普通聊天消息为已读失败:', error);
         }
