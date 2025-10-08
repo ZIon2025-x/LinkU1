@@ -1922,7 +1922,7 @@ const MessagePage: React.FC = () => {
             flexShrink: 0,
             position: isMobile ? 'sticky' : 'static',
             top: isMobile ? '0' : 'auto',
-            zIndex: isMobile ? 10 : 'auto'
+            zIndex: isMobile ? 5 : 'auto'
           }}>
             {/* 移动端菜单按钮 */}
             {isMobile && (
@@ -2081,13 +2081,14 @@ const MessagePage: React.FC = () => {
           <div style={{ 
             flex: 1, 
             overflowY: 'auto', 
-            padding: isMobile ? '16px' : '30px', 
+            padding: isMobile ? '16px 16px 16px 16px' : '30px', 
             background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
             display: 'flex', 
             flexDirection: 'column',
             minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
             maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
-            position: 'relative'
+            position: 'relative',
+            paddingTop: isMobile ? '20px' : '30px'
           }}>
             {/* 用户聊天模式下的系统提示 */}
             {activeContact && !isServiceMode && showSystemWarning && (
@@ -2098,9 +2099,8 @@ const MessagePage: React.FC = () => {
                 padding: '16px 20px',
                 marginBottom: '20px',
                 boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
-                position: 'sticky',
-                top: '0',
-                zIndex: 10
+                position: 'relative',
+                zIndex: 1
               }}>
                 <div style={{
                   display: 'flex',
