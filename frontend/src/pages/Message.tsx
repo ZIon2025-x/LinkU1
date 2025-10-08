@@ -2096,7 +2096,7 @@ const MessagePage: React.FC = () => {
             minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
             maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none',
             position: 'relative',
-            paddingTop: isMobile ? '20px' : '20px'
+            paddingTop: isMobile ? '40px' : '20px'
           }}>
           {isServiceMode ? (
               <div style={{ 
