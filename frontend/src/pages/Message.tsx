@@ -9,7 +9,14 @@ import LoginModal from '../components/LoginModal';
 
 // 移动端检测函数
 const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // 检查屏幕宽度
+  const isSmallScreen = window.innerWidth <= 768;
+  // 检查User Agent
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // 检查触摸支持
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  return isSmallScreen || (isMobileUA && isTouchDevice);
 };
 
 // 配置dayjs插件
@@ -2145,8 +2152,8 @@ const MessagePage: React.FC = () => {
             background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
             display: 'flex', 
             flexDirection: 'column',
-            minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
-            maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
+            minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
+            maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none',
             position: 'relative',
             paddingTop: isMobile ? '180px' : '30px'
           }}>
