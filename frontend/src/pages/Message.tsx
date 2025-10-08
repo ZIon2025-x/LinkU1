@@ -2084,71 +2084,6 @@ const MessagePage: React.FC = () => {
             )}
           </div>
 
-          {/* 用户聊天模式下的系统提示 */}
-          {activeContact && !isServiceMode && showSystemWarning && (
-            <div style={{
-              background: isMobile ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'rgba(254, 243, 199, 0.95)',
-              border: '2px solid #f59e0b',
-              borderRadius: '12px',
-              padding: '16px 20px',
-              margin: isMobile ? '16px' : '0',
-              boxShadow: isMobile ? '0 4px 12px rgba(245, 158, 11, 0.2)' : '0 8px 32px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-              position: isMobile ? 'sticky' : 'fixed',
-              top: isMobile ? '100px' : '120px',
-              left: isMobile ? 'auto' : '50%',
-              transform: isMobile ? 'none' : 'translateX(-50%)',
-              width: isMobile ? 'auto' : '90%',
-              maxWidth: isMobile ? 'none' : '600px',
-              zIndex: isMobile ? 15 : 1000,
-              backdropFilter: isMobile ? 'none' : 'blur(10px)',
-              WebkitBackdropFilter: isMobile ? 'none' : 'blur(10px)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  color: '#92400e'
-                }}>
-                  ⚠️
-                </div>
-                <div style={{
-                  flex: 1,
-                  color: '#92400e',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  lineHeight: '1.4'
-                }}>
-                  请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSystemWarning(false);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#92400e',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* 消息显示区域 */}
           <div style={{ 
@@ -2769,6 +2704,65 @@ const MessagePage: React.FC = () => {
                     }}
                   >
                     {uploadingImage ? '发送中...' : '发送图片'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 用户聊天模式下的系统提示 */}
+            {activeContact && !isServiceMode && showSystemWarning && (
+              <div style={{
+                background: isMobile ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'rgba(254, 243, 199, 0.95)',
+                border: '2px solid #f59e0b',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                margin: isMobile ? '16px' : '16px 0',
+                boxShadow: isMobile ? '0 4px 12px rgba(245, 158, 11, 0.2)' : '0 8px 32px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                backdropFilter: isMobile ? 'none' : 'blur(10px)',
+                WebkitBackdropFilter: isMobile ? 'none' : 'blur(10px)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{
+                    fontSize: '20px',
+                    color: '#92400e'
+                  }}>
+                    ⚠️
+                  </div>
+                  <div style={{
+                    flex: 1,
+                    color: '#92400e',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    lineHeight: '1.4'
+                  }}>
+                    请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowSystemWarning(false);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#92400e',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'none';
+                    }}
+                  >
+                    ✕
                   </button>
                 </div>
               </div>
