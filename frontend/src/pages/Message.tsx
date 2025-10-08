@@ -786,6 +786,13 @@ const MessagePage: React.FC = () => {
     console.log('移动端状态更新:', { isMobile, showContactsList, activeContact: !!activeContact });
   }, [isMobile, showContactsList, activeContact]);
 
+  // 移动端初始化时显示联系人列表
+  useEffect(() => {
+    if (isMobile && !activeContact) {
+      setShowContactsList(true);
+    }
+  }, [isMobile, activeContact]);
+
   // 获取当前用户信息
   useEffect(() => {
     const loadUser = async () => {
@@ -1459,11 +1466,12 @@ const MessagePage: React.FC = () => {
               return newCount;
             });
             
-            // 更新该联系人的未读消息数量为0
-            setContactUnreadCounts(prev => ({
-              ...prev,
-              [contactId]: 0
-            }));
+            // 更新该联系人的未读消息数量为0（从状态中删除该联系人）
+            setContactUnreadCounts(prev => {
+              const newCounts = { ...prev };
+              delete newCounts[contactId];
+              return newCounts;
+            });
           } else {
             // 如果无法获取具体数量，重新加载
             await loadUnreadCount();
@@ -2052,6 +2060,11 @@ const MessagePage: React.FC = () => {
                       // 加载该对话的聊天历史记录
                       await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
                       setIsConnectingToService(false);
+                      
+                      // 移动端自动关闭联系人列表
+                      if (isMobile) {
+                        setShowContactsList(false);
+                      }
                       return; // 直接返回，不创建新对话
                     } else {
                       // 对话已结束，清除localStorage并重置状态
@@ -2078,6 +2091,11 @@ const MessagePage: React.FC = () => {
                 setActiveContact(null);
                 setMessages([]);
                 setShowSystemWarning(true);
+                
+                // 移动端自动关闭联系人列表
+                if (isMobile) {
+                  setShowContactsList(false);
+                }
               }}
               style={{ 
                 display: 'flex', 
