@@ -745,6 +745,12 @@ export const markCustomerServiceMessagesRead = async (chatId: string) => {
   return response.data;
 };
 
+// 标记普通聊天的消息为已读
+export const markChatMessagesAsRead = async (contactId: string) => {
+  const response = await api.post(`/api/users/messages/mark-chat-read/${contactId}`);
+  return response.data;
+};
+
 export const sendCustomerServiceMessage = async (chatId: string, content: string) => {
   const response = await api.post(`/api/users/customer-service/send-message/${chatId}`, { content });
   return response.data;

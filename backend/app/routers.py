@@ -1636,6 +1636,38 @@ def mark_message_read_api(
     return crud.mark_message_read(db, msg_id, current_user.id)
 
 
+@router.post("/messages/mark-chat-read/{contact_id}")
+def mark_chat_messages_read_api(
+    contact_id: str, current_user=Depends(check_user_status), db: Session = Depends(get_db)
+):
+    """标记与指定联系人的所有消息为已读"""
+    try:
+        # 获取与指定联系人的所有未读消息
+        unread_messages = (
+            db.query(Message)
+            .filter(
+                Message.receiver_id == current_user.id,
+                Message.sender_id == contact_id,
+                Message.is_read == 0
+            )
+            .all()
+        )
+        
+        # 标记所有未读消息为已读
+        for msg in unread_messages:
+            msg.is_read = 1
+        
+        db.commit()
+        
+        return {
+            "message": f"已标记与用户 {contact_id} 的 {len(unread_messages)} 条消息为已读",
+            "marked_count": len(unread_messages)
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"标记消息为已读失败: {str(e)}")
+
+
 @router.get("/admin/messages", response_model=list[schemas.MessageOut])
 def get_admin_messages_api(
     current_user=Depends(admin_required), db: Session = Depends(get_db)

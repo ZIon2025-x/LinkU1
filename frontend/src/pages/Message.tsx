@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability } from '../api';
+import { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -129,6 +129,9 @@ const MessagePage: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [showImagePreviewModal, setShowImagePreviewModal] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -175,7 +178,14 @@ const MessagePage: React.FC = () => {
       // 创建预览
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        const previewUrl = e.target?.result as string;
+        setImagePreview(previewUrl);
+        
+        // 在移动端显示弹窗预览
+        if (isMobile) {
+          setPreviewImageUrl(previewUrl);
+          setShowImagePreviewModal(true);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -467,6 +477,49 @@ const MessagePage: React.FC = () => {
       alert(`发送文件失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的文件。`);
     } finally {
       setUploadingFile(false);
+    }
+  };
+
+  // 发送图片（从弹窗）
+  const sendImageFromModal = async () => {
+    if (!selectedImage || !ws) return;
+    
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+      
+      const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const message = `[图片] ${data.url}`;
+        
+        // 发送消息
+        ws.send(JSON.stringify({
+          type: 'message',
+          content: message,
+          to: currentChat?.chat_id || activeContact?.id
+        }));
+        
+        // 清空图片选择并关闭弹窗
+        setSelectedImage(null);
+        setImagePreview(null);
+        setShowImagePreviewModal(false);
+        setPreviewImageUrl('');
+        setInput('');
+      } else {
+        alert('图片上传失败');
+      }
+    } catch (error) {
+      console.error('发送图片失败:', error);
+      alert('发送图片失败');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -916,6 +969,9 @@ const MessagePage: React.FC = () => {
       console.log('联系人API响应:', contactsData);
       setContacts(contactsData || []);
       console.log('联系人列表已更新，数量:', (contactsData || []).length);
+      
+      // 同时加载未读消息数量
+      await loadUnreadCount();
     } catch (error: any) {
       console.error('加载联系人失败:', error);
       console.error('错误详情:', error.response?.data || error.message);
@@ -1040,6 +1096,75 @@ const MessagePage: React.FC = () => {
     };
   }, [showEmojiPicker]);
 
+  // 请求通知权限
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // 播放消息提示音
+  const playMessageSound = () => {
+    try {
+      // 创建音频上下文
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // 创建简单的提示音（440Hz，持续0.2秒）
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+      console.log('无法播放提示音:', error);
+    }
+  };
+
+  // 加载未读消息数量
+  const loadUnreadCount = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users/messages/unread/count`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTotalUnreadCount(data.unread_count || 0);
+        
+        // 更新页面标题
+        if (data.unread_count > 0) {
+          document.title = `(${data.unread_count}) 消息中心 - Link2Ur`;
+        } else {
+          document.title = '消息中心 - Link2Ur';
+        }
+      }
+    } catch (error) {
+      console.error('加载未读消息数量失败:', error);
+    }
+  }, [user]);
+
+  // 定期更新未读消息数量（每30秒检查一次）
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      loadUnreadCount();
+    }, 30000); // 30秒检查一次
+
+    return () => clearInterval(interval);
+  }, [user, loadUnreadCount]);
+
   // WebSocket连接 - 实时接收消息
   useEffect(() => {
     if (user) {
@@ -1130,6 +1255,40 @@ const MessagePage: React.FC = () => {
                 // 如果是接收到的消息（不是自己发送的），更新联系人排序
                 if (msg.from !== user.id && msg.from !== 'system' && msg.from !== 'customer_service' && msg.from !== 'admin') {
                   updateContactOrder(msg.from);
+                  
+                  // 播放提示音
+                  playMessageSound();
+                  
+                  // 更新未读消息数量
+                  setTotalUnreadCount(prev => prev + 1);
+                  
+                  // 更新页面标题
+                  setTotalUnreadCount(prev => {
+                    if (prev > 0) {
+                      document.title = `(${prev}) 消息中心 - Link2Ur`;
+                    } else {
+                      document.title = '消息中心 - Link2Ur';
+                    }
+                    return prev;
+                  });
+                  
+                  // 显示桌面通知
+                  if ('Notification' in window && Notification.permission === 'granted') {
+                    // 检查页面是否可见，如果不可见才显示通知
+                    if (document.hidden) {
+                      const notification = new Notification('新消息', {
+                        body: `${fromName}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`,
+                        icon: '/favicon.ico',
+                        tag: 'message-notification',
+                        requireInteraction: false
+                      });
+                      
+                      // 3秒后自动关闭通知
+                      setTimeout(() => {
+                        notification.close();
+                      }, 3000);
+                    }
+                  }
                 }
               }
             }
@@ -1206,6 +1365,15 @@ const MessagePage: React.FC = () => {
           // 按时间排序（最新的在最后）
           formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
           setMessages(formattedMessages);
+          
+          // 标记客服对话消息为已读
+          try {
+            await markCustomerServiceMessagesRead(chatId);
+            console.log('客服对话消息已标记为已读');
+          } catch (error) {
+            console.error('标记客服消息为已读失败:', error);
+          }
+          
           return;
         }
       }
@@ -1233,6 +1401,17 @@ const MessagePage: React.FC = () => {
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         setMessages(formattedMessages);
+        
+        // 标记普通聊天的未读消息为已读
+        try {
+          await markChatMessagesAsRead(contactId);
+          console.log('普通聊天消息已标记为已读');
+          
+          // 重新加载未读消息数量
+          await loadUnreadCount();
+        } catch (error) {
+          console.error('标记普通聊天消息为已读失败:', error);
+        }
       }
     } catch (error) {
       console.error('加载聊天历史失败:', error);
@@ -1730,6 +1909,20 @@ const MessagePage: React.FC = () => {
             {isMobile ? '← 关闭' : '← 返回'}
         </div>
             💬 消息中心
+            {totalUnreadCount > 0 && (
+              <span style={{
+                background: '#ef4444',
+                color: '#fff',
+                borderRadius: '12px',
+                padding: '2px 8px',
+                fontSize: '12px',
+                fontWeight: '600',
+                marginLeft: '8px',
+                animation: 'pulse 2s infinite'
+              }}>
+                {totalUnreadCount}
+              </span>
+            )}
           </div>
 
           {/* 搜索框 */}
@@ -2064,21 +2257,22 @@ const MessagePage: React.FC = () => {
                         }}></div>
                       </div>
                     </div>
-                    {false && (
+                    {c.unreadCount && c.unreadCount > 0 && (
                       <div style={{ 
                         background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                         borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
+                        width: '20px',
+                        height: '20px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '12px',
+                        fontSize: '11px',
                         color: '#fff',
                         fontWeight: 'bold',
-                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                        animation: 'pulse 2s infinite'
                       }}>
-                        {/* 未读消息计数功能已移除 */}
+                        {c.unreadCount > 99 ? '99+' : c.unreadCount}
                       </div>
                     )}
                   </div>
@@ -2924,8 +3118,8 @@ const MessagePage: React.FC = () => {
               id="file-upload"
             />
 
-            {/* 图片预览区域 */}
-            {imagePreview && (
+            {/* 图片预览区域 - 只在桌面端显示 */}
+            {imagePreview && !isMobile && (
               <div style={{
                 marginBottom: '12px',
                 padding: '12px',
@@ -3497,6 +3691,97 @@ const MessagePage: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+
+      {/* 移动端图片预览弹窗 */}
+      {showImagePreviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          {/* 弹窗内容 */}
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '20px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px'
+          }}>
+            {/* 图片预览 */}
+            <img
+              src={previewImageUrl}
+              alt="图片预览"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '60vh',
+                borderRadius: '12px',
+                objectFit: 'contain'
+              }}
+            />
+            
+            {/* 按钮区域 */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              width: '100%'
+            }}>
+              <button
+                onClick={() => {
+                  setShowImagePreviewModal(false);
+                  setPreviewImageUrl('');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: '#f1f5f9',
+                  color: '#64748b',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={sendImageFromModal}
+                disabled={uploadingImage}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: uploadingImage ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {uploadingImage ? '发送中...' : '发送图片'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
