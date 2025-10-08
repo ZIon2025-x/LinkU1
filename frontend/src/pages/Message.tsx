@@ -2846,10 +2846,12 @@ const MessagePage: React.FC = () => {
                   border: '2px solid #e2e8f0',
                   background: '#fff',
                   color: '#1e293b',
-                  fontSize: isMobile ? '14px' : '16px',
+                  fontSize: isMobile ? '16px' : '16px', // 移动端使用16px防止缩放
                   fontFamily: 'inherit',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                  WebkitAppearance: 'none', // 移除iOS默认样式
+                  appearance: 'none'
                 }}
                 disabled={!activeContact && !(isServiceMode && serviceConnected)}
               />
