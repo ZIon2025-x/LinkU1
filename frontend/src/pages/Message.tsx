@@ -538,6 +538,11 @@ const MessagePage: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // 调试移动端状态
+  useEffect(() => {
+    console.log('移动端状态更新:', { isMobile, showContactsList, activeContact: !!activeContact });
+  }, [isMobile, showContactsList, activeContact]);
+
   // 获取当前用户信息
   useEffect(() => {
     const loadUser = async () => {
@@ -1896,27 +1901,8 @@ const MessagePage: React.FC = () => {
           flexDirection: 'column',
           background: '#fff',
           width: isMobile ? '100%' : 'auto',
-          position: isMobile ? 'relative' : 'static',
-          height: isMobile ? '100vh' : 'auto',
-          overflow: 'hidden',
-          zIndex: isMobile ? 1 : 'auto',
-          visibility: isMobile ? (showContactsList ? 'hidden' : 'visible') : 'visible'
+          position: isMobile ? 'relative' : 'static'
         }}>
-          {/* 调试信息 */}
-          {isMobile && (
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              right: '10px',
-              background: 'rgba(0,0,0,0.7)',
-              color: 'white',
-              padding: '5px',
-              fontSize: '12px',
-              zIndex: 9999
-            }}>
-              移动端: {isMobile ? '是' : '否'}, 显示联系人: {showContactsList ? '是' : '否'}, 活跃联系人: {activeContact ? activeContact.name : '无'}
-            </div>
-          )}
           {/* 聊天头部 */}
         <div style={{ 
             padding: isMobile ? '16px' : '24px 30px', 
