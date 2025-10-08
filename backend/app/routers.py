@@ -1624,14 +1624,14 @@ def get_unread_messages_api(
 
 @router.get("/messages/unread/count")
 def get_unread_count_api(
-    current_user=Depends(check_user_status), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     return {"unread_count": len(crud.get_unread_messages(db, current_user.id))}
 
 
 @router.get("/messages/unread/by-contact")
 def get_unread_count_by_contact_api(
-    current_user=Depends(check_user_status), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """获取每个联系人的未读消息数量"""
     from app.models import Message
@@ -1662,10 +1662,14 @@ def mark_message_read_api(
 
 @router.post("/messages/mark-chat-read/{contact_id}")
 def mark_chat_messages_read_api(
-    contact_id: str, current_user=Depends(check_user_status), db: Session = Depends(get_db)
+    contact_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """标记与指定联系人的所有消息为已读"""
     try:
+        from app.models import Message
+        
+        print(f"🔍 [DEBUG] 标记已读API调用 - 当前用户: {current_user.id}, 联系人: {contact_id}")
+        
         # 获取与指定联系人的所有未读消息
         unread_messages = (
             db.query(Message)
@@ -1677,17 +1681,22 @@ def mark_chat_messages_read_api(
             .all()
         )
         
+        print(f"📊 [DEBUG] 找到 {len(unread_messages)} 条未读消息")
+        
         # 标记所有未读消息为已读
         for msg in unread_messages:
+            print(f"📝 [DEBUG] 标记消息 {msg.id} 为已读")
             msg.is_read = 1
         
         db.commit()
+        print(f"✅ [DEBUG] 成功标记 {len(unread_messages)} 条消息为已读")
         
         return {
             "message": f"已标记与用户 {contact_id} 的 {len(unread_messages)} 条消息为已读",
             "marked_count": len(unread_messages)
         }
     except Exception as e:
+        print(f"❌ [DEBUG] 标记已读失败: {str(e)}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"标记消息为已读失败: {str(e)}")
 

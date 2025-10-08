@@ -747,8 +747,15 @@ export const markCustomerServiceMessagesRead = async (chatId: string) => {
 
 // 标记普通聊天的消息为已读
 export const markChatMessagesAsRead = async (contactId: string) => {
-  const response = await api.post(`/api/users/messages/mark-chat-read/${contactId}`);
-  return response.data;
+  console.log('📤 调用标记已读API:', `/api/users/messages/mark-chat-read/${contactId}`);
+  try {
+    const response = await api.post(`/api/users/messages/mark-chat-read/${contactId}`);
+    console.log('📥 标记已读API响应:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ 标记已读API错误:', error);
+    throw error;
+  }
 };
 
 // 获取每个联系人的未读消息数量

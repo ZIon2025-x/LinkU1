@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
+import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -1036,27 +1036,31 @@ const MessagePage: React.FC = () => {
 
   // 选择联系人时加载聊天历史
   useEffect(() => {
-    if (activeContact && user) {
-      // 如果选择了联系人，切换到普通聊天模式
-      if (!isServiceMode || serviceConnected) {
-        console.log('切换到普通聊天模式，加载聊天记录');
-        setIsServiceMode(false);
-        setServiceConnected(false);
-        setCurrentChatId(null);
-        setCurrentChat(null);
-        // setService(null); // 已移除service状态
+    const handleContactSelection = async () => {
+      if (activeContact && user) {
+        // 如果选择了联系人，切换到普通聊天模式
+        if (!isServiceMode || serviceConnected) {
+          console.log('切换到普通聊天模式，加载聊天记录');
+          setIsServiceMode(false);
+          setServiceConnected(false);
+          setCurrentChatId(null);
+          setCurrentChat(null);
+          // setService(null); // 已移除service状态
+        }
+        
+        // 只有在消息列表为空时才加载聊天记录，避免覆盖现有消息
+        if (messages.length === 0) {
+          console.log('消息列表为空，加载聊天记录');
+          await loadChatHistory(activeContact.id);
+        } else {
+          console.log('消息列表不为空，跳过加载聊天记录，当前消息数量:', messages.length);
+        }
+        // 切换到新联系人时重新显示系统提示
+        setShowSystemWarning(true);
       }
-      
-      // 只有在消息列表为空时才加载聊天记录，避免覆盖现有消息
-      if (messages.length === 0) {
-        console.log('消息列表为空，加载聊天记录');
-        loadChatHistory(activeContact.id);
-      } else {
-        console.log('消息列表不为空，跳过加载聊天记录，当前消息数量:', messages.length);
-      }
-      // 切换到新联系人时重新显示系统提示
-      setShowSystemWarning(true);
-    }
+    };
+    
+    handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
   // 自动滚动到底部
@@ -1137,22 +1141,16 @@ const MessagePage: React.FC = () => {
     if (!user) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/messages/unread/count`, {
-        credentials: 'include'
-      });
+      const response = await api.get('/api/users/messages/unread/count');
+      const newCount = response.data.unread_count || 0;
+      console.log('📊 未读消息数量更新:', newCount);
+      setTotalUnreadCount(newCount);
       
-      if (response.ok) {
-        const data = await response.json();
-        const newCount = data.unread_count || 0;
-        console.log('📊 未读消息数量更新:', newCount);
-        setTotalUnreadCount(newCount);
-        
-        // 更新页面标题
-        if (newCount > 0) {
-          document.title = `(${newCount}) 消息中心 - Link2Ur`;
-        } else {
-          document.title = '消息中心 - Link2Ur';
-        }
+      // 更新页面标题
+      if (newCount > 0) {
+        document.title = `(${newCount}) 消息中心 - Link2Ur`;
+      } else {
+        document.title = '消息中心 - Link2Ur';
       }
     } catch (error) {
       console.error('加载未读消息数量失败:', error);
@@ -1444,8 +1442,9 @@ const MessagePage: React.FC = () => {
         
         // 标记普通聊天的未读消息为已读
         try {
+          console.log('🔍 开始标记联系人消息为已读:', contactId);
           const result = await markChatMessagesAsRead(contactId);
-          console.log('普通聊天消息已标记为已读:', result);
+          console.log('✅ 普通聊天消息已标记为已读:', result);
           
           // 立即更新未读消息数量（减少已标记的数量）
           if (result && result.marked_count) {
@@ -2028,7 +2027,7 @@ const MessagePage: React.FC = () => {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {/* 客服中心 - 固定在顶部 */}
             <div
-              onClick={() => {
+              onClick={async () => {
                 // 先检查localStorage中是否已有活跃的客服对话
                 const savedChat = localStorage.getItem('currentCustomerServiceChat');
                 console.log('点击客服中心时检查localStorage:', savedChat);
@@ -2051,7 +2050,7 @@ const MessagePage: React.FC = () => {
                       // setService(chatData.service); // 已移除service状态
                       
                       // 加载该对话的聊天历史记录
-                      loadChatHistory(chatData.service.id, chatData.chat.chat_id);
+                      await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
                       setIsConnectingToService(false);
                       return; // 直接返回，不创建新对话
                     } else {
