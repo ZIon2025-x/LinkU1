@@ -646,6 +646,27 @@ async def get_database_pool_status():
     return pool_status
 
 
+@async_router.get("/tasks/{task_id}/reviews", response_model=List[schemas.ReviewOut])
+async def get_task_reviews_async(
+    task_id: int,
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务评价（异步版本）"""
+    try:
+        # 获取任务评价
+        reviews_query = select(models.Review).where(
+            models.Review.task_id == task_id,
+            models.Review.is_anonymous == 0
+        )
+        reviews_result = await db.execute(reviews_query)
+        reviews = reviews_result.scalars().all()
+        
+        return reviews
+    except Exception as e:
+        logger.error(f"Error getting task reviews for {task_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get task reviews: {str(e)}")
+
+
 @async_router.post("/tasks/{task_id}/confirm_completion", response_model=schemas.TaskOut)
 async def confirm_task_completion_async(
     task_id: int,
