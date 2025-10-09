@@ -1636,10 +1636,15 @@ const MessagePage: React.FC = () => {
         
         setMessages(formattedMessages);
         
-        // 取消首次加载时的自动滚动
-        // if (!isLoadMore) {
-        //   setShouldScrollToBottom(true);
-        // }
+        // 首次加载时滚动到底部显示最新消息
+        if (!isLoadMore && formattedMessages.length > 0) {
+          setTimeout(() => {
+            const messagesContainer = messagesContainerRef.current;
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }, 100);
+        }
           
           // 标记客服对话消息为已读
           try {
@@ -1759,17 +1764,22 @@ const MessagePage: React.FC = () => {
           }
         });
         
+        // 首次加载时滚动到底部显示最新消息
+        if (!isLoadMore && formattedMessages.length > 0) {
+          setTimeout(() => {
+            const messagesContainer = messagesContainerRef.current;
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }, 100);
+        }
+        
         // 检查是否还有更多消息
         if (formattedMessages.length < limit) {
           setHasMoreMessages(false);
         } else {
           setHasMoreMessages(true);
         }
-        
-        // 取消首次加载时的自动滚动
-        // if (!isLoadMore) {
-        //   setShouldScrollToBottom(true);
-        // }
         
         // 标记普通聊天的未读消息为已读
         try {
