@@ -534,6 +534,7 @@ const MessagePage: React.FC = () => {
       
       const finalImageUrl = getImageUrl(imageUrl);
       
+
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ 
@@ -591,53 +592,10 @@ const MessagePage: React.FC = () => {
                 objectFit: 'cover',
                 display: 'block'
               }}
-              onError={async (e) => {
+              onError={(e) => {
                 console.error('图片加载失败:', finalImageUrl);
-                console.error('原始图片URL:', imageUrl);
                 
-                // 如果是私有文件且返回403，提示用户刷新页面
-                if (isSignedUrl) {
-                  console.log('私有文件认证失败，建议刷新页面');
-                  
-                  // 显示认证失败提示
-                  const container = e.currentTarget.parentElement!;
-                  container.innerHTML = `
-                    <div style="
-                      padding: 40px 20px; 
-                      text-align: center; 
-                      color: #6b7280; 
-                      background: linear-gradient(135deg, #fef3c7, #fde68a);
-                      border-radius: 12px;
-                      border: 2px dashed #f59e0b;
-                    ">
-                      <div style="font-size: 24px; margin-bottom: 8px;">🔒</div>
-                      <div style="font-weight: 600; margin-bottom: 4px; color: #92400e;">图片认证过期</div>
-                      <div style="font-size: 12px; opacity: 0.7; color: #92400e;">请刷新页面重新加载图片</div>
-                      <button onclick="window.location.reload()" style="
-                        margin-top: 8px;
-                        padding: 6px 12px;
-                        background: #f59e0b;
-                        color: white;
-                        border: none;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-size: 12px;
-                        font-weight: 600;
-                      ">刷新页面</button>
-                    </div>
-                  `;
-                  return;
-                }
-                
-                // 尝试使用原始URL（不带API前缀）
-                if (finalImageUrl.includes(API_BASE_URL)) {
-                  const originalUrl = imageUrl;
-                  console.log('尝试使用原始URL:', originalUrl);
-                  e.currentTarget.src = originalUrl;
-                  return;
-                }
-                
-                // 显示错误信息
+                // 显示简单的错误提示
                 const container = e.currentTarget.parentElement!;
                 container.innerHTML = `
                   <div style="
@@ -649,9 +607,8 @@ const MessagePage: React.FC = () => {
                     border: 2px dashed #d1d5db;
                   ">
                     <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败 (403)</div>
-                    <div style="font-size: 12px; opacity: 0.7;">认证失败，请刷新页面重试</div>
-                    <div style="font-size: 10px; opacity: 0.5; margin-top: 4px; word-break: break-all;">${finalImageUrl}</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败</div>
+                    <div style="font-size: 12px; opacity: 0.7;">请刷新页面重试</div>
                     <button onclick="window.location.reload()" style="
                       margin-top: 8px;
                       padding: 4px 8px;
