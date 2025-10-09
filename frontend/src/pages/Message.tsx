@@ -7,6 +7,106 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
 
+// 私有图片加载组件
+const PrivateImageLoader: React.FC<{
+  src: string;
+  alt: string;
+  style: React.CSSProperties;
+}> = ({ src, alt, style }) => {
+  const [imageSrc, setImageSrc] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+        
+        // 使用fetch获取图片，确保传递Cookie认证
+        const response = await fetch(src, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'image/*'
+          }
+        });
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          setImageSrc(blobUrl);
+        } else {
+          console.error('图片加载失败:', response.status, response.statusText);
+          setError(true);
+        }
+      } catch (err) {
+        console.error('图片加载错误:', err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+    
+    // 清理blob URL
+    return () => {
+      if (imageSrc && imageSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(imageSrc);
+      }
+    };
+  }, [src]);
+
+  if (loading) {
+    return (
+      <div style={{
+        ...style,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f3f4f6',
+        color: '#6b7280'
+      }}>
+        <div style={{ fontSize: '14px' }}>加载中...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        ...style,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
+        color: '#6b7280',
+        borderRadius: '8px',
+        border: '2px dashed #d1d5db',
+        padding: '20px'
+      }}>
+        <div style={{ fontSize: '24px', marginBottom: '8px' }}>📷</div>
+        <div style={{ fontWeight: '600', marginBottom: '4px' }}>图片加载失败</div>
+        <div style={{ fontSize: '12px', opacity: 0.7 }}>请刷新页面重试</div>
+        <button onClick={() => window.location.reload()} style={{
+          marginTop: '8px',
+          padding: '4px 8px',
+          background: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '10px'
+        }}>刷新页面</button>
+      </div>
+    );
+  }
+
+  return <img src={imageSrc} alt={alt} style={style} />;
+};
+
 // 移动端检测函数
 const isMobileDevice = () => {
   // 检查屏幕宽度
@@ -582,7 +682,7 @@ const MessagePage: React.FC = () => {
             }
           }}
           >
-            <img
+            <PrivateImageLoader
               src={finalImageUrl}
               alt="发送的图片"
               style={{
@@ -591,36 +691,6 @@ const MessagePage: React.FC = () => {
                 maxHeight: '300px',
                 objectFit: 'cover',
                 display: 'block'
-              }}
-              onError={(e) => {
-                console.error('图片加载失败:', finalImageUrl);
-                
-                // 显示简单的错误提示
-                const container = e.currentTarget.parentElement!;
-                container.innerHTML = `
-                  <div style="
-                    padding: 40px 20px; 
-                    text-align: center; 
-                    color: #6b7280; 
-                    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-                    border-radius: 12px;
-                    border: 2px dashed #d1d5db;
-                  ">
-                    <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败</div>
-                    <div style="font-size: 12px; opacity: 0.7;">请刷新页面重试</div>
-                    <button onclick="window.location.reload()" style="
-                      margin-top: 8px;
-                      padding: 4px 8px;
-                      background: #3b82f6;
-                      color: white;
-                      border: none;
-                      border-radius: 4px;
-                      cursor: pointer;
-                      font-size: 10px;
-                    ">刷新页面</button>
-                  </div>
-                `;
               }}
             />
             {/* 图片类型指示器 */}
@@ -1557,6 +1627,13 @@ const MessagePage: React.FC = () => {
           
         // 按时间排序（最新的在最后）
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        // 如果是首次加载，确保显示最新的消息
+        if (!isLoadMore && formattedMessages.length > 0) {
+          // 将消息列表反转，让最新的消息在最后
+          formattedMessages.reverse();
+        }
+        
         setMessages(formattedMessages);
         
         // 取消首次加载时的自动滚动
@@ -1612,6 +1689,13 @@ const MessagePage: React.FC = () => {
         
         // 按时间排序（最新的在最后）
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        // 如果是首次加载，确保显示最新的消息
+        if (!isLoadMore && formattedMessages.length > 0) {
+          // 将消息列表反转，让最新的消息在最后
+          formattedMessages.reverse();
+        }
+        
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         
         // 处理消息列表
