@@ -4110,3 +4110,183 @@ async def get_file(filename: str):
     except Exception as e:
         logger.error(f"获取文件失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取文件失败: {str(e)}")
+
+
+# 图片存储优化相关API
+@router.get("/admin/image-storage/stats")
+def get_image_storage_stats(
+    current_user=Depends(admin_required),
+    db: Session = Depends(get_db)
+):
+    """
+    获取图片存储优化统计信息
+    """
+    try:
+        from app.image_storage import image_storage_manager
+        
+        stats = image_storage_manager.get_optimization_stats()
+        
+        # 添加数据库统计信息
+        from sqlalchemy import text
+        
+        # 统计图片消息数量
+        image_message_count = db.execute(text("""
+            SELECT COUNT(*) FROM messages 
+            WHERE content LIKE '[图片] %'
+        """)).scalar()
+        
+        base64_image_count = db.execute(text("""
+            SELECT COUNT(*) FROM messages 
+            WHERE content LIKE '[图片] data:image/%'
+        """)).scalar()
+        
+        url_image_count = image_message_count - base64_image_count
+        
+        # 统计客服消息中的图片
+        cs_image_message_count = db.execute(text("""
+            SELECT COUNT(*) FROM customer_service_messages 
+            WHERE content LIKE '[图片] %'
+        """)).scalar()
+        
+        cs_base64_image_count = db.execute(text("""
+            SELECT COUNT(*) FROM customer_service_messages 
+            WHERE content LIKE '[图片] data:image/%'
+        """)).scalar()
+        
+        cs_url_image_count = cs_image_message_count - cs_base64_image_count
+        
+        stats.update({
+            "database_stats": {
+                "total_image_messages": image_message_count + cs_image_message_count,
+                "base64_images": base64_image_count + cs_base64_image_count,
+                "url_images": url_image_count + cs_url_image_count,
+                "regular_messages": {
+                    "total": image_message_count,
+                    "base64": base64_image_count,
+                    "url": url_image_count
+                },
+                "customer_service_messages": {
+                    "total": cs_image_message_count,
+                    "base64": cs_base64_image_count,
+                    "url": cs_url_image_count
+                }
+            }
+        })
+        
+        return JSONResponse(content={
+            "success": True,
+            "stats": stats
+        })
+        
+    except Exception as e:
+        logger.error(f"获取图片存储统计失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+
+
+@router.post("/admin/image-storage/cleanup")
+def cleanup_orphaned_images(
+    current_user=Depends(admin_required),
+    db: Session = Depends(get_db)
+):
+    """
+    清理孤立的图片文件
+    """
+    try:
+        from app.image_storage import image_storage_manager
+        
+        cleaned_count = image_storage_manager.cleanup_orphaned_files()
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": f"清理完成，删除了 {cleaned_count} 个孤立文件",
+            "cleaned_count": cleaned_count
+        })
+        
+    except Exception as e:
+        logger.error(f"清理孤立文件失败: {e}")
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
+@router.get("/admin/image-storage/recommendations")
+def get_storage_recommendations(
+    current_user=Depends(admin_required),
+    db: Session = Depends(get_db)
+):
+    """
+    获取存储优化建议
+    """
+    try:
+        from app.image_storage import ImageProcessor, ImageStorageConfig
+        
+        config = ImageStorageConfig()
+        processor = ImageProcessor(config)
+        
+        # 分析当前存储情况
+        from sqlalchemy import text
+        
+        # 统计图片消息分布
+        image_messages = db.execute(text("""
+            SELECT content FROM messages 
+            WHERE content LIKE '[图片] %'
+            LIMIT 100
+        """)).fetchall()
+        
+        size_analysis = {
+            "file_storage_images": 0,  # 文件存储的图片
+            "base64_images": 0,  # base64图片（需要迁移）
+            "total_analyzed": len(image_messages)
+        }
+        
+        for row in image_messages:
+            content = row[0]
+            if content.startswith('[图片] '):
+                image_data = content.replace('[图片] ', '')
+                if image_data.startswith('data:image/'):
+                    size_analysis["base64_images"] += 1
+                else:
+                    size_analysis["file_storage_images"] += 1
+        
+        # 生成建议
+        recommendations = []
+        
+        if size_analysis["base64_images"] > 0:
+            recommendations.append({
+                "type": "migration",
+                "priority": "high",
+                "title": "需要迁移base64图片",
+                "description": f"发现 {size_analysis['base64_images']} 个base64图片，建议迁移到文件存储以提高性能",
+                "action": "运行图片迁移工具"
+            })
+        
+        if size_analysis["file_storage_images"] > 0:
+            recommendations.append({
+                "type": "success",
+                "priority": "low",
+                "title": "文件存储正常",
+                "description": f"已有 {size_analysis['file_storage_images']} 个图片使用文件存储，性能良好",
+                "action": "无需操作"
+            })
+        
+        if size_analysis["total_analyzed"] > 50:
+            recommendations.append({
+                "type": "performance",
+                "priority": "medium",
+                "title": "数据库性能优化",
+                "description": f"数据库中有大量图片消息（{size_analysis['total_analyzed']}个），建议定期清理和优化",
+                "action": "定期运行清理任务"
+            })
+        
+        return JSONResponse(content={
+            "success": True,
+            "size_analysis": size_analysis,
+            "recommendations": recommendations,
+            "storage_config": {
+                "max_file_size": config.max_file_size,
+                "max_base64_size": config.max_base64_size,
+                "storage_strategy": config.get_storage_strategy().value
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"获取存储建议失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取建议失败: {str(e)}")

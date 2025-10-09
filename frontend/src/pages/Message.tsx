@@ -222,6 +222,14 @@ const MessagePage: React.FC = () => {
     setUploadingImage(true);
     
     try {
+      // 检查图片大小，如果超过5MB则拒绝上传
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      if (selectedImage.size > maxFileSize) {
+        alert(`图片过大，无法上传。\n\n当前大小: ${(selectedImage.size / 1024 / 1024).toFixed(2)}MB\n最大允许: 5MB\n\n请压缩图片后重试。`);
+        setUploadingImage(false);
+        return;
+      }
+      
       const formData = new FormData();
       formData.append('image', selectedImage);
       
@@ -254,77 +262,7 @@ const MessagePage: React.FC = () => {
       // 发送包含图片URL的消息
       const messageContent = `[图片] ${imageUrl}`;
       
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        if (isServiceMode && currentChat) {
-          const messageData = {
-            receiver_id: currentChat.service_id,
-            content: messageContent,
-            chat_id: currentChat.chat_id
-          };
-          ws.send(JSON.stringify(messageData));
-        } else if (activeContact) {
-          const messageData = {
-            receiver_id: activeContact.id,
-            content: messageContent
-          };
-          ws.send(JSON.stringify(messageData));
-        }
-        
-        // 立即添加消息到本地状态
-        const newMessage = {
-          id: Date.now(),
-          from: '我',
-          content: messageContent,
-          created_at: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, newMessage]);
-        
-        // 更新联系人排序
-        if (activeContact && !isServiceMode) {
-          updateContactOrder(activeContact.id);
-        }
-      } else {
-        // WebSocket未连接，使用HTTP API
-        if (isServiceMode && currentChat) {
-          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            credentials: 'include',  // 使用Cookie认证
-            body: JSON.stringify({ content: messageContent })
-          });
-          
-          if (!response.ok) {
-            throw new Error('发送消息失败');
-          }
-          
-          const newMessage = {
-            id: Date.now(),
-            from: '我',
-            content: messageContent,
-            created_at: new Date().toISOString()
-          };
-          setMessages(prev => [...prev, newMessage]);
-        } else if (activeContact) {
-          const response = await sendMessage({
-            receiver_id: activeContact.id,
-            content: messageContent
-          });
-          
-          const newMessage = {
-            id: response.id,
-            from: '我',
-            content: messageContent,
-            created_at: response.created_at
-          };
-          setMessages(prev => [...prev, newMessage]);
-          
-          if (activeContact) {
-            updateContactOrder(activeContact.id);
-          }
-        }
-      }
+      await sendImageMessage(messageContent);
       
       // 清除图片选择
       setSelectedImage(null);
@@ -332,62 +270,85 @@ const MessagePage: React.FC = () => {
       
     } catch (error) {
       console.error('发送图片失败:', error);
-      
-      // 如果上传失败，尝试使用base64编码直接发送
-      try {
-        console.log('尝试使用base64编码发送图片...');
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64Data = e.target?.result as string;
-          const messageContent = `[图片] ${base64Data}`;
-          
-          console.log('使用base64发送图片消息:', messageContent.substring(0, 100) + '...');
-          
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            if (isServiceMode && currentChat) {
-              const messageData = {
-                receiver_id: currentChat.service_id,
-                content: messageContent,
-                chat_id: currentChat.chat_id
-              };
-              ws.send(JSON.stringify(messageData));
-            } else if (activeContact) {
-              const messageData = {
-                receiver_id: activeContact.id,
-                content: messageContent
-              };
-              ws.send(JSON.stringify(messageData));
-            }
-            
-            // 立即添加消息到本地状态
-            const newMessage = {
-              id: Date.now(),
-              from: '我',
-              content: messageContent,
-              created_at: new Date().toISOString()
-            };
-            setMessages(prev => [...prev, newMessage]);
-            
-            // 更新联系人排序
-            if (activeContact && !isServiceMode) {
-              updateContactOrder(activeContact.id);
-            }
-            
-            // 清除图片选择
-            setSelectedImage(null);
-            setImagePreview(null);
-            console.log('base64图片发送成功');
-          } else {
-            throw new Error('WebSocket未连接');
-          }
-        };
-        reader.readAsDataURL(selectedImage);
-      } catch (base64Error) {
-        console.error('base64发送也失败:', base64Error);
-        alert(`发送图片失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 图片文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的图片。`);
-      }
+      alert(`发送图片失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 图片文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的图片。`);
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+
+  // 发送图片消息的通用方法
+  const sendImageMessage = async (messageContent: string) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      if (isServiceMode && currentChat) {
+        const messageData = {
+          receiver_id: currentChat.service_id,
+          content: messageContent,
+          chat_id: currentChat.chat_id
+        };
+        ws.send(JSON.stringify(messageData));
+      } else if (activeContact) {
+        const messageData = {
+          receiver_id: activeContact.id,
+          content: messageContent
+        };
+        ws.send(JSON.stringify(messageData));
+      }
+      
+      // 立即添加消息到本地状态
+      const newMessage = {
+        id: Date.now(),
+        from: '我',
+        content: messageContent,
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, newMessage]);
+      
+      // 更新联系人排序
+      if (activeContact && !isServiceMode) {
+        updateContactOrder(activeContact.id);
+      }
+    } else {
+      // WebSocket未连接，使用HTTP API
+      if (isServiceMode && currentChat) {
+        const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',  // 使用Cookie认证
+          body: JSON.stringify({ content: messageContent })
+        });
+        
+        if (!response.ok) {
+          throw new Error('发送消息失败');
+        }
+        
+        const newMessage = {
+          id: Date.now(),
+          from: '我',
+          content: messageContent,
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, newMessage]);
+      } else if (activeContact) {
+        const response = await sendMessage({
+          receiver_id: activeContact.id,
+          content: messageContent
+        });
+        
+        const newMessage = {
+          id: response.id,
+          from: '我',
+          content: messageContent,
+          created_at: response.created_at
+        };
+        setMessages(prev => [...prev, newMessage]);
+        
+        if (activeContact) {
+          updateContactOrder(activeContact.id);
+        }
+      }
     }
   };
 
@@ -534,57 +495,96 @@ const MessagePage: React.FC = () => {
   const renderMessageContent = (content: string) => {
     // 检查是否是图片消息
     if (content.startsWith('[图片] ')) {
-      const imageData = content.replace('[图片] ', '');
-      
-      // 判断是URL还是base64数据
-      const isBase64 = imageData.startsWith('data:image/');
-      const imageUrl = isBase64 ? imageData : imageData;
+      const imageUrl = content.replace('[图片] ', '');
       
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontSize: '14px', opacity: 0.8 }}>
-            📷 图片 {isBase64 ? '(内嵌)' : '(链接)'}
+          <div style={{ 
+            fontSize: '12px', 
+            opacity: 0.7,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            📷 图片 
+            <span style={{ 
+              padding: '2px 6px', 
+              background: '#dbeafe', 
+              color: '#1e40af',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: '600'
+            }}>
+              文件存储
+            </span>
           </div>
-          <img
-            src={imageUrl}
-            alt="发送的图片"
-            style={{
-              maxWidth: '200px',
-              maxHeight: '200px',
-              borderRadius: '8px',
-              objectFit: 'cover',
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              if (isBase64) {
-                // 对于base64图片，创建新窗口显示
-                const newWindow = window.open();
-                if (newWindow) {
-                  newWindow.document.write(`
-                    <html>
-                      <head><title>图片预览</title></head>
-                      <body style="margin:0; padding:20px; text-align:center; background:#f5f5f5;">
-                        <img src="${imageUrl}" style="max-width:100%; max-height:100%; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1);" />
-                      </body>
-                    </html>
-                  `);
-                }
-              } else {
-                // 对于URL图片，直接打开
-                window.open(imageUrl, '_blank');
-              }
-            }}
-            onError={(e) => {
-              console.error('图片加载失败:', imageData.substring(0, 50) + '...');
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement!.innerHTML = `
-                <div style="padding: 20px; text-align: center; color: #6b7280; background: #f3f4f6; border-radius: 8px;">
-                  📷 图片加载失败
-                  <div style="font-size: 12px; margin-top: 4px;">请检查网络连接</div>
-                </div>
-              `;
-            }}
-          />
+          <div style={{
+            position: 'relative',
+            display: 'inline-block',
+            maxWidth: '250px',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+          }}
+          onClick={() => {
+            // 打开图片链接
+            window.open(imageUrl, '_blank');
+          }}
+          >
+            <img
+              src={imageUrl}
+              alt="发送的图片"
+              style={{
+                width: '100%',
+                height: 'auto',
+                maxHeight: '300px',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+              onError={(e) => {
+                console.error('图片加载失败:', imageUrl);
+                const container = e.currentTarget.parentElement!;
+                container.innerHTML = `
+                  <div style="
+                    padding: 40px 20px; 
+                    text-align: center; 
+                    color: #6b7280; 
+                    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+                    border-radius: 12px;
+                    border: 2px dashed #d1d5db;
+                  ">
+                    <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败</div>
+                    <div style="font-size: 12px; opacity: 0.7;">请检查网络连接或图片链接</div>
+                  </div>
+                `;
+              }}
+            />
+            {/* 图片类型指示器 */}
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: 'rgba(0,0,0,0.6)',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              fontSize: '10px',
+              fontWeight: '600'
+            }}>
+              文件
+            </div>
+          </div>
         </div>
       );
     }
