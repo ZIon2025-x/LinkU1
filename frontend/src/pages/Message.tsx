@@ -143,6 +143,10 @@ const MessagePage: React.FC = () => {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 缓存相关状态
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+  const [lastLoadTime, setLastLoadTime] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -857,13 +861,16 @@ const MessagePage: React.FC = () => {
     }
   }, [user]);
 
-  // 当URL参数变化时，强制重新加载联系人列表
+  // 当URL参数变化时，只在必要时重新加载联系人列表
   useEffect(() => {
     if (user && location.search.includes('uid=')) {
-      console.log('检测到URL参数变化，重新加载联系人列表');
-      loadContacts();
+      // 如果联系人列表为空，才重新加载
+      if (contacts.length === 0) {
+        console.log('联系人列表为空，重新加载联系人列表');
+        loadContacts();
+      }
     }
-  }, [location.search, user]);
+  }, [location.search, user, contacts.length]);
 
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
@@ -1016,23 +1023,38 @@ const MessagePage: React.FC = () => {
     }
   }, []);
 
-  const loadContacts = async () => {
+  const loadContacts = async (forceReload: boolean = false) => {
+    // 如果已经加载过且不是强制重新加载，且距离上次加载不到30秒，则跳过
+    const now = Date.now();
+    if (contactsLoaded && !forceReload && (now - lastLoadTime) < 30000) {
+      console.log('联系人列表已缓存，跳过加载');
+      return;
+    }
+    
     try {
       console.log('开始加载联系人列表...');
       setContactsLoading(true);
-      const contactsData = await getContacts();
-      console.log('联系人API响应:', contactsData);
-      setContacts(contactsData || []);
-      console.log('联系人列表已更新，数量:', (contactsData || []).length);
       
-      // 同时加载未读消息数量
-      await loadUnreadCount();
-      // 加载每个联系人的未读消息数量
-      await loadContactUnreadCounts();
+      // 并行加载联系人列表和未读消息数量
+      const [contactsData] = await Promise.allSettled([
+        getContacts(),
+        loadUnreadCount(),
+        loadContactUnreadCounts()
+      ]);
+      
+      if (contactsData.status === 'fulfilled') {
+        console.log('联系人API响应:', contactsData.value);
+        setContacts(contactsData.value || []);
+        setContactsLoaded(true);
+        setLastLoadTime(now);
+        console.log('联系人列表已更新，数量:', (contactsData.value || []).length);
+      } else {
+        console.error('加载联系人失败:', contactsData.reason);
+        setContacts([]);
+      }
     } catch (error: any) {
       console.error('加载联系人失败:', error);
       console.error('错误详情:', error.response?.data || error.message);
-      // API调用失败时显示空列表，但不影响URL参数处理
       setContacts([]);
     } finally {
       setContactsLoading(false);
@@ -1104,7 +1126,10 @@ const MessagePage: React.FC = () => {
         
         // 加载聊天记录
         console.log('加载聊天记录，当前消息数量:', messages.length);
-        await loadChatHistory(activeContact.id);
+        // 使用setTimeout让UI先更新，然后异步加载聊天记录
+        setTimeout(() => {
+          loadChatHistory(activeContact.id);
+        }, 0);
         
         // 立即清除该联系人的未读标识
         setContactUnreadCounts(prev => {
@@ -1530,8 +1555,9 @@ const MessagePage: React.FC = () => {
           });
         }
         
-        const offset = (page - 1) * 50; // 计算偏移量
-        const chatData = await getChatHistory(contactId, 50, undefined, offset); // 支持分页加载
+        const offset = (page - 1) * 20; // 计算偏移量，初始加载20条
+        const limit = page === 1 ? 20 : 50; // 首次加载20条，后续加载50条
+        const chatData = await getChatHistory(contactId, limit, undefined, offset); // 支持分页加载
         const formattedMessages = chatData.map((msg: any) => ({
           id: msg.id,
           from: String(msg.sender_id) === String(user.id) ? '我' : (msg.is_admin_msg === 1 ? '系统' : '对方'),
@@ -1605,7 +1631,7 @@ const MessagePage: React.FC = () => {
         });
         
         // 检查是否还有更多消息
-        if (formattedMessages.length < 50) {
+        if (formattedMessages.length < limit) {
           setHasMoreMessages(false);
         } else {
           setHasMoreMessages(true);
@@ -2252,6 +2278,45 @@ const MessagePage: React.FC = () => {
 
           {/* 联系人列表 */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
+            {/* 加载骨架屏 */}
+            {contactsLoading && contacts.length === 0 && (
+              <div style={{ padding: '20px' }}>
+                {[...Array(5)].map((_, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    marginBottom: '8px',
+                    background: 'rgba(255,255,255,0.5)',
+                    borderRadius: '12px',
+                    animation: 'pulse 1.5s ease-in-out infinite'
+                  }}>
+                    <div style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '50%',
+                      background: '#e2e8f0'
+                    }}></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        height: '16px',
+                        background: '#e2e8f0',
+                        borderRadius: '4px',
+                        marginBottom: '8px',
+                        width: '60%'
+                      }}></div>
+                      <div style={{
+                        height: '12px',
+                        background: '#e2e8f0',
+                        borderRadius: '4px',
+                        width: '40%'
+                      }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {/* 客服中心 - 固定在顶部 */}
             <div
               onClick={async () => {
@@ -3123,6 +3188,34 @@ const MessagePage: React.FC = () => {
                 </div>
               )
                     ) : null}
+            
+            {/* 消息加载骨架屏 */}
+            {activeContact && !isServiceMode && messages.length === 0 && (
+              <div style={{ padding: '20px' }}>
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: index % 2 === 0 ? 'flex-end' : 'flex-start',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{
+                      maxWidth: '70%',
+                      padding: '12px 16px',
+                      borderRadius: '18px',
+                      background: index % 2 === 0 ? '#3b82f6' : '#f1f5f9',
+                      animation: 'pulse 1.5s ease-in-out infinite'
+                    }}>
+                      <div style={{
+                        height: '16px',
+                        background: index % 2 === 0 ? 'rgba(255,255,255,0.3)' : '#e2e8f0',
+                        borderRadius: '4px',
+                        width: index % 2 === 0 ? '120px' : '80px'
+                      }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             
             {/* 加载更多消息的UI */}
             {activeContact && !isServiceMode && hasMoreMessages && (
