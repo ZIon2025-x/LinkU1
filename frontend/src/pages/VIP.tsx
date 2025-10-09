@@ -346,7 +346,7 @@ const VIP: React.FC = () => {
             如果您对会员服务有任何疑问，请联系我们的客服团队
           </p>
           <button
-            onClick={() => navigate('/customer-service')}
+            onClick={() => navigate('/message')}
             style={{
               padding: '15px 30px',
               border: 'none',
