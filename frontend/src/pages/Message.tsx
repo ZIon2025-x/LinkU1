@@ -1073,12 +1073,28 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 自动滚动到底部
+  // 自动滚动到底部 - 只在有新消息时滚动
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current && messages.length > 0) {
+      // 使用 setTimeout 确保 DOM 更新完成后再滚动
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
     }
-  }, [messages]);
+  }, [messages.length]); // 只在消息数量变化时触发
+
+  // 当选择联系人时，立即滚动到底部
+  useEffect(() => {
+    if (activeContact && messagesEndRef.current) {
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+        }
+      }, 300); // 增加延迟确保消息加载完成
+    }
+  }, [activeContact]);
 
   // 点击外部区域和ESC键关闭表情框
   useEffect(() => {
@@ -1414,6 +1430,13 @@ const MessagePage: React.FC = () => {
           formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
           setMessages(formattedMessages);
           
+          // 消息加载完成后立即滚动到底部
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+            }
+          }, 100);
+          
           // 标记客服对话消息为已读
           try {
             await markCustomerServiceMessagesRead(chatId);
@@ -1449,6 +1472,13 @@ const MessagePage: React.FC = () => {
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         setMessages(formattedMessages);
+        
+        // 消息加载完成后立即滚动到底部
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+          }
+        }, 100);
         
         // 标记普通聊天的未读消息为已读
         try {
