@@ -136,6 +136,7 @@ const MessagePage: React.FC = () => {
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [showMobileImagePreview, setShowMobileImagePreview] = useState(false);
+  const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
   
@@ -202,7 +203,7 @@ const MessagePage: React.FC = () => {
         
         // 移动端显示发送弹窗，桌面端显示预览区域
         if (isMobile) {
-          setShowMobileImagePreview(true);
+          setShowMobileImageSendModal(true);
           setPreviewImageUrl(previewUrl);
         }
       };
@@ -489,7 +490,7 @@ const MessagePage: React.FC = () => {
         // 清空图片选择并关闭弹窗
         setSelectedImage(null);
         setImagePreview(null);
-        setShowMobileImagePreview(false);
+        setShowMobileImageSendModal(false);
         setPreviewImageUrl('');
         setInput('');
       } else {
@@ -1261,10 +1262,13 @@ const MessagePage: React.FC = () => {
         if (showMobileImagePreview) {
           setShowMobileImagePreview(false);
         }
+        if (showMobileImageSendModal) {
+          setShowMobileImageSendModal(false);
+        }
       }
     };
 
-    if (showEmojiPicker || showImagePreview || showMobileImagePreview) {
+    if (showEmojiPicker || showImagePreview || showMobileImagePreview || showMobileImageSendModal) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -1273,7 +1277,7 @@ const MessagePage: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEmojiPicker, showImagePreview, showMobileImagePreview]);
+  }, [showEmojiPicker, showImagePreview, showMobileImagePreview, showMobileImageSendModal]);
 
   // 请求通知权限
   useEffect(() => {
@@ -4217,7 +4221,7 @@ const MessagePage: React.FC = () => {
       />
 
       {/* 移动端图片发送弹窗 */}
-      {showMobileImagePreview && (
+      {showMobileImageSendModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -4278,7 +4282,7 @@ const MessagePage: React.FC = () => {
             }}>
               <button
                 onClick={() => {
-                  setShowMobileImagePreview(false);
+                  setShowMobileImageSendModal(false);
                   setPreviewImageUrl('');
                   setSelectedImage(null);
                   setImagePreview(null);
