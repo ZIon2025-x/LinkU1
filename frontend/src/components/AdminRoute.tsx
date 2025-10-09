@@ -14,7 +14,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         // 使用Cookie认证检查用户信息
-        const response = await fetch('http://localhost:8000/api/users/profile/me', {
+        const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${API_BASE_URL}/api/users/profile/me`, {
           credentials: 'include'
         });
         
@@ -24,8 +25,10 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
           // 只允许后台管理员访问，不允许客服
           if (user.user_type === 'admin') {
             setIsAuthorized(true);
+            console.log('管理员访问管理后台:', user.id);
           } else {
             setIsAuthorized(false);
+            console.warn('非管理员用户尝试访问管理后台:', user.user_type);
           }
         } else {
           setIsAuthorized(false);

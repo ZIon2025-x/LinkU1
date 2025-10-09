@@ -138,7 +138,12 @@ class Config:
         "X-XSS-Protection": "1; mode=block",
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
         "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: https:;",
+        "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
     }
+    
+    # 环境配置
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
     @classmethod
     def get_redis_config(cls) -> Optional[dict]:

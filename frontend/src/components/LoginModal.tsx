@@ -37,6 +37,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
+  const [passwordValidation, setPasswordValidation] = useState({
+    is_valid: false,
+    score: 0,
+    strength: 'weak',
+    errors: [],
+    suggestions: []
+  });
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +53,36 @@ const LoginModal: React.FC<LoginModalProps> = ({
       [name]: value
     }));
     setError('');
+    
+    // 如果是密码字段且是注册模式，进行密码验证
+    if (name === 'password' && !isLogin) {
+      validatePassword(value);
+    }
+  };
+
+  // 密码验证函数
+  const validatePassword = async (password: string) => {
+    if (!password) {
+      setPasswordValidation({
+        is_valid: false,
+        score: 0,
+        strength: 'weak',
+        errors: [],
+        suggestions: []
+      });
+      return;
+    }
+
+    try {
+      const response = await api.post('/api/users/password/validate', {
+        password: password,
+        username: formData.username,
+        email: formData.email
+      });
+      setPasswordValidation(response.data);
+    } catch (error) {
+      console.error('密码验证失败:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +127,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
         
         if (!agreedToTerms) {
           setError('请先同意用户协议和隐私政策');
+          setLoading(false);
+          return;
+        }
+        
+        // 检查密码强度
+        if (!passwordValidation.is_valid) {
+          setError('密码不符合安全要求，请查看下方提示');
           setLoading(false);
           return;
         }
@@ -406,7 +450,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              placeholder={isLogin ? "请输入密码" : "至少8位，包含字母和数字"}
+              placeholder={isLogin ? "请输入密码" : "至少12位，包含大小写字母、数字和特殊字符"}
               required
               style={{
                 width: '100%',
@@ -424,6 +468,49 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 e.target.style.borderColor = '#ddd';
               }}
             />
+            
+            {/* 密码强度显示 - 仅在注册模式且输入密码时显示 */}
+            {!isLogin && formData.password && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px solid #e9ecef'
+              }}>
+                <div style={{ marginBottom: '6px' }}>
+                  <span style={{ 
+                    color: passwordValidation.score >= 80 ? '#52c41a' : 
+                           passwordValidation.score >= 60 ? '#faad14' : '#ff4d4f',
+                    fontWeight: 'bold',
+                    fontSize: '13px'
+                  }}>
+                    密码强度: {passwordValidation.strength === 'weak' ? '弱' : 
+                           passwordValidation.strength === 'medium' ? '中等' :
+                           passwordValidation.strength === 'strong' ? '强' : '很强'} 
+                    ({passwordValidation.score}/100)
+                  </span>
+                </div>
+                
+                {passwordValidation.errors.length > 0 && (
+                  <div style={{ color: '#ff4d4f', marginBottom: '6px', fontSize: '12px' }}>
+                    {passwordValidation.errors.map((error, index) => (
+                      <div key={index}>• {error}</div>
+                    ))}
+                  </div>
+                )}
+                
+                {passwordValidation.suggestions.length > 0 && (
+                  <div style={{ color: '#1890ff', fontSize: '12px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>建议:</div>
+                    {passwordValidation.suggestions.map((suggestion, index) => (
+                      <div key={index}>• {suggestion}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* 忘记密码链接 - 放在密码输入框右下角 */}
             {isLogin && (
               <div style={{ textAlign: 'right', marginTop: '4px' }}>

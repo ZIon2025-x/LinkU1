@@ -79,8 +79,10 @@ async def admin_login(
         admin.last_login = datetime.utcnow()
         db.commit()
         
-        # 记录成功登录
-        logger.info(f"管理员登录成功：{admin.username} (ID: {admin.id}, 超级管理员: {admin.is_super_admin})")
+        # 记录成功登录（脱敏处理）
+        username_masked = admin.username[:3] + "***" if len(admin.username) > 3 else admin.username
+        admin_id_masked = admin.id[:3] + "***" if len(admin.id) > 3 else admin.id
+        logger.info(f"管理员登录成功：{username_masked} (ID: {admin_id_masked}, 超级管理员: {admin.is_super_admin})")
         
         return {
             "message": "管理员登录成功",

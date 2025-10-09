@@ -43,17 +43,44 @@ const Register: React.FC = () => {
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordValidation, setPasswordValidation] = useState({
+    is_valid: false,
+    score: 0,
+    strength: 'weak',
+    errors: [],
+    suggestions: []
+  });
 
   // 密码验证函数
-  const validatePassword = (pwd: string) => {
-    return {
-      length: pwd.length >= 8,
-      hasLetter: /[A-Za-z]/.test(pwd),
-      hasNumber: /\d/.test(pwd)
-    };
+  const validatePassword = async (pwd: string) => {
+    if (!pwd) {
+      setPasswordValidation({
+        is_valid: false,
+        score: 0,
+        strength: 'weak',
+        errors: [],
+        suggestions: []
+      });
+      return;
+    }
+
+    try {
+      const response = await api.post('/api/users/password/validate', {
+        password: pwd
+      });
+      setPasswordValidation(response.data);
+    } catch (error) {
+      console.error('密码验证失败:', error);
+    }
   };
 
-  const passwordValidation = validatePassword(password);
+  // 实时验证密码
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validatePassword(password);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [password]);
 
   const onFinish = async (values: any) => {
     try {
@@ -168,8 +195,15 @@ const Register: React.FC = () => {
             name="password" 
             rules={[
               { required: true, message: t('register.passwordRequired') },
-              { min: 8, message: t('register.passwordTooShort') },
-              { pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,}$/, message: t('register.passwordWeak') }
+              { 
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve();
+                  if (!passwordValidation.is_valid) {
+                    return Promise.reject(new Error('密码不符合安全要求'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           > 
             <Input.Password 
@@ -179,15 +213,35 @@ const Register: React.FC = () => {
             />
             {password && (
               <PasswordRequirements>
-                <PasswordRequirementItem valid={passwordValidation.length}>
-                  ✓ {t('register.passwordRequirements.length')}
-                </PasswordRequirementItem>
-                <PasswordRequirementItem valid={passwordValidation.hasLetter}>
-                  ✓ {t('register.passwordRequirements.letter')}
-                </PasswordRequirementItem>
-                <PasswordRequirementItem valid={passwordValidation.hasNumber}>
-                  ✓ {t('register.passwordRequirements.number')}
-                </PasswordRequirementItem>
+                <div style={{ marginBottom: '8px' }}>
+                  <span style={{ 
+                    color: passwordValidation.score >= 80 ? '#52c41a' : 
+                           passwordValidation.score >= 60 ? '#faad14' : '#ff4d4f',
+                    fontWeight: 'bold'
+                  }}>
+                    密码强度: {passwordValidation.strength === 'weak' ? '弱' : 
+                           passwordValidation.strength === 'medium' ? '中等' :
+                           passwordValidation.strength === 'strong' ? '强' : '很强'} 
+                    ({passwordValidation.score}/100)
+                  </span>
+                </div>
+                
+                {passwordValidation.errors.length > 0 && (
+                  <div style={{ color: '#ff4d4f', marginBottom: '8px' }}>
+                    {passwordValidation.errors.map((error, index) => (
+                      <div key={index}>• {error}</div>
+                    ))}
+                  </div>
+                )}
+                
+                {passwordValidation.suggestions.length > 0 && (
+                  <div style={{ color: '#1890ff', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>建议:</div>
+                    {passwordValidation.suggestions.map((suggestion, index) => (
+                      <div key={index}>• {suggestion}</div>
+                    ))}
+                  </div>
+                )}
               </PasswordRequirements>
             )}
           </Form.Item>

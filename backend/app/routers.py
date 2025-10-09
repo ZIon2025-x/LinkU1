@@ -78,6 +78,33 @@ def register_test(user: schemas.UserCreate):
         "validation": "passed"
     }
 
+@router.post("/password/validate")
+def validate_password_strength(
+    password_data: schemas.PasswordValidationRequest,
+    current_user: Optional[models.User] = Depends(get_current_user_optional)
+):
+    """验证密码强度"""
+    from app.password_validator import password_validator
+    
+    # 获取用户信息用于验证
+    username = str(current_user.name) if current_user else password_data.username
+    email = str(current_user.email) if current_user else password_data.email
+    
+    validation_result = password_validator.validate_password(
+        password_data.password,
+        username=username,
+        email=email
+    )
+    
+    return {
+        "is_valid": validation_result.is_valid,
+        "score": validation_result.score,
+        "strength": validation_result.strength,
+        "errors": validation_result.errors,
+        "suggestions": validation_result.suggestions,
+        "requirements": password_validator.get_password_requirements()
+    }
+
 @router.post("/register/debug")
 def register_debug(request_data: dict):
     """调试注册数据 - 接受原始JSON"""
@@ -99,6 +126,7 @@ async def register(
     from app.email_verification import EmailVerificationManager, send_verification_email_with_token
     from app.config import Config
     from app.security import get_password_hash
+    from app.password_validator import password_validator
     from datetime import datetime
     from app.async_crud import async_user_crud
     
@@ -134,6 +162,22 @@ async def register(
         raise HTTPException(
             status_code=400, 
             detail="用户名不能包含客服相关关键词"
+        )
+    
+    # 验证密码强度
+    password_validation = password_validator.validate_password(
+        validated_data['password'], 
+        username=validated_data['name'],
+        email=validated_data['email']
+    )
+    
+    if not password_validation.is_valid:
+        error_message = "密码不符合安全要求：\n" + "\n".join(password_validation.errors)
+        if password_validation.suggestions:
+            error_message += "\n\n建议：\n" + "\n".join(password_validation.suggestions)
+        raise HTTPException(
+            status_code=400,
+            detail=error_message
         )
 
     # 检查是否跳过邮件验证（开发环境）
@@ -3109,15 +3153,25 @@ from app.deps import check_admin, check_admin_user_status, check_super_admin
 
 @router.get("/admin/dashboard/stats")
 def get_dashboard_stats(
-    current_admin=Depends(check_admin_user_status), db: Session = Depends(get_db)
+    current_admin=Depends(check_admin_user_status), 
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     """获取管理后台统计数据"""
+    # 记录管理页面访问
+    if request:
+        client_ip = request.client.host
+        logger.info(f"管理员访问仪表板: {current_admin.username[:3]}*** (IP: {client_ip})")
     try:
         stats = crud.get_dashboard_stats(db)
         return stats
     except Exception as e:
-        print(f"Error in get_dashboard_stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        logger.error(f"Error in get_dashboard_stats: {e}")
+        # 生产环境不暴露内部错误信息
+        if os.getenv("ENVIRONMENT", "development") == "production":
+            raise HTTPException(status_code=500, detail="Internal server error")
+        else:
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/admin/users")

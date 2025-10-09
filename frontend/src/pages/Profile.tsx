@@ -251,19 +251,23 @@ const Profile: React.FC = () => {
                 onClick={() => setShowAvatars(v => !v)} 
                 style={{
                   position: 'absolute', 
-                  right: '-10px', 
-                  bottom: '-10px', 
+                  right: isMobile ? '5px' : '8px', 
+                  bottom: isMobile ? '5px' : '8px', 
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
                   color: '#fff', 
                   border: 'none', 
                   borderRadius: '50%', 
-                  width: '36px', 
-                  height: '36px', 
-                  fontSize: '16px', 
+                  width: isMobile ? '28px' : '32px', 
+                  height: isMobile ? '28px' : '32px', 
+                  fontSize: isMobile ? '12px' : '14px', 
                   fontWeight: '700', 
                   cursor: 'pointer',
                   boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.1)';

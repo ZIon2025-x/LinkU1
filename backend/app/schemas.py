@@ -29,6 +29,11 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class PasswordValidationRequest(BaseModel):
+    password: str
+    username: Optional[str] = None
+    email: Optional[str] = None
+
 
 class PasswordChange(BaseModel):
     current_password: str

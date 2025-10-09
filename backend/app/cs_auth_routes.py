@@ -189,7 +189,10 @@ async def cs_refresh_token(
         from app.security import add_security_headers
         add_security_headers(response)
         
-        logger.info(f"客服token刷新成功：{cs.email} (ID: {cs.id})")
+        # 脱敏处理日志
+        email_masked = cs.email[:3] + "***" + cs.email.split('@')[1] if '@' in cs.email else cs.email[:3] + "***"
+        cs_id_masked = cs.id[:3] + "***" if len(str(cs.id)) > 3 else str(cs.id)
+        logger.info(f"客服token刷新成功：{email_masked} (ID: {cs_id_masked})")
         
         return {
             "message": "Token刷新成功",
