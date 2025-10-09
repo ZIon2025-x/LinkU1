@@ -156,12 +156,28 @@ from app.async_routers import async_router
 app.include_router(async_router, prefix="/api", tags=["async"])
 
 # 创建上传目录
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
-(UPLOAD_DIR / "images").mkdir(exist_ok=True)
+import os
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
 
-# 添加静态文件服务
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+if RAILWAY_ENVIRONMENT:
+    # Railway环境：使用持久化卷
+    UPLOAD_DIR = Path("/data/uploads")
+    (UPLOAD_DIR / "images").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "files").mkdir(parents=True, exist_ok=True)
+else:
+    # 本地开发环境
+    UPLOAD_DIR = Path("uploads")
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    (UPLOAD_DIR / "images").mkdir(exist_ok=True)
+    (UPLOAD_DIR / "files").mkdir(exist_ok=True)
+
+# 添加静态文件服务 - 支持Railway环境
+if RAILWAY_ENVIRONMENT:
+    # Railway环境：使用持久化卷
+    app.mount("/uploads", StaticFiles(directory="/data/uploads"), name="uploads")
+else:
+    # 本地开发环境
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 active_connections = {}
 
