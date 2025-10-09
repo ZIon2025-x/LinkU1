@@ -3935,19 +3935,19 @@ from app.config import Config
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
 USE_CLOUD_STORAGE = os.getenv("USE_CLOUD_STORAGE", "false").lower() == "true"
 
-# 图片上传相关配置
+# 图片上传相关配置 - 使用私有存储
 if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
-    # Railway环境：使用持久化卷或临时存储
-    UPLOAD_DIR = Path("/data/uploads/images")  # Railway Volume挂载点
-    FILE_UPLOAD_DIR = Path("/data/uploads/files")
+    # Railway环境：使用私有目录
+    PRIVATE_IMAGE_DIR = Path("/data/uploads/private/images")
+    PRIVATE_FILE_DIR = Path("/data/uploads/private/files")
 else:
-    # 本地开发或云存储
-    UPLOAD_DIR = Path("uploads/images")
-    FILE_UPLOAD_DIR = Path("uploads/files")
+    # 本地开发环境：使用私有目录
+    PRIVATE_IMAGE_DIR = Path("uploads/private/images")
+    PRIVATE_FILE_DIR = Path("uploads/private/files")
 
-# 确保目录存在
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-FILE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+# 确保私有目录存在
+PRIVATE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+PRIVATE_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -3984,15 +3984,20 @@ async def upload_image(
         # 生成唯一文件名
         file_id = str(uuid.uuid4())
         filename = f"{file_id}{file_extension}"
-        file_path = UPLOAD_DIR / filename
+        file_path = PRIVATE_IMAGE_DIR / filename
 
-        # 保存文件
+        # 保存文件到私有目录
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        # 生成访问URL - 支持Railway部署
-        base_url = Config.BASE_URL
-        image_url = f"{base_url}/uploads/images/{filename}"
+        # 生成签名URL
+        from app.signed_url import signed_url_manager
+        image_url = signed_url_manager.generate_signed_url(
+            file_path=f"images/{filename}",
+            user_id=current_user.id,
+            expiry_minutes=15,  # 15分钟过期
+            one_time=False  # 可以多次使用
+        )
 
         logger.info(f"用户 {current_user.id} 上传图片: {filename}")
 
@@ -4061,15 +4066,20 @@ async def upload_file(
         # 生成唯一文件名
         file_id = str(uuid.uuid4())
         filename = f"{file_id}{file_extension}"
-        file_path = FILE_UPLOAD_DIR / filename
+        file_path = PRIVATE_FILE_DIR / filename
 
-        # 保存文件
+        # 保存文件到私有目录
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        # 生成访问URL - 支持Railway部署
-        base_url = Config.BASE_URL
-        file_url = f"{base_url}/uploads/files/{filename}"
+        # 生成签名URL
+        from app.signed_url import signed_url_manager
+        file_url = signed_url_manager.generate_signed_url(
+            file_path=f"files/{filename}",
+            user_id=current_user.id,
+            expiry_minutes=15,  # 15分钟过期
+            one_time=False  # 可以多次使用
+        )
 
         logger.info(f"用户 {current_user.id} 上传文件: {filename}")
 
@@ -4090,25 +4100,71 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
-@router.get("/uploads/files/{filename}")
-async def get_file(filename: str):
+@router.get("/private-file")
+async def get_private_file(
+    file: str = Query(..., description="文件路径"),
+    user: str = Query(..., description="用户ID"),
+    exp: int = Query(..., description="过期时间戳"),
+    sig: str = Query(..., description="签名"),
+    ip: str = Query(None, description="IP地址限制"),
+    ot: str = Query("0", description="是否一次性使用")
+):
     """
-    获取上传的文件
+    获取私有文件 - 需要签名URL
     """
     try:
-        file_path = FILE_UPLOAD_DIR / filename
-
+        from app.signed_url import signed_url_manager
+        from fastapi import Request
+        from fastapi.responses import FileResponse
+        
+        # 解析参数
+        params = {
+            "file": file,
+            "user": user,
+            "exp": str(exp),
+            "sig": sig,
+            "ip": ip,
+            "ot": ot
+        }
+        
+        parsed_params = signed_url_manager.parse_signed_url_params(params)
+        if not parsed_params:
+            raise HTTPException(status_code=400, detail="无效的签名URL参数")
+        
+        # 验证签名
+        request_ip = None  # 可以从Request对象获取
+        if not signed_url_manager.verify_signed_url(
+            file_path=parsed_params["file_path"],
+            user_id=parsed_params["user_id"],
+            expiry=parsed_params["expiry"],
+            signature=parsed_params["signature"],
+            ip_address=parsed_params.get("ip_address"),
+            one_time=parsed_params["one_time"]
+        ):
+            raise HTTPException(status_code=403, detail="签名验证失败")
+        
+        # 构建文件路径
+        if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
+            base_private_dir = Path("/data/uploads/private")
+        else:
+            base_private_dir = Path("uploads/private")
+        
+        file_path = base_private_dir / parsed_params["file_path"]
+        
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
-
-        from fastapi.responses import FileResponse
-
-        return FileResponse(path=file_path, filename=filename)
-
+        
+        # 返回文件
+        return FileResponse(
+            path=file_path,
+            filename=file_path.name,
+            media_type='application/octet-stream'
+        )
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取文件失败: {e}")
+        logger.error(f"获取私有文件失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取文件失败: {str(e)}")
 
 

@@ -497,6 +497,9 @@ const MessagePage: React.FC = () => {
     if (content.startsWith('[图片] ')) {
       const imageUrl = content.replace('[图片] ', '');
       
+      // 检查是否是签名URL
+      const isSignedUrl = imageUrl.includes('/api/private-file?');
+      
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ 
@@ -509,13 +512,13 @@ const MessagePage: React.FC = () => {
             📷 图片 
             <span style={{ 
               padding: '2px 6px', 
-              background: '#dbeafe', 
-              color: '#1e40af',
+              background: isSignedUrl ? '#fef3c7' : '#dbeafe', 
+              color: isSignedUrl ? '#92400e' : '#1e40af',
               borderRadius: '4px',
               fontSize: '10px',
               fontWeight: '600'
             }}>
-              文件存储
+              {isSignedUrl ? '私有存储' : '文件存储'}
             </span>
           </div>
           <div style={{
@@ -582,7 +585,7 @@ const MessagePage: React.FC = () => {
               fontSize: '10px',
               fontWeight: '600'
             }}>
-              文件
+              {isSignedUrl ? '私有' : '文件'}
             </div>
           </div>
         </div>

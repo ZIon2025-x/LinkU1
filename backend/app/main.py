@@ -162,22 +162,34 @@ RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
 if RAILWAY_ENVIRONMENT:
     # Railway环境：使用持久化卷
     UPLOAD_DIR = Path("/data/uploads")
-    (UPLOAD_DIR / "images").mkdir(parents=True, exist_ok=True)
-    (UPLOAD_DIR / "files").mkdir(parents=True, exist_ok=True)
+    # 公开目录（用于静态文件服务）
+    (UPLOAD_DIR / "public").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "public" / "images").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "public" / "files").mkdir(parents=True, exist_ok=True)
+    # 私有目录（需要签名URL访问）
+    (UPLOAD_DIR / "private").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "private" / "images").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "private" / "files").mkdir(parents=True, exist_ok=True)
 else:
     # 本地开发环境
     UPLOAD_DIR = Path("uploads")
     UPLOAD_DIR.mkdir(exist_ok=True)
-    (UPLOAD_DIR / "images").mkdir(exist_ok=True)
-    (UPLOAD_DIR / "files").mkdir(exist_ok=True)
+    # 公开目录
+    (UPLOAD_DIR / "public").mkdir(exist_ok=True)
+    (UPLOAD_DIR / "public" / "images").mkdir(exist_ok=True)
+    (UPLOAD_DIR / "public" / "files").mkdir(exist_ok=True)
+    # 私有目录
+    (UPLOAD_DIR / "private").mkdir(exist_ok=True)
+    (UPLOAD_DIR / "private" / "images").mkdir(exist_ok=True)
+    (UPLOAD_DIR / "private" / "files").mkdir(exist_ok=True)
 
-# 添加静态文件服务 - 支持Railway环境
+# 添加静态文件服务 - 只允许访问公开目录
 if RAILWAY_ENVIRONMENT:
-    # Railway环境：使用持久化卷
-    app.mount("/uploads", StaticFiles(directory="/data/uploads"), name="uploads")
+    # Railway环境：只允许访问公开目录
+    app.mount("/uploads", StaticFiles(directory="/data/uploads/public"), name="uploads")
 else:
-    # 本地开发环境
-    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    # 本地开发环境：只允许访问公开目录
+    app.mount("/uploads", StaticFiles(directory="uploads/public"), name="uploads")
 
 active_connections = {}
 
