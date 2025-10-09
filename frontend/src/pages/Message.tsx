@@ -720,6 +720,25 @@ const MessagePage: React.FC = () => {
         }
         
         console.log('消息发送成功，已添加到本地状态');
+        
+        // 发送成功后，使用HTTP API作为备用确认
+        try {
+          if (activeContact && !isServiceMode) {
+            const response = await sendMessage({
+              receiver_id: activeContact.id,
+              content: messageContent
+            });
+            
+            // 更新本地消息的ID为服务器返回的ID
+            if (response) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === newMessage.id ? { ...msg, id: response.id } : msg
+              ));
+            }
+          }
+        } catch (error) {
+          console.warn('HTTP备用发送失败，但WebSocket已发送:', error);
+        }
       } else {
         console.log('WebSocket未连接，状态:', ws ? ws.readyState : 'null');
         // WebSocket未连接，使用HTTP API作为备用
@@ -1076,6 +1095,13 @@ const MessagePage: React.FC = () => {
         // 加载聊天记录
         console.log('加载聊天记录，当前消息数量:', messages.length);
         await loadChatHistory(activeContact.id);
+        
+        // 立即清除该联系人的未读标识
+        setContactUnreadCounts(prev => {
+          const newCounts = { ...prev };
+          delete newCounts[activeContact.id];
+          return newCounts;
+        });
         // 切换到新联系人时重新显示系统提示
         setShowSystemWarning(true);
       }
@@ -1486,7 +1512,7 @@ const MessagePage: React.FC = () => {
           }
         });
         
-        const chatData = await getChatHistory(contactId, 20); // 增加加载数量
+        const chatData = await getChatHistory(contactId, 50); // 增加加载数量到50条
         const formattedMessages = chatData.map((msg: any) => ({
           id: msg.id,
           from: String(msg.sender_id) === String(user.id) ? '我' : (msg.is_admin_msg === 1 ? '系统' : '对方'),
@@ -1502,12 +1528,34 @@ const MessagePage: React.FC = () => {
         setMessages(prev => {
           // 移除加载状态消息
           const filteredPrev = prev.filter(msg => msg.id !== -1);
+          
+          // 如果当前有消息且新加载的消息为空，保留现有消息
+          if (filteredPrev.length > 0 && formattedMessages.length === 0) {
+            console.log('保持现有消息，新加载的消息为空');
+            return filteredPrev;
+          }
+          
           // 合并现有消息和新加载的消息，去重
           const allMessages = [...filteredPrev, ...formattedMessages];
-          // 去重：基于消息ID和内容
-          const uniqueMessages = allMessages.filter((msg, index, self) => 
-            index === self.findIndex(m => m.id === msg.id || (m.content === msg.content && m.from === msg.from))
-          );
+          
+          // 去重：优先使用服务器ID，然后基于内容和时间
+          const uniqueMessages = allMessages.filter((msg, index, self) => {
+            // 如果有服务器ID，优先使用ID去重
+            if (msg.id && msg.id > 0) {
+              return index === self.findIndex(m => m.id === msg.id);
+            }
+            // 否则基于内容和时间去重
+            return index === self.findIndex(m => 
+              m.content === msg.content && 
+              m.from === msg.from && 
+              Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
+            );
+          });
+          
+          // 按时间排序
+          uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          
+          console.log('消息去重完成，最终消息数量:', uniqueMessages.length);
           return uniqueMessages;
         });
         
@@ -2430,7 +2478,7 @@ const MessagePage: React.FC = () => {
                         }}></div>
                       </div>
                     </div>
-                    {c.unreadCount && c.unreadCount > 0 && (
+                    {contactUnreadCounts[c.id] && contactUnreadCounts[c.id] > 0 && (
                       <div style={{ 
                         background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                         borderRadius: '50%',
@@ -2445,7 +2493,7 @@ const MessagePage: React.FC = () => {
                         boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
                         animation: 'pulse 2s infinite'
                       }}>
-                        {c.unreadCount > 99 ? '99+' : c.unreadCount}
+                        {contactUnreadCounts[c.id] > 99 ? '99+' : contactUnreadCounts[c.id]}
                       </div>
                     )}
                   </div>
