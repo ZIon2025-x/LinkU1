@@ -182,11 +182,8 @@ const MessagePage: React.FC = () => {
         const previewUrl = e.target?.result as string;
         setImagePreview(previewUrl);
         
-        // 在移动端显示弹窗预览
-        if (isMobile) {
-          setPreviewImageUrl(previewUrl);
-          setShowImagePreview(true);
-        }
+        // 移动端和桌面端都显示发送图片的弹窗，不显示预览弹窗
+        // 移动端会在发送图片弹窗中显示预览
       };
       reader.readAsDataURL(file);
     }
@@ -3294,8 +3291,8 @@ const MessagePage: React.FC = () => {
               id="file-upload"
             />
 
-            {/* 图片预览区域 - 只在桌面端显示 */}
-            {imagePreview && !isMobile && (
+            {/* 图片预览区域 - 移动端和桌面端都显示 */}
+            {imagePreview && (
               <div style={{
                 marginBottom: '12px',
                 padding: '12px',
