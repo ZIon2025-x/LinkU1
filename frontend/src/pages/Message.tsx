@@ -135,7 +135,6 @@ const MessagePage: React.FC = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
-  const [showMobileImagePreview, setShowMobileImagePreview] = useState(false);
   const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
@@ -575,13 +574,8 @@ const MessagePage: React.FC = () => {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
           }}
           onClick={() => {
-            // 显示图片预览
-            if (isMobile) {
-              // 移动端显示移动端预览弹窗
-              setPreviewImageUrl(finalImageUrl);
-              setShowMobileImagePreview(true);
-            } else {
-              // 桌面端显示桌面端预览弹窗
+            // 显示图片预览（仅桌面端）
+            if (!isMobile) {
               setPreviewImageUrl(finalImageUrl);
               setShowImagePreview(true);
             }
@@ -599,23 +593,48 @@ const MessagePage: React.FC = () => {
               }}
               onError={async (e) => {
                 console.error('图片加载失败:', finalImageUrl);
+                console.error('原始图片URL:', imageUrl);
                 
-                // 尝试重新获取图片URL（如果是私有文件）
+                // 如果是私有文件且返回403，提示用户刷新页面
                 if (isSignedUrl) {
-                  try {
-                    const retryResponse = await fetch(finalImageUrl, {
-                      method: 'GET',
-                      credentials: 'include'
-                    });
-                    
-                    if (retryResponse.ok) {
-                      // 重新设置图片源
-                      e.currentTarget.src = finalImageUrl;
-                      return;
-                    }
-                  } catch (retryError) {
-                    console.error('重试获取图片失败:', retryError);
-                  }
+                  console.log('私有文件认证失败，建议刷新页面');
+                  
+                  // 显示认证失败提示
+                  const container = e.currentTarget.parentElement!;
+                  container.innerHTML = `
+                    <div style="
+                      padding: 40px 20px; 
+                      text-align: center; 
+                      color: #6b7280; 
+                      background: linear-gradient(135deg, #fef3c7, #fde68a);
+                      border-radius: 12px;
+                      border: 2px dashed #f59e0b;
+                    ">
+                      <div style="font-size: 24px; margin-bottom: 8px;">🔒</div>
+                      <div style="font-weight: 600; margin-bottom: 4px; color: #92400e;">图片认证过期</div>
+                      <div style="font-size: 12px; opacity: 0.7; color: #92400e;">请刷新页面重新加载图片</div>
+                      <button onclick="window.location.reload()" style="
+                        margin-top: 8px;
+                        padding: 6px 12px;
+                        background: #f59e0b;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-weight: 600;
+                      ">刷新页面</button>
+                    </div>
+                  `;
+                  return;
+                }
+                
+                // 尝试使用原始URL（不带API前缀）
+                if (finalImageUrl.includes(API_BASE_URL)) {
+                  const originalUrl = imageUrl;
+                  console.log('尝试使用原始URL:', originalUrl);
+                  e.currentTarget.src = originalUrl;
+                  return;
                 }
                 
                 // 显示错误信息
@@ -630,8 +649,9 @@ const MessagePage: React.FC = () => {
                     border: 2px dashed #d1d5db;
                   ">
                     <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
-                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败</div>
-                    <div style="font-size: 12px; opacity: 0.7;">请检查网络连接或图片链接</div>
+                    <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败 (403)</div>
+                    <div style="font-size: 12px; opacity: 0.7;">认证失败，请刷新页面重试</div>
+                    <div style="font-size: 10px; opacity: 0.5; margin-top: 4px; word-break: break-all;">${finalImageUrl}</div>
                     <button onclick="window.location.reload()" style="
                       margin-top: 8px;
                       padding: 4px 8px;
@@ -1259,16 +1279,13 @@ const MessagePage: React.FC = () => {
         if (showImagePreview) {
           setShowImagePreview(false);
         }
-        if (showMobileImagePreview) {
-          setShowMobileImagePreview(false);
-        }
         if (showMobileImageSendModal) {
           setShowMobileImageSendModal(false);
         }
       }
     };
 
-    if (showEmojiPicker || showImagePreview || showMobileImagePreview || showMobileImageSendModal) {
+    if (showEmojiPicker || showImagePreview || showMobileImageSendModal) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -1277,7 +1294,7 @@ const MessagePage: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEmojiPicker, showImagePreview, showMobileImagePreview, showMobileImageSendModal]);
+  }, [showEmojiPicker, showImagePreview, showMobileImageSendModal]);
 
   // 请求通知权限
   useEffect(() => {
