@@ -237,7 +237,7 @@ const TermsOfService: React.FC = () => {
                 如果您对本协议有任何疑问，请通过以下方式联系我们：
               </p>
               <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>邮箱：legal@linku.com</li>
+                <li>邮箱：info@link2ur.com</li>
                 <li>客服电话：400-123-4567</li>
                 <li>在线客服：平台内客服系统</li>
               </ul>

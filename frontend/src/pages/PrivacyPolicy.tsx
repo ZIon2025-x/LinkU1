@@ -252,7 +252,7 @@ const PrivacyPolicy: React.FC = () => {
               </h2>
               <p>如果您对本隐私政策有任何疑问或需要行使您的权利，请通过以下方式联系我们：</p>
               <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>邮箱：privacy@linku.com</li>
+                <li>邮箱：info@link2ur.com</li>
                 <li>客服电话：400-123-4567</li>
                 <li>在线客服：平台内客服系统</li>
                 <li>邮寄地址：北京市朝阳区某某大厦1001室</li>

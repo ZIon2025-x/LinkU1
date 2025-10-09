@@ -146,13 +146,13 @@ const Footer: React.FC = () => {
               }}>
                 问题或建议？发送邮件至
               </p>
-              <a href="mailto:feedback@linku.com" style={{
+              <a href="mailto:support@link2ur.com" style={{
                 color: '#60a5fa',
                 textDecoration: 'none',
                 fontSize: '14px',
                 fontWeight: '500'
               }}>
-                feedback@linku.com
+                support@link2ur.com
               </a>
             </div>
             
@@ -164,13 +164,13 @@ const Footer: React.FC = () => {
               }}>
                 商务合作，发送邮件至
               </p>
-              <a href="mailto:business@linku.com" style={{
+              <a href="mailto:info@link2ur.com" style={{
                 color: '#60a5fa',
                 textDecoration: 'none',
                 fontSize: '14px',
                 fontWeight: '500'
               }}>
-                business@linku.com
+                info@link2ur.com
               </a>
             </div>
             
@@ -182,13 +182,13 @@ const Footer: React.FC = () => {
               }}>
                 合作伙伴，发送邮件至
               </p>
-              <a href="mailto:partnership@linku.com" style={{
+              <a href="mailto:info@link2ur.com" style={{
                 color: '#60a5fa',
                 textDecoration: 'none',
                 fontSize: '14px',
                 fontWeight: '500'
               }}>
-                partnership@linku.com
+                info@link2ur.com
               </a>
             </div>
             

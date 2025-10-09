@@ -1155,8 +1155,8 @@ const Home: React.FC = () => {
               <div style={{color: '#888'}}>—— 用户B</div>
             </div>
             <div style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}>
-              <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>【公告】平台将于本月上线新会员功能，敬请期待！</div>
-              <div style={{color: '#888'}}>2025-07-22</div>
+              <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>【公告】目前平台属于测试阶段，如有问题欢迎发送邮件至 support@link2ur.com</div>
+              <div style={{color: '#888'}}>2025-10-09</div>
             </div>
           </div>
         </div>
