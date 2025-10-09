@@ -46,9 +46,21 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     loadUserData();
+  }, []);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const loadUserData = async () => {
@@ -267,11 +279,11 @@ const Profile: React.FC = () => {
             {showAvatars && (
               <div style={{
                 display: 'flex', 
-                gap: '16px', 
+                gap: isMobile ? '12px' : '16px', 
                 marginTop: '20px', 
                 flexWrap: 'wrap', 
                 justifyContent: 'center',
-                padding: '20px',
+                padding: isMobile ? '16px' : '20px',
                 background: '#f8fafc',
                 borderRadius: '16px',
                 border: '1px solid #e2e8f0'
@@ -283,8 +295,8 @@ const Profile: React.FC = () => {
                     alt="可选头像" 
                     onClick={() => handleAvatarChange(src)} 
                     style={{
-                      width: '60px', 
-                      height: '60px', 
+                      width: isMobile ? '50px' : '60px', 
+                      height: isMobile ? '50px' : '60px', 
                       borderRadius: '50%', 
                       border: src === user.avatar ? '3px solid #3b82f6' : '2px solid #e2e8f0', 
                       cursor: 'pointer', 

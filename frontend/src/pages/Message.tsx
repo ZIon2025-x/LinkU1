@@ -3557,15 +3557,17 @@ const MessagePage: React.FC = () => {
         }}>
           <div style={{
             background: '#fff',
-            borderRadius: '20px',
-            padding: '30px',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)'
+            borderRadius: isMobile ? '16px' : '20px',
+            padding: isMobile ? '20px' : '30px',
+            maxWidth: isMobile ? '95%' : '500px',
+            width: isMobile ? '95%' : '90%',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+            maxHeight: isMobile ? '90vh' : 'auto',
+            overflowY: isMobile ? 'auto' : 'visible'
           }}>
             <h3 style={{
               margin: '0 0 20px 0',
-              fontSize: '20px',
+              fontSize: isMobile ? '18px' : '20px',
               fontWeight: '700',
               color: '#1e293b',
               textAlign: 'center'
@@ -3588,7 +3590,7 @@ const MessagePage: React.FC = () => {
               {/* 交互式星星评分 */}
               <div style={{ 
                 display: 'flex', 
-                gap: '30px', 
+                gap: isMobile ? '20px' : '30px', 
                 justifyContent: 'center',
                 marginBottom: '12px'
               }}>
@@ -3599,9 +3601,9 @@ const MessagePage: React.FC = () => {
                     style={{
                       background: 'none',
                       border: 'none',
-                      fontSize: '36px',
+                      fontSize: isMobile ? '28px' : '36px',
                       cursor: 'pointer',
-                      padding: '4px',
+                      padding: isMobile ? '2px' : '4px',
                       borderRadius: '4px',
                       transition: 'all 0.3s ease',
                       position: 'relative'
@@ -3621,7 +3623,7 @@ const MessagePage: React.FC = () => {
                       top: '50%',
                       left: '50%',
                       transform: 'translate(-50%, -50%)',
-                      fontSize: '36px',
+                      fontSize: isMobile ? '28px' : '36px',
                       color: '#d1d5db',
                       zIndex: 1
                     }}>
@@ -3635,7 +3637,7 @@ const MessagePage: React.FC = () => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        fontSize: '36px',
+                        fontSize: isMobile ? '28px' : '36px',
                         color: '#fbbf24',
                         zIndex: 2,
                         textShadow: '0 2px 4px rgba(251, 191, 36, 0.3)'
@@ -3716,8 +3718,9 @@ const MessagePage: React.FC = () => {
 
             <div style={{
               display: 'flex',
-              gap: '12px',
-              justifyContent: 'center'
+              gap: isMobile ? '8px' : '12px',
+              justifyContent: 'center',
+              flexDirection: isMobile ? 'column' : 'row'
             }}>
               <button
                 onClick={() => {
@@ -3730,12 +3733,13 @@ const MessagePage: React.FC = () => {
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  padding: '12px 24px',
+                  padding: isMobile ? '14px 20px' : '12px 24px',
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  width: isMobile ? '100%' : 'auto'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#e5e7eb';
@@ -3752,12 +3756,13 @@ const MessagePage: React.FC = () => {
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                   color: '#fff',
                   border: 'none',
-                  padding: '12px 24px',
+                  padding: isMobile ? '14px 20px' : '12px 24px',
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '16px' : '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  width: isMobile ? '100%' : 'auto'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
