@@ -129,9 +129,9 @@ const MessagePage: React.FC = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [showImagePreviewModal, setShowImagePreviewModal] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string>('');
   const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
 
   const location = useLocation();
@@ -185,7 +185,7 @@ const MessagePage: React.FC = () => {
         // 在移动端显示弹窗预览
         if (isMobile) {
           setPreviewImageUrl(previewUrl);
-          setShowImagePreviewModal(true);
+          setShowImagePreview(true);
         }
       };
       reader.readAsDataURL(file);
@@ -471,7 +471,7 @@ const MessagePage: React.FC = () => {
         // 清空图片选择并关闭弹窗
         setSelectedImage(null);
         setImagePreview(null);
-        setShowImagePreviewModal(false);
+        setShowImagePreview(false);
         setPreviewImageUrl('');
         setInput('');
       } else {
@@ -540,8 +540,9 @@ const MessagePage: React.FC = () => {
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
           }}
           onClick={() => {
-            // 打开图片链接
-            window.open(imageUrl, '_blank');
+            // 显示图片预览
+            setPreviewImageUrl(imageUrl);
+            setShowImagePreview(true);
           }}
           >
             <img
@@ -1113,12 +1114,17 @@ const MessagePage: React.FC = () => {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (showEmojiPicker && event.key === 'Escape') {
-        setShowEmojiPicker(false);
+      if (event.key === 'Escape') {
+        if (showEmojiPicker) {
+          setShowEmojiPicker(false);
+        }
+        if (showImagePreview) {
+          setShowImagePreview(false);
+        }
       }
     };
 
-    if (showEmojiPicker) {
+    if (showEmojiPicker || showImagePreview) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -1127,7 +1133,7 @@ const MessagePage: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEmojiPicker]);
+  }, [showEmojiPicker, showImagePreview]);
 
   // 请求通知权限
   useEffect(() => {
@@ -3833,7 +3839,7 @@ const MessagePage: React.FC = () => {
       />
 
       {/* 移动端图片预览弹窗 */}
-      {showImagePreviewModal && (
+      {showImagePreview && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -3880,7 +3886,7 @@ const MessagePage: React.FC = () => {
             }}>
               <button
                 onClick={() => {
-                  setShowImagePreviewModal(false);
+                  setShowImagePreview(false);
                   setPreviewImageUrl('');
                   setSelectedImage(null);
                   setImagePreview(null);
@@ -3919,6 +3925,124 @@ const MessagePage: React.FC = () => {
                 {uploadingImage ? '发送中...' : '发送图片'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 图片预览模态框 */}
+      {showImagePreview && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}
+        onClick={() => setShowImagePreview(false)}
+        >
+          <div style={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setShowImagePreview(false)}
+              style={{
+                position: 'absolute',
+                top: '-50px',
+                right: '0',
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                color: 'white',
+                fontSize: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10001
+              }}
+            >
+              ×
+            </button>
+            
+            {/* 图片 */}
+            <img
+              src={previewImageUrl}
+              alt="图片预览"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
+              }}
+              onError={(e) => {
+                console.error('图片加载失败:', previewImageUrl);
+                const img = e.currentTarget;
+                img.style.display = 'none';
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                  color: white;
+                  font-size: 18px;
+                  text-align: center;
+                  padding: 40px;
+                  background: rgba(255, 255, 255, 0.1);
+                  border-radius: 8px;
+                  border: 2px dashed rgba(255, 255, 255, 0.3);
+                `;
+                errorDiv.textContent = '图片加载失败';
+                img.parentNode?.appendChild(errorDiv);
+              }}
+            />
+            
+            {/* 下载按钮 */}
+            <button
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = previewImageUrl;
+                link.download = `image_${Date.now()}.jpg`;
+                link.click();
+              }}
+              style={{
+                marginTop: '20px',
+                background: 'rgba(59, 130, 246, 0.8)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 24px',
+                color: 'white',
+                fontSize: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 1)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.8)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              📥 下载图片
+            </button>
           </div>
         </div>
       )}
