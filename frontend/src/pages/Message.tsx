@@ -1162,8 +1162,8 @@ const MessagePage: React.FC = () => {
           // setService(null); // 已移除service状态
         }
         
-        // 重置滚动标志
-        setShouldScrollToBottom(false);
+        // 取消滚动标志重置
+        // setShouldScrollToBottom(false);
         
         // 加载聊天记录
         console.log('加载聊天记录，当前消息数量:', messages.length);
@@ -1186,31 +1186,31 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 自动滚动到底部 - 处理首次加载和发送新消息的滚动
-  useEffect(() => {
-    if (messagesEndRef.current && messages.length > 0) {
-      // 如果是首次加载聊天历史，直接滚动到底部
-      if (shouldScrollToBottom) {
-        setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-            setShouldScrollToBottom(false); // 重置标志
-          }
-        }, 100);
-      }
-      // 如果是发送新消息，平滑滚动到底部
-      else if (!loadingMoreMessages) {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage && lastMessage.from === '我') {
-          setTimeout(() => {
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 50);
-        }
-      }
-    }
-  }, [messages.length, shouldScrollToBottom, loadingMoreMessages]);
+  // 取消自动滚动功能
+  // useEffect(() => {
+  //   if (messagesEndRef.current && messages.length > 0) {
+  //     // 如果是首次加载聊天历史，直接滚动到底部
+  //     if (shouldScrollToBottom) {
+  //       setTimeout(() => {
+  //         if (messagesEndRef.current) {
+  //           messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+  //           setShouldScrollToBottom(false); // 重置标志
+  //         }
+  //       }, 100);
+  //     }
+  //     // 如果是发送新消息，平滑滚动到底部
+  //     else if (!loadingMoreMessages) {
+  //       const lastMessage = messages[messages.length - 1];
+  //       if (lastMessage && lastMessage.from === '我') {
+  //         setTimeout(() => {
+  //           if (messagesEndRef.current) {
+  //             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  //           }
+  //         }, 50);
+  //       }
+  //     }
+  //   }
+  // }, [messages.length, shouldScrollToBottom, loadingMoreMessages]);
 
   // 点击外部区域和ESC键关闭表情框
   useEffect(() => {
@@ -1559,10 +1559,10 @@ const MessagePage: React.FC = () => {
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         setMessages(formattedMessages);
         
-        // 如果是首次加载（不是加载更多），设置滚动到底部的标志
-        if (!isLoadMore) {
-          setShouldScrollToBottom(true);
-        }
+        // 取消首次加载时的自动滚动
+        // if (!isLoadMore) {
+        //   setShouldScrollToBottom(true);
+        // }
           
           // 标记客服对话消息为已读
           try {
@@ -1682,10 +1682,10 @@ const MessagePage: React.FC = () => {
           setHasMoreMessages(true);
         }
         
-        // 如果是首次加载（不是加载更多），设置滚动到底部的标志
-        if (!isLoadMore) {
-          setShouldScrollToBottom(true);
-        }
+        // 取消首次加载时的自动滚动
+        // if (!isLoadMore) {
+        //   setShouldScrollToBottom(true);
+        // }
         
         // 标记普通聊天的未读消息为已读
         try {
