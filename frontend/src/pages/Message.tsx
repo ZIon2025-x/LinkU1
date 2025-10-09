@@ -1091,7 +1091,7 @@ const MessagePage: React.FC = () => {
     if (activeContact && messagesEndRef.current) {
       setTimeout(() => {
         if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+          messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
         }
       }, 300); // 增加延迟确保消息加载完成
     }
@@ -1439,7 +1439,7 @@ const MessagePage: React.FC = () => {
           // 消息加载完成后立即滚动到底部
           setTimeout(() => {
             if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
             }
           }, 100);
           
@@ -1482,7 +1482,7 @@ const MessagePage: React.FC = () => {
         // 消息加载完成后立即滚动到底部
         setTimeout(() => {
           if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
           }
         }, 100);
         
