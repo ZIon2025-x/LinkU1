@@ -135,6 +135,7 @@ const MessagePage: React.FC = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [showMobileImagePreview, setShowMobileImagePreview] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
   
@@ -147,6 +148,9 @@ const MessagePage: React.FC = () => {
   // 缓存相关状态
   const [contactsLoaded, setContactsLoaded] = useState(false);
   const [lastLoadTime, setLastLoadTime] = useState(0);
+  
+  // 滚动控制状态
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -196,8 +200,8 @@ const MessagePage: React.FC = () => {
         const previewUrl = e.target?.result as string;
         setImagePreview(previewUrl);
         
-        // 移动端和桌面端都显示发送图片的弹窗，不显示预览弹窗
-        // 移动端会在发送图片弹窗中显示预览
+        // 移动端和桌面端都显示图片预览区域（包含发送按钮）
+        // 不需要额外的弹窗，图片预览区域已经包含发送功能
       };
       reader.readAsDataURL(file);
     }
@@ -482,7 +486,7 @@ const MessagePage: React.FC = () => {
         // 清空图片选择并关闭弹窗
         setSelectedImage(null);
         setImagePreview(null);
-        setShowImagePreview(false);
+        setShowMobileImagePreview(false);
         setPreviewImageUrl('');
         setInput('');
       } else {
@@ -510,6 +514,22 @@ const MessagePage: React.FC = () => {
       
       // 检查是否是签名URL
       const isSignedUrl = imageUrl.includes('/api/private-file?');
+      
+      // 处理图片URL，确保使用正确的格式
+      const getImageUrl = (url: string) => {
+        // 如果是相对路径，添加API基础URL
+        if (url.startsWith('/')) {
+          return `${API_BASE_URL}${url}`;
+        }
+        // 如果已经是完整URL，直接返回
+        if (url.startsWith('http')) {
+          return url;
+        }
+        // 其他情况，添加API基础URL
+        return `${API_BASE_URL}/${url}`;
+      };
+      
+      const finalImageUrl = getImageUrl(imageUrl);
       
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -552,12 +572,19 @@ const MessagePage: React.FC = () => {
           }}
           onClick={() => {
             // 显示图片预览
-            setPreviewImageUrl(imageUrl);
-            setShowImagePreview(true);
+            if (isMobile) {
+              // 移动端显示移动端预览弹窗
+              setPreviewImageUrl(finalImageUrl);
+              setShowMobileImagePreview(true);
+            } else {
+              // 桌面端显示桌面端预览弹窗
+              setPreviewImageUrl(finalImageUrl);
+              setShowImagePreview(true);
+            }
           }}
           >
             <img
-              src={imageUrl}
+              src={finalImageUrl}
               alt="发送的图片"
               style={{
                 width: '100%',
@@ -566,8 +593,28 @@ const MessagePage: React.FC = () => {
                 objectFit: 'cover',
                 display: 'block'
               }}
-              onError={(e) => {
-                console.error('图片加载失败:', imageUrl);
+              onError={async (e) => {
+                console.error('图片加载失败:', finalImageUrl);
+                
+                // 尝试重新获取图片URL（如果是私有文件）
+                if (isSignedUrl) {
+                  try {
+                    const retryResponse = await fetch(finalImageUrl, {
+                      method: 'GET',
+                      credentials: 'include'
+                    });
+                    
+                    if (retryResponse.ok) {
+                      // 重新设置图片源
+                      e.currentTarget.src = finalImageUrl;
+                      return;
+                    }
+                  } catch (retryError) {
+                    console.error('重试获取图片失败:', retryError);
+                  }
+                }
+                
+                // 显示错误信息
                 const container = e.currentTarget.parentElement!;
                 container.innerHTML = `
                   <div style="
@@ -581,6 +628,16 @@ const MessagePage: React.FC = () => {
                     <div style="font-size: 24px; margin-bottom: 8px;">📷</div>
                     <div style="font-weight: 600; margin-bottom: 4px;">图片加载失败</div>
                     <div style="font-size: 12px; opacity: 0.7;">请检查网络连接或图片链接</div>
+                    <button onclick="window.location.reload()" style="
+                      margin-top: 8px;
+                      padding: 4px 8px;
+                      background: #3b82f6;
+                      color: white;
+                      border: none;
+                      border-radius: 4px;
+                      cursor: pointer;
+                      font-size: 10px;
+                    ">刷新页面</button>
                   </div>
                 `;
               }}
@@ -1124,6 +1181,9 @@ const MessagePage: React.FC = () => {
           // setService(null); // 已移除service状态
         }
         
+        // 重置滚动标志
+        setShouldScrollToBottom(false);
+        
         // 加载聊天记录
         console.log('加载聊天记录，当前消息数量:', messages.length);
         // 使用setTimeout让UI先更新，然后异步加载聊天记录
@@ -1145,28 +1205,31 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 自动滚动到底部 - 只在有新消息时滚动
+  // 自动滚动到底部 - 处理首次加载和发送新消息的滚动
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0) {
-      // 使用 setTimeout 确保 DOM 更新完成后再滚动
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      // 如果是首次加载聊天历史，直接滚动到底部
+      if (shouldScrollToBottom) {
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+            setShouldScrollToBottom(false); // 重置标志
+          }
+        }, 100);
+      }
+      // 如果是发送新消息，平滑滚动到底部
+      else if (!loadingMoreMessages) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.from === '我') {
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 50);
         }
-      }, 50);
+      }
     }
-  }, [messages.length]); // 只在消息数量变化时触发
-
-  // 当选择联系人时，立即滚动到底部
-  useEffect(() => {
-    if (activeContact && messagesEndRef.current) {
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-        }
-      }, 300); // 增加延迟确保消息加载完成
-    }
-  }, [activeContact]);
+  }, [messages.length, shouldScrollToBottom, loadingMoreMessages]);
 
   // 点击外部区域和ESC键关闭表情框
   useEffect(() => {
@@ -1192,10 +1255,13 @@ const MessagePage: React.FC = () => {
         if (showImagePreview) {
           setShowImagePreview(false);
         }
+        if (showMobileImagePreview) {
+          setShowMobileImagePreview(false);
+        }
       }
     };
 
-    if (showEmojiPicker || showImagePreview) {
+    if (showEmojiPicker || showImagePreview || showMobileImagePreview) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
     }
@@ -1204,7 +1270,7 @@ const MessagePage: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEmojiPicker, showImagePreview]);
+  }, [showEmojiPicker, showImagePreview, showMobileImagePreview]);
 
   // 请求通知权限
   useEffect(() => {
@@ -1508,16 +1574,14 @@ const MessagePage: React.FC = () => {
             };
           });
           
-          // 按时间排序（最新的在最后）
-          formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          setMessages(formattedMessages);
-          
-          // 消息加载完成后立即滚动到底部
-          setTimeout(() => {
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-            }
-          }, 100);
+        // 按时间排序（最新的在最后）
+        formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        setMessages(formattedMessages);
+        
+        // 如果是首次加载（不是加载更多），设置滚动到底部的标志
+        if (!isLoadMore) {
+          setShouldScrollToBottom(true);
+        }
           
           // 标记客服对话消息为已读
           try {
@@ -1637,12 +1701,10 @@ const MessagePage: React.FC = () => {
           setHasMoreMessages(true);
         }
         
-        // 消息加载完成后立即滚动到底部
-        setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-          }
-        }, 100);
+        // 如果是首次加载（不是加载更多），设置滚动到底部的标志
+        if (!isLoadMore) {
+          setShouldScrollToBottom(true);
+        }
         
         // 标记普通聊天的未读消息为已读
         try {
@@ -4152,92 +4214,77 @@ const MessagePage: React.FC = () => {
       />
 
       {/* 移动端图片预览弹窗 */}
-      {showImagePreview && (
+      {showMobileImagePreview && (
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
-          zIndex: 9999,
+          background: 'rgba(0, 0, 0, 0.9)',
+          zIndex: 10001,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
-        }}>
+        }}
+        onClick={() => {
+          setShowMobileImagePreview(false);
+          setPreviewImageUrl('');
+        }}
+        >
           {/* 弹窗内容 */}
           <div style={{
-            background: '#fff',
-            borderRadius: '16px',
-            padding: '20px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
+            position: 'relative',
+            maxWidth: '95vw',
+            maxHeight: '95vh',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '16px'
-          }}>
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => {
+                setShowMobileImagePreview(false);
+                setPreviewImageUrl('');
+              }}
+              style={{
+                position: 'absolute',
+                top: '-50px',
+                right: '0',
+                background: 'rgba(0, 0, 0, 0.6)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                fontSize: '20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10002
+              }}
+            >
+              ×
+            </button>
+            
             {/* 图片预览 */}
             <img
               src={previewImageUrl}
               alt="图片预览"
               style={{
                 maxWidth: '100%',
-                maxHeight: '60vh',
+                maxHeight: '80vh',
                 borderRadius: '12px',
-                objectFit: 'contain'
+                objectFit: 'contain',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
               }}
             />
-            
-            {/* 按钮区域 */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              width: '100%'
-            }}>
-              <button
-                onClick={() => {
-                  setShowImagePreview(false);
-                  setPreviewImageUrl('');
-                  setSelectedImage(null);
-                  setImagePreview(null);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px 20px',
-                  background: '#f1f5f9',
-                  color: '#64748b',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                取消
-              </button>
-              <button
-                onClick={sendImageFromModal}
-                disabled={uploadingImage}
-                style={{
-                  flex: 1,
-                  padding: '12px 20px',
-                  background: uploadingImage ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: uploadingImage ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {uploadingImage ? '发送中...' : '发送图片'}
-              </button>
-            </div>
           </div>
         </div>
       )}
