@@ -49,7 +49,8 @@ class SignedURLManager:
             if expiry_minutes is None:
                 expiry_minutes = self.default_expiry_minutes
             
-            expiry_time = int(time.time()) + (expiry_minutes * 60)
+            current_time = int(time.time())
+            expiry_time = current_time + (expiry_minutes * 60)
             
             # 构建签名数据
             signature_data = {
@@ -58,7 +59,7 @@ class SignedURLManager:
                 "expiry": expiry_time,
                 "ip": ip_address,
                 "one_time": one_time,
-                "timestamp": int(time.time())
+                "timestamp": current_time
             }
             
             # 生成签名
@@ -69,7 +70,8 @@ class SignedURLManager:
                 "file": file_path,
                 "user": user_id,
                 "exp": expiry_time,
-                "sig": signature
+                "sig": signature,
+                "ts": current_time  # 添加时间戳参数
             }
             
             if ip_address:
@@ -95,6 +97,7 @@ class SignedURLManager:
         user_id: str,
         expiry: int,
         signature: str,
+        timestamp: int,
         ip_address: str = None,
         one_time: bool = False
     ) -> bool:
@@ -106,6 +109,7 @@ class SignedURLManager:
             user_id: 用户ID
             expiry: 过期时间戳
             signature: 签名
+            timestamp: 原始时间戳
             ip_address: 请求IP地址
             one_time: 是否一次性使用
         
@@ -118,14 +122,14 @@ class SignedURLManager:
                 logger.warning(f"签名URL已过期: {file_path}")
                 return False
             
-            # 重新生成签名进行验证
+            # 重新生成签名进行验证（使用原始时间戳）
             signature_data = {
                 "file_path": file_path,
                 "user_id": user_id,
                 "expiry": expiry,
                 "ip": ip_address,
                 "one_time": one_time,
-                "timestamp": int(time.time())
+                "timestamp": timestamp
             }
             
             expected_signature = self._generate_signature(signature_data)
@@ -171,11 +175,20 @@ class SignedURLManager:
                     logger.warning(f"缺少必需参数: {param}")
                     return None
             
+            # 处理可选的时间戳参数
+            timestamp = None
+            if "ts" in query_params:
+                timestamp = int(query_params["ts"])
+            else:
+                # 向后兼容：如果没有时间戳，使用过期时间减去15分钟
+                timestamp = int(query_params["exp"]) - 900
+            
             return {
                 "file_path": unquote(query_params["file"]),
                 "user_id": unquote(query_params["user"]),
                 "expiry": int(query_params["exp"]),
                 "signature": query_params["sig"],
+                "timestamp": timestamp,
                 "ip_address": query_params.get("ip"),
                 "one_time": query_params.get("ot") == "1"
             }

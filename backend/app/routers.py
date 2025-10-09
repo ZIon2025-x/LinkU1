@@ -4106,6 +4106,7 @@ async def get_private_file(
     user: str = Query(..., description="用户ID"),
     exp: int = Query(..., description="过期时间戳"),
     sig: str = Query(..., description="签名"),
+    ts: int = Query(None, description="时间戳"),
     ip: str = Query(None, description="IP地址限制"),
     ot: str = Query("0", description="是否一次性使用")
 ):
@@ -4127,6 +4128,10 @@ async def get_private_file(
             "ot": ot
         }
         
+        # 如果有时间戳参数，添加到参数中
+        if ts is not None:
+            params["ts"] = str(ts)
+        
         parsed_params = signed_url_manager.parse_signed_url_params(params)
         if not parsed_params:
             raise HTTPException(status_code=400, detail="无效的签名URL参数")
@@ -4138,6 +4143,7 @@ async def get_private_file(
             user_id=parsed_params["user_id"],
             expiry=parsed_params["expiry"],
             signature=parsed_params["signature"],
+            timestamp=parsed_params.get("timestamp", exp - 900),  # 如果没有时间戳，使用过期时间减去15分钟
             ip_address=parsed_params.get("ip_address"),
             one_time=parsed_params["one_time"]
         ):
