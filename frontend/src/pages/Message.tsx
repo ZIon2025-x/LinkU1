@@ -1729,6 +1729,22 @@ const MessagePage: React.FC = () => {
             // 按时间排序
             uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             
+            // 保持滚动位置：计算新增消息的高度
+            setTimeout(() => {
+              const messagesContainer = messagesContainerRef.current;
+              if (messagesContainer) {
+                const newMessageCount = uniqueMessages.length - filteredPrev.length;
+                if (newMessageCount > 0) {
+                  // 估算每条消息的平均高度（可以根据实际情况调整）
+                  const estimatedMessageHeight = 60; // 像素
+                  const scrollAdjustment = newMessageCount * estimatedMessageHeight;
+                  
+                  // 调整滚动位置，保持用户当前查看的内容不变
+                  messagesContainer.scrollTop += scrollAdjustment;
+                }
+              }
+            }, 50);
+            
             console.log('加载更多消息完成，最终消息数量:', uniqueMessages.length);
             return uniqueMessages;
           } else {
