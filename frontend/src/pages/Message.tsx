@@ -251,6 +251,10 @@ const MessagePage: React.FC = () => {
   
   // 滚动控制状态
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
+  
+  // 发送状态
+  const [isSending, setIsSending] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -786,6 +790,13 @@ const MessagePage: React.FC = () => {
   const handleSend = async () => {
     console.log('handleSend 被调用');
     console.log('input:', input);
+    
+    if (isSending) {
+      console.log('正在发送中，忽略重复点击');
+      return;
+    }
+    
+    setIsSending(true);
     console.log('isServiceMode:', isServiceMode);
     console.log('currentChat:', currentChat);
     console.log('activeContact:', activeContact);
@@ -794,6 +805,7 @@ const MessagePage: React.FC = () => {
     
     if (!input.trim()) {
       console.log('输入内容为空，返回');
+      setIsSending(false);
       return;
     }
     
@@ -908,6 +920,8 @@ const MessagePage: React.FC = () => {
       setInput(messageContent); // 恢复输入内容
       // 移除失败的消息
       setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -1256,31 +1270,21 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 取消自动滚动功能
-  // useEffect(() => {
-  //   if (messagesEndRef.current && messages.length > 0) {
-  //     // 如果是首次加载聊天历史，直接滚动到底部
-  //     if (shouldScrollToBottom) {
-  //       setTimeout(() => {
-  //         if (messagesEndRef.current) {
-  //           messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-  //           setShouldScrollToBottom(false); // 重置标志
-  //         }
-  //       }, 100);
-  //     }
-  //     // 如果是发送新消息，平滑滚动到底部
-  //     else if (!loadingMoreMessages) {
-  //       const lastMessage = messages[messages.length - 1];
-  //       if (lastMessage && lastMessage.from === '我') {
-  //         setTimeout(() => {
-  //           if (messagesEndRef.current) {
-  //             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  //           }
-  //         }, 50);
-  //       }
-  //     }
-  //   }
-  // }, [messages.length, shouldScrollToBottom, loadingMoreMessages]);
+  // 自动滚动到底部 - 仅针对发送和接收消息
+  useEffect(() => {
+    if (messagesEndRef.current && messages.length > 0 && !loadingMoreMessages) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // 如果是发送的消息或接收的消息，自动滚动到底部
+      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方' || lastMessage.from === '系统')) {
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    }
+  }, [messages.length, loadingMoreMessages]);
 
   // 点击外部区域和ESC键关闭表情框
   useEffect(() => {
@@ -1849,6 +1853,14 @@ const MessagePage: React.FC = () => {
     }
   }, [isServiceMode, serviceConnected, user]);
 
+  // 滚动到底部
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setShowScrollToBottomButton(false);
+    }
+  }, []);
+
   // 加载更多历史消息
   const loadMoreMessages = useCallback(async () => {
     if (!activeContact || loadingMoreMessages || !hasMoreMessages) {
@@ -1875,6 +1887,11 @@ const MessagePage: React.FC = () => {
         console.log('检测到滚动到顶部，开始加载更多消息');
         loadMoreMessages();
       }
+      
+      // 控制"滚动到底部"按钮的显示
+      // 当用户向上滚动超过200px时显示按钮，接近底部时隐藏
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      setShowScrollToBottomButton(distanceFromBottom > 200);
     };
 
     messagesContainer.addEventListener('scroll', handleScroll);
@@ -3459,6 +3476,42 @@ const MessagePage: React.FC = () => {
               </div>
             ))}
             <div ref={messagesEndRef} />
+            
+            {/* 滚动到底部按钮 */}
+            {showScrollToBottomButton && (
+              <div
+                onClick={scrollToBottom}
+                style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  right: '20px',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
+                  transition: 'all 0.3s ease',
+                  zIndex: 1000,
+                  fontSize: '20px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.backgroundColor = '#0056b3';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.backgroundColor = '#007bff';
+                }}
+                title="滚动到底部"
+              >
+                ↓
+              </div>
+            )}
                   </div>
 
 
