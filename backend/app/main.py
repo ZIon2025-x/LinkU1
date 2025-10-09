@@ -31,7 +31,7 @@ from app.csrf_routes import router as csrf_router
 from app.rate_limit_routes import router as rate_limit_router
 from app.security_monitoring_routes import router as security_monitoring_router
 from app.deps import get_db
-from app.routers import router as user_router
+from app.routers import router as user_router, router as main_router
 from app.security import add_security_headers
 from app.security_monitoring import check_security_middleware
 from app.error_handlers import (
@@ -130,6 +130,7 @@ async def debug_cookie_middleware(request: Request, call_next):
 
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
+app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
 # auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
 app.include_router(cs_auth_router, tags=["客服认证"])
