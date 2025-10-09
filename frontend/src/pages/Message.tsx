@@ -87,6 +87,10 @@ const MessagePage: React.FC = () => {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
       }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     `;
     document.head.appendChild(style);
     return () => {
@@ -133,6 +137,12 @@ const MessagePage: React.FC = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
+  
+  // 无限滚动相关状态
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -1438,9 +1448,14 @@ const MessagePage: React.FC = () => {
     }
   }, [user?.id]);
 
-  const loadChatHistory = useCallback(async (contactId: string, chatId?: string) => {
+  const loadChatHistory = useCallback(async (contactId: string, chatId?: string, page: number = 1, isLoadMore: boolean = false) => {
     try {
-      console.log('加载聊天历史:', { contactId, chatId, isServiceMode, serviceConnected });
+      console.log('加载聊天历史:', { contactId, chatId, isServiceMode, serviceConnected, page, isLoadMore });
+      
+      // 如果是加载更多，设置加载状态
+      if (isLoadMore) {
+        setLoadingMoreMessages(true);
+      }
       
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
       if (chatId) {
@@ -1494,25 +1509,29 @@ const MessagePage: React.FC = () => {
       // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
       if (!chatId && !isServiceMode && !serviceConnected) {
         console.log('使用普通聊天API加载消息');
-        // 显示加载状态，但保留现有消息
-        setMessages(prev => {
-          const loadingMessage = {
-            id: -1, // 使用负数ID表示加载状态
-            from: '系统',
-            content: '正在加载历史消息...',
-            created_at: new Date().toISOString()
-          };
-          
-          // 如果已经有消息，在末尾添加加载状态
-          if (prev.length > 0) {
-            return [...prev, loadingMessage];
-          } else {
-            // 如果没有消息，只显示加载状态
-            return [loadingMessage];
-          }
-        });
         
-        const chatData = await getChatHistory(contactId, 50); // 增加加载数量到50条
+        // 如果不是加载更多，显示加载状态
+        if (!isLoadMore) {
+          setMessages(prev => {
+            const loadingMessage = {
+              id: -1, // 使用负数ID表示加载状态
+              from: '系统',
+              content: '正在加载历史消息...',
+              created_at: new Date().toISOString()
+            };
+            
+            // 如果已经有消息，在末尾添加加载状态
+            if (prev.length > 0) {
+              return [...prev, loadingMessage];
+            } else {
+              // 如果没有消息，只显示加载状态
+              return [loadingMessage];
+            }
+          });
+        }
+        
+        const offset = (page - 1) * 50; // 计算偏移量
+        const chatData = await getChatHistory(contactId, 50, undefined, offset); // 支持分页加载
         const formattedMessages = chatData.map((msg: any) => ({
           id: msg.id,
           from: String(msg.sender_id) === String(user.id) ? '我' : (msg.is_admin_msg === 1 ? '系统' : '对方'),
@@ -1524,40 +1543,73 @@ const MessagePage: React.FC = () => {
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         
-        // 替换消息列表，但保留加载状态消息
+        // 处理消息列表
         setMessages(prev => {
           // 移除加载状态消息
           const filteredPrev = prev.filter(msg => msg.id !== -1);
           
-          // 如果当前有消息且新加载的消息为空，保留现有消息
-          if (filteredPrev.length > 0 && formattedMessages.length === 0) {
-            console.log('保持现有消息，新加载的消息为空');
-            return filteredPrev;
-          }
-          
-          // 合并现有消息和新加载的消息，去重
-          const allMessages = [...filteredPrev, ...formattedMessages];
-          
-          // 去重：优先使用服务器ID，然后基于内容和时间
-          const uniqueMessages = allMessages.filter((msg, index, self) => {
-            // 如果有服务器ID，优先使用ID去重
-            if (msg.id && msg.id > 0) {
-              return index === self.findIndex(m => m.id === msg.id);
+          if (isLoadMore) {
+            // 加载更多：将新消息添加到现有消息前面
+            const allMessages = [...formattedMessages, ...filteredPrev];
+            
+            // 去重：优先使用服务器ID，然后基于内容和时间
+            const uniqueMessages = allMessages.filter((msg, index, self) => {
+              // 如果有服务器ID，优先使用ID去重
+              if (msg.id && msg.id > 0) {
+                return index === self.findIndex(m => m.id === msg.id);
+              }
+              // 否则基于内容和时间去重
+              return index === self.findIndex(m => 
+                m.content === msg.content && 
+                m.from === msg.from && 
+                Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
+              );
+            });
+            
+            // 按时间排序
+            uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            
+            console.log('加载更多消息完成，最终消息数量:', uniqueMessages.length);
+            return uniqueMessages;
+          } else {
+            // 初始加载：替换消息列表
+            // 如果当前有消息且新加载的消息为空，保留现有消息
+            if (filteredPrev.length > 0 && formattedMessages.length === 0) {
+              console.log('保持现有消息，新加载的消息为空');
+              return filteredPrev;
             }
-            // 否则基于内容和时间去重
-            return index === self.findIndex(m => 
-              m.content === msg.content && 
-              m.from === msg.from && 
-              Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
-            );
-          });
-          
-          // 按时间排序
-          uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          
-          console.log('消息去重完成，最终消息数量:', uniqueMessages.length);
-          return uniqueMessages;
+            
+            // 合并现有消息和新加载的消息，去重
+            const allMessages = [...filteredPrev, ...formattedMessages];
+            
+            // 去重：优先使用服务器ID，然后基于内容和时间
+            const uniqueMessages = allMessages.filter((msg, index, self) => {
+              // 如果有服务器ID，优先使用ID去重
+              if (msg.id && msg.id > 0) {
+                return index === self.findIndex(m => m.id === msg.id);
+              }
+              // 否则基于内容和时间去重
+              return index === self.findIndex(m => 
+                m.content === msg.content && 
+                m.from === msg.from && 
+                Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
+              );
+            });
+            
+            // 按时间排序
+            uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            
+            console.log('消息去重完成，最终消息数量:', uniqueMessages.length);
+            return uniqueMessages;
+          }
         });
+        
+        // 检查是否还有更多消息
+        if (formattedMessages.length < 50) {
+          setHasMoreMessages(false);
+        } else {
+          setHasMoreMessages(true);
+        }
         
         // 消息加载完成后立即滚动到底部
         setTimeout(() => {
@@ -1610,8 +1662,56 @@ const MessagePage: React.FC = () => {
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      // 完成加载更多
+      if (isLoadMore) {
+        setLoadingMoreMessages(false);
+      }
     }
   }, [isServiceMode, serviceConnected, user]);
+
+  // 加载更多历史消息
+  const loadMoreMessages = useCallback(async () => {
+    if (!activeContact || loadingMoreMessages || !hasMoreMessages) {
+      return;
+    }
+    
+    console.log('开始加载更多消息，当前页:', currentPage + 1);
+    setCurrentPage(prev => prev + 1);
+    await loadChatHistory(activeContact.id, undefined, currentPage + 1, true);
+  }, [activeContact, loadingMoreMessages, hasMoreMessages, currentPage, loadChatHistory]);
+
+  // 滚动监听器 - 检测是否滚动到顶部
+  useEffect(() => {
+    const messagesContainer = messagesContainerRef.current;
+    if (!messagesContainer || !activeContact) {
+      return;
+    }
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+      
+      // 当滚动到顶部附近时（距离顶部50px内），加载更多消息
+      if (scrollTop <= 50 && hasMoreMessages && !loadingMoreMessages) {
+        console.log('检测到滚动到顶部，开始加载更多消息');
+        loadMoreMessages();
+      }
+    };
+
+    messagesContainer.addEventListener('scroll', handleScroll);
+    return () => {
+      messagesContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [activeContact, hasMoreMessages, loadingMoreMessages, loadMoreMessages]);
+
+  // 重置分页状态当切换联系人时
+  useEffect(() => {
+    if (activeContact) {
+      setCurrentPage(1);
+      setHasMoreMessages(true);
+      setLoadingMoreMessages(false);
+    }
+  }, [activeContact]);
 
   // 联系在线客服
   const handleContactCustomerService = async () => {
@@ -2749,19 +2849,21 @@ const MessagePage: React.FC = () => {
           )}
 
           {/* 消息显示区域 */}
-          <div style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
-            padding: isMobile ? '16px' : '30px', 
-            background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
-            display: 'flex', 
-            flexDirection: 'column',
-            minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
-            maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none',
-            position: 'relative',
-            paddingTop: isMobile ? '20px' : '20px',
-            marginTop: isMobile ? '92px' : '0'
-          }}>
+          <div 
+            ref={messagesContainerRef}
+            style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: isMobile ? '16px' : '30px', 
+              background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
+              display: 'flex', 
+              flexDirection: 'column',
+              minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
+              maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none',
+              position: 'relative',
+              paddingTop: isMobile ? '20px' : '20px',
+              marginTop: isMobile ? '92px' : '0'
+            }}>
           {isServiceMode ? (
               <div style={{ 
                 display: 'flex', 
@@ -3021,6 +3123,44 @@ const MessagePage: React.FC = () => {
                 </div>
               )
                     ) : null}
+            
+            {/* 加载更多消息的UI */}
+            {activeContact && !isServiceMode && hasMoreMessages && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: '16px',
+                color: '#64748b',
+                fontSize: '14px'
+              }}>
+                {loadingMoreMessages ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid #e2e8f0',
+                      borderTop: '2px solid #3b82f6',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
+                    加载历史消息中...
+                  </div>
+                ) : (
+                  <div style={{ 
+                    padding: '8px 16px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={loadMoreMessages}
+                  >
+                    向上滚动加载更多消息
+                  </div>
+                )}
+              </div>
+            )}
             
             {((activeContact && !isServiceMode) || (isServiceMode && messages.length > 0)) && messages.map((msg, idx) => (
               <div key={idx} style={{ 
