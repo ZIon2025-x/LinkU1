@@ -200,8 +200,11 @@ const MessagePage: React.FC = () => {
         const previewUrl = e.target?.result as string;
         setImagePreview(previewUrl);
         
-        // 移动端和桌面端都显示图片预览区域（包含发送按钮）
-        // 不需要额外的弹窗，图片预览区域已经包含发送功能
+        // 移动端显示发送弹窗，桌面端显示预览区域
+        if (isMobile) {
+          setShowMobileImagePreview(true);
+          setPreviewImageUrl(previewUrl);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -3634,8 +3637,8 @@ const MessagePage: React.FC = () => {
               id="file-upload"
             />
 
-            {/* 图片预览区域 - 移动端和桌面端都显示 */}
-            {imagePreview && (
+            {/* 图片预览区域 - 仅桌面端显示，移动端使用弹窗 */}
+            {imagePreview && !isMobile && (
               <div style={{
                 marginBottom: '12px',
                 padding: '12px',
@@ -4213,7 +4216,7 @@ const MessagePage: React.FC = () => {
         }}
       />
 
-      {/* 移动端图片预览弹窗 */}
+      {/* 移动端图片发送弹窗 */}
       {showMobileImagePreview && (
         <div style={{
           position: 'fixed',
@@ -4221,57 +4224,38 @@ const MessagePage: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.9)',
+          background: 'rgba(0, 0, 0, 0.8)',
           zIndex: 10001,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '20px'
-        }}
-        onClick={() => {
-          setShowMobileImagePreview(false);
-          setPreviewImageUrl('');
-        }}
-        >
+        }}>
           {/* 弹窗内容 */}
           <div style={{
-            position: 'relative',
-            maxWidth: '95vw',
-            maxHeight: '95vh',
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '20px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '16px'
-          }}
-          onClick={(e) => e.stopPropagation()}
-          >
-            {/* 关闭按钮 */}
-            <button
-              onClick={() => {
-                setShowMobileImagePreview(false);
-                setPreviewImageUrl('');
-              }}
-              style={{
-                position: 'absolute',
-                top: '-50px',
-                right: '0',
-                background: 'rgba(0, 0, 0, 0.6)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                fontSize: '20px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10002
-              }}
-            >
-              ×
-            </button>
+            gap: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            {/* 标题 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937'
+            }}>
+              📷 发送图片
+            </div>
             
             {/* 图片预览 */}
             <img
@@ -4279,12 +4263,76 @@ const MessagePage: React.FC = () => {
               alt="图片预览"
               style={{
                 maxWidth: '100%',
-                maxHeight: '80vh',
+                maxHeight: '50vh',
                 borderRadius: '12px',
                 objectFit: 'contain',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                border: '2px solid #e5e7eb'
               }}
             />
+            
+            {/* 按钮区域 */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              width: '100%'
+            }}>
+              <button
+                onClick={() => {
+                  setShowMobileImagePreview(false);
+                  setPreviewImageUrl('');
+                  setSelectedImage(null);
+                  setImagePreview(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: '#f1f5f9',
+                  color: '#64748b',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e2e8f0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={sendImageFromModal}
+                disabled={uploadingImage}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: uploadingImage ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!uploadingImage) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {uploadingImage ? '发送中...' : '发送图片'}
+              </button>
+            </div>
           </div>
         </div>
       )}
