@@ -793,9 +793,16 @@ const MessagePage: React.FC = () => {
   // 移动端初始化时显示联系人列表
   useEffect(() => {
     if (isMobile && !activeContact) {
-      setShowContactsList(true);
+      // 检查URL参数，如果有uid参数，说明用户想要直接进入聊天
+      const urlParams = new URLSearchParams(location.search);
+      const targetUserId = urlParams.get('uid');
+      
+      if (!targetUserId) {
+        // 只有在没有URL参数时才显示联系人列表
+        setShowContactsList(true);
+      }
     }
-  }, [isMobile, activeContact]);
+  }, [isMobile, activeContact, location.search]);
 
   // 获取当前用户信息
   useEffect(() => {
@@ -848,7 +855,12 @@ const MessagePage: React.FC = () => {
           console.log('在现有联系人中找到目标联系人:', targetContact);
           setActiveContact(targetContact);
           setIsServiceMode(false);
-          setMessages([]); // 清空消息列表，准备加载新的聊天历史
+          // 不清空消息列表，让loadChatHistory处理消息加载
+          
+          // 移动端从URL参数进入聊天时，确保不显示联系人列表
+          if (isMobile) {
+            setShowContactsList(false);
+          }
         } else {
           console.log('未在现有联系人中找到，创建临时联系人信息');
           // 如果不在现有联系人中，创建一个临时的联系人信息
@@ -867,7 +879,12 @@ const MessagePage: React.FC = () => {
           console.log('创建临时联系人:', tempContact);
           setActiveContact(tempContact);
           setIsServiceMode(false);
-          setMessages([]); // 清空消息列表，准备加载新的聊天历史
+          // 不清空消息列表，让loadChatHistory处理消息加载
+          
+          // 移动端从URL参数进入聊天时，确保不显示联系人列表
+          if (isMobile) {
+            setShowContactsList(false);
+          }
         }
       }
     }
@@ -1059,13 +1076,9 @@ const MessagePage: React.FC = () => {
           // setService(null); // 已移除service状态
         }
         
-        // 只有在消息列表为空时才加载聊天记录，避免覆盖现有消息
-        if (messages.length === 0) {
-          console.log('消息列表为空，加载聊天记录');
-          await loadChatHistory(activeContact.id);
-        } else {
-          console.log('消息列表不为空，跳过加载聊天记录，当前消息数量:', messages.length);
-        }
+        // 加载聊天记录
+        console.log('加载聊天记录，当前消息数量:', messages.length);
+        await loadChatHistory(activeContact.id);
         // 切换到新联系人时重新显示系统提示
         setShowSystemWarning(true);
       }
@@ -1458,13 +1471,23 @@ const MessagePage: React.FC = () => {
       // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
       if (!chatId && !isServiceMode && !serviceConnected) {
         console.log('使用普通聊天API加载消息');
-        // 显示加载状态
-        setMessages([{
-          id: -1, // 使用负数ID表示加载状态
-          from: '系统',
-          content: '正在加载历史消息...',
-          created_at: new Date().toISOString()
-        }]);
+        // 显示加载状态，但保留现有消息
+        setMessages(prev => {
+          const loadingMessage = {
+            id: -1, // 使用负数ID表示加载状态
+            from: '系统',
+            content: '正在加载历史消息...',
+            created_at: new Date().toISOString()
+          };
+          
+          // 如果已经有消息，在末尾添加加载状态
+          if (prev.length > 0) {
+            return [...prev, loadingMessage];
+          } else {
+            // 如果没有消息，只显示加载状态
+            return [loadingMessage];
+          }
+        });
         
         const chatData = await getChatHistory(contactId, 20); // 增加加载数量
         const formattedMessages = chatData.map((msg: any) => ({
@@ -1477,7 +1500,19 @@ const MessagePage: React.FC = () => {
         // 按时间排序（最新的在最后）
         formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
-        setMessages(formattedMessages);
+        
+        // 替换消息列表，但保留加载状态消息
+        setMessages(prev => {
+          // 移除加载状态消息
+          const filteredPrev = prev.filter(msg => msg.id !== -1);
+          // 合并现有消息和新加载的消息，去重
+          const allMessages = [...filteredPrev, ...formattedMessages];
+          // 去重：基于消息ID和内容
+          const uniqueMessages = allMessages.filter((msg, index, self) => 
+            index === self.findIndex(m => m.id === msg.id || (m.content === msg.content && m.from === msg.from))
+          );
+          return uniqueMessages;
+        });
         
         // 消息加载完成后立即滚动到底部
         setTimeout(() => {
@@ -2292,7 +2327,7 @@ const MessagePage: React.FC = () => {
                       
                       setActiveContact(c); 
                       setIsServiceMode(false); 
-                      setMessages([]); // 清空消息列表，准备加载新的聊天历史
+                      // 不清空消息列表，让loadChatHistory处理消息加载
                       
                       // 移动端点击联系人后自动关闭联系人列表
                       if (isMobile) {

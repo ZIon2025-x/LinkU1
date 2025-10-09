@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
+import { API_BASE_URL } from '../config';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -207,7 +208,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
     // 关闭弹窗并跳转到消息页面
     onClose();
-    window.open(`/message?uid=${task.poster_id}`, '_blank');
+    // 使用window.location.href在当前页面跳转，而不是打开新标签页
+    window.location.href = `/message?uid=${task.poster_id}`;
   };
 
   const handleAcceptTask = async () => {
@@ -218,8 +220,22 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setActionLoading(true);
     try {
       console.log('开始接受任务...', { taskId, currentStatus: task?.status });
-      const result = await applyForTask(taskId!);
+      
+      // 使用正确的API端点
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      const result = await response.json();
       console.log('接受任务API调用成功:', result);
+      
+      if (!response.ok) {
+        throw new Error(result.detail || '接受任务失败');
+      }
       
       alert('任务申请成功！\n\n请等待任务发布者审核您的申请，审核通过后您就可以开始执行任务了。');
       
