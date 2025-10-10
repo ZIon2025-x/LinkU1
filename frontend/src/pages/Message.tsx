@@ -7,63 +7,134 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
 
-// 图片加载工具函数
-const loadImageWithFallback = async (src: string, retryCount = 0): Promise<string> => {
-  // 首先尝试使用fetch
-  try {
-    const response = await fetch(src, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'image/*',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Connection': 'keep-alive'
-      },
-      signal: AbortSignal.timeout(10000)
-    });
-    
-    if (response.ok) {
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
+// 私密图片显示组件
+const PrivateImageDisplay: React.FC<{
+  imageId: string;
+  currentUserId: string;
+  style: React.CSSProperties;
+  alt?: string;
+}> = ({ imageId, currentUserId, style, alt = "私密图片" }) => {
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+        
+        // 生成图片访问URL
+        const response = await api.post('/api/messages/generate-image-url', {
+          image_id: imageId
+        });
+        
+        if (response.data.success) {
+          const { image_url } = response.data;
+          
+          // 使用fetch加载图片
+          const imgResponse = await fetch(image_url, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'Accept': 'image/*',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          });
+          
+          if (imgResponse.ok) {
+            const blob = await imgResponse.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            setImageUrl(blobUrl);
+            console.log('私密图片加载成功:', imageId);
+          } else {
+            throw new Error(`HTTP ${imgResponse.status}: ${imgResponse.statusText}`);
+          }
+        } else {
+          throw new Error('生成图片URL失败');
+        }
+        
+      } catch (err) {
+        console.error('私密图片加载错误:', err, imageId);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (imageId && currentUserId) {
+      loadImage();
     }
     
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  } catch (error) {
-    console.warn('Fetch失败，尝试XMLHttpRequest:', error);
-    
-    // 如果fetch失败，使用XMLHttpRequest作为备用
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.withCredentials = true;
-      xhr.responseType = 'blob';
-      xhr.timeout = 10000;
-      
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const blob = xhr.response;
-          const blobUrl = URL.createObjectURL(blob);
-          resolve(blobUrl);
-        } else {
-          reject(new Error(`XHR HTTP ${xhr.status}: ${xhr.statusText}`));
-        }
-      };
-      
-      xhr.onerror = () => {
-        reject(new Error('XHR网络错误'));
-      };
-      
-      xhr.ontimeout = () => {
-        reject(new Error('XHR超时'));
-      };
-      
-      xhr.send();
-    });
+    // 清理blob URL
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageId, currentUserId]);
+
+  if (loading) {
+    return (
+      <div style={{
+        ...style,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f3f4f6',
+        color: '#6b7280',
+        borderRadius: '8px'
+      }}>
+        <div style={{ fontSize: '14px' }}>加载中...</div>
+      </div>
+    );
   }
+
+  if (error) {
+    return (
+      <div style={{
+        ...style,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
+        color: '#6b7280',
+        borderRadius: '8px',
+        border: '2px dashed #d1d5db',
+        padding: '20px'
+      }}>
+        <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔒</div>
+        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+          私密图片加载失败
+        </div>
+        <div style={{ fontSize: '12px', opacity: 0.7, textAlign: 'center' }}>
+          权限不足或网络错误
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={imageUrl} 
+      alt={alt} 
+      style={{
+        ...style,
+        borderRadius: '8px',
+        maxWidth: '100%',
+        height: 'auto'
+      }}
+      onError={() => {
+        console.error('图片显示失败:', imageId);
+        setError(true);
+      }}
+    />
+  );
 };
 
-// 私有图片加载组件
+// 私有图片加载组件（兼容旧版本）
 const PrivateImageLoader: React.FC<{
   src: string;
   alt: string;
@@ -79,12 +150,25 @@ const PrivateImageLoader: React.FC<{
         setLoading(true);
         setError(false);
         
-        // 图片URL无过期时间，直接加载
+        // 直接使用fetch加载图片
+        const response = await fetch(src, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'image/*',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         
-        // 使用新的图片加载工具函数
-        const blobUrl = await loadImageWithFallback(src);
-        setImageSrc(blobUrl);
-        console.log('图片加载成功:', src);
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          setImageSrc(blobUrl);
+          console.log('图片加载成功:', src);
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
       } catch (err) {
         console.error('图片加载错误:', err, src);
@@ -438,14 +522,14 @@ const MessagePage: React.FC = () => {
       const uploadResult = await uploadResponse.json();
       console.log('上传成功结果:', uploadResult);
       
-      if (!uploadResult.url) {
-        throw new Error('服务器未返回图片URL');
+      if (!uploadResult.image_id) {
+        throw new Error('服务器未返回图片ID');
       }
       
-      const imageUrl = uploadResult.url;
+      const imageId = uploadResult.image_id;
       
-      // 发送包含图片URL的消息
-      const messageContent = `[图片] ${imageUrl}`;
+      // 发送包含图片ID的消息
+      const messageContent = `[图片] ${imageId}`;
       
       await sendImageMessage(messageContent);
       
@@ -677,103 +761,47 @@ const MessagePage: React.FC = () => {
   };
 
   // 渲染消息内容（支持图片）
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (content: string, message: any) => {
     // 检查是否是图片消息
-    if (content.startsWith('[图片] ')) {
-      const imageUrl = content.replace('[图片] ', '');
-      
-      // 检查是否是签名URL
-      const isSignedUrl = imageUrl.includes('/api/private-file?');
-      
-      // 处理图片URL，确保使用正确的格式
-      const getImageUrl = (url: string) => {
-        // 如果是相对路径，添加API基础URL
-        if (url.startsWith('/')) {
-          return `${API_BASE_URL}${url}`;
-        }
-        // 如果已经是完整URL，直接返回
-        if (url.startsWith('http')) {
-          return url;
-        }
-        // 其他情况，添加API基础URL
-        return `${API_BASE_URL}/${url}`;
-      };
-      
-      const finalImageUrl = getImageUrl(imageUrl);
+    if (content.startsWith('[图片] ') || message.image_id) {
+      const imageId = message.image_id || content.replace('[图片] ', '');
       
       
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ 
             fontSize: '12px', 
-            opacity: 0.7,
+            color: '#6b7280', 
+            marginBottom: '4px',
             display: 'flex',
             alignItems: 'center',
             gap: '4px'
           }}>
-            📷 图片 
+            📷 私密图片
             <span style={{ 
+              fontSize: '10px', 
+              background: '#fef3c7', 
               padding: '2px 6px', 
-              background: isSignedUrl ? '#fef3c7' : '#dbeafe', 
-              color: isSignedUrl ? '#92400e' : '#1e40af',
               borderRadius: '4px',
-              fontSize: '10px',
+              color: '#92400e',
               fontWeight: '600'
             }}>
-              {isSignedUrl ? '私有存储' : '文件存储'}
+              仅聊天可见
             </span>
           </div>
-          <div style={{
-            position: 'relative',
-            display: 'inline-block',
-            maxWidth: '250px',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            transition: 'all 0.3s ease',
-            cursor: 'pointer'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.02)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-          }}
-          onClick={() => {
-            // 显示图片预览（仅桌面端）
-            if (!isMobile) {
-              setPreviewImageUrl(finalImageUrl);
-            setShowImagePreview(true);
-            }
-          }}
-          >
-            <PrivateImageLoader
-              src={finalImageUrl}
-              alt="发送的图片"
+          <div style={{ maxWidth: '300px', maxHeight: '300px' }}>
+            <PrivateImageDisplay
+              imageId={imageId}
+              currentUserId={user?.id || ''}
               style={{
                 width: '100%',
-                height: 'auto',
-                maxHeight: '300px',
+                height: '100%',
                 objectFit: 'cover',
-                display: 'block'
+                borderRadius: '8px',
+                cursor: 'pointer'
               }}
+              alt="私密图片"
             />
-            {/* 图片类型指示器 */}
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: 'rgba(0,0,0,0.6)',
-              color: 'white',
-              padding: '4px 8px',
-              borderRadius: '12px',
-              fontSize: '10px',
-              fontWeight: '600'
-            }}>
-              {isSignedUrl ? '私有' : '文件'}
-            </div>
           </div>
         </div>
       );
@@ -3573,7 +3601,7 @@ const MessagePage: React.FC = () => {
                   {msg.from !== '系统' && (
                     <div style={{ fontSize: 14, marginBottom: 4, fontWeight: '600' }}>{msg.from}</div>
                   )}
-                  {renderMessageContent(msg.content)}
+                  {renderMessageContent(msg.content, msg)}
                   <div style={{ 
                     fontSize: 12, 
                     color: msg.from === '系统' 
