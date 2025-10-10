@@ -98,7 +98,7 @@ const Footer: React.FC = () => {
                 marginBottom: '16px',
                 color: '#fff'
               }}>
-                合作伙伴
+                合作
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                 <a href="#" style={{
@@ -121,7 +121,18 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  任务发布者
+                  任务达人
+                </a>
+                <a href="#" style={{
+                  color: 'rgba(255,255,255,0.8)',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
+                onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
+                >
+                  商户合作
                 </a>
               </div>
             </div>
@@ -190,68 +201,6 @@ const Footer: React.FC = () => {
               }}>
                 info@link2ur.com
               </a>
-            </div>
-            
-            {/* 应用下载按钮 */}
-            <div className="footer-download" style={{marginTop: '24px'}}>
-              <p style={{
-                fontSize: '14px',
-                color: 'rgba(255,255,255,0.8)',
-                marginBottom: '12px'
-              }}>
-                下载我们的应用
-              </p>
-              <div className="download-buttons" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                <button style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                }}
-                >
-                  <span style={{fontSize: '16px'}}>📱</span>
-                  GET IT ON Google Play
-                </button>
-                
-                <button style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  color: '#fff',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                }}
-                >
-                  <span style={{fontSize: '16px'}}>🍎</span>
-                  Download on the App Store
-                </button>
-              </div>
             </div>
           </div>
         </div>

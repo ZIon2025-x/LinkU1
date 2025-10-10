@@ -132,12 +132,6 @@ const Home: React.FC = () => {
   // 联调相关状态
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState(t('home.allTypes'));
-  const [city, setCity] = useState('all');
-  const [keyword, setKeyword] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(6);
-  const [total, setTotal] = useState(0);
 
   // 用户登录与头像逻辑
   const [user, setUser] = useState<any>(null);
@@ -232,35 +226,62 @@ const Home: React.FC = () => {
     }
   }, [user]);
 
-  // 获取任务数据
+  // 获取任务数据 - 只显示赏金最高且最新的3个任务
   useEffect(() => {
     setLoading(true);
-    console.log('开始获取任务数据，参数:', { type, city, keyword, page, pageSize });
-    console.log('Home页面城市状态:', city);
-    fetchTasks({ type, city, keyword, page, pageSize })
+    console.log('开始获取首页任务数据');
+    fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
       .then(data => {
         console.log('获取到的任务数据:', data);
-        setTasks(Array.isArray(data) ? data : (data.items || []));
-        setTotal(data.total || 0);
+        const allTasks = Array.isArray(data) ? data : (data.items || []);
+        
+        // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
+        const sortedTasks = allTasks
+          .sort((a: any, b: any) => {
+            // 首先按赏金排序（从高到低）
+            const rewardA = parseFloat(a.reward) || 0;
+            const rewardB = parseFloat(b.reward) || 0;
+            if (rewardA !== rewardB) {
+              return rewardB - rewardA;
+            }
+            // 如果赏金相同，按创建时间排序（从新到旧）
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          })
+          .slice(0, 3); // 只取前3个
+        
+        setTasks(sortedTasks);
       })
       .catch(error => {
         console.error('获取任务数据失败:', error);
         setTasks([]);
-        setTotal(0);
       })
       .finally(() => setLoading(false));
-  }, [type, city, keyword, page, pageSize]);
+  }, []);
 
   // 定期刷新任务列表以更新剩余时间和状态
   useEffect(() => {
     const interval = setInterval(() => {
       if (tasks.length > 0) {
         // 重新获取任务数据以更新状态
-        fetchTasks({ type, city, keyword, page, pageSize })
+        fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
           .then(data => {
-            const newTasks = Array.isArray(data) ? data : (data.items || []);
-            setTasks(newTasks);
-            setTotal(data.total || 0);
+            const allTasks = Array.isArray(data) ? data : (data.items || []);
+            
+            // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
+            const sortedTasks = allTasks
+              .sort((a: any, b: any) => {
+                // 首先按赏金排序（从高到低）
+                const rewardA = parseFloat(a.reward) || 0;
+                const rewardB = parseFloat(b.reward) || 0;
+                if (rewardA !== rewardB) {
+                  return rewardB - rewardA;
+                }
+                // 如果赏金相同，按创建时间排序（从新到旧）
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+              })
+              .slice(0, 3); // 只取前3个
+            
+            setTasks(sortedTasks);
           })
           .catch(error => {
             console.error('定期刷新任务列表失败:', error);
@@ -268,7 +289,7 @@ const Home: React.FC = () => {
       }
     }, 60000); // 每分钟更新一次
     return () => clearInterval(interval);
-  }, [type, city, keyword, page, pageSize, tasks.length]);
+  }, [tasks.length]);
 
   const navigate = useNavigate();
 
@@ -671,130 +692,6 @@ const Home: React.FC = () => {
             {t('home.subtitle')}
           </p>
         </div>
-        {/* 筛选/搜索栏 - 重新设计 */}
-        <div style={{
-          background: '#fff',
-          borderRadius: '16px',
-          padding: '24px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          marginBottom: '40px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <div style={{display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center'}}>
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-              <span style={{color: '#4a5568', fontWeight: '600', fontSize: '14px'}}>{t('tasks.taskCategory')}:</span>
-              <select 
-                value={type} 
-                onChange={e => { setType(e.target.value); setPage(1); }} 
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  color: '#4a5568',
-                  fontWeight: '500',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-            <option>{t('tasks.filterByCategory')}</option>
-            {TASK_TYPES.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-            </div>
-            
-            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-              <span style={{color: '#4a5568', fontWeight: '600', fontSize: '14px'}}>{t('common.city')}:</span>
-              <select 
-                value={city} 
-                onChange={e => { setCity(e.target.value); setPage(1); }} 
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  color: '#4a5568',
-                  fontWeight: '500',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-            <option value="all">{t('home.allCities')}</option>
-            {CITIES.map(cityName => (
-              <option key={cityName} value={cityName}>{cityName}</option>
-            ))}
-          </select>
-            </div>
-            
-            <div style={{flex: 1, minWidth: '200px'}}>
-              <input 
-                type="text" 
-                value={keyword} 
-                onChange={e => setKeyword(e.target.value)} 
-                placeholder={t('tasks.searchPlaceholder')} 
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  color: '#4a5568',
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
-            
-            <button 
-              onClick={() => { setPage(1); }} 
-              style={{
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-              }}
-            >
-              🔍 {t('home.search')}
-            </button>
-          </div>
-        </div>
         {/* 自动取消过期任务提示 */}
         <div style={{
           background: 'linear-gradient(135deg, #fff3cd, #ffeaa7)',
@@ -1086,12 +983,6 @@ const Home: React.FC = () => {
             })}
           </div>
         )}
-        {/* 分页按钮 */}
-        <div style={{marginTop: 32, textAlign: 'center'}}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{marginRight: 8, padding: '6px 16px', borderRadius: 4, border: '1px solid #8b5cf6', background: page === 1 ? '#eee' : '#fff', color: '#8b5cf6', fontWeight: 700}}>{t('home.previousPage')}</button>
-          <span style={{margin: '0 12px', color: '#A67C52', fontWeight: 600}}>{t('home.page')} {page} {t('home.of')}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={tasks.length < pageSize} style={{padding: '6px 16px', borderRadius: 4, border: '1px solid #8b5cf6', background: tasks.length < pageSize ? '#eee' : '#8b5cf6', color: tasks.length < pageSize ? '#8b5cf6' : '#fff', fontWeight: 700}}>{t('home.nextPage')}</button>
-        </div>
       </main>
       {/* 平台优势/亮点区块 */}
       <section style={{background: '#f8fbff', padding: '48px 0'}}>
