@@ -4074,10 +4074,23 @@ def generate_image_url(
         if not image_id:
             raise HTTPException(status_code=400, detail="缺少image_id参数")
         
-        # 查找包含此图片的消息
-        message = db.query(Message).filter(Message.image_id == image_id).first()
-        if not message:
-            raise HTTPException(status_code=404, detail="图片不存在")
+        logger.info(f"尝试生成图片URL，image_id: {image_id}")
+        
+        # 检查image_id字段是否存在
+        try:
+            # 查找包含此图片的消息
+            message = db.query(Message).filter(Message.image_id == image_id).first()
+            if not message:
+                # 如果通过image_id找不到，尝试通过content查找
+                message = db.query(Message).filter(Message.content.like(f'%[图片] {image_id}%')).first()
+                if not message:
+                    raise HTTPException(status_code=404, detail="图片不存在")
+                logger.info(f"通过content找到消息: {message.id}")
+            else:
+                logger.info(f"通过image_id找到消息: {message.id}")
+        except AttributeError as e:
+            logger.error(f"数据库字段错误: {e}")
+            raise HTTPException(status_code=500, detail="数据库字段不存在，请运行迁移")
         
         # 检查用户是否有权限访问此图片
         if current_user.id not in [message.sender_id, message.receiver_id]:
@@ -4088,21 +4101,23 @@ def generate_image_url(
         
         # 生成访问URL
         image_url = private_image_system.generate_image_url(
-            image_id, 
-            current_user.id, 
+            image_id,
+            current_user.id,
             participants
         )
-        
+
         return JSONResponse(content={
             "success": True,
             "image_url": image_url,
             "image_id": image_id
         })
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"生成图片URL失败: {e}")
+        import traceback
+        logger.error(f"详细错误: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"生成URL失败: {str(e)}")
 
 
