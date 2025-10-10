@@ -100,7 +100,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
 
   const insertEmoji = (emoji: string) => {
-    setInput(prev => prev + emoji);
+    setInput((prev: string) => prev + emoji);
     setShowEmojiPicker(false);
     textareaRef.current?.focus();
   };
