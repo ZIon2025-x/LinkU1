@@ -11,8 +11,6 @@ const api = axios.create({
     'Connection': 'keep-alive',  // 强制HTTP/1.1
     'Upgrade': 'http/1.1'  // 明确指定HTTP版本
   },
-  // 强制使用HTTP/1.1避免HTTP/2问题
-  httpVersion: '1.1',
   // 添加更多HTTP/1.1相关配置
   maxRedirects: 5,
   validateStatus: function (status) {
