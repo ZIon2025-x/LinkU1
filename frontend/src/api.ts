@@ -153,6 +153,9 @@ api.interceptors.request.use(async config => {
       try {
         const token = await getCSRFToken();
         config.headers['X-CSRF-Token'] = token;
+        
+        // 同时设置Cookie中的CSRF token（后端需要两者匹配）
+        document.cookie = `csrf_token=${token}; path=/; secure; samesite=strict`;
       } catch (error) {
         console.warn('无法获取CSRF token，请求可能失败:', error);
       }
@@ -272,7 +275,8 @@ api.interceptors.response.use(
         '/api/users/profile/me',
         '/api/secure-auth/refresh',
         '/api/cs/refresh',
-        '/api/admin/refresh'
+        '/api/admin/refresh',
+        '/api/users/messages/mark-chat-read'
       ];
       
       if (skipRefreshApis.some(api => error.config?.url?.includes(api))) {
