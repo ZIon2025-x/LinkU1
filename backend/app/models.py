@@ -30,13 +30,87 @@ def get_uk_time():
     uk_tz = pytz.timezone("Europe/London")
     return datetime.datetime.now(uk_tz)
 
+def get_uk_time_online():
+    """通过网络获取真实的英国时间，使用多个API作为备用"""
+    import requests
+    import pytz
+    from datetime import datetime
+    
+    # 导入Railway配置
+    try:
+        from railway_config import railway_config
+        config = railway_config
+    except ImportError:
+        # 如果Railway配置不可用，使用默认配置
+        class DefaultConfig:
+            enable_online_time = True
+            timeout_seconds = 3
+            max_retries = 3
+            fallback_to_local = True
+            
+            def get_apis(self):
+                return [
+                    {
+                        'name': 'WorldTimeAPI',
+                        'url': 'http://worldtimeapi.org/api/timezone/Europe/London',
+                        'parser': lambda data: datetime.fromisoformat(data['utc_datetime'].replace('Z', '+00:00'))
+                    },
+                    {
+                        'name': 'TimeAPI',
+                        'url': 'http://timeapi.io/api/Time/current/zone?timeZone=Europe/London',
+                        'parser': lambda data: datetime.fromisoformat(data['dateTime'].replace('Z', '+00:00'))
+                    },
+                    {
+                        'name': 'WorldClockAPI',
+                        'url': 'http://worldclockapi.com/api/json/utc/now',
+                        'parser': lambda data: datetime.fromisoformat(data['currentDateTime'].replace('Z', '+00:00'))
+                    }
+                ]
+        
+        config = DefaultConfig()
+    
+    # 检查是否启用在线时间
+    if not config.enable_online_time:
+        print("在线时间获取已禁用，使用本地时间")
+        return get_uk_time()
+    
+    # 获取API列表
+    apis = config.get_apis()
+    
+    for attempt in range(config.max_retries):
+        for api in apis:
+            try:
+                print(f"尝试使用 {api['name']} 获取英国时间... (尝试 {attempt + 1}/{config.max_retries})")
+                response = requests.get(api['url'], timeout=config.timeout_seconds)
+                if response.status_code == 200:
+                    data = response.json()
+                    utc_time = api['parser'](data)
+                    # 转换为英国时区
+                    uk_tz = pytz.timezone("Europe/London")
+                    uk_time = utc_time.astimezone(uk_tz)
+                    print(f"成功从 {api['name']} 获取英国时间: {uk_time}")
+                    return uk_time
+                else:
+                    print(f"{api['name']} API失败，状态码: {response.status_code}")
+            except Exception as e:
+                print(f"{api['name']} 获取时间失败: {e}")
+                continue
+    
+    # 所有API都失败时回退到本地时间
+    if config.fallback_to_local:
+        print("所有在线时间API都失败，使用本地时间")
+        return get_uk_time()
+    else:
+        print("所有在线时间API都失败，且禁用本地时间回退")
+        raise Exception("无法获取英国时间")
+
 def get_uk_time_naive():
     """获取当前英国时间 (timezone-naive，用于数据库存储)"""
     import pytz
     from datetime import timezone
 
-    uk_tz = pytz.timezone("Europe/London")
-    uk_time = datetime.datetime.now(uk_tz)
+    # 使用在线时间获取更准确的英国时间
+    uk_time = get_uk_time_online()
     # 转换为UTC然后移除时区信息，存储为naive datetime
     return uk_time.astimezone(timezone.utc).replace(tzinfo=None)
 

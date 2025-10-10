@@ -23,6 +23,31 @@ const PrivateImageLoader: React.FC<{
         setLoading(true);
         setError(false);
         
+        // 检查URL是否包含过期时间戳
+        const urlParams = new URLSearchParams(src.split('?')[1] || '');
+        const exp = urlParams.get('exp');
+        const ts = urlParams.get('ts');
+        
+        if (exp) {
+          const expTime = parseInt(exp) * 1000; // 转换为毫秒
+          const currentTime = Date.now();
+          const timeLeft = expTime - currentTime;
+          
+          console.log('图片URL过期检查:', {
+            url: src,
+            expTime: new Date(expTime).toISOString(),
+            currentTime: new Date(currentTime).toISOString(),
+            timeLeft: Math.round(timeLeft / 1000) + '秒',
+            isExpired: timeLeft < 0
+          });
+          
+          if (timeLeft < 0) {
+            console.warn('图片URL已过期，尝试重新获取');
+            setError(true);
+            return;
+          }
+        }
+        
         // 使用fetch获取图片，确保传递Cookie认证
         const response = await fetch(src, {
           method: 'GET',
@@ -36,12 +61,13 @@ const PrivateImageLoader: React.FC<{
           const blob = await response.blob();
           const blobUrl = URL.createObjectURL(blob);
           setImageSrc(blobUrl);
+          console.log('图片加载成功:', src);
         } else {
-          console.error('图片加载失败:', response.status, response.statusText);
+          console.error('图片加载失败:', response.status, response.statusText, src);
           setError(true);
         }
       } catch (err) {
-        console.error('图片加载错误:', err);
+        console.error('图片加载错误:', err, src);
         setError(true);
       } finally {
         setLoading(false);
@@ -74,6 +100,11 @@ const PrivateImageLoader: React.FC<{
   }
 
   if (error) {
+    // 检查是否是签名URL过期
+    const urlParams = new URLSearchParams(src.split('?')[1] || '');
+    const exp = urlParams.get('exp');
+    const isExpired = exp && parseInt(exp) * 1000 < Date.now();
+    
     return (
       <div style={{
         ...style,
@@ -88,17 +119,24 @@ const PrivateImageLoader: React.FC<{
         padding: '20px'
       }}>
         <div style={{ fontSize: '24px', marginBottom: '8px' }}>📷</div>
-        <div style={{ fontWeight: '600', marginBottom: '4px' }}>图片加载失败</div>
-        <div style={{ fontSize: '12px', opacity: 0.7 }}>请刷新页面重试</div>
+        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+          {isExpired ? '图片链接已过期' : '图片加载失败'}
+        </div>
+        <div style={{ fontSize: '12px', opacity: 0.7, textAlign: 'center', marginBottom: '8px' }}>
+          {isExpired 
+            ? '图片链接已过期，请刷新页面获取新的链接' 
+            : '网络错误或权限问题，请重试'
+          }
+        </div>
         <button onClick={() => window.location.reload()} style={{
-          marginTop: '8px',
-          padding: '4px 8px',
+          padding: '6px 12px',
           background: '#3b82f6',
           color: 'white',
           border: 'none',
-          borderRadius: '4px',
+          borderRadius: '6px',
           cursor: 'pointer',
-          fontSize: '10px'
+          fontSize: '12px',
+          fontWeight: '600'
         }}>刷新页面</button>
       </div>
     );
@@ -262,8 +300,19 @@ const MessagePage: React.FC = () => {
   // 格式化时间为英国时间
   const formatTime = (timeString: string) => {
     try {
-      // 始终显示英国时间
-      return dayjs(timeString).tz('Europe/London').format('YYYY/MM/DD HH:mm:ss') + ' (英国时间)';
+      // 使用dayjs的tz插件正确处理英国时区（包括夏令时/冬令时）
+      const londonTime = dayjs(timeString).tz('Europe/London');
+      
+      // 检查是否是夏令时 - 英国夏令时通常从3月最后一个周日到10月最后一个周日
+      const month = londonTime.month(); // 0-11
+      const day = londonTime.date();
+      const dayOfWeek = londonTime.day(); // 0=Sunday, 1=Monday, etc.
+      
+      // 简化的夏令时判断：3月到9月通常是夏令时
+      const isDST = month >= 2 && month <= 8; // 3月到9月
+      const timezoneName = isDST ? 'BST' : 'GMT'; // BST = British Summer Time, GMT = Greenwich Mean Time
+      
+      return londonTime.format('YYYY/MM/DD HH:mm:ss') + ` (英国时间 ${timezoneName})`;
     } catch (error) {
       console.error('时间格式化错误:', error);
       return timeString;
@@ -638,7 +687,7 @@ const MessagePage: React.FC = () => {
       
       const finalImageUrl = getImageUrl(imageUrl);
       
-
+      
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ 
@@ -682,7 +731,7 @@ const MessagePage: React.FC = () => {
             // 显示图片预览（仅桌面端）
             if (!isMobile) {
               setPreviewImageUrl(finalImageUrl);
-              setShowImagePreview(true);
+            setShowImagePreview(true);
             }
           }}
           >
@@ -1273,17 +1322,17 @@ const MessagePage: React.FC = () => {
   // 自动滚动到底部 - 仅针对发送和接收消息
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0 && !loadingMoreMessages) {
-      const lastMessage = messages[messages.length - 1];
+        const lastMessage = messages[messages.length - 1];
       
       // 如果是发送的消息或接收的消息，自动滚动到底部
       if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方' || lastMessage.from === '系统')) {
-        setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
         }, 100);
+        }
       }
-    }
   }, [messages.length, loadingMoreMessages]);
 
   // 点击外部区域和ESC键关闭表情框
@@ -3476,46 +3525,6 @@ const MessagePage: React.FC = () => {
               </div>
             ))}
             <div ref={messagesEndRef} />
-            
-            {/* 滚动到底部按钮 - 定位在消息显示区域底部中间 */}
-            {showScrollToBottomButton && (
-              <div
-                onClick={scrollToBottom}
-                style={{
-                  position: 'absolute',
-                  bottom: '20px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
-                  transition: 'all 0.3s ease',
-                  zIndex: 1000,
-                  fontSize: '20px',
-                  fontWeight: 'bold'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
-                  e.currentTarget.style.backgroundColor = '#0056b3';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
-                  e.currentTarget.style.backgroundColor = '#007bff';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.3)';
-                }}
-                title="滚动到底部"
-              >
-                ↓
-              </div>
-            )}
                   </div>
 
 
@@ -4602,6 +4611,47 @@ const MessagePage: React.FC = () => {
               📥 下载图片
             </button>
           </div>
+        </div>
+      )}
+      
+      {/* 固定定位的滚动到底部按钮 - 固定在聊天框上 */}
+      {showScrollToBottomButton && (
+        <div
+          onClick={scrollToBottom}
+          style={{
+            position: 'fixed',
+            bottom: '120px', // 在输入框上方
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: '#007bff',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(0, 123, 255, 0.4)',
+            transition: 'all 0.3s ease',
+            zIndex: 10000, // 确保在所有内容之上
+            fontSize: '24px',
+            fontWeight: 'bold',
+            border: '3px solid white' // 添加白色边框增强视觉效果
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+            e.currentTarget.style.backgroundColor = '#0056b3';
+            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 123, 255, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+            e.currentTarget.style.backgroundColor = '#007bff';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 123, 255, 0.4)';
+          }}
+          title="滚动到底部"
+        >
+          ↓
         </div>
       )}
       

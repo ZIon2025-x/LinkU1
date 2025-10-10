@@ -1,191 +1,177 @@
 #!/usr/bin/env python3
 """
-检查Railway部署配置
+Railway部署检查脚本
+检查在线时间获取功能在Railway环境中的状态
 """
 
+import os
+import sys
 import requests
 import json
 from datetime import datetime
+import pytz
 
-def check_railway_deployment():
-    """检查Railway部署配置"""
-    print("🔍 检查Railway部署配置")
-    print("=" * 60)
-    print(f"检查时间: {datetime.now().isoformat()}")
-    print()
+def check_environment():
+    """检查环境变量配置"""
+    print("=== 环境变量检查 ===")
     
-    base_url = "https://linku1-production.up.railway.app"
+    env_vars = {
+        'ENABLE_ONLINE_TIME': os.getenv('ENABLE_ONLINE_TIME', 'true'),
+        'TIME_API_TIMEOUT': os.getenv('TIME_API_TIMEOUT', '3'),
+        'TIME_API_MAX_RETRIES': os.getenv('TIME_API_MAX_RETRIES', '3'),
+        'FALLBACK_TO_LOCAL_TIME': os.getenv('FALLBACK_TO_LOCAL_TIME', 'true'),
+        'CUSTOM_TIME_APIS': os.getenv('CUSTOM_TIME_APIS', ''),
+    }
     
-    # 1. 检查应用状态
-    print("1️⃣ 检查应用状态")
-    print("-" * 40)
-    
-    try:
-        # 检查健康状态
-        health_url = f"{base_url}/health"
-        response = requests.get(health_url, timeout=10)
-        
-        print(f"健康检查状态码: {response.status_code}")
-        if response.status_code == 200:
-            print("✅ 应用正常运行")
-            try:
-                data = response.json()
-                print(f"健康检查响应: {data}")
-            except:
-                print(f"健康检查响应: {response.text}")
-        else:
-            print(f"❌ 应用异常: {response.status_code}")
-            print(f"响应: {response.text[:200]}...")
-            
-    except Exception as e:
-        print(f"❌ 健康检查失败: {e}")
+    for key, value in env_vars.items():
+        print(f"  {key}: {value}")
     
     print()
+
+def check_network_connectivity():
+    """检查网络连接"""
+    print("=== 网络连接检查 ===")
     
-    # 2. 检查API端点
-    print("2️⃣ 检查API端点")
-    print("-" * 40)
+    apis = [
+        'http://worldtimeapi.org/api/timezone/Europe/London',
+        'http://timeapi.io/api/Time/current/zone?timeZone=Europe/London',
+        'http://worldclockapi.com/api/json/utc/now'
+    ]
     
-    try:
-        # 检查根路径
-        root_url = f"{base_url}/"
-        response = requests.get(root_url, timeout=10)
-        
-        print(f"根路径状态码: {response.status_code}")
-        if response.status_code == 200:
-            print("✅ 根路径正常")
-            print(f"响应内容: {response.text[:100]}...")
-            
-            # 检查是否是Hono应用
-            if "Hello world!" in response.text:
-                print("❌ 检测到Hono应用！Railway配置有问题")
-                print("🔧 需要修复Railway项目配置")
+    for api in apis:
+        try:
+            response = requests.get(api, timeout=5)
+            if response.status_code == 200:
+                print(f"  ✅ {api} - 连接成功")
             else:
-                print("✅ 不是Hono应用，可能是Python应用")
-        else:
-            print(f"❌ 根路径异常: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ 根路径检查失败: {e}")
+                print(f"  ❌ {api} - HTTP {response.status_code}")
+        except Exception as e:
+            print(f"  ❌ {api} - 连接失败: {e}")
     
     print()
-    
-    # 3. 检查Python应用端点
-    print("3️⃣ 检查Python应用端点")
-    print("-" * 40)
-    
-    try:
-        # 检查API文档
-        docs_url = f"{base_url}/docs"
-        response = requests.get(docs_url, timeout=10)
-        
-        print(f"API文档状态码: {response.status_code}")
-        if response.status_code == 200:
-            print("✅ Python FastAPI应用正常运行")
-            print("✅ 检测到FastAPI文档页面")
-        else:
-            print(f"❌ API文档不可用: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ API文档检查失败: {e}")
-    
-    print()
-    
-    # 4. 检查认证端点
-    print("4️⃣ 检查认证端点")
-    print("-" * 40)
-    
-    try:
-        # 检查认证状态
-        auth_url = f"{base_url}/api/secure-auth/status"
-        response = requests.get(auth_url, timeout=10)
-        
-        print(f"认证状态码: {response.status_code}")
-        if response.status_code == 200:
-            print("✅ 认证端点正常")
-            try:
-                data = response.json()
-                print(f"认证响应: {data}")
-            except:
-                print(f"认证响应: {response.text}")
-        else:
-            print(f"❌ 认证端点异常: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ 认证端点检查失败: {e}")
-    
-    print()
-    
-    # 5. 检查Redis状态
-    print("5️⃣ 检查Redis状态")
-    print("-" * 40)
-    
-    try:
-        # 检查Redis状态
-        redis_url = f"{base_url}/api/secure-auth/redis-status"
-        response = requests.get(redis_url, timeout=10)
-        
-        print(f"Redis状态码: {response.status_code}")
-        if response.status_code == 200:
-            print("✅ Redis状态检查正常")
-            try:
-                data = response.json()
-                print(f"Redis状态: {data}")
-            except:
-                print(f"Redis状态: {response.text}")
-        else:
-            print(f"❌ Redis状态检查异常: {response.status_code}")
-            
-    except Exception as e:
-        print(f"❌ Redis状态检查失败: {e}")
 
-def analyze_railway_issues():
-    """分析Railway问题"""
-    print("\n📊 分析Railway问题")
-    print("=" * 60)
+def test_time_apis():
+    """测试时间API"""
+    print("=== 时间API测试 ===")
     
-    print("🔍 可能的问题:")
-    print("  1. Railway项目被重置为默认模板")
-    print("  2. Python应用被Hono应用覆盖")
-    print("  3. 项目配置错误")
-    print("  4. 启动命令错误")
+    apis = [
+        {
+            'name': 'WorldTimeAPI',
+            'url': 'http://worldtimeapi.org/api/timezone/Europe/London',
+            'parser': lambda data: datetime.fromisoformat(data['utc_datetime'].replace('Z', '+00:00'))
+        },
+        {
+            'name': 'TimeAPI',
+            'url': 'http://timeapi.io/api/Time/current/zone?timeZone=Europe/London',
+            'parser': lambda data: datetime.fromisoformat(data['dateTime'].replace('Z', '+00:00'))
+        },
+        {
+            'name': 'WorldClockAPI',
+            'url': 'http://worldclockapi.com/api/json/utc/now',
+            'parser': lambda data: datetime.fromisoformat(data['currentDateTime'].replace('Z', '+00:00'))
+        }
+    ]
+    
+    for api in apis:
+        try:
+            print(f"测试 {api['name']}...")
+            response = requests.get(api['url'], timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                utc_time = api['parser'](data)
+                uk_tz = pytz.timezone("Europe/London")
+                uk_time = utc_time.astimezone(uk_tz)
+                print(f"  ✅ 成功: {uk_time}")
+            else:
+                print(f"  ❌ 失败: HTTP {response.status_code}")
+        except Exception as e:
+            print(f"  ❌ 错误: {e}")
+    
     print()
+
+def test_online_time_function():
+    """测试在线时间获取函数"""
+    print("=== 在线时间函数测试 ===")
     
-    print("🔧 修复建议:")
-    print("  1. 检查Railway项目设置")
-    print("  2. 确保项目类型是Python")
-    print("  3. 检查启动命令")
-    print("  4. 重新部署应用")
+    try:
+        # 导入时间函数
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from app.models import get_uk_time_online, get_uk_time, get_uk_time_naive
+        
+        # 测试本地时间
+        print("本地英国时间:")
+        local_time = get_uk_time()
+        print(f"  {local_time}")
+        
+        # 测试在线时间
+        print("在线英国时间:")
+        online_time = get_uk_time_online()
+        print(f"  {online_time}")
+        
+        # 测试数据库时间
+        print("数据库存储时间:")
+        naive_time = get_uk_time_naive()
+        print(f"  {naive_time}")
+        
+        # 比较时间差异
+        time_diff = abs((online_time - local_time).total_seconds())
+        print(f"时间差异: {time_diff:.2f} 秒")
+        
+        if time_diff < 10:
+            print("  ✅ 时间差异在可接受范围内")
+        else:
+            print("  ⚠️  时间差异较大，可能需要检查")
+            
+    except Exception as e:
+        print(f"  ❌ 测试失败: {e}")
+    
     print()
+
+def check_railway_specific():
+    """检查Railway特定配置"""
+    print("=== Railway特定检查 ===")
     
-    print("🔍 检查步骤:")
-    print("  1. 登录Railway控制台")
-    print("  2. 进入项目设置")
-    print("  3. 检查项目类型")
-    print("  4. 检查启动命令")
-    print("  5. 检查环境变量")
+    # 检查是否在Railway环境
+    if os.getenv('RAILWAY_ENVIRONMENT'):
+        print("  ✅ 检测到Railway环境")
+        print(f"  环境: {os.getenv('RAILWAY_ENVIRONMENT')}")
+        print(f"  项目ID: {os.getenv('RAILWAY_PROJECT_ID', 'N/A')}")
+    else:
+        print("  ⚠️  未检测到Railway环境")
+    
+    # 检查端口配置
+    port = os.getenv('PORT')
+    if port:
+        print(f"  ✅ 端口配置: {port}")
+    else:
+        print("  ⚠️  未设置PORT环境变量")
+    
+    # 检查时区
+    try:
+        uk_tz = pytz.timezone("Europe/London")
+        current_uk_time = datetime.now(uk_tz)
+        print(f"  ✅ 当前英国时间: {current_uk_time}")
+        print(f"  ✅ 是否夏令时: {current_uk_time.dst() != datetime.timedelta(0)}")
+    except Exception as e:
+        print(f"  ❌ 时区检查失败: {e}")
+    
     print()
-    
-    print("⚠️  注意事项:")
-    print("  1. 如果检测到Hono应用，需要重新配置")
-    print("  2. 确保Python应用正确部署")
-    print("  3. 检查所有配置文件")
-    print("  4. 重新部署应用")
 
 def main():
     """主函数"""
-    print("🚀 Railway部署配置检查")
-    print("=" * 60)
+    print("Railway部署检查脚本")
+    print("=" * 50)
+    print()
     
-    # 检查Railway部署配置
-    check_railway_deployment()
+    check_environment()
+    check_network_connectivity()
+    test_time_apis()
+    test_online_time_function()
+    check_railway_specific()
     
-    # 分析Railway问题
-    analyze_railway_issues()
-    
-    print("\n📋 检查总结:")
-    print("Railway部署配置检查完成")
-    print("请查看上述结果，确认问题原因")
+    print("检查完成！")
+    print()
+    print("如果发现问题，请参考 RAILWAY_ENV_VARS.md 进行配置。")
 
 if __name__ == "__main__":
     main()
