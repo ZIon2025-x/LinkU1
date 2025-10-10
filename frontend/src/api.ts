@@ -3,7 +3,14 @@ import { API_BASE_URL, API_ENDPOINTS } from './config';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true  // 确保发送Cookie
+  withCredentials: true,  // 确保发送Cookie
+  timeout: 10000,  // 10秒超时
+  headers: {
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache'
+  },
+  // 强制使用HTTP/1.1避免HTTP/2问题
+  httpVersion: '1.1'
 });
 
 // CSRF token管理

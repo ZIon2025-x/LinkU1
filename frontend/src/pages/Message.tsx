@@ -7,6 +7,62 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import LoginModal from '../components/LoginModal';
 
+// 图片加载工具函数
+const loadImageWithFallback = async (src: string, retryCount = 0): Promise<string> => {
+  // 首先尝试使用fetch
+  try {
+    const response = await fetch(src, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'image/*',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Connection': 'keep-alive'
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    }
+    
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  } catch (error) {
+    console.warn('Fetch失败，尝试XMLHttpRequest:', error);
+    
+    // 如果fetch失败，使用XMLHttpRequest作为备用
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', src, true);
+      xhr.withCredentials = true;
+      xhr.responseType = 'blob';
+      xhr.timeout = 10000;
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const blob = xhr.response;
+          const blobUrl = URL.createObjectURL(blob);
+          resolve(blobUrl);
+        } else {
+          reject(new Error(`XHR HTTP ${xhr.status}: ${xhr.statusText}`));
+        }
+      };
+      
+      xhr.onerror = () => {
+        reject(new Error('XHR网络错误'));
+      };
+      
+      xhr.ontimeout = () => {
+        reject(new Error('XHR超时'));
+      };
+      
+      xhr.send();
+    });
+  }
+};
+
 // 私有图片加载组件
 const PrivateImageLoader: React.FC<{
   src: string;
@@ -18,7 +74,7 @@ const PrivateImageLoader: React.FC<{
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const loadImage = async () => {
+    const loadImage = async (retryCount = 0) => {
       try {
         setLoading(true);
         setError(false);
@@ -26,7 +82,6 @@ const PrivateImageLoader: React.FC<{
         // 检查URL是否包含过期时间戳
         const urlParams = new URLSearchParams(src.split('?')[1] || '');
         const exp = urlParams.get('exp');
-        const ts = urlParams.get('ts');
         
         if (exp) {
           const expTime = parseInt(exp) * 1000; // 转换为毫秒
@@ -48,26 +103,23 @@ const PrivateImageLoader: React.FC<{
           }
         }
         
-        // 使用fetch获取图片，确保传递Cookie认证
-        const response = await fetch(src, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Accept': 'image/*'
-          }
-        });
+        // 使用新的图片加载工具函数
+        const blobUrl = await loadImageWithFallback(src);
+        setImageSrc(blobUrl);
+        console.log('图片加载成功:', src);
         
-        if (response.ok) {
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          setImageSrc(blobUrl);
-          console.log('图片加载成功:', src);
-        } else {
-          console.error('图片加载失败:', response.status, response.statusText, src);
-          setError(true);
-        }
       } catch (err) {
         console.error('图片加载错误:', err, src);
+        
+        // 如果是网络错误，尝试重试
+        if (retryCount < 2) {
+          console.log(`图片加载失败，${1000 * (retryCount + 1)}ms后重试...`);
+          setTimeout(() => {
+            loadImage(retryCount + 1);
+          }, 1000 * (retryCount + 1));
+          return;
+        }
+        
         setError(true);
       } finally {
         setLoading(false);
