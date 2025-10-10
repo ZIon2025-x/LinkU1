@@ -161,9 +161,9 @@ def send_confirmation_email(
     background_tasks: BackgroundTasks, to_email: str, token: str
 ):
     confirm_url = f"{Config.BASE_URL}/api/users/confirm/{token}"
-    subject = "Link2Ur Email Confirmation"
+    subject = "Link²Ur Email Confirmation"
     body = (
-        "<p>Welcome to Link2Ur! Please confirm your email by clicking the link below:</p>"
+        "<p>Welcome to Link²Ur! Please confirm your email by clicking the link below:</p>"
     )
     body += f'<p><a href="{confirm_url}">{confirm_url}</a></p>'
     background_tasks.add_task(send_email, to_email, subject, body)
@@ -183,7 +183,7 @@ def confirm_reset_token(token, expiration=3600 * 2):
 
 def send_reset_email(background_tasks: BackgroundTasks, to_email: str, token: str):
     reset_url = f"{Config.FRONTEND_URL}/reset-password/{token}"  # 使用配置的前端URL
-    subject = "Link2Ur Password Reset"
+    subject = "Link²Ur Password Reset"
     body = "<p>To reset your password, click the link below:</p>"
     body += f'<p><a href="{reset_url}">{reset_url}</a></p>'
     background_tasks.add_task(send_email, to_email, subject, body)

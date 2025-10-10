@@ -294,7 +294,7 @@ const Footer: React.FC = () => {
                 color: '#fff',
                 lineHeight: '1'
               }}>
-                Link2Ur
+                Link²Ur
               </div>
               <div style={{
                 fontSize: '12px',
@@ -312,7 +312,7 @@ const Footer: React.FC = () => {
             color: 'rgba(255,255,255,0.8)',
             textAlign: 'center'
           }}>
-            Copyright © 2025 Link2Ur
+            Copyright © 2025 Link²Ur
           </div>
           
           {/* 右侧 - 社交媒体 */}

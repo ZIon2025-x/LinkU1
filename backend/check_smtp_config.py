@@ -130,7 +130,7 @@ def test_email_sending():
     try:
         # 创建测试邮件
         msg = MIMEText("这是一封测试邮件，用于验证SMTP配置。", "plain", "utf-8")
-        msg["Subject"] = "Link2Ur SMTP测试邮件"
+        msg["Subject"] = "Link²Ur SMTP测试邮件"
         msg["From"] = email_from
         msg["To"] = smtp_user  # 发送给自己
         

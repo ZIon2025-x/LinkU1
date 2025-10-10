@@ -48,7 +48,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Link2Ur Task Platform",
+    title="Link²Ur Task Platform",
     description="A simple task platform for students, freelancers, and job seekers.",
     version="0.1.0",
 )
@@ -813,7 +813,7 @@ async def websocket_chat(
 @app.get("/")
 def read_root():
     """根路径 - 不依赖数据库，用于基本健康检查"""
-    return {"status": "ok", "message": "Welcome to Link2Ur!"}
+    return {"status": "ok", "message": "Welcome to Link²Ur!"}
 
 
 @app.get("/health")

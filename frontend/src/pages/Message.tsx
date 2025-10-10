@@ -1404,9 +1404,9 @@ const MessagePage: React.FC = () => {
       
       // 更新页面标题
       if (newCount > 0) {
-        document.title = `(${newCount}) 消息中心 - Link2Ur`;
+        document.title = `(${newCount}) 消息中心 - Link²Ur`;
       } else {
-        document.title = '消息中心 - Link2Ur';
+        document.title = '消息中心 - Link²Ur';
       }
     } catch (error) {
       console.error('加载未读消息数量失败:', error);
@@ -1553,9 +1553,9 @@ const MessagePage: React.FC = () => {
                     const newCount = prev + 1;
                     // 更新页面标题
                     if (newCount > 0) {
-                      document.title = `(${newCount}) 消息中心 - Link2Ur`;
+                      document.title = `(${newCount}) 消息中心 - Link²Ur`;
                     } else {
-                      document.title = '消息中心 - Link2Ur';
+                      document.title = '消息中心 - Link²Ur';
                     }
                     return newCount;
                   });
@@ -1858,9 +1858,9 @@ const MessagePage: React.FC = () => {
               const newCount = Math.max(0, prev - result.marked_count);
               // 更新页面标题
               if (newCount > 0) {
-                document.title = `(${newCount}) 消息中心 - Link2Ur`;
+                document.title = `(${newCount}) 消息中心 - Link²Ur`;
               } else {
-                document.title = '消息中心 - Link2Ur';
+                document.title = '消息中心 - Link²Ur';
               }
               return newCount;
             });

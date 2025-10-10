@@ -86,7 +86,7 @@ def test_direct_smtp():
     try:
         # 创建测试邮件
         msg = MIMEText("这是一封测试邮件，用于验证SMTP配置。", "plain", "utf-8")
-        msg["Subject"] = "Link2Ur SMTP测试邮件"
+        msg["Subject"] = "Link²Ur SMTP测试邮件"
         msg["From"] = smtp_config['user']
         msg["To"] = smtp_config['user']
         
@@ -166,7 +166,7 @@ def analyze_email_issue():
     print("  3. 在 '登录Google' 部分，点击 '两步验证'")
     print("  4. 滚动到底部，点击 '应用专用密码'")
     print("  5. 选择 '邮件' 和 '其他（自定义名称）'")
-    print("  6. 输入名称如 'Link2Ur App'")
+    print("  6. 输入名称如 'Link²Ur App'")
     print("  7. 点击 '生成'")
     print("  8. 复制生成的16位密码")
     print("  9. 在Railway控制台设置 SMTP_PASS=生成的密码")

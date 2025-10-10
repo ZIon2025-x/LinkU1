@@ -691,7 +691,7 @@ const Tasks: React.FC = () => {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              Link2Ur
+              Link²Ur
           </div>
 
           {/* 位置信息 */}

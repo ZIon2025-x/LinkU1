@@ -331,7 +331,7 @@ const JoinUs: React.FC = () => {
               (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
             }}
           >
-            Link2Ur
+            Link²Ur
           </div>
           
           {/* 语言切换器、通知按钮和汉堡菜单 */}

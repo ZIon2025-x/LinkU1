@@ -85,7 +85,7 @@
     "notLoggedIn": "用户未登录"
   },
   "home": {
-    "welcome": "欢迎来到 Link2Ur Review",
+    "welcome": "欢迎来到 Link²Ur Review",
     "subtitle": "连接、协作、创造",
     "getStarted": "开始使用",
     "learnMore": "了解更多",
@@ -132,7 +132,7 @@
     "page": "第",
     "of": "页",
     "totalTasks": "总任务数",
-    "newUserGuide": "新手如何使用Link2Ur？",
+    "newUserGuide": "新手如何使用Link²Ur？",
     "step1": "注册/登录",
     "step1Desc": "快速注册账号，完善个人信息",
     "step2": "浏览/筛选任务",
@@ -208,13 +208,13 @@
     "profileUpdateError": "个人资料更新失败，请重试。"
   },
   "about": {
-    "title": "关于 Link2Ur Review",
+    "title": "关于 Link²Ur Review",
     "subtitle": "连接人才，创造机会",
     "mission": "我们的使命",
     "missionText": "创建一个平台，让有才华的个人能够连接、协作并共同创造令人惊叹的项目。我们相信社区的力量和每个人的潜力。",
     "vision": "我们的愿景",
     "ourStory": "我们的故事",
-    "ourStoryText": "Link2Ur Review 诞生于一个简单的想法：让每个人都能找到属于自己的机会。我们相信，无论背景如何，每个人都有独特的才能和价值。",
+    "ourStoryText": "Link²Ur Review 诞生于一个简单的想法：让每个人都能找到属于自己的机会。我们相信，无论背景如何，每个人都有独特的才能和价值。",
     "ourValues": "我们的价值观",
     "userFirst": "用户至上",
     "userFirstDesc": "我们始终将用户需求放在首位，致力于提供最优质的服务体验",
@@ -288,13 +288,13 @@
     "address": "地址"
   },
   "footer": {
-    "companyName": "Link2Ur Review",
+    "companyName": "Link²Ur Review",
     "description": "连接人才，创造机会。加入我们的社区，发现精彩项目。",
     "quickLinks": "快速链接",
     "support": "支持",
     "legal": "法律",
     "followUs": "关注我们",
-    "copyright": "© 2024 Link2Ur Review. 保留所有权利。",
+    "copyright": "© 2024 Link²Ur Review. 保留所有权利。",
     "privacyPolicy": "隐私政策",
     "termsOfService": "服务条款",
     "cookiePolicy": "Cookie 政策"
