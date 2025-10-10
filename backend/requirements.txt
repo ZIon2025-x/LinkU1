@@ -9,6 +9,7 @@ pydantic>=2.0.0
 alembic>=1.16.0
 asyncpg>=0.29.0
 aiopg>=1.4.0
+psycopg2-binary>=2.9.0
 
 # 认证和安全
 passlib[bcrypt]==1.7.4

@@ -4072,21 +4072,67 @@ def generate_image_url(
     """
     try:
         from app.image_system import private_image_system
+        from urllib.parse import urlparse, parse_qs
+        import re
         
         # 从请求数据中获取image_id
-        image_id = request_data.get('image_id')
-        if not image_id:
+        raw_image_id = request_data.get('image_id')
+        if not raw_image_id:
             raise HTTPException(status_code=400, detail="缺少image_id参数")
         
-        logger.info(f"尝试生成图片URL，image_id: {image_id}")
+        logger.info(f"尝试生成图片URL，原始image_id: {raw_image_id}")
+        
+        # 处理不同格式的image_id
+        image_id = raw_image_id
+        
+        # 如果是完整的URL，尝试提取图片ID
+        if raw_image_id.startswith('http'):
+            try:
+                parsed_url = urlparse(raw_image_id)
+                if '/api/private-file' in parsed_url.path:
+                    # 从private-file URL中提取file参数
+                    query_params = parse_qs(parsed_url.query)
+                    if 'file' in query_params:
+                        file_path = query_params['file'][0]
+                        # 提取文件名（去掉images/前缀）
+                        if file_path.startswith('images/'):
+                            image_id = file_path[7:]  # 去掉'images/'前缀
+                            # 去掉文件扩展名
+                            image_id = image_id.rsplit('.', 1)[0]
+                        else:
+                            image_id = file_path.rsplit('.', 1)[0]
+                        logger.info(f"从URL提取image_id: {image_id}")
+                elif '/private-image/' in parsed_url.path:
+                    # 从private-image URL中提取image_id
+                    image_id = parsed_url.path.split('/private-image/')[-1]
+                    logger.info(f"从private-image URL提取image_id: {image_id}")
+            except Exception as e:
+                logger.warning(f"URL解析失败: {e}")
+                # 如果URL解析失败，尝试从URL中提取可能的ID
+                uuid_match = re.search(r'([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})', raw_image_id)
+                if uuid_match:
+                    image_id = uuid_match.group(1)
+                    logger.info(f"从URL中提取UUID: {image_id}")
+        
+        # 如果是新格式的image_id（user_timestamp_random），直接使用
+        elif '_' in raw_image_id and len(raw_image_id.split('_')) >= 3:
+            image_id = raw_image_id
+            logger.info(f"使用新格式image_id: {image_id}")
+        
+        # 如果是旧格式的UUID，也直接使用
+        else:
+            image_id = raw_image_id
+            logger.info(f"使用原始image_id: {image_id}")
+        
+        logger.info(f"最终image_id: {image_id}")
         
         # 查找包含此图片的消息
         message = None
         
         # 首先尝试通过image_id字段查找（如果字段存在）
         try:
-            if hasattr(Message, 'image_id'):
-                message = db.query(Message).filter(Message.image_id == image_id).first()
+            if hasattr(models.Message, 'image_id'):
+                message = db.query(models.Message).filter(models.Message.image_id == image_id).first()
                 if message:
                     logger.info(f"通过image_id找到消息: {message.id}")
         except Exception as e:
@@ -4094,11 +4140,23 @@ def generate_image_url(
         
         # 如果通过image_id找不到，尝试通过content查找
         if not message:
-            message = db.query(Message).filter(Message.content.like(f'%[图片] {image_id}%')).first()
+            message = db.query(models.Message).filter(models.Message.content.like(f'%[图片] {image_id}%')).first()
             if message:
                 logger.info(f"通过content找到消息: {message.id}")
         
+        # 如果还是找不到，尝试查找原始image_id
+        if not message and raw_image_id != image_id:
+            logger.info(f"尝试通过原始image_id查找")
+            if hasattr(models.Message, 'image_id'):
+                message = db.query(models.Message).filter(models.Message.image_id == raw_image_id).first()
+            if not message:
+                message = db.query(models.Message).filter(models.Message.content.like(f'%[图片] {raw_image_id}%')).first()
+            if message:
+                logger.info(f"通过原始image_id找到消息: {message.id}")
+                image_id = raw_image_id  # 使用原始ID
+        
         if not message:
+            logger.error(f"未找到包含image_id {image_id}的消息")
             raise HTTPException(status_code=404, detail="图片不存在")
         
         # 检查用户是否有权限访问此图片
@@ -4130,26 +4188,7 @@ def generate_image_url(
         raise HTTPException(status_code=500, detail=f"生成URL失败: {str(e)}")
 
 
-@router.get("/uploads/images/{filename}")
-async def get_image(filename: str):
-    """
-    获取公开图片文件（已废弃，保留兼容性）
-    """
-    try:
-        file_path = UPLOAD_DIR / filename
-
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="图片不存在")
-
-        from fastapi.responses import FileResponse
-
-        return FileResponse(path=file_path, media_type="image/*", filename=filename)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取图片失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取图片失败: {str(e)}")
+# 废弃的公开图片API已删除 - 现在使用私密图片系统
 
 
 @router.post("/upload/file")
@@ -4287,181 +4326,5 @@ async def get_private_file(
         raise HTTPException(status_code=500, detail=f"获取文件失败: {str(e)}")
 
 
-# 图片存储优化相关API
-@router.get("/admin/image-storage/stats")
-def get_image_storage_stats(
-    current_user=Depends(admin_required),
-    db: Session = Depends(get_db)
-):
-    """
-    获取图片存储优化统计信息
-    """
-    try:
-        from app.image_storage import image_storage_manager
-        
-        stats = image_storage_manager.get_optimization_stats()
-        
-        # 添加数据库统计信息
-        from sqlalchemy import text
-        
-        # 统计图片消息数量
-        image_message_count = db.execute(text("""
-            SELECT COUNT(*) FROM messages 
-            WHERE content LIKE '[图片] %'
-        """)).scalar()
-        
-        base64_image_count = db.execute(text("""
-            SELECT COUNT(*) FROM messages 
-            WHERE content LIKE '[图片] data:image/%'
-        """)).scalar()
-        
-        url_image_count = image_message_count - base64_image_count
-        
-        # 统计客服消息中的图片
-        cs_image_message_count = db.execute(text("""
-            SELECT COUNT(*) FROM customer_service_messages 
-            WHERE content LIKE '[图片] %'
-        """)).scalar()
-        
-        cs_base64_image_count = db.execute(text("""
-            SELECT COUNT(*) FROM customer_service_messages 
-            WHERE content LIKE '[图片] data:image/%'
-        """)).scalar()
-        
-        cs_url_image_count = cs_image_message_count - cs_base64_image_count
-        
-        stats.update({
-            "database_stats": {
-                "total_image_messages": image_message_count + cs_image_message_count,
-                "base64_images": base64_image_count + cs_base64_image_count,
-                "url_images": url_image_count + cs_url_image_count,
-                "regular_messages": {
-                    "total": image_message_count,
-                    "base64": base64_image_count,
-                    "url": url_image_count
-                },
-                "customer_service_messages": {
-                    "total": cs_image_message_count,
-                    "base64": cs_base64_image_count,
-                    "url": cs_url_image_count
-                }
-            }
-        })
-        
-        return JSONResponse(content={
-            "success": True,
-            "stats": stats
-        })
-        
-    except Exception as e:
-        logger.error(f"获取图片存储统计失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
-
-
-@router.post("/admin/image-storage/cleanup")
-def cleanup_orphaned_images(
-    current_user=Depends(admin_required),
-    db: Session = Depends(get_db)
-):
-    """
-    清理孤立的图片文件
-    """
-    try:
-        from app.image_storage import image_storage_manager
-        
-        cleaned_count = image_storage_manager.cleanup_orphaned_files()
-        
-        return JSONResponse(content={
-            "success": True,
-            "message": f"清理完成，删除了 {cleaned_count} 个孤立文件",
-            "cleaned_count": cleaned_count
-        })
-        
-    except Exception as e:
-        logger.error(f"清理孤立文件失败: {e}")
-        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
-
-
-@router.get("/admin/image-storage/recommendations")
-def get_storage_recommendations(
-    current_user=Depends(admin_required),
-    db: Session = Depends(get_db)
-):
-    """
-    获取存储优化建议
-    """
-    try:
-        from app.image_storage import ImageProcessor, ImageStorageConfig
-        
-        config = ImageStorageConfig()
-        processor = ImageProcessor(config)
-        
-        # 分析当前存储情况
-        from sqlalchemy import text
-        
-        # 统计图片消息分布
-        image_messages = db.execute(text("""
-            SELECT content FROM messages 
-            WHERE content LIKE '[图片] %'
-            LIMIT 100
-        """)).fetchall()
-        
-        size_analysis = {
-            "file_storage_images": 0,  # 文件存储的图片
-            "base64_images": 0,  # base64图片（需要迁移）
-            "total_analyzed": len(image_messages)
-        }
-        
-        for row in image_messages:
-            content = row[0]
-            if content.startswith('[图片] '):
-                image_data = content.replace('[图片] ', '')
-                if image_data.startswith('data:image/'):
-                    size_analysis["base64_images"] += 1
-                else:
-                    size_analysis["file_storage_images"] += 1
-        
-        # 生成建议
-        recommendations = []
-        
-        if size_analysis["base64_images"] > 0:
-            recommendations.append({
-                "type": "migration",
-                "priority": "high",
-                "title": "需要迁移base64图片",
-                "description": f"发现 {size_analysis['base64_images']} 个base64图片，建议迁移到文件存储以提高性能",
-                "action": "运行图片迁移工具"
-            })
-        
-        if size_analysis["file_storage_images"] > 0:
-            recommendations.append({
-                "type": "success",
-                "priority": "low",
-                "title": "文件存储正常",
-                "description": f"已有 {size_analysis['file_storage_images']} 个图片使用文件存储，性能良好",
-                "action": "无需操作"
-            })
-        
-        if size_analysis["total_analyzed"] > 50:
-            recommendations.append({
-                "type": "performance",
-                "priority": "medium",
-                "title": "数据库性能优化",
-                "description": f"数据库中有大量图片消息（{size_analysis['total_analyzed']}个），建议定期清理和优化",
-                "action": "定期运行清理任务"
-            })
-        
-        return JSONResponse(content={
-            "success": True,
-            "size_analysis": size_analysis,
-            "recommendations": recommendations,
-            "storage_config": {
-                "max_file_size": config.max_file_size,
-                "max_base64_size": config.max_base64_size,
-                "storage_strategy": config.get_storage_strategy().value
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"获取存储建议失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取建议失败: {str(e)}")
+# 旧的图片存储优化API已删除 - 现在使用私密图片系统
+# 旧的图片存储优化API已删除 - 现在使用私密图片系统
