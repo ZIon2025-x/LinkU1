@@ -344,7 +344,7 @@
     "registrationError": "注册失败，请重试。",
     "usernameExists": "该用户名已被使用，请选择其他用户名",
     "emailExists": "该邮箱已被注册，请使用其他邮箱或直接登录",
-    "usernameContainsKeywords": "用户名不能包含客服相关关键词",
+    "usernameContainsKeywords": "用户名不能包含客服相关关键词"
   },
   "forgotPassword": {
     "title": "忘记密码",
