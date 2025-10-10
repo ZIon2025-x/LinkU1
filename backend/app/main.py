@@ -141,6 +141,10 @@ app.include_router(rate_limit_router, tags=["速率限制"])
 # 添加时间检查端点
 from app.time_check_endpoint import router as time_check_router
 app.include_router(time_check_router, tags=["时间检查"])
+
+# Add time validation endpoint
+from app.time_validation_endpoint import router as time_validation_router
+app.include_router(time_validation_router, tags=["时间验证"])
 # 暂时禁用安全监控路由以解决异步/同步混用问题
 # app.include_router(security_monitoring_router, tags=["安全监控"])
 
@@ -634,7 +638,13 @@ async def websocket_chat(
 
                     # 保存普通消息到数据库
                     message = crud.send_message(
-                        db, user_id, msg["receiver_id"], msg["content"], msg.get("message_id", None)
+                        db, 
+                        user_id, 
+                        msg["receiver_id"], 
+                        msg["content"], 
+                        msg.get("message_id", None),
+                        msg.get("timezone", "Europe/London"),
+                        msg.get("local_time", None)
                     )
 
                 # 创建通知给接收者

@@ -123,7 +123,13 @@ def get_uk_time_online():
         raise Exception("无法获取英国时间")
 
 def get_uk_time_naive():
-    """获取当前英国时间 (timezone-naive，用于数据库存储)"""
+    """获取当前英国时间 (timezone-naive，用于数据库存储) - 兼容性函数"""
+    # 使用新的UTC时间处理系统
+    from app.time_utils import get_utc_time
+    return get_utc_time()
+
+def get_uk_time_naive_legacy():
+    """获取当前英国时间 (timezone-naive，用于数据库存储) - 旧版本"""
     import pytz
     from datetime import timezone
 
@@ -230,7 +236,9 @@ class Message(Base):
     )  # 允许为NULL，用于系统消息
     receiver_id = Column(String(8), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=get_uk_time_naive)
+    created_at = Column(DateTime, default=lambda: datetime.utcnow())  # 存储UTC时间
+    created_at_tz = Column(String(50), default="UTC")  # 时区信息
+    local_time = Column(Text, nullable=True)  # 原始本地时间字符串（可选）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
 
 

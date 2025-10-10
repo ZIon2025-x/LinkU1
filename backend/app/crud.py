@@ -616,9 +616,10 @@ def get_task_history(db: Session, task_id: int):
     )
 
 
-def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None):
+def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None, timezone_str: str = "Europe/London", local_time_str: str = None):
     from app.models import Message
     from datetime import datetime, timedelta
+    from app.time_utils import TimeHandler
 
     # 如果有消息ID，先检查是否已存在
     if message_id:
@@ -626,7 +627,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             db.query(Message)
             .filter(Message.sender_id == sender_id)
             .filter(Message.content == content)
-            .filter(Message.created_at >= datetime.now() - timedelta(minutes=1))
+            .filter(Message.created_at >= datetime.utcnow() - timedelta(minutes=1))
             .first()
         )
         if existing_by_id:
@@ -634,7 +635,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             return existing_by_id
 
     # 检查是否在最近5秒内发送过相同的消息（防止重复发送）
-    recent_time = datetime.now() - timedelta(seconds=5)
+    recent_time = datetime.utcnow() - timedelta(seconds=5)
     existing_message = (
         db.query(Message)
         .filter(
@@ -650,7 +651,28 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
         print(f"检测到重复消息，跳过保存: {content}")
         return existing_message
 
-    msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
+    # 处理时间
+    if local_time_str:
+        # 使用用户提供的本地时间
+        utc_time, tz_info, local_time = TimeHandler.parse_local_time_to_utc(
+            local_time_str, timezone_str, "later"
+        )
+    else:
+        # 使用当前时间
+        utc_time = datetime.utcnow()
+        tz_info = timezone_str
+        local_time = None
+
+    # 创建消息记录
+    msg = Message(
+        sender_id=sender_id, 
+        receiver_id=receiver_id, 
+        content=content,
+        created_at=utc_time,
+        created_at_tz=tz_info,
+        local_time=local_time
+    )
+    
     db.add(msg)
     db.commit()
     db.refresh(msg)
