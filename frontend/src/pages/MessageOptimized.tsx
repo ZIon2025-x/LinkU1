@@ -203,6 +203,12 @@ const MessageOptimized: React.FC = () => {
     await handleSendMessage(messageContent);
   }, [user, activeContact, handleSendMessage]);
 
+  // 处理图片按钮点击
+  const handleImageButtonClick = useCallback(() => {
+    // 这里可以添加图片选择逻辑
+    console.log('图片按钮被点击');
+  }, []);
+
   // 处理文件选择
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -314,7 +320,7 @@ const MessageOptimized: React.FC = () => {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={() => {
+        onSuccess={() => {
           setShowLoginModal(false);
           window.location.reload();
         }}
@@ -487,7 +493,7 @@ const MessageOptimized: React.FC = () => {
                 取消
               </button>
               <button
-                onClick={handleSendImage}
+                onClick={handleImageButtonClick}
                 disabled={uploadingImage}
                 style={{
                   padding: '8px 16px',

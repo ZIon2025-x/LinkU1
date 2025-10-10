@@ -99,7 +99,8 @@ export const loadWithHttp1Fallback = async (url: string, options: RequestInit = 
       return await xhrHttp1(url, options);
     } catch (xhrError) {
       console.error('XMLHttpRequest也失败:', xhrError);
-      throw new Error(`加载失败: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`加载失败: ${errorMessage}`);
     }
   }
 };
