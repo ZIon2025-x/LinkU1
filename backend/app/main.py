@@ -548,9 +548,16 @@ async def websocket_chat(
                     # 确定发送者类型
                     sender_type = "customer_service" if is_customer_service else "user"
 
+                    # 处理图片消息
+                    image_id = None
+                    if msg["content"].startswith('[图片] '):
+                        # 提取图片ID
+                        image_id = msg["content"].replace('[图片] ', '')
+                        logger.info(f"🔍 [DEBUG] 客服消息检测到图片，image_id: {image_id}")
+                    
                     # 保存客服对话消息
                     message = crud.save_customer_service_message(
-                        db, chat_id, user_id, sender_type, msg["content"]
+                        db, chat_id, user_id, sender_type, msg["content"], image_id=image_id
                     )
 
                     # 立即广播客服对话消息给接收者
@@ -643,6 +650,13 @@ async def websocket_chat(
                                 )
                                 continue
 
+                    # 处理图片消息
+                    image_id = None
+                    if msg["content"].startswith('[图片] '):
+                        # 提取图片ID
+                        image_id = msg["content"].replace('[图片] ', '')
+                        logger.info(f"🔍 [DEBUG] WebSocket检测到图片消息，image_id: {image_id}")
+                    
                     # 保存普通消息到数据库
                     message = crud.send_message(
                         db, 
@@ -651,7 +665,8 @@ async def websocket_chat(
                         msg["content"], 
                         msg.get("message_id", None),
                         msg.get("timezone", "Europe/London"),
-                        msg.get("local_time", None)
+                        msg.get("local_time", None),
+                        image_id=image_id
                     )
 
                 # 创建通知给接收者

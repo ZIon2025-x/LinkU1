@@ -393,6 +393,7 @@ class CustomerServiceMessage(Base):
     content = Column(Text, nullable=False)  # 消息内容
     is_read = Column(Integer, default=0)  # 是否已读 (0: 未读, 1: 已读)
     created_at = Column(DateTime, default=get_uk_time)
+    image_id = Column(String(100), nullable=True)  # 私密图片ID
 
 
 # 数据库索引优化

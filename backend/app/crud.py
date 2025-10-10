@@ -2108,7 +2108,7 @@ def rate_customer_service_chat(
 
 
 def save_customer_service_message(
-    db: Session, chat_id: str, sender_id: str, sender_type: str, content: str
+    db: Session, chat_id: str, sender_id: str, sender_type: str, content: str, image_id: str = None
 ) -> dict:
     """保存客服对话消息"""
     from datetime import datetime, timedelta, timezone
@@ -2116,9 +2116,19 @@ def save_customer_service_message(
     from app.models import CustomerServiceChat, CustomerServiceMessage
 
     # 保存消息
-    message = CustomerServiceMessage(
-        chat_id=chat_id, sender_id=sender_id, sender_type=sender_type, content=content
-    )
+    message_data = {
+        'chat_id': chat_id, 
+        'sender_id': sender_id, 
+        'sender_type': sender_type, 
+        'content': content
+    }
+    
+    # 如果image_id字段存在，则添加它
+    if hasattr(CustomerServiceMessage, 'image_id') and image_id:
+        message_data['image_id'] = image_id
+        print(f"🔍 [DEBUG] 客服消息设置image_id: {image_id}")
+    
+    message = CustomerServiceMessage(**message_data)
 
     db.add(message)
 
