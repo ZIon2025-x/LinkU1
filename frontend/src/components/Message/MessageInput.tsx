@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { api } from '../../api';
+import api from '../../api';
 
 interface MessageInputProps {
   input: string;
