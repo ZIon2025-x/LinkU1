@@ -1672,14 +1672,15 @@ const MessagePage: React.FC = () => {
         
         setMessages(formattedMessages);
         
-        // 首次加载时滚动到底部显示最新消息
+        // 首次加载时直接设置到底部，不使用动画
         if (!isLoadMore && formattedMessages.length > 0) {
           setTimeout(() => {
             const messagesContainer = messagesContainerRef.current;
             if (messagesContainer) {
+              // 直接设置到底部，不使用smooth滚动
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-          }, 100);
+          }, 50);
         }
           
           // 标记客服对话消息为已读
@@ -1771,12 +1772,23 @@ const MessagePage: React.FC = () => {
               if (messagesContainer) {
                 const newMessageCount = uniqueMessages.length - filteredPrev.length;
                 if (newMessageCount > 0) {
+                  // 记录当前滚动位置
+                  const currentScrollTop = messagesContainer.scrollTop;
+                  const currentScrollHeight = messagesContainer.scrollHeight;
+                  
                   // 估算每条消息的平均高度（可以根据实际情况调整）
                   const estimatedMessageHeight = 60; // 像素
                   const scrollAdjustment = newMessageCount * estimatedMessageHeight;
                   
                   // 调整滚动位置，保持用户当前查看的内容不变
-                  messagesContainer.scrollTop += scrollAdjustment;
+                  messagesContainer.scrollTop = currentScrollTop + scrollAdjustment;
+                  
+                  console.log('加载更多消息，保持滚动位置:', {
+                    currentScrollTop,
+                    newScrollTop: messagesContainer.scrollTop,
+                    scrollAdjustment,
+                    newMessageCount
+                  });
                 }
               }
             }, 50);
@@ -1816,14 +1828,15 @@ const MessagePage: React.FC = () => {
           }
         });
         
-        // 首次加载时滚动到底部显示最新消息
+        // 首次加载时直接设置到底部，不使用动画
         if (!isLoadMore && formattedMessages.length > 0) {
           setTimeout(() => {
             const messagesContainer = messagesContainerRef.current;
             if (messagesContainer) {
+              // 直接设置到底部，不使用smooth滚动
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-          }, 100);
+          }, 50);
         }
         
         // 检查是否还有更多消息
@@ -4597,14 +4610,14 @@ const MessagePage: React.FC = () => {
         </div>
       )}
       
-      {/* 固定定位的滚动到底部按钮 - 固定在聊天框上 */}
+      {/* 固定定位的滚动到底部按钮 - 相对于聊天区域居中 */}
       {showScrollToBottomButton && (
         <div
           onClick={scrollToBottom}
           style={{
             position: 'fixed',
-            bottom: '120px', // 在输入框上方
-            left: '50%',
+            bottom: '160px', // 在输入框上方更高的位置
+            left: isMobile ? '50%' : 'calc(50% + 175px)', // 相对于聊天区域居中（联系人列表宽度350px的一半）
             transform: 'translateX(-50%)',
             width: '56px',
             height: '56px',
