@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const PublishTask: React.FC = () => {
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -27,7 +29,7 @@ const PublishTask: React.FC = () => {
     setError('');
     setSuccess('');
     if (!form.title || !form.description || !form.deadline || !form.reward) {
-      setError('请填写所有必填项');
+      setError(t('publishTask.fillAllFields'));
       return;
     }
     setLoading(true);
@@ -38,10 +40,10 @@ const PublishTask: React.FC = () => {
         deadline: new Date(form.deadline).toISOString(),
         is_public: form.is_public,
       });
-      setSuccess('发布成功！即将跳转...');
+      setSuccess(t('publishTask.publishSuccess'));
       setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
-      let errorMsg = '发布失败，请重试';
+      let errorMsg = t('publishTask.publishError');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
           errorMsg = err.response.data.detail;
@@ -118,12 +120,12 @@ const PublishTask: React.FC = () => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             letterSpacing: '1px'
-          }}>发布新任务</h2>
+          }}>{t('publishTask.title')}</h2>
           <p style={{
             color: '#6b7280',
             fontSize: '16px',
             margin: 0
-          }}>创建您的任务，让更多人帮助您完成</p>
+          }}>{t('publishTask.subtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
           <div style={{display: 'flex', gap: '20px', marginBottom: '24px'}}>
@@ -134,7 +136,7 @@ const PublishTask: React.FC = () => {
                 display: 'block',
                 color: '#374151',
                 fontSize: '14px'
-              }}>任务类型</label>
+              }}>{t('publishTask.taskType')}</label>
               <select 
                 name="task_type" 
                 value={form.task_type} 
@@ -163,7 +165,7 @@ const PublishTask: React.FC = () => {
                 display: 'block',
                 color: '#374151',
                 fontSize: '14px'
-              }}>城市</label>
+              }}>{t('publishTask.city')}</label>
               <select 
                 name="location" 
                 value={form.location} 
@@ -193,7 +195,7 @@ const PublishTask: React.FC = () => {
               display: 'block',
               color: '#374151',
               fontSize: '14px'
-            }}>可见性设置</label>
+            }}>{t('publishTask.visibilitySettings')}</label>
             <div style={{
               display: 'flex', 
               gap: '24px', 
@@ -222,7 +224,7 @@ const PublishTask: React.FC = () => {
                   onChange={(e) => setForm({...form, is_public: parseInt(e.target.value)})}
                   style={{width: '18px', height: '18px', accentColor: '#667eea'}}
                 />
-                <span style={{fontWeight: '500'}}>🌍 公开显示</span>
+                <span style={{fontWeight: '500'}}>{t('publishTask.publicDisplay')}</span>
               </label>
               <label style={{
                 display: 'flex', 
@@ -243,7 +245,7 @@ const PublishTask: React.FC = () => {
                   onChange={(e) => setForm({...form, is_public: parseInt(e.target.value)})}
                   style={{width: '18px', height: '18px', accentColor: '#667eea'}}
                 />
-                <span style={{fontWeight: '500'}}>🔒 仅自己可见</span>
+                <span style={{fontWeight: '500'}}>{t('publishTask.privateOnly')}</span>
               </label>
             </div>
             <div style={{
@@ -254,7 +256,7 @@ const PublishTask: React.FC = () => {
               background: '#f1f5f9',
               borderRadius: '8px'
             }}>
-              {form.is_public === 1 ? '✅ 其他用户可以在你的个人主页看到这个任务' : '🔒 只有你自己可以看到这个任务，不会显示在个人主页上'}
+              {form.is_public === 1 ? t('publishTask.publicDescription') : t('publishTask.privateDescription')}
             </div>
           </div>
           <div style={{marginBottom: '24px'}}>
@@ -264,7 +266,7 @@ const PublishTask: React.FC = () => {
               display: 'block',
               color: '#374151',
               fontSize: '14px'
-            }}>📋 标题</label>
+            }}>{t('publishTask.titleLabel')}</label>
             <input 
               name="title" 
               value={form.title} 
@@ -283,7 +285,7 @@ const PublishTask: React.FC = () => {
               onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               maxLength={50} 
               required 
-              placeholder="简明扼要地描述任务..." 
+              placeholder={t('publishTask.titlePlaceholder')} 
             />
             <div style={{
               fontSize: '12px',
@@ -301,7 +303,7 @@ const PublishTask: React.FC = () => {
               display: 'block',
               color: '#374151',
               fontSize: '14px'
-            }}>📝 描述</label>
+            }}>{t('publishTask.descriptionLabel')}</label>
             <textarea 
               name="description" 
               value={form.description} 
@@ -322,7 +324,7 @@ const PublishTask: React.FC = () => {
               onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               maxLength={500} 
               required 
-              placeholder="请详细描述任务内容、要求、时间等..." 
+              placeholder={t('publishTask.descriptionPlaceholder')} 
             />
             <div style={{
               fontSize: '12px',
@@ -341,7 +343,7 @@ const PublishTask: React.FC = () => {
                 display: 'block',
                 color: '#374151',
                 fontSize: '14px'
-              }}>⏰ 截止时间</label>
+              }}>{t('publishTask.deadlineLabel')}</label>
               <input 
                 name="deadline" 
                 type="datetime-local" 
@@ -369,7 +371,7 @@ const PublishTask: React.FC = () => {
                 display: 'block',
                 color: '#374151',
                 fontSize: '14px'
-              }}>💰 金额（£）</label>
+              }}>{t('publishTask.rewardLabel')}</label>
               <input 
                 name="reward" 
                 type="number" 
@@ -390,7 +392,7 @@ const PublishTask: React.FC = () => {
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
                 required 
-                placeholder="请输入金额" 
+                placeholder={t('publishTask.rewardPlaceholder')} 
               />
             </div>
           </div>
@@ -463,12 +465,12 @@ const PublishTask: React.FC = () => {
             {loading ? (
               <>
                 <span style={{ marginRight: '8px' }}>⏳</span>
-                发布中...
+                {t('publishTask.publishingButton')}
               </>
             ) : (
               <>
                 <span style={{ marginRight: '8px' }}>🚀</span>
-                发布任务
+                {t('publishTask.publishButton')}
               </>
             )}
           </button>

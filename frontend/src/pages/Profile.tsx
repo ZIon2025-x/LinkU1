@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser, updateAvatar } from '../api';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const AVATARS = [
   '/static/avatar1.png',
@@ -38,6 +39,7 @@ interface Review {
 }
 
 const Profile: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -101,7 +103,7 @@ const Profile: React.FC = () => {
       setShowAvatars(false);
     } catch (error) {
       console.error('更新头像失败:', error);
-      alert('更新头像失败，请重试');
+      alert(t('profile.updateAvatarFailed'));
     } finally {
       setSaving(false);
     }
@@ -124,7 +126,7 @@ const Profile: React.FC = () => {
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-          <div style={{ fontSize: '18px', color: '#64748b' }}>加载中...</div>
+          <div style={{ fontSize: '18px', color: '#64748b' }}>{t('profile.loading')}</div>
         </div>
       </div>
     );
@@ -147,7 +149,7 @@ const Profile: React.FC = () => {
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>❌</div>
-          <div style={{ fontSize: '18px', color: '#64748b' }}>加载用户数据失败</div>
+          <div style={{ fontSize: '18px', color: '#64748b' }}>{t('profile.loadUserDataFailed')}</div>
         </div>
       </div>
     );
@@ -201,7 +203,7 @@ const Profile: React.FC = () => {
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            ← 返回首页
+            {t('profile.backToHome')}
           </button>
           
           <div style={{ fontSize: 48, marginBottom: 16, filter: 'brightness(0) invert(1)' }}>👤</div>
@@ -210,14 +212,14 @@ const Profile: React.FC = () => {
             fontSize: '32px', 
             fontWeight: 'bold' 
           }}>
-            个人主页
+            {t('profile.personalProfile')}
           </h1>
           <p style={{ 
             fontSize: '16px', 
             opacity: 0.9,
             margin: 0
           }}>
-            查看和管理您的个人信息
+            {t('profile.viewAndManageInfo')}
           </p>
         </div>
 
@@ -230,7 +232,7 @@ const Profile: React.FC = () => {
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <img
                 src={user.avatar || '/static/avatar1.png'}
-                alt="头像"
+                alt={t('profile.avatar')}
                 onError={(e) => {
                   console.error('头像加载失败:', e.currentTarget.src);
                   e.currentTarget.src = '/static/avatar1.png';
@@ -296,7 +298,7 @@ const Profile: React.FC = () => {
                   <img 
                     key={src} 
                     src={src} 
-                    alt="可选头像" 
+                    alt={t('profile.optionalAvatar')} 
                     onClick={() => handleAvatarChange(src)} 
                     style={{
                       width: isMobile ? '50px' : '60px', 
@@ -353,7 +355,7 @@ const Profile: React.FC = () => {
               fontSize: '14px',
               fontWeight: '500'
             }}>
-              🆔 用户ID:
+              {t('profile.userId')}
             </span>
             <span style={{ 
               color: '#3b82f6', 
@@ -381,13 +383,13 @@ const Profile: React.FC = () => {
               borderRadius: '25px',
               border: '1px solid #cbd5e1'
             }}>
-              <span style={{ color: '#64748b', fontSize: '14px' }}>会员等级</span>
+              <span style={{ color: '#64748b', fontSize: '14px' }}>{t('profile.memberLevel')}</span>
               <div style={{ 
                 color: user.user_level === 'super' ? '#8b5cf6' : user.user_level === 'vip' ? '#f59e0b' : '#64748b',
                 fontWeight: '700',
                 fontSize: '16px'
               }}>
-                {user.user_level === 'super' ? '超级VIP' : user.user_level === 'vip' ? 'VIP' : '普通用户'}
+                {user.user_level === 'super' ? t('profile.superVip') : user.user_level === 'vip' ? t('profile.vip') : t('profile.normalUser')}
               </div>
             </div>
             
@@ -397,7 +399,7 @@ const Profile: React.FC = () => {
               borderRadius: '25px',
               border: '1px solid #cbd5e1'
             }}>
-              <span style={{ color: '#64748b', fontSize: '14px' }}>注册时间</span>
+              <span style={{ color: '#64748b', fontSize: '14px' }}>{t('profile.registrationTime')}</span>
               <div style={{ color: '#1e293b', fontWeight: '600', fontSize: '16px' }}>
                 {new Date(user.created_at).toLocaleDateString()}
               </div>
@@ -439,7 +441,7 @@ const Profile: React.FC = () => {
               }}
             >
               <span style={{ fontSize: '20px' }}>👑</span>
-              VIP会员
+              {t('profile.vipMember')}
             </button>
           </div>
         </div>
@@ -466,7 +468,7 @@ const Profile: React.FC = () => {
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
                 {user.total_tasks || 0}
               </div>
-              <div style={{ fontSize: '14px', opacity: 0.9 }}>总任务数</div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.totalTasks')}</div>
             </div>
             
             <div style={{
@@ -481,7 +483,7 @@ const Profile: React.FC = () => {
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
                 {user.completed_tasks || 0}
               </div>
-              <div style={{ fontSize: '14px', opacity: 0.9 }}>完成任务</div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.completedTasks')}</div>
             </div>
             
             <div style={{
@@ -496,7 +498,7 @@ const Profile: React.FC = () => {
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
                 {user.avg_rating ? user.avg_rating.toFixed(1) : '0.0'}
               </div>
-              <div style={{ fontSize: '14px', opacity: 0.9 }}>平均评分</div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.averageRating')}</div>
             </div>
           </div>
 
@@ -516,7 +518,7 @@ const Profile: React.FC = () => {
               alignItems: 'center',
               gap: '8px'
             }}>
-              💬 用户评价
+              {t('profile.userReviews')}
             </h3>
             
             {reviews.length > 0 ? (
@@ -546,7 +548,7 @@ const Profile: React.FC = () => {
                             fontWeight: '600',
                             color: '#1e293b'
                           }}>
-                            {review.is_anonymous ? '匿名用户' : review.reviewer_name}
+                            {review.is_anonymous ? t('profile.anonymousUser') : review.reviewer_name}
                           </span>
                           <div style={{
                             display: 'flex',
@@ -590,7 +592,7 @@ const Profile: React.FC = () => {
                 padding: '40px 20px'
               }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>💭</div>
-                <div style={{ fontSize: '16px' }}>暂无评价</div>
+                <div style={{ fontSize: '16px' }}>{t('profile.noReviews')}</div>
               </div>
             )}
           </div>

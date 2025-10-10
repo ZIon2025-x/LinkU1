@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getUserProfile, fetchCurrentUser } from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface UserProfileType {
   user: {
@@ -43,6 +44,7 @@ interface UserProfileType {
 }
 
 const UserProfile: React.FC = () => {
+  const { t } = useLanguage();
   const { userId } = useParams();
   const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,12 +98,12 @@ const UserProfile: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'open': return '开放中';
-      case 'taken': return '已接受';
-      case 'in_progress': return '进行中';
-      case 'pending_confirmation': return '待确认';
-      case 'completed': return '已完成';
-      case 'cancelled': return '已取消';
+      case 'open': return t('userProfile.taskStatus.open');
+      case 'taken': return t('userProfile.taskStatus.taken');
+      case 'in_progress': return t('userProfile.taskStatus.in_progress');
+      case 'pending_confirmation': return t('userProfile.taskStatus.pending_confirmation');
+      case 'completed': return t('userProfile.taskStatus.completed');
+      case 'cancelled': return t('userProfile.taskStatus.cancelled');
       default: return status;
     }
   };
@@ -120,9 +122,9 @@ const UserProfile: React.FC = () => {
 
   const getLevelText = (level: string) => {
     switch (level) {
-      case 'normal': return '普通用户';
-      case 'vip': return 'VIP会员';
-      case 'super': return '超级会员';
+      case 'normal': return t('userProfile.normalUser');
+      case 'vip': return t('userProfile.vipMember');
+      case 'super': return t('userProfile.superMember');
       default: return level;
     }
   };
@@ -166,7 +168,7 @@ const UserProfile: React.FC = () => {
         fontSize: 18,
         color: '#666'
       }}>
-        加载中...
+        {t('userProfile.loading')}
       </div>
     );
   }
@@ -179,7 +181,7 @@ const UserProfile: React.FC = () => {
         color: '#dc3545',
         fontSize: 18
       }}>
-        {error || '用户不存在'}
+        {error || t('userProfile.userNotExist')}
       </div>
     );
   }
@@ -328,7 +330,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.total_tasks}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  总任务
+                  {t('userProfile.totalTasks')}
                 </div>
               </div>
               <div style={{
@@ -343,7 +345,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.completed_tasks}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  已完成
+                  {t('userProfile.completedTasks')}
                 </div>
               </div>
               <div style={{
@@ -358,7 +360,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.total_reviews}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  评价数
+                  {t('userProfile.totalReviews')}
                 </div>
               </div>
               <div style={{
@@ -373,7 +375,7 @@ const UserProfile: React.FC = () => {
                   {profile.user.days_since_joined}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  注册天数
+                  {t('userProfile.joinDays')}
                 </div>
               </div>
             </div>
@@ -406,7 +408,7 @@ const UserProfile: React.FC = () => {
                   target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
                 }}
               >
-                💬 发送消息
+                {t('userProfile.chatWithUser')}
               </button>
             )}
           </div>
@@ -431,7 +433,7 @@ const UserProfile: React.FC = () => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
           }}>
-            📊 详细统计
+            📊 {t('userProfile.detailedStats')}
           </h2>
           
           <div style={{
@@ -463,7 +465,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.posted_tasks}
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  📤 发布的任务
+                  {t('userProfile.postedTasks')}
                 </div>
               </div>
             </div>
@@ -492,7 +494,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.taken_tasks}
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  📥 接受的任务
+                  {t('userProfile.takenTasks')}
                 </div>
               </div>
             </div>
@@ -521,7 +523,7 @@ const UserProfile: React.FC = () => {
                   {Math.round((profile.stats.completed_tasks / Math.max(profile.stats.taken_tasks, 1)) * 100)}%
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  ✅ 完成率
+                  {t('userProfile.completionRate')}
                 </div>
               </div>
             </div>
@@ -550,7 +552,7 @@ const UserProfile: React.FC = () => {
                   {profile.stats.total_reviews}
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  ⭐ 评价数量
+                  ⭐ {t('userProfile.totalReviews')}
                 </div>
               </div>
             </div>
@@ -577,7 +579,7 @@ const UserProfile: React.FC = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
-              📋 最近任务
+              📋 {t('userProfile.recentTasks')}
             </h2>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -679,7 +681,7 @@ const UserProfile: React.FC = () => {
                         target.style.transform = 'translateY(0)';
                       }}
                     >
-                      查看详情
+                      {t('userProfile.viewTask')}
                     </button>
                   </div>
                 </div>
@@ -708,7 +710,7 @@ const UserProfile: React.FC = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
-              ⭐ 用户评价 ({profile.reviews.length})
+              ⭐ {t('userProfile.userReviews')} ({profile.reviews.length})
             </h2>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -764,7 +766,7 @@ const UserProfile: React.FC = () => {
                             color: '#333',
                             marginBottom: 4
                           }}>
-                            {review.is_anonymous ? '匿名用户' : review.reviewer_name}
+                            {review.is_anonymous ? t('userProfile.anonymousUser') : review.reviewer_name}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {renderStars(review.rating)}
@@ -835,7 +837,7 @@ const UserProfile: React.FC = () => {
               color: '#666',
               fontWeight: 600
             }}>
-              暂无评价
+              {t('userProfile.noReviews')}
             </div>
             <div style={{ 
               fontSize: 14, 

@@ -64,7 +64,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  FAQ
+                  {t('footer.faq')}
                 </a>
                 <a href="#" style={{
                   color: 'rgba(255,255,255,0.8)',
@@ -98,7 +98,7 @@ const Footer: React.FC = () => {
                 marginBottom: '16px',
                 color: '#fff'
               }}>
-                合作
+                {t('footer.cooperation')}
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                 <a href="#" style={{
@@ -110,7 +110,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  合作伙伴
+                  {t('footer.partners')}
                 </a>
                 <a href="#" style={{
                   color: 'rgba(255,255,255,0.8)',
@@ -121,7 +121,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  任务达人
+                  {t('footer.taskExperts')}
                 </a>
                 <a href="#" style={{
                   color: 'rgba(255,255,255,0.8)',
@@ -132,7 +132,7 @@ const Footer: React.FC = () => {
                 onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#fff'}
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
-                  商户合作
+                  {t('footer.merchantCooperation')}
                 </a>
               </div>
             </div>
@@ -146,7 +146,7 @@ const Footer: React.FC = () => {
               marginBottom: '20px',
               color: '#fff'
             }}>
-              联系我们
+              {t('footer.contactUs')}
             </h4>
             
             <div style={{marginBottom: '24px'}}>
@@ -155,7 +155,7 @@ const Footer: React.FC = () => {
                 color: 'rgba(255,255,255,0.8)',
                 marginBottom: '8px'
               }}>
-                问题或建议？发送邮件至
+                {t('footer.questionsOrSuggestions')}
               </p>
               <a href="mailto:support@link2ur.com" style={{
                 color: '#60a5fa',
@@ -173,7 +173,7 @@ const Footer: React.FC = () => {
                 color: 'rgba(255,255,255,0.8)',
                 marginBottom: '8px'
               }}>
-                商务合作，发送邮件至
+                {t('footer.businessCooperation')}
               </p>
               <a href="mailto:info@link2ur.com" style={{
                 color: '#60a5fa',
@@ -191,7 +191,7 @@ const Footer: React.FC = () => {
                 color: 'rgba(255,255,255,0.8)',
                 marginBottom: '8px'
               }}>
-                合作伙伴，发送邮件至
+                {t('footer.partnerCooperation')}
               </p>
               <a href="mailto:info@link2ur.com" style={{
                 color: '#60a5fa',
@@ -261,7 +261,7 @@ const Footer: React.FC = () => {
             color: 'rgba(255,255,255,0.8)',
             textAlign: 'center'
           }}>
-            Copyright © 2025 Link²Ur
+            {t('footer.copyrightText')}
           </div>
           
           {/* 右侧 - 社交媒体 */}
