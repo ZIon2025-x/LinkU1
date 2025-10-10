@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import PublishTask from './pages/PublishTask';
 import Profile from './pages/Profile';
 import MessagePage from './pages/Message';
+import MessageOptimized from './pages/MessageOptimized';
 import TaskDetail from './pages/TaskDetail';
 import MyTasks from './pages/MyTasks';
 import Tasks from './pages/Tasks';
@@ -60,6 +61,11 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/message" element={
+            <ProtectedRoute>
+              <MessageOptimized />
+            </ProtectedRoute>
+          } />
+          <Route path="/message-old" element={
             <ProtectedRoute>
               <MessagePage />
             </ProtectedRoute>
