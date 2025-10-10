@@ -53,19 +53,40 @@ def get_uk_time_online():
                     {
                         'name': 'WorldTimeAPI',
                         'url': 'http://worldtimeapi.org/api/timezone/Europe/London',
-                        'parser': lambda data: datetime.fromisoformat(data['utc_datetime'].replace('Z', '+00:00'))
+                        'parser': self._parse_worldtimeapi
                     },
                     {
                         'name': 'TimeAPI',
                         'url': 'http://timeapi.io/api/Time/current/zone?timeZone=Europe/London',
-                        'parser': lambda data: datetime.fromisoformat(data['dateTime'].replace('Z', '+00:00'))
+                        'parser': self._parse_timeapi
                     },
                     {
                         'name': 'WorldClockAPI',
                         'url': 'http://worldclockapi.com/api/json/utc/now',
-                        'parser': lambda data: datetime.fromisoformat(data['currentDateTime'].replace('Z', '+00:00'))
+                        'parser': self._parse_worldclockapi
                     }
                 ]
+            
+            def _parse_worldtimeapi(self, data):
+                # 直接使用API返回的英国时间，不进行时区转换
+                if 'datetime' in data:
+                    # 直接解析英国时间
+                    return datetime.fromisoformat(data['datetime'].replace('Z', ''))
+                else:
+                    # 如果没有datetime字段，使用utc_datetime转换
+                    utc_time = datetime.fromisoformat(data['utc_datetime'].replace('Z', '+00:00'))
+                    uk_tz = pytz.timezone("Europe/London")
+                    return utc_time.astimezone(uk_tz)
+            
+            def _parse_timeapi(self, data):
+                # 直接使用API返回的英国时间
+                return datetime.fromisoformat(data['dateTime'].replace('Z', ''))
+            
+            def _parse_worldclockapi(self, data):
+                # 使用UTC时间转换为英国时间
+                utc_time = datetime.fromisoformat(data['currentDateTime'].replace('Z', '+00:00'))
+                uk_tz = pytz.timezone("Europe/London")
+                return utc_time.astimezone(uk_tz)
         
         config = DefaultConfig()
     
@@ -84,10 +105,7 @@ def get_uk_time_online():
                 response = requests.get(api['url'], timeout=config.timeout_seconds)
                 if response.status_code == 200:
                     data = response.json()
-                    utc_time = api['parser'](data)
-                    # 转换为英国时区
-                    uk_tz = pytz.timezone("Europe/London")
-                    uk_time = utc_time.astimezone(uk_tz)
+                    uk_time = api['parser'](data)
                     print(f"成功从 {api['name']} 获取英国时间: {uk_time}")
                     return uk_time
                 else:
@@ -109,9 +127,16 @@ def get_uk_time_naive():
     import pytz
     from datetime import timezone
 
-    # 使用在线时间获取更准确的英国时间
-    uk_time = get_uk_time_online()
-    # 直接使用英国时间，不转换为UTC，避免时区转换问题
+    # 暂时禁用在线时间获取，直接使用本地时间确保准确性
+    # TODO: 在线时间API有时区问题，暂时使用本地时间
+    uk_tz = pytz.timezone("Europe/London")
+    uk_time = datetime.datetime.now(uk_tz)
+    
+    print(f"使用本地英国时间: {uk_time}")
+    print(f"时区: {uk_time.tzinfo}")
+    print(f"是否夏令时: {uk_time.dst() != datetime.timedelta(0)}")
+    
+    # 移除时区信息，用于数据库存储
     return uk_time.replace(tzinfo=None)
 
 
