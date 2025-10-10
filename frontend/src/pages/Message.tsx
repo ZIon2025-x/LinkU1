@@ -84,7 +84,7 @@ const PrivateImageDisplay: React.FC<{
         justifyContent: 'center',
         background: '#f3f4f6',
         color: '#6b7280',
-        borderRadius: '8px'
+        minHeight: '100px'
       }}>
         <div style={{ fontSize: '14px' }}>加载中...</div>
       </div>
@@ -101,15 +101,16 @@ const PrivateImageDisplay: React.FC<{
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
         color: '#6b7280',
-        borderRadius: '8px',
         border: '2px dashed #d1d5db',
-        padding: '20px'
+        padding: '16px',
+        minHeight: '100px',
+        textAlign: 'center'
       }}>
-        <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔒</div>
-        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+        <div style={{ fontSize: '20px', marginBottom: '6px' }}>🔒</div>
+        <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '12px' }}>
           私密图片加载失败
         </div>
-        <div style={{ fontSize: '12px', opacity: 0.7, textAlign: 'center' }}>
+        <div style={{ fontSize: '10px', opacity: 0.7 }}>
           权限不足或网络错误
         </div>
       </div>
@@ -122,9 +123,9 @@ const PrivateImageDisplay: React.FC<{
       alt={alt} 
       style={{
         ...style,
-        borderRadius: '8px',
         maxWidth: '100%',
-        height: 'auto'
+        maxHeight: '100%',
+        objectFit: 'cover'
       }}
       onError={() => {
         console.error('图片显示失败:', imageId);
@@ -789,7 +790,13 @@ const MessagePage: React.FC = () => {
               仅聊天可见
             </span>
           </div>
-          <div style={{ maxWidth: '300px', maxHeight: '300px' }}>
+          <div style={{ 
+            maxWidth: '250px', 
+            maxHeight: '250px',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}>
             <PrivateImageDisplay
               imageId={imageId}
               currentUserId={user?.id || ''}
@@ -797,8 +804,7 @@ const MessagePage: React.FC = () => {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                borderRadius: '8px',
-                cursor: 'pointer'
+                display: 'block'
               }}
               alt="私密图片"
             />

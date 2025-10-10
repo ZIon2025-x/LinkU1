@@ -4059,7 +4059,7 @@ async def get_private_image(
 
 @router.post("/messages/generate-image-url")
 def generate_image_url(
-    image_id: str = Body(...),
+    request_data: dict,
     current_user=Depends(get_current_user_secure_sync),
     db: Session = Depends(get_db)
 ):
@@ -4068,6 +4068,11 @@ def generate_image_url(
     """
     try:
         from app.image_system import private_image_system
+        
+        # 从请求数据中获取image_id
+        image_id = request_data.get('image_id')
+        if not image_id:
+            raise HTTPException(status_code=400, detail="缺少image_id参数")
         
         # 查找包含此图片的消息
         message = db.query(Message).filter(Message.image_id == image_id).first()

@@ -7,9 +7,7 @@ const api = axios.create({
   timeout: 10000,  // 10秒超时
   headers: {
     'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
-    'Connection': 'keep-alive',  // 强制HTTP/1.1
-    'Upgrade': 'http/1.1'  // 明确指定HTTP版本
+    'Pragma': 'no-cache'
   },
   // 添加更多HTTP/1.1相关配置
   maxRedirects: 5,
