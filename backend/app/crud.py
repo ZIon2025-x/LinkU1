@@ -621,7 +621,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
     from datetime import datetime, timedelta
     from app.time_utils import TimeHandler
 
-    # 如果有消息ID，先检查是否已存在
+    # 如果有消息ID，先检查是否已存在相同ID的消息
     if message_id:
         existing_by_id = (
             db.query(Message)
@@ -634,7 +634,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             print(f"检测到重复消息ID，跳过保存: {message_id}")
             return existing_by_id
 
-    # 检查是否在最近5秒内发送过相同的消息（防止重复发送）
+    # 检查是否在最近5秒内发送过完全相同的消息（防止重复发送）
     recent_time = datetime.utcnow() - timedelta(seconds=5)
     existing_message = (
         db.query(Message)
@@ -644,11 +644,12 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             Message.content == content,
             Message.created_at >= recent_time
         )
+        .order_by(Message.created_at.desc())
         .first()
     )
     
     if existing_message:
-        print(f"检测到重复消息，跳过保存: {content}")
+        print(f"检测到重复消息，跳过保存: {content} (时间差: {(datetime.utcnow() - existing_message.created_at).total_seconds():.2f}秒)")
         return existing_message
 
     # 处理时间

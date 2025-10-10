@@ -210,7 +210,10 @@ class TimeHandler:
         检测指定年份的夏令时切换日期
         """
         try:
-            zone = ZoneInfo(TimeHandler.UK_TIMEZONE)
+            if ZONEINFO_AVAILABLE:
+                zone = ZoneInfo(TimeHandler.UK_TIMEZONE)
+            else:
+                zone = pytz.timezone(TimeHandler.UK_TIMEZONE)
             
             # 查找春季和秋季切换日期
             spring_transition = None
@@ -219,7 +222,10 @@ class TimeHandler:
             # 检查3月最后一个周日（春季）
             for day in range(25, 32):
                 try:
-                    test_date = datetime(year, 3, day, 1, 0, tzinfo=zone)
+                    if ZONEINFO_AVAILABLE:
+                        test_date = datetime(year, 3, day, 1, 0, tzinfo=zone)
+                    else:
+                        test_date = zone.localize(datetime(year, 3, day, 1, 0))
                     if test_date.weekday() == 6:  # 周日
                         spring_transition = test_date.strftime("%Y-%m-%d")
                         break
@@ -229,7 +235,10 @@ class TimeHandler:
             # 检查10月最后一个周日（秋季）
             for day in range(25, 32):
                 try:
-                    test_date = datetime(year, 10, day, 1, 0, tzinfo=zone)
+                    if ZONEINFO_AVAILABLE:
+                        test_date = datetime(year, 10, day, 1, 0, tzinfo=zone)
+                    else:
+                        test_date = zone.localize(datetime(year, 10, day, 1, 0))
                     if test_date.weekday() == 6:  # 周日
                         autumn_transition = test_date.strftime("%Y-%m-%d")
                         break
@@ -261,7 +270,11 @@ class TimeHandler:
         try:
             # 解析时间
             local_dt = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M")
-            zone = ZoneInfo(timezone_str)
+            
+            if ZONEINFO_AVAILABLE:
+                zone = ZoneInfo(timezone_str)
+            else:
+                zone = pytz.timezone(timezone_str)
             
             # 检查是否为歧义时间
             is_ambiguous = False

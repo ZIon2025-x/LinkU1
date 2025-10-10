@@ -3984,20 +3984,24 @@ async def upload_image(
         # 生成唯一文件名
         file_id = str(uuid.uuid4())
         filename = f"{file_id}{file_extension}"
-        file_path = PRIVATE_IMAGE_DIR / filename
-
-        # 保存文件到私有目录
+        
+        # 保存到公开目录，可以直接通过URL访问
+        if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
+            file_path = Path("/data/uploads/public/images") / filename
+        else:
+            file_path = Path("uploads/public/images") / filename
+            
+        # 确保目录存在
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # 保存文件到公开目录
         with open(file_path, "wb") as buffer:
             buffer.write(content)
 
-        # 生成签名URL
-        from app.signed_url import signed_url_manager
-        image_url = signed_url_manager.generate_signed_url(
-            file_path=f"images/{filename}",
-            user_id=current_user.id,
-            expiry_minutes=15,  # 15分钟过期
-            one_time=False  # 可以多次使用
-        )
+        # 生成公开URL（无需签名验证）
+        from app.config import Config
+        base_url = Config.BASE_URL
+        image_url = f"{base_url}/uploads/images/{filename}"
 
         logger.info(f"用户 {current_user.id} 上传图片: {filename}")
 
@@ -4015,6 +4019,51 @@ async def upload_image(
     except Exception as e:
         logger.error(f"图片上传失败: {e}")
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
+@router.post("/refresh-image-url")
+async def refresh_image_url(
+    request: dict, 
+    current_user: models.User = Depends(get_current_user_secure_sync)
+):
+    """
+    刷新过期的图片URL
+    """
+    try:
+        original_url = request.get("original_url")
+        if not original_url:
+            raise HTTPException(status_code=400, detail="缺少original_url参数")
+        
+        # 从URL中提取文件名
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(original_url)
+        query_params = parse_qs(parsed_url.query)
+        
+        if 'file' not in query_params:
+            raise HTTPException(status_code=400, detail="无法从URL中提取文件名")
+        
+        filename = query_params['file'][0]
+        
+        # 生成新的签名URL（无过期时间）
+        from app.signed_url import signed_url_manager
+        new_url = signed_url_manager.generate_signed_url(
+            file_path=f"images/{filename}",
+            user_id=current_user.id,
+            expiry_minutes=None,  # 无过期时间
+            one_time=False
+        )
+        
+        logger.info(f"用户 {current_user.id} 刷新图片URL: {filename}")
+        
+        return JSONResponse(content={
+            "success": True,
+            "url": new_url,
+            "filename": filename
+        })
+        
+    except Exception as e:
+        logger.error(f"刷新图片URL失败: {e}")
+        raise HTTPException(status_code=500, detail=f"刷新失败: {str(e)}")
 
 
 @router.get("/uploads/images/{filename}")

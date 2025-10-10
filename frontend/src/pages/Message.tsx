@@ -79,29 +79,7 @@ const PrivateImageLoader: React.FC<{
         setLoading(true);
         setError(false);
         
-        // 检查URL是否包含过期时间戳
-        const urlParams = new URLSearchParams(src.split('?')[1] || '');
-        const exp = urlParams.get('exp');
-        
-        if (exp) {
-          const expTime = parseInt(exp) * 1000; // 转换为毫秒
-          const currentTime = Date.now();
-          const timeLeft = expTime - currentTime;
-          
-          console.log('图片URL过期检查:', {
-            url: src,
-            expTime: new Date(expTime).toISOString(),
-            currentTime: new Date(currentTime).toISOString(),
-            timeLeft: Math.round(timeLeft / 1000) + '秒',
-            isExpired: timeLeft < 0
-          });
-          
-          if (timeLeft < 0) {
-            console.warn('图片URL已过期，尝试重新获取');
-            setError(true);
-            return;
-          }
-        }
+        // 图片URL无过期时间，直接加载
         
         // 使用新的图片加载工具函数
         const blobUrl = await loadImageWithFallback(src);
@@ -152,11 +130,6 @@ const PrivateImageLoader: React.FC<{
   }
 
   if (error) {
-    // 检查是否是签名URL过期
-    const urlParams = new URLSearchParams(src.split('?')[1] || '');
-    const exp = urlParams.get('exp');
-    const isExpired = exp && parseInt(exp) * 1000 < Date.now();
-    
     return (
       <div style={{
         ...style,
@@ -172,13 +145,10 @@ const PrivateImageLoader: React.FC<{
       }}>
         <div style={{ fontSize: '24px', marginBottom: '8px' }}>📷</div>
         <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-          {isExpired ? '图片链接已过期' : '图片加载失败'}
+          图片加载失败
         </div>
         <div style={{ fontSize: '12px', opacity: 0.7, textAlign: 'center', marginBottom: '8px' }}>
-          {isExpired 
-            ? '图片链接已过期，请刷新页面获取新的链接' 
-            : '网络错误或权限问题，请重试'
-          }
+          网络错误或权限问题，请重试
         </div>
         <button onClick={() => window.location.reload()} style={{
           padding: '6px 12px',

@@ -21,7 +21,7 @@ class SignedURLManager:
     def __init__(self, secret_key: str = None):
         # 使用环境变量或默认密钥
         self.secret_key = secret_key or "your-secret-key-change-in-production"
-        self.default_expiry_minutes = 15  # 默认15分钟过期
+        self.default_expiry_minutes = None  # 无过期时间
     
     def generate_signed_url(
         self, 
@@ -50,7 +50,11 @@ class SignedURLManager:
                 expiry_minutes = self.default_expiry_minutes
             
             current_time = int(time.time())
-            expiry_time = current_time + (expiry_minutes * 60)
+            # 如果没有设置过期时间，设置为10年后（实际永不过期）
+            if expiry_minutes is None:
+                expiry_time = current_time + (10 * 365 * 24 * 60 * 60)  # 10年后
+            else:
+                expiry_time = current_time + (expiry_minutes * 60)
             
             # 构建签名数据
             signature_data = {
