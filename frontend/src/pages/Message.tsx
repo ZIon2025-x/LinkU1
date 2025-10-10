@@ -237,6 +237,7 @@ const MessagePage: React.FC = () => {
   const [input, setInput] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isNewMessage, setIsNewMessage] = useState(false);
   const [isServiceMode, setIsServiceMode] = useState(false);
   const [currentChat, setCurrentChat] = useState<CustomerServiceChat | null>(null);
   const [rating, setRating] = useState(5);
@@ -853,6 +854,9 @@ const MessagePage: React.FC = () => {
       return newMessages;
     });
     
+    // 标记为新消息，触发自动滚动
+    setIsNewMessage(true);
+    
     try {
       if (ws && ws.readyState === WebSocket.OPEN) {
         if (isServiceMode && currentChat) {
@@ -1302,9 +1306,9 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 自动滚动到底部 - 仅针对发送和接收消息，不包括系统消息
+  // 自动滚动到底部 - 仅针对真正的新消息（发送和接收），不包括系统消息和历史消息
   useEffect(() => {
-    if (messagesEndRef.current && messages.length > 0 && !loadingMoreMessages) {
+    if (messagesEndRef.current && messages.length > 0 && !loadingMoreMessages && isNewMessage) {
         const lastMessage = messages[messages.length - 1];
       
       // 只对发送的消息或接收的消息自动滚动到底部，不包括系统消息
@@ -1316,7 +1320,10 @@ const MessagePage: React.FC = () => {
         }, 100);
         }
       }
-  }, [messages.length, loadingMoreMessages]);
+      
+      // 重置新消息标志
+      setIsNewMessage(false);
+  }, [messages.length, loadingMoreMessages, isNewMessage]);
 
   // 点击外部区域和ESC键关闭表情框
   useEffect(() => {
@@ -1540,6 +1547,11 @@ const MessagePage: React.FC = () => {
                   console.log('添加消息后，新消息数量:', newMessages.length);
                   return newMessages;
                 });
+                
+                // 标记为新消息，触发自动滚动（只对非系统消息）
+                if (fromName !== '系统') {
+                  setIsNewMessage(true);
+                }
                 
                 // 如果是接收到的消息（不是自己发送的），更新联系人排序
                 if (msg.from !== user.id && msg.from !== 'system' && msg.from !== 'customer_service' && msg.from !== 'admin') {
