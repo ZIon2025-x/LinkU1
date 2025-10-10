@@ -1610,6 +1610,10 @@ def send_message_api(
         # 验证图片ID格式
         if not image_id or len(image_id) < 10:
             raise HTTPException(status_code=400, detail="无效的图片ID")
+        
+        print(f"🔍 [DEBUG] 检测到图片消息，image_id: {image_id}")
+    else:
+        print(f"🔍 [DEBUG] 普通消息: {msg.content[:50]}...")
 
     # 保存消息
     message = crud.send_message(db, current_user.id, msg.receiver_id, msg.content, image_id=image_id)
@@ -4076,21 +4080,26 @@ def generate_image_url(
         
         logger.info(f"尝试生成图片URL，image_id: {image_id}")
         
-        # 检查image_id字段是否存在
+        # 查找包含此图片的消息
+        message = None
+        
+        # 首先尝试通过image_id字段查找（如果字段存在）
         try:
-            # 查找包含此图片的消息
-            message = db.query(Message).filter(Message.image_id == image_id).first()
-            if not message:
-                # 如果通过image_id找不到，尝试通过content查找
-                message = db.query(Message).filter(Message.content.like(f'%[图片] {image_id}%')).first()
-                if not message:
-                    raise HTTPException(status_code=404, detail="图片不存在")
+            if hasattr(Message, 'image_id'):
+                message = db.query(Message).filter(Message.image_id == image_id).first()
+                if message:
+                    logger.info(f"通过image_id找到消息: {message.id}")
+        except Exception as e:
+            logger.warning(f"image_id字段查询失败: {e}")
+        
+        # 如果通过image_id找不到，尝试通过content查找
+        if not message:
+            message = db.query(Message).filter(Message.content.like(f'%[图片] {image_id}%')).first()
+            if message:
                 logger.info(f"通过content找到消息: {message.id}")
-            else:
-                logger.info(f"通过image_id找到消息: {message.id}")
-        except AttributeError as e:
-            logger.error(f"数据库字段错误: {e}")
-            raise HTTPException(status_code=500, detail="数据库字段不存在，请运行迁移")
+        
+        if not message:
+            raise HTTPException(status_code=404, detail="图片不存在")
         
         # 检查用户是否有权限访问此图片
         if current_user.id not in [message.sender_id, message.receiver_id]:

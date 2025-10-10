@@ -665,16 +665,21 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
         local_time = None
 
     # 创建消息记录
-    msg = Message(
-        sender_id=sender_id, 
-        receiver_id=receiver_id, 
-        content=content,
-        created_at=utc_time,
-        image_id=image_id
-        # 暂时注释掉新字段
-        # created_at_tz=tz_info,
-        # local_time=local_time
-    )
+    msg_data = {
+        'sender_id': sender_id, 
+        'receiver_id': receiver_id, 
+        'content': content,
+        'created_at': utc_time
+    }
+    
+    # 如果image_id字段存在，则添加它
+    if hasattr(Message, 'image_id') and image_id:
+        msg_data['image_id'] = image_id
+        print(f"🔍 [DEBUG] 设置image_id: {image_id}")
+    else:
+        print(f"🔍 [DEBUG] 未设置image_id - hasattr: {hasattr(Message, 'image_id')}, image_id: {image_id}")
+    
+    msg = Message(**msg_data)
     
     db.add(msg)
     db.commit()

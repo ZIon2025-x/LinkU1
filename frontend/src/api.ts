@@ -153,9 +153,7 @@ api.interceptors.request.use(async config => {
       try {
         const token = await getCSRFToken();
         config.headers['X-CSRF-Token'] = token;
-        
-        // 同时设置Cookie中的CSRF token（后端需要两者匹配）
-        document.cookie = `csrf_token=${token}; path=/; secure; samesite=strict`;
+        console.log('设置CSRF token到Header:', token.substring(0, 8) + '...');
       } catch (error) {
         console.warn('无法获取CSRF token，请求可能失败:', error);
       }
