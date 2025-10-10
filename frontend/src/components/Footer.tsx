@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Footer: React.FC = () => {
@@ -112,7 +113,7 @@ const Footer: React.FC = () => {
                 >
                   {t('footer.partners')}
                 </a>
-                <a href="#" style={{
+                <Link to="/task-experts" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -122,7 +123,7 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.taskExperts')}
-                </a>
+                </Link>
                 <a href="#" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',

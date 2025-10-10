@@ -14,6 +14,7 @@ import TaskDetail from './pages/TaskDetail';
 import MyTasks from './pages/MyTasks';
 import Tasks from './pages/Tasks';
 import UserProfile from './pages/UserProfile';
+import TaskExperts from './pages/TaskExperts';
 import CustomerService from './pages/CustomerService';
 import CustomerServiceLogin from './pages/CustomerServiceLogin';
 import AdminLogin from './pages/AdminLogin';
@@ -71,6 +72,7 @@ function App() {
             </ProtectedRoute>
           } />
           <Route path="/user/:userId" element={<UserProfile />} />
+          <Route path="/task-experts" element={<TaskExperts />} />
           <Route path="/vip" element={<VIP />} />
           <Route path="/wallet" element={
             <ProtectedRoute>
