@@ -301,7 +301,7 @@ const Footer: React.FC = () => {
                 color: 'rgba(255,255,255,0.6)',
                 lineHeight: '1'
               }}>
-                Delivery
+                Platform
               </div>
             </div>
           </div>
