@@ -1,10 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { api } from '../../api';
 
 interface MessageInputProps {
   input: string;
   setInput: (value: string) => void;
   onSendMessage: (content: string) => void;
-  onSendImage: () => void;
+  onSendImage: (imageId: string) => void;
   uploadingImage: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -19,8 +20,55 @@ const MessageInput: React.FC<MessageInputProps> = ({
   disabled = false,
   placeholder = "输入消息..."
 }) => {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await api.post('/api/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (response.data.success) {
+        const { image_id } = response.data;
+        onSendImage(image_id);
+      } else {
+        throw new Error('图片上传失败');
+      }
+    } catch (error) {
+      console.error('图片上传错误:', error);
+      alert('图片上传失败，请重试');
+    }
+  }, [onSendImage]);
+
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 检查文件类型
+      if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+      }
+      
+      // 检查文件大小 (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件过大，请选择小于5MB的图片');
+        return;
+      }
+      
+      handleImageUpload(file);
+    }
+  }, [handleImageUpload]);
+
+  const handleImageClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,7 +161,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           {/* 图片上传按钮 */}
           <button
             type="button"
-            onClick={onSendImage}
+            onClick={handleImageClick}
             disabled={disabled || uploadingImage}
             style={{
               padding: '8px',

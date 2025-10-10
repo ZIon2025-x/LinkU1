@@ -1602,8 +1602,17 @@ def send_message_api(
     if not receiver:
         raise HTTPException(status_code=404, detail="接收者不存在")
 
+    # 处理图片消息
+    image_id = None
+    if msg.content.startswith('[图片] '):
+        # 提取图片ID
+        image_id = msg.content.replace('[图片] ', '')
+        # 验证图片ID格式
+        if not image_id or len(image_id) < 10:
+            raise HTTPException(status_code=400, detail="无效的图片ID")
+
     # 保存消息
-    message = crud.send_message(db, current_user.id, msg.receiver_id, msg.content)
+    message = crud.send_message(db, current_user.id, msg.receiver_id, msg.content, image_id=image_id)
 
     # 创建通知
     try:
@@ -3959,60 +3968,22 @@ MAX_FILE_SIZE_LARGE = 10 * 1024 * 1024  # 10MB
 
 @router.post("/upload/image")
 async def upload_image(
-    image: UploadFile = File(...), current_user: models.User = Depends(get_current_user_secure_sync)
+    image: UploadFile = File(...), 
+    current_user: models.User = Depends(get_current_user_secure_sync),
+    db: Session = Depends(get_db)
 ):
     """
-    上传图片文件
+    上传私密图片文件
     """
     try:
-        # 检查文件类型
-        file_extension = Path(image.filename).suffix.lower()
-        if file_extension not in ALLOWED_EXTENSIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型。支持的格式: {', '.join(ALLOWED_EXTENSIONS)}",
-            )
-
-        # 检查文件大小
+        # 读取文件内容
         content = await image.read()
-        if len(content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=400,
-                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE // (1024*1024)}MB",
-            )
-
-        # 生成唯一文件名
-        file_id = str(uuid.uuid4())
-        filename = f"{file_id}{file_extension}"
         
-        # 保存到公开目录，可以直接通过URL访问
-        if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
-            file_path = Path("/data/uploads/public/images") / filename
-        else:
-            file_path = Path("uploads/public/images") / filename
-            
-        # 确保目录存在
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        # 使用新的私密图片系统上传
+        from app.image_system import private_image_system
+        result = private_image_system.upload_image(content, image.filename, current_user.id, db)
         
-        # 保存文件到公开目录
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-
-        # 生成公开URL（无需签名验证）
-        from app.config import Config
-        base_url = Config.BASE_URL
-        image_url = f"{base_url}/uploads/images/{filename}"
-
-        logger.info(f"用户 {current_user.id} 上传图片: {filename}")
-
-        return JSONResponse(
-            content={
-                "success": True,
-                "url": image_url,
-                "filename": filename,
-                "size": len(content),
-            }
-        )
+        return JSONResponse(content=result)
 
     except HTTPException:
         raise
@@ -4066,10 +4037,74 @@ async def refresh_image_url(
         raise HTTPException(status_code=500, detail=f"刷新失败: {str(e)}")
 
 
+@router.get("/private-image/{image_id}")
+async def get_private_image(
+    image_id: str,
+    user: str = Query(..., description="用户ID"),
+    token: str = Query(..., description="访问令牌"),
+    db: Session = Depends(get_db)
+):
+    """
+    获取私密图片（需要验证访问权限）
+    """
+    try:
+        from app.image_system import private_image_system
+        return private_image_system.get_image(image_id, user, token, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取私密图片失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取图片失败: {str(e)}")
+
+
+@router.post("/messages/generate-image-url")
+def generate_image_url(
+    image_id: str = Body(...),
+    current_user=Depends(get_current_user_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """
+    为聊天参与者生成图片访问URL
+    """
+    try:
+        from app.image_system import private_image_system
+        
+        # 查找包含此图片的消息
+        message = db.query(Message).filter(Message.image_id == image_id).first()
+        if not message:
+            raise HTTPException(status_code=404, detail="图片不存在")
+        
+        # 检查用户是否有权限访问此图片
+        if current_user.id not in [message.sender_id, message.receiver_id]:
+            raise HTTPException(status_code=403, detail="无权访问此图片")
+        
+        # 获取聊天参与者
+        participants = [message.sender_id, message.receiver_id]
+        
+        # 生成访问URL
+        image_url = private_image_system.generate_image_url(
+            image_id, 
+            current_user.id, 
+            participants
+        )
+        
+        return JSONResponse(content={
+            "success": True,
+            "image_url": image_url,
+            "image_id": image_id
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成图片URL失败: {e}")
+        raise HTTPException(status_code=500, detail=f"生成URL失败: {str(e)}")
+
+
 @router.get("/uploads/images/{filename}")
 async def get_image(filename: str):
     """
-    获取上传的图片文件
+    获取公开图片文件（已废弃，保留兼容性）
     """
     try:
         file_path = UPLOAD_DIR / filename

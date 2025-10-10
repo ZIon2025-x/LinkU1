@@ -1,58 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { loadImageWithHttp1 } from '../../utils/httpUtils';
 
 // 图片加载工具函数
 const loadImageWithFallback = async (src: string, retryCount = 0): Promise<string> => {
-  // 首先尝试使用fetch
   try {
-    const response = await fetch(src, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'image/*',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Connection': 'keep-alive'
-      },
-      signal: AbortSignal.timeout(10000)
-    });
+    return await loadImageWithHttp1(src);
+  } catch (error) {
+    console.warn('图片加载失败，尝试重试:', error);
     
-    if (response.ok) {
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
+    // 如果是网络错误，尝试重试
+    if (retryCount < 2) {
+      console.log(`图片加载失败，${1000 * (retryCount + 1)}ms后重试...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      return loadImageWithFallback(src, retryCount + 1);
     }
     
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  } catch (error) {
-    console.warn('Fetch失败，尝试XMLHttpRequest:', error);
-    
-    // 如果fetch失败，使用XMLHttpRequest作为备用
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.withCredentials = true;
-      xhr.responseType = 'blob';
-      xhr.timeout = 10000;
-      
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const blob = xhr.response;
-          const blobUrl = URL.createObjectURL(blob);
-          resolve(blobUrl);
-        } else {
-          reject(new Error(`XHR HTTP ${xhr.status}: ${xhr.statusText}`));
-        }
-      };
-      
-      xhr.onerror = () => {
-        reject(new Error('XHR网络错误'));
-      };
-      
-      xhr.ontimeout = () => {
-        reject(new Error('XHR超时'));
-      };
-      
-      xhr.send();
-    });
+    throw error;
   }
 };
 

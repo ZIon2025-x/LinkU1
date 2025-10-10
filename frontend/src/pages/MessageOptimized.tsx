@@ -196,42 +196,12 @@ const MessageOptimized: React.FC = () => {
   }, [user, activeContact]);
 
   // 发送图片
-  const handleSendImage = useCallback(async () => {
-    if (!selectedImage || !user || !activeContact) return;
+  const handleSendImage = useCallback(async (imageId: string) => {
+    if (!user || !activeContact) return;
     
-    setUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append('image', selectedImage);
-      
-      const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/image`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-      
-      if (!uploadResponse.ok) {
-        throw new Error('图片上传失败');
-      }
-      
-      const uploadResult = await uploadResponse.json();
-      const imageUrl = uploadResult.url;
-      
-      // 发送包含图片URL的消息
-      const messageContent = `[图片] ${imageUrl}`;
-      await handleSendMessage(messageContent);
-      
-      // 清除图片选择
-      setSelectedImage(null);
-      setImagePreview(null);
-      
-    } catch (error) {
-      console.error('发送图片失败:', error);
-      alert('图片发送失败，请重试');
-    } finally {
-      setUploadingImage(false);
-    }
-  }, [selectedImage, user, activeContact, handleSendMessage]);
+    const messageContent = `[图片] ${imageId}`;
+    await handleSendMessage(messageContent);
+  }, [user, activeContact, handleSendMessage]);
 
   // 处理文件选择
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

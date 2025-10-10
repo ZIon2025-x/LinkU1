@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import PrivateImageDisplay from './PrivateImageDisplay';
 import PrivateImageLoader from './PrivateImageLoader';
 import dayjs from 'dayjs';
 
@@ -9,6 +10,7 @@ interface Message {
   content: string;
   created_at: string;
   is_read: number;
+  image_id?: string;
 }
 
 interface MessageListProps {
@@ -60,15 +62,15 @@ const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (message: Message) => {
     // 检查是否是图片消息
-    if (content.startsWith('[图片] ')) {
-      const imageUrl = content.replace('[图片] ', '');
+    if (message.content.startsWith('[图片] ') || message.image_id) {
+      const imageId = message.image_id || message.content.replace('[图片] ', '');
       return (
         <div style={{ maxWidth: '300px', maxHeight: '300px' }}>
-          <PrivateImageLoader
-            src={imageUrl}
-            alt="聊天图片"
+          <PrivateImageDisplay
+            imageId={imageId}
+            currentUserId={currentUserId}
             style={{
               width: '100%',
               height: '100%',
@@ -76,7 +78,7 @@ const MessageList: React.FC<MessageListProps> = ({
               borderRadius: '8px',
               cursor: 'pointer'
             }}
-            onClick={() => window.open(imageUrl, '_blank')}
+            alt="私密图片"
           />
         </div>
       );
@@ -89,7 +91,7 @@ const MessageList: React.FC<MessageListProps> = ({
         whiteSpace: 'pre-wrap',
         lineHeight: '1.4'
       }}>
-        {content}
+        {message.content}
       </div>
     );
   };
@@ -141,7 +143,7 @@ const MessageList: React.FC<MessageListProps> = ({
                 wordBreak: 'break-word'
               }}
             >
-              {renderMessageContent(message.content)}
+                    {renderMessageContent(message)}
               <div
                 style={{
                   fontSize: '10px',

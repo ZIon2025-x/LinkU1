@@ -241,6 +241,7 @@ class Message(Base):
     # created_at_tz = Column(String(50), default="UTC")  # 时区信息
     # local_time = Column(Text, nullable=True)  # 原始本地时间字符串（可选）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
+    image_id = Column(String(100), nullable=True)  # 私密图片ID
 
 
 class Notification(Base):

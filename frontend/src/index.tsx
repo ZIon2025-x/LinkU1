@@ -3,6 +3,14 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { autoFixHttp2 } from './utils/http2Fix';
+import { setupNetworkMonitoring } from './utils/networkDiagnostics';
+
+// 自动应用HTTP/2修复
+autoFixHttp2();
+
+// 启动网络监控
+setupNetworkMonitoring();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

@@ -616,7 +616,7 @@ def get_task_history(db: Session, task_id: int):
     )
 
 
-def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None, timezone_str: str = "Europe/London", local_time_str: str = None):
+def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None, timezone_str: str = "Europe/London", local_time_str: str = None, image_id: str = None):
     from app.models import Message
     from datetime import datetime, timedelta
     from app.time_utils import TimeHandler
@@ -669,7 +669,8 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
         sender_id=sender_id, 
         receiver_id=receiver_id, 
         content=content,
-        created_at=utc_time
+        created_at=utc_time,
+        image_id=image_id
         # 暂时注释掉新字段
         # created_at_tz=tz_info,
         # local_time=local_time
