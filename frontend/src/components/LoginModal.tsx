@@ -536,33 +536,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
               </div>
             )}
             {/* 注册时显示密码要求 */}
-            {!isLogin && (
-              <div style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: '#666',
-                lineHeight: '1.4'
-              }}>
-                <div style={{ marginBottom: '4px' }}>密码要求：</div>
-                <div style={{ 
-                  color: formData.password.length >= 8 ? '#52c41a' : '#d9d9d9',
-                  marginBottom: '2px'
-                }}>
-                  ✓ 至少8个字符
-                </div>
-                <div style={{ 
-                  color: /[A-Za-z]/.test(formData.password) ? '#52c41a' : '#d9d9d9',
-                  marginBottom: '2px'
-                }}>
-                  ✓ 包含至少一个字母
-                </div>
-                <div style={{ 
-                  color: /\d/.test(formData.password) ? '#52c41a' : '#d9d9d9'
-                }}>
-                  ✓ 包含至少一个数字
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 注册时显示确认密码 */}

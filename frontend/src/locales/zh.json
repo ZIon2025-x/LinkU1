@@ -345,12 +345,6 @@
     "usernameExists": "该用户名已被使用，请选择其他用户名",
     "emailExists": "该邮箱已被注册，请使用其他邮箱或直接登录",
     "usernameContainsKeywords": "用户名不能包含客服相关关键词",
-    "passwordRequirements": {
-      "title": "密码要求：",
-      "length": "至少8个字符",
-      "letter": "包含字母",
-      "number": "包含数字"
-    }
   },
   "forgotPassword": {
     "title": "忘记密码",

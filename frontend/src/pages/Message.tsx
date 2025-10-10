@@ -1302,13 +1302,13 @@ const MessagePage: React.FC = () => {
     handleContactSelection();
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
-  // 自动滚动到底部 - 仅针对发送和接收消息
+  // 自动滚动到底部 - 仅针对发送和接收消息，不包括系统消息
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0 && !loadingMoreMessages) {
         const lastMessage = messages[messages.length - 1];
       
-      // 如果是发送的消息或接收的消息，自动滚动到底部
-      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方' || lastMessage.from === '系统')) {
+      // 只对发送的消息或接收的消息自动滚动到底部，不包括系统消息
+      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方')) {
           setTimeout(() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
