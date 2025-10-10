@@ -137,6 +137,10 @@ app.include_router(cs_auth_router, tags=["客服认证"])
 app.include_router(admin_auth_router, tags=["管理员认证"])
 app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
+
+# 添加时间检查端点
+from app.time_check_endpoint import router as time_check_router
+app.include_router(time_check_router, tags=["时间检查"])
 # 暂时禁用安全监控路由以解决异步/同步混用问题
 # app.include_router(security_monitoring_router, tags=["安全监控"])
 
@@ -630,7 +634,7 @@ async def websocket_chat(
 
                     # 保存普通消息到数据库
                     message = crud.send_message(
-                        db, user_id, msg["receiver_id"], msg["content"]
+                        db, user_id, msg["receiver_id"], msg["content"], msg.get("message_id", None)
                     )
 
                 # 创建通知给接收者

@@ -845,6 +845,11 @@ const MessagePage: React.FC = () => {
       return;
     }
     
+    if (!input.trim()) {
+      console.log('输入内容为空，返回');
+      return;
+    }
+    
     setIsSending(true);
     console.log('isServiceMode:', isServiceMode);
     console.log('currentChat:', currentChat);
@@ -852,18 +857,15 @@ const MessagePage: React.FC = () => {
     console.log('ws:', ws);
     console.log('ws.readyState:', ws ? ws.readyState : 'null');
     
-    if (!input.trim()) {
-      console.log('输入内容为空，返回');
-      setIsSending(false);
-      return;
-    }
-    
     const messageContent = input.trim();
     setInput('');
     
+    // 生成唯一消息ID防止重复发送
+    const messageId = Date.now() + Math.floor(Math.random() * 1000);
+    
     // 立即添加消息到本地状态以提供即时反馈
     const newMessage = {
-      id: Date.now(), // 临时ID
+      id: messageId, // 唯一ID
       from: '我',
       content: messageContent,
       created_at: new Date().toISOString(),
@@ -883,7 +885,8 @@ const MessagePage: React.FC = () => {
           const messageData = {
             receiver_id: currentChat.service_id,
             content: messageContent,
-            chat_id: currentChat.chat_id
+            chat_id: currentChat.chat_id,
+            message_id: messageId // 添加消息ID防止重复
           };
           console.log('用户发送客服消息:', messageData);
           ws.send(JSON.stringify(messageData));
@@ -891,7 +894,8 @@ const MessagePage: React.FC = () => {
           // 普通聊天模式发送消息
           const messageData = {
             receiver_id: activeContact.id,
-            content: messageContent
+            content: messageContent,
+            message_id: messageId // 添加消息ID防止重复
           };
           console.log('用户发送普通消息:', messageData);
           ws.send(JSON.stringify(messageData));

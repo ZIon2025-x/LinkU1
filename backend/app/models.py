@@ -111,8 +111,8 @@ def get_uk_time_naive():
 
     # 使用在线时间获取更准确的英国时间
     uk_time = get_uk_time_online()
-    # 转换为UTC然后移除时区信息，存储为naive datetime
-    return uk_time.astimezone(timezone.utc).replace(tzinfo=None)
+    # 直接使用英国时间，不转换为UTC，避免时区转换问题
+    return uk_time.replace(tzinfo=None)
 
 
 class User(Base):

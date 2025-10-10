@@ -616,8 +616,39 @@ def get_task_history(db: Session, task_id: int):
     )
 
 
-def send_message(db: Session, sender_id: str, receiver_id: str, content: str):
+def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None):
     from app.models import Message
+    from datetime import datetime, timedelta
+
+    # 如果有消息ID，先检查是否已存在
+    if message_id:
+        existing_by_id = (
+            db.query(Message)
+            .filter(Message.sender_id == sender_id)
+            .filter(Message.content == content)
+            .filter(Message.created_at >= datetime.now() - timedelta(minutes=1))
+            .first()
+        )
+        if existing_by_id:
+            print(f"检测到重复消息ID，跳过保存: {message_id}")
+            return existing_by_id
+
+    # 检查是否在最近5秒内发送过相同的消息（防止重复发送）
+    recent_time = datetime.now() - timedelta(seconds=5)
+    existing_message = (
+        db.query(Message)
+        .filter(
+            Message.sender_id == sender_id,
+            Message.receiver_id == receiver_id,
+            Message.content == content,
+            Message.created_at >= recent_time
+        )
+        .first()
+    )
+    
+    if existing_message:
+        print(f"检测到重复消息，跳过保存: {content}")
+        return existing_message
 
     msg = Message(sender_id=sender_id, receiver_id=receiver_id, content=content)
     db.add(msg)
