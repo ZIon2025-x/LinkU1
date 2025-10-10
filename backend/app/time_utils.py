@@ -3,10 +3,18 @@
 处理英国时区的夏令时切换和歧义时间
 """
 
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Tuple, Dict, Any
 import pytz
+
+# 尝试导入zoneinfo，如果失败则使用pytz
+try:
+    from zoneinfo import ZoneInfo
+    ZONEINFO_AVAILABLE = True
+except ImportError:
+    ZONEINFO_AVAILABLE = False
+    # 使用pytz作为备用
+    import pytz
 
 class TimeHandler:
     """时间处理器，专门处理英国时区的复杂情况"""
@@ -51,7 +59,10 @@ class TimeHandler:
                 local_dt = datetime.strptime(local_time_str, "%Y-%m-%d %H:%M")
             
             # 获取时区信息
-            zone = ZoneInfo(timezone_str)
+            if ZONEINFO_AVAILABLE:
+                zone = ZoneInfo(timezone_str)
+            else:
+                zone = pytz.timezone(timezone_str)
             
             # 处理歧义时间
             if timezone_str == TimeHandler.UK_TIMEZONE:
@@ -60,7 +71,10 @@ class TimeHandler:
                 )
             else:
                 # 其他时区直接转换
-                local_dt_with_tz = local_dt.replace(tzinfo=zone)
+                if ZONEINFO_AVAILABLE:
+                    local_dt_with_tz = local_dt.replace(tzinfo=zone)
+                else:
+                    local_dt_with_tz = zone.localize(local_dt)
                 utc_dt = local_dt_with_tz.astimezone(timezone.utc)
                 tz_info = timezone_str
             
@@ -74,39 +88,63 @@ class TimeHandler:
     @staticmethod
     def _handle_uk_time_ambiguity(
         local_dt: datetime, 
-        zone: ZoneInfo, 
+        zone, 
         disambiguation: str
     ) -> Tuple[datetime, str]:
         """
         处理英国时区的歧义时间
         """
         try:
-            # 使用fold参数处理歧义
-            if disambiguation == "earlier":
-                # 选择较早的时间（BST）
-                dt_with_tz = local_dt.replace(tzinfo=zone, fold=0)
-            elif disambiguation == "later":
-                # 选择较晚的时间（GMT）
-                dt_with_tz = local_dt.replace(tzinfo=zone, fold=1)
+            if ZONEINFO_AVAILABLE:
+                # 使用fold参数处理歧义
+                if disambiguation == "earlier":
+                    # 选择较早的时间（BST）
+                    dt_with_tz = local_dt.replace(tzinfo=zone, fold=0)
+                elif disambiguation == "later":
+                    # 选择较晚的时间（GMT）
+                    dt_with_tz = local_dt.replace(tzinfo=zone, fold=1)
+                else:
+                    # 默认使用later
+                    dt_with_tz = local_dt.replace(tzinfo=zone, fold=1)
+                
+                # 转换为UTC
+                utc_dt = dt_with_tz.astimezone(timezone.utc)
+                
+                # 确定时区信息
+                if dt_with_tz.fold == 0:
+                    tz_info = f"{TimeHandler.UK_TIMEZONE} (BST)"
+                else:
+                    tz_info = f"{TimeHandler.UK_TIMEZONE} (GMT)"
             else:
-                # 默认使用later
-                dt_with_tz = local_dt.replace(tzinfo=zone, fold=1)
-            
-            # 转换为UTC
-            utc_dt = dt_with_tz.astimezone(timezone.utc)
-            
-            # 确定时区信息
-            if dt_with_tz.fold == 0:
-                tz_info = f"{TimeHandler.UK_TIMEZONE} (BST)"
-            else:
-                tz_info = f"{TimeHandler.UK_TIMEZONE} (GMT)"
+                # 使用pytz处理歧义
+                if disambiguation == "earlier":
+                    # 选择较早的时间（BST）
+                    dt_with_tz = zone.localize(local_dt, is_dst=True)
+                elif disambiguation == "later":
+                    # 选择较晚的时间（GMT）
+                    dt_with_tz = zone.localize(local_dt, is_dst=False)
+                else:
+                    # 默认使用later
+                    dt_with_tz = zone.localize(local_dt, is_dst=False)
+                
+                # 转换为UTC
+                utc_dt = dt_with_tz.astimezone(timezone.utc)
+                
+                # 确定时区信息
+                if dt_with_tz.dst() != timedelta(0):
+                    tz_info = f"{TimeHandler.UK_TIMEZONE} (BST)"
+                else:
+                    tz_info = f"{TimeHandler.UK_TIMEZONE} (GMT)"
             
             return utc_dt, tz_info
             
         except Exception as e:
             print(f"英国时区歧义处理错误: {e}")
             # 回退到标准处理
-            dt_with_tz = local_dt.replace(tzinfo=zone)
+            if ZONEINFO_AVAILABLE:
+                dt_with_tz = local_dt.replace(tzinfo=zone)
+            else:
+                dt_with_tz = zone.localize(local_dt)
             utc_dt = dt_with_tz.astimezone(timezone.utc)
             return utc_dt, TimeHandler.UK_TIMEZONE
     
@@ -128,11 +166,15 @@ class TimeHandler:
         """
         try:
             # 转换为用户时区
-            zone = ZoneInfo(user_timezone)
-            local_dt = utc_dt.replace(tzinfo=timezone.utc).astimezone(zone)
+            if ZONEINFO_AVAILABLE:
+                zone = ZoneInfo(user_timezone)
+                local_dt = utc_dt.replace(tzinfo=timezone.utc).astimezone(zone)
+            else:
+                zone = pytz.timezone(user_timezone)
+                local_dt = zone.fromutc(utc_dt)
             
             # 检查是否夏令时
-            is_dst = local_dt.dst() != timezone.timedelta(0)
+            is_dst = local_dt.dst() != timedelta(0)
             
             # 格式化时间
             local_time_str = local_dt.strftime("%Y-%m-%d %H:%M:%S")

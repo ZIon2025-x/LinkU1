@@ -668,9 +668,10 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
         sender_id=sender_id, 
         receiver_id=receiver_id, 
         content=content,
-        created_at=utc_time,
-        created_at_tz=tz_info,
-        local_time=local_time
+        created_at=utc_time
+        # 暂时注释掉新字段
+        # created_at_tz=tz_info,
+        # local_time=local_time
     )
     
     db.add(msg)

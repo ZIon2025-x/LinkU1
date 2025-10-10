@@ -237,8 +237,9 @@ class Message(Base):
     receiver_id = Column(String(8), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.utcnow())  # 存储UTC时间
-    created_at_tz = Column(String(50), default="UTC")  # 时区信息
-    local_time = Column(Text, nullable=True)  # 原始本地时间字符串（可选）
+    # 暂时注释掉新字段，避免数据库错误
+    # created_at_tz = Column(String(50), default="UTC")  # 时区信息
+    # local_time = Column(Text, nullable=True)  # 原始本地时间字符串（可选）
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
 
 
