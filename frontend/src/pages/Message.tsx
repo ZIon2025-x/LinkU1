@@ -3477,14 +3477,15 @@ const MessagePage: React.FC = () => {
             ))}
             <div ref={messagesEndRef} />
             
-            {/* 滚动到底部按钮 */}
+            {/* 滚动到底部按钮 - 定位在消息显示区域底部中间 */}
             {showScrollToBottomButton && (
               <div
                 onClick={scrollToBottom}
                 style={{
                   position: 'absolute',
                   bottom: '20px',
-                  right: '20px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
                   width: '48px',
                   height: '48px',
                   borderRadius: '50%',
@@ -3497,15 +3498,18 @@ const MessagePage: React.FC = () => {
                   boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
                   transition: 'all 0.3s ease',
                   zIndex: 1000,
-                  fontSize: '20px'
+                  fontSize: '20px',
+                  fontWeight: 'bold'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
                   e.currentTarget.style.backgroundColor = '#0056b3';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.4)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
                   e.currentTarget.style.backgroundColor = '#007bff';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.3)';
                 }}
                 title="滚动到底部"
               >
@@ -4065,16 +4069,21 @@ const MessagePage: React.FC = () => {
           <button
             onClick={handleSend}
                 style={{ 
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
+                  background: isSending 
+                    ? 'linear-gradient(135deg, #6b7280, #4b5563)' 
+                    : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
                   color: '#fff', 
                   border: 'none', 
                   borderRadius: '25px', 
                   padding: '16px 24px', 
                   fontWeight: '700',
                   fontSize: '16px',
-                  cursor: 'pointer',
+                  cursor: isSending ? 'not-allowed' : 'pointer',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  boxShadow: isSending 
+                    ? '0 2px 6px rgba(107, 114, 128, 0.3)' 
+                    : '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  opacity: isSending ? 0.7 : 1
                 }}
                 disabled={(() => {
                   const condition1 = !activeContact && !(isServiceMode && serviceConnected);
@@ -4092,7 +4101,7 @@ const MessagePage: React.FC = () => {
                   return isDisabled;
                 })()}
               >
-                发送
+                {isSending ? '发送中...' : '发送'}
               </button>
         </div>
       </div>
@@ -4595,6 +4604,7 @@ const MessagePage: React.FC = () => {
           </div>
         </div>
       )}
+      
     </div>
   );
 };
