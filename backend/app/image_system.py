@@ -135,35 +135,65 @@ class PrivateImageSystem:
         try:
             parts = token.split(':')
             if len(parts) < 5:
+                logger.error(f"令牌格式错误，部分数量不足: {len(parts)}")
                 return False
             
             token_image_id = parts[0]
             token_user_id = parts[1]
-            token_participants = parts[2:-1]  # 参与者列表
-            timestamp = int(parts[-2])
-            signature = parts[-1]
+            
+            # 找到时间戳和签名的位置
+            # 格式: image_id:user_id:participant1:participant2:...:timestamp:signature
+            timestamp = None
+            signature = None
+            participants = []
+            
+            # 从后往前找时间戳和签名
+            for i in range(len(parts) - 1, 1, -1):
+                try:
+                    # 尝试解析为时间戳
+                    timestamp = int(parts[i])
+                    # 如果成功，那么前面的都是参与者，后面的是签名
+                    participants = parts[2:i]
+                    signature = parts[i + 1]
+                    break
+                except ValueError:
+                    continue
+            
+            if timestamp is None or signature is None:
+                logger.error(f"无法解析令牌时间戳和签名: {token}")
+                return False
+            
+            logger.info(f"令牌解析: image_id={token_image_id}, user_id={token_user_id}, participants={participants}, timestamp={timestamp}")
             
             # 检查基本参数
             if token_image_id != image_id or token_user_id != user_id:
+                logger.error(f"令牌参数不匹配: token_image_id={token_image_id}, image_id={image_id}, token_user_id={token_user_id}, user_id={user_id}")
                 return False
             
             # 检查用户是否在参与者列表中
-            if user_id not in token_participants:
+            if user_id not in participants:
+                logger.error(f"用户不在参与者列表中: user_id={user_id}, participants={participants}")
                 return False
             
             # 检查时间戳（令牌有效期24小时）
-            if time.time() - timestamp > 24 * 60 * 60:
+            current_time = time.time()
+            if current_time - timestamp > 24 * 60 * 60:
+                logger.error(f"令牌已过期: current_time={current_time}, timestamp={timestamp}, diff={current_time - timestamp}")
                 return False
             
             # 验证签名
-            data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(token_participants))}:{timestamp}"
+            data_string = f"{token_image_id}:{token_user_id}:{':'.join(sorted(participants))}:{timestamp}"
             expected_signature = hmac.new(
                 self.access_secret.encode('utf-8'),
                 data_string.encode('utf-8'),
                 hashlib.sha256
             ).hexdigest()
             
-            return hmac.compare_digest(signature, expected_signature)
+            is_valid = hmac.compare_digest(signature, expected_signature)
+            if not is_valid:
+                logger.error(f"签名验证失败: expected={expected_signature}, actual={signature}")
+            
+            return is_valid
             
         except Exception as e:
             logger.error(f"令牌验证失败: {e}")

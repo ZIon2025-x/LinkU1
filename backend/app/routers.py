@@ -4085,6 +4085,11 @@ def generate_image_url(
         # 处理不同格式的image_id
         image_id = raw_image_id
         
+        # 如果是base64数据（旧格式），直接返回错误
+        if raw_image_id.startswith('data:image/'):
+            logger.error(f"检测到旧的base64格式图片数据，不支持")
+            raise HTTPException(status_code=400, detail="此图片使用旧格式存储，请重新发送图片")
+        
         # 如果是完整的URL，尝试提取图片ID
         if raw_image_id.startswith('http'):
             try:
