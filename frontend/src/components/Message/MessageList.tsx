@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import PrivateImageDisplay from './PrivateImageDisplay';
-import PrivateImageLoader from './PrivateImageLoader';
 import dayjs from 'dayjs';
 
 interface Message {
