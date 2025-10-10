@@ -3,7 +3,7 @@ import api from '../../api';
 
 interface MessageInputProps {
   input: string;
-  setInput: (value: string) => void;
+  setInput: (value: string | ((prev: string) => string)) => void;
   onSendMessage: (content: string) => void;
   onSendImage: (imageId: string) => void;
   uploadingImage: boolean;
@@ -100,7 +100,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
 
   const insertEmoji = (emoji: string) => {
-    setInput((prev: string) => prev + emoji);
+    setInput(input + emoji);
     setShowEmojiPicker(false);
     textareaRef.current?.focus();
   };
