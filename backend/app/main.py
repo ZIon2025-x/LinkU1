@@ -338,6 +338,13 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
+        # 自动运行数据库迁移
+        try:
+            from auto_migrate import auto_migrate
+            auto_migrate()
+        except Exception as e:
+            logger.warning(f"自动迁移失败，但应用继续启动: {e}")
+        
         # 验证表是否创建成功
         from sqlalchemy import inspect
         inspector = inspect(sync_engine)

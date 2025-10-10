@@ -98,13 +98,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 这里可以添加文件处理逻辑
-      console.log('选择的文件:', file);
-    }
-  };
 
   const insertEmoji = (emoji: string) => {
     setInput(prev => prev + emoji);

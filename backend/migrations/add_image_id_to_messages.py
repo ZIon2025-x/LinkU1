@@ -11,13 +11,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from sqlalchemy import create_engine, text
-from app.database import get_database_url
+from app.database import DATABASE_URL
 
 def run_migration():
     """运行数据库迁移"""
     try:
         # 获取数据库URL
-        database_url = get_database_url()
+        database_url = DATABASE_URL
         engine = create_engine(database_url)
         
         with engine.connect() as conn:
