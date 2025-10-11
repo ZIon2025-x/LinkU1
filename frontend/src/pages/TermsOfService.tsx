@@ -101,15 +101,18 @@ const TermsOfService: React.FC = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
-              用户协议
+              {t('termsOfService.title')}
             </h1>
-            <p style={{
-              fontSize: '1.1rem',
+            <div style={{
+              fontSize: '1rem',
               color: '#64748b',
-              margin: 0
+              margin: 0,
+              lineHeight: '1.6'
             }}>
-              最后更新：2024年1月1日
-            </p>
+              <p style={{ margin: '4px 0' }}>{t('termsOfService.version')}</p>
+              <p style={{ margin: '4px 0' }}>{t('termsOfService.effectiveDate')}</p>
+              <p style={{ margin: '4px 0' }}>{t('termsOfService.jurisdiction')}</p>
+            </div>
           </div>
 
           {/* 协议内容 */}
@@ -121,126 +124,98 @@ const TermsOfService: React.FC = () => {
             lineHeight: '1.8'
           }}>
             <div style={{ color: '#374151', fontSize: '1rem' }}>
+              {/* 主体信息 */}
+              <div style={{
+                marginBottom: '32px',
+                padding: '20px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '1px solid #e9ecef'
+              }}>
+                <h3 style={{ color: '#1e293b', fontSize: '1.3rem', marginBottom: '16px' }}>
+                  {t('termsOfService.operatorInfo')}
+                </h3>
+                <p style={{ marginBottom: '8px' }}>{t('termsOfService.operator')}</p>
+                <p style={{ margin: 0 }}>{t('termsOfService.contact')}</p>
+              </div>
+
+              {/* 1. 服务性质 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                1. 服务条款
+                {t('termsOfService.serviceNature.title')}
               </h2>
-              <p>
-                欢迎使用Link²Ur平台（以下简称"本平台"）。本用户协议（以下简称"本协议"）是您与Link²Ur之间关于您使用本平台服务所订立的协议。
-              </p>
+              <p>{t('termsOfService.serviceNature.content')}</p>
 
+              {/* 2. 用户类型与资格 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                2. 服务内容
+                {t('termsOfService.userTypes.title')}
               </h2>
-              <p>
-                Link²Ur是一个连接个人用户和企业用户的平台，提供以下服务：
-              </p>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>任务发布和接取服务</li>
-                <li>用户匹配和推荐服务</li>
-                <li>支付和结算服务</li>
-                <li>用户评价和反馈系统</li>
-                <li>客户服务和技术支持</li>
-              </ul>
+              <p>{t('termsOfService.userTypes.content')}</p>
+              <p>{t('termsOfService.userTypes.userTypes')}</p>
 
+              {/* 3. 平台定位与站外交易 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                3. 用户权利与义务
+                {t('termsOfService.platformPosition.title')}
               </h2>
-              <h3 style={{ color: '#374151', fontSize: '1.2rem', marginBottom: '12px', marginTop: '24px' }}>
-                3.1 用户权利
-              </h3>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>注册和使用本平台服务</li>
-                <li>发布和接取任务</li>
-                <li>获得平台提供的客户服务</li>
-                <li>对平台服务提出意见和建议</li>
-              </ul>
+              <p>{t('termsOfService.platformPosition.content')}</p>
+              <p>{t('termsOfService.platformPosition.offPlatform')}</p>
 
-              <h3 style={{ color: '#374151', fontSize: '1.2rem', marginBottom: '12px', marginTop: '24px' }}>
-                3.2 用户义务
-              </h3>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>提供真实、准确、完整的个人信息</li>
-                <li>遵守相关法律法规和本协议条款</li>
-                <li>不得发布违法、有害、虚假信息</li>
-                <li>不得恶意刷单、虚假交易</li>
-                <li>保护账户安全，不得转让账户</li>
-              </ul>
-
+              {/* 4. 费用与平台规则 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                4. 平台权利与义务
+                {t('termsOfService.feesAndRules.title')}
               </h2>
-              <h3 style={{ color: '#374151', fontSize: '1.2rem', marginBottom: '12px', marginTop: '24px' }}>
-                4.1 平台权利
-              </h3>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>对用户发布的内容进行审核</li>
-                <li>对违规用户进行警告、限制或封禁</li>
-                <li>根据业务需要调整服务内容</li>
-                <li>收取合理的平台服务费用</li>
-              </ul>
+              <p>{t('termsOfService.feesAndRules.content')}</p>
+              <p>{t('termsOfService.feesAndRules.reviews')}</p>
 
-              <h3 style={{ color: '#374151', fontSize: '1.2rem', marginBottom: '12px', marginTop: '24px' }}>
-                4.2 平台义务
-              </h3>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>提供稳定、安全的平台服务</li>
-                <li>保护用户个人信息安全</li>
-                <li>及时处理用户投诉和反馈</li>
-                <li>建立完善的客户服务体系</li>
-              </ul>
-
+              {/* 5. 用户行为与禁止事项 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                5. 费用与支付
+                {t('termsOfService.userBehavior.title')}
               </h2>
-              <p>
-                本平台可能对部分服务收取费用，具体收费标准将在相关页面明确标示。用户同意按照平台公布的收费标准支付相应费用。
-              </p>
+              <p>{t('termsOfService.userBehavior.prohibited')}</p>
+              <p>{t('termsOfService.userBehavior.consequences')}</p>
 
+              {/* 6. 知识产权与用户内容 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                6. 知识产权
+                {t('termsOfService.intellectualProperty.title')}
               </h2>
-              <p>
-                本平台的所有内容，包括但不限于文字、图片、音频、视频、软件、程序、版面设计等，均受知识产权法保护。未经许可，不得复制、传播或用于商业用途。
-              </p>
+              <p>{t('termsOfService.intellectualProperty.platformRights')}</p>
+              <p>{t('termsOfService.intellectualProperty.userContent')}</p>
+              <p>{t('termsOfService.intellectualProperty.complaints')}</p>
 
+              {/* 7. 隐私与数据 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                7. 免责声明
+                {t('termsOfService.privacyData.title')}
               </h2>
-              <p>
-                本平台不对以下情况承担责任：
-              </p>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>因不可抗力导致的服务中断</li>
-                <li>用户因使用第三方服务造成的损失</li>
-                <li>用户违反本协议造成的损失</li>
-                <li>因网络故障、系统维护等原因造成的服务中断</li>
-              </ul>
+              <p>{t('termsOfService.privacyData.controller')}</p>
+              <p>{t('termsOfService.privacyData.payments')}</p>
 
+              {/* 8. 免责声明与责任限制 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                8. 协议修改
+                {t('termsOfService.disclaimer.title')}
               </h2>
-              <p>
-                本平台有权根据业务发展需要修改本协议。修改后的协议将在平台公布，用户继续使用服务即视为同意修改后的协议。
-              </p>
+              <p>{t('termsOfService.disclaimer.service')}</p>
+              <p>{t('termsOfService.disclaimer.liability')}</p>
+              <p>{t('termsOfService.disclaimer.limit')}</p>
 
+              {/* 9. 终止与数据保留 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                9. 争议解决
+                {t('termsOfService.termination.title')}
               </h2>
-              <p>
-                因本协议产生的争议，双方应友好协商解决。协商不成的，可向有管辖权的人民法院提起诉讼。
-              </p>
+              <p>{t('termsOfService.termination.content')}</p>
+              <p>{t('termsOfService.termination.effect')}</p>
 
+              {/* 10. 争议与适用法律 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
-                10. 联系方式
+                {t('termsOfService.disputes.title')}
               </h2>
-              <p>
-                如果您对本协议有任何疑问，请通过以下方式联系我们：
-              </p>
-              <ul style={{ paddingLeft: '20px', marginBottom: '20px' }}>
-                <li>邮箱：info@link2ur.com</li>
-                <li>客服电话：400-123-4567</li>
-                <li>在线客服：平台内客服系统</li>
-              </ul>
+              <p>{t('termsOfService.disputes.negotiation')}</p>
+              <p>{t('termsOfService.disputes.law')}</p>
+
+              {/* 消费者条款附录 */}
+              <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
+                {t('termsOfService.consumerAppendix.title')}
+              </h2>
+              <p>{t('termsOfService.consumerAppendix.freeService')}</p>
+              <p>{t('termsOfService.consumerAppendix.futureCharges')}</p>
 
               <div style={{
                 marginTop: '40px',
@@ -250,7 +225,7 @@ const TermsOfService: React.FC = () => {
                 border: '1px solid #e9ecef'
               }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: '#6c757d' }}>
-                  <strong>重要提示：</strong>请仔细阅读本协议，特别是免除或限制责任的条款。如果您不同意本协议的任何条款，请停止使用本平台服务。
+                  <strong>{t('termsOfService.importantNotice')}</strong>
                 </p>
               </div>
             </div>

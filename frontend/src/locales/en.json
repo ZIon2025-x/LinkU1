@@ -1594,5 +1594,121 @@
     "erroneousless": "Erroneousless",
     "mistakelessless": "Mistakelessless",
     "mistakenless": "Mistakenless"
+  },
+  "termsOfService": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated: October 10, 2025",
+    "version": "Version: v0.9-beta",
+    "effectiveDate": "Effective Date: October 10, 2025",
+    "jurisdiction": "Applicable Jurisdiction: England & Wales",
+    "operatorInfo": "Entity Information",
+    "operator": "Operator (\"We\" \"Link²Ur\"): Zixiong Zhang, trading as \"Link²Ur\".",
+    "contact": "Contact: info@link2ur.com",
+    "serviceNature": {
+      "title": "1. Nature of Service",
+      "content": "This service is an early beta version (Beta/MVP) designed for matching and communication, and does not provide payment or fund custody within the platform. We may change, suspend or terminate access at any time."
+    },
+    "userTypes": {
+      "title": "2. User Types and Eligibility",
+      "content": "Only users aged 18 and above may register and use the service.",
+      "userTypes": "Users may be business users (B2B) or individual/consumer users (B2C). If you are a consumer, the Consumer Terms Appendix at the end applies."
+    },
+    "platformPosition": {
+      "title": "3. Platform Position and Off-Platform Transactions",
+      "content": "We are a matching online platform, not an employer, contractor or agent for any tasks/projects.",
+      "offPlatform": "Off-Platform Transactions: Parties may pay/settle offline or through other channels. We are not responsible for or guarantee off-platform transactions related to contracts, quality, delivery, refunds, taxes and disputes, unless due to our own fault. We recommend parties maintain written agreements and records and conduct their own due diligence."
+    },
+    "feesAndRules": {
+      "title": "4. Fees and Platform Rules",
+      "content": "During the testing phase, we do not charge platform service fees to users; if we charge fees in the future, we will prominently display them on the page and update these terms.",
+      "reviews": "Reviews and Content: Prohibited are false/misleading reviews, review manipulation or organizing \"positive review tasks\". We may delete related content and restrict or terminate accounts."
+    },
+    "userBehavior": {
+      "title": "5. User Behavior and Prohibited Activities",
+      "prohibited": "You may not: (1) publish illegal, infringing, fraudulent, misleading or harmful content; (2) publish tasks requiring licenses without proper qualifications; (3) scrape, attack, bypass access controls or attempt to damage the system; (4) engage in money laundering, sanctions evasion or other financial crimes.",
+      "consequences": "If violated, we may delete content, restrict/terminate access, and report to regulatory or law enforcement agencies when necessary."
+    },
+    "intellectualProperty": {
+      "title": "6. Intellectual Property and User Content",
+      "platformRights": "All rights to the platform and its content belong to us or our licensors.",
+      "userContent": "You retain rights to uploaded content, but for the purpose of providing, operating and promoting the service, you grant us a worldwide, non-exclusive, royalty-free, sublicensable license (for display, backup, review, indexing and promotion).",
+      "complaints": "Infringement complaints are handled through our notice-and-takedown process (please contact us via the above email)."
+    },
+    "privacyData": {
+      "title": "7. Privacy and Data (UK GDPR)",
+      "controller": "We act as a **data controller** processing account, log and communication data, only within the scope of \"providing services, ensuring security, improving experience\", as detailed in the Privacy Notice (Beta) below; you may exercise rights of access, rectification, erasure, restriction of processing, data portability, objection to processing, withdrawal of consent, etc.; you may also complain to the ICO.",
+      "payments": "Off-platform payments are handled by relevant third parties or transaction counterparts; we do not access complete payment credentials."
+    },
+    "disclaimer": {
+      "title": "8. Disclaimer and Limitation of Liability",
+      "service": "The service is provided \"as is\" / \"as available\" without warranty of uninterrupted or error-free operation.",
+      "liability": "We are not liable for indirect, consequential, punitive damages or loss of profits/goodwill.",
+      "limit": "Total liability cap: For any single or combined claim, our liability is limited to the total amount you actually paid us in the past 12 months or **£100 (whichever is higher)**; except for legally mandatory liability (such as personal injury or death due to negligence)."
+    },
+    "termination": {
+      "title": "9. Termination and Data Retention",
+      "content": "You or we may terminate test access at any time. To comply with legal obligations and legitimate purposes, we may retain logs and records for the shortest necessary period (as detailed in the Privacy Notice (Beta)).",
+      "effect": "Termination does not affect existing rights and obligations."
+    },
+    "disputes": {
+      "title": "10. Disputes and Applicable Law",
+      "negotiation": "Parties should first negotiate amicably; if negotiation fails, submit to the exclusive jurisdiction of courts in England and Wales.",
+      "law": "These terms are governed by and construed in accordance with the laws of England and Wales."
+    },
+    "consumerAppendix": {
+      "title": "Consumer Terms Appendix (Applicable when user is a consumer)",
+      "freeService": "When you use our free matching service as a consumer, we will provide key information on the interface (platform identity, contact information, main functions and any important limitations).",
+      "futureCharges": "Currently during the testing period we do not charge consumers, so the cooling-off/refund mechanism for paid digital services is not triggered; once we charge consumers in the future, we will comply with relevant consumer regulations (including information disclosure, cancellation rights and prohibition of hidden fees/false reviews, etc.) and notify prominently before charging."
+    },
+    "importantNotice": "Important Notice: Please read these terms carefully, especially the terms that exclude or limit liability. If you do not agree to any terms, please stop using the platform service."
+  },
+  "privacyPolicy": {
+    "title": "Privacy Notice",
+    "lastUpdated": "Last Updated: October 10, 2025",
+    "version": "Version: v0.9-beta",
+    "effectiveDate": "Effective Date: October 10, 2025",
+    "controller": "Controller",
+    "operator": "Zixiong Zhang (trading as \"Link²Ur\")",
+    "contactEmail": "Contact Email: info@link2ur.com",
+    "address": "Mailing Address: A3, B16 9NB, UK",
+    "dpoNote": "(For data protection contact/DPO, please use the above email)",
+    "dataCollection": {
+      "title": "What Data We Collect & Processing Purposes (Legal Basis)",
+      "accountData": "Account Data: Email, name (if provided), login records, etc. — For account creation and management, communication with you (contract performance/legitimate interests).",
+      "taskData": "Task and Communication Data: Task content, timestamps, communication records (in-platform messages/emails received by us) — For matching, risk control and support (contract performance/legitimate interests).",
+      "technicalData": "Technical and Log Data: IP, device information, error logs, necessary Cookies — For security, debugging and abuse prevention (legitimate interests).",
+      "analyticsData": "Optional Analytics Cookies (if enabled): For understanding usage and improving experience (consent).",
+      "paymentData": "Payment Related: We do not process payments within the platform; if you make off-platform payments, payment data is handled by relevant third parties or transaction counterparts, and we only obtain minimal necessary information for reconciliation or support needs (contract performance/legitimate interests)."
+    },
+    "dataSharing": {
+      "title": "Who We Share With",
+      "cloudServices": "Cloud Services/Hosting and Security Vendors: Only shared to the extent necessary for service provision, with data processing agreements in place.",
+      "legalDisclosure": "Law Enforcement/Regulatory and Dispute Resolution: Disclose necessary information when legally required or to protect legitimate rights."
+    },
+    "internationalTransfer": {
+      "title": "International Transfers",
+      "content": "If personal data needs to be transferred outside the UK, we will use applicable transfer safeguards (such as UK IDTA or UK addendum to EU SCCs, etc.)."
+    },
+    "retentionPeriod": {
+      "title": "Retention Periods",
+      "accountData": "Account and Basic Operational Data: Account duration + reasonable backup period.",
+      "transactionData": "Transaction/Task and Customer Service Records: For accounting, tax or compliance purposes, typically retained for no more than 6 years (unless law requires longer/shorter).",
+      "securityLogs": "Security Logs: Determined based on risk classification, kept for the shortest necessary period."
+    },
+    "yourRights": {
+      "title": "Your Rights",
+      "content": "You have the right to request access, rectification, erasure, restriction of processing, data portability, objection to processing, and to withdraw consent when based on consent (withdrawal does not affect the legality of processing before withdrawal).",
+      "complaintProcess": "If you have questions or complaints about our data processing, please first contact info@link2ur.com by email; if you still have concerns, you may complain to the UK Information Commissioner's Office (ICO)."
+    },
+    "cookies": {
+      "title": "Cookies",
+      "necessary": "Necessary Cookies: Essential for site operation.",
+      "optional": "Analytics/Functional Cookies (Optional): Only enabled after your explicit consent; you can change preferences at any time in the Cookie banner or settings."
+    },
+    "contactUs": {
+      "title": "Contact Us",
+      "content": "For this privacy notice or personal data matters, contact us anytime: info@link2ur.com"
+    },
+    "importantNotice": "Important Notice: This privacy notice is an agreement between you and Link²Ur regarding personal information processing. We are committed to protecting your privacy rights in accordance with this notice."
   }
 }
