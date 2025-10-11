@@ -142,7 +142,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
           email: formData.email,
           password: formData.password,
           name: formData.username,  // 改为 name
-          phone: formData.phone
+          phone: formData.phone,
+          agreed_to_terms: agreedToTerms,  // 记录用户同意状态
+          terms_agreed_at: new Date().toISOString()  // 记录同意时间
         });
         
         // 处理注册成功后的逻辑
@@ -637,17 +639,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {/* 提交按钮 */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!isLogin && !agreedToTerms)}
             style={{
               width: '100%',
               padding: '14px',
-              backgroundColor: loading ? '#ccc' : '#3b82f6',
+              backgroundColor: (loading || (!isLogin && !agreedToTerms)) ? '#ccc' : '#3b82f6',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: (loading || (!isLogin && !agreedToTerms)) ? 'not-allowed' : 'pointer',
               marginBottom: '16px',
               transition: 'background-color 0.2s'
             }}

@@ -95,6 +95,12 @@ def create_user(db: Session, user: schemas.UserCreate):
         if not existing_user:
             break
 
+    # 处理同意时间
+    terms_agreed_at = None
+    if hasattr(user, 'terms_agreed_at') and user.terms_agreed_at:
+        from datetime import datetime
+        terms_agreed_at = datetime.fromisoformat(user.terms_agreed_at.replace('Z', '+00:00'))
+    
     db_user = models.User(
         id=user_id,
         name=user.name,
@@ -102,6 +108,8 @@ def create_user(db: Session, user: schemas.UserCreate):
         phone=user.phone,
         hashed_password=hashed_password,
         avatar=getattr(user, "avatar", ""),
+        agreed_to_terms=1 if getattr(user, "agreed_to_terms", False) else 0,
+        terms_agreed_at=terms_agreed_at,
     )
     db.add(db_user)
     db.commit()

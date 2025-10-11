@@ -14,6 +14,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6)
     avatar: Optional[str] = ""
+    agreed_to_terms: Optional[bool] = False
+    terms_agreed_at: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
