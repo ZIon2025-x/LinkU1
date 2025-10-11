@@ -692,22 +692,6 @@ const Home: React.FC = () => {
             {t('home.subtitle')}
           </p>
         </div>
-        {/* 自动取消过期任务提示 */}
-        <div style={{
-          background: 'linear-gradient(135deg, #fff3cd, #ffeaa7)',
-          border: '1px solid #ffc107',
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
-        }}>
-          <span style={{fontSize: 16}}>⏰</span>
-          <span style={{color: '#856404', fontSize: 14}}>
-            {t('home.autoCancelExpired')}
-          </span>
-        </div>
         {/* 任务卡片列表 - 重新设计 */}
         {loading ? (
           <div style={{

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import styled from 'styled-components';
 import { useNavigate, useParams } from 'react-router-dom';
+import LoginModal from '../components/LoginModal';
 import api from '../api';
 
 const Wrapper = styled.div`
@@ -26,6 +27,8 @@ const ErrorMsg = styled.div`
 const ResetPassword: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const navigate = useNavigate();
   const { token } = useParams();
 
@@ -39,7 +42,7 @@ const ResetPassword: React.FC = () => {
       setErrorMsg('');
       setSuccessMsg('Password reset successful! Redirecting to login...');
       setTimeout(() => {
-        navigate('/login');
+        setShowLoginModal(true);
       }, 2000);
     } catch (err: any) {
       let msg = 'Password reset failed';
@@ -81,9 +84,22 @@ const ResetPassword: React.FC = () => {
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Button type="link" onClick={() => navigate('/login')}>Back to Login</Button>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>Back to Login</Button>
         </div>
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

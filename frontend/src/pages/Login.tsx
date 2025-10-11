@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import LoginModal from '../components/LoginModal';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -31,6 +32,8 @@ const Login: React.FC = () => {
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // 检查用户是否已登录
   useEffect(() => {
@@ -114,15 +117,28 @@ const Login: React.FC = () => {
           </Form.Item>
         </Form>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-          <Button type="link" onClick={() => navigate('/forgot-password')}>{t('auth.forgotPassword')}</Button>
-          <Button type="link" onClick={() => navigate('/register')}>{t('common.register')}</Button>
+          <Button type="link" onClick={() => setShowForgotPasswordModal(true)}>{t('auth.forgotPassword')}</Button>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>{t('common.register')}</Button>
         </div>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Button type="link" onClick={() => navigate('/resend-verification')}>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>
             重发验证邮件
           </Button>
         </div>
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

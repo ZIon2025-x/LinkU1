@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import LoginModal from '../components/LoginModal';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -24,6 +25,8 @@ const ResendVerification: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -65,7 +68,7 @@ const ResendVerification: React.FC = () => {
               <Button onClick={() => setSuccess(false)}>
                 {t('auth.resendEmail')}
               </Button>
-              <Button type="primary" onClick={() => navigate('/login')}>
+              <Button type="primary" onClick={() => setShowLoginModal(true)}>
                 {t('common.login')}
               </Button>
             </div>
@@ -99,11 +102,24 @@ const ResendVerification: React.FC = () => {
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Button type="link" onClick={() => navigate('/login')}>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>
             {t('common.login')}
           </Button>
         </div>
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

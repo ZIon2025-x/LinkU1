@@ -3,6 +3,7 @@ import { Form, Input, Button, Card, message } from 'antd';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import LoginModal from '../components/LoginModal';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -26,6 +27,8 @@ const ErrorMsg = styled.div`
 const ForgotPassword: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const navigate = useNavigate();
 
   const onFinish = async (values: any) => {
@@ -71,9 +74,22 @@ const ForgotPassword: React.FC = () => {
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Button type="link" onClick={() => navigate('/login')}>Back to Login</Button>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>Back to Login</Button>
         </div>
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

@@ -414,6 +414,24 @@ const Tasks: React.FC = () => {
     loadNotificationsAndSettings();
   }, [user]);
 
+  // 定期更新未读通知数量
+  useEffect(() => {
+    if (user) {
+      const interval = setInterval(() => {
+        // 只在页面可见时才更新
+        if (!document.hidden) {
+          getUnreadNotificationCount().then(count => {
+            console.log('定期更新未读通知数量:', count);
+            setUnreadCount(count.unread_count);
+          }).catch(error => {
+            console.error('定期更新未读数量失败:', error);
+          });
+        }
+      }, 30000); // 每30秒更新一次
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   // 加载任务列表
   const loadTasks = useCallback(async () => {
     setLoading(true);

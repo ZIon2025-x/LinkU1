@@ -155,7 +155,7 @@ const PublishTask: React.FC = () => {
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               >
-                {TASK_TYPES.map((type: string) => <option key={type} value={type}>{type}</option>)}
+                {TASK_TYPES.map((type: string) => <option key={type} value={type}>{t(`publishTask.taskTypes.${type}`)}</option>)}
               </select>
             </div>
             <div style={{flex: 1}}>
@@ -184,7 +184,7 @@ const PublishTask: React.FC = () => {
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               >
-                {CITIES.map((city: string) => <option key={city} value={city}>{city}</option>)}
+                {CITIES.map((city: string) => <option key={city} value={city}>{t(`publishTask.cities.${city}`)}</option>)}
               </select>
             </div>
           </div>

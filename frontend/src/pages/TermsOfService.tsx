@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { fetchCurrentUser, logout } from '../api';
 
@@ -9,6 +10,8 @@ const TermsOfService: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -72,7 +75,7 @@ const TermsOfService: React.FC = () => {
                 }
                 window.location.reload();
               }}
-              onLoginClick={() => navigate('/login')}
+              onLoginClick={() => setShowLoginModal(true)}
               systemSettings={{}}
             />
           </div>
@@ -232,6 +235,19 @@ const TermsOfService: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </div>
   );
 };

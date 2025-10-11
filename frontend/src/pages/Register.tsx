@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import LoginModal from '../components/LoginModal';
 import api from '../api';
 
 const { Text, Paragraph } = Typography;
@@ -43,6 +44,8 @@ const Register: React.FC = () => {
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [password, setPassword] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [passwordValidation, setPasswordValidation] = useState({
     is_valid: false,
     score: 0,
@@ -91,13 +94,13 @@ const Register: React.FC = () => {
         message.success(`注册成功！我们已向 ${res.data.email} 发送了验证邮件，请检查您的邮箱并点击验证链接完成注册。`);
         // 3秒后跳转到重发验证邮件页面
         setTimeout(() => {
-          navigate('/resend-verification');
+          setShowLoginModal(true);
         }, 3000);
       } else {
         message.success(res.data.message || '注册成功！');
         // 开发环境：直接跳转到登录页面
         setTimeout(() => {
-          navigate('/login');
+          setShowLoginModal(true);
         }, 1500);
       }
     } catch (err: any) {
@@ -255,13 +258,26 @@ const Register: React.FC = () => {
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <Text type="secondary">
               {t('register.alreadyHaveAccount')}{' '}
-              <Button type="link" onClick={() => navigate('/login')} style={{ padding: 0 }}>
+              <Button type="link" onClick={() => setShowLoginModal(true)} style={{ padding: 0 }}>
                 {t('register.loginHere')}
               </Button>
             </Text>
           </div>
         </Form>
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

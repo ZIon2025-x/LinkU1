@@ -4,6 +4,7 @@ import { Card, Spin, Alert, Button } from 'antd';
 import styled from 'styled-components';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import LoginModal from '../components/LoginModal';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -39,6 +40,8 @@ const VerifyEmail: React.FC = () => {
   const [status, setStatus] = useState<'success' | 'error' | 'loading'>('loading');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -67,11 +70,11 @@ const VerifyEmail: React.FC = () => {
   }, [searchParams]);
 
   const handleGoToLogin = () => {
-    navigate('/login');
+    setShowLoginModal(true);
   };
 
   const handleGoToRegister = () => {
-    navigate('/register');
+    setShowLoginModal(true);
   };
 
   if (loading) {
@@ -120,6 +123,19 @@ const VerifyEmail: React.FC = () => {
           </>
         )}
       </StyledCard>
+
+      {/* 登录弹窗 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          setShowLoginModal(false);
+          window.location.reload();
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => setShowForgotPasswordModal(true)}
+        onHideForgotPassword={() => setShowForgotPasswordModal(false)}
+      />
     </Wrapper>
   );
 };

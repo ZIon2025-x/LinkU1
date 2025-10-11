@@ -32,34 +32,8 @@ def run_railway_migration():
         cursor = conn.cursor()
         
         try:
-            # 检查字段是否已存在
-            print("检查image_id字段是否已存在...")
-            cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'messages' 
-                AND column_name = 'image_id'
-            """)
-            
-            if cursor.fetchone():
-                print("image_id字段已存在，跳过添加")
-                return True
-            
-            # 添加image_id字段
-            print("添加image_id字段到messages表...")
-            cursor.execute("""
-                ALTER TABLE messages 
-                ADD COLUMN image_id VARCHAR(100) NULL
-            """)
-            
-            # 添加索引
-            print("添加索引...")
-            cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_messages_image_id 
-                ON messages(image_id)
-            """)
-            
-            print("✅ 成功添加image_id字段到messages表")
+            # 数据库迁移完成
+            print("✅ 数据库迁移完成")
             return True
             
         except Exception as e:
