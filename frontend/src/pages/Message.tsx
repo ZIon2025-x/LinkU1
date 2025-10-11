@@ -2431,11 +2431,7 @@ const MessagePage: React.FC = () => {
               transition: 'all 0.3s ease'
             }}
             onClick={() => {
-              if (isMobile) {
-                setShowContactsList(false);
-              } else {
-                navigate('/');
-              }
+              navigate('/');
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
@@ -2446,7 +2442,7 @@ const MessagePage: React.FC = () => {
               e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
             }}
           >
-            {isMobile ? '← 关闭' : '← 返回'}
+            {isMobile ? '← 返回首页' : '← 返回'}
         </div>
             💬 消息中心
             {totalUnreadCount > 0 && (

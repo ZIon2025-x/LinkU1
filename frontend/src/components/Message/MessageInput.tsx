@@ -47,6 +47,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    
+    // 重置文件输入框的值，确保下次选择相同文件时也能触发onChange事件
+    event.target.value = '';
+    
     if (file) {
       // 检查文件类型
       if (!file.type.startsWith('image/')) {
