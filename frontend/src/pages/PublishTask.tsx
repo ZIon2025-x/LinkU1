@@ -128,7 +128,7 @@ const PublishTask: React.FC = () => {
           }}>{t('publishTask.subtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{display: 'flex', gap: '20px', marginBottom: '24px'}}>
+          <div style={{display: 'flex', gap: '24px', marginBottom: '24px'}}>
             <div style={{flex: 1}}>
               <label style={{
                 fontWeight: '600', 
@@ -335,7 +335,7 @@ const PublishTask: React.FC = () => {
               {form.description.length}/500
             </div>
           </div>
-          <div style={{display: 'flex', gap: '20px', marginBottom: '24px'}}>
+          <div style={{display: 'flex', gap: '24px', marginBottom: '24px'}}>
             <div style={{flex: 1}}>
               <label style={{
                 fontWeight: '600', 
@@ -463,15 +463,9 @@ const PublishTask: React.FC = () => {
             }}
           >
             {loading ? (
-              <>
-                <span style={{ marginRight: '8px' }}>⏳</span>
-                {t('publishTask.publishingButton')}
-              </>
+              t('publishTask.publishingButton')
             ) : (
-              <>
-                <span style={{ marginRight: '8px' }}>🚀</span>
-                {t('publishTask.publishButton')}
-              </>
+              t('publishTask.publishButton')
             )}
           </button>
         </form>
