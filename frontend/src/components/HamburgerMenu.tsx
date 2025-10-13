@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 interface HamburgerMenuProps {
   user: any;
@@ -16,7 +16,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   systemSettings
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const { t } = useLanguage();
 
   const toggleMenu = () => {

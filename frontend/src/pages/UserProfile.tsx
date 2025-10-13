@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getUserProfile, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 interface UserProfileType {
   user: {
@@ -46,11 +47,11 @@ interface UserProfileType {
 const UserProfile: React.FC = () => {
   const { t } = useLanguage();
   const { userId } = useParams();
+  const { navigate } = useLocalizedNavigation();
   const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // 直接获取用户信息，HttpOnly Cookie会自动发送

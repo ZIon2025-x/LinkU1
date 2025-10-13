@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import api from '../api';
 
 interface TaskExpert {
@@ -25,7 +25,7 @@ interface TaskExpert {
 
 const TaskExperts: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const [experts, setExperts] = useState<TaskExpert[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');

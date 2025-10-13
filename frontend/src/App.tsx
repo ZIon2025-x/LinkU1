@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import PublishTask from './pages/PublishTask';
 import Profile from './pages/Profile';
@@ -19,72 +19,113 @@ import Settings from './pages/Settings';
 import About from './pages/About';
 import JoinUs from './pages/JoinUs';
 import LanguageTest from './pages/LanguageTest';
+import InternationalizationTest from './pages/InternationalizationTest';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
+
+// 语言路由组件
+const LanguageRoutes: React.FC = () => {
+  return (
+    <Routes>
+      {/* 根路径重定向到默认语言 */}
+      <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+      
+      {/* 语言路由 */}
+      {SUPPORTED_LANGUAGES.map((lang) => (
+        <React.Fragment key={lang}>
+          <Route path={`/${lang}`} element={<Home />} />
+          <Route path={`/${lang}/tasks`} element={<Tasks />} />
+          <Route path={`/${lang}/about`} element={<About />} />
+          <Route path={`/${lang}/join-us`} element={<JoinUs />} />
+          <Route path={`/${lang}/language-test`} element={<LanguageTest />} />
+          <Route path={`/${lang}/i18n-test`} element={<InternationalizationTest />} />
+          <Route path={`/${lang}/terms`} element={<TermsOfService />} />
+          <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
+          <Route path={`/${lang}/publish`} element={
+            <ProtectedRoute>
+              <PublishTask />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/profile`} element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/message`} element={
+            <ProtectedRoute>
+              <MessagePage />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/tasks/:id`} element={<TaskDetail />} />
+          <Route path={`/${lang}/my-tasks`} element={
+            <ProtectedRoute>
+              <MyTasks />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/user/:userId`} element={<UserProfile />} />
+          <Route path={`/${lang}/task-experts`} element={<TaskExperts />} />
+          <Route path={`/${lang}/vip`} element={<VIP />} />
+          <Route path={`/${lang}/wallet`} element={
+            <ProtectedRoute>
+              <Wallet />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/settings`} element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/customer-service/login`} element={<CustomerServiceLogin />} />
+          <Route path={`/${lang}/admin/login`} element={<AdminLogin />} />
+          <Route path={`/${lang}/customer-service`} element={
+            <CustomerServiceRoute>
+              <CustomerService />
+            </CustomerServiceRoute>
+          } />
+          <Route path={`/${lang}/admin`} element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          } />
+        </React.Fragment>
+      ))}
+      
+      {/* 处理没有语言前缀的旧链接 */}
+      <Route path="/tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks`} replace />} />
+      <Route path="/about" element={<Navigate to={`/${DEFAULT_LANGUAGE}/about`} replace />} />
+      <Route path="/join-us" element={<Navigate to={`/${DEFAULT_LANGUAGE}/join-us`} replace />} />
+      <Route path="/language-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/language-test`} replace />} />
+      <Route path="/i18n-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/i18n-test`} replace />} />
+      <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
+      <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
+      <Route path="/publish" element={<Navigate to={`/${DEFAULT_LANGUAGE}/publish`} replace />} />
+      <Route path="/profile" element={<Navigate to={`/${DEFAULT_LANGUAGE}/profile`} replace />} />
+      <Route path="/message" element={<Navigate to={`/${DEFAULT_LANGUAGE}/message`} replace />} />
+      <Route path="/tasks/:id" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks/:id`} replace />} />
+      <Route path="/my-tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/my-tasks`} replace />} />
+      <Route path="/user/:userId" element={<Navigate to={`/${DEFAULT_LANGUAGE}/user/:userId`} replace />} />
+      <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />
+      <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
+      <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
+      <Route path="/settings" element={<Navigate to={`/${DEFAULT_LANGUAGE}/settings`} replace />} />
+      <Route path="/customer-service/login" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service/login`} replace />} />
+      <Route path="/admin/login" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin/login`} replace />} />
+      <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
+      <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
+    </Routes>
+  );
+};
 
 function App() {
   return (
     <LanguageProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/join-us" element={<JoinUs />} />
-          <Route path="/language-test" element={<LanguageTest />} />
-          <Route path="/terms" element={<TermsOfService />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/publish" element={
-            <ProtectedRoute>
-              <PublishTask />
-            </ProtectedRoute>
-          } />
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          } />
-          <Route path="/message" element={
-            <ProtectedRoute>
-              <MessagePage />
-            </ProtectedRoute>
-          } />
-          <Route path="/tasks/:id" element={<TaskDetail />} />
-          <Route path="/my-tasks" element={
-            <ProtectedRoute>
-              <MyTasks />
-            </ProtectedRoute>
-          } />
-          <Route path="/user/:userId" element={<UserProfile />} />
-          <Route path="/task-experts" element={<TaskExperts />} />
-          <Route path="/vip" element={<VIP />} />
-          <Route path="/wallet" element={
-            <ProtectedRoute>
-              <Wallet />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          } />
-          <Route path="/customer-service/login" element={<CustomerServiceLogin />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/customer-service" element={
-            <CustomerServiceRoute>
-              <CustomerService />
-            </CustomerServiceRoute>
-          } />
-          <Route path="/admin" element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          } />
-        </Routes>
+        <LanguageRoutes />
       </Router>
     </LanguageProvider>
   );

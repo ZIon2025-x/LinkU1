@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
-import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -12,6 +11,7 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -114,6 +114,7 @@ interface Notification {
 
 const Home: React.FC = () => {
   const { t } = useLanguage();
+  const { navigate } = useLocalizedNavigation();
   
   // 任务类型数组 - 使用翻译
   const TASK_TYPES = [

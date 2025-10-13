@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import enTranslations from '../locales/en.json';
 import zhTranslations from '../locales/zh.json';
+import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, DEFAULT_LANGUAGE } from '../utils/i18n';
 
 export type Language = 'en' | 'zh';
 
@@ -22,21 +24,37 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  // 默认语言为英文
-  const [language, setLanguage] = useState<Language>('en');
+  const location = useLocation();
+  
+  // 从URL路径检测语言，如果没有则使用默认语言
+  const [language, setLanguage] = useState<Language>(() => {
+    const urlLanguage = getLanguageFromPath(location.pathname);
+    return urlLanguage !== DEFAULT_LANGUAGE ? urlLanguage : DEFAULT_LANGUAGE;
+  });
 
-  // 从localStorage加载保存的语言设置
+  // 当URL路径变化时，更新语言设置
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language') as Language;
-    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'zh')) {
-      setLanguage(savedLanguage);
+    const urlLanguage = getLanguageFromPath(location.pathname);
+    if (urlLanguage !== language) {
+      setLanguage(urlLanguage);
+      // 同时更新localStorage
+      localStorage.setItem('language', urlLanguage);
     }
-  }, []);
+  }, [location.pathname, language]);
 
-  // 保存语言设置到localStorage
+  // 保存语言设置到localStorage并更新URL
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
+    
+    // 更新URL以反映新的语言设置
+    const currentPath = location.pathname;
+    const newPath = addLanguageToPath(currentPath, lang);
+    
+    // 如果路径发生变化，进行导航
+    if (newPath !== currentPath) {
+      window.location.href = newPath;
+    }
   };
 
   // 翻译函数

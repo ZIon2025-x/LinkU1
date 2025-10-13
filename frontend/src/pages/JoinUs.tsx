@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { 
   Card, 
   Row, 
@@ -55,7 +55,7 @@ interface Notification {
 
 const JoinUs: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
