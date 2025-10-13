@@ -403,7 +403,7 @@ const Tasks: React.FC = () => {
           ]);
           
           setNotifications(notificationsData);
-          setUnreadCount(unreadCountData.unread_count);
+          setUnreadCount(unreadCountData);
           setSystemSettings(settingsData);
         } catch (error) {
           console.error('加载通知或系统设置失败:', error);
@@ -422,7 +422,7 @@ const Tasks: React.FC = () => {
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
             console.log('定期更新未读通知数量:', count);
-            setUnreadCount(count.unread_count);
+            setUnreadCount(count);
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
           });
