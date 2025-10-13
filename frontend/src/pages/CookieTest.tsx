@@ -46,7 +46,7 @@ const CookieTest: React.FC = () => {
 
       <div>
         <h2>本地存储检查</h2>
-        <p>打开浏览器开发者工具，查看Application > Local Storage中的以下键值：</p>
+        <p>打开浏览器开发者工具，查看Application &gt; Local Storage中的以下键值：</p>
         <ul>
           <li>cookieConsent: 是否已同意</li>
           <li>cookiePreferences: 具体的Cookie偏好设置</li>
