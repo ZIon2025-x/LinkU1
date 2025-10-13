@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
 import enTranslations from '../locales/en.json';
 import zhTranslations from '../locales/zh.json';
 import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, DEFAULT_LANGUAGE } from '../utils/i18n';
@@ -24,33 +23,35 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const location = useLocation();
-  
-  // 从URL路径检测语言，如果没有则使用默认语言
+  // 从localStorage或浏览器语言检测语言，如果没有则使用默认语言
   const [language, setLanguage] = useState<Language>(() => {
-    const urlLanguage = getLanguageFromPath(location.pathname);
-    return urlLanguage !== DEFAULT_LANGUAGE ? urlLanguage : DEFAULT_LANGUAGE;
-  });
-
-  // 当URL路径变化时，更新语言设置
-  useEffect(() => {
-    const urlLanguage = getLanguageFromPath(location.pathname);
-    if (urlLanguage !== language) {
-      setLanguage(urlLanguage);
-      // 同时更新localStorage
-      localStorage.setItem('language', urlLanguage);
+    // 首先尝试从localStorage获取
+    const savedLanguage = localStorage.getItem('language') as Language;
+    if (savedLanguage && ['en', 'zh'].includes(savedLanguage)) {
+      return savedLanguage;
     }
-  }, [location.pathname, language]);
+    
+    // 然后尝试从URL检测（如果可用）
+    if (typeof window !== 'undefined') {
+      const urlLanguage = getLanguageFromPath(window.location.pathname);
+      if (urlLanguage !== DEFAULT_LANGUAGE) {
+        return urlLanguage;
+      }
+    }
+    
+    // 最后使用浏览器语言检测
+    return detectBrowserLanguage();
+  });
 
   // 保存语言设置到localStorage并更新URL
   const handleSetLanguage = (lang: Language) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
-    
+
     // 更新URL以反映新的语言设置
-    const currentPath = location.pathname;
+    const currentPath = window.location.pathname;
     const newPath = addLanguageToPath(currentPath, lang);
-    
+
     // 如果路径发生变化，进行导航
     if (newPath !== currentPath) {
       window.location.href = newPath;
