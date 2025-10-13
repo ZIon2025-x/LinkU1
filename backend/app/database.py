@@ -38,9 +38,9 @@ if IS_PRODUCTION:
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
     QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
 else:
-    # 开发环境配置
-    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
-    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    # 开发环境配置 - 增加连接池大小以防止连接耗尽
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "30"))
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
     POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # 1小时
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"

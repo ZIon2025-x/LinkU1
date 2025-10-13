@@ -91,7 +91,7 @@ const MyTasks: React.FC = () => {
       setUser(null);
       setShowLoginModal(true);
     });
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (user) {
