@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { Card, Row, Col, Typography, Space, Avatar, Divider } from 'antd';
 import { 
   TeamOutlined, 
@@ -32,7 +32,7 @@ interface Notification {
 
 const About: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);

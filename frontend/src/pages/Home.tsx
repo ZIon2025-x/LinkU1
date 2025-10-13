@@ -292,8 +292,6 @@ const Home: React.FC = () => {
     return () => clearInterval(interval);
   }, [tasks.length]);
 
-  const navigate = useNavigate();
-
   // 处理通知点击 - 只标记为已读，不跳转
   const handleNotificationClick = async (notification: Notification) => {
     // 只标记通知为已读，不进行任何跳转

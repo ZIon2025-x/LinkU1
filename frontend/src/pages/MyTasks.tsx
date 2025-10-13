@@ -84,8 +84,6 @@ const MyTasks: React.FC = () => {
   // 任务详情弹窗状态
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  
-  const navigate = useNavigate();
 
   useEffect(() => {
     // 直接获取用户信息，HttpOnly Cookie会自动发送

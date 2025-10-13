@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
 import { API_BASE_URL } from '../config';
-import { useNavigate } from 'react-router-dom';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -363,7 +363,7 @@ const Tasks: React.FC = () => {
   // 已申请任务状态
   const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
   
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
 
   // 加载用户信息
   useEffect(() => {
