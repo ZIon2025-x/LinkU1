@@ -25,6 +25,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
+import UserProfileRedirect from './components/UserProfileRedirect';
+import ParamRedirect from './components/ParamRedirect';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
@@ -106,9 +108,9 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/publish" element={<Navigate to={`/${DEFAULT_LANGUAGE}/publish`} replace />} />
       <Route path="/profile" element={<Navigate to={`/${DEFAULT_LANGUAGE}/profile`} replace />} />
       <Route path="/message" element={<Navigate to={`/${DEFAULT_LANGUAGE}/message`} replace />} />
-      <Route path="/tasks/:id" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks/:id`} replace />} />
+      <Route path="/tasks/:id" element={<ParamRedirect basePath="/tasks/:id" />} />
       <Route path="/my-tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/my-tasks`} replace />} />
-      <Route path="/user/:userId" element={<Navigate to={`/${DEFAULT_LANGUAGE}/user/:userId`} replace />} />
+      <Route path="/user/:userId" element={<UserProfileRedirect />} />
       <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />
       <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
       <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
