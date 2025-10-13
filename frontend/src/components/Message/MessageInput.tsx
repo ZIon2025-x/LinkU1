@@ -271,21 +271,26 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* 表情选择器 */}
       {showEmojiPicker && (
-        <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '0',
-          right: '0',
-          background: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          padding: '12px',
-          marginBottom: '8px',
-          maxHeight: '200px',
-          overflowY: 'auto',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          zIndex: 1000
-        }}>
+        <div 
+          className="emoji-picker"
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '0',
+            right: '0',
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '12px',
+            marginBottom: '8px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            zIndex: 1000,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
+          }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(8, 1fr)',
@@ -330,6 +335,52 @@ const MessageInput: React.FC<MessageInputProps> = ({
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
+      
+      {/* 移动端样式 */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            /* 表情选择器移动端优化 */
+            .emoji-picker {
+              position: fixed !important;
+              bottom: 80px !important;
+              left: 10px !important;
+              right: 10px !important;
+              width: calc(100% - 20px) !important;
+              max-width: calc(100% - 20px) !important;
+              grid-template-columns: repeat(6, 1fr) !important;
+              gap: 6px !important;
+              padding: 16px !important;
+              max-height: 200px !important;
+              border-radius: 12px !important;
+            }
+            
+            /* 表情按钮移动端优化 */
+            .emoji-picker button {
+              width: 32px !important;
+              height: 32px !important;
+              font-size: 18px !important;
+              padding: 4px !important;
+            }
+          }
+          
+          @media (max-width: 480px) {
+            /* 超小屏幕优化 */
+            .emoji-picker {
+              grid-template-columns: repeat(5, 1fr) !important;
+              gap: 4px !important;
+              padding: 12px !important;
+              max-height: 180px !important;
+            }
+            
+            .emoji-picker button {
+              width: 28px !important;
+              height: 28px !important;
+              font-size: 16px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

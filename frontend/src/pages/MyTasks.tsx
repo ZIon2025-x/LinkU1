@@ -1855,8 +1855,8 @@ const MyTasks: React.FC = () => {
             }
             
             .tasks-grid {
-              grid-template-columns: 1fr !important;
-              gap: 16px !important;
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 12px !important;
             }
             
             /* 任务卡片移动端优化 */

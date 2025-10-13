@@ -3970,6 +3970,7 @@ const MessagePage: React.FC = () => {
                     position: 'absolute',
                     bottom: '100%',
                     left: 0,
+                    right: 0,
                     background: '#fff',
                     border: '2px solid #e2e8f0',
                     borderRadius: '16px',
@@ -3981,7 +3982,10 @@ const MessagePage: React.FC = () => {
                     display: 'grid',
                     gridTemplateColumns: 'repeat(8, 1fr)',
                     gap: '8px',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box'
                   }}>
                   {/* 关闭按钮 */}
                   <div style={{
@@ -4659,6 +4663,65 @@ const MessagePage: React.FC = () => {
         </div>
       )}
       
+      {/* 移动端样式 */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            /* 表情选择器移动端优化 */
+            [data-emoji-picker] {
+              position: fixed !important;
+              bottom: 80px !important;
+              left: 10px !important;
+              right: 10px !important;
+              width: calc(100% - 20px) !important;
+              max-width: calc(100% - 20px) !important;
+              grid-template-columns: repeat(6, 1fr) !important;
+              gap: 6px !important;
+              padding: 16px !important;
+              max-height: 200px !important;
+              border-radius: 12px !important;
+            }
+            
+            /* 表情按钮移动端优化 */
+            [data-emoji-picker] button {
+              width: 32px !important;
+              height: 32px !important;
+              font-size: 18px !important;
+              padding: 4px !important;
+            }
+            
+            /* 输入框区域移动端优化 */
+            .message-input-container {
+              padding: 12px !important;
+            }
+            
+            .message-input-area {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+            
+            .message-input-row {
+              width: 100% !important;
+            }
+          }
+          
+          @media (max-width: 480px) {
+            /* 超小屏幕优化 */
+            [data-emoji-picker] {
+              grid-template-columns: repeat(5, 1fr) !important;
+              gap: 4px !important;
+              padding: 12px !important;
+              max-height: 180px !important;
+            }
+            
+            [data-emoji-picker] button {
+              width: 28px !important;
+              height: 28px !important;
+              font-size: 16px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

@@ -2201,9 +2201,9 @@ const Tasks: React.FC = () => {
               overflow-y: auto !important;
             }
             
-            /* 任务网格移动端优化 */
+            /* 任务网格移动端优化 - 两个一行显示 */
             .tasks-grid {
-              grid-template-columns: 1fr !important;
+              grid-template-columns: repeat(2, 1fr) !important;
               gap: 12px !important;
             }
             
