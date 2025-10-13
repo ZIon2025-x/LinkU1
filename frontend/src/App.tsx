@@ -20,6 +20,7 @@ import About from './pages/About';
 import JoinUs from './pages/JoinUs';
 import LanguageTest from './pages/LanguageTest';
 import InternationalizationTest from './pages/InternationalizationTest';
+import CookieTest from './pages/CookieTest';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -28,6 +29,8 @@ import CustomerServiceRoute from './components/CustomerServiceRoute';
 import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { CookieProvider } from './contexts/CookieContext';
+import CookieManager from './components/CookieManager';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // 语言路由组件
@@ -46,6 +49,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
           <Route path={`/${lang}/language-test`} element={<LanguageTest />} />
           <Route path={`/${lang}/i18n-test`} element={<InternationalizationTest />} />
+          <Route path={`/${lang}/cookie-test`} element={<CookieTest />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
           <Route path={`/${lang}/publish`} element={
@@ -103,6 +107,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/join-us" element={<Navigate to={`/${DEFAULT_LANGUAGE}/join-us`} replace />} />
       <Route path="/language-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/language-test`} replace />} />
       <Route path="/i18n-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/i18n-test`} replace />} />
+      <Route path="/cookie-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-test`} replace />} />
       <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
       <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
       <Route path="/publish" element={<Navigate to={`/${DEFAULT_LANGUAGE}/publish`} replace />} />
@@ -126,9 +131,12 @@ const LanguageRoutes: React.FC = () => {
 function App() {
   return (
     <LanguageProvider>
-      <Router>
-        <LanguageRoutes />
-      </Router>
+      <CookieProvider>
+        <Router>
+          <LanguageRoutes />
+          <CookieManager />
+        </Router>
+      </CookieProvider>
     </LanguageProvider>
   );
 }

@@ -1,0 +1,148 @@
+.cookie-consent-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.cookie-consent-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: cookieConsentSlideIn 0.3s ease-out;
+}
+
+@keyframes cookieConsentSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cookie-consent-content {
+  padding: 24px;
+}
+
+.cookie-consent-header {
+  margin-bottom: 16px;
+}
+
+.cookie-consent-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.3;
+}
+
+.cookie-consent-body {
+  margin-bottom: 24px;
+}
+
+.cookie-consent-body p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666;
+}
+
+.cookie-consent-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.cookie-consent-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.cookie-consent-button-primary {
+  background-color: #000;
+  color: white;
+}
+
+.cookie-consent-button-primary:hover {
+  background-color: #333;
+  transform: translateY(-1px);
+}
+
+.cookie-consent-button-secondary {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.cookie-consent-button-secondary:hover {
+  background-color: #e8e8e8;
+  transform: translateY(-1px);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .cookie-consent-container {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .cookie-consent-content {
+    padding: 20px;
+  }
+  
+  .cookie-consent-actions {
+    flex-direction: column;
+  }
+  
+  .cookie-consent-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .cookie-consent-container {
+    background: #1a1a1a;
+    color: #fff;
+  }
+  
+  .cookie-consent-header h3 {
+    color: #fff;
+  }
+  
+  .cookie-consent-body p {
+    color: #ccc;
+  }
+  
+  .cookie-consent-button-secondary {
+    background-color: #333;
+    color: #fff;
+    border-color: #555;
+  }
+  
+  .cookie-consent-button-secondary:hover {
+    background-color: #444;
+  }
+}
