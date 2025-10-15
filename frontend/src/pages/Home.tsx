@@ -93,7 +93,42 @@ const bellStyles = `
 // 注入样式到页面
 if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
-  styleElement.textContent = bellStyles;
+  styleElement.textContent = bellStyles + `
+    /* 响应式背景样式 */
+    @media (max-width: 768px) {
+      .hero-section {
+        min-height: 100vh !important;
+        padding: 40px 0 !important;
+      }
+      .hero-title {
+        font-size: 32px !important;
+        line-height: 1.3 !important;
+      }
+      .hero-subtitle {
+        font-size: 16px !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .hero-section {
+        padding: 20px 0 !important;
+      }
+      .hero-title {
+        font-size: 28px !important;
+      }
+    }
+    
+    /* 确保背景图片完美适配 */
+    .hero-section {
+      background-attachment: fixed;
+    }
+    
+    @media (max-width: 1024px) {
+      .hero-section {
+        background-attachment: scroll;
+      }
+    }
+  `;
   document.head.appendChild(styleElement);
 }
 
@@ -406,28 +441,33 @@ const Home: React.FC = () => {
       />
       
       {/* 英雄区域 - 重新设计 */}
-      <section style={{
-        background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+      <section className="hero-section" style={{
+        backgroundImage: 'url(/static/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
         padding: '80px 0',
         textAlign: 'center',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        {/* 背景装饰 */}
+        {/* 背景遮罩层 */}
         <div style={{
           position: 'absolute',
-          top: '-50%',
-          left: '-50%',
-          width: '200%',
-          height: '200%',
-          background: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '50px 50px',
-          animation: 'float 20s infinite linear',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0, 0, 0, 0.4)',
           pointerEvents: 'none'
         }} />
         
-        <div style={{maxWidth: 1200, margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2}}>
-          <h1 style={{
+        <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
+          <h1 className="hero-title" style={{
             fontSize: '48px',
             fontWeight: '800',
             marginBottom: '24px',
@@ -440,7 +480,7 @@ const Home: React.FC = () => {
             <span style={{color: '#FFD700'}}>{t('home.subtitle')}</span>
           </h1>
           
-          <p style={{
+          <p className="hero-subtitle" style={{
             fontSize: '20px',
             color: 'rgba(255,255,255,0.9)',
             marginBottom: '40px',
