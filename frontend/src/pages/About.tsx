@@ -235,20 +235,58 @@ const About: React.FC = () => {
         onMarkAllRead={handleMarkAllRead}
       />
       
-      {/* 英雄区域 */}
-      <div className="hero-section">
-        <div className="hero-content">
-          <Title level={1} className="hero-title">
+      {/* 英雄区域 - 重新设计 */}
+      <section className="hero-section" style={{
+        backgroundImage: 'url(/static/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '100vh',
+        padding: '80px 0',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        {/* 背景遮罩层 */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0, 0, 0, 0.4)',
+          pointerEvents: 'none'
+        }} />
+        
+        <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
+          <h1 className="hero-title" style={{
+            fontSize: '48px',
+            fontWeight: '800',
+            marginBottom: '24px',
+            color: '#fff',
+            textShadow: '0 4px 8px rgba(0,0,0,0.3)',
+            lineHeight: '1.2'
+          }}>
             {t('about.title')}
-          </Title>
-          <Paragraph className="hero-subtitle">
-            {t('about.subtitle')}
-          </Paragraph>
-          <Paragraph className="hero-description">
+            <br />
+            <span style={{color: '#FFD700'}}>{t('about.subtitle')}</span>
+          </h1>
+          
+          <p className="hero-subtitle" style={{
+            fontSize: '20px',
+            color: 'rgba(255,255,255,0.9)',
+            marginBottom: '40px',
+            maxWidth: '600px',
+            margin: '0 auto 40px',
+            lineHeight: '1.6'
+          }}>
             {t('about.missionText')}
-          </Paragraph>
+          </p>
         </div>
-      </div>
+      </section>
 
       {/* 统计数据 */}
       <div className="stats-section">
