@@ -74,7 +74,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
       <div className="cookie-settings-container">
         <div className="cookie-settings-content">
           <div className="cookie-settings-header">
-            <h2>Cookie设置</h2>
+            <h2>Cookie Center 🍪</h2>
             <button className="cookie-settings-close" onClick={onClose}>
               ×
             </button>
@@ -82,13 +82,13 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
           
           <div className="cookie-settings-body">
             <p className="cookie-settings-description">
-              我们使用Cookie来改善您的体验。您可以选择接受或拒绝不同类型的Cookie。
-              请注意，某些Cookie对于网站的正常运行是必要的。
+              We use cookies to improve your experience. You can choose to accept or reject different types of cookies.
+              Please note that some cookies are necessary for the website to function properly.
             </p>
 
             <div className="cookie-category">
               <div className="cookie-category-header">
-                <h3>必要的Cookie</h3>
+                <h3>Necessary Cookies</h3>
                 <div className="cookie-toggle disabled">
                   <input
                     type="checkbox"
@@ -100,14 +100,13 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
                 </div>
               </div>
               <p className="cookie-category-description">
-                这些Cookie对于网站的基本功能是必需的，无法关闭。它们通常仅响应您执行的操作而设置，
-                例如设置隐私偏好、登录或填写表单。
+                These cookies are essential for the basic functionality of the website and cannot be disabled. They are usually only set in response to actions you take, such as setting privacy preferences, logging in, or filling out forms.
               </p>
             </div>
 
             <div className="cookie-category">
               <div className="cookie-category-header">
-                <h3>分析Cookie</h3>
+                <h3>Analytics Cookies</h3>
                 <div className="cookie-toggle">
                   <input
                     type="checkbox"
@@ -118,14 +117,13 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
                 </div>
               </div>
               <p className="cookie-category-description">
-                这些Cookie帮助我们了解访问者如何与网站互动，通过匿名收集和报告信息。
-                这有助于我们改善网站性能。
+                These cookies help us understand how visitors interact with the website by collecting and reporting information anonymously. This helps us improve website performance.
               </p>
             </div>
 
             <div className="cookie-category">
               <div className="cookie-category-header">
-                <h3>营销Cookie</h3>
+                <h3>Marketing Cookies</h3>
                 <div className="cookie-toggle">
                   <input
                     type="checkbox"
@@ -136,13 +134,13 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
                 </div>
               </div>
               <p className="cookie-category-description">
-                这些Cookie用于跟踪访问者在网站上的活动。目的是显示相关和个性化的广告。
+                These cookies are used to track visitors' activities on the website. The purpose is to display relevant and personalized advertisements.
               </p>
             </div>
 
             <div className="cookie-category">
               <div className="cookie-category-header">
-                <h3>功能Cookie</h3>
+                <h3>Functional Cookies</h3>
                 <div className="cookie-toggle">
                   <input
                     type="checkbox"
@@ -153,7 +151,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
                 </div>
               </div>
               <p className="cookie-category-description">
-                这些Cookie使网站能够提供增强的功能和个性化设置，如语言偏好和区域设置。
+                These cookies enable the website to provide enhanced functionality and personalization settings, such as language preferences and regional settings.
               </p>
             </div>
           </div>
@@ -163,19 +161,19 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({
               className="cookie-settings-button cookie-settings-button-secondary"
               onClick={handleRejectAll}
             >
-              拒绝全部
+              Reject All
             </button>
             <button 
               className="cookie-settings-button cookie-settings-button-secondary"
               onClick={handleAcceptAll}
             >
-              接受全部
+              Accept All
             </button>
             <button 
               className="cookie-settings-button cookie-settings-button-primary"
               onClick={handleSave}
             >
-              保存设置
+              Save Settings
             </button>
           </div>
         </div>

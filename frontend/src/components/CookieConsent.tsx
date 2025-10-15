@@ -55,13 +55,13 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept, onReject, onCus
       <div className="cookie-consent-container">
         <div className="cookie-consent-content">
           <div className="cookie-consent-header">
-            <h3>我们使用Cookie</h3>
+            <h3>We Use Cookies</h3>
           </div>
           <div className="cookie-consent-body">
             <p>
-              点击"接受"以允许LinkU使用Cookie来个性化此网站，并在其他应用程序和网站上投放广告并衡量其效果，包括社交媒体。
-              在您的Cookie设置中自定义您的偏好，或点击"拒绝"如果您不希望我们为此目的使用Cookie。
-              在我们的Cookie通知中了解更多信息。
+              Click "Accept" to allow LinkU to use cookies to personalize this website and serve ads and measure their effectiveness on other applications and websites, including social media.
+              Customize your preferences in your cookie settings, or click "Reject" if you do not want us to use cookies for this purpose.
+              Learn more in our cookie notice.
             </p>
           </div>
           <div className="cookie-consent-actions">
@@ -69,19 +69,19 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept, onReject, onCus
               className="cookie-consent-button cookie-consent-button-secondary"
               onClick={onCustomize}
             >
-              Cookie设置
+              Cookie Settings
             </button>
             <button 
               className="cookie-consent-button cookie-consent-button-secondary"
               onClick={handleReject}
             >
-              拒绝
+              Reject
             </button>
             <button 
               className="cookie-consent-button cookie-consent-button-primary"
               onClick={handleAccept}
             >
-              接受
+              Accept
             </button>
           </div>
         </div>
