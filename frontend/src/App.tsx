@@ -28,6 +28,7 @@ import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
 import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
+import ScrollToTop from './components/ScrollToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
 import CookieManager from './components/CookieManager';
@@ -133,6 +134,7 @@ function App() {
     <LanguageProvider>
       <CookieProvider>
         <Router>
+          <ScrollToTop />
           <LanguageRoutes />
           <CookieManager />
         </Router>
