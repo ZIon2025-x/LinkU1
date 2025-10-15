@@ -967,26 +967,6 @@ const Home: React.FC = () => {
           </div>
         )}
       </main>
-      {/* 平台优势/亮点区块 */}
-      <section style={{background: '#f8fbff', padding: '48px 0'}}>
-        <div style={{maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 32, flexWrap: 'wrap', justifyContent: 'center'}}>
-          <div style={{flex: 1, minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 32, textAlign: 'center', borderTop: '4px solid #8b5cf6'}}>
-            <div style={{fontSize: 32, color: '#8b5cf6', marginBottom: 12}}>🌟</div>
-            <div style={{fontWeight: 600, fontSize: 20, marginBottom: 8, color: '#A67C52'}}>{t('home.diverseTaskTypes')}</div>
-            <div style={{color: '#888'}}>{t('home.diverseTaskTypesDesc')}</div>
-          </div>
-          <div style={{flex: 1, minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 32, textAlign: 'center', borderTop: '4px solid #A67C52'}}>
-            <div style={{fontSize: 32, color: '#A67C52', marginBottom: 12}}>🔒</div>
-            <div style={{fontWeight: 600, fontSize: 20, marginBottom: 8, color: '#A67C52'}}>{t('home.securePayment')}</div>
-            <div style={{color: '#888'}}>{t('home.securePaymentDesc')}</div>
-          </div>
-          <div style={{flex: 1, minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 32, textAlign: 'center', borderTop: '4px solid #8b5cf6'}}>
-            <div style={{fontSize: 32, color: '#8b5cf6', marginBottom: 12}}>⏱️</div>
-            <div style={{fontWeight: 600, fontSize: 20, marginBottom: 8, color: '#A67C52'}}>{t('home.efficientMatching')}</div>
-            <div style={{color: '#888'}}>{t('home.efficientMatchingDesc')}</div>
-          </div>
-        </div>
-      </section>
       {/* 新手引导/操作流程区块 */}
       <section style={{background: '#fff', padding: '48px 0'}}>
         <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>

@@ -350,7 +350,7 @@ const About: React.FC = () => {
           <Col xs={24} lg={12}>
             <div className="vision-image">
               <img 
-                src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                src="/logo.png" 
                 alt={t('about.vision')} 
                 className="vision-img"
               />
