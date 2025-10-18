@@ -441,7 +441,7 @@ const MessagePage: React.FC = () => {
       
       // 更新联系人排序
       if (activeContact && !isServiceMode) {
-        updateContactOrder(activeContact.id);
+        updateContactOrder(activeContact.id, new Date().toISOString());
       }
     } else {
       // WebSocket未连接，使用HTTP API
@@ -481,7 +481,7 @@ const MessagePage: React.FC = () => {
         setMessages(prev => [...prev, newMessage]);
         
         if (activeContact) {
-          updateContactOrder(activeContact.id);
+          updateContactOrder(activeContact.id, new Date().toISOString());
         }
       }
     }
@@ -557,7 +557,7 @@ const MessagePage: React.FC = () => {
         
         // 更新联系人排序
         if (activeContact && !isServiceMode) {
-          updateContactOrder(activeContact.id);
+          updateContactOrder(activeContact.id, new Date().toISOString());
         }
         
         // 清除文件选择
@@ -829,7 +829,7 @@ const MessagePage: React.FC = () => {
         
         // 更新联系人排序（如果是普通聊天模式）
         if (activeContact && !isServiceMode) {
-          updateContactOrder(activeContact.id);
+          updateContactOrder(activeContact.id, newMessage.created_at);
         }
         
         console.log('消息发送成功，已添加到本地状态');
@@ -885,7 +885,7 @@ const MessagePage: React.FC = () => {
             
             // 更新联系人排序（如果是普通聊天模式）
             if (activeContact && !isServiceMode) {
-              updateContactOrder(activeContact.id);
+              updateContactOrder(activeContact.id, new Date().toISOString());
             }
             
             console.log('普通消息发送成功，已添加到本地状态');
@@ -1163,7 +1163,7 @@ const MessagePage: React.FC = () => {
   };
 
   // 更新联系人排序（当有新消息时）
-  const updateContactOrder = (contactId: string) => {
+  const updateContactOrder = (contactId: string, messageTime?: string) => {
     setContacts(prevContacts => {
       const contactIndex = prevContacts.findIndex(c => c.id === contactId);
       if (contactIndex === -1) return prevContacts;
@@ -1171,7 +1171,8 @@ const MessagePage: React.FC = () => {
       // 将联系人移到列表顶部
       const updatedContacts = [...prevContacts];
       const [contact] = updatedContacts.splice(contactIndex, 1);
-      contact.last_message_time = new Date().toISOString();
+      // 使用消息的实际时间，如果没有则使用当前时间
+      contact.last_message_time = messageTime || new Date().toISOString();
       updatedContacts.unshift(contact);
       
       return updatedContacts;
@@ -1498,7 +1499,7 @@ const MessagePage: React.FC = () => {
                 
                 // 如果是接收到的消息（不是自己发送的），更新联系人排序
                 if (msg.from !== user.id && msg.from !== 'system' && msg.from !== 'customer_service' && msg.from !== 'admin') {
-                  updateContactOrder(msg.from);
+                  updateContactOrder(msg.from, msg.created_at);
                   
                   // 播放提示音
                   playMessageSound();
