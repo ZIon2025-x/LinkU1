@@ -30,7 +30,7 @@ from app.deps import get_current_user_secure_sync_csrf
 
 logger = logging.getLogger(__name__)
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import stripe
 from pydantic import BaseModel
@@ -2346,7 +2346,19 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync), db: Session
             )
         ).all()
         
-        latest_messages_dict = {msg.contact_id: msg.last_message_time for msg in latest_messages}
+        # 确保时间格式正确，添加时区信息
+        latest_messages_dict = {}
+        for msg in latest_messages:
+            if msg.last_message_time:
+                # 确保时间是UTC格式，添加Z后缀
+                if msg.last_message_time.tzinfo is None:
+                    # 假设是UTC时间，添加时区信息
+                    utc_time = msg.last_message_time.replace(tzinfo=timezone.utc)
+                else:
+                    utc_time = msg.last_message_time.astimezone(timezone.utc)
+                latest_messages_dict[msg.contact_id] = utc_time.isoformat().replace('+00:00', 'Z')
+            else:
+                latest_messages_dict[msg.contact_id] = None
         
         # 构建联系人信息
         contacts_with_last_message = []
@@ -3856,7 +3868,7 @@ def get_chat_timeout_status(
             return {"is_ended": True, "is_timeout": False, "timeout_available": False}
 
         # 计算最后消息时间到现在的时间差
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta, timezone, timezone
 
         last_message_time = chat["last_message_at"]
 
