@@ -247,6 +247,15 @@ async def create_task_async(
         
         print(f"DEBUG: 任务创建成功，任务ID: {db_task.id}")
         
+        # 清除用户任务缓存，确保新任务能立即显示
+        try:
+            from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache
+            invalidate_user_cache(current_user.id)
+            invalidate_tasks_cache()
+            print(f"DEBUG: 已清除用户 {current_user.id} 的任务缓存")
+        except Exception as e:
+            print(f"DEBUG: 清除缓存失败: {e}")
+        
         # 返回简单的成功响应，避免序列化问题
         result = {
             "id": db_task.id,

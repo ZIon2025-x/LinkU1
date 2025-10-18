@@ -673,7 +673,7 @@ const MyTasks: React.FC = () => {
                     border: '1px solid #e5e7eb'
                   }}>
                     <div style={{ fontSize: '20px', fontWeight: '600', color: '#10b981', marginBottom: '4px' }}>
-                      {tasks.filter(t => t.poster_id === user?.id).length}
+                      {tasks.filter(t => t.poster_id === user?.id && t.status !== 'cancelled').length}
                     </div>
                     <div style={{ fontSize: '13px', color: '#6b7280' }}>{t('myTasks.stats.posted')}</div>
                   </div>
@@ -687,7 +687,7 @@ const MyTasks: React.FC = () => {
                     border: '1px solid #e5e7eb'
                   }}>
                     <div style={{ fontSize: '20px', fontWeight: '600', color: '#f59e0b', marginBottom: '4px' }}>
-                      {tasks.filter(t => t.taker_id === user?.id).length}
+                      {tasks.filter(t => t.taker_id === user?.id && t.status !== 'cancelled').length}
                     </div>
                     <div style={{ fontSize: '13px', color: '#6b7280' }}>{t('myTasks.stats.taken')}</div>
                   </div>
@@ -719,8 +719,8 @@ const MyTasks: React.FC = () => {
                 }}>
             {[
               { key: 'all', label: t('myTasks.tabs.all'), count: tasks.length, icon: '📋' },
-              { key: 'posted', label: t('myTasks.tabs.posted'), count: tasks.filter(t => t.poster_id === user?.id).length, icon: '📤' },
-              { key: 'taken', label: t('myTasks.tabs.taken'), count: tasks.filter(t => t.taker_id === user?.id).length, icon: '📥' },
+              { key: 'posted', label: t('myTasks.tabs.posted'), count: tasks.filter(t => t.poster_id === user?.id && t.status !== 'cancelled').length, icon: '📤' },
+              { key: 'taken', label: t('myTasks.tabs.taken'), count: tasks.filter(t => t.taker_id === user?.id && t.status !== 'cancelled').length, icon: '📥' },
               { key: 'pending', label: t('myTasks.tabs.pending'), count: applications.filter(app => app.status === 'pending').length, icon: '⏳' },
               { key: 'completed', label: t('myTasks.tabs.completed'), count: tasks.filter(t => t.status === 'completed').length, icon: '✅' },
               { key: 'cancelled', label: t('myTasks.tabs.cancelled'), count: tasks.filter(t => t.status === 'cancelled').length, icon: '❌' }

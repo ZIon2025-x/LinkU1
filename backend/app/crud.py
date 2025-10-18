@@ -252,6 +252,14 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     # 自动更新发布者的任务统计
     update_user_statistics(db, user_id)
 
+    # 清除用户任务缓存，确保新任务能立即显示
+    try:
+        from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache
+        invalidate_user_cache(user_id)
+        invalidate_tasks_cache()
+    except Exception as e:
+        print(f"清除缓存失败: {e}")
+
     return db_task
 
 
