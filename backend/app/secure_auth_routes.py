@@ -120,6 +120,11 @@ def secure_login(
             user_agent=user_agent
         )
         
+        # 生成并设置CSRF token
+        from app.csrf import generate_csrf_token
+        csrf_token = generate_csrf_token()
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        
         # 记录成功登录
         log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户安全登录成功")
         
