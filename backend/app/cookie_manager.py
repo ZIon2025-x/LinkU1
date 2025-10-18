@@ -355,6 +355,16 @@ class CookieManager:
             domain=cookie_domain
         )
         
+        # 清除user_authenticated
+        response.delete_cookie(
+            key="user_authenticated",
+            httponly=False,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        
         logger.info("清除会话Cookie（包括移动端特殊Cookie）")
     
     @staticmethod
@@ -362,12 +372,16 @@ class CookieManager:
         """清除CSRF token Cookie"""
         samesite_value = CookieManager._get_samesite_value()
         
+        # 获取正确的domain设置
+        cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN else None
+        
         response.delete_cookie(
             key="csrf_token",
             httponly=False,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,
-            path="/"
+            path="/",
+            domain=cookie_domain
         )
         
         logger.info("清除CSRF Cookie")
