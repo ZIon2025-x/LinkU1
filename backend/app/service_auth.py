@@ -201,8 +201,8 @@ class ServiceAuthManager:
         session_data = {
             'session_id': session_info.session_id,
             'service_id': session_info.service_id,
-            'created_at': session_info.created_at.isoformat(),
-            'last_activity': session_info.last_activity.isoformat(),
+            'created_at': session_info.created_at.isoformat() if session_info.created_at else None,
+            'last_activity': session_info.last_activity.isoformat() if session_info.last_activity else None,
             'device_fingerprint': session_info.device_fingerprint,
             'ip_address': session_info.ip_address,
             'user_agent': session_info.user_agent,
@@ -238,8 +238,8 @@ class ServiceAuthManager:
                 return {
                     'session_id': session.session_id,
                     'service_id': session.service_id,
-                    'created_at': session.created_at.isoformat(),
-                    'last_activity': session.last_activity.isoformat(),
+                    'created_at': session.created_at.isoformat() if session.created_at else None,
+                    'last_activity': session.last_activity.isoformat() if session.last_activity else None,
                     'device_fingerprint': session.device_fingerprint,
                     'ip_address': session.ip_address,
                     'user_agent': session.user_agent,

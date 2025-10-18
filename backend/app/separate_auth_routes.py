@@ -118,7 +118,7 @@ def get_admin_profile(
         "email": current_admin.email,
         "is_super_admin": bool(current_admin.is_super_admin),
         "is_active": bool(current_admin.is_active),
-        "created_at": current_admin.created_at.isoformat(),
+        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else None,
         "last_login": current_admin.last_login.isoformat() if current_admin.last_login else None
     }
 
@@ -226,7 +226,7 @@ def service_login(
             "avg_rating": service.avg_rating,
             "total_ratings": service.total_ratings,
             "is_online": bool(service.is_online),
-            "created_at": service.created_at.isoformat()
+            "created_at": service.created_at.isoformat() if service.created_at else None
         },
         "session_id": session_info.session_id
     }
