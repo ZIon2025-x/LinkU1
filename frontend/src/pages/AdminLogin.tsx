@@ -17,12 +17,11 @@ const AdminLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/admin/login', formData);
-      const { access_token, user } = response.data;
+      const response = await api.post('/api/auth/admin/login', formData);
+      const { admin } = response.data;
       
-      // 保存token和管理员信息
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('userInfo', JSON.stringify(user));
+      // 新的管理员登录使用Cookie认证，不需要保存token到localStorage
+      console.log('管理员登录成功，使用HttpOnly Cookie认证');
       
       // 跳转到管理后台
       navigate('/admin');

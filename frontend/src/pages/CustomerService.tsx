@@ -238,19 +238,22 @@ const CustomerService: React.FC = () => {
 
   const checkAdminStatus = async () => {
     try {
-      // 检查是否为客服专用token
-      const userInfo = localStorage.getItem('userInfo');
-      if (userInfo) {
-        const user = JSON.parse(userInfo);
-        if (user.user_type === 'customer_service') {
-          setCurrentUser(user);
-          return;
-        }
+      // 新的认证系统使用Cookie认证，不需要检查localStorage
+      // 直接通过API检查客服认证状态
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/service/profile`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const service = await response.json();
+        setCurrentUser(service);
+        return;
       }
       
-      // 如果不是客服token，重定向到客服登录页面
+      // 如果认证失败，重定向到客服登录页面
       navigate('/customer-service/login');
     } catch (error) {
+      console.error('客服认证检查失败:', error);
       navigate('/customer-service/login');
     }
   };

@@ -312,22 +312,9 @@ api.interceptors.response.use(
         // 开始刷新token
         isRefreshing = true;
         
-        // 根据用户类型选择正确的refresh端点
-        const userInfo = localStorage.getItem('userInfo');
-        let refreshEndpoint = '/api/secure-auth/refresh'; // 默认用户refresh端点
-        
-        if (userInfo) {
-          try {
-            const user = JSON.parse(userInfo);
-            if (user.user_type === 'customer_service') {
-              refreshEndpoint = '/api/cs/refresh';
-            } else if (user.user_type === 'admin') {
-              refreshEndpoint = '/api/admin/refresh';
-            }
-          } catch (e) {
-            console.log('解析用户信息失败，使用默认refresh端点');
-          }
-        }
+        // 新的认证系统使用会话管理，不需要token refresh
+        // 直接使用用户refresh端点
+        const refreshEndpoint = '/api/secure-auth/refresh';
         
         refreshPromise = api.post(refreshEndpoint);
         
@@ -1011,8 +998,7 @@ export const logout = async () => {
   } catch (error) {
     console.warn('登出请求失败:', error);
   } finally {
-    // 清理localStorage（保留userInfo清理，因为这是用户信息缓存）
-    localStorage.removeItem('userInfo');
+    // 新的认证系统使用HttpOnly Cookie，不需要清理localStorage
     clearCSRFToken();
     // 清理重试计数器
     clearRetryCounters();

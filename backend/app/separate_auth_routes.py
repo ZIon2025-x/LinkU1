@@ -177,10 +177,26 @@ def service_login(
         )
     
     # 创建客服会话
-    session_info = ServiceAuthManager.create_session(service.id, request)
+    try:
+        session_info = ServiceAuthManager.create_session(service.id, request)
+        logger.info(f"[SERVICE_AUTH] 客服会话创建成功: {service.id}")
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 客服会话创建失败: {service.id}, 错误: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="会话创建失败，请稍后重试"
+        )
     
     # 设置Cookie
-    response = create_service_session_cookie(response, session_info.session_id)
+    try:
+        response = create_service_session_cookie(response, session_info.session_id)
+        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: {service.id}")
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 客服Cookie设置失败: {service.id}, 错误: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Cookie设置失败，请稍后重试"
+        )
     
     # 设置客服在线状态
     service.is_online = 1

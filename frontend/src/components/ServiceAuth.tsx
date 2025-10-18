@@ -84,6 +84,10 @@ const ServiceAuth: React.FC = () => {
         setServiceProfile(data.service);
         setIsLoggedIn(true);
         setError('');
+        
+        // 不保存session_id到localStorage，使用HttpOnly Cookie
+        console.log('客服登录成功，使用HttpOnly Cookie认证');
+        
         // 跳转到客服面板
         navigate('/service/dashboard');
       } else {

@@ -2044,10 +2044,14 @@ const MessagePage: React.FC = () => {
         setCurrentChat(response.chat);
         // setService(response.service); // 已移除service状态
         
-        // 保存对话信息到localStorage
+        // 保存对话信息到localStorage（不包含敏感信息）
         const chatToSave = {
           chat: response.chat,
-          service: response.service,
+          service: {
+            id: response.service.id,
+            name: response.service.name,
+            is_online: response.service.is_online
+          },
           chatId: response.chat.chat_id
         };
         localStorage.setItem('currentCustomerServiceChat', JSON.stringify(chatToSave));
@@ -3243,10 +3247,14 @@ const MessagePage: React.FC = () => {
                           setCurrentChat(response.chat);
                           // setService(response.service); // 已移除service状态
                           
-                          // 保存对话信息到localStorage
+                          // 保存对话信息到localStorage（不包含敏感信息）
                           const chatToSave = {
                             chat: response.chat,
-                            service: response.service,
+                            service: {
+                              id: response.service.id,
+                              name: response.service.name,
+                              is_online: response.service.is_online
+                            },
                             chatId: response.chat.chat_id
                           };
                           localStorage.setItem('currentCustomerServiceChat', JSON.stringify(chatToSave));
