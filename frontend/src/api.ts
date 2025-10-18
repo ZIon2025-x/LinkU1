@@ -727,17 +727,17 @@ export const assignCustomerService = async () => {
 };
 
 export const getCustomerServiceSessions = async () => {
-  const response = await api.get('/api/users/customer-service/chats');
+  const response = await api.get('/api/customer-service/chats');
   return response.data;
 };
 
 export const getCustomerServiceMessages = async (chatId: string) => {
-  const response = await api.get(`/api/users/customer-service/messages/${chatId}`);
+  const response = await api.get(`/api/customer-service/messages/${chatId}`);
   return response.data;
 };
 
 export const markCustomerServiceMessagesRead = async (chatId: string) => {
-  const response = await api.post(`/api/users/customer-service/mark-messages-read/${chatId}`);
+  const response = await api.post(`/api/customer-service/mark-messages-read/${chatId}`);
   return response.data;
 };
 
@@ -761,49 +761,49 @@ export const getContactUnreadCounts = async () => {
 };
 
 export const sendCustomerServiceMessage = async (chatId: string, content: string) => {
-  const response = await api.post(`/api/users/customer-service/send-message/${chatId}`, { content });
+  const response = await api.post(`/api/customer-service/send-message/${chatId}`, { content });
   return response.data;
 };
 
 export const setCustomerServiceOnline = async () => {
-  const response = await api.post('/api/users/customer-service/online');
+  const response = await api.post('/api/customer-service/online');
   return response.data;
 };
 
 export const setCustomerServiceOffline = async () => {
-  const response = await api.post('/api/users/customer-service/offline');
+  const response = await api.post('/api/customer-service/offline');
   return response.data;
 };
 
 export const getCustomerServiceStatus = async () => {
-  const response = await api.get('/api/users/customer-service/status');
+  const response = await api.get('/api/customer-service/status');
   return response.data;
 };
 
 // 结束对话和评分相关API
 export const endCustomerServiceSession = async (sessionId: number) => {
-  const response = await api.post(`/api/users/customer-service/end-session/${sessionId}`);
+  const response = await api.post(`/api/customer-service/end-session/${sessionId}`);
   return response.data;
 };
 
 export const rateCustomerService = async (sessionId: number, rating: number, comment?: string) => {
-  const response = await api.post(`/api/users/customer-service/rate/${sessionId}`, { rating, comment });
+  const response = await api.post(`/api/customer-service/rate/${sessionId}`, { rating, comment });
   return response.data;
 };
 
 export const getMyCustomerServiceSessions = async () => {
-  const res = await api.get('/api/users/customer-service/my-sessions');
+  const res = await api.get('/api/customer-service/my-sessions');
   return res.data;
 };
 
 // 客服改名接口
 export const updateCustomerServiceName = async (name: string) => {
-  const res = await api.patch('/api/users/customer-service/update-name', name);
+  const res = await api.patch('/api/customer-service/update-name', name);
   return res.data;
 };
 
 export const customerServiceLogout = async () => {
-  const res = await api.post('/api/users/customer-service/logout');
+  const res = await api.post('/api/customer-service/logout');
   return res.data;
 };
 
@@ -973,7 +973,7 @@ export const getPublicSystemSettings = async () => {
 
 // 检查客服可用性
 export const checkCustomerServiceAvailability = async () => {
-  const res = await api.get('/api/users/customer-service/check-availability');
+  const res = await api.get('/api/customer-service/check-availability');
   return res.data;
 };
 

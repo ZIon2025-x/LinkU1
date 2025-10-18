@@ -3365,7 +3365,7 @@ def send_staff_notification(
 
 @router.get("/staff/notifications")
 def get_staff_notifications(
-    current_user=Depends(get_current_customer_service_or_user),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """获取员工提醒列表（所有提醒，已读+未读，限制5条最新）"""
@@ -3399,7 +3399,7 @@ def get_staff_notifications(
 
 @router.get("/staff/notifications/unread")
 def get_unread_staff_notifications(
-    current_user=Depends(get_current_customer_service_or_user),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """获取未读员工提醒"""
@@ -3428,7 +3428,7 @@ def get_unread_staff_notifications(
 @router.post("/staff/notifications/{notification_id}/read")
 def mark_staff_notification_read(
     notification_id: int,
-    current_user=Depends(get_current_customer_service_or_user),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """标记员工提醒为已读"""
@@ -3457,7 +3457,7 @@ def mark_staff_notification_read(
 
 @router.post("/staff/notifications/read-all")
 def mark_all_staff_notifications_read(
-    current_user=Depends(get_current_customer_service_or_user),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """标记所有员工提醒为已读"""

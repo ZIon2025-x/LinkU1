@@ -154,7 +154,7 @@ const CustomerService: React.FC = () => {
   // WebSocket连接测试函数
   const testWebSocketConnection = () => {
     // 客服使用Cookie认证，无需检查token
-    const testUrl = `ws://localhost:8000/ws/chat/${currentUser?.id}`;
+    const testUrl = `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser?.id}`;
     
     const testSocket = new WebSocket(testUrl);
     
@@ -311,7 +311,7 @@ const CustomerService: React.FC = () => {
     try {
       // 这里需要实现发送公告的API
       // 暂时使用通知API作为示例
-      const response = await fetch('http://localhost:8000/api/users/notifications/send-announcement', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/users/notifications/send-announcement`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -453,7 +453,7 @@ const CustomerService: React.FC = () => {
     if (!currentUser) return;
     
     // 客服使用Cookie认证，无需token
-    const notificationSocket = new WebSocket(`ws://localhost:8000/ws/chat/${currentUser.id}`);
+    const notificationSocket = new WebSocket(`${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser.id}`);
     
     notificationSocket.onopen = () => {
       // 通知WebSocket连接已建立
@@ -614,7 +614,7 @@ const CustomerService: React.FC = () => {
   const loadAdminChatMessages = async () => {
     try {
       console.log('开始加载管理聊天记录...');
-      const response = await fetch('http://localhost:8000/api/users/customer-service/admin-chat', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
         credentials: 'include'  // 使用Cookie认证
       });
       if (response.ok) {
@@ -634,7 +634,7 @@ const CustomerService: React.FC = () => {
   const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
       console.log('审核取消请求:', { requestId, status, adminComment: adminComment });
-      const response = await fetch(`http://localhost:8000/api/users/customer-service/cancel-requests/${requestId}/review`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cancel-requests/${requestId}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -712,7 +712,7 @@ const CustomerService: React.FC = () => {
 
     try {
       console.log('发送管理消息:', newAdminMessage);
-      const response = await fetch('http://localhost:8000/api/users/customer-service/admin-chat', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -762,7 +762,7 @@ const CustomerService: React.FC = () => {
   // 检查对话超时状态
   const checkChatTimeoutStatus = async (chatId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/users/customer-service/chat-timeout-status/${chatId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chat-timeout-status/${chatId}`, {
         method: 'GET',
         headers: {
           credentials: 'include',  // 使用Cookie认证
@@ -787,7 +787,7 @@ const CustomerService: React.FC = () => {
   // 超时结束对话
   const timeoutEndChat = async (chatId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/users/customer-service/timeout-end-chat/${chatId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/timeout-end-chat/${chatId}`, {
         method: 'POST',
         headers: {
           credentials: 'include',  // 使用Cookie认证
@@ -1529,7 +1529,7 @@ const CustomerService: React.FC = () => {
                 onClick={async () => {
                   if (window.confirm('确定要清理超过50个的旧已结束对话吗？此操作不可撤销。')) {
                     try {
-                      const response = await fetch(`http://localhost:8000/api/users/customer-service/cleanup-old-chats/${currentUser.id}`, {
+                      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cleanup-old-chats/${currentUser.id}`, {
                         method: 'POST',
                         headers: {
                           credentials: 'include',  // 使用Cookie认证
