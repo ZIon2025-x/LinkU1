@@ -228,7 +228,7 @@ def get_service_profile(
         "avg_rating": current_service.avg_rating,
         "total_ratings": current_service.total_ratings,
         "is_online": bool(current_service.is_online),
-        "created_at": current_service.created_at.isoformat()
+        "created_at": current_service.created_at.isoformat() if current_service.created_at else None
     }
 
 @router.post("/service/change-password")

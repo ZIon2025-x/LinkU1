@@ -159,7 +159,7 @@ export const useAuth = () => {
         // 登录成功后重新检查认证状态
         setTimeout(() => {
           checkAuth();
-        }, 100);
+        }, 500);
         
         return true;
       } else {
