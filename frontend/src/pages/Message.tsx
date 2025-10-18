@@ -1619,14 +1619,19 @@ const MessagePage: React.FC = () => {
             };
           });
           
-        // 按时间排序（最新的在最后）
-        formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        // 确保消息按时间排序（最新的在最后）
+        formattedMessages.sort((a: any, b: any) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeA - timeB; // 升序排序，最早的在前
+        });
         
-        // 如果是首次加载，确保显示最新的消息
-        if (!isLoadMore && formattedMessages.length > 0) {
-          // 将消息列表反转，让最新的消息在最后
-          formattedMessages.reverse();
-        }
+        // 对于客服聊天，始终确保最新的消息在最后（不需要反转，因为我们已经按时间升序排序）
+        console.log('客服聊天消息排序后:', formattedMessages.map((msg: any) => ({
+          content: msg.content.substring(0, 20) + '...',
+          time: msg.created_at,
+          from: msg.from
+        })));
         
         setMessages(formattedMessages);
         
@@ -1687,14 +1692,19 @@ const MessagePage: React.FC = () => {
           created_at: msg.created_at 
         }));
         
-        // 按时间排序（最新的在最后）
-        formattedMessages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        // 确保消息按时间排序（最新的在最后）
+        formattedMessages.sort((a: any, b: any) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeA - timeB; // 升序排序，最早的在前
+        });
         
-        // 如果是首次加载，确保显示最新的消息
-        if (!isLoadMore && formattedMessages.length > 0) {
-          // 将消息列表反转，让最新的消息在最后
-          formattedMessages.reverse();
-        }
+        // 对于普通聊天，始终确保最新的消息在最后（不需要反转，因为我们已经按时间升序排序）
+        console.log('普通聊天消息排序后:', formattedMessages.map((msg: any) => ({
+          content: msg.content.substring(0, 20) + '...',
+          time: msg.created_at,
+          from: msg.from
+        })));
         
         console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         
