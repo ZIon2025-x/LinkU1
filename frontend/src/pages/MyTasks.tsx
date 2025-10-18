@@ -437,8 +437,8 @@ const MyTasks: React.FC = () => {
       return applications.filter(app => app.status === 'pending');
     }
     return tasks.filter(task => {
-      if (activeTab === 'posted') return task.poster_id === user?.id;
-      if (activeTab === 'taken') return task.taker_id === user?.id;
+      if (activeTab === 'posted') return task.poster_id === user?.id && task.status !== 'cancelled';
+      if (activeTab === 'taken') return task.taker_id === user?.id && task.status !== 'cancelled';
       if (activeTab === 'completed') return task.status === 'completed';
       if (activeTab === 'cancelled') return task.status === 'cancelled';
       return true;
