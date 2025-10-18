@@ -292,20 +292,30 @@ def list_tasks(
     # 使用UTC时间进行过滤
     now_utc = TimeHandlerV2.get_utc_now()
 
-    # 构建基础查询 - 需要将deadline转换为UTC时间进行比较
-    query = db.query(Task).filter(Task.status == "open")
+    # 使用数据库查询直接过滤过期任务，提高效率
+    from sqlalchemy import and_, or_
     
-    # 手动过滤过期任务，因为deadline可能没有时区信息
-    open_tasks = query.all()
-    valid_tasks = []
-    for task in open_tasks:
-        if task.deadline.tzinfo is None:
-            task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
-        else:
-            task_deadline_utc = task.deadline.astimezone(timezone.utc)
-        
-        if task_deadline_utc > now_utc:
-            valid_tasks.append(task)
+    # 构建基础查询，直接在数据库层面过滤过期任务
+    query = db.query(Task).filter(
+        and_(
+            Task.status == "open",
+            or_(
+                # 情况1：deadline有时区信息，直接比较
+                and_(
+                    Task.deadline.isnot(None),
+                    Task.deadline > now_utc
+                ),
+                # 情况2：deadline没有时区信息，假设是UTC时间
+                and_(
+                    Task.deadline.isnot(None),
+                    Task.deadline > now_utc.replace(tzinfo=None)
+                )
+            )
+        )
+    )
+    
+    # 获取有效的未过期任务
+    valid_tasks = query.all()
 
     # 添加任务类型筛选
     if task_type and task_type.strip():
@@ -1007,54 +1017,60 @@ def cancel_expired_tasks(db: Session):
         now_utc = TimeHandlerV2.get_utc_now()
         logger.info(f"开始检查过期任务，当前UTC时间: {now_utc}")
 
-        # 查找所有状态为'open'的任务
-        open_tasks = db.query(Task).filter(Task.status == "open").all()
-        logger.info(f"找到 {len(open_tasks)} 个状态为 'open' 的任务")
+        # 使用数据库查询直接找到过期的任务，避免逐个检查
+        # 处理两种情况：deadline有时区信息和没有时区信息
+        from sqlalchemy import and_, or_
+        
+        expired_tasks = db.query(Task).filter(
+            and_(
+                Task.status == "open",
+                or_(
+                    # 情况1：deadline有时区信息，直接比较
+                    and_(
+                        Task.deadline.isnot(None),
+                        Task.deadline <= now_utc
+                    ),
+                    # 情况2：deadline没有时区信息，假设是UTC时间
+                    and_(
+                        Task.deadline.isnot(None),
+                        Task.deadline <= now_utc.replace(tzinfo=None)
+                    )
+                )
+            )
+        ).all()
+
+        logger.info(f"找到 {len(expired_tasks)} 个过期任务")
 
         cancelled_count = 0
-        for task in open_tasks:
+        for task in expired_tasks:
             try:
-                # 数据库中的deadline存储的是UTC时间（从前端toISOString()发送）
-                # 但可能没有时区信息，需要添加UTC时区
-                if task.deadline.tzinfo is None:
-                    # 如果deadline没有时区信息，假设它是UTC时间
-                    task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
-                else:
-                    # 如果deadline有时区信息，转换为UTC时间
-                    task_deadline_utc = task.deadline.astimezone(timezone.utc)
-
-                logger.info(f"检查任务 {task.id}: 截止时间 {task_deadline_utc}, 当前时间 {now_utc}")
+                logger.info(f"取消过期任务 {task.id}: {task.title}")
                 
-                # 使用UTC时间进行比较
-                if now_utc > task_deadline_utc:
-                    logger.info(f"任务 {task.id} 已过期，开始取消")
-                    # 将任务状态更新为已取消
-                    task.status = "cancelled"
+                # 将任务状态更新为已取消
+                task.status = "cancelled"
 
-                    # 记录任务历史
-                    add_task_history(
-                        db,
-                        task.id,
-                        task.poster_id,
-                        "cancelled",
-                        "任务因超过截止日期自动取消",
-                    )
+                # 记录任务历史
+                add_task_history(
+                    db,
+                    task.id,
+                    task.poster_id,
+                    "cancelled",
+                    "任务因超过截止日期自动取消",
+                )
 
-                    # 创建通知给任务发布者（不自动提交）
-                    create_notification(
-                        db,
-                        task.poster_id,
-                        "task_cancelled",
-                        "任务自动取消",
-                        f'您的任务"{task.title}"因超过截止日期已自动取消',
-                        task.id,
-                        auto_commit=False,
-                    )
+                # 创建通知给任务发布者（不自动提交）
+                create_notification(
+                    db,
+                    task.poster_id,
+                    "task_cancelled",
+                    "任务自动取消",
+                    f'您的任务"{task.title}"因超过截止日期已自动取消',
+                    task.id,
+                    auto_commit=False,
+                )
 
-                    cancelled_count += 1
-                    logger.info(f"任务 {task.id} 已成功取消")
-                else:
-                    logger.info(f"任务 {task.id} 未过期")
+                cancelled_count += 1
+                logger.info(f"任务 {task.id} 已成功取消")
 
             except Exception as e:
                 logger.error(f"处理任务 {task.id} 时出错: {e}")
