@@ -78,9 +78,10 @@ async def custom_cors_middleware(request: Request, call_next):
     if request.method == "OPTIONS":
         response = Response(status_code=200)
         origin = request.headers.get("origin")
-        if origin and any(origin.startswith(domain) for domain in [
-            "https://link-u1", "http://localhost", "https://www.link2ur.com"
-        ]):
+        allowed_domains = [
+            "https://link-u1", "http://localhost", "https://www.link2ur.com", "https://api.link2ur.com"
+        ]
+        if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -91,9 +92,10 @@ async def custom_cors_middleware(request: Request, call_next):
     
     # 强制设置CORS头
     origin = request.headers.get("origin")
-    if origin and any(origin.startswith(domain) for domain in [
-        "https://link-u1", "http://localhost", "https://www.link2ur.com"
-    ]):
+    allowed_domains = [
+        "https://link-u1", "http://localhost", "https://www.link2ur.com", "https://api.link2ur.com"
+    ]
+    if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"

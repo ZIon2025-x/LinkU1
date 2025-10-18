@@ -61,6 +61,12 @@ def admin_login(
     # 设置Cookie
     response = create_admin_session_cookie(response, session_info.session_id)
     
+    # 生成并设置CSRF token
+    from app.csrf import CSRFProtection
+    csrf_token = CSRFProtection.generate_csrf_token()
+    user_agent = request.headers.get("user-agent", "")
+    CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+    
     # 更新最后登录时间
     admin.last_login = datetime.utcnow()
     db.commit()
@@ -190,6 +196,13 @@ def service_login(
     # 设置Cookie
     try:
         response = create_service_session_cookie(response, session_info.session_id)
+        
+        # 生成并设置CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        user_agent = request.headers.get("user-agent", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: {service.id}")
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 客服Cookie设置失败: {service.id}, 错误: {str(e)}")
