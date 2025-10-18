@@ -121,8 +121,8 @@ def secure_login(
         )
         
         # 生成并设置CSRF token
-        from app.csrf import generate_csrf_token
-        csrf_token = generate_csrf_token()
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
         CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
         
         # 记录成功登录
@@ -135,6 +135,7 @@ def secure_login(
         ])
         
         # 为移动端添加特殊的响应头和token
+        access_token = None
         if is_mobile:
             # 为移动端生成access_token作为备用认证
             from app.security import create_access_token
@@ -156,7 +157,7 @@ def secure_login(
                 "is_verified": user.is_verified,
             },
             "session_id": session.session_id,  # 移动端需要这个值
-            "access_token": access_token if is_mobile else None,  # 移动端备用token
+            "access_token": access_token,  # 移动端备用token
             "expires_in": 300,  # 5分钟
             "mobile_auth": is_mobile,  # 标识是否为移动端
             "auth_headers": {
