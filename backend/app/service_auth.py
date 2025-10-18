@@ -369,6 +369,12 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         else:
             cookie_domain = None  # 开发环境不设置domain
         cookie_path = Config.COOKIE_PATH
+        
+        # 强制使用lax以提高跨域兼容性（覆盖环境变量设置）
+        if samesite_value == "strict":
+            samesite_value = "lax"
+            logger.info(f"客服Cookie SameSite从strict改为lax以提高跨域兼容性")
+        
         logger.info(f"客服桌面端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
     
     # 设置客服会话Cookie - 支持跨域

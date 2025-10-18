@@ -166,6 +166,11 @@ class CookieManager:
             samesite_value = CookieManager._get_samesite_value(user_agent)
             secure_value = CookieManager._get_secure_value(user_agent)
             
+            # 强制使用lax以提高跨域兼容性（覆盖环境变量设置）
+            if samesite_value == "strict":
+                samesite_value = "lax"
+                logger.info(f"用户Cookie SameSite从strict改为lax以提高跨域兼容性")
+            
             # 记录桌面端Cookie设置
             logger.info(f"桌面端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
         
