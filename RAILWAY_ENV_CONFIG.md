@@ -6,8 +6,8 @@
 
 ### 必需的环境变量
 ```
-REACT_APP_API_URL=https://your-backend-url.railway.app
-REACT_APP_WS_URL=wss://your-backend-url.railway.app
+REACT_APP_API_URL=https://api.link2ur.com
+REACT_APP_WS_URL=wss://api.link2ur.com
 ```
 
 ### 可选的环境变量
@@ -45,9 +45,38 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=30
 
 # 其他
-RAILWAY_ENVIRONMENT=production
 USE_REDIS=true
 ```
+
+## 重要说明
+
+### 🔒 **最高安全等级认证系统**
+
+#### 客服认证系统
+- ✅ **Cookie会话认证**：使用 `service_session_id` Cookie
+- ✅ **最高安全等级**：`httponly=True`, `secure=True`, `samesite="strict"`
+- ✅ **路径限制**：仅限 `/api/auth/service` 路径
+- ✅ **设备指纹验证**：防止会话劫持
+- ✅ **IP地址验证**：检测异常登录
+- ✅ **会话活跃检查**：实时验证会话状态
+
+#### 管理员认证系统
+- ✅ **Cookie会话认证**：使用 `admin_session_id` Cookie
+- ✅ **最高安全等级**：`httponly=True`, `secure=True`, `samesite="strict"`
+- ✅ **路径限制**：仅限 `/api/auth/admin` 路径
+- ✅ **设备指纹验证**：防止会话劫持
+- ✅ **IP地址验证**：检测异常登录
+- ✅ **会话活跃检查**：实时验证会话状态
+
+#### 用户认证系统
+- ✅ **混合认证**：支持Cookie会话 + JWT token
+- ✅ **标准安全等级**：`httponly=True`, `secure=True`, `samesite="lax"`
+- ✅ **向后兼容**：支持旧JWT认证系统
+
+### 🚫 **安全隔离**
+- ❌ **客服不能访问用户路由**：完全分离
+- ❌ **管理员不能访问用户路由**：完全分离
+- ❌ **用户不能访问客服/管理员路由**：完全分离
 
 ## 配置说明
 

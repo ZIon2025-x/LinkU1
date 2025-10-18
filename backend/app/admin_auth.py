@@ -290,7 +290,7 @@ class AdminAuthManager:
                 del admin_active_sessions[session_id]
 
 def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
-    """验证管理员会话"""
+    """验证管理员会话（最高安全等级）"""
     logger.info(f"[ADMIN_AUTH] validate_admin_session - URL: {request.url}")
     logger.info(f"[ADMIN_AUTH] validate_admin_session - Cookies: {dict(request.cookies)}")
     
@@ -303,46 +303,60 @@ def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
     
     logger.info(f"[ADMIN_AUTH] 找到admin_session_id: {admin_session_id[:8]}...")
     
+    # 验证会话
     session = AdminAuthManager.get_session(admin_session_id, update_activity=False)
     if not session:
         logger.info(f"[ADMIN_AUTH] 管理员会话验证失败: {admin_session_id[:8]}...")
         return None
     
-    logger.info(f"[ADMIN_AUTH] 管理员会话验证成功: {admin_session_id[:8]}..., 管理员: {session.admin_id}")
+    # 验证会话是否仍然活跃
+    if not session.is_active:
+        logger.warning(f"[ADMIN_AUTH] 管理员会话已失效: {session.admin_id}")
+        return None
     
     # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = AdminAuthManager.get_device_fingerprint(request)
     if session.device_fingerprint != current_fingerprint:
         logger.warning(f"[ADMIN_AUTH] 设备指纹不匹配，可能存在会话劫持: {session.admin_id}")
+        # 强制登出可疑会话
+        AdminAuthManager.delete_session(admin_session_id)
+        return None
+    
+    # 验证IP地址（可选，用于检测异常登录）
+    current_ip = request.client.host if request.client else "unknown"
+    if session.ip_address != current_ip:
+        logger.warning(f"[ADMIN_AUTH] IP地址不匹配: 会话IP={session.ip_address}, 当前IP={current_ip}")
         # 可以选择是否强制登出
         # AdminAuthManager.delete_session(admin_session_id)
         # return None
     
+    logger.info(f"[ADMIN_AUTH] 管理员会话验证成功: {admin_session_id[:8]}..., 管理员: {session.admin_id}")
     return session
 
 def create_admin_session_cookie(response: Response, session_id: str) -> Response:
-    """创建管理员会话Cookie"""
-    import os
-    is_production = os.getenv("RAILWAY_ENVIRONMENT") is not None
-    
-    # 设置管理员会话Cookie
+    """创建管理员会话Cookie（最高安全等级）"""
+    # 设置管理员会话Cookie - 最高安全等级
     response.set_cookie(
         key="admin_session_id",
         value=session_id,
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,  # 8小时
-        httponly=True,
-        secure=is_production,  # 只在生产环境使用HTTPS
-        samesite="lax"
+        httponly=True,  # 防止XSS攻击
+        secure=True,    # 仅HTTPS传输
+        samesite="strict",  # 最严格的同站策略
+        path="/api/auth/admin",  # 限制路径
+        domain=None  # 不设置domain，提高安全性
     )
     
-    # 设置管理员身份标识Cookie
+    # 设置管理员身份标识Cookie - 最高安全等级
     response.set_cookie(
         key="admin_authenticated",
         value="true",
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
-        secure=is_production,
-        samesite="lax"
+        secure=True,     # 仅HTTPS传输
+        samesite="strict",  # 最严格的同站策略
+        path="/api/auth/admin",  # 限制路径
+        domain=None  # 不设置domain，提高安全性
     )
     
     return response

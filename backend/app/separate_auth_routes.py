@@ -5,7 +5,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
-from app.deps import get_sync_db
+from app.deps import get_sync_db, get_current_customer_service_or_user, get_current_admin_user
 from app import models, crud, schemas
 from app.security import verify_password, get_password_hash
 from app.admin_auth import AdminAuthManager, create_admin_session_cookie, clear_admin_session_cookie

@@ -290,7 +290,7 @@ class ServiceAuthManager:
                 del service_active_sessions[session_id]
 
 def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
-    """验证客服会话"""
+    """验证客服会话（最高安全等级）"""
     logger.info(f"[SERVICE_AUTH] validate_service_session - URL: {request.url}")
     logger.info(f"[SERVICE_AUTH] validate_service_session - Cookies: {dict(request.cookies)}")
     
@@ -303,46 +303,60 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     
     logger.info(f"[SERVICE_AUTH] 找到service_session_id: {service_session_id[:8]}...")
     
+    # 验证会话
     session = ServiceAuthManager.get_session(service_session_id, update_activity=False)
     if not session:
         logger.info(f"[SERVICE_AUTH] 客服会话验证失败: {service_session_id[:8]}...")
         return None
     
-    logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
+    # 验证会话是否仍然活跃
+    if not session.is_active:
+        logger.warning(f"[SERVICE_AUTH] 客服会话已失效: {session.service_id}")
+        return None
     
     # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = ServiceAuthManager.get_device_fingerprint(request)
     if session.device_fingerprint != current_fingerprint:
         logger.warning(f"[SERVICE_AUTH] 设备指纹不匹配，可能存在会话劫持: {session.service_id}")
+        # 强制登出可疑会话
+        ServiceAuthManager.delete_session(service_session_id)
+        return None
+    
+    # 验证IP地址（可选，用于检测异常登录）
+    current_ip = request.client.host if request.client else "unknown"
+    if session.ip_address != current_ip:
+        logger.warning(f"[SERVICE_AUTH] IP地址不匹配: 会话IP={session.ip_address}, 当前IP={current_ip}")
         # 可以选择是否强制登出
         # ServiceAuthManager.delete_session(service_session_id)
         # return None
     
+    logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
     return session
 
 def create_service_session_cookie(response: Response, session_id: str) -> Response:
-    """创建客服会话Cookie"""
-    import os
-    is_production = os.getenv("RAILWAY_ENVIRONMENT") is not None
-    
-    # 设置客服会话Cookie
+    """创建客服会话Cookie（最高安全等级）"""
+    # 设置客服会话Cookie - 最高安全等级
     response.set_cookie(
         key="service_session_id",
         value=session_id,
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
-        httponly=True,
-        secure=is_production,  # 只在生产环境使用HTTPS
-        samesite="lax"
+        httponly=True,  # 防止XSS攻击
+        secure=True,    # 仅HTTPS传输
+        samesite="strict",  # 最严格的同站策略
+        path="/api/auth/service",  # 限制路径
+        domain=None  # 不设置domain，提高安全性
     )
     
-    # 设置客服身份标识Cookie
+    # 设置客服身份标识Cookie - 最高安全等级
     response.set_cookie(
         key="service_authenticated",
         value="true",
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
-        secure=is_production,
-        samesite="lax"
+        secure=True,     # 仅HTTPS传输
+        samesite="strict",  # 最严格的同站策略
+        path="/api/auth/service",  # 限制路径
+        domain=None  # 不设置domain，提高安全性
     )
     
     return response
