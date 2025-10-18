@@ -371,61 +371,7 @@ def cs_login(
     }
 
 
-@router.post("/customer-service/login")
-def customer_service_login(
-    request: Request,
-    response: Response,
-    login_data: schemas.CustomerServiceLogin, 
-    db: Session = Depends(get_db)
-):
-    """客服登录端点 - 支持ID或邮箱登录，使用Cookie会话认证"""
-    # 支持ID或邮箱登录
-    username = login_data.cs_id  # 这里cs_id字段实际是用户名（可能是ID或邮箱）
-    cs = None
-    
-    # 首先尝试作为ID查找（CS + 4位数字格式）
-    if username.startswith('CS') and len(username) == 6 and username[2:].isdigit():
-        cs = crud.get_customer_service_by_id(db, username)
-        if cs and verify_password(login_data.password, cs.hashed_password):
-            pass  # 验证成功
-        else:
-            cs = None
-    
-    # 如果ID查找失败，尝试作为邮箱查找
-    if not cs:
-        cs = crud.get_customer_service_by_email(db, username)
-        if cs and verify_password(login_data.password, cs.hashed_password):
-            pass  # 验证成功
-        else:
-            cs = None
-    
-    if not cs:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-
-    # 使用新的客服会话认证系统
-    from app.service_auth import create_service_session, create_service_session_cookie
-    
-    # 创建客服会话
-    session_id = create_service_session(cs.id, request)
-    if not session_id:
-        raise HTTPException(status_code=500, detail="Failed to create service session")
-    
-    # 设置客服会话Cookie
-    response = create_service_session_cookie(response, session_id)
-    
-    # 更新客服在线状态
-    crud.update_customer_service_online_status(db, cs.id, True)
-
-    return {
-        "message": "客服登录成功",
-        "service": {
-            "id": cs.id,
-            "name": cs.name,
-            "email": cs.email,
-            "is_online": True,
-            "user_type": "customer_service",
-        },
-    }
+# 旧的客服登录路由已删除，请使用 /api/cs/login
 
 
 @router.post("/admin/login")

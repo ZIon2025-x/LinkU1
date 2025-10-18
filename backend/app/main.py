@@ -25,8 +25,8 @@ from sqlalchemy.orm import Session
 from app import crud
 # auth_routes 已移除，使用 secure_auth_routes 替代
 from app.secure_auth_routes import secure_auth_router
-from app.cs_auth_routes import cs_auth_router
-from app.admin_auth_routes import admin_auth_router
+# 旧的客服认证路由已删除，使用新的独立认证系统
+# 旧的管理员认证路由已删除，使用新的独立认证系统
 from app.separate_auth_routes import router as separate_auth_router
 from app.csrf_routes import router as csrf_router
 from app.rate_limit_routes import router as rate_limit_router
@@ -134,8 +134,8 @@ app.include_router(user_router, prefix="/api/users", tags=["users"])
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
 # auth_router 已移除，使用 secure_auth_router 替代
 app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安全认证系统
-app.include_router(cs_auth_router, tags=["客服认证"])
-app.include_router(admin_auth_router, tags=["管理员认证"])
+# 旧的客服认证路由已删除，使用新的独立认证系统
+# 旧的管理员认证路由已删除，使用新的独立认证系统
 app.include_router(separate_auth_router, prefix="/api/auth", tags=["独立认证系统"])  # 新增独立认证系统
 app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
