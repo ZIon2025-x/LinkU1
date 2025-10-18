@@ -67,7 +67,14 @@ const Login: React.FC = () => {
       
       // 保存session_id（桌面端和移动端都需要）
       if (res.data.session_id) {
-        localStorage.setItem('session_id', res.data.session_id);
+        // 检测是否为移动端，只有移动端才需要localStorage存储
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && res.data.session_id) {
+          localStorage.setItem('session_id', res.data.session_id);
+          console.log('移动端：Session ID已保存到localStorage:', res.data.session_id);
+        } else if (!isMobile) {
+          console.log('桌面端：使用HttpOnly Cookie认证，无需localStorage存储');
+        }
         console.log('已保存session_id');
       }
       

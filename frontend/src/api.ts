@@ -135,11 +135,17 @@ api.interceptors.request.use(async config => {
       console.log('移动端使用Authorization头认证');
     }
   } else {
-    // 桌面端使用Cookie + X-Session-ID认证
-    const sessionId = localStorage.getItem('session_id');
-    if (sessionId) {
-      config.headers['X-Session-ID'] = sessionId;
-      console.log('桌面端使用X-Session-ID认证');
+    // 桌面端优先使用HttpOnly Cookie认证
+    // 只有在移动端或Cookie不可用时才使用localStorage中的session_id
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      const sessionId = localStorage.getItem('session_id');
+      if (sessionId) {
+        config.headers['X-Session-ID'] = sessionId;
+        console.log('移动端使用X-Session-ID认证');
+      }
+    } else {
+      console.log('桌面端使用HttpOnly Cookie认证');
     }
   }
   
@@ -997,10 +1003,15 @@ export const checkCustomerServiceAvailability = async () => {
 export const login = async (email: string, password: string) => {
   const res = await api.post('/api/secure-auth/login', { email, password });
   
-  // 保存session_id到localStorage（移动端认证支持）
-  if (res.data.session_id) {
+  // 检测是否为移动端，只有移动端才需要localStorage存储
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // 移动端认证支持：保存session_id到localStorage
+  if (isMobile && res.data.session_id) {
     localStorage.setItem('session_id', res.data.session_id);
-    console.log('Session ID已保存到localStorage:', res.data.session_id);
+    console.log('移动端：Session ID已保存到localStorage:', res.data.session_id);
+  } else if (!isMobile) {
+    console.log('桌面端：使用HttpOnly Cookie认证，无需localStorage存储');
   }
   
   return res.data;
