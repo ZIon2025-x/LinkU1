@@ -37,6 +37,12 @@ export const useAuth = () => {
                            document.cookie.includes('access_token=');
 
       console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
+      console.log('当前Cookie:', document.cookie);
+      
+      // 如果检测到任何Cookie，优先使用该角色
+      if (hasAdminCookie || hasServiceCookie || hasUserCookie) {
+        console.log('检测到Cookie标识，跳过通用检查');
+      }
 
       // 按优先级检查：管理员 > 客服 > 用户
       const checks = [];
@@ -51,13 +57,16 @@ export const useAuth = () => {
         checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
       }
 
-      // 如果没有Cookie标识，则按顺序检查所有角色
+      // 如果没有检测到任何Cookie标识，则按顺序检查所有角色
       if (checks.length === 0) {
+        console.log('没有检测到Cookie标识，按顺序检查所有角色');
         checks.push(
           { role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' },
           { role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' },
           { role: 'user' as AuthRole, endpoint: '/api/users/profile/me' }
         );
+      } else {
+        console.log('检测到Cookie标识，只检查相关角色:', checks.map(c => c.role));
       }
 
       console.log('认证检查列表:', checks);
@@ -120,7 +129,7 @@ export const useAuth = () => {
           endpoint = '/api/cs/login';
           break;
         case 'user':
-          endpoint = '/api/users/login';
+          endpoint = '/api/secure-auth/login';
           break;
         default:
           return false;
@@ -159,11 +168,11 @@ export const useAuth = () => {
         // 登录成功后直接设置认证状态，避免重新检查
         console.log('登录成功，设置认证状态:', { role, user: userData });
         
-        // 不重新检查认证状态，直接使用登录返回的数据
-        // setTimeout(() => {
-        //   console.log('延迟检查认证状态...');
-        //   checkAuth();
-        // }, 1000);
+        // 登录成功后，确保Cookie已设置，然后重新检查认证状态
+        setTimeout(() => {
+          console.log('登录后重新检查认证状态...');
+          checkAuth();
+        }, 2000);
         
         return true;
       } else {
@@ -189,7 +198,7 @@ export const useAuth = () => {
           endpoint = '/api/auth/service/logout';
           break;
         case 'user':
-          endpoint = '/api/users/logout';
+          endpoint = '/api/secure-auth/logout';
           break;
         default:
           break;

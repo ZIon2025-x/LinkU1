@@ -1316,41 +1316,32 @@ def get_my_profile(
 
     # 安全地创建用户对象，避免SQLAlchemy内部属性
     try:
-        # 检查是否为客服
-        if hasattr(current_user, 'email') and hasattr(current_user, 'id') and current_user.id.startswith('CS'):
-            formatted_user = {
-                "id": current_user.id,
-                "name": getattr(current_user, 'name', ''),
-                "email": getattr(current_user, 'email', ''),
-                "user_type": "customer_service"
-            }
-        else:
-            # 普通用户 - 强制从数据库重新查询以获取最新数据
-            from app.redis_cache import invalidate_user_cache
-            try:
-                invalidate_user_cache(current_user.id)
-                logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
-            except Exception as e:
-                logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
-            
-            # 直接从数据库查询最新数据
-            from app import crud
-            fresh_user = crud.get_user_by_id(db, current_user.id)
-            if fresh_user:
-                current_user = fresh_user
-                logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
-            
-            formatted_user = {
-                "id": current_user.id,
-                "name": getattr(current_user, 'name', ''),
-                "email": getattr(current_user, 'email', ''),
-                "phone": getattr(current_user, 'phone', ''),
-                "is_verified": getattr(current_user, 'is_verified', False),
-                "user_level": getattr(current_user, 'user_level', 1),
-                "avatar": getattr(current_user, 'avatar', ''),
-                "created_at": getattr(current_user, 'created_at', None),
-                "user_type": "normal_user"
-            }
+        # 普通用户 - 强制从数据库重新查询以获取最新数据
+        from app.redis_cache import invalidate_user_cache
+        try:
+            invalidate_user_cache(current_user.id)
+            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
+        except Exception as e:
+            logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
+        
+        # 直接从数据库查询最新数据
+        from app import crud
+        fresh_user = crud.get_user_by_id(db, current_user.id)
+        if fresh_user:
+            current_user = fresh_user
+            logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
+        
+        formatted_user = {
+            "id": current_user.id,
+            "name": getattr(current_user, 'name', ''),
+            "email": getattr(current_user, 'email', ''),
+            "phone": getattr(current_user, 'phone', ''),
+            "is_verified": getattr(current_user, 'is_verified', False),
+            "user_level": getattr(current_user, 'user_level', 1),
+            "avatar": getattr(current_user, 'avatar', ''),
+            "created_at": getattr(current_user, 'created_at', None),
+            "user_type": "normal_user"
+        }
         
         return formatted_user
     except Exception as e:
