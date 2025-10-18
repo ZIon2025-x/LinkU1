@@ -1396,6 +1396,16 @@ def update_user_by_admin(db: Session, user_id: str, user_update: dict):
     return user
 
 
+def update_customer_service_online_status(db: Session, cs_id: str, is_online: bool):
+    """更新客服在线状态"""
+    cs = db.query(models.CustomerService).filter(models.CustomerService.id == cs_id).first()
+    if cs:
+        cs.is_online = 1 if is_online else 0
+        db.commit()
+        db.refresh(cs)
+        return cs
+    return None
+
 def create_customer_service_by_admin(db: Session, cs_data: dict):
     """管理员创建客服账号"""
     # 创建用户账号
