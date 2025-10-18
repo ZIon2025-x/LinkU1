@@ -205,46 +205,9 @@ class CookieManager:
             domain=cookie_domain
         )
         
-        # 移动端额外设置：使用统一的Cookie配置
+        # 移动端不再需要额外的备用Cookie，主要session_id Cookie已经工作正常
         if is_mobile:
-            # 设置备用Cookie（与主要Cookie保持一致的属性）
-            response.set_cookie(
-                key="mobile_session_id",
-                value=session_id,
-                max_age=session_max_age,
-                httponly=True,
-                secure=secure_value,   # 使用统一的secure设置
-                samesite=samesite_value,  # 使用统一的samesite设置
-                path=cookie_path,
-                domain=cookie_domain
-            )
-            
-            # 设置非HttpOnly的Cookie（用于JavaScript访问）
-            response.set_cookie(
-                key="js_session_id",
-                value=session_id,
-                max_age=session_max_age,
-                httponly=False,
-                secure=secure_value,   # 使用统一的secure设置
-                samesite=samesite_value,  # 使用统一的samesite设置
-                path=cookie_path,
-                domain=cookie_domain
-            )
-            
-            # 移动端特殊Cookie：尝试不同的SameSite设置
-            # 设置strict Cookie作为备用
-            response.set_cookie(
-                key="mobile_strict_session_id",
-                value=session_id,
-                max_age=session_max_age,
-                httponly=True,
-                secure=secure_value,
-                samesite="strict",  # 使用strict作为备用
-                path=cookie_path,
-                domain=cookie_domain
-            )
-            
-            logger.info(f"移动端Cookie设置完成: 主要={samesite_value}, 备用=strict")
+            logger.info(f"移动端Cookie设置完成: 使用主要session_id Cookie")
         
         logger.info(f"设置会话Cookie - session_id: {session_id[:8]}..., user_id: {user_id}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
     

@@ -28,12 +28,8 @@ class MobileAuthMiddleware:
     @staticmethod
     def get_session_from_multiple_sources(request: Request) -> Optional[str]:
         """从多个来源获取session_id（移动端兼容性）"""
-        # 1. 尝试Cookie
-        session_id = (
-            request.cookies.get("session_id") or
-            request.cookies.get("mobile_session_id") or
-            request.cookies.get("js_session_id")
-        )
+        # 1. 尝试主要Cookie
+        session_id = request.cookies.get("session_id")
         
         if session_id:
             logger.info(f"从Cookie获取session_id: {session_id[:8]}...")

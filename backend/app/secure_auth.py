@@ -432,13 +432,8 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     logger.info(f"[DEBUG] validate_session - Cookies: {dict(request.cookies)}")
     logger.info(f"[DEBUG] validate_session - Headers: {dict(request.headers)}")
     
-    # 1. 尝试多种Cookie名称（移动端兼容性）
-    session_id = (
-        request.cookies.get("session_id") or
-        request.cookies.get("mobile_session_id") or
-        request.cookies.get("js_session_id") or
-        request.cookies.get("mobile_strict_session_id")  # 新增移动端strict Cookie
-    )
+    # 1. 尝试主要Cookie名称
+    session_id = request.cookies.get("session_id")
     
     # 2. 如果Cookie中没有，尝试从请求头获取（仅作为最后的备用方案）
     if not session_id:
