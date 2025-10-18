@@ -660,15 +660,16 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
         print(f"检测到重复消息，跳过保存: {content} (时间差: {(datetime.utcnow() - existing_message.created_at).total_seconds():.2f}秒)")
         return existing_message
 
-    # 处理时间
+    # 处理时间 - 统一使用UTC时间
     if local_time_str:
         # 使用用户提供的本地时间
         utc_time, tz_info, local_time = TimeHandler.parse_local_time_to_utc(
             local_time_str, timezone_str, "later"
         )
     else:
-        # 使用当前时间
-        utc_time = datetime.utcnow()
+        # 使用当前UTC时间
+        from app.time_utils_v2 import TimeHandlerV2
+        utc_time = TimeHandlerV2.get_utc_now()
         tz_info = timezone_str
         local_time = None
 

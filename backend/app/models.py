@@ -238,10 +238,7 @@ class Message(Base):
     )  # 允许为NULL，用于系统消息
     receiver_id = Column(String(8), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.utcnow())  # 存储UTC时间
-    # 暂时注释掉新字段，避免数据库错误
-    # created_at_tz = Column(String(50), default="UTC")  # 时区信息
-    # local_time = Column(Text, nullable=True)  # 原始本地时间字符串（可选）
+    created_at = Column(DateTime, default=lambda: datetime.utcnow())  # 统一存储UTC时间
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
     image_id = Column(String(100), nullable=True)  # 私密图片ID
 

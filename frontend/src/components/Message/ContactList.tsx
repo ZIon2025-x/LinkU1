@@ -1,4 +1,5 @@
 import React from 'react';
+import { TimeHandlerV2 } from '../../utils/timeUtils';
 
 interface Contact {
   id: string;
@@ -54,27 +55,8 @@ const ContactList: React.FC<ContactListProps> = ({
   };
 
   const formatLastMessageTime = (timestamp: string | null) => {
-    if (!timestamp) return '';
-    
-    const now = new Date();
-    const messageTime = new Date(timestamp);
-    const diffInHours = (now.getTime() - messageTime.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return messageTime.toLocaleTimeString('zh-CN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } else if (diffInHours < 168) { // 7 days
-      return messageTime.toLocaleDateString('zh-CN', { 
-        weekday: 'short' 
-      });
-    } else {
-      return messageTime.toLocaleDateString('zh-CN', { 
-        month: '2-digit', 
-        day: '2-digit' 
-      });
-    }
+    // 使用新的统一时间处理系统
+    return TimeHandlerV2.formatLastMessageTime(timestamp);
   };
 
   if (loading) {

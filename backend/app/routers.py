@@ -3828,19 +3828,10 @@ def timeout_end_customer_service_chat(
 
 @router.get("/timezone/info")
 def get_timezone_info():
-    """获取当前服务器时区信息"""
-    import pytz
-
-    uk_tz = pytz.timezone("Europe/London")
-    current_time = datetime.now(uk_tz)
-
-    return {
-        "server_timezone": "Europe/London",
-        "server_time": current_time.isoformat(),
-        "timezone_offset": current_time.strftime("%z"),
-        "is_dst": current_time.dst().total_seconds() > 0,
-        "timezone_name": current_time.tzname(),
-    }
+    """获取当前服务器时区信息 - 使用新的时间处理系统"""
+    from app.time_utils_v2 import TimeHandlerV2
+    
+    return TimeHandlerV2.get_timezone_info()
 
 
 @router.get("/customer-service/chat-timeout-status/{chat_id}")

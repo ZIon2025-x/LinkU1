@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 
 // 私密图片显示组件
@@ -290,18 +291,9 @@ const MessagePage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 格式化时间为用户时区
+  // 格式化时间为用户时区 - 使用新的统一时间处理系统
   const formatTime = (timeString: string) => {
-    try {
-      // 获取用户时区
-      const userTimezone = getUserTimezone();
-      
-      // 使用新的时间格式化函数
-      return formatTimeForDisplay(timeString, userTimezone);
-    } catch (error) {
-      console.error('时间格式化错误:', error);
-      return timeString;
-    }
+    return TimeHandlerV2.formatDetailedTime(timeString, userTimezone);
   };
 
 

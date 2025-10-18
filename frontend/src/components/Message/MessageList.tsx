@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import PrivateImageDisplay from './PrivateImageDisplay';
-import dayjs from 'dayjs';
+import { TimeHandlerV2 } from '../../utils/timeUtils';
 
 interface Message {
   id: number;
@@ -40,24 +40,12 @@ const MessageList: React.FC<MessageListProps> = ({
   }, [messages]);
 
   const formatMessageTime = (timestamp: string) => {
+    // 使用新的统一时间处理系统，自动处理DST
     try {
-      let messageTime;
-      
-      if (isServiceMode && currentChat) {
-        // 客服模式：使用英国时间
-        messageTime = dayjs.utc(timestamp).tz('Europe/London');
-      } else if (userTimezone && timezoneInfo) {
-        // 普通聊天：使用用户时区
-        messageTime = dayjs.utc(timestamp).tz(userTimezone);
-      } else {
-        // 默认使用英国时间
-        messageTime = dayjs.utc(timestamp).tz('Europe/London');
-      }
-      
-      return messageTime.format('HH:mm');
+      return TimeHandlerV2.formatMessageTime(timestamp, userTimezone);
     } catch (error) {
-      console.error('时间格式化错误:', error);
-      return dayjs(timestamp).format('HH:mm');
+      console.error('消息时间格式化错误:', error);
+      return '--:--';
     }
   };
 
