@@ -55,7 +55,7 @@ USE_REDIS=true
 #### 客服认证系统
 - ✅ **Cookie会话认证**：使用 `service_session_id` Cookie
 - ✅ **最高安全等级**：`httponly=True`, `secure=True`, `samesite="strict"`
-- ✅ **路径限制**：仅限 `/api/auth/service` 路径
+- ✅ **路径设置**：根路径 `/` 确保前端可读取
 - ✅ **设备指纹验证**：防止会话劫持
 - ✅ **IP地址验证**：检测异常登录
 - ✅ **会话活跃检查**：实时验证会话状态
@@ -63,7 +63,7 @@ USE_REDIS=true
 #### 管理员认证系统
 - ✅ **Cookie会话认证**：使用 `admin_session_id` Cookie
 - ✅ **最高安全等级**：`httponly=True`, `secure=True`, `samesite="strict"`
-- ✅ **路径限制**：仅限 `/api/auth/admin` 路径
+- ✅ **路径设置**：根路径 `/` 确保前端可读取
 - ✅ **设备指纹验证**：防止会话劫持
 - ✅ **IP地址验证**：检测异常登录
 - ✅ **会话活跃检查**：实时验证会话状态

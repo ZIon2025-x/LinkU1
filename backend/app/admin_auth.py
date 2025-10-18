@@ -343,7 +343,7 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         httponly=True,  # 防止XSS攻击
         secure=True,    # 仅HTTPS传输
         samesite="strict",  # 最严格的同站策略
-        path="/api/auth/admin",  # 限制路径
+        path="/",  # 根路径，确保前端可以读取
         domain=None  # 不设置domain，提高安全性
     )
     
@@ -355,7 +355,7 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         httponly=False,  # 前端需要读取
         secure=True,     # 仅HTTPS传输
         samesite="strict",  # 最严格的同站策略
-        path="/api/auth/admin",  # 限制路径
+        path="/",  # 根路径，确保前端可以读取
         domain=None  # 不设置domain，提高安全性
     )
     
