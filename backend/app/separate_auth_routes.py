@@ -221,22 +221,45 @@ def service_login(
     
     # 返回响应，确保cookie设置生效
     from fastapi.responses import JSONResponse
-    return JSONResponse(
-        content={
-            "message": "客服登录成功",
-            "service": {
-                "id": service.id,
-                "name": service.name,
-                "email": service.email,
-                "avg_rating": service.avg_rating,
-                "total_ratings": service.total_ratings,
-                "is_online": bool(service.is_online),
-                "created_at": service.created_at.isoformat() if service.created_at else None
-            },
-            "session_id": session_info.session_id
+    
+    # 创建响应内容
+    content = {
+        "message": "客服登录成功",
+        "service": {
+            "id": service.id,
+            "name": service.name,
+            "email": service.email,
+            "avg_rating": service.avg_rating,
+            "total_ratings": service.total_ratings,
+            "is_online": bool(service.is_online),
+            "created_at": service.created_at.isoformat() if service.created_at else None
         },
-        headers=dict(response.headers)
-    )
+        "session_id": session_info.session_id
+    }
+    
+    # 创建JSONResponse并复制cookie
+    json_response = JSONResponse(content=content)
+    
+    # 复制所有cookie到新响应
+    for cookie in response.cookies:
+        json_response.set_cookie(
+            key=cookie.key,
+            value=cookie.value,
+            max_age=cookie.get("max_age"),
+            expires=cookie.get("expires"),
+            path=cookie.get("path"),
+            domain=cookie.get("domain"),
+            secure=cookie.get("secure"),
+            httponly=cookie.get("httponly"),
+            samesite=cookie.get("samesite")
+        )
+    
+    # 复制其他headers
+    for key, value in response.headers.items():
+        if key.lower() not in ['content-length', 'content-type']:
+            json_response.headers[key] = value
+    
+    return json_response
 
 @router.post("/service/refresh", response_model=Dict[str, Any])
 def service_refresh(
