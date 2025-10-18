@@ -163,7 +163,7 @@ export class TimeHandlerV2 {
       } else if (diffInDays < 7) {
         return `${diffInDays}天前`;
       } else {
-        return messageTime.format('MM/DD');
+        return messageTimeUK.format('MM/DD');
       }
     } catch (error) {
       console.error('最后消息时间格式化错误:', error);
