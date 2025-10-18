@@ -103,9 +103,13 @@ const TaskDetail: React.FC = () => {
              (task.status === 'open' || task.status === 'taken');
     }
     
-    // 登录用户：任务相关的人（发布者、接收者）可以查看所有状态的任务
-    const isTaskRelated = user.id === task.poster_id || user.id === task.taker_id;
-    if (isTaskRelated) {
+    // 任务发布者可以查看自己发布的所有任务，无论任务等级如何
+    if (user.id === task.poster_id) {
+      return true;
+    }
+    
+    // 任务接受者可以查看自己接受的任务，无论任务等级如何
+    if (user.id === task.taker_id) {
       return true;
     }
     

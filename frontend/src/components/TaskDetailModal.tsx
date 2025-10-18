@@ -153,6 +153,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       return task.task_level === 'normal';
     }
     
+    // 任务发布者可以查看自己发布的所有任务，无论任务等级如何
+    if (user.id === task.poster_id) {
+      return true;
+    }
+    
+    // 任务接受者可以查看自己接受的任务，无论任务等级如何
+    if (user.id === task.taker_id) {
+      return true;
+    }
+    
+    // 其他用户需要满足等级要求
     const levelHierarchy = { 'normal': 1, 'vip': 2, 'super': 3 };
     const userLevelValue = levelHierarchy[user.user_level as keyof typeof levelHierarchy] || 1;
     const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
