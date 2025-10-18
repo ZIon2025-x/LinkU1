@@ -14,7 +14,7 @@ from app.security import verify_token
 from app.csrf import sync_csrf_cookie_bearer, sync_cookie_bearer_readonly
 
 # 用户认证依赖
-def get_current_user_secure_sync(
+def get_current_user_secure_sync_csrf(
     request: Request,
     db: Session = Depends(get_sync_db),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer_readonly),

@@ -4,14 +4,14 @@
 
 from fastapi import APIRouter, Request, Depends, HTTPException, status
 from app.security_monitoring import security_monitor, get_client_ip
-from app.deps import get_current_user_secure_sync
+from app.deps import get_current_user_secure_sync_csrf
 from typing import Dict, Any
 
 router = APIRouter(prefix="/api/security", tags=["安全监控"])
 
 @router.get("/stats")
 async def get_security_stats(
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取安全统计信息（管理员功能）
@@ -38,7 +38,7 @@ async def get_security_stats(
 async def block_ip_address(
     ip_address: str,
     reason: str,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     阻止IP地址（管理员功能）
@@ -65,7 +65,7 @@ async def block_ip_address(
 async def unblock_ip_address(
     ip_address: str,
     reason: str,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     解除IP阻止（管理员功能）
@@ -91,7 +91,7 @@ async def unblock_ip_address(
 @router.get("/my-ip")
 async def get_my_ip_address(
     request: Request,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取当前用户的IP地址信息
@@ -120,7 +120,7 @@ async def get_my_ip_address(
 @router.get("/logs")
 async def get_security_logs(
     limit: int = 100,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取安全日志（管理员功能）
@@ -176,7 +176,7 @@ async def test_security_event(
     event_type: str,
     details: str,
     request: Request,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     测试安全事件记录（管理员功能）

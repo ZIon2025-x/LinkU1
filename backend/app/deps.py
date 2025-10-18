@@ -49,7 +49,7 @@ async def get_async_db_dependency():
 
 
 # 通用会话认证函数
-def authenticate_with_session(request: Request, db: Session) -> Optional[models.User]:
+def authenticate_with_session(request: Request, db: Session = Depends(get_sync_db)) -> Optional[models.User]:
     """使用会话认证获取用户"""
     from app.secure_auth import validate_session
     
@@ -202,6 +202,31 @@ def check_user_status(current_user=Depends(authenticate_with_session)):
     ):
         raise HTTPException(status_code=403, detail="User is suspended.")
     return current_user
+
+def get_current_user_optional(
+    request: Request,
+    db: Session = Depends(get_sync_db),
+) -> Optional[models.User]:
+    """获取当前用户（可选，不强制认证）"""
+    try:
+        from app.secure_auth import validate_session
+        
+        session = validate_session(request)
+        if session:
+            user = crud.get_user_by_id(db, session.user_id)
+            if user:
+                # 检查用户状态
+                if hasattr(user, "is_suspended") and user.is_suspended:
+                    return None
+
+                if hasattr(user, "is_banned") and user.is_banned:
+                    return None
+                
+                return user
+    except Exception as e:
+        logger.warning(f"可选用户认证失败: {e}")
+    
+    return None
 
 
 def check_super_admin(current_user=Depends(check_user_status)):

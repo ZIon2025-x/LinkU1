@@ -44,7 +44,7 @@ from app.deps import (
     get_current_admin_user,
     get_current_customer_service,
     get_current_customer_service_or_user,
-    get_current_user_secure_sync,
+    get_current_user_secure_sync_csrf,
     get_current_user_optional,
     get_db,
 )
@@ -383,7 +383,7 @@ def admin_login(login_data: schemas.AdminUserLogin, db: Session = Depends(get_db
 
 @router.get("/user/info")
 def get_user_info(
-    current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """获取当前用户信息"""
     return {
@@ -726,7 +726,7 @@ def reset_password(
 @router.patch("/profile/timezone")
 def update_timezone(
     timezone: str = Body(...),
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """更新用户时区"""
@@ -1340,7 +1340,7 @@ def get_my_tasks(
 
 @router.get("/profile/{user_id}")
 def user_profile(
-    user_id: str, current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    user_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     # 尝试直接查找
     user = crud.get_user_by_id(db, user_id)
@@ -1462,7 +1462,7 @@ class AvatarUpdate(BaseModel):
 @router.patch("/profile/avatar")
 def update_avatar(
     data: AvatarUpdate,
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     logger.info(f"[DEBUG] 头像更新请求 - 用户ID: {current_user.id}, 新头像: {data.avatar}")
@@ -1611,7 +1611,7 @@ def send_message_api(
 @router.get("/messages/history/{user_id}", response_model=list[schemas.MessageOut])
 def get_chat_history_api(
     user_id: str,
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
     limit: int = 20,  # 增加默认加载数量
     offset: int = 0,
@@ -2239,7 +2239,7 @@ def admin_get_payments(
 
 
 @router.get("/contacts")
-def get_contacts(current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)):
+def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)):
     try:
         from app.models import Message, User
         
@@ -2353,7 +2353,7 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync), db: Session
 @router.get("/users/shared-tasks/{other_user_id}")
 def get_shared_tasks(
     other_user_id: str,
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """获取当前用户与指定用户之间的共同任务"""
@@ -2473,7 +2473,7 @@ def admin_review_cancel_request(
 
 @router.post("/assign_customer_service")
 def assign_customer_service(
-    current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     try:
         # 随机分配一个在线客服
@@ -2783,7 +2783,7 @@ def send_customer_service_message(
 # 结束对话和评分相关接口
 @router.post("/customer-service/end-chat/{chat_id}")
 def end_customer_service_chat(
-    chat_id: str, current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """结束客服对话"""
     # 验证chat_id是否存在且用户有权限
@@ -2811,7 +2811,7 @@ def end_customer_service_chat(
 def rate_customer_service(
     chat_id: str,
     rating_data: schemas.CustomerServiceRating,
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """用户对客服评分"""
@@ -2874,7 +2874,7 @@ def rate_customer_service(
 
 @router.get("/customer-service/my-chats")
 def get_my_customer_service_chats(
-    current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """获取用户的客服对话历史"""
     chats = crud.get_user_customer_service_chats(db, current_user.id)
@@ -2883,7 +2883,7 @@ def get_my_customer_service_chats(
 
 @router.get("/customer-service/chat/{chat_id}/messages")
 def get_customer_service_chat_messages(
-    chat_id: str, current_user=Depends(get_current_user_secure_sync), db: Session = Depends(get_db)
+    chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     """获取客服对话消息（用户端）"""
     # 验证chat_id是否属于当前用户
@@ -2901,7 +2901,7 @@ def get_customer_service_chat_messages(
 def send_customer_service_chat_message(
     chat_id: str,
     message_data: dict = Body(...),
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """用户发送消息到客服对话"""
@@ -3931,7 +3931,7 @@ MAX_FILE_SIZE_LARGE = 10 * 1024 * 1024  # 10MB
 @router.post("/upload/image")
 async def upload_image(
     image: UploadFile = File(...), 
-    current_user: models.User = Depends(get_current_user_secure_sync),
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
@@ -3957,7 +3957,7 @@ async def upload_image(
 @router.post("/refresh-image-url")
 async def refresh_image_url(
     request: dict, 
-    current_user: models.User = Depends(get_current_user_secure_sync)
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     刷新过期的图片URL
@@ -4022,7 +4022,7 @@ async def get_private_image(
 @router.post("/messages/generate-image-url")
 def generate_image_url(
     request_data: dict,
-    current_user=Depends(get_current_user_secure_sync),
+    current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
@@ -4156,7 +4156,7 @@ def generate_image_url(
 
 @router.post("/upload/file")
 async def upload_file(
-    file: UploadFile = File(...), current_user: models.User = Depends(get_current_user_secure_sync)
+    file: UploadFile = File(...), current_user: models.User = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     上传文件

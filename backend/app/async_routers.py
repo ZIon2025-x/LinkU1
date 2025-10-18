@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from app import async_crud, models, schemas
 from app.database import check_database_health, get_pool_status
-from app.deps import get_async_db_dependency, get_current_user_async, get_current_user_secure
+from app.deps import get_async_db_dependency
 from app.csrf import csrf_cookie_bearer
 from app.security import cookie_bearer
 from app.rate_limiting import rate_limit
@@ -25,10 +25,43 @@ logger = logging.getLogger(__name__)
 async_router = APIRouter()
 
 
+# 创建任务专用的认证依赖（支持Cookie + CSRF保护）
+async def get_current_user_secure_async_csrf(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(csrf_cookie_bearer),
+) -> models.User:
+    """CSRF保护的安全用户认证（异步版本）"""
+    # 首先尝试使用会话认证
+    from app.secure_auth import validate_session
+    
+    session = validate_session(request)
+    if session:
+        user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
+        if user:
+            # 检查用户状态
+            if hasattr(user, "is_suspended") and user.is_suspended:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
+                )
+
+            if hasattr(user, "is_banned") and user.is_banned:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
+                )
+            
+            return user
+    
+    # 如果会话认证失败，抛出认证错误
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
+    )
+
+
 # 异步用户路由
 @async_router.get("/users/me", response_model=schemas.UserOut)
 async def get_current_user_info(
-    current_user: models.User = Depends(get_current_user_secure),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
 ):
     """获取当前用户信息（异步版本）"""
     return current_user
@@ -106,41 +139,6 @@ async def get_task_by_id(
         raise HTTPException(status_code=404, detail="Task not found")
     return task
 
-
-# 创建任务专用的认证依赖（支持Cookie，暂时不需要CSRF保护）
-# 旧的JWT认证函数已删除，请使用新的会话认证系统
-
-
-async def get_current_user_secure_async_csrf(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(csrf_cookie_bearer),
-) -> models.User:
-    """CSRF保护的安全用户认证（异步版本）"""
-    # 首先尝试使用会话认证
-    from app.secure_auth import validate_session
-    
-    session = validate_session(request)
-    if session:
-        user = await async_crud.async_user_crud.get_user_by_id(db, session.user_id)
-        if user:
-            # 检查用户状态
-            if hasattr(user, "is_suspended") and user.is_suspended:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-                )
-
-            if hasattr(user, "is_banned") and user.is_banned:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-                )
-            
-            return user
-    
-    # 如果会话认证失败，抛出认证错误
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
-    )
 
 # 简化的测试路由
 @async_router.get("/test")
@@ -496,7 +494,7 @@ async def get_user_tasks(
 @async_router.post("/messages", response_model=schemas.MessageOut)
 async def send_message(
     message: schemas.MessageCreate,
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """发送消息（异步版本）"""
@@ -514,7 +512,7 @@ async def send_message(
 async def get_messages(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取用户的消息（异步版本）"""
@@ -531,7 +529,7 @@ async def get_conversation_messages(
     user_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取与指定用户的对话消息（异步版本）"""
@@ -562,7 +560,7 @@ async def get_notifications(
 )
 async def mark_notification_as_read(
     notification_id: int,
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """标记通知为已读（异步版本）"""
@@ -765,7 +763,7 @@ async def confirm_task_completion_async(
 @async_router.post("/notifications/batch")
 async def batch_create_notifications(
     notifications: List[schemas.NotificationCreate],
-    current_user: models.User = Depends(get_current_user_async),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """批量创建通知（异步版本）"""

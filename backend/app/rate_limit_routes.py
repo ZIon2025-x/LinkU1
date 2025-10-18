@@ -4,14 +4,14 @@
 
 from fastapi import APIRouter, Request, Depends
 from app.rate_limiting import get_rate_limit_info, RATE_LIMITS
-from app.deps import get_current_user_secure_sync
+from app.deps import get_current_user_secure_sync_csrf
 
 router = APIRouter(prefix="/api/rate-limit", tags=["速率限制"])
 
 @router.get("/info")
 async def get_rate_limit_status(
     request: Request,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取当前用户的速率限制状态
@@ -39,7 +39,7 @@ async def get_rate_limit_status(
 async def get_specific_rate_limit_info(
     rate_type: str,
     request: Request,
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取特定操作的速率限制状态
@@ -68,7 +68,7 @@ async def get_specific_rate_limit_info(
 
 @router.get("/config")
 async def get_rate_limit_config(
-    current_user = Depends(get_current_user_secure_sync)
+    current_user = Depends(get_current_user_secure_sync_csrf)
 ):
     """
     获取所有速率限制配置（管理员功能）
