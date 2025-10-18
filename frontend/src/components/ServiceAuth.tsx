@@ -34,6 +34,16 @@ const ServiceAuth: React.FC = () => {
 
   const checkServiceAuthStatus = async () => {
     try {
+      // 首先检查是否有客服Cookie标识
+      const hasServiceCookie = document.cookie.includes('service_authenticated=true');
+      
+      if (!hasServiceCookie) {
+        console.log('没有检测到客服Cookie标识，直接设置为未登录');
+        setIsLoggedIn(false);
+        setServiceProfile(null);
+        return;
+      }
+
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/service/profile`, {
         credentials: 'include'
       });

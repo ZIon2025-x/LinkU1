@@ -39,34 +39,19 @@ export const useAuth = () => {
       console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
       console.log('当前Cookie:', document.cookie);
       
-      // 如果检测到任何Cookie，优先使用该角色
-      if (hasAdminCookie || hasServiceCookie || hasUserCookie) {
-        console.log('检测到Cookie标识，跳过通用检查');
-      }
-
-      // 按优先级检查：管理员 > 客服 > 用户
+      // 根据Cookie标识只检查对应的角色，避免跨角色检查
       const checks = [];
       
       if (hasAdminCookie) {
         checks.push({ role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' });
-      }
-      if (hasServiceCookie) {
+      } else if (hasServiceCookie) {
         checks.push({ role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' });
-      }
-      if (hasUserCookie) {
+      } else if (hasUserCookie) {
         checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
-      }
-
-      // 如果没有检测到任何Cookie标识，则按顺序检查所有角色
-      if (checks.length === 0) {
-        console.log('没有检测到Cookie标识，按顺序检查所有角色');
-        checks.push(
-          { role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' },
-          { role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' },
-          { role: 'user' as AuthRole, endpoint: '/api/users/profile/me' }
-        );
       } else {
-        console.log('检测到Cookie标识，只检查相关角色:', checks.map(c => c.role));
+        // 如果没有检测到任何Cookie标识，默认只检查用户认证
+        console.log('没有检测到Cookie标识，只检查用户认证');
+        checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
       }
 
       console.log('认证检查列表:', checks);

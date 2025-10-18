@@ -35,6 +35,16 @@ const AdminAuth: React.FC = () => {
 
   const checkAdminAuthStatus = async () => {
     try {
+      // 首先检查是否有管理员Cookie标识
+      const hasAdminCookie = document.cookie.includes('admin_authenticated=true');
+      
+      if (!hasAdminCookie) {
+        console.log('没有检测到管理员Cookie标识，直接设置为未登录');
+        setIsLoggedIn(false);
+        setAdminProfile(null);
+        return;
+      }
+
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/admin/profile`, {
         credentials: 'include'
       });
