@@ -316,9 +316,12 @@ def resend_verification_email(
 
 @router.post("/customer-service/login")
 def customer_service_login(
-    login_data: schemas.CustomerServiceLogin, db: Session = Depends(get_db)
+    request: Request,
+    response: Response,
+    login_data: schemas.CustomerServiceLogin, 
+    db: Session = Depends(get_db)
 ):
-    """客服登录端点 - 支持ID或邮箱登录"""
+    """客服登录端点 - 支持ID或邮箱登录，使用Cookie会话认证"""
     # 支持ID或邮箱登录
     username = login_data.cs_id  # 这里cs_id字段实际是用户名（可能是ID或邮箱）
     cs = None
@@ -342,27 +345,40 @@ def customer_service_login(
     if not cs:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    # 创建客服专用的token
-    access_token = create_access_token(
-        {"sub": cs.id, "cs_id": cs.id, "user_type": "customer_service"}
-    )
+    # 使用新的客服会话认证系统
+    from app.service_auth import create_service_session, create_service_session_cookie
+    
+    # 创建客服会话
+    session_id = create_service_session(cs.id, request)
+    if not session_id:
+        raise HTTPException(status_code=500, detail="Failed to create service session")
+    
+    # 设置客服会话Cookie
+    response = create_service_session_cookie(response, session_id)
+    
+    # 更新客服在线状态
+    crud.update_customer_service_online_status(db, cs.id, True)
 
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "cs_info": {
-            "id": cs.id,  # 数据库已经存储格式化ID
+        "message": "客服登录成功",
+        "service": {
+            "id": cs.id,
             "name": cs.name,
             "email": cs.email,
-            "is_online": cs.is_online,
+            "is_online": True,
             "user_type": "customer_service",
         },
     }
 
 
 @router.post("/admin/login")
-def admin_login(login_data: schemas.AdminUserLogin, db: Session = Depends(get_db)):
-    """后台管理员登录端点"""
+def admin_login(
+    request: Request,
+    response: Response,
+    login_data: schemas.AdminUserLogin, 
+    db: Session = Depends(get_db)
+):
+    """后台管理员登录端点，使用Cookie会话认证"""
     admin = crud.authenticate_admin_user(db, login_data.username, login_data.password)
     if not admin:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
@@ -370,16 +386,21 @@ def admin_login(login_data: schemas.AdminUserLogin, db: Session = Depends(get_db
     # 更新最后登录时间
     crud.update_admin_last_login(db, admin.id)
 
-    # 创建管理员专用的token
-    access_token = create_access_token(
-        {"sub": admin.username, "admin_id": admin.id, "user_type": "admin"}
-    )
+    # 使用新的管理员会话认证系统
+    from app.admin_auth import create_admin_session, create_admin_session_cookie
+    
+    # 创建管理员会话
+    session_id = create_admin_session(admin.id, request)
+    if not session_id:
+        raise HTTPException(status_code=500, detail="Failed to create admin session")
+    
+    # 设置管理员会话Cookie
+    response = create_admin_session_cookie(response, session_id)
 
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "admin_info": {
-            "id": admin.id,  # 数据库已经存储格式化ID
+        "message": "管理员登录成功",
+        "admin": {
+            "id": admin.id,
             "name": admin.name,
             "username": admin.username,
             "email": admin.email,

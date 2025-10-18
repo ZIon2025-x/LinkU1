@@ -30,21 +30,50 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, loading: true }));
 
     try {
+      // 首先检查Cookie标识，避免不必要的请求
+      const hasAdminCookie = document.cookie.includes('admin_authenticated=true');
+      const hasServiceCookie = document.cookie.includes('service_authenticated=true');
+      const hasUserCookie = document.cookie.includes('user_authenticated=true') || 
+                           document.cookie.includes('access_token=');
+
+      console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
+
       // 按优先级检查：管理员 > 客服 > 用户
-      const checks = [
-        { role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' },
-        { role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' },
-        { role: 'user' as AuthRole, endpoint: '/api/users/profile/me' }
-      ];
+      const checks = [];
+      
+      if (hasAdminCookie) {
+        checks.push({ role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' });
+      }
+      if (hasServiceCookie) {
+        checks.push({ role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' });
+      }
+      if (hasUserCookie) {
+        checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
+      }
+
+      // 如果没有Cookie标识，则按顺序检查所有角色
+      if (checks.length === 0) {
+        checks.push(
+          { role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' },
+          { role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' },
+          { role: 'user' as AuthRole, endpoint: '/api/users/profile/me' }
+        );
+      }
+
+      console.log('认证检查列表:', checks);
 
       for (const check of checks) {
         try {
+          console.log(`检查${check.role}认证状态:`, check.endpoint);
           const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${check.endpoint}`, {
             credentials: 'include'
           });
 
+          console.log(`${check.role}认证响应:`, response.status);
+
           if (response.ok) {
             const userData = await response.json();
+            console.log(`${check.role}认证成功:`, userData);
             setAuthState({
               isAuthenticated: true,
               role: check.role,
@@ -59,6 +88,7 @@ export const useAuth = () => {
       }
 
       // 如果所有检查都失败
+      console.log('所有认证检查都失败');
       setAuthState({
         isAuthenticated: false,
         role: null,
@@ -87,7 +117,7 @@ export const useAuth = () => {
           endpoint = '/api/auth/admin/login';
           break;
         case 'service':
-          endpoint = '/api/auth/service/login';
+          endpoint = '/api/customer-service/login';
           break;
         case 'user':
           endpoint = '/api/users/login';
@@ -107,12 +137,30 @@ export const useAuth = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('登录成功，响应数据:', data);
+        
+        // 根据角色获取用户数据
+        let userData = null;
+        if (role === 'admin' && data.admin) {
+          userData = data.admin;
+        } else if (role === 'service' && data.service) {
+          userData = data.service;
+        } else if (role === 'user' && data.user) {
+          userData = data.user;
+        }
+        
         setAuthState({
           isAuthenticated: true,
           role,
-          user: data.user || data.admin || data.service,
+          user: userData,
           loading: false
         });
+        
+        // 登录成功后重新检查认证状态
+        setTimeout(() => {
+          checkAuth();
+        }, 100);
+        
         return true;
       } else {
         const errorData = await response.json();
