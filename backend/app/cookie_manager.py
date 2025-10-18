@@ -205,6 +205,18 @@ class CookieManager:
             domain=cookie_domain
         )
         
+        # 设置用户身份标识Cookie（前端需要检测）
+        response.set_cookie(
+            key="user_authenticated",
+            value="true",
+            max_age=refresh_max_age,
+            httponly=False,  # 前端需要访问
+            secure=secure_value,
+            samesite=samesite_value,
+            path=cookie_path,
+            domain=cookie_domain
+        )
+        
         # 移动端不再需要额外的备用Cookie，主要session_id Cookie已经工作正常
         if is_mobile:
             logger.info(f"移动端Cookie设置完成: 使用主要session_id Cookie")

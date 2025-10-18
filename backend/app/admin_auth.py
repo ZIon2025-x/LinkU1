@@ -340,16 +340,24 @@ def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
 
 def create_admin_session_cookie(response: Response, session_id: str) -> Response:
     """创建管理员会话Cookie（支持跨域）"""
+    from app.config import Config
+    
+    # 根据环境设置domain
+    cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION else None
+    
+    # 确保samesite值有效
+    samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
+    
     # 设置管理员会话Cookie - 支持跨域
     response.set_cookie(
         key="admin_session_id",
         value=session_id,
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,  # 8小时
         httponly=True,  # 防止XSS攻击
-        secure=True,    # 仅HTTPS传输
-        samesite="lax",  # 支持跨域请求
+        secure=Config.COOKIE_SECURE,    # 根据环境设置
+        samesite=samesite_value,  # 根据环境设置
         path="/",  # 根路径，确保前端可以读取
-        domain=".link2ur.com"  # 支持子域名
+        domain=cookie_domain  # 根据环境设置
     )
     
     # 设置管理员身份标识Cookie - 支持跨域
@@ -358,10 +366,10 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         value="true",
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
-        secure=True,     # 仅HTTPS传输
-        samesite="lax",  # 支持跨域请求
+        secure=Config.COOKIE_SECURE,     # 根据环境设置
+        samesite=samesite_value,  # 根据环境设置
         path="/",  # 根路径，确保前端可以读取
-        domain=".link2ur.com"  # 支持子域名
+        domain=cookie_domain  # 根据环境设置
     )
     
     return response
