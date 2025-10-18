@@ -289,6 +289,11 @@ class AdminAuthManager:
             for session_id in expired_sessions:
                 del admin_active_sessions[session_id]
 
+def create_admin_session(admin_id: str, request: Request) -> str:
+    """创建管理员会话并返回会话ID"""
+    session_info = AdminAuthManager.create_session(admin_id, request)
+    return session_info.session_id
+
 def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
     """验证管理员会话（最高安全等级）"""
     logger.info(f"[ADMIN_AUTH] validate_admin_session - URL: {request.url}")

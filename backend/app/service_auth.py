@@ -289,6 +289,11 @@ class ServiceAuthManager:
             for session_id in expired_sessions:
                 del service_active_sessions[session_id]
 
+def create_service_session(service_id: str, request: Request) -> str:
+    """创建客服会话并返回会话ID"""
+    session_info = ServiceAuthManager.create_session(service_id, request)
+    return session_info.session_id
+
 def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     """验证客服会话（最高安全等级）"""
     logger.info(f"[SERVICE_AUTH] validate_service_session - URL: {request.url}")
