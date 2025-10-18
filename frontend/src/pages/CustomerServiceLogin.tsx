@@ -34,12 +34,16 @@ const CustomerServiceLogin: React.FC = () => {
       
       // 等待一下确保Cookie已设置，然后跳转到客服管理页面
       setTimeout(() => {
+        // 检查cookie是否已设置
+        console.log('登录后检查Cookie:', document.cookie);
+        console.log('service_authenticated存在:', document.cookie.includes('service_authenticated=true'));
+        
         // 先尝试手动触发认证检查
         if (window.location.pathname === '/customer-service/login') {
           // 如果还在登录页面，说明需要跳转
           window.location.href = '/customer-service';
         }
-      }, 500);
+      }, 1000);
     } catch (error: any) {
       let errorMsg = '登录失败';
       if (error?.response?.data?.detail) {

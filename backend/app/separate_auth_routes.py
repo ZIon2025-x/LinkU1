@@ -219,19 +219,24 @@ def service_login(
     
     logger.info(f"[SERVICE_AUTH] 客服登录成功: {service.id}")
     
-    return {
-        "message": "客服登录成功",
-        "service": {
-            "id": service.id,
-            "name": service.name,
-            "email": service.email,
-            "avg_rating": service.avg_rating,
-            "total_ratings": service.total_ratings,
-            "is_online": bool(service.is_online),
-            "created_at": service.created_at.isoformat() if service.created_at else None
+    # 返回响应，确保cookie设置生效
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content={
+            "message": "客服登录成功",
+            "service": {
+                "id": service.id,
+                "name": service.name,
+                "email": service.email,
+                "avg_rating": service.avg_rating,
+                "total_ratings": service.total_ratings,
+                "is_online": bool(service.is_online),
+                "created_at": service.created_at.isoformat() if service.created_at else None
+            },
+            "session_id": session_info.session_id
         },
-        "session_id": session_info.session_id
-    }
+        headers=dict(response.headers)
+    )
 
 @router.post("/service/refresh", response_model=Dict[str, Any])
 def service_refresh(
