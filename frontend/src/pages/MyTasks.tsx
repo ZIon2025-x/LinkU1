@@ -102,6 +102,18 @@ const MyTasks: React.FC = () => {
     }
   }, [user]);
 
+  // 页面重新获得焦点时刷新任务列表
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) {
+        loadTasks(true); // 强制刷新
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user]);
+
   // 加载通知和系统设置
   const loadNotificationsAndSettings = async () => {
     if (user) {

@@ -41,7 +41,7 @@ const PublishTask: React.FC = () => {
         is_public: form.is_public,
       });
       setSuccess(t('publishTask.publishSuccess'));
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => navigate('/my-tasks'), 1500);
     } catch (err: any) {
       let errorMsg = t('publishTask.publishError');
       if (err?.response?.data?.detail) {
