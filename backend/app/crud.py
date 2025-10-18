@@ -946,16 +946,14 @@ def delete_task_safely(db: Session, task_id: int):
 
 
 def cancel_expired_tasks(db: Session):
-    """自动取消已过期的未接受任务 - 使用英国时间进行比较"""
+    """自动取消已过期的未接受任务 - 使用UTC时间进行比较"""
     from datetime import datetime, timedelta, timezone
-
-    # 获取当前英国时间 (UTC+0)
-    import pytz
+    from app.time_utils_v2 import TimeHandlerV2
 
     from app.models import Task, User
 
-    uk_tz = pytz.timezone("Europe/London")
-    now_local = get_uk_time()
+    # 获取当前UTC时间
+    now_utc = TimeHandlerV2.get_utc_now()
 
     # 查找所有状态为'open'的任务
     open_tasks = db.query(Task).filter(Task.status == "open").all()
@@ -963,15 +961,15 @@ def cancel_expired_tasks(db: Session):
     cancelled_count = 0
     for task in open_tasks:
         try:
-            # 数据库中的截止时间是naive datetime，需要转换为英国时间进行比较
+            # 数据库中的deadline存储的是UTC时间，直接比较
             if task.deadline.tzinfo is None:
-                # 如果deadline没有时区信息，假设它是英国时间
-                task_deadline_uk = uk_tz.localize(task.deadline)
+                # 如果deadline没有时区信息，假设它是UTC时间
+                task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
             else:
-                # 如果deadline有时区信息，转换为英国时间
-                task_deadline_uk = task.deadline.astimezone(uk_tz)
+                # 如果deadline有时区信息，转换为UTC时间
+                task_deadline_utc = task.deadline.astimezone(timezone.utc)
 
-            if now_local > task_deadline_uk:
+            if now_utc > task_deadline_utc:
                 # 将任务状态更新为已取消
                 task.status = "cancelled"
 
@@ -981,7 +979,7 @@ def cancel_expired_tasks(db: Session):
                     task.id,
                     task.poster_id,
                     "cancelled",
-                    "任务因超过截止日期自动取消（基于UTC时间）",
+                    "任务因超过截止日期自动取消",
                 )
 
                 # 创建通知给任务发布者
@@ -990,7 +988,7 @@ def cancel_expired_tasks(db: Session):
                     task.poster_id,
                     "task_cancelled",
                     "任务自动取消",
-                    f'您的任务"{task.title}"因超过截止日期已自动取消（基于UTC时间）',
+                    f'您的任务"{task.title}"因超过截止日期已自动取消',
                     task.id,
                 )
 
