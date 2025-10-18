@@ -33,6 +33,31 @@ export class TimeHandlerV2 {
   }
 
   /**
+   * 检查是否为夏令时（DST）
+   * @param dayjsTime dayjs时间对象
+   * @param timezone 时区
+   */
+  private static isDST(dayjsTime: any, timezone: string): boolean {
+    try {
+      if (timezone === 'Europe/London') {
+        // 对于英国时区，通过UTC偏移量判断
+        const utcOffset = dayjsTime.utcOffset();
+        return utcOffset === 60; // BST是UTC+1，即60分钟偏移
+      }
+      
+      // 对于其他时区，使用dayjs的时区信息
+      const utcOffset = dayjsTime.utcOffset();
+      const standardOffset = dayjsTime.tz(timezone).utcOffset();
+      
+      // 如果当前偏移量大于标准偏移量，说明是夏令时
+      return utcOffset > standardOffset;
+    } catch (error) {
+      console.warn('DST检测失败:', error);
+      return false;
+    }
+  }
+
+  /**
    * 格式化UTC时间为用户本地时间显示
    * @param utcTimeString UTC时间字符串
    * @param format 显示格式，默认 'YYYY/MM/DD HH:mm:ss'
@@ -61,9 +86,7 @@ export class TimeHandlerV2 {
       
       // 如果是英国时区，检查DST并添加时区标识
       if (tz === 'Europe/London') {
-        // 通过比较UTC偏移量来判断是否DST
-        const utcOffset = localTime.utcOffset();
-        const isDST = utcOffset === 60; // BST是UTC+1，即60分钟偏移
+        const isDST = this.isDST(localTime, tz);
         const tzName = isDST ? 'BST' : 'GMT';
         return `${localTime.format(format)} (${tzName})`;
       }
@@ -143,8 +166,7 @@ export class TimeHandlerV2 {
       const localTime = utcTime.tz(tz);
       
       // 检查是否夏令时
-      const utcOffset = localTime.utcOffset();
-      const isDST = utcOffset === 60; // BST是UTC+1，即60分钟偏移
+      const isDST = this.isDST(localTime, tz);
       let tzDisplay;
       
       if (tz === 'Europe/London') {

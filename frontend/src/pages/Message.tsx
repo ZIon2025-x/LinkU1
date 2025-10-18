@@ -154,25 +154,7 @@ const isMobileDevice = () => {
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// 时区检测和转换工具函数
-const getUserTimezone = () => {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-};
-
-const formatTimeWithUserTimezone = (time: string | Date, serverTimezone: string = 'Europe/London') => {
-  const userTimezone = getUserTimezone();
-  return dayjs(time).tz(serverTimezone).tz(userTimezone).format('YYYY/MM/DD HH:mm:ss');
-};
-
-const getTimezoneInfo = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/users/timezone/info`);
-    return await response.json();
-  } catch (error) {
-    console.error('获取时区信息失败:', error);
-    return null;
-  }
-};
+// 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
 
 interface Message {
   id?: number;
@@ -293,7 +275,12 @@ const MessagePage: React.FC = () => {
 
   // 格式化时间为用户时区 - 使用新的统一时间处理系统
   const formatTime = (timeString: string) => {
-    return TimeHandlerV2.formatDetailedTime(timeString, userTimezone);
+    try {
+      return TimeHandlerV2.formatDetailedTime(timeString, userTimezone);
+    } catch (error) {
+      console.error('时间格式化错误:', error);
+      return timeString;
+    }
   };
 
 
@@ -762,43 +749,7 @@ const MessagePage: React.FC = () => {
   };
 
   // 获取用户时区
-  const getUserTimezone = () => {
-    try {
-      // 使用浏览器API获取时区
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      console.log('检测到用户时区:', timezone);
-      return timezone;
-    } catch (error) {
-      console.warn('无法检测时区，使用默认值:', error);
-      return 'Europe/London'; // 默认英国时区
-    }
-  };
-
-  // 格式化时间用于显示
-  const formatTimeForDisplay = (utcTimeString: string, timezone: string) => {
-    try {
-      const utcTime = new Date(utcTimeString);
-      const localTime = new Intl.DateTimeFormat('en-GB', {
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).format(utcTime);
-      
-      // 检查是否夏令时
-      const isDST = utcTime.toLocaleString('en-GB', { timeZone: timezone }).includes('BST');
-      const tzDisplay = timezone === 'Europe/London' ? (isDST ? 'BST' : 'GMT') : timezone;
-      
-      return `${localTime} (${tzDisplay})`;
-    } catch (error) {
-      console.error('时间格式化错误:', error);
-      return utcTimeString;
-    }
-  };
+  // 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
 
   // 发送消息
   const handleSend = async () => {
@@ -829,7 +780,7 @@ const MessagePage: React.FC = () => {
     const messageId = Date.now() + Math.floor(Math.random() * 1000);
     
     // 获取用户时区
-    const userTimezone = getUserTimezone();
+    const userTimezone = TimeHandlerV2.getUserTimezone();
     
     // 立即添加消息到本地状态以提供即时反馈
     const newMessage = {
@@ -1087,10 +1038,10 @@ const MessagePage: React.FC = () => {
   // 初始化时区信息
   const initializeTimezone = useCallback(async () => {
     try {
-      const detectedTimezone = getUserTimezone();
+      const detectedTimezone = TimeHandlerV2.getUserTimezone();
       setUserTimezone(detectedTimezone);
       
-      const serverTimezoneInfo = await getTimezoneInfo();
+      const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
       if (serverTimezoneInfo) {
         setTimezoneInfo(serverTimezoneInfo);
         console.log('时区信息已加载:', {

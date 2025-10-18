@@ -4,59 +4,14 @@ import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
 import { updateCustomerServiceName, getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 import './CustomerService.css';
 
 // 时区检测和转换工具函数
-const getUserTimezone = () => {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-};
-
-const formatTimeWithUserTimezone = (time: string | Date, serverTimezone: string = 'Europe/London') => {
-  const userTimezone = getUserTimezone();
-  return new Date(time).toLocaleString('zh-CN', {
-    timeZone: userTimezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-};
-
-const getTimezoneInfo = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/api/users/timezone/info');
-    return await response.json();
-  } catch (error) {
-    console.error('获取时区信息失败:', error);
-    return null;
-  }
-};
+// 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
 
 // 英国时间格式化工具函数（回退）
-const formatUKTime = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return '刚刚';
-    }
-    // 转换为英国时间 (UTC+0)
-    return date.toLocaleString('en-GB', {
-      timeZone: 'Europe/London',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }) + ' (英国时间)';
-  } catch (error) {
-    return '刚刚';
-  }
-};
+// 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
 
 // 英国日期格式化工具函数
 const formatUKDate = (dateString: string): string => {
@@ -263,10 +218,10 @@ const CustomerService: React.FC = () => {
   // 初始化时区信息
   const initializeTimezone = async () => {
     try {
-      const detectedTimezone = getUserTimezone();
+      const detectedTimezone = TimeHandlerV2.getUserTimezone();
       setUserTimezone(detectedTimezone);
       
-      const serverTimezoneInfo = await getTimezoneInfo();
+      const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
       if (serverTimezoneInfo) {
         setTimezoneInfo(serverTimezoneInfo);
         console.log('客服页面时区信息已加载:', {
@@ -896,7 +851,7 @@ const CustomerService: React.FC = () => {
     }
 
     const messageContent = inputMessage.trim();
-    const currentTime = userTimezone && timezoneInfo ? formatTimeWithUserTimezone(new Date().toISOString(), timezoneInfo.server_timezone) : formatUKTime(new Date().toISOString());
+    const currentTime = TimeHandlerV2.formatDetailedTime(new Date().toISOString(), userTimezone);
 
     try {
       // 通过WebSocket发送消息
@@ -1668,7 +1623,7 @@ const CustomerService: React.FC = () => {
                           {session.user_name}
                         </div>
                         <div style={{ fontSize: 12, color: '#666' }}>
-                          <span>会话开始: {userTimezone && timezoneInfo ? formatTimeWithUserTimezone(session.created_at, timezoneInfo.server_timezone) : formatUKTime(session.created_at)}</span>
+                          <span>会话开始: {TimeHandlerV2.formatDetailedTime(session.created_at, userTimezone)}</span>
                         </div>
                         {/* 会话状态标签 */}
                         <div style={{ 
@@ -1915,7 +1870,7 @@ const CustomerService: React.FC = () => {
                         color: msg.sender_type === 'system' ? '#999' : (msg.sender_type === 'customer_service' ? 'rgba(255,255,255,0.7)' : '#888'), 
                         marginTop: 4 
                       }}>
-                        {userTimezone && timezoneInfo ? formatTimeWithUserTimezone(msg.created_at, timezoneInfo.server_timezone) : formatUKTime(msg.created_at)}
+                        {TimeHandlerV2.formatDetailedTime(msg.created_at, userTimezone)}
                       </div>
                     </div>
                   </div>
@@ -2020,7 +1975,7 @@ const CustomerService: React.FC = () => {
                     {request.status === 'rejected' && '已拒绝'}
                   </span>
                 </td>
-                <td>{formatUKTime(request.created_at)}</td>
+                <td>{TimeHandlerV2.formatDetailedTime(request.created_at, userTimezone)}</td>
                 <td>
                   {request.status === 'pending' && (
                     <div className="action-buttons">
@@ -2036,7 +1991,7 @@ const CustomerService: React.FC = () => {
                     <div>
                       <div>审核人: {request.admin_id}</div>
                       <div>审核意见: {request.admin_comment || '无'}</div>
-                      <div>审核时间: {request.reviewed_at ? formatUKTime(request.reviewed_at) : '无'}</div>
+                      <div>审核时间: {request.reviewed_at ? TimeHandlerV2.formatDetailedTime(request.reviewed_at, userTimezone) : '无'}</div>
                     </div>
                   )}
                 </td>
@@ -2088,7 +2043,7 @@ const CustomerService: React.FC = () => {
                   border: `1px solid ${message.sender_type === 'admin' ? '#91d5ff' : '#b7eb8f'}`
                 }}>
                   <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
-                    {message.sender_type === 'admin' ? '后台工作人员' : '我'} - {formatUKTime(message.created_at)}
+                    {message.sender_type === 'admin' ? '后台工作人员' : '我'} - {TimeHandlerV2.formatDetailedTime(message.created_at, userTimezone)}
                   </div>
                   <div>{message.content}</div>
                 </div>
@@ -2191,7 +2146,7 @@ const CustomerService: React.FC = () => {
                            request.status === 'completed' ? '已完成' : '已拒绝'}
                         </span>
                       </td>
-                      <td>{formatUKTime(request.created_at)}</td>
+                      <td>{TimeHandlerV2.formatDetailedTime(request.created_at, userTimezone)}</td>
                       <td>
                         <button
                           onClick={() => {
@@ -2521,7 +2476,7 @@ const CustomerService: React.FC = () => {
               <p><strong>任务ID:</strong> {selectedCancelRequest.task_id}</p>
               <p><strong>请求者ID:</strong> {selectedCancelRequest.requester_id}</p>
               <p><strong>取消原因:</strong> {selectedCancelRequest.reason || '无'}</p>
-              <p><strong>请求时间:</strong> {formatUKTime(selectedCancelRequest.created_at)}</p>
+              <p><strong>请求时间:</strong> {TimeHandlerV2.formatDetailedTime(selectedCancelRequest.created_at, userTimezone)}</p>
             </div>
             <textarea
               value={adminComment}

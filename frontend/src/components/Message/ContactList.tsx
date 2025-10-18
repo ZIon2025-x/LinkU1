@@ -55,8 +55,15 @@ const ContactList: React.FC<ContactListProps> = ({
   };
 
   const formatLastMessageTime = (timestamp: string | null) => {
-    // 使用新的统一时间处理系统
-    return TimeHandlerV2.formatLastMessageTime(timestamp);
+    // 使用新的统一时间处理系统，确保正确处理UTC时间
+    if (!timestamp) return '';
+    
+    try {
+      return TimeHandlerV2.formatLastMessageTime(timestamp);
+    } catch (error) {
+      console.error('最后消息时间格式化错误:', error);
+      return '';
+    }
   };
 
   if (loading) {

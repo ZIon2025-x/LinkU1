@@ -40,7 +40,7 @@ const MessageList: React.FC<MessageListProps> = ({
   }, [messages]);
 
   const formatMessageTime = (timestamp: string) => {
-    // 使用新的统一时间处理系统，自动处理DST
+    // 使用新的统一时间处理系统，确保正确处理UTC时间
     try {
       return TimeHandlerV2.formatMessageTime(timestamp, userTimezone);
     } catch (error) {
