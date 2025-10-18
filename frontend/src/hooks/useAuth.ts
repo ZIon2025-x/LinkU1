@@ -168,12 +168,6 @@ export const useAuth = () => {
         // 登录成功后直接设置认证状态，避免重新检查
         console.log('登录成功，设置认证状态:', { role, user: userData });
         
-        // 登录成功后，确保Cookie已设置，然后重新检查认证状态
-        setTimeout(() => {
-          console.log('登录后重新检查认证状态...');
-          checkAuth();
-        }, 2000);
-        
         return true;
       } else {
         const errorData = await response.json();
@@ -225,7 +219,7 @@ export const useAuth = () => {
   // 组件挂载时检查认证状态
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+  }, []); // 只在组件挂载时调用一次
 
   return {
     ...authState,

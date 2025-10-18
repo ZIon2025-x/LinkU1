@@ -18,11 +18,11 @@ const CustomerServiceLogin: React.FC = () => {
 
     try {
       const response = await api.post('/api/cs/login', formData);
-      const { access_token, user } = response.data;
+      const { service } = response.data;
       
-      // 保存token和客服信息
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('userInfo', JSON.stringify(user));
+      // 新的客服登录使用Cookie认证，不需要保存token
+      // 只需要跳转到客服管理页面
+      console.log('客服登录成功:', service);
       
       // 跳转到客服管理页面
       navigate('/customer-service');
