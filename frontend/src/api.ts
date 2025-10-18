@@ -128,25 +128,15 @@ api.interceptors.request.use(async config => {
   const isMobile = isMobileDevice();
   
   if (isMobile) {
-    // 移动端使用Authorization头认证
-    const accessToken = localStorage.getItem('access_token');
-    if (accessToken) {
-      config.headers['Authorization'] = `Bearer ${accessToken}`;
-      console.log('移动端使用Authorization头认证');
+    // 移动端使用X-Session-ID头认证
+    const sessionId = localStorage.getItem('session_id');
+    if (sessionId) {
+      config.headers['X-Session-ID'] = sessionId;
+      console.log('移动端使用X-Session-ID认证');
     }
   } else {
-    // 桌面端优先使用HttpOnly Cookie认证
-    // 只有在移动端或Cookie不可用时才使用localStorage中的session_id
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    if (isMobile) {
-      const sessionId = localStorage.getItem('session_id');
-      if (sessionId) {
-        config.headers['X-Session-ID'] = sessionId;
-        console.log('移动端使用X-Session-ID认证');
-      }
-    } else {
-      console.log('桌面端使用HttpOnly Cookie认证');
-    }
+    // 桌面端使用HttpOnly Cookie认证
+    console.log('桌面端使用HttpOnly Cookie认证');
   }
   
   // 对于写操作，添加CSRF token
@@ -1043,7 +1033,6 @@ export const logout = async () => {
   } finally {
     // 清理localStorage
     localStorage.removeItem('session_id');
-    localStorage.removeItem('access_token'); // 清理移动端token
     localStorage.removeItem('userInfo');
     clearCSRFToken();
     // 清理重试计数器

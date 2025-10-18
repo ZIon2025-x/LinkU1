@@ -45,12 +45,12 @@ class MobileAuthMiddleware:
             logger.info(f"从X-Session-ID头获取session_id: {session_id[:8]}...")
             return session_id
         
-        # 3. 尝试Authorization头
+        # 3. 尝试Authorization头（仅用于移动端JWT认证）
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            session_id = auth_header[7:]
-            logger.info(f"从Authorization头获取session_id: {session_id[:8]}...")
-            return session_id
+            # 这是JWT token，不是session_id，应该通过JWT认证处理
+            logger.info(f"检测到Authorization头，但这是JWT token，不是session_id")
+            # 不将JWT token当作session_id处理
         
         logger.warning("未找到session_id")
         return None

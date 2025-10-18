@@ -446,12 +446,13 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
         if session_id:
             logger.info(f"[DEBUG] 从X-Session-ID头获取session_id: {session_id[:8]}...")
     
-    # 3. 如果还是没有，尝试从Authorization头获取
+    # 3. 如果还是没有，尝试从Authorization头获取（仅用于移动端JWT认证）
     if not session_id:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            session_id = auth_header[7:]  # 移除 "Bearer " 前缀
-            logger.info(f"[DEBUG] 从Authorization头获取session_id: {session_id[:8]}...")
+            # 这是JWT token，不是session_id，应该通过JWT认证处理
+            logger.info(f"[DEBUG] 检测到Authorization头，但这是JWT token，不是session_id")
+            # 不将JWT token当作session_id处理
     
     if not session_id:
         logger.info("[DEBUG] 未找到session_id")

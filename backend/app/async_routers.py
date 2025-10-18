@@ -108,41 +108,7 @@ async def get_task_by_id(
 
 
 # 创建任务专用的认证依赖（支持Cookie，暂时不需要CSRF保护）
-async def get_current_user_for_task_creation(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db_dependency),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(cookie_bearer),
-) -> models.User:
-    """任务创建专用的用户认证（支持Cookie，需要CSRF保护）"""
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
-        )
-
-    try:
-        # 验证token
-        from app.security import verify_token
-        payload = verify_token(credentials.credentials, "access")
-        user_id = payload.get("sub")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-            )
-
-        # 获取用户信息
-        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-            )
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
+# 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 
 async def get_current_user_secure_async_csrf(
@@ -171,47 +137,10 @@ async def get_current_user_secure_async_csrf(
             
             return user
     
-    # 如果会话认证失败，回退到JWT认证
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
-        )
-
-    try:
-        # 验证token
-        from app.security import verify_token
-        payload = verify_token(credentials.credentials, "access")
-        user_id = payload.get("sub")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-            )
-
-        # 获取用户信息
-        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-            )
-
-        # 检查用户状态
-        if hasattr(user, "is_suspended") and user.is_suspended:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-            )
-
-        if hasattr(user, "is_banned") and user.is_banned:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-            )
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
+    # 如果会话认证失败，抛出认证错误
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
+    )
 
 # 简化的测试路由
 @async_router.get("/test")

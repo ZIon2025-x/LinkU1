@@ -303,52 +303,7 @@ def resend_verification_email(
     }
 
 
-@router.post("/login")
-def login(
-    response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(), 
-    db: Session = Depends(get_db)
-):
-    # 支持ID或邮箱登录
-    username = form_data.username
-    db_user = None
-    
-    # 首先尝试作为ID查找（8位数字）
-    if username.isdigit() and len(username) == 8:
-        db_user = crud.get_user_by_id(db, username)
-    
-    # 如果ID查找失败，尝试作为邮箱查找
-    if not db_user:
-        db_user = crud.get_user_by_email(db, username)
-    
-    if not db_user or not verify_password(form_data.password, db_user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    
-    # 检查用户是否已验证邮箱
-    if not db_user.is_verified:
-        raise HTTPException(
-            status_code=400, 
-            detail="请先验证您的邮箱。请检查您的邮箱并点击验证链接。"
-        )
-
-    # 使用security.py中的函数创建token
-    from app.security import create_access_token, create_refresh_token, set_secure_cookies
-    access_token = create_access_token({"sub": db_user.id})
-    refresh_token = create_refresh_token({"sub": db_user.id})
-    
-    # 设置HttpOnly Cookie
-    set_secure_cookies(response, access_token, refresh_token)
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_info": {
-            "id": db_user.id,  # 数据库已经存储格式化ID
-            "name": db_user.name,
-            "email": db_user.email,
-            "user_type": "normal_user",
-        },
-    }
+# 旧的JWT登录路由已删除，请使用 /api/secure-auth/login
 
 
 @router.post("/customer-service/login")

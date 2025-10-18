@@ -98,12 +98,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: formData.password,
         });
         
-        // 检测是否为移动端，如果是则保存access_token
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile && res.data.access_token) {
-          localStorage.setItem('access_token', res.data.access_token);
-          console.log('移动端登录成功，已保存access_token');
-        }
+        // JWT token相关代码已删除，现在只使用session_id认证
         
         // 保存session_id（桌面端和移动端都需要）
         if (res.data.session_id) {

@@ -45,39 +45,7 @@ async def get_async_db_dependency():
         yield session
 
 
-# 同步用户认证（向后兼容）
-def get_current_user(
-    db: Session = Depends(get_sync_db), token: str = Depends(oauth2_scheme)
-):
-    payload = verify_token(token, "access")
-    if not payload or "user_id" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
-    user = crud.get_user_by_id(db, payload["user_id"])
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
-    return user
-
-
-# 异步用户认证
-async def get_current_user_async(
-    db: AsyncSession = Depends(get_async_db_dependency),
-    token: str = Depends(oauth2_scheme),
-):
-    payload = verify_token(token, "access")
-    if not payload or "sub" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
-    user = await async_crud.async_user_crud.get_user_by_id(db, payload["sub"])
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
-    return user
+# 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 
 # 通用会话认证函数
@@ -217,107 +185,13 @@ async def get_current_user_secure(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
 
 
-def get_current_user_secure_sync(
-    request: Request,
-    db: Session = Depends(get_sync_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer),
-) -> models.User:
-    """同步版本的安全用户认证"""
-    print(f"[DEBUG] get_current_user_secure_sync - URL: {request.url}")
-    print(f"[DEBUG] get_current_user_secure_sync - credentials: {credentials}")
-    
-    # 首先尝试使用会话认证
-    try:
-        user = authenticate_with_session(request, db)
-        if user:
-            print(f"[DEBUG] 会话认证成功，用户: {user.id}")
-            return user
-    except Exception as e:
-        print(f"[DEBUG] 会话认证失败: {str(e)}")
-    
-    # 如果会话认证失败，检查是否有JWT token（不是session_id）
-    if credentials and len(credentials.credentials) > 50:  # JWT token通常很长
-        # 这看起来像是一个真正的JWT token，尝试JWT认证
-        try:
-            payload = verify_token(credentials.credentials, "access")
-            user_id = payload.get("sub")
-
-            if not user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-                )
-
-            # 获取用户信息
-            user = crud.get_user_by_id(db, user_id)
-            if not user:
-                client_ip = get_client_ip(request)
-                log_security_event(
-                    "INVALID_USER", user_id, client_ip, "Token中的用户不存在"
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-                )
-
-            # 检查用户状态
-            if hasattr(user, "is_suspended") and user.is_suspended:
-                client_ip = get_client_ip(request)
-                log_security_event(
-                    "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-                )
-
-            if hasattr(user, "is_banned") and user.is_banned:
-                client_ip = get_client_ip(request)
-                log_security_event(
-                    "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-                )
-
-            print(f"[DEBUG] JWT认证成功，用户: {user.id}")
-            return user
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            client_ip = get_client_ip(request)
-            log_security_event("AUTH_ERROR", "unknown", client_ip, f"JWT认证错误: {str(e)}")
-            print(f"[DEBUG] JWT认证失败: {str(e)}")
-    
-    # 如果都失败了，抛出401错误
-    print(f"[DEBUG] 所有认证方式都失败，抛出401错误")
-    print(f"[DEBUG] 请求URL: {request.url}")
-    print(f"[DEBUG] 请求头: {dict(request.headers)}")
-    print(f"[DEBUG] Cookie: {dict(request.cookies)}")
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供有效的认证信息"
-    )
+# 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 
-def get_current_user_optional(
-    db: Session = Depends(get_db), authorization: Optional[str] = Header(None)
-) -> Optional[object]:
-    """可选的身份验证依赖，如果token无效或不存在则返回None"""
-    if not authorization or not authorization.startswith("Bearer "):
-        return None
-
-    token = authorization.replace("Bearer ", "")
-    try:
-        payload = verify_token(token, "access")
-        if not payload or "user_id" not in payload:
-            return None
-        user = crud.get_user_by_id(db, payload["user_id"])
-        if not user:
-            return None
-        return user
-    except:
-        return None
+# 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 
-def check_user_status(current_user=Depends(get_current_user_secure_sync)):
+def check_user_status(current_user=Depends(authenticate_with_session)):
     import datetime
 
     now = datetime.datetime.utcnow()
@@ -588,40 +462,7 @@ def get_current_user_secure_sync_csrf(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
 
 
-def get_current_user_readonly(
-    request: Request,
-    db: Session = Depends(get_sync_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer_readonly),
-) -> models.User:
-    """只读操作的用户认证（不需要CSRF保护）"""
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
-        )
-
-    try:
-        # 验证token
-        payload = verify_token(credentials.credentials, "access")
-        user_id = payload.get("sub")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-            )
-
-        # 获取用户信息
-        user = crud.get_user_by_id(db, user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-            )
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
+# 旧的JWT认证函数已删除，请使用新的会话认证系统
 
 
 def check_admin_user_status(current_admin=Depends(get_current_admin_user)):
