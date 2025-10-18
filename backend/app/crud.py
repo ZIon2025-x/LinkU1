@@ -137,7 +137,7 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
         .all()
     )
     
-    # 缓存任务列表
+    # 缓存任务列表 - 使用正确的缓存键格式
     cache_user_tasks(cache_key, tasks)
     return tasks
 
@@ -254,9 +254,20 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
 
     # 清除用户任务缓存，确保新任务能立即显示
     try:
-        from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache
+        from app.redis_cache import invalidate_user_cache, invalidate_tasks_cache, redis_cache
         invalidate_user_cache(user_id)
         invalidate_tasks_cache()
+        
+        # 额外清除特定格式的缓存键
+        patterns = [
+            f"user_tasks:{user_id}*",
+            f"{user_id}_*",
+            f"user_tasks:{user_id}_*"
+        ]
+        for pattern in patterns:
+            deleted = redis_cache.delete_pattern(pattern)
+            if deleted > 0:
+                print(f"DEBUG: 清除模式 {pattern}，删除了 {deleted} 个键")
     except Exception as e:
         print(f"清除缓存失败: {e}")
 

@@ -256,6 +256,22 @@ async def create_task_async(
         except Exception as e:
             print(f"DEBUG: 清除缓存失败: {e}")
         
+        # 额外清除特定格式的缓存键
+        try:
+            from app.redis_cache import redis_cache
+            # 清除所有可能的用户任务缓存键格式
+            patterns = [
+                f"user_tasks:{current_user.id}*",
+                f"{current_user.id}_*",
+                f"user_tasks:{current_user.id}_*"
+            ]
+            for pattern in patterns:
+                deleted = redis_cache.delete_pattern(pattern)
+                if deleted > 0:
+                    print(f"DEBUG: 清除模式 {pattern}，删除了 {deleted} 个键")
+        except Exception as e:
+            print(f"DEBUG: 额外清除缓存失败: {e}")
+        
         # 返回简单的成功响应，避免序列化问题
         result = {
             "id": db_task.id,

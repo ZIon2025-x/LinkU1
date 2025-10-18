@@ -169,7 +169,7 @@ class RedisCache:
         """清除用户相关的所有缓存"""
         patterns = [
             f"user:{user_id}",
-            f"user_tasks:{user_id}",
+            f"user_tasks:{user_id}*",  # 使用通配符匹配所有用户任务缓存
             f"user_profile:{user_id}",
             f"user_notifications:{user_id}",
             f"user_reviews:{user_id}"
@@ -224,14 +224,22 @@ def get_user_info(user_id: str) -> Optional[Any]:
     key = get_cache_key(CACHE_PREFIXES['USER'], user_id)
     return redis_cache.get(key)
 
-def cache_user_tasks(user_id: str, tasks_data: Any, ttl: int = DEFAULT_TTL['USER_TASKS']) -> bool:
+def cache_user_tasks(cache_key: str, tasks_data: Any, ttl: int = DEFAULT_TTL['USER_TASKS']) -> bool:
     """缓存用户任务"""
-    key = get_cache_key(CACHE_PREFIXES['USER_TASKS'], user_id)
+    # 如果传入的是完整的缓存键，直接使用；否则生成标准键
+    if ':' in cache_key:
+        key = cache_key
+    else:
+        key = get_cache_key(CACHE_PREFIXES['USER_TASKS'], cache_key)
     return redis_cache.set(key, tasks_data, ttl)
 
-def get_user_tasks(user_id: str) -> Optional[Any]:
+def get_user_tasks(cache_key: str) -> Optional[Any]:
     """获取用户任务缓存"""
-    key = get_cache_key(CACHE_PREFIXES['USER_TASKS'], user_id)
+    # 如果传入的是完整的缓存键，直接使用；否则生成标准键
+    if ':' in cache_key:
+        key = cache_key
+    else:
+        key = get_cache_key(CACHE_PREFIXES['USER_TASKS'], cache_key)
     return redis_cache.get(key)
 
 def cache_tasks_list(params: dict, tasks_data: Any, ttl: int = DEFAULT_TTL['TASKS_LIST']) -> bool:
