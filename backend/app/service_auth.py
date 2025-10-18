@@ -343,12 +343,33 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
     from app.config import Config
     from app.cookie_manager import CookieManager
     
-    # 根据环境设置domain
-    cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION else None
-    
-    # 使用与用户登录相同的Cookie设置逻辑
+    # 使用与用户登录完全相同的Cookie设置逻辑
     samesite_value = CookieManager._get_samesite_value(user_agent)
     secure_value = CookieManager._get_secure_value(user_agent)
+    is_mobile = CookieManager._is_mobile_user_agent(user_agent)
+    is_private_mode = CookieManager._is_private_mode_user_agent(user_agent)
+    
+    # 移动端特殊处理：使用兼容性最好的Cookie设置
+    if is_mobile:
+        cookie_domain = None
+        cookie_path = "/"
+        samesite_value = "none"  # 移动端跨域请求必须使用none
+        secure_value = True      # 移动端必须使用secure（HTTPS环境）
+        logger.info(f"客服移动端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
+    elif is_private_mode:
+        cookie_domain = None  # 隐私模式下不设置domain
+        cookie_path = "/"
+        samesite_value = "lax"   # 隐私模式下lax兼容性更好
+        secure_value = True      # HTTPS环境必须使用secure
+        logger.info(f"客服隐私模式Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
+    else:
+        # 桌面端：开发环境不设置domain，生产环境使用配置的domain
+        if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
+            cookie_domain = Config.COOKIE_DOMAIN
+        else:
+            cookie_domain = None  # 开发环境不设置domain
+        cookie_path = Config.COOKIE_PATH
+        logger.info(f"客服桌面端Cookie设置: SameSite={samesite_value}, Secure={secure_value}, Domain={cookie_domain}")
     
     # 设置客服会话Cookie - 支持跨域
     response.set_cookie(

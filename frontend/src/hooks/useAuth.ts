@@ -43,6 +43,13 @@ export const useAuth = () => {
       console.log('是否包含service_authenticated:', document.cookie.indexOf('service_authenticated'));
       console.log('Cookie分割结果:', document.cookie.split(';').map(c => c.trim()));
       
+      // 详细检查service_authenticated cookie
+      const serviceCookieMatch = document.cookie.match(/service_authenticated=([^;]+)/);
+      console.log('service_authenticated cookie匹配结果:', serviceCookieMatch);
+      if (serviceCookieMatch) {
+        console.log('service_authenticated cookie值:', serviceCookieMatch[1]);
+      }
+      
       // 根据Cookie标识只检查对应的角色，避免跨角色检查
       const checks = [];
       
