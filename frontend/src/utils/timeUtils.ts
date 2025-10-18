@@ -123,18 +123,35 @@ export class TimeHandlerV2 {
     
     try {
       const tz = userTimezone || this.getUserTimezone();
-      const now = dayjs();
-      const messageTime = this.formatUtcToLocal(utcTimeString, '', tz);
-      const messageDayjs = dayjs.tz(messageTime, tz);
       
-      const diffInHours = now.diff(messageDayjs, 'hour');
-      
-      if (diffInHours < 24) {
-        return messageDayjs.format('HH:mm');
-      } else if (diffInHours < 168) { // 7 days
-        return messageDayjs.format('ddd');
+      // 确保正确解析UTC时间
+      let utcTime;
+      if (utcTimeString.endsWith('Z')) {
+        utcTime = dayjs.utc(utcTimeString);
       } else {
-        return messageDayjs.format('MM/DD');
+        utcTime = dayjs.utc(utcTimeString + 'Z');
+      }
+      
+      // 转换为用户时区
+      const messageTime = utcTime.tz(tz);
+      const now = dayjs().tz(tz);
+      
+      // 计算时间差
+      const diffInMinutes = now.diff(messageTime, 'minute');
+      const diffInHours = now.diff(messageTime, 'hour');
+      const diffInDays = now.diff(messageTime, 'day');
+      
+      // 根据时间差显示不同格式
+      if (diffInMinutes < 1) {
+        return '刚刚';
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes}分钟前`;
+      } else if (diffInHours < 24) {
+        return `${diffInHours}小时前`;
+      } else if (diffInDays < 7) {
+        return `${diffInDays}天前`;
+      } else {
+        return messageTime.format('MM/DD');
       }
     } catch (error) {
       console.error('最后消息时间格式化错误:', error);
