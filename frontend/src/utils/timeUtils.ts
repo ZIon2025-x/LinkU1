@@ -73,12 +73,17 @@ export class TimeHandlerV2 {
       
       // 确保正确解析UTC时间
       let utcTime;
+      
+      // 处理不同的时间格式
       if (utcTimeString.endsWith('Z')) {
-        // 已经是标准UTC格式
+        // 标准ISO格式，带Z后缀
         utcTime = dayjs.utc(utcTimeString);
-      } else {
-        // 假设是UTC时间，添加Z后缀
+      } else if (utcTimeString.includes('T')) {
+        // ISO格式但没有Z后缀
         utcTime = dayjs.utc(utcTimeString + 'Z');
+      } else {
+        // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
+        utcTime = dayjs.utc(utcTimeString);
       }
       
       // 转换为用户时区
@@ -130,10 +135,17 @@ export class TimeHandlerV2 {
       
       // 确保正确解析UTC时间
       let utcTime;
+      
+      // 处理不同的时间格式
       if (utcTimeString.endsWith('Z')) {
+        // 标准ISO格式，带Z后缀
         utcTime = dayjs.utc(utcTimeString);
-      } else {
+      } else if (utcTimeString.includes('T')) {
+        // ISO格式但没有Z后缀
         utcTime = dayjs.utc(utcTimeString + 'Z');
+      } else {
+        // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
+        utcTime = dayjs.utc(utcTimeString);
       }
       
       console.log('解析后UTC时间:', utcTime.format());
@@ -188,10 +200,17 @@ export class TimeHandlerV2 {
       
       // 确保正确解析UTC时间
       let utcTime;
+      
+      // 处理不同的时间格式
       if (utcTimeString.endsWith('Z')) {
+        // 标准ISO格式，带Z后缀
         utcTime = dayjs.utc(utcTimeString);
-      } else {
+      } else if (utcTimeString.includes('T')) {
+        // ISO格式但没有Z后缀
         utcTime = dayjs.utc(utcTimeString + 'Z');
+      } else {
+        // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
+        utcTime = dayjs.utc(utcTimeString);
       }
       
       // 转换为用户时区
