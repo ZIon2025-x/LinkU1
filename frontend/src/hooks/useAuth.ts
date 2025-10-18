@@ -156,10 +156,14 @@ export const useAuth = () => {
           loading: false
         });
         
-        // 登录成功后重新检查认证状态
-        setTimeout(() => {
-          checkAuth();
-        }, 500);
+        // 登录成功后直接设置认证状态，避免重新检查
+        console.log('登录成功，设置认证状态:', { role, user: userData });
+        
+        // 不重新检查认证状态，直接使用登录返回的数据
+        // setTimeout(() => {
+        //   console.log('延迟检查认证状态...');
+        //   checkAuth();
+        // }, 1000);
         
         return true;
       } else {

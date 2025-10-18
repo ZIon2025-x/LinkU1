@@ -139,7 +139,7 @@ class ServiceProfileResponse(BaseModel):
     avg_rating: float
     total_ratings: int
     is_online: bool
-    created_at: str
+    created_at: Optional[str] = None
 
 class ServiceChangePassword(BaseModel):
     old_password: str
