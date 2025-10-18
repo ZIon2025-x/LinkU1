@@ -48,6 +48,14 @@ from app.deps import (
     get_current_user_optional,
     get_db,
 )
+from app.separate_auth_deps import (
+    get_current_admin,
+    get_current_service,
+    get_current_user,
+    get_current_admin_optional,
+    get_current_service_optional,
+    get_current_user_optional as get_current_user_optional_new,
+)
 from app.security import sync_cookie_bearer
 from app.email_utils import (
     confirm_reset_token,
@@ -1278,7 +1286,7 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/profile/me", response_model=schemas.UserOut)
 def get_my_profile(
-    request: Request, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
+    request: Request, current_user=Depends(get_current_user), db: Session = Depends(get_db)
 ):
     print("Authorization header:", request.headers.get("authorization"))
 
@@ -2066,7 +2074,7 @@ def admin_batch_delete_tasks(
 def admin_get_customer_service_requests(
     status: str = None,
     priority: str = None,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员获取客服请求列表"""
@@ -2113,7 +2121,7 @@ def admin_get_customer_service_requests(
 
 @router.get("/admin/customer-service-requests/{request_id}")
 def admin_get_customer_service_request_detail(
-    request_id: int, current_user=Depends(admin_required), db: Session = Depends(get_db)
+    request_id: int, current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     """管理员获取客服请求详情"""
     from app.models import AdminRequest, CustomerService
@@ -2979,7 +2987,7 @@ def cs_get_cancel_requests(
 def cs_review_cancel_request(
     request_id: int,
     review: schemas.TaskCancelRequestReview,
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """客服审核任务取消请求"""
@@ -3053,7 +3061,7 @@ def cs_review_cancel_request(
     "/customer-service/admin-requests", response_model=list[schemas.AdminRequestOut]
 )
 def get_admin_requests(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """获取客服提交的管理请求列表"""
     from app.models import AdminRequest

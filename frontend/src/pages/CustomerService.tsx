@@ -956,7 +956,7 @@ const CustomerService: React.FC = () => {
 
       const connectWebSocket = () => {
         // 使用Cookie认证，无需在URL中传递token
-        const wsUrl = `ws://localhost:8000/ws/chat/${currentUser.id}`;
+        const wsUrl = `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/chat/${currentUser.id}`;
         socket = new WebSocket(wsUrl);
         setWsConnectionStatus('connecting');
         

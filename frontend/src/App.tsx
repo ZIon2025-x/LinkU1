@@ -31,7 +31,12 @@ import ParamRedirect from './components/ParamRedirect';
 import ScrollToTop from './components/ScrollToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
+import { AuthProvider } from './contexts/AuthContext';
 import CookieManager from './components/CookieManager';
+import AdminAuth from './components/AdminAuth';
+import ServiceAuth from './components/ServiceAuth';
+import AuthTest from './pages/AuthTest';
+import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
 
 // 语言路由组件
@@ -51,6 +56,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/language-test`} element={<LanguageTest />} />
           <Route path={`/${lang}/i18n-test`} element={<InternationalizationTest />} />
           <Route path={`/${lang}/cookie-test`} element={<CookieTest />} />
+          <Route path={`/${lang}/auth-test`} element={<AuthTest />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
           <Route path={`/${lang}/publish`} element={
@@ -89,6 +95,8 @@ const LanguageRoutes: React.FC = () => {
           } />
           <Route path={`/${lang}/customer-service/login`} element={<CustomerServiceLogin />} />
           <Route path={`/${lang}/admin/login`} element={<AdminLogin />} />
+          <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
+          <Route path={`/${lang}/admin/auth`} element={<AdminAuth />} />
           <Route path={`/${lang}/customer-service`} element={
             <CustomerServiceRoute>
               <CustomerService />
@@ -98,6 +106,17 @@ const LanguageRoutes: React.FC = () => {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          } />
+          {/* 新的独立认证路由 */}
+          <Route path={`/${lang}/service`} element={
+            <ServiceGuard>
+              <ServiceAuth />
+            </ServiceGuard>
+          } />
+          <Route path={`/${lang}/admin-panel`} element={
+            <AdminGuard>
+              <AdminAuth />
+            </AdminGuard>
           } />
         </React.Fragment>
       ))}
@@ -133,11 +152,13 @@ function App() {
   return (
     <LanguageProvider>
       <CookieProvider>
-        <Router>
-          <ScrollToTop />
-          <LanguageRoutes />
-          <CookieManager />
-        </Router>
+        <AuthProvider>
+          <Router>
+            <ScrollToTop />
+            <LanguageRoutes />
+            <CookieManager />
+          </Router>
+        </AuthProvider>
       </CookieProvider>
     </LanguageProvider>
   );

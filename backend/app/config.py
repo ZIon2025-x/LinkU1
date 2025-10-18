@@ -38,6 +38,15 @@ class Config:
     # Railway环境检测
     RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT", None)
     
+    # 独立认证系统配置
+    ADMIN_SESSION_EXPIRE_HOURS = int(os.getenv("ADMIN_SESSION_EXPIRE_HOURS", "8"))
+    SERVICE_SESSION_EXPIRE_HOURS = int(os.getenv("SERVICE_SESSION_EXPIRE_HOURS", "12"))
+    USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "24"))
+    
+    ADMIN_MAX_ACTIVE_SESSIONS = int(os.getenv("ADMIN_MAX_ACTIVE_SESSIONS", "3"))
+    SERVICE_MAX_ACTIVE_SESSIONS = int(os.getenv("SERVICE_MAX_ACTIVE_SESSIONS", "2"))
+    USER_MAX_ACTIVE_SESSIONS = int(os.getenv("USER_MAX_ACTIVE_SESSIONS", "5"))
+    
     # Railway Redis配置检测
     if RAILWAY_ENVIRONMENT:
         # 在Railway环境中，优先使用REDIS_URL

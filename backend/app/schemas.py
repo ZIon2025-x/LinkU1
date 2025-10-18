@@ -103,6 +103,59 @@ class AdminOut(BaseModel):
     created_at: datetime.datetime
     last_login: Optional[datetime.datetime] = None
 
+# 独立认证系统相关Schema
+class AdminUserLoginNew(BaseModel):
+    username: str
+    password: str
+
+class AdminLoginResponse(BaseModel):
+    message: str
+    admin: dict
+    session_id: str
+
+class AdminProfileResponse(BaseModel):
+    id: str
+    name: str
+    username: str
+    email: str
+    is_super_admin: bool
+    is_active: bool
+    created_at: str
+    last_login: Optional[str] = None
+
+class AdminChangePassword(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6)
+
+class ServiceLoginResponse(BaseModel):
+    message: str
+    service: dict
+    session_id: str
+
+class ServiceProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    avg_rating: float
+    total_ratings: int
+    is_online: bool
+    created_at: str
+
+class ServiceChangePassword(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6)
+
+class UserProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: Optional[str] = None
+    is_verified: bool
+    is_suspended: bool
+    is_banned: bool
+    created_at: str
+    last_login: Optional[str] = None
+
 
 class UserOut(UserBase):
     id: str  # 现在ID是字符串类型
