@@ -34,7 +34,7 @@ export const useAuth = () => {
       const checks = [
         { role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' },
         { role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' },
-        { role: 'user' as AuthRole, endpoint: '/api/users/profile' }
+        { role: 'user' as AuthRole, endpoint: '/api/users/profile/me' }
       ];
 
       for (const check of checks) {

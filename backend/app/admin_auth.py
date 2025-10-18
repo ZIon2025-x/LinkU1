@@ -322,13 +322,16 @@ def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
 
 def create_admin_session_cookie(response: Response, session_id: str) -> Response:
     """创建管理员会话Cookie"""
+    import os
+    is_production = os.getenv("RAILWAY_ENVIRONMENT") is not None
+    
     # 设置管理员会话Cookie
     response.set_cookie(
         key="admin_session_id",
         value=session_id,
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,  # 8小时
         httponly=True,
-        secure=True,  # 生产环境使用HTTPS
+        secure=is_production,  # 只在生产环境使用HTTPS
         samesite="lax"
     )
     
@@ -338,7 +341,7 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         value="true",
         max_age=ADMIN_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
-        secure=True,
+        secure=is_production,
         samesite="lax"
     )
     

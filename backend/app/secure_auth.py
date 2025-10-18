@@ -482,3 +482,36 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
             return None
     
     return session
+
+def create_user_session_cookie(response: Response, session_id: str) -> Response:
+    """创建用户会话Cookie"""
+    import os
+    is_production = os.getenv("RAILWAY_ENVIRONMENT") is not None
+    
+    # 设置用户会话Cookie
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        max_age=USER_SESSION_EXPIRE_HOURS * 3600,  # 24小时
+        httponly=True,
+        secure=is_production,  # 只在生产环境使用HTTPS
+        samesite="lax"
+    )
+    
+    # 设置用户身份标识Cookie
+    response.set_cookie(
+        key="user_authenticated",
+        value="true",
+        max_age=USER_SESSION_EXPIRE_HOURS * 3600,
+        httponly=False,  # 前端需要读取
+        secure=is_production,
+        samesite="lax"
+    )
+    
+    return response
+
+def clear_user_session_cookie(response: Response) -> Response:
+    """清除用户会话Cookie"""
+    response.delete_cookie("session_id")
+    response.delete_cookie("user_authenticated")
+    return response

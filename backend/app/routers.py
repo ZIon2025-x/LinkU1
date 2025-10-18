@@ -1286,7 +1286,7 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/profile/me", response_model=schemas.UserOut)
 def get_my_profile(
-    request: Request, current_user=Depends(get_current_user), db: Session = Depends(get_db)
+    request: Request, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
     print("Authorization header:", request.headers.get("authorization"))
 
