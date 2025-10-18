@@ -6,6 +6,7 @@ import api from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -868,7 +869,7 @@ const MyTasks: React.FC = () => {
                           color: '#6b7280'
                         }}>
                           <span>📅</span>
-                          <span>申请时间: {dayjs(application.created_at).format('YYYY-MM-DD HH:mm')}</span>
+                          <span>申请时间: {TimeHandlerV2.formatUtcToLocal(application.created_at, 'YYYY-MM-DD HH:mm')}</span>
                         </div>
                       </div>
 
@@ -1062,7 +1063,7 @@ const MyTasks: React.FC = () => {
                       }}>
                         <span style={{ fontSize: '14px', color: '#64748b' }}>⏰</span>
                         <span style={{ fontSize: '14px', color: '#1e293b' }}>
-                          {task.deadline && dayjs(task.deadline).tz('Europe/London').format('MM/DD HH:mm')}
+                          {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')}
                         </span>
                       </div>
                     </div>
@@ -1398,7 +1399,7 @@ const MyTasks: React.FC = () => {
                               fontSize: '11px',
                               marginTop: '6px'
                             }}>
-                              {new Date(review.created_at).toLocaleString()}
+                              {TimeHandlerV2.formatUtcToLocal(review.created_at)}
                             </div>
                           </div>
                         ))}

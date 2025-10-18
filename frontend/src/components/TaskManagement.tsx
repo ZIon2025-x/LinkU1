@@ -8,6 +8,7 @@ import {
   batchDeleteAdminTasks
 } from '../api';
 import dayjs from 'dayjs';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 // 实际的任务类型和城市定义
 const TASK_TYPES = [
@@ -384,7 +385,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>£{task.reward.toFixed(2)}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>{task.location}</td>
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                      {dayjs(task.created_at).tz('Europe/London').format('YYYY-MM-DD HH:mm')} (英国时间)
+                      {TimeHandlerV2.formatUtcToLocal(task.created_at, 'YYYY-MM-DD HH:mm', 'Europe/London')} (英国时间)
                     </td>
                     <td style={{ padding: '10px', border: '1px solid #ddd' }}>
                       <div style={{ display: 'flex', gap: '5px' }}>
@@ -616,11 +617,11 @@ const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, 
             </div>
             <div>
               <strong>创建时间：</strong>
-              <div style={{ marginTop: '5px' }}>{dayjs(task.created_at).tz('Europe/London').format('YYYY-MM-DD HH:mm:ss')} (英国时间)</div>
+              <div style={{ marginTop: '5px' }}>{TimeHandlerV2.formatUtcToLocal(task.created_at, 'YYYY-MM-DD HH:mm:ss', 'Europe/London')} (英国时间)</div>
             </div>
             <div>
               <strong>截止时间：</strong>
-              <div style={{ marginTop: '5px' }}>{dayjs(task.deadline).tz('Europe/London').format('YYYY-MM-DD HH:mm:ss')} (英国时间)</div>
+              <div style={{ marginTop: '5px' }}>{TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY-MM-DD HH:mm:ss', 'Europe/London')} (英国时间)</div>
             </div>
             <div>
               <strong>是否已支付：</strong>

@@ -3,6 +3,7 @@ import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotificat
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import Footer from '../components/Footer';
@@ -17,40 +18,82 @@ import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// 剩余时间计算函数 - 正确处理UTC时间
+// 剩余时间计算函数 - 使用英国时间
 function getRemainTime(deadline: string, t: (key: string) => string) {
-  const now = dayjs();
-  // 假设deadline是UTC时间，先解析为UTC，再转换为本地时间进行比较
-  const end = dayjs.utc(deadline).local();
-  const diff = end.diff(now, 'minute');
-  
-  if (diff <= 0) return t('home.taskExpired');
-  
-  const hours = Math.floor(diff / 60);
-  const minutes = diff % 60;
-  
-  if (hours > 0) {
-    return `${hours}${t('home.hours')}${minutes}${t('home.minutes')}`;
+  try {
+    // 解析UTC时间并转换为英国时间
+    let utcTime;
+    if (deadline.endsWith('Z')) {
+      utcTime = dayjs.utc(deadline);
+    } else if (deadline.includes('T')) {
+      utcTime = dayjs.utc(deadline + 'Z');
+    } else {
+      utcTime = dayjs.utc(deadline);
+    }
+    
+    const nowUK = dayjs().tz('Europe/London');
+    const endUK = utcTime.tz('Europe/London');
+    const diff = endUK.diff(nowUK, 'minute');
+    
+    if (diff <= 0) return t('home.taskExpired');
+    
+    const hours = Math.floor(diff / 60);
+    const minutes = diff % 60;
+    
+    if (hours > 0) {
+      return `${hours}${t('home.hours')}${minutes}${t('home.minutes')}`;
+    }
+    return `${minutes}${t('home.minutes')}`;
+  } catch (error) {
+    console.error('剩余时间计算错误:', error);
+    return t('home.taskExpired');
   }
-  return `${minutes}${t('home.minutes')}`;
 }
 
-// 检查是否即将过期 - 正确处理UTC时间
+// 检查是否即将过期 - 使用英国时间
 function isExpiringSoon(deadline: string) {
-  const now = dayjs();
-  // 假设deadline是UTC时间，先解析为UTC，再转换为本地时间进行比较
-  const end = dayjs.utc(deadline).local();
-  const oneDayLater = now.add(1, 'day');
-  
-  return now.isBefore(end) && end.isBefore(oneDayLater);
+  try {
+    // 解析UTC时间并转换为英国时间
+    let utcTime;
+    if (deadline.endsWith('Z')) {
+      utcTime = dayjs.utc(deadline);
+    } else if (deadline.includes('T')) {
+      utcTime = dayjs.utc(deadline + 'Z');
+    } else {
+      utcTime = dayjs.utc(deadline);
+    }
+    
+    const nowUK = dayjs().tz('Europe/London');
+    const endUK = utcTime.tz('Europe/London');
+    const oneDayLater = nowUK.add(1, 'day');
+    
+    return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
+  } catch (error) {
+    console.error('过期检查错误:', error);
+    return false;
+  }
 }
 
-// 检查是否已过期 - 正确处理UTC时间
+// 检查是否已过期 - 使用英国时间
 function isExpired(deadline: string) {
-  const now = dayjs();
-  // 假设deadline是UTC时间，先解析为UTC，再转换为本地时间进行比较
-  const end = dayjs.utc(deadline).local();
-  return now.isAfter(end);
+  try {
+    // 解析UTC时间并转换为英国时间
+    let utcTime;
+    if (deadline.endsWith('Z')) {
+      utcTime = dayjs.utc(deadline);
+    } else if (deadline.includes('T')) {
+      utcTime = dayjs.utc(deadline + 'Z');
+    } else {
+      utcTime = dayjs.utc(deadline);
+    }
+    
+    const nowUK = dayjs().tz('Europe/London');
+    const endUK = utcTime.tz('Europe/London');
+    return nowUK.isAfter(endUK);
+  } catch (error) {
+    console.error('过期检查错误:', error);
+    return true; // 如果解析失败，假设已过期
+  }
 }
 
 // 添加可爱的动画样式

@@ -7,6 +7,7 @@ import {
   sendAdminCustomerServiceChatMessage
 } from '../api';
 import dayjs from 'dayjs';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 interface CustomerServiceRequest {
   id: number;
@@ -382,9 +383,9 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
                         fontSize: '12px',
                         color: '#999'
                       }}>
-                        <span>创建时间: {dayjs(request.created_at).format('YYYY-MM-DD HH:mm')}</span>
+                        <span>创建时间: {TimeHandlerV2.formatUtcToLocal(request.created_at, 'YYYY-MM-DD HH:mm')}</span>
                         {request.updated_at && (
-                          <span>更新时间: {dayjs(request.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                          <span>更新时间: {TimeHandlerV2.formatUtcToLocal(request.updated_at, 'YYYY-MM-DD HH:mm')}</span>
                         )}
                       </div>
                     </div>
@@ -466,7 +467,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
                           marginTop: '5px',
                           textAlign: 'right'
                         }}>
-                          {dayjs(message.created_at).format('HH:mm')}
+                          {TimeHandlerV2.formatUtcToLocal(message.created_at, 'HH:mm')}
                         </div>
                       </div>
                     </div>
@@ -570,7 +571,7 @@ const RequestDetailModal: React.FC<{
           <div style={{ color: '#666', marginBottom: '15px' }}>
             <p><strong>请求者:</strong> {request.requester_name} ({request.requester_id})</p>
             <p><strong>类型:</strong> {getTypeText(request.type)}</p>
-            <p><strong>创建时间:</strong> {dayjs(request.created_at).format('YYYY-MM-DD HH:mm:ss')}</p>
+            <p><strong>创建时间:</strong> {TimeHandlerV2.formatUtcToLocal(request.created_at, 'YYYY-MM-DD HH:mm:ss')}</p>
           </div>
           <div style={{
             padding: '15px',

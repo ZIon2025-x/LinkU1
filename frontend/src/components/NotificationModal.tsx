@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getStaffNotifications, markStaffNotificationRead, markAllStaffNotificationsRead } from '../api';
 import dayjs from 'dayjs';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 interface StaffNotification {
   id: number;
@@ -217,7 +218,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
                     fontSize: '12px',
                     color: '#666'
                   }}>
-                    {dayjs(notification.created_at).format('MM-DD HH:mm')}
+                    {TimeHandlerV2.formatUtcToLocal(notification.created_at, 'MM-DD HH:mm')}
                   </span>
                 </div>
                 

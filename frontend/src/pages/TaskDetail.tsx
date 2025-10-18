@@ -4,6 +4,7 @@ import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, co
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 
 // 配置dayjs插件
@@ -696,7 +697,7 @@ const TaskDetail: React.FC = () => {
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {dayjs(task.deadline).tz('Europe/London').format('MM/DD HH:mm')} (英国时间)
+              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (英国时间)
             </div>
           </div>
         </div>
@@ -899,7 +900,7 @@ const TaskDetail: React.FC = () => {
             }}>
               <span style={{ color: '#64748b', minWidth: '80px' }}>截止时间：</span>
               <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.deadline && dayjs(task.deadline).tz('Europe/London').format('YYYY/MM/DD HH:mm:ss')} (英国时间)
+                {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} (英国时间)
               </span>
             </div>
             
@@ -1161,7 +1162,7 @@ const TaskDetail: React.FC = () => {
                         </div>
                       )}
                       <div style={{ color: '#999', fontSize: '12px' }}>
-                        申请时间: {new Date(app.created_at).toLocaleString()}
+                        申请时间: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -1336,7 +1337,7 @@ const TaskDetail: React.FC = () => {
                 </div>
               )}
               <div style={{color: '#999', fontSize: 12, marginTop: 8}}>
-                {dayjs(review.created_at).tz('Europe/London').format('YYYY/MM/DD HH:mm:ss')} (英国时间)
+                {TimeHandlerV2.formatUtcToLocal(review.created_at, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} (英国时间)
               </div>
             </div>
           ))}
