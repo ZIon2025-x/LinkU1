@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 interface Notification {
   id: number;
@@ -193,12 +194,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       fontSize: '11px',
                       color: '#999'
                     }}>
-                      {new Date(notification.created_at).toLocaleString('zh-CN', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {TimeHandlerV2.formatUtcToLocal(notification.created_at, 'MMM DD HH:mm')}
                     </span>
                     {notification.is_read === 0 && (
                       <span style={{
