@@ -125,19 +125,8 @@ function isMobileDevice(): boolean {
 }
 
 api.interceptors.request.use(async config => {
-  const isMobile = isMobileDevice();
-  
-  if (isMobile) {
-    // 移动端使用X-Session-ID头认证
-    const sessionId = localStorage.getItem('session_id');
-    if (sessionId) {
-      config.headers['X-Session-ID'] = sessionId;
-      console.log('移动端使用X-Session-ID认证');
-    }
-  } else {
-    // 桌面端使用HttpOnly Cookie认证
-    console.log('桌面端使用HttpOnly Cookie认证');
-  }
+  // 所有设备都使用HttpOnly Cookie认证，不再区分移动端和桌面端
+  console.log('使用HttpOnly Cookie认证');
   
   // 对于写操作，添加CSRF token
   // 但跳过登录相关的请求，因为它们不需要CSRF保护
@@ -161,8 +150,7 @@ api.interceptors.request.use(async config => {
     method: config.method,
     url: config.url,
     headers: config.headers,
-    withCredentials: config.withCredentials,
-    isMobile: isMobile
+    withCredentials: config.withCredentials
   });
   return config;
 });
@@ -993,16 +981,8 @@ export const checkCustomerServiceAvailability = async () => {
 export const login = async (email: string, password: string) => {
   const res = await api.post('/api/secure-auth/login', { email, password });
   
-  // 检测是否为移动端，只有移动端才需要localStorage存储
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
-  // 移动端认证支持：保存session_id到localStorage
-  if (isMobile && res.data.session_id) {
-    localStorage.setItem('session_id', res.data.session_id);
-    console.log('移动端：Session ID已保存到localStorage:', res.data.session_id);
-  } else if (!isMobile) {
-    console.log('桌面端：使用HttpOnly Cookie认证，无需localStorage存储');
-  }
+  // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
+  console.log('使用HttpOnly Cookie认证，无需localStorage存储');
   
   return res.data;
 };
@@ -1031,13 +1011,12 @@ export const logout = async () => {
   } catch (error) {
     console.warn('登出请求失败:', error);
   } finally {
-    // 清理localStorage
-    localStorage.removeItem('session_id');
+    // 清理localStorage（保留userInfo清理，因为这是用户信息缓存）
     localStorage.removeItem('userInfo');
     clearCSRFToken();
     // 清理重试计数器
     clearRetryCounters();
-    console.log('用户已登出，localStorage和重试计数器已清理');
+    console.log('用户已登出，重试计数器已清理');
   }
 };
 

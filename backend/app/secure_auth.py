@@ -440,7 +440,7 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
         request.cookies.get("mobile_strict_session_id")  # 新增移动端strict Cookie
     )
     
-    # 2. 如果Cookie中没有，尝试从请求头获取（移动端备用方案）
+    # 2. 如果Cookie中没有，尝试从请求头获取（仅作为最后的备用方案）
     if not session_id:
         session_id = request.headers.get("X-Session-ID")
         if session_id:
