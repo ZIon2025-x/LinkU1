@@ -147,23 +147,33 @@ def service_login(
     db: Session = Depends(get_sync_db)
 ):
     """客服登录（独立认证系统）"""
-    logger.info(f"[SERVICE_AUTH] 客服登录尝试: {login_data.email}")
+    logger.info(f"[SERVICE_AUTH] 客服登录尝试: {login_data.cs_id}")
     
-    # 查找客服
-    service = crud.get_customer_service_by_email(db, login_data.email)
+    # 支持ID或邮箱登录
+    username = login_data.cs_id  # 这里cs_id字段实际是用户名（可能是ID或邮箱）
+    service = None
+    
+    # 首先尝试作为ID查找（CS + 4位数字格式）
+    if username.startswith('CS') and len(username) == 6 and username[2:].isdigit():
+        service = crud.get_customer_service_by_id(db, username)
+        if service and verify_password(login_data.password, service.hashed_password):
+            pass  # 验证成功
+        else:
+            service = None
+    
+    # 如果ID查找失败，尝试作为邮箱查找
     if not service:
-        logger.warning(f"[SERVICE_AUTH] 客服不存在: {login_data.email}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="邮箱或密码错误"
-        )
+        service = crud.get_customer_service_by_email(db, username)
+        if service and verify_password(login_data.password, service.hashed_password):
+            pass  # 验证成功
+        else:
+            service = None
     
-    # 验证密码
-    if not verify_password(login_data.password, service.hashed_password):
-        logger.warning(f"[SERVICE_AUTH] 客服密码错误: {service.id}")
+    if not service:
+        logger.warning(f"[SERVICE_AUTH] 客服不存在或密码错误: {username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="邮箱或密码错误"
+            detail="用户名或密码错误"
         )
     
     # 创建客服会话

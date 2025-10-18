@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface ServiceLoginData {
-  email: string;
+  cs_id: string;
   password: string;
 }
 
@@ -20,7 +20,7 @@ const ServiceAuth: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [serviceProfile, setServiceProfile] = useState<ServiceProfile | null>(null);
   const [loginData, setLoginData] = useState<ServiceLoginData>({
-    email: '',
+    cs_id: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -232,8 +232,8 @@ const ServiceAuth: React.FC = () => {
             </label>
             <input
               type="email"
-              value={loginData.email}
-              onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+              value={loginData.cs_id}
+              onChange={(e) => setLoginData({...loginData, cs_id: e.target.value})}
               required
               style={{
                 width: '100%',

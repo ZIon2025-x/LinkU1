@@ -111,7 +111,7 @@ export const useAuth = () => {
           endpoint = '/api/auth/admin/login';
           break;
         case 'service':
-          endpoint = '/api/cs/login';
+          endpoint = '/api/auth/service/login';
           break;
         case 'user':
           endpoint = '/api/secure-auth/login';

@@ -17,7 +17,7 @@ const CustomerServiceLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/cs/login', formData);
+      const response = await api.post('/api/auth/service/login', formData);
       const { service } = response.data;
       
       // 新的客服登录使用Cookie认证，不需要保存token
