@@ -13,7 +13,7 @@ class TimeHandlerV2:
     @staticmethod
     def get_utc_now() -> datetime:
         """获取当前UTC时间（用于数据库存储）"""
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
     
     @staticmethod
     def get_uk_now() -> datetime:

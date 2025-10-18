@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
-import { TimeHandlerV2 } from '../utils/timeUtils';
 
 const PublishTask: React.FC = () => {
   const { t } = useLanguage();
@@ -38,13 +37,7 @@ const PublishTask: React.FC = () => {
       await api.post('/api/tasks', {
         ...form,
         reward: parseFloat(form.reward),
-        deadline: (() => {
-          // 用户选择的是英国时间，需要转换为UTC时间存储
-          const userSelectedTime = new Date(form.deadline);
-          // 由于用户选择的是英国时间，我们需要将其转换为UTC时间
-          // 使用toISOString()会将本地时间转换为UTC，但我们需要确保这是英国时间
-          return userSelectedTime.toISOString();
-        })(),
+        deadline: new Date(form.deadline).toISOString(),
         is_public: form.is_public,
       });
       setSuccess(t('publishTask.publishSuccess'));
@@ -350,18 +343,7 @@ const PublishTask: React.FC = () => {
                 display: 'block',
                 color: '#374151',
                 fontSize: '14px'
-              }}>
-                {t('publishTask.deadlineLabel')} (英国时间)
-              </label>
-              <div style={{
-                fontSize: '12px',
-                color: '#6b7280',
-                marginBottom: '8px'
-              }}>
-                当前英国时间: {TimeHandlerV2.formatUtcToLocal(new Date().toISOString(), 'YYYY-MM-DDTHH:mm', 'Europe/London')}
-                <br />
-                <strong>注意：请选择英国时间作为截止时间</strong>
-              </div>
+              }}>{t('publishTask.deadlineLabel')}</label>
               <input 
                 name="deadline" 
                 type="datetime-local" 

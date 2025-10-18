@@ -267,51 +267,62 @@ def list_tasks(
     from sqlalchemy import or_
 
     from app.models import Task, User
+    from app.time_utils_v2 import TimeHandlerV2
+    from datetime import timezone
 
-    # 使用英国时间进行过滤
-    now_utc = get_uk_time()
+    # 使用UTC时间进行过滤
+    now_utc = TimeHandlerV2.get_utc_now()
 
-    # 构建基础查询
-    query = db.query(Task).filter(Task.status == "open", Task.deadline > now_utc)
+    # 构建基础查询 - 需要将deadline转换为UTC时间进行比较
+    query = db.query(Task).filter(Task.status == "open")
+    
+    # 手动过滤过期任务，因为deadline可能没有时区信息
+    open_tasks = query.all()
+    valid_tasks = []
+    for task in open_tasks:
+        if task.deadline.tzinfo is None:
+            task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
+        else:
+            task_deadline_utc = task.deadline.astimezone(timezone.utc)
+        
+        if task_deadline_utc > now_utc:
+            valid_tasks.append(task)
 
     # 添加任务类型筛选
     if task_type and task_type.strip():
-        query = query.filter(Task.task_type == task_type)
+        valid_tasks = [task for task in valid_tasks if task.task_type == task_type]
 
     # 添加城市筛选
     if location and location.strip():
-        query = query.filter(Task.location == location)
+        valid_tasks = [task for task in valid_tasks if task.location == location]
 
     # 添加关键词搜索
     if keyword and keyword.strip():
         keyword = keyword.strip()
         # 搜索标题、描述、任务类型、城市
-        query = query.filter(
-            or_(
-                Task.title.ilike(f"%{keyword}%"),
-                Task.description.ilike(f"%{keyword}%"),
-                Task.task_type.ilike(f"%{keyword}%"),
-                Task.location.ilike(f"%{keyword}%"),
-            )
-        )
+        valid_tasks = [task for task in valid_tasks if 
+                      keyword.lower() in task.title.lower() or
+                      keyword.lower() in task.description.lower() or
+                      keyword.lower() in task.task_type.lower() or
+                      keyword.lower() in task.location.lower()]
 
     # 根据排序参数进行排序
     if sort_by == "latest":
-        query = query.order_by(Task.created_at.desc())
+        valid_tasks.sort(key=lambda x: x.created_at, reverse=True)
     elif sort_by == "reward_asc":
-        query = query.order_by(Task.reward.asc())
+        valid_tasks.sort(key=lambda x: x.reward)
     elif sort_by == "reward_desc":
-        query = query.order_by(Task.reward.desc())
+        valid_tasks.sort(key=lambda x: x.reward, reverse=True)
     elif sort_by == "deadline_asc":
-        query = query.order_by(Task.deadline.asc())
+        valid_tasks.sort(key=lambda x: x.deadline)
     elif sort_by == "deadline_desc":
-        query = query.order_by(Task.deadline.desc())
+        valid_tasks.sort(key=lambda x: x.deadline, reverse=True)
     else:
         # 默认按创建时间降序
-        query = query.order_by(Task.created_at.desc())
+        valid_tasks.sort(key=lambda x: x.created_at, reverse=True)
 
-    # 执行查询
-    tasks = query.offset(skip).limit(limit).all()
+    # 执行分页
+    tasks = valid_tasks[skip:skip + limit]
 
     # 为每个任务添加发布者时区信息
     for task in tasks:
@@ -331,12 +342,26 @@ def count_tasks(
     from sqlalchemy import or_
 
     from app.models import Task
+    from app.time_utils_v2 import TimeHandlerV2
+    from datetime import timezone
 
-    # 使用英国时间进行过滤
-    now_utc = get_uk_time()
+    # 使用UTC时间进行过滤
+    now_utc = TimeHandlerV2.get_utc_now()
 
-    # 构建基础查询
-    query = db.query(Task).filter(Task.status == "open", Task.deadline > now_utc)
+    # 构建基础查询 - 需要手动过滤过期任务
+    query = db.query(Task).filter(Task.status == "open")
+    
+    # 手动过滤过期任务
+    open_tasks = query.all()
+    valid_tasks = []
+    for task in open_tasks:
+        if task.deadline.tzinfo is None:
+            task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
+        else:
+            task_deadline_utc = task.deadline.astimezone(timezone.utc)
+        
+        if task_deadline_utc > now_utc:
+            valid_tasks.append(task)
 
     # 添加任务类型筛选
     if task_type and task_type.strip():
