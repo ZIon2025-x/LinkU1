@@ -1218,11 +1218,13 @@ const MessagePage: React.FC = () => {
       if (activeContact && user) {
         // 如果选择了联系人，切换到普通聊天模式
         if (!isServiceMode || serviceConnected) {
-          console.log('切换到普通聊天模式，加载聊天记录');
+          console.log('切换到普通聊天模式，清空消息并加载聊天记录');
           setIsServiceMode(false);
           setServiceConnected(false);
           setCurrentChatId(null);
           setCurrentChat(null);
+          // 清空当前消息列表，确保聊天框重置
+          setMessages([]);
           // setService(null); // 已移除service状态
         }
         
