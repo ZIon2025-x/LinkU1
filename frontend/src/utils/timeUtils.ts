@@ -61,7 +61,9 @@ export class TimeHandlerV2 {
       
       // 如果是英国时区，检查DST并添加时区标识
       if (tz === 'Europe/London') {
-        const isDST = localTime.isDST();
+        // 通过比较UTC偏移量来判断是否DST
+        const utcOffset = localTime.utcOffset();
+        const isDST = utcOffset === 60; // BST是UTC+1，即60分钟偏移
         const tzName = isDST ? 'BST' : 'GMT';
         return `${localTime.format(format)} (${tzName})`;
       }
@@ -141,7 +143,8 @@ export class TimeHandlerV2 {
       const localTime = utcTime.tz(tz);
       
       // 检查是否夏令时
-      const isDST = localTime.isDST();
+      const utcOffset = localTime.utcOffset();
+      const isDST = utcOffset === 60; // BST是UTC+1，即60分钟偏移
       let tzDisplay;
       
       if (tz === 'Europe/London') {
