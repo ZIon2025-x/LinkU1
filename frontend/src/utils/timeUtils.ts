@@ -144,14 +144,14 @@ export class TimeHandlerV2 {
         utcTime = dayjs.utc(utcTimeString);
       }
       
-      // 转换为用户时区
-      const messageTime = utcTime.tz(tz);
-      const now = dayjs().tz(tz);
+      // 转换为英国时间进行比较
+      const messageTimeUK = utcTime.tz('Europe/London');
+      const nowUK = dayjs().tz('Europe/London');
       
-      // 计算时间差
-      const diffInMinutes = now.diff(messageTime, 'minute');
-      const diffInHours = now.diff(messageTime, 'hour');
-      const diffInDays = now.diff(messageTime, 'day');
+      // 计算时间差（使用英国时间）
+      const diffInMinutes = nowUK.diff(messageTimeUK, 'minute');
+      const diffInHours = nowUK.diff(messageTimeUK, 'hour');
+      const diffInDays = nowUK.diff(messageTimeUK, 'day');
       
       // 根据时间差显示不同格式
       if (diffInMinutes < 1) {
