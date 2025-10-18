@@ -13,25 +13,19 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 使用Cookie认证检查用户信息
+        // 使用客服认证路由检查权限
         const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${API_BASE_URL}/api/users/profile/me`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/service/profile`, {
           credentials: 'include'
         });
         
         if (response.ok) {
-          const user = await response.json();
-          
-          // 只有通过客服登录系统登录的用户才能访问客服管理界面
-          if (user.user_type === 'customer_service') {
-            setIsAuthorized(true);
-            console.log('客服访问客服管理页面:', user.id);
-          } else {
-            setIsAuthorized(false);
-            console.warn('非客服用户尝试访问客服管理页面:', user.user_type);
-          }
+          const service = await response.json();
+          setIsAuthorized(true);
+          console.log('客服访问客服管理页面:', service.id);
         } else {
           setIsAuthorized(false);
+          console.warn('客服认证失败:', response.status);
         }
       } catch (error) {
         // 认证失败

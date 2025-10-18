@@ -42,7 +42,6 @@ from app.deps import (
     check_admin_user_status,
     check_user_status,
     get_current_admin_user,
-    get_current_customer_service,
     get_current_customer_service_or_user,
     get_current_user_secure_sync_csrf,
     get_current_user_optional,
@@ -2578,7 +2577,7 @@ def assign_customer_service(
 # 客服在线状态管理
 @router.post("/customer-service/online")
 def set_customer_service_online(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """设置客服为在线状态"""
     current_user.is_online = 1
@@ -2588,7 +2587,7 @@ def set_customer_service_online(
 
 @router.post("/customer-service/offline")
 def set_customer_service_offline(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """设置客服为离线状态"""
     current_user.is_online = 0
@@ -2606,7 +2605,7 @@ def logout(response: Response):
 
 @router.post("/customer-service/logout")
 def customer_service_logout(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """客服登出时自动设置为离线状态"""
     current_user.is_online = 0
@@ -2616,7 +2615,7 @@ def customer_service_logout(
 
 @router.get("/customer-service/status")
 def get_customer_service_status(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """获取客服在线状态和名字"""
     # 使用新的客服对话系统获取评分数据
@@ -2688,7 +2687,7 @@ def check_customer_service_availability(db: Session = Depends(get_db)):
 # 客服管理相关接口
 @router.get("/customer-service/chats")
 def get_customer_service_chats(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """获取分配给当前客服的用户对话列表"""
     chats = crud.get_service_customer_service_chats(db, current_user.id)
@@ -2725,7 +2724,7 @@ def get_customer_service_chats(
 @router.get("/customer-service/messages/{chat_id}")
 def get_customer_service_messages(
     chat_id: str,
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """获取客服对话消息（仅限分配给该客服的对话）"""
@@ -2743,7 +2742,7 @@ def get_customer_service_messages(
 @router.post("/customer-service/mark-messages-read/{chat_id}")
 def mark_customer_service_messages_read(
     chat_id: str,
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """标记客服对话消息为已读"""
@@ -2764,7 +2763,7 @@ def mark_customer_service_messages_read(
 def send_customer_service_message(
     chat_id: str,
     message_data: dict = Body(...),
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """客服发送消息给用户"""
@@ -2989,7 +2988,7 @@ def get_all_customer_service_ratings(db: Session = Depends(get_db)):
 
 @router.get("/customer-service/cancel-requests", response_model=list[schemas.TaskCancelRequestOut])
 def cs_get_cancel_requests(
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
     status: str = None,
 ):
@@ -3093,7 +3092,7 @@ def get_admin_requests(
 @router.post("/customer-service/admin-requests", response_model=schemas.AdminRequestOut)
 def create_admin_request(
     request_data: schemas.AdminRequestCreate,
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """客服提交管理请求"""
@@ -3116,7 +3115,7 @@ def create_admin_request(
     "/customer-service/admin-chat", response_model=list[schemas.AdminChatMessageOut]
 )
 def get_admin_chat_messages(
-    current_user=Depends(get_current_customer_service), db: Session = Depends(get_db)
+    current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """获取与后台工作人员的聊天记录"""
     from app.models import AdminChatMessage
@@ -3130,7 +3129,7 @@ def get_admin_chat_messages(
 @router.post("/customer-service/admin-chat", response_model=schemas.AdminChatMessageOut)
 def send_admin_chat_message(
     message_data: schemas.AdminChatMessageCreate,
-    current_user=Depends(get_current_customer_service),
+    current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """客服发送消息给后台工作人员"""
@@ -3753,7 +3752,7 @@ def get_user_task_statistics(
 @router.post("/customer-service/cleanup-old-chats/{service_id}")
 def cleanup_old_customer_service_chats(
     service_id: str,
-    current_user: models.CustomerService = Depends(get_current_customer_service),
+    current_user: models.CustomerService = Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """清理客服的旧已结束对话"""
@@ -3774,7 +3773,7 @@ def cleanup_old_customer_service_chats(
 @router.post("/customer-service/timeout-end-chat/{chat_id}")
 def timeout_end_customer_service_chat(
     chat_id: str,
-    current_user: models.CustomerService = Depends(get_current_customer_service),
+    current_user: models.CustomerService = Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """超时结束客服对话"""
@@ -3827,7 +3826,7 @@ def get_timezone_info():
 @router.get("/customer-service/chat-timeout-status/{chat_id}")
 def get_chat_timeout_status(
     chat_id: str,
-    current_user: models.CustomerService = Depends(get_current_customer_service),
+    current_user: models.CustomerService = Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
     """获取对话超时状态"""
