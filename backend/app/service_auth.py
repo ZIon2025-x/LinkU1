@@ -339,29 +339,29 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     return session
 
 def create_service_session_cookie(response: Response, session_id: str) -> Response:
-    """创建客服会话Cookie（最高安全等级）"""
-    # 设置客服会话Cookie - 最高安全等级
+    """创建客服会话Cookie（支持跨域）"""
+    # 设置客服会话Cookie - 支持跨域
     response.set_cookie(
         key="service_session_id",
         value=session_id,
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
         httponly=True,  # 防止XSS攻击
         secure=True,    # 仅HTTPS传输
-        samesite="strict",  # 最严格的同站策略
+        samesite="lax",  # 支持跨域请求
         path="/",  # 根路径，确保前端可以读取
-        domain=None  # 不设置domain，提高安全性
+        domain=".link2ur.com"  # 支持子域名
     )
     
-    # 设置客服身份标识Cookie - 最高安全等级
+    # 设置客服身份标识Cookie - 支持跨域
     response.set_cookie(
         key="service_authenticated",
         value="true",
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
         secure=True,     # 仅HTTPS传输
-        samesite="strict",  # 最严格的同站策略
+        samesite="lax",  # 支持跨域请求
         path="/",  # 根路径，确保前端可以读取
-        domain=None  # 不设置domain，提高安全性
+        domain=".link2ur.com"  # 支持子域名
     )
     
     return response
