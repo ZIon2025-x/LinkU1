@@ -803,6 +803,7 @@ def create_notification(
     title: str,
     content: str,
     related_id: str = None,
+    auto_commit: bool = True,
 ):
     from app.models import Notification, get_uk_time_naive
     from sqlalchemy.exc import IntegrityError
@@ -813,12 +814,14 @@ def create_notification(
             user_id=user_id, type=type, title=title, content=content, related_id=related_id
         )
         db.add(notification)
-        db.commit()
-        db.refresh(notification)
+        if auto_commit:
+            db.commit()
+            db.refresh(notification)
         return notification
     except IntegrityError:
         # 如果违反唯一约束，更新现有通知
-        db.rollback()
+        if auto_commit:
+            db.rollback()
         existing_notification = db.query(Notification).filter(
             Notification.user_id == user_id,
             Notification.type == type,
@@ -1018,7 +1021,7 @@ def cancel_expired_tasks(db: Session):
                         "任务因超过截止日期自动取消",
                     )
 
-                    # 创建通知给任务发布者
+                    # 创建通知给任务发布者（不自动提交）
                     create_notification(
                         db,
                         task.poster_id,
@@ -1026,6 +1029,7 @@ def cancel_expired_tasks(db: Session):
                         "任务自动取消",
                         f'您的任务"{task.title}"因超过截止日期已自动取消',
                         task.id,
+                        auto_commit=False,
                     )
 
                     cancelled_count += 1
