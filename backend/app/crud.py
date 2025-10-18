@@ -949,58 +949,79 @@ def cancel_expired_tasks(db: Session):
     """自动取消已过期的未接受任务 - 使用UTC时间进行比较"""
     from datetime import datetime, timedelta, timezone
     from app.time_utils_v2 import TimeHandlerV2
+    import logging
 
     from app.models import Task, User
 
-    # 获取当前UTC时间
-    now_utc = TimeHandlerV2.get_utc_now()
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # 获取当前UTC时间
+        now_utc = TimeHandlerV2.get_utc_now()
+        logger.info(f"开始检查过期任务，当前UTC时间: {now_utc}")
 
-    # 查找所有状态为'open'的任务
-    open_tasks = db.query(Task).filter(Task.status == "open").all()
+        # 查找所有状态为'open'的任务
+        open_tasks = db.query(Task).filter(Task.status == "open").all()
+        logger.info(f"找到 {len(open_tasks)} 个状态为 'open' 的任务")
 
-    cancelled_count = 0
-    for task in open_tasks:
-        try:
-            # 数据库中的deadline存储的是UTC时间，直接比较
-            if task.deadline.tzinfo is None:
-                # 如果deadline没有时区信息，假设它是UTC时间
-                task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
-            else:
-                # 如果deadline有时区信息，转换为UTC时间
-                task_deadline_utc = task.deadline.astimezone(timezone.utc)
+        cancelled_count = 0
+        for task in open_tasks:
+            try:
+                # 数据库中的deadline存储的是UTC时间（从前端toISOString()发送）
+                # 但可能没有时区信息，需要添加UTC时区
+                if task.deadline.tzinfo is None:
+                    # 如果deadline没有时区信息，假设它是UTC时间
+                    task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
+                else:
+                    # 如果deadline有时区信息，转换为UTC时间
+                    task_deadline_utc = task.deadline.astimezone(timezone.utc)
 
-            if now_utc > task_deadline_utc:
-                # 将任务状态更新为已取消
-                task.status = "cancelled"
+                logger.info(f"检查任务 {task.id}: 截止时间 {task_deadline_utc}, 当前时间 {now_utc}")
+                
+                # 使用UTC时间进行比较
+                if now_utc > task_deadline_utc:
+                    logger.info(f"任务 {task.id} 已过期，开始取消")
+                    # 将任务状态更新为已取消
+                    task.status = "cancelled"
 
-                # 记录任务历史
-                add_task_history(
-                    db,
-                    task.id,
-                    task.poster_id,
-                    "cancelled",
-                    "任务因超过截止日期自动取消",
-                )
+                    # 记录任务历史
+                    add_task_history(
+                        db,
+                        task.id,
+                        task.poster_id,
+                        "cancelled",
+                        "任务因超过截止日期自动取消",
+                    )
 
-                # 创建通知给任务发布者
-                create_notification(
-                    db,
-                    task.poster_id,
-                    "task_cancelled",
-                    "任务自动取消",
-                    f'您的任务"{task.title}"因超过截止日期已自动取消',
-                    task.id,
-                )
+                    # 创建通知给任务发布者
+                    create_notification(
+                        db,
+                        task.poster_id,
+                        "task_cancelled",
+                        "任务自动取消",
+                        f'您的任务"{task.title}"因超过截止日期已自动取消',
+                        task.id,
+                    )
 
-                cancelled_count += 1
+                    cancelled_count += 1
+                    logger.info(f"任务 {task.id} 已成功取消")
+                else:
+                    logger.info(f"任务 {task.id} 未过期")
 
-        except Exception as e:
-            # 记录错误但继续处理其他任务
-            continue
+            except Exception as e:
+                logger.error(f"处理任务 {task.id} 时出错: {e}")
+                # 记录错误但继续处理其他任务
+                continue
 
-    # 提交所有更改
-    db.commit()
-    return cancelled_count
+        # 提交所有更改
+        db.commit()
+        logger.info(f"成功取消 {cancelled_count} 个过期任务")
+        return cancelled_count
+        
+    except Exception as e:
+        logger.error(f"取消过期任务时出错: {e}")
+        db.rollback()
+        return 0
 
 
 def cleanup_cancelled_tasks(db: Session):
