@@ -38,6 +38,7 @@ export const useAuth = () => {
 
       console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
       console.log('当前Cookie:', document.cookie);
+      console.log('service_authenticated检查结果:', document.cookie.includes('service_authenticated=true'));
       
       // 根据Cookie标识只检查对应的角色，避免跨角色检查
       const checks = [];
@@ -230,6 +231,8 @@ export const useAuth = () => {
       const hasServiceCookie = document.cookie.includes('service_authenticated=true');
       const hasUserCookie = document.cookie.includes('user_authenticated=true') || 
                            document.cookie.includes('access_token=');
+      
+      console.log('Cookie变化检测:', { hasAdminCookie, hasServiceCookie, hasUserCookie, isAuthenticated: authState.isAuthenticated });
       
       // 如果检测到Cookie且当前未认证，重新检查认证状态
       if ((hasAdminCookie || hasServiceCookie || hasUserCookie) && !authState.isAuthenticated) {
