@@ -124,6 +124,10 @@ export class TimeHandlerV2 {
     try {
       const tz = userTimezone || this.getUserTimezone();
       
+      console.log('formatLastMessageTime 调试信息:');
+      console.log('输入时间字符串:', utcTimeString);
+      console.log('用户时区:', tz);
+      
       // 确保正确解析UTC时间
       let utcTime;
       if (utcTimeString.endsWith('Z')) {
@@ -132,27 +136,38 @@ export class TimeHandlerV2 {
         utcTime = dayjs.utc(utcTimeString + 'Z');
       }
       
+      console.log('解析后UTC时间:', utcTime.format());
+      
       // 转换为用户时区
       const messageTime = utcTime.tz(tz);
       const now = dayjs().tz(tz);
+      
+      console.log('用户时区时间:', messageTime.format());
+      console.log('当前时间:', now.format());
       
       // 计算时间差
       const diffInMinutes = now.diff(messageTime, 'minute');
       const diffInHours = now.diff(messageTime, 'hour');
       const diffInDays = now.diff(messageTime, 'day');
       
+      console.log(`时间差: ${diffInMinutes}分钟, ${diffInHours}小时, ${diffInDays}天`);
+      
       // 根据时间差显示不同格式
+      let result;
       if (diffInMinutes < 1) {
-        return '刚刚';
+        result = '刚刚';
       } else if (diffInMinutes < 60) {
-        return `${diffInMinutes}分钟前`;
+        result = `${diffInMinutes}分钟前`;
       } else if (diffInHours < 24) {
-        return `${diffInHours}小时前`;
+        result = `${diffInHours}小时前`;
       } else if (diffInDays < 7) {
-        return `${diffInDays}天前`;
+        result = `${diffInDays}天前`;
       } else {
-        return messageTime.format('MM/DD');
+        result = messageTime.format('MM/DD');
       }
+      
+      console.log('最终结果:', result);
+      return result;
     } catch (error) {
       console.error('最后消息时间格式化错误:', error);
       return utcTimeString;
