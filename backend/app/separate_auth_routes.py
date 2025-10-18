@@ -195,7 +195,8 @@ def service_login(
     
     # 设置Cookie
     try:
-        response = create_service_session_cookie(response, session_info.session_id)
+        user_agent = request.headers.get("user-agent", "")
+        response = create_service_session_cookie(response, session_info.session_id, user_agent)
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -230,6 +231,63 @@ def service_login(
         },
         "session_id": session_info.session_id
     }
+
+@router.post("/service/refresh", response_model=Dict[str, Any])
+def service_refresh(
+    request: Request,
+    response: Response,
+    current_service: models.CustomerService = Depends(get_current_service)
+):
+    """客服会话刷新 - 延长会话有效期"""
+    logger.info(f"[SERVICE_AUTH] 客服会话刷新: {current_service.id}")
+    
+    try:
+        # 获取当前会话ID
+        service_session_id = request.cookies.get("service_session_id")
+        if not service_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="未找到客服会话"
+            )
+        
+        # 验证会话并更新活动时间
+        session_info = ServiceAuthManager.get_session(service_session_id, update_activity=True)
+        if not session_info or not session_info.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="客服会话无效或已过期"
+            )
+        
+        # 生成新的CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        user_agent = request.headers.get("user-agent", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        logger.info(f"[SERVICE_AUTH] 客服会话刷新成功: {current_service.id}")
+        
+        return {
+            "message": "会话刷新成功",
+            "service": {
+                "id": current_service.id,
+                "name": current_service.name,
+                "email": current_service.email,
+                "avg_rating": current_service.avg_rating,
+                "total_ratings": current_service.total_ratings,
+                "is_online": bool(current_service.is_online),
+                "created_at": current_service.created_at.isoformat() if current_service.created_at else None
+            },
+            "session_id": session_info.session_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 客服会话刷新失败: {current_service.id}, 错误: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="会话刷新失败，请稍后重试"
+        )
 
 @router.post("/service/logout")
 def service_logout(

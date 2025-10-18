@@ -353,7 +353,8 @@ def cs_login(
         raise HTTPException(status_code=500, detail="Failed to create service session")
     
     # 设置客服会话Cookie
-    response = create_service_session_cookie(response, session_id)
+    user_agent = request.headers.get("user-agent", "")
+    response = create_service_session_cookie(response, session_id, user_agent)
     
     # 更新客服在线状态
     crud.update_customer_service_online_status(db, cs.id, True)

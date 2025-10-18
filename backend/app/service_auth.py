@@ -338,15 +338,17 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
     return session
 
-def create_service_session_cookie(response: Response, session_id: str) -> Response:
+def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "") -> Response:
     """创建客服会话Cookie（支持跨域）"""
     from app.config import Config
+    from app.cookie_manager import CookieManager
     
     # 根据环境设置domain
     cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION else None
     
-    # 确保samesite值有效
-    samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
+    # 使用与用户登录相同的Cookie设置逻辑
+    samesite_value = CookieManager._get_samesite_value(user_agent)
+    secure_value = CookieManager._get_secure_value(user_agent)
     
     # 设置客服会话Cookie - 支持跨域
     response.set_cookie(
@@ -354,8 +356,8 @@ def create_service_session_cookie(response: Response, session_id: str) -> Respon
         value=session_id,
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
         httponly=True,  # 防止XSS攻击
-        secure=Config.COOKIE_SECURE,    # 根据环境设置
-        samesite=samesite_value,  # 根据环境设置
+        secure=secure_value,    # 使用动态设置
+        samesite=samesite_value,  # 使用动态设置
         path="/",  # 根路径，确保前端可以读取
         domain=cookie_domain  # 根据环境设置
     )
@@ -366,8 +368,8 @@ def create_service_session_cookie(response: Response, session_id: str) -> Respon
         value="true",
         max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
         httponly=False,  # 前端需要读取
-        secure=Config.COOKIE_SECURE,     # 根据环境设置
-        samesite=samesite_value,  # 根据环境设置
+        secure=secure_value,     # 使用动态设置
+        samesite=samesite_value,  # 使用动态设置
         path="/",  # 根路径，确保前端可以读取
         domain=cookie_domain  # 根据环境设置
     )
