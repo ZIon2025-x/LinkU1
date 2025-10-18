@@ -23,6 +23,14 @@ const AdminLogin: React.FC = () => {
       // 新的管理员登录使用Cookie认证，不需要保存token到localStorage
       console.log('管理员登录成功，使用HttpOnly Cookie认证');
       
+      // 登录成功后获取CSRF token
+      try {
+        await api.get('/api/csrf/token');
+        console.log('管理员登录成功后获取CSRF token');
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
+      
       // 跳转到管理后台
       navigate('/admin');
     } catch (error: any) {

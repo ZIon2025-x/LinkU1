@@ -61,6 +61,14 @@ const Login: React.FC = () => {
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
       console.log('使用HttpOnly Cookie认证，无需localStorage存储');
       
+      // 登录成功后获取CSRF token
+      try {
+        await api.get('/api/csrf/token');
+        console.log('登录成功后获取CSRF token');
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
+      
       setErrorMsg(''); // 登录成功清空错误
       message.success(t('auth.loginSuccess'));
       // 添加短暂延迟确保认证信息设置完成

@@ -101,6 +101,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
         // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
         console.log('使用HttpOnly Cookie认证，无需localStorage存储');
         
+        // 登录成功后获取CSRF token
+        try {
+          await api.get('/api/csrf/token');
+          console.log('登录成功后获取CSRF token');
+        } catch (error) {
+          console.warn('获取CSRF token失败:', error);
+        }
+        
         // 添加短暂延迟确保认证信息设置完成
         setTimeout(() => {
           onSuccess?.();

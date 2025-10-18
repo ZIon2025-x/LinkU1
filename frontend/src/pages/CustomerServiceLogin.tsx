@@ -24,6 +24,14 @@ const CustomerServiceLogin: React.FC = () => {
       // 只需要跳转到客服管理页面
       console.log('客服登录成功:', service);
       
+      // 登录成功后获取CSRF token
+      try {
+        await api.get('/api/csrf/token');
+        console.log('客服登录成功后获取CSRF token');
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
+      
       // 跳转到客服管理页面
       navigate('/customer-service');
     } catch (error: any) {

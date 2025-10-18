@@ -133,6 +133,19 @@ export const useAuth = () => {
         const data = await response.json();
         console.log('登录成功，响应数据:', data);
         
+        // 登录成功后获取CSRF token
+        try {
+          const csrfResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/csrf/token`, {
+            method: 'GET',
+            credentials: 'include'
+          });
+          if (csrfResponse.ok) {
+            console.log('登录成功后获取CSRF token');
+          }
+        } catch (error) {
+          console.warn('获取CSRF token失败:', error);
+        }
+        
         // 根据角色获取用户数据
         let userData = null;
         if (role === 'admin' && data.admin) {
