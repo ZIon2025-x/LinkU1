@@ -22,6 +22,20 @@ router = APIRouter()
 
 # ==================== 管理员认证API ====================
 
+def find_admin_by_username_or_id(db: Session, username_or_id: str):
+    """根据用户名或ID查找管理员"""
+    admin = None
+    
+    # 首先尝试按用户名查找
+    admin = crud.get_admin_user_by_username(db, username_or_id)
+    
+    # 如果按用户名没找到，且输入的是ID格式（A+4位数字），则按ID查找
+    if not admin and username_or_id.startswith('A') and len(username_or_id) == 5 and username_or_id[1:].isdigit():
+        admin = crud.get_admin_user_by_id(db, username_or_id)
+        logger.info(f"[ADMIN_AUTH] 按ID查找管理员: {username_or_id}")
+    
+    return admin
+
 @router.post("/admin/login", response_model=schemas.AdminLoginResponse)
 def admin_login(
     login_data: schemas.AdminUserLoginNew,
@@ -34,8 +48,8 @@ def admin_login(
     
     logger.info(f"[ADMIN_AUTH] 管理员登录尝试: {login_data.username}")
     
-    # 查找管理员
-    admin = crud.get_admin_user_by_username(db, login_data.username)
+    # 查找管理员 - 支持用户名和ID登录
+    admin = find_admin_by_username_or_id(db, login_data.username)
     if not admin:
         logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username}")
         raise HTTPException(
@@ -139,8 +153,8 @@ def send_admin_verification_code(
             detail="管理员邮箱验证功能未启用"
         )
     
-    # 查找管理员
-    admin = AdminVerificationManager.get_admin_by_username(db, login_data.username)
+    # 查找管理员 - 支持用户名和ID登录
+    admin = find_admin_by_username_or_id(db, login_data.username)
     if not admin:
         logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username}")
         raise HTTPException(
