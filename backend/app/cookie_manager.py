@@ -153,11 +153,8 @@ class CookieManager:
             samesite_value = "lax"   # 隐私模式下lax兼容性更好
             secure_value = True      # HTTPS环境必须使用secure
         else:
-            # 桌面端：开发环境不设置domain，生产环境使用配置的domain
-            # 只使用当前域名，不设置domain属性
+            # 桌面端：只使用当前域名，不设置domain属性
             cookie_domain = None
-            else:
-                cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
             session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
@@ -240,11 +237,8 @@ class CookieManager:
             cookie_domain = None
             cookie_path = "/"
         else:
-            # 开发环境不设置domain，生产环境使用配置的domain
             # 只使用当前域名，不设置domain属性
             cookie_domain = None
-            else:
-                cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
         
         response.set_cookie(
