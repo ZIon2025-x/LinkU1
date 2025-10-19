@@ -87,7 +87,8 @@ class AdminVerificationManager:
                 verification_data_str = redis_client.get(redis_key)
                 
                 if not verification_data_str:
-                    logger.warning(f"管理员 {admin_id} 验证码不存在或已过期")
+                    # Redis中没有找到 = 验证码不存在、已过期或已被使用
+                    logger.warning(f"管理员 {admin_id} 验证码不存在、已过期或已被使用")
                     return False
                 
                 try:
@@ -101,12 +102,7 @@ class AdminVerificationManager:
                     logger.warning(f"管理员 {admin_id} 验证码不匹配")
                     return False
                 
-                # 检查是否已使用
-                if verification_data.get("is_used", False):
-                    logger.warning(f"管理员 {admin_id} 验证码已使用")
-                    return False
-                
-                # 标记为已使用（删除Redis中的验证码）
+                # 验证成功，立即删除Redis中的验证码（确保一次性使用）
                 redis_client.delete(redis_key)
                 
                 logger.info(f"管理员 {admin_id} 验证码验证成功")
