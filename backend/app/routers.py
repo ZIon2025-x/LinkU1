@@ -2581,9 +2581,23 @@ def set_customer_service_online(
     current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """设置客服为在线状态"""
-    current_user.is_online = 1
-    db.commit()
-    return {"message": "客服已设置为在线状态"}
+    logger.info(f"[CUSTOMER_SERVICE] 设置客服在线状态: {current_user.id}")
+    logger.info(f"[CUSTOMER_SERVICE] 当前在线状态: {current_user.is_online}")
+    
+    try:
+        current_user.is_online = 1
+        db.commit()
+        logger.info(f"[CUSTOMER_SERVICE] 客服在线状态设置成功: {current_user.id}")
+        
+        # 验证更新是否成功
+        db.refresh(current_user)
+        logger.info(f"[CUSTOMER_SERVICE] 验证更新后状态: {current_user.is_online}")
+        
+        return {"message": "客服已设置为在线状态", "is_online": current_user.is_online}
+    except Exception as e:
+        logger.error(f"[CUSTOMER_SERVICE] 设置在线状态失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"设置在线状态失败: {str(e)}")
 
 
 @router.post("/customer-service/offline")
@@ -2591,9 +2605,23 @@ def set_customer_service_offline(
     current_user=Depends(get_current_service), db: Session = Depends(get_db)
 ):
     """设置客服为离线状态"""
-    current_user.is_online = 0
-    db.commit()
-    return {"message": "客服已设置为离线状态"}
+    logger.info(f"[CUSTOMER_SERVICE] 设置客服离线状态: {current_user.id}")
+    logger.info(f"[CUSTOMER_SERVICE] 当前在线状态: {current_user.is_online}")
+    
+    try:
+        current_user.is_online = 0
+        db.commit()
+        logger.info(f"[CUSTOMER_SERVICE] 客服离线状态设置成功: {current_user.id}")
+        
+        # 验证更新是否成功
+        db.refresh(current_user)
+        logger.info(f"[CUSTOMER_SERVICE] 验证更新后状态: {current_user.is_online}")
+        
+        return {"message": "客服已设置为离线状态", "is_online": current_user.is_online}
+    except Exception as e:
+        logger.error(f"[CUSTOMER_SERVICE] 设置离线状态失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"设置离线状态失败: {str(e)}")
 
 
 @router.post("/logout")
