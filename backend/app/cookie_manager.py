@@ -252,7 +252,7 @@ class CookieManager:
             domain=cookie_domain
         )
         
-        logger.info("设置CSRF Cookie")
+        logger.info(f"设置CSRF Cookie - token: {token[:8]}..., secure: {secure_value}, samesite: {samesite_value}, path: {cookie_path}, domain: {cookie_domain}")
     
     @staticmethod
     def clear_auth_cookies(response: Response) -> None:

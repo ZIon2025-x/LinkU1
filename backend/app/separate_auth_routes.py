@@ -270,7 +270,9 @@ def service_login(
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
+        logger.info(f"[SERVICE_AUTH] 生成CSRF token: {csrf_token[:8]}...")
         CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        logger.info(f"[SERVICE_AUTH] CSRF cookie设置完成")
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: {service.id}")
     except Exception as e:

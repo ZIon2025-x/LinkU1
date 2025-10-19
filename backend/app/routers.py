@@ -3800,25 +3800,33 @@ def timeout_end_customer_service_chat(
 ):
     """超时结束客服对话"""
     try:
+        logger.info(f"客服 {current_user.id} 尝试超时结束对话 {chat_id}")
+        
         # 获取对话信息
         chat = crud.get_customer_service_chat(db, chat_id)
         if not chat:
+            logger.warning(f"对话 {chat_id} 不存在")
             raise HTTPException(status_code=404, detail="对话不存在")
 
         # 检查权限
         if chat["service_id"] != current_user.id:
+            logger.warning(f"客服 {current_user.id} 无权限操作对话 {chat_id}，对话属于客服 {chat['service_id']}")
             raise HTTPException(status_code=403, detail="无权限操作此对话")
 
         # 检查对话是否已结束
         if chat["is_ended"] == 1:
+            logger.info(f"对话 {chat_id} 已经结束")
             raise HTTPException(status_code=400, detail="对话已结束")
 
         # 结束对话
+        logger.info(f"正在结束对话 {chat_id}")
         success = crud.end_customer_service_chat(db, chat_id)
         if not success:
+            logger.error(f"结束对话 {chat_id} 失败")
             raise HTTPException(status_code=500, detail="结束对话失败")
 
         # 发送超时通知给用户
+        logger.info(f"为用户 {chat['user_id']} 创建超时通知")
         crud.create_notification(
             db=db,
             user_id=chat["user_id"],
@@ -3828,6 +3836,7 @@ def timeout_end_customer_service_chat(
             related_id=chat_id,
         )
 
+        logger.info(f"对话 {chat_id} 超时结束成功")
         return {"message": "对话已超时结束", "chat_id": chat_id, "user_notified": True}
 
     except HTTPException:
@@ -3853,17 +3862,22 @@ def get_chat_timeout_status(
 ):
     """获取对话超时状态"""
     try:
+        logger.info(f"客服 {current_user.id} 检查对话 {chat_id} 的超时状态")
+        
         # 获取对话信息
         chat = crud.get_customer_service_chat(db, chat_id)
         if not chat:
+            logger.warning(f"对话 {chat_id} 不存在")
             raise HTTPException(status_code=404, detail="对话不存在")
 
         # 检查权限
         if chat["service_id"] != current_user.id:
+            logger.warning(f"客服 {current_user.id} 无权限查看对话 {chat_id}")
             raise HTTPException(status_code=403, detail="无权限查看此对话")
 
         # 检查对话是否已结束
         if chat["is_ended"] == 1:
+            logger.info(f"对话 {chat_id} 已结束")
             return {"is_ended": True, "is_timeout": False, "timeout_available": False}
 
         # 计算最后消息时间到现在的时间差
@@ -3926,14 +3940,17 @@ def get_chat_timeout_status(
 
         # 2分钟 = 120秒
         is_timeout = time_diff.total_seconds() > 120
-
-        return {
+        
+        result = {
             "is_ended": False,
             "is_timeout": is_timeout,
             "timeout_available": is_timeout,
             "last_message_time": chat["last_message_at"],
             "time_since_last_message": int(time_diff.total_seconds()),
         }
+        
+        logger.info(f"对话 {chat_id} 超时状态: {result}")
+        return result
 
     except HTTPException:
         raise

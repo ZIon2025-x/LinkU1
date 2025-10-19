@@ -823,14 +823,19 @@ const CustomerService: React.FC = () => {
       
       if (response.ok) {
         const status = await response.json();
+        console.log('超时状态检查结果:', status);
         setChatTimeoutStatus(status);
         return status;
       } else {
         console.error('获取超时状态失败:', response.status);
+        // 如果获取超时状态失败，清除当前状态
+        setChatTimeoutStatus(null);
         return null;
       }
     } catch (error) {
       console.error('检查超时状态失败:', error);
+      // 如果检查失败，清除当前状态
+      setChatTimeoutStatus(null);
       return null;
     }
   };
@@ -848,10 +853,15 @@ const CustomerService: React.FC = () => {
       
       if (response.ok) {
         const result = await response.json();
-        alert('对话已超时结束，用户已收到通知');
         
-        // 重新加载会话列表
-        loadSessions();
+        // 先更新本地状态，避免状态不一致
+        setSessions(prevSessions => 
+          prevSessions.map(session => 
+            session.chat_id === chatId 
+              ? { ...session, is_ended: 1, ended_at: new Date().toISOString() }
+              : session
+          )
+        );
         
         // 清除当前选中的会话
         setSelectedSession(null);
@@ -864,9 +874,18 @@ const CustomerService: React.FC = () => {
           setTimeoutCheckInterval(null);
         }
         
+        // 显示成功消息
+        alert('对话已超时结束，用户已收到通知');
+        
+        // 异步重新加载会话列表以确保数据同步
+        setTimeout(() => {
+          loadSessions();
+        }, 100);
+        
         return result;
       } else {
         const errorData = await response.json();
+        console.error('超时结束失败:', errorData);
         alert('超时结束失败: ' + (errorData.detail || '未知错误'));
         return null;
       }
@@ -982,10 +1001,10 @@ const CustomerService: React.FC = () => {
       // 立即检查一次超时状态
       await checkChatTimeoutStatus(session.chat_id);
       
-      // 设置定时器，每30秒检查一次超时状态
+      // 设置定时器，每10秒检查一次超时状态，确保及时更新
       const interval = setInterval(async () => {
         await checkChatTimeoutStatus(session.chat_id);
-      }, 30000); // 30秒检查一次
+      }, 10000); // 10秒检查一次，提高响应速度
       
       setTimeoutCheckInterval(interval);
     }
@@ -1902,6 +1921,13 @@ const CustomerService: React.FC = () => {
                   >
                     超时结束
                   </button>
+                )}
+                
+                {/* 调试信息 - 开发环境显示 */}
+                {process.env.NODE_ENV === 'development' && selectedSession.is_ended === 0 && (
+                  <div style={{ fontSize: 10, color: '#999', marginTop: 4 }}>
+                    调试: 超时状态 = {JSON.stringify(chatTimeoutStatus)}
+                  </div>
                 )}
               </div>
 
