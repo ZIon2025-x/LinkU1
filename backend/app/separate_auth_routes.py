@@ -200,7 +200,7 @@ def service_login(
     # 设置Cookie
     try:
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, session_info.session_id, user_agent)
+        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(service.id))
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -292,11 +292,101 @@ def service_refresh(
             detail="会话刷新失败，请稍后重试"
         )
 
+@router.post("/service/refresh-token", response_model=Dict[str, Any])
+def service_refresh_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db)
+):
+    """客服refresh token刷新 - 生成新的access token和refresh token"""
+    logger.info(f"[SERVICE_AUTH] 客服refresh token刷新请求")
+    
+    try:
+        # 从cookie中获取refresh token
+        refresh_token = request.cookies.get("service_refresh_token")
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="未找到refresh token"
+            )
+        
+        # 验证refresh token
+        from app.security import verify_token, refresh_access_token
+        try:
+            payload = verify_token(refresh_token, "refresh")
+            service_id = payload.get("sub")
+            role = payload.get("role")
+            
+            if role != "service":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="无效的refresh token角色"
+                )
+        except Exception as e:
+            logger.warning(f"[SERVICE_AUTH] refresh token验证失败: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的refresh token"
+            )
+        
+        # 检查客服是否存在
+        if not service_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的service_id"
+            )
+        
+        service = crud.get_customer_service_by_id(db, service_id)
+        if not service:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="客服不存在"
+            )
+        
+        # 生成新的access token和refresh token
+        new_access_token, new_refresh_token = refresh_access_token(refresh_token)
+        
+        # 设置新的Cookie
+        user_agent = request.headers.get("user-agent", "")
+        response = create_service_session_cookie(response, "", user_agent, str(service.id))
+        
+        # 生成新的CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        logger.info(f"[SERVICE_AUTH] 客服refresh token刷新成功: {service.id}")
+        
+        return {
+            "message": "Token刷新成功",
+            "service": {
+                "id": str(service.id),
+                "name": str(service.name),
+                "email": str(service.email),
+                "avg_rating": float(service.avg_rating) if service.avg_rating else 0.0,  # type: ignore
+                "total_ratings": int(service.total_ratings) if service.total_ratings else 0,  # type: ignore
+                "is_online": bool(service.is_online),
+                "created_at": service.created_at.isoformat() if service.created_at else None  # type: ignore
+            },
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 客服refresh token刷新失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token刷新失败，请稍后重试"
+        )
+
 @router.post("/service/logout")
 def service_logout(
     request: Request,
     response: Response,
-    current_service: models.CustomerService = Depends(get_current_service)
+    current_service: models.CustomerService = Depends(get_current_service),
+    db: Session = Depends(get_sync_db)
 ):
     """客服登出（独立认证系统）"""
     logger.info(f"[SERVICE_AUTH] 客服登出: {current_service.id}")

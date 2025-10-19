@@ -376,10 +376,11 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
     return session
 
-def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "") -> Response:
-    """创建客服会话Cookie（与用户登录保持一致的设计）"""
+def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None) -> Response:
+    """创建客服会话Cookie（与用户登录保持一致的设计，包含refresh token）"""
     from app.cookie_manager import CookieManager
     from app.config import get_settings
+    from app.security import create_refresh_token
     
     settings = get_settings()
     
@@ -397,11 +398,20 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         
         # 根据环境设置Cookie参数
         secure_value = settings.COOKIE_SECURE
-        samesite_value: str = "lax"  # 默认使用lax
+        samesite_value = "lax"  # 默认使用lax
         if settings.COOKIE_SAMESITE in ["lax", "strict", "none"]:
             samesite_value = settings.COOKIE_SAMESITE
         cookie_domain = settings.COOKIE_DOMAIN if settings.IS_PRODUCTION else None
         cookie_path = "/"
+        
+        # 生成refresh token（如果提供了service_id）
+        refresh_token = None
+        if service_id:
+            try:
+                refresh_token = create_refresh_token(data={"sub": service_id, "role": "service"})
+                logger.info(f"[SERVICE_AUTH] 生成客服refresh token: {service_id}")
+            except Exception as e:
+                logger.warning(f"[SERVICE_AUTH] 生成refresh token失败: {e}")
         
         # 设置客服会话Cookie - 使用与用户登录相同的设置
         response.set_cookie(
@@ -414,6 +424,19 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             path=cookie_path,
             domain=cookie_domain
         )
+        
+        # 设置客服refresh token Cookie（如果生成了）
+        if refresh_token:
+            response.set_cookie(
+                key="service_refresh_token",
+                value=refresh_token,
+                max_age=7 * 24 * 3600,  # 7天
+                httponly=True,  # 防止XSS攻击
+                secure=secure_value,
+                samesite=samesite_value,
+                path=cookie_path,
+                domain=cookie_domain
+            )
         
         # 设置客服身份标识Cookie - 前端需要读取
         response.set_cookie(
@@ -430,7 +453,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         # 设置客服ID Cookie（非敏感，用于前端显示）
         response.set_cookie(
             key="service_id",
-            value="",  # 这里不设置具体值，由前端从profile接口获取
+            value=service_id or "",  # 设置实际的service_id
             max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
             httponly=False,  # 前端需要访问
             secure=secure_value,
@@ -443,7 +466,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         if is_mobile:
             logger.info(f"[SERVICE_AUTH] 移动端客服Cookie设置: 使用主要service_session_id Cookie")
         
-        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
+        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., service_id={service_id}, refresh_token={'是' if refresh_token else '否'}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
         return response
         
     except Exception as e:
@@ -461,6 +484,7 @@ def clear_service_session_cookie(response: Response) -> Response:
     
     # 清除所有客服相关的Cookie
     response.delete_cookie("service_session_id", path=cookie_path, domain=cookie_domain)
+    response.delete_cookie("service_refresh_token", path=cookie_path, domain=cookie_domain)
     response.delete_cookie("service_authenticated", path=cookie_path, domain=cookie_domain)
     response.delete_cookie("service_id", path=cookie_path, domain=cookie_domain)
     
