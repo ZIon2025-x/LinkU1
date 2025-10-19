@@ -257,8 +257,29 @@ class ServiceAuthManager:
                 if keys:
                     result = safe_redis_get(keys[0])
                     logger.info(f"[SERVICE_AUTH] 获取到的会话数据: {result}")
-                    return result
-                logger.info(f"[SERVICE_AUTH] 未找到匹配的会话数据")
+                    if result:
+                        return result
+                    else:
+                        logger.warning(f"[SERVICE_AUTH] Redis数据获取失败，尝试内存查找")
+                else:
+                    logger.info(f"[SERVICE_AUTH] Redis中未找到匹配的会话数据，尝试内存查找")
+                
+                # 如果Redis中没有找到，尝试从内存查找
+                session = service_active_sessions.get(session_id)
+                if session:
+                    logger.info(f"[SERVICE_AUTH] 从内存找到会话数据: {session_id[:8]}...")
+                    return {
+                        'session_id': session.session_id,
+                        'service_id': session.service_id,
+                        'created_at': session.created_at.isoformat() if session.created_at else None,
+                        'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                        'device_fingerprint': session.device_fingerprint,
+                        'ip_address': session.ip_address,
+                        'user_agent': session.user_agent,
+                        'is_active': session.is_active
+                    }
+                
+                logger.info(f"[SERVICE_AUTH] 内存中也没有找到会话数据: {session_id[:8]}...")
                 return None
             else:
                 # 从内存查找
@@ -313,9 +334,17 @@ class ServiceAuthManager:
     @staticmethod
     def _is_session_expired(session_data: dict) -> bool:
         """检查会话是否过期"""
-        last_activity = datetime.fromisoformat(session_data['last_activity'])
-        expire_time = last_activity + timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS)
-        return datetime.utcnow() > expire_time
+        try:
+            last_activity = datetime.fromisoformat(session_data['last_activity'])
+            expire_time = last_activity + timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS)
+            current_time = datetime.utcnow()
+            is_expired = current_time > expire_time
+            
+            logger.info(f"[SERVICE_AUTH] 会话过期检查 - last_activity: {last_activity}, expire_time: {expire_time}, current_time: {current_time}, is_expired: {is_expired}")
+            return is_expired
+        except Exception as e:
+            logger.error(f"[SERVICE_AUTH] 会话过期检查失败: {e}")
+            return True  # 如果检查失败，认为已过期
     
     @staticmethod
     def _cleanup_expired_sessions(service_id: str):

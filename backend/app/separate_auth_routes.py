@@ -168,6 +168,10 @@ def service_redis_test():
         except Exception as e:
             ping_status = f"failed: {e}"
         
+        # 查找现有的客服会话
+        pattern = "service_session:CS8888:*"
+        existing_keys = redis_client.keys(pattern)
+        
         # 测试存储和获取
         test_key = "service_test_key"
         test_data = {"test": "service_redis_test", "timestamp": datetime.utcnow().isoformat()}
@@ -177,6 +181,11 @@ def service_redis_test():
         
         # 获取测试数据
         get_result = safe_redis_get(test_key)
+        
+        # 测试现有会话数据获取
+        existing_session_data = None
+        if existing_keys:
+            existing_session_data = safe_redis_get(existing_keys[0])
         
         # 清理测试数据
         if redis_client:
@@ -189,7 +198,9 @@ def service_redis_test():
             "ping_status": ping_status,
             "set_result": set_result,
             "get_result": get_result,
-            "data_match": get_result == test_data if get_result else False
+            "data_match": get_result == test_data if get_result else False,
+            "existing_keys": existing_keys,
+            "existing_session_data": existing_session_data
         }
         
     except Exception as e:
