@@ -270,8 +270,49 @@ class AdminAuthManager:
         return datetime.utcnow() > expire_time
     
     @staticmethod
+    def cleanup_expired_sessions():
+        """清理过期会话（公共方法）"""
+        try:
+            if USE_REDIS and redis_client:
+                # 主动清理Redis中的过期会话
+                pattern = "admin_session:*"
+                keys = redis_client.keys(pattern)
+                cleaned_count = 0
+                
+                for key in keys:
+                    data = safe_redis_get(key.decode())
+                    if data:
+                        # 检查会话是否过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            last_activity = datetime.fromisoformat(last_activity_str)
+                            if datetime.utcnow() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                # 删除过期会话
+                                redis_client.delete(key)
+                                cleaned_count += 1
+                
+                logger.info(f"[ADMIN_AUTH] Redis清理了 {cleaned_count} 个过期会话")
+            else:
+                # 清理内存中的过期会话
+                current_time = datetime.utcnow()
+                expired_sessions = []
+                
+                for session_id, session in admin_active_sessions.items():
+                    expire_time = session.last_activity + timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS)
+                    if current_time > expire_time:
+                        expired_sessions.append(session_id)
+                
+                for session_id in expired_sessions:
+                    del admin_active_sessions[session_id]
+                
+                logger.info(f"[ADMIN_AUTH] 内存清理了 {len(expired_sessions)} 个过期会话")
+                
+        except Exception as e:
+            logger.error(f"[ADMIN_AUTH] 清理过期会话失败: {e}")
+
+    @staticmethod
     def _cleanup_expired_sessions(admin_id: str):
-        """清理过期会话"""
+        """清理特定管理员的过期会话（私有方法）"""
         if USE_REDIS:
             # Redis会自动过期，无需手动清理
             pass
