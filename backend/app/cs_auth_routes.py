@@ -77,12 +77,16 @@ async def cs_login(
                 detail="邮箱或密码错误"
             )
         
-        # 创建token
-        access_token = create_access_token(data={"sub": cs.id, "role": "cs"})
-        refresh_token = create_refresh_token(data={"sub": cs.id, "role": "cs"})
+        # 使用新的客服会话认证系统
+        from app.service_auth import ServiceAuthManager, create_service_session_cookie
         
-        # 设置安全cookie
-        CookieManager.set_auth_cookies(response, access_token, refresh_token)
+        # 创建客服会话
+        session_info = ServiceAuthManager.create_session(str(cs.id), request)
+        logger.info(f"[SERVICE_AUTH] 客服会话创建成功: {cs.id}")
+        
+        # 设置客服会话Cookie
+        user_agent = request.headers.get("user-agent", "")
+        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(cs.id))
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -103,9 +107,6 @@ async def cs_login(
         
         return {
             "message": "客服登录成功",
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": 900,  # 15分钟
             "user": {
                 "id": cs.id,
                 "name": cs.name,
