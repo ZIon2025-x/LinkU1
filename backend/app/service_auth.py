@@ -9,7 +9,7 @@ import secrets
 import hashlib
 import time
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -126,9 +126,64 @@ class ServiceAuthManager:
         return hashlib.sha256(fingerprint_data.encode()).hexdigest()[:16]
     
     @staticmethod
+    def _get_active_sessions(service_id: str) -> List[ServiceSessionInfo]:
+        """获取指定客服的活跃会话"""
+        active_sessions = []
+        
+        if USE_REDIS and redis_client:
+            try:
+                # 查找所有该客服的会话
+                pattern = f"service_session:{service_id}:*"
+                keys = redis_client.keys(pattern)
+                
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    data = safe_redis_get(key_str)
+                    if data and data.get('is_active', True):
+                        # 检查是否过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            last_activity = datetime.fromisoformat(last_activity_str)
+                            if datetime.utcnow() - last_activity <= timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
+                                # 转换为ServiceSessionInfo对象
+                                session_info = ServiceSessionInfo(
+                                    session_id=data['session_id'],
+                                    service_id=data['service_id'],
+                                    created_at=datetime.fromisoformat(data['created_at']),
+                                    last_activity=datetime.fromisoformat(last_activity_str),
+                                    device_fingerprint=data.get('device_fingerprint', ''),
+                                    ip_address=data.get('ip_address', ''),
+                                    user_agent=data.get('user_agent', ''),
+                                    is_active=data.get('is_active', True)
+                                )
+                                active_sessions.append(session_info)
+            except Exception as e:
+                logger.error(f"[SERVICE_AUTH] 获取活跃会话失败: {e}")
+        
+        return active_sessions
+    
+    @staticmethod
+    def _revoke_session(session_id: str) -> bool:
+        """撤销指定会话"""
+        try:
+            if USE_REDIS and redis_client:
+                # 查找并删除会话
+                pattern = f"service_session:*:{session_id}"
+                keys = redis_client.keys(pattern)
+                
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    redis_client.delete(key_str)
+                    logger.info(f"[SERVICE_AUTH] 撤销会话: {session_id}")
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"[SERVICE_AUTH] 撤销会话失败: {e}")
+            return False
+    
+    @staticmethod
     def create_session(service_id: str, request: Request) -> ServiceSessionInfo:
-        """创建客服会话"""
-        session_id = ServiceAuthManager.generate_session_id()
+        """创建客服会话（优化版：支持会话复用和数量限制）"""
         current_time = datetime.utcnow()
         
         # 获取客户端信息
@@ -136,7 +191,29 @@ class ServiceAuthManager:
         user_agent = request.headers.get("user-agent", "")
         device_fingerprint = ServiceAuthManager.get_device_fingerprint(request)
         
-        # 创建会话信息
+        # 1. 检查现有活跃会话
+        existing_sessions = ServiceAuthManager._get_active_sessions(service_id)
+        
+        # 2. 如果存在活跃会话，优先复用（相同设备指纹）
+        for session in existing_sessions:
+            if (session.device_fingerprint == device_fingerprint and 
+                session.ip_address == client_ip and
+                session.is_active):
+                # 更新最后活动时间
+                session.last_activity = current_time
+                ServiceAuthManager._store_session(session)
+                logger.info(f"[SERVICE_AUTH] 复用现有客服会话: {service_id}, session_id: {session.session_id[:8]}...")
+                return session
+        
+        # 3. 检查会话数量限制（最多3个活跃会话）
+        if len(existing_sessions) >= 3:
+            # 清理最旧的会话
+            oldest_session = min(existing_sessions, key=lambda s: s.created_at)
+            ServiceAuthManager._revoke_session(oldest_session.session_id)
+            logger.info(f"[SERVICE_AUTH] 清理最旧会话: {oldest_session.session_id[:8]}...")
+        
+        # 4. 创建新会话
+        session_id = ServiceAuthManager.generate_session_id()
         session_info = ServiceSessionInfo(
             session_id=session_id,
             service_id=service_id,
@@ -153,7 +230,7 @@ class ServiceAuthManager:
         # 清理过期会话
         ServiceAuthManager._cleanup_expired_sessions(service_id)
         
-        logger.info(f"[SERVICE_AUTH] 创建客服会话: {service_id}, session_id: {session_id[:8]}...")
+        logger.info(f"[SERVICE_AUTH] 创建新客服会话: {service_id}, session_id: {session_id[:8]}...")
         return session_info
     
     @staticmethod

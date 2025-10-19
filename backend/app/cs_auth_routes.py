@@ -172,17 +172,31 @@ async def cs_refresh_token(
                 detail="无效的refresh token"
             )
         
-        # 生成新的会话
-        from app.service_auth import ServiceAuthManager, create_service_session_cookie
-        new_session = ServiceAuthManager.create_session(service_id, request)
+        # 获取现有会话ID（不创建新会话）
+        existing_session_id = request.cookies.get("service_session_id")
+        if not existing_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="未找到现有会话"
+            )
+        
+        # 验证现有会话
+        from app.service_auth import ServiceAuthManager
+        existing_session = ServiceAuthManager.get_session(existing_session_id)
+        if not existing_session or existing_session.service_id != service_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="现有会话无效"
+            )
         
         # 撤销旧的refresh token
         from app.service_auth import revoke_service_refresh_token
         revoke_service_refresh_token(refresh_token)
         
-        # 生成新的会话和refresh token
+        # 生成新的refresh token（复用现有会话）
+        from app.service_auth import create_service_session_cookie
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, new_session.session_id, user_agent, str(cs.id))
+        response = create_service_session_cookie(response, existing_session_id, user_agent, str(cs.id))
         
         # 生成并设置新的CSRF token
         from app.csrf import CSRFProtection
@@ -199,7 +213,7 @@ async def cs_refresh_token(
         return {
             "message": "会话刷新成功",
             "service_id": cs.id,
-            "session_id": new_session.session_id,
+            "session_id": existing_session_id,
             "csrf_token": csrf_token
         }
         

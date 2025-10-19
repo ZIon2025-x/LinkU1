@@ -207,34 +207,27 @@ def refresh_session(
                 status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停或封禁"
             )
         
-        # 生成新的会话ID（防止会话固定攻击）
-        new_session = SecureAuthManager.create_session(
-            user_id=user.id,
-            device_fingerprint=session.device_fingerprint,
-            ip_address=get_client_ip(request),
-            user_agent=request.headers.get("user-agent", "")
-        )
-        
-        # 撤销旧会话
-        SecureAuthManager.revoke_session(session.session_id)
+        # 更新现有会话的最后活动时间（不创建新会话）
+        session.last_activity = datetime.utcnow()
+        SecureAuthManager._store_session(session)
         
         # 生成新的刷新令牌
         refresh_token = SecureAuthManager.generate_refresh_token()
         
-        # 设置新的安全Cookie
+        # 设置新的安全Cookie（复用现有会话）
         CookieManager.set_session_cookies(
             response=response,
-            session_id=new_session.session_id,
+            session_id=session.session_id,
             refresh_token=refresh_token,
             user_id=user.id,
             user_agent=request.headers.get("user-agent", "")
         )
         
-        logger.info(f"会话刷新成功 - 用户: {user.id}, 新会话: {new_session.session_id[:8]}...")
+        logger.info(f"会话刷新成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
         
         return {
             "message": "会话刷新成功",
-            "session_id": new_session.session_id,  # 仅用于调试
+            "session_id": session.session_id,  # 仅用于调试
             "expires_in": 300,  # 5分钟
         }
 

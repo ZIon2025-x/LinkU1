@@ -9,7 +9,7 @@ import secrets
 import hashlib
 import time
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, Set
+from typing import Optional, List, Dict, Any, Set
 from dataclasses import dataclass
 from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -87,28 +87,61 @@ class SecureAuthManager:
         return secrets.token_urlsafe(32)  # 256 bits
     
     @staticmethod
-    def create_session(
-        user_id: str,
-        device_fingerprint: str,
-        ip_address: str,
-        user_agent: str
-    ) -> SessionInfo:
-        """创建新会话"""
-        session_id = SecureAuthManager.generate_session_id()
-        now = datetime.utcnow()
-        
-        session = SessionInfo(
-            user_id=user_id,
-            session_id=session_id,
-            device_fingerprint=device_fingerprint,
-            created_at=now,
-            last_activity=now,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
+    def _get_active_sessions(user_id: str) -> List[SessionInfo]:
+        """获取指定用户的活跃会话"""
+        active_sessions = []
         
         if USE_REDIS and redis_client:
-            # 使用 Redis 存储会话
+            try:
+                # 查找所有该用户的会话
+                pattern = f"session:*"
+                keys = redis_client.keys(pattern)
+                
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    data = safe_redis_get(key_str)
+                    if data and data.get('user_id') == user_id and data.get('is_active', True):
+                        # 检查是否过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            last_activity = datetime.fromisoformat(last_activity_str)
+                            if datetime.utcnow() - last_activity <= timedelta(hours=SESSION_EXPIRE_HOURS):
+                                # 转换为SessionInfo对象
+                                session_info = SessionInfo(
+                                    user_id=data['user_id'],
+                                    session_id=data['session_id'],
+                                    device_fingerprint=data.get('device_fingerprint', ''),
+                                    created_at=datetime.fromisoformat(data['created_at']),
+                                    last_activity=datetime.fromisoformat(last_activity_str),
+                                    ip_address=data.get('ip_address', ''),
+                                    user_agent=data.get('user_agent', ''),
+                                    is_active=data.get('is_active', True)
+                                )
+                                active_sessions.append(session_info)
+            except Exception as e:
+                logger.error(f"[SECURE_AUTH] 获取活跃会话失败: {e}")
+        
+        return active_sessions
+    
+    @staticmethod
+    def _revoke_session(session_id: str) -> bool:
+        """撤销指定会话"""
+        try:
+            if USE_REDIS and redis_client:
+                # 删除会话
+                key = f"session:{session_id}"
+                redis_client.delete(key)
+                logger.info(f"[SECURE_AUTH] 撤销用户会话: {session_id}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"[SECURE_AUTH] 撤销用户会话失败: {e}")
+            return False
+    
+    @staticmethod
+    def _store_session(session: SessionInfo) -> None:
+        """存储会话到Redis"""
+        if USE_REDIS and redis_client:
             session_data = {
                 "user_id": session.user_id,
                 "session_id": session.session_id,
@@ -122,50 +155,62 @@ class SecureAuthManager:
             
             # 存储会话数据
             redis_client.setex(
-                f"session:{session_id}",
-                SESSION_EXPIRE_HOURS * 3600,  # TTL in seconds
+                f"session:{session.session_id}",
+                SESSION_EXPIRE_HOURS * 3600,  # 24小时TTL
                 json.dumps(session_data)
             )
             
-            # 维护用户会话列表
-            user_sessions_key = f"user_sessions:{user_id}"
-            redis_client.sadd(user_sessions_key, session_id)
-            redis_client.expire(user_sessions_key, SESSION_EXPIRE_HOURS * 3600)
-            
-            # 清理用户的旧会话
-            user_sessions = redis_client.smembers(user_sessions_key)
-            if len(user_sessions) > MAX_ACTIVE_SESSIONS:
-                # 获取最旧的会话并标记为不活跃
-                oldest_sessions = []
-                for sid in user_sessions:
-                    data = safe_redis_get(f"session:{sid}")
-                    if data and data.get("is_active", True):  # 只考虑活跃会话
-                        oldest_sessions.append((data["last_activity"], sid))
-                
-                # 按最后活动时间排序，标记最旧的为不活跃
-                oldest_sessions.sort()
-                for _, old_sid in oldest_sessions[:-MAX_ACTIVE_SESSIONS]:
-                    # 标记为不活跃而不是删除
-                    data = safe_redis_get(f"session:{old_sid}")
-                    if data:
-                        data["is_active"] = False
-                        redis_client.setex(
-                            f"session:{old_sid}",
-                            SESSION_EXPIRE_HOURS * 3600,
-                            json.dumps(data)
-                        )
-                    redis_client.srem(user_sessions_key, old_sid)
-        else:
-            # 使用内存存储
-            # 清理用户的旧会话（保持最多MAX_ACTIVE_SESSIONS个）
-            user_sessions = [s for s in active_sessions.values() if s.user_id == user_id and s.is_active]
-            if len(user_sessions) >= MAX_ACTIVE_SESSIONS:
-                # 删除最旧的会话
-                oldest_session = min(user_sessions, key=lambda s: s.last_activity)
-                oldest_session.is_active = False
-            
-            active_sessions[session_id] = session
+            # 添加到用户会话集合
+            redis_client.sadd(f"user_sessions:{session.user_id}", session.session_id)
+            redis_client.expire(f"user_sessions:{session.user_id}", SESSION_EXPIRE_HOURS * 3600)
+    
+    @staticmethod
+    def create_session(
+        user_id: str,
+        device_fingerprint: str,
+        ip_address: str,
+        user_agent: str
+    ) -> SessionInfo:
+        """创建新会话（优化版：支持会话复用和数量限制）"""
+        now = datetime.utcnow()
         
+        # 1. 检查现有活跃会话
+        existing_sessions = SecureAuthManager._get_active_sessions(user_id)
+        
+        # 2. 如果存在活跃会话，优先复用（相同设备指纹）
+        for session in existing_sessions:
+            if (session.device_fingerprint == device_fingerprint and 
+                session.ip_address == ip_address and
+                session.is_active):
+                # 更新最后活动时间
+                session.last_activity = now
+                SecureAuthManager._store_session(session)
+                logger.info(f"[SECURE_AUTH] 复用现有用户会话: {user_id}, session_id: {session.session_id[:8]}...")
+                return session
+        
+        # 3. 检查会话数量限制（最多3个活跃会话）
+        if len(existing_sessions) >= 3:
+            # 清理最旧的会话
+            oldest_session = min(existing_sessions, key=lambda s: s.created_at)
+            SecureAuthManager._revoke_session(oldest_session.session_id)
+            logger.info(f"[SECURE_AUTH] 清理最旧用户会话: {oldest_session.session_id[:8]}...")
+        
+        # 4. 创建新会话
+        session_id = SecureAuthManager.generate_session_id()
+        session = SessionInfo(
+            user_id=user_id,
+            session_id=session_id,
+            device_fingerprint=device_fingerprint,
+            created_at=now,
+            last_activity=now,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # 存储会话
+        SecureAuthManager._store_session(session)
+        
+        logger.info(f"[SECURE_AUTH] 创建新用户会话: {user_id}, session_id: {session_id[:8]}...")
         return session
     
     @staticmethod
