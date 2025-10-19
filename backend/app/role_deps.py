@@ -17,30 +17,18 @@ from app.csrf import sync_csrf_cookie_bearer, sync_cookie_bearer_readonly
 def get_current_user_secure_sync_csrf(
     request: Request,
     db: Session = Depends(get_sync_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer_readonly),
 ) -> models.User:
     """获取当前用户（同步版本，只读操作）"""
-    if not credentials:
+    from app.secure_auth import validate_session
+    
+    session = validate_session(request)
+    if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供认证信息"
+            detail="认证失败，请重新登录"
         )
     
-    try:
-        payload = verify_token(credentials.credentials)
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的token"
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token验证失败"
-        )
-    
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).filter(models.User.id == session.user_id).first()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,40 +53,22 @@ def get_current_user_secure_sync_csrf(
 def get_current_customer_service_secure_sync(
     request: Request,
     db: Session = Depends(get_sync_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_csrf_cookie_bearer),
 ) -> models.CustomerService:
     """获取当前客服（同步版本，CSRF保护）"""
-    if not credentials:
+    from app.service_auth import validate_service_session
+    
+    session = validate_service_session(request)
+    if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供认证信息"
+            detail="认证失败，请重新登录"
         )
     
-    try:
-        payload = verify_token(credentials.credentials)
-        cs_id = payload.get("sub")
-        if cs_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的token"
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token验证失败"
-        )
-    
-    cs = db.query(models.CustomerService).filter(models.CustomerService.id == cs_id).first()
+    cs = db.query(models.CustomerService).filter(models.CustomerService.id == session.service_id).first()
     if cs is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="客服不存在"
-        )
-    
-    if not cs.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="客服账号已被禁用"
         )
     
     return cs
@@ -107,30 +77,18 @@ def get_current_customer_service_secure_sync(
 def get_current_admin_secure_sync(
     request: Request,
     db: Session = Depends(get_sync_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_csrf_cookie_bearer),
 ) -> models.AdminUser:
     """获取当前管理员（同步版本，CSRF保护）"""
-    if not credentials:
+    from app.admin_auth import validate_admin_session
+    
+    session = validate_admin_session(request)
+    if not session:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="未提供认证信息"
+            detail="认证失败，请重新登录"
         )
     
-    try:
-        payload = verify_token(credentials.credentials)
-        admin_id = payload.get("sub")
-        if admin_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的token"
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token验证失败"
-        )
-    
-    admin = db.query(models.AdminUser).filter(models.AdminUser.id == admin_id).first()
+    admin = db.query(models.AdminUser).filter(models.AdminUser.id == session.admin_id).first()
     if admin is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -225,33 +183,17 @@ def get_current_user_or_cs_or_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(sync_cookie_bearer_readonly),
 ) -> Union[models.User, models.CustomerService, models.AdminUser]:
     """获取当前用户、客服或管理员（多角色支持）"""
-    # 首先尝试使用会话认证
+    # 使用会话认证
     from app.secure_auth import validate_session
     
     session = validate_session(request)
-    if session:
-        user_id = session.user_id
-    else:
-        # 如果会话认证失败，回退到JWT认证
-        if not credentials:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="未提供认证信息"
-            )
-        
-        try:
-            payload = verify_token(credentials.credentials)
-            user_id = payload.get("sub")
-            if user_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="无效的token"
-                )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token验证失败"
-            )
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="认证失败，请重新登录"
+        )
+    
+    user_id = session.user_id
     
     # 按优先级查找：管理员 > 客服 > 用户
     admin = db.query(models.AdminUser).filter(models.AdminUser.id == user_id).first()

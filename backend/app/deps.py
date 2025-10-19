@@ -128,61 +128,13 @@ async def get_current_user_secure(
             
             return user
     
-    # 如果会话认证失败，回退到JWT认证
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="未提供认证信息"
-        )
-
-    try:
-        # 验证token
-        payload = verify_token(credentials.credentials, "access")
-        user_id = payload.get("sub")
-
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的token"
-            )
-
-        # 获取用户信息
-        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
-        if not user:
-            # 记录安全事件
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "INVALID_USER", user_id, client_ip, "Token中的用户不存在"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在"
-            )
-
-        # 检查用户状态
-        if hasattr(user, "is_suspended") and user.is_suspended:
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "SUSPENDED_USER_ACCESS", user_id, client_ip, "被暂停用户尝试访问"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被暂停"
-            )
-
-        if hasattr(user, "is_banned") and user.is_banned:
-            client_ip = get_client_ip(request)
-            log_security_event(
-                "BANNED_USER_ACCESS", user_id, client_ip, "被封禁用户尝试访问"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="账户已被封禁"
-            )
-
-        return user
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        client_ip = get_client_ip(request)
-        log_security_event("AUTH_ERROR", "unknown", client_ip, f"认证错误: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="认证失败")
+    # 会话认证失败，拒绝访问
+    client_ip = get_client_ip(request)
+    log_security_event("SESSION_AUTH_FAILED", "unknown", client_ip, "会话认证失败")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, 
+        detail="认证失败，请重新登录"
+    )
 
 
 # 旧的JWT认证函数已删除，请使用新的会话认证系统

@@ -134,18 +134,13 @@ def secure_login(
             'windows phone', 'opera mini', 'iemobile'
         ])
         
-        # 为移动端添加特殊的响应头和token
-        access_token = None
+        # 为移动端添加特殊的响应头
         if is_mobile:
-            # 为移动端生成access_token作为备用认证
-            from app.security import create_access_token
-            access_token = create_access_token({"sub": user.id})
-            
+            # 设置会话ID到响应头（用于移动端）
             response.headers["X-Session-ID"] = session.session_id
             response.headers["X-User-ID"] = user.id
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
-            response.headers["X-Access-Token"] = access_token  # 移动端备用token
 
         return {
             "message": "登录成功",
