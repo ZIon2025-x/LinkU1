@@ -92,10 +92,11 @@ class UserRedisCleanup:
                     f"user_refresh_tokens:{user_id}",  # 用户refresh token列表
                 ]
             else:
-                # 清理所有refresh token
+                # 清理所有refresh token（包括客服的）
                 patterns = [
                     "refresh_token:*",
                     "user_refresh_tokens:*",
+                    "service_refresh_token:*",  # 客服refresh token
                 ]
             
             for pattern in patterns:
@@ -104,7 +105,7 @@ class UserRedisCleanup:
                     key_str = key.decode() if isinstance(key, bytes) else key
                     
                     # 检查是否是refresh token数据
-                    if key_str.startswith("refresh_token:"):
+                    if key_str.startswith("refresh_token:") or key_str.startswith("service_refresh_token:"):
                         data = self._get_redis_data(key_str)
                         if data and self._is_refresh_token_expired(data):
                             self.redis_client.delete(key_str)

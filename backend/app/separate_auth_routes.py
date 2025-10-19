@@ -363,7 +363,7 @@ def service_refresh_token(
     response: Response,
     db: Session = Depends(get_sync_db)
 ):
-    """客服refresh token刷新 - 生成新的access token和refresh token"""
+    """客服refresh token刷新 - 生成新的会话"""
     logger.info(f"[SERVICE_AUTH] 客服refresh token刷新请求")
     
     try:
@@ -375,32 +375,15 @@ def service_refresh_token(
                 detail="未找到refresh token"
             )
         
-        # 验证refresh token
-        from app.security import verify_token, refresh_access_token
-        try:
-            payload = verify_token(refresh_token, "refresh")
-            service_id = payload.get("sub")
-            role = payload.get("role")
-            
-            if role != "service":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="无效的refresh token角色"
-                )
-        except Exception as e:
-            logger.warning(f"[SERVICE_AUTH] refresh token验证失败: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的refresh token"
-            )
-        
-        # 检查客服是否存在
+        # 从cookie中获取service_id
+        service_id = request.cookies.get("service_id")
         if not service_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的service_id"
+                detail="未找到service_id"
             )
         
+        # 检查客服是否存在
         service = crud.get_customer_service_by_id(db, service_id)
         if not service:
             raise HTTPException(
@@ -408,12 +391,26 @@ def service_refresh_token(
                 detail="客服不存在"
             )
         
-        # 生成新的access token和refresh token
-        new_access_token, new_refresh_token = refresh_access_token(refresh_token)
+        # 验证refresh token
+        from app.service_auth import verify_service_refresh_token
+        verified_service_id = verify_service_refresh_token(refresh_token)
+        if not verified_service_id or verified_service_id != service_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的refresh token"
+            )
         
-        # 设置新的Cookie
+        # 生成新的会话
+        from app.service_auth import ServiceAuthManager, create_service_session_cookie
+        new_session = ServiceAuthManager.create_session(service_id, request)
+        
+        # 撤销旧的refresh token
+        from app.service_auth import revoke_service_refresh_token
+        revoke_service_refresh_token(refresh_token)
+        
+        # 生成新的会话和refresh token
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, "", user_agent, str(service.id))
+        response = create_service_session_cookie(response, new_session.session_id, user_agent, str(service.id))
         
         # 生成新的CSRF token
         from app.csrf import CSRFProtection

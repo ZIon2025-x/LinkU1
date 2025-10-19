@@ -488,14 +488,29 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
 def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None) -> Response:
     """创建客服会话Cookie（完全按照用户登录的方式）"""
     from app.cookie_manager import CookieManager
-    from app.security import create_refresh_token
     
     try:
-        # 生成refresh token（如果提供了service_id）
+        # 生成简单的refresh token（和用户一样）
         refresh_token = None
         if service_id:
             try:
-                refresh_token = create_refresh_token(data={"sub": service_id, "role": "service"})
+                # 使用简单的随机字符串，和用户refresh token一样
+                refresh_token = secrets.token_urlsafe(32)
+                
+                # 保存refresh token到Redis
+                if USE_REDIS and redis_client:
+                    refresh_data = {
+                        "service_id": service_id,
+                        "created_at": datetime.utcnow().isoformat(),
+                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                    }
+                    redis_client.setex(
+                        f"service_refresh_token:{refresh_token}",
+                        30 * 24 * 3600,  # 30天TTL
+                        json.dumps(refresh_data)
+                    )
+                    logger.info(f"[SERVICE_AUTH] 客服refresh token已保存到Redis: {service_id}")
+                
                 logger.info(f"[SERVICE_AUTH] 生成客服refresh token: {service_id}")
             except Exception as e:
                 logger.warning(f"[SERVICE_AUTH] 生成refresh token失败: {e}")
@@ -512,8 +527,8 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         from typing import Literal
         samesite_literal: Literal["lax", "strict", "none"] = samesite_value  # type: ignore
         
-        # 不设置domain，让Cookie使用默认域名（api.link2ur.com）
-        # 前端不需要访问HttpOnly Cookie，所以不需要跨子域名支持
+        # 只使用API域名，不设置domain属性
+        # 确保cookie只绑定到api.link2ur.com
         cookie_domain = None
         
         # 设置客服会话Cookie - HttpOnly，后端验证用
@@ -533,12 +548,12 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             response.set_cookie(
                 key="service_refresh_token",
                 value=refresh_token,
-                max_age=7 * 24 * 3600,  # 7天
+                max_age=30 * 24 * 3600,  # 30天，与JWT过期时间一致
                 httponly=True,  # 防止XSS攻击
                 secure=settings.COOKIE_SECURE,
                 samesite=samesite_literal,
                 path="/",
-                domain=cookie_domain  # 跨子域名支持
+                domain=cookie_domain
             )
         
         # 前端不需要检测Cookie，所以不设置这些标识Cookie
@@ -555,7 +570,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
 def clear_service_session_cookie(response: Response) -> Response:
     """清除客服会话Cookie（只清除客服专用Cookie）"""
     try:
-        # 不设置domain，让Cookie使用默认域名（api.link2ur.com）
+        # 只使用API域名，不设置domain属性
         cookie_domain = None
         
         # 清除客服专用的Cookie
@@ -568,3 +583,39 @@ def clear_service_session_cookie(response: Response) -> Response:
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 客服Cookie清除失败: {e}")
         return response
+
+def verify_service_refresh_token(refresh_token: str) -> Optional[str]:
+    """验证客服refresh token"""
+    try:
+        if not USE_REDIS or not redis_client:
+            return None
+        
+        # 从Redis获取refresh token数据
+        data = safe_redis_get(f"service_refresh_token:{refresh_token}")
+        if not data:
+            return None
+        
+        # 检查是否过期
+        expires_at_str = data.get('expires_at')
+        if expires_at_str:
+            expires_at = datetime.fromisoformat(expires_at_str)
+            if datetime.utcnow() > expires_at:
+                # 过期了，删除
+                redis_client.delete(f"service_refresh_token:{refresh_token}")
+                return None
+        
+        return data.get('service_id')
+        
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 验证refresh token失败: {e}")
+        return None
+
+def revoke_service_refresh_token(refresh_token: str) -> bool:
+    """撤销客服refresh token"""
+    try:
+        if USE_REDIS and redis_client:
+            return redis_client.delete(f"service_refresh_token:{refresh_token}") > 0
+        return False
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 撤销refresh token失败: {e}")
+        return False
