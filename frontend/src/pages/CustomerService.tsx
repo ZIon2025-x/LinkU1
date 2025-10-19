@@ -369,9 +369,9 @@ const CustomerService: React.FC = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          credentials: 'include'  // 使用Cookie认证
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify(body)
       });
 
@@ -412,9 +412,7 @@ const CustomerService: React.FC = () => {
     try {
       const response = await fetch(`/api/users/admin/tasks/${taskId}/delete`, {
         method: 'DELETE',
-        headers: {
-          credentials: 'include'  // 使用Cookie认证
-        }
+        credentials: 'include'  // 使用Cookie认证
       });
 
       if (response.ok) {
@@ -768,9 +766,9 @@ const CustomerService: React.FC = () => {
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chat-timeout-status/${chatId}`, {
         method: 'GET',
         headers: {
-          credentials: 'include',  // 使用Cookie认证
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'  // 使用Cookie认证
       });
       
       if (response.ok) {
@@ -793,9 +791,9 @@ const CustomerService: React.FC = () => {
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/timeout-end-chat/${chatId}`, {
         method: 'POST',
         headers: {
-          credentials: 'include',  // 使用Cookie认证
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'  // 使用Cookie认证
       });
       
       if (response.ok) {
@@ -1535,9 +1533,9 @@ const CustomerService: React.FC = () => {
                       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cleanup-old-chats/${currentUser.id}`, {
                         method: 'POST',
                         headers: {
-                          credentials: 'include',  // 使用Cookie认证
                           'Content-Type': 'application/json'
-                        }
+                        },
+                        credentials: 'include'  // 使用Cookie认证
                       });
                       
                       if (response.ok) {

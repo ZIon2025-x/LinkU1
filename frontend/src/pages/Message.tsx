@@ -1070,9 +1070,7 @@ const MessagePage: React.FC = () => {
           console.log('验证对话是否仍然有效...');
           try {
             const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
-              headers: {
-    credentials: 'include'  // 使用Cookie认证
-              }
+              credentials: 'include'  // 使用Cookie认证
             });
             
             if (response.ok) {
@@ -1952,9 +1950,7 @@ const MessagePage: React.FC = () => {
           console.log('验证对话是否仍然有效...');
           try {
             const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
-              headers: {
-    credentials: 'include'  // 使用Cookie认证
-              }
+              credentials: 'include'  // 使用Cookie认证
             });
             
             if (response.ok) {
