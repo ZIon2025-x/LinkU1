@@ -156,7 +156,9 @@ async def security_exception_handler(request: Request, exc: SecurityError) -> JS
     safe_message = get_safe_error_message(exc.error_code, exc.message)
     
     # 记录安全事件
-    logger.warning(f"安全异常: {exc.error_code} - {request.url} - IP: {request.client.host}")
+    from app.security import get_client_ip
+    client_ip = get_client_ip(request)
+    logger.warning(f"安全异常: {exc.error_code} - {request.url} - IP: {client_ip}")
     
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,

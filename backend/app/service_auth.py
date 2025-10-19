@@ -186,8 +186,9 @@ class ServiceAuthManager:
         """创建客服会话（优化版：支持会话复用和数量限制）"""
         current_time = datetime.utcnow()
         
-        # 获取客户端信息
-        client_ip = request.client.host if request.client else "unknown"
+        # 获取客户端信息 - 使用统一的IP获取方法
+        from app.security import get_client_ip
+        client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         device_fingerprint = ServiceAuthManager.get_device_fingerprint(request)
         
@@ -551,8 +552,9 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
         # ServiceAuthManager.delete_session(service_session_id)
         # return None
     
-    # 验证IP地址（可选，用于检测异常登录）
-    current_ip = request.client.host if request.client else "unknown"
+    # 验证IP地址（可选，用于检测异常登录）- 使用统一的IP获取方法
+    from app.security import get_client_ip
+    current_ip = get_client_ip(request)
     if session.ip_address != current_ip:
         logger.warning(f"[SERVICE_AUTH] IP地址不匹配: 会话IP={session.ip_address}, 当前IP={current_ip}")
         # 可以选择是否强制登出

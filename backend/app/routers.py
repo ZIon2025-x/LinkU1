@@ -3192,7 +3192,8 @@ def get_dashboard_stats(
     """获取管理后台统计数据"""
     # 记录管理页面访问
     if request:
-        client_ip = request.client.host
+        from app.security import get_client_ip
+        client_ip = get_client_ip(request)
         logger.info(f"管理员访问仪表板: {current_admin.username[:3]}*** (IP: {client_ip})")
     try:
         stats = crud.get_dashboard_stats(db)
