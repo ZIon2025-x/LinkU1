@@ -178,7 +178,7 @@ class ServiceAuthManager:
         """删除客服的所有会话"""
         deleted_count = 0
         
-        if USE_REDIS:
+        if USE_REDIS and redis_client:
             # 从Redis删除
             pattern = f"service_session:{service_id}:*"
             keys = redis_client.keys(pattern)
@@ -237,7 +237,7 @@ class ServiceAuthManager:
     def _get_session_data(session_id: str) -> Optional[dict]:
         """从Redis或内存获取会话数据"""
         try:
-            if USE_REDIS:
+            if USE_REDIS and redis_client:
                 # 从Redis查找
                 pattern = f"service_session:*:{session_id}"
                 keys = redis_client.keys(pattern)
@@ -282,7 +282,7 @@ class ServiceAuthManager:
     @staticmethod
     def _delete_session(session_id: str) -> bool:
         """删除会话"""
-        if USE_REDIS:
+        if USE_REDIS and redis_client:
             pattern = f"service_session:*:{session_id}"
             keys = redis_client.keys(pattern)
             if keys:
@@ -377,34 +377,73 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     return session
 
 def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "") -> Response:
-    """创建客服会话Cookie（简化版本，与用户登录保持一致）"""
+    """创建客服会话Cookie（与用户登录保持一致的设计）"""
     from app.cookie_manager import CookieManager
+    from app.config import get_settings
     
-    # 使用与用户登录相同的Cookie设置逻辑
+    settings = get_settings()
+    
     try:
+        # 检测是否为移动端
+        is_mobile = any(device in user_agent.lower() for device in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        # 检测是否为隐私模式（Safari等）
+        is_private_mode = any(mode in user_agent.lower() for mode in [
+            'private', 'incognito', 'inprivate'
+        ])
+        
+        # 根据环境设置Cookie参数
+        secure_value = settings.COOKIE_SECURE
+        samesite_value: str = "lax"  # 默认使用lax
+        if settings.COOKIE_SAMESITE in ["lax", "strict", "none"]:
+            samesite_value = settings.COOKIE_SAMESITE
+        cookie_domain = settings.COOKIE_DOMAIN if settings.IS_PRODUCTION else None
+        cookie_path = "/"
+        
         # 设置客服会话Cookie - 使用与用户登录相同的设置
         response.set_cookie(
             key="service_session_id",
             value=session_id,
             max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
             httponly=True,  # 防止XSS攻击
-            secure=False,   # 开发环境使用False
-            samesite="lax", # 使用lax提高兼容性
-            path="/"        # 根路径
+            secure=secure_value,
+            samesite=samesite_value,
+            path=cookie_path,
+            domain=cookie_domain
         )
         
-        # 设置客服身份标识Cookie
+        # 设置客服身份标识Cookie - 前端需要读取
         response.set_cookie(
             key="service_authenticated",
             value="true",
             max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
             httponly=False,  # 前端需要读取
-            secure=False,    # 开发环境使用False
-            samesite="lax",  # 使用lax提高兼容性
-            path="/"         # 根路径
+            secure=secure_value,
+            samesite=samesite_value,
+            path=cookie_path,
+            domain=cookie_domain
         )
         
-        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}...")
+        # 设置客服ID Cookie（非敏感，用于前端显示）
+        response.set_cookie(
+            key="service_id",
+            value="",  # 这里不设置具体值，由前端从profile接口获取
+            max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
+            httponly=False,  # 前端需要访问
+            secure=secure_value,
+            samesite=samesite_value,
+            path=cookie_path,
+            domain=cookie_domain
+        )
+        
+        # 移动端特殊处理
+        if is_mobile:
+            logger.info(f"[SERVICE_AUTH] 移动端客服Cookie设置: 使用主要service_session_id Cookie")
+        
+        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
         return response
         
     except Exception as e:
@@ -414,6 +453,16 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
 
 def clear_service_session_cookie(response: Response) -> Response:
     """清除客服会话Cookie"""
-    response.delete_cookie("service_session_id")
-    response.delete_cookie("service_authenticated")
+    from app.config import get_settings
+    
+    settings = get_settings()
+    cookie_domain = settings.COOKIE_DOMAIN if settings.IS_PRODUCTION else None
+    cookie_path = "/"
+    
+    # 清除所有客服相关的Cookie
+    response.delete_cookie("service_session_id", path=cookie_path, domain=cookie_domain)
+    response.delete_cookie("service_authenticated", path=cookie_path, domain=cookie_domain)
+    response.delete_cookie("service_id", path=cookie_path, domain=cookie_domain)
+    
+    logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
     return response

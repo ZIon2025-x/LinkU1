@@ -41,7 +41,7 @@ def admin_login(
         )
     
     # 检查管理员状态
-    if not admin.is_active:
+    if not bool(admin.is_active):
         logger.warning(f"[ADMIN_AUTH] 管理员已被禁用: {admin.id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -49,7 +49,7 @@ def admin_login(
         )
     
     # 验证密码
-    if not verify_password(login_data.password, admin.hashed_password):
+    if not verify_password(login_data.password, str(admin.hashed_password)):
         logger.warning(f"[ADMIN_AUTH] 管理员密码错误: {admin.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,7 +57,7 @@ def admin_login(
         )
     
     # 创建管理员会话
-    session_info = AdminAuthManager.create_session(admin.id, request)
+    session_info = AdminAuthManager.create_session(str(admin.id), request)
     
     # 设置Cookie
     response = create_admin_session_cookie(response, session_info.session_id)
@@ -69,7 +69,7 @@ def admin_login(
     CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
     
     # 更新最后登录时间
-    admin.last_login = datetime.utcnow()
+    admin.last_login = datetime.utcnow()  # type: ignore
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员登录成功: {admin.id}")
@@ -77,12 +77,12 @@ def admin_login(
     return {
         "message": "管理员登录成功",
         "admin": {
-            "id": admin.id,
-            "name": admin.name,
-            "username": admin.username,
-            "email": admin.email,
+            "id": str(admin.id),
+            "name": str(admin.name),
+            "username": str(admin.username),
+            "email": str(admin.email),
             "is_super_admin": bool(admin.is_super_admin),
-            "last_login": admin.last_login.isoformat() if admin.last_login else None
+            "last_login": admin.last_login.isoformat() if admin.last_login else None  # type: ignore
         },
         "session_id": session_info.session_id
     }
@@ -113,14 +113,14 @@ def get_admin_profile(
 ):
     """获取管理员个人信息"""
     return {
-        "id": current_admin.id,
-        "name": current_admin.name,
-        "username": current_admin.username,
-        "email": current_admin.email,
+        "id": str(current_admin.id),
+        "name": str(current_admin.name),
+        "username": str(current_admin.username),
+        "email": str(current_admin.email),
         "is_super_admin": bool(current_admin.is_super_admin),
         "is_active": bool(current_admin.is_active),
-        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else None,
-        "last_login": current_admin.last_login.isoformat() if current_admin.last_login else None
+        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else None,  # type: ignore
+        "last_login": current_admin.last_login.isoformat() if current_admin.last_login else None  # type: ignore
     }
 
 @router.post("/admin/change-password")
@@ -131,14 +131,14 @@ def admin_change_password(
 ):
     """管理员修改密码"""
     # 验证旧密码
-    if not verify_password(password_data.old_password, current_admin.hashed_password):
+    if not verify_password(password_data.old_password, str(current_admin.hashed_password)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="旧密码错误"
         )
     
     # 更新密码
-    current_admin.hashed_password = get_password_hash(password_data.new_password)
+    current_admin.hashed_password = get_password_hash(password_data.new_password)  # type: ignore
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员修改密码成功: {current_admin.id}")
@@ -163,7 +163,7 @@ def service_login(
     # 首先尝试作为ID查找（CS + 4位数字格式）
     if username.startswith('CS') and len(username) == 6 and username[2:].isdigit():
         service = crud.get_customer_service_by_id(db, username)
-        if service and verify_password(login_data.password, service.hashed_password):
+        if service and verify_password(login_data.password, str(service.hashed_password)):
             pass  # 验证成功
         else:
             service = None
@@ -171,7 +171,7 @@ def service_login(
     # 如果ID查找失败，尝试作为邮箱查找
     if not service:
         service = crud.get_customer_service_by_email(db, username)
-        if service and verify_password(login_data.password, service.hashed_password):
+        if service and verify_password(login_data.password, str(service.hashed_password)):
             pass  # 验证成功
         else:
             service = None
@@ -185,7 +185,7 @@ def service_login(
     
     # 创建客服会话
     try:
-        session_info = ServiceAuthManager.create_session(service.id, request)
+        session_info = ServiceAuthManager.create_session(str(service.id), request)
         logger.info(f"[SERVICE_AUTH] 客服会话创建成功: {service.id}")
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 客服会话创建失败: {service.id}, 错误: {str(e)}")
@@ -205,7 +205,6 @@ def service_login(
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
         csrf_token = CSRFProtection.generate_csrf_token()
-        user_agent = request.headers.get("user-agent", "")
         CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: {service.id}")
@@ -217,52 +216,24 @@ def service_login(
         )
     
     # 设置客服在线状态
-    service.is_online = 1
+    service.is_online = 1  # type: ignore
     db.commit()
     
     logger.info(f"[SERVICE_AUTH] 客服登录成功: {service.id}")
     
-    # 返回响应，确保cookie设置生效
-    from fastapi.responses import JSONResponse
-    
-    # 创建响应内容
-    content = {
+    return {
         "message": "客服登录成功",
         "service": {
-            "id": service.id,
-            "name": service.name,
-            "email": service.email,
-            "avg_rating": service.avg_rating,
-            "total_ratings": service.total_ratings,
+            "id": str(service.id),
+            "name": str(service.name),
+            "email": str(service.email),
+            "avg_rating": float(service.avg_rating) if service.avg_rating else 0.0,  # type: ignore
+            "total_ratings": int(service.total_ratings) if service.total_ratings else 0,  # type: ignore
             "is_online": bool(service.is_online),
-            "created_at": service.created_at.isoformat() if service.created_at else None
+            "created_at": service.created_at.isoformat() if service.created_at else None  # type: ignore
         },
         "session_id": session_info.session_id
     }
-    
-    # 创建JSONResponse并复制cookie
-    json_response = JSONResponse(content=content)
-    
-    # 复制所有cookie到新响应
-    for cookie in response.cookies:
-        json_response.set_cookie(
-            key=cookie.key,
-            value=cookie.value,
-            max_age=cookie.get("max_age"),
-            expires=cookie.get("expires"),
-            path=cookie.get("path"),
-            domain=cookie.get("domain"),
-            secure=cookie.get("secure"),
-            httponly=cookie.get("httponly"),
-            samesite=cookie.get("samesite")
-        )
-    
-    # 复制其他headers
-    for key, value in response.headers.items():
-        if key.lower() not in ['content-length', 'content-type']:
-            json_response.headers[key] = value
-    
-    return json_response
 
 @router.post("/service/refresh", response_model=Dict[str, Any])
 def service_refresh(
@@ -301,13 +272,13 @@ def service_refresh(
         return {
             "message": "会话刷新成功",
             "service": {
-                "id": current_service.id,
-                "name": current_service.name,
-                "email": current_service.email,
-                "avg_rating": current_service.avg_rating,
-                "total_ratings": current_service.total_ratings,
+                "id": str(current_service.id),
+                "name": str(current_service.name),
+                "email": str(current_service.email),
+                "avg_rating": float(current_service.avg_rating) if current_service.avg_rating else 0.0,  # type: ignore
+                "total_ratings": int(current_service.total_ratings) if current_service.total_ratings else 0,  # type: ignore
                 "is_online": bool(current_service.is_online),
-                "created_at": current_service.created_at.isoformat() if current_service.created_at else None
+                "created_at": current_service.created_at.isoformat() if current_service.created_at else None  # type: ignore
             },
             "session_id": session_info.session_id
         }
@@ -337,7 +308,7 @@ def service_logout(
         ServiceAuthManager.delete_session(service_session_id)
     
     # 设置客服离线状态
-    current_service.is_online = 0
+    current_service.is_online = 0  # type: ignore
     db.commit()
     
     # 清除Cookie
@@ -351,13 +322,13 @@ def get_service_profile(
 ):
     """获取客服个人信息"""
     return {
-        "id": current_service.id,
-        "name": current_service.name,
-        "email": current_service.email,
-        "avg_rating": current_service.avg_rating,
-        "total_ratings": current_service.total_ratings,
+        "id": str(current_service.id),
+        "name": str(current_service.name),
+        "email": str(current_service.email),
+        "avg_rating": float(current_service.avg_rating) if current_service.avg_rating else 0.0,  # type: ignore
+        "total_ratings": int(current_service.total_ratings) if current_service.total_ratings else 0,  # type: ignore
         "is_online": bool(current_service.is_online),
-        "created_at": current_service.created_at.isoformat() if current_service.created_at else None
+        "created_at": current_service.created_at.isoformat() if current_service.created_at else None  # type: ignore
     }
 
 @router.post("/service/change-password")
@@ -368,14 +339,14 @@ def service_change_password(
 ):
     """客服修改密码"""
     # 验证旧密码
-    if not verify_password(password_data.old_password, current_service.hashed_password):
+    if not verify_password(password_data.old_password, str(current_service.hashed_password)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="旧密码错误"
         )
     
     # 更新密码
-    current_service.hashed_password = get_password_hash(password_data.new_password)
+    current_service.hashed_password = get_password_hash(password_data.new_password)  # type: ignore
     db.commit()
     
     logger.info(f"[SERVICE_AUTH] 客服修改密码成功: {current_service.id}")
@@ -389,15 +360,15 @@ def get_user_profile(
 ):
     """获取用户个人信息"""
     return {
-        "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
-        "phone": current_user.phone,
+        "id": str(current_user.id),
+        "name": str(current_user.name),
+        "email": str(current_user.email),
+        "phone": str(current_user.phone) if current_user.phone else None,  # type: ignore
         "is_verified": bool(current_user.is_verified),
         "is_suspended": bool(current_user.is_suspended),
         "is_banned": bool(current_user.is_banned),
         "created_at": current_user.created_at.isoformat(),
-        "last_login": current_user.last_login.isoformat() if current_user.last_login else None
+        "last_login": getattr(current_user, 'last_login', None).isoformat() if getattr(current_user, 'last_login', None) else None  # type: ignore
     }
 
 @router.post("/user/logout")
@@ -437,7 +408,7 @@ def clear_admin_sessions(
     current_admin: models.AdminUser = Depends(get_current_admin)
 ):
     """清除管理员所有会话"""
-    deleted_count = AdminAuthManager.delete_all_sessions(current_admin.id)
+    deleted_count = AdminAuthManager.delete_all_sessions(str(current_admin.id))
     return {"message": f"已清除 {deleted_count} 个会话"}
 
 @router.get("/service/sessions")
@@ -453,5 +424,5 @@ def clear_service_sessions(
     current_service: models.CustomerService = Depends(get_current_service)
 ):
     """清除客服所有会话"""
-    deleted_count = ServiceAuthManager.delete_all_sessions(current_service.id)
+    deleted_count = ServiceAuthManager.delete_all_sessions(str(current_service.id))
     return {"message": f"已清除 {deleted_count} 个会话"}

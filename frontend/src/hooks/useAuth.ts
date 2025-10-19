@@ -38,10 +38,6 @@ export const useAuth = () => {
 
       console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
       console.log('当前Cookie:', document.cookie);
-      console.log('service_authenticated检查结果:', document.cookie.includes('service_authenticated=true'));
-      console.log('Cookie长度:', document.cookie.length);
-      console.log('是否包含service_authenticated:', document.cookie.indexOf('service_authenticated'));
-      console.log('Cookie分割结果:', document.cookie.split(';').map(c => c.trim()));
       
       // 详细检查service_authenticated cookie
       const serviceCookieMatch = document.cookie.match(/service_authenticated=([^;]+)/);
