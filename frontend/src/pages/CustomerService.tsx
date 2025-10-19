@@ -339,6 +339,55 @@ const CustomerService: React.FC = () => {
     }
   };
 
+  // 客服登出处理函数
+  const handleLogout = async () => {
+    try {
+      // 1. 先设置为离线状态
+      if (isOnline) {
+        await toggleOnlineStatus();
+      }
+
+      // 2. 调用客服登出API
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/service/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // 3. 清理本地状态
+        setCurrentUser(null);
+        setIsOnline(false);
+        
+        // 4. 关闭WebSocket连接
+        if (ws) {
+          ws.close();
+          setWs(null);
+        }
+        
+        // 5. 关闭通知WebSocket连接
+        if (notificationWs) {
+          notificationWs.close();
+          setNotificationWs(null);
+        }
+        
+        // 6. 清理超时检查
+        if (timeoutCheckInterval) {
+          clearInterval(timeoutCheckInterval);
+          setTimeoutCheckInterval(null);
+        }
+        
+        // 7. 跳转到登录页面
+        navigate('/service/login');
+      } else {
+        console.error('客服登出失败');
+        window.alert('登出失败，请重试');
+      }
+    } catch (error) {
+      console.error('客服登出时发生错误:', error);
+      window.alert('登出时发生错误，请重试');
+    }
+  };
+
   const handleUserAction = async (userId: string, action: string, value?: any) => {
     try {
       let endpoint = '';
@@ -2362,9 +2411,31 @@ const CustomerService: React.FC = () => {
             修改客服名字
           </button>
           
-          <button onClick={() => navigate('/')} className="btn-secondary">
-            返回首页
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid #ff4d4f',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: '#fff',
+              color: '#ff4d4f',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#ff4d4f';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#fff';
+              e.currentTarget.style.color = '#ff4d4f';
+            }}
+          >
+            退出登录
           </button>
+          
         </div>
       </div>
 

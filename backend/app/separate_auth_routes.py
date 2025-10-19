@@ -537,7 +537,7 @@ def user_logout(
     if session_id:
         # 删除会话（使用原有系统）
         from app.secure_auth import SecureAuthManager
-        SecureAuthManager.delete_session(session_id)
+        SecureAuthManager.revoke_session(session_id)
     
     # 清除Cookie
     response.delete_cookie("session_id")
