@@ -177,6 +177,12 @@ class ServiceAuthManager:
             session_data['last_activity'] = datetime.utcnow().isoformat()
             ServiceAuthManager._store_session_data(session_id, session_data)
         
+        # 转换字符串日期时间为datetime对象
+        if 'created_at' in session_data and isinstance(session_data['created_at'], str):
+            session_data['created_at'] = datetime.fromisoformat(session_data['created_at'])
+        if 'last_activity' in session_data and isinstance(session_data['last_activity'], str):
+            session_data['last_activity'] = datetime.fromisoformat(session_data['last_activity'])
+        
         return ServiceSessionInfo(**session_data)
     
     @staticmethod
