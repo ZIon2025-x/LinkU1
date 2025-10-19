@@ -46,12 +46,12 @@ def admin_login(
     """管理员登录（独立认证系统）"""
     from app.admin_verification import AdminVerificationManager
     
-    logger.info(f"[ADMIN_AUTH] 管理员登录尝试: {login_data.username}")
+    logger.info(f"[ADMIN_AUTH] 管理员登录尝试: {login_data.username_or_id}")
     
     # 查找管理员 - 支持用户名和ID登录
-    admin = find_admin_by_username_or_id(db, login_data.username)
+    admin = find_admin_by_username_or_id(db, login_data.username_or_id)
     if not admin:
-        logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username}")
+        logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username_or_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误"
@@ -247,7 +247,7 @@ def send_admin_verification_code(
     from app.admin_verification import AdminVerificationManager
     from app.email_utils import send_admin_verification_code_email
     
-    logger.info(f"[ADMIN_AUTH] 发送验证码请求: {login_data.username}")
+    logger.info(f"[ADMIN_AUTH] 发送验证码请求: {login_data.username_or_id}")
     
     # 检查是否启用了邮箱验证
     if not AdminVerificationManager.is_verification_enabled():
@@ -257,9 +257,9 @@ def send_admin_verification_code(
         )
     
     # 查找管理员 - 支持用户名和ID登录
-    admin = find_admin_by_username_or_id(db, login_data.username)
+    admin = find_admin_by_username_or_id(db, login_data.username_or_id)
     if not admin:
-        logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username}")
+        logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username_or_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误"
