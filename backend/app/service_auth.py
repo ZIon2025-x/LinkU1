@@ -53,7 +53,7 @@ def safe_redis_get(key: str) -> Optional[dict]:
         logger.error(f"Failed to decode Redis data for key {key}: {e}")
         return None
 
-def safe_redis_set(key: str, value: dict, expire_seconds: int = None):
+def safe_redis_set(key: str, value: dict, expire_seconds: Optional[int] = None):
     """安全地向 Redis 设置 JSON 数据"""
     if not redis_client:
         return False
@@ -377,35 +377,11 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     return session
 
 def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None) -> Response:
-    """创建客服会话Cookie（与用户登录保持一致的设计，包含refresh token）"""
+    """创建客服会话Cookie（完全按照用户登录的方式）"""
     from app.cookie_manager import CookieManager
-    from app.config import get_settings
     from app.security import create_refresh_token
     
-    settings = get_settings()
-    
     try:
-        # 检测是否为移动端
-        is_mobile = any(device in user_agent.lower() for device in [
-            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
-            'windows phone', 'opera mini', 'iemobile'
-        ])
-        
-        # 检测是否为隐私模式（Safari等）
-        is_private_mode = any(mode in user_agent.lower() for mode in [
-            'private', 'incognito', 'inprivate'
-        ])
-        
-        # 根据环境设置Cookie参数
-        secure_value = settings.COOKIE_SECURE
-        samesite_value = "lax"  # 默认使用lax
-        if settings.COOKIE_SAMESITE in ["lax", "strict", "none"]:
-            samesite_value = settings.COOKIE_SAMESITE
-        # 修复Cookie域名设置 - 不设置domain，与用户登录保持一致
-        cookie_domain = None  # 不设置domain，让Cookie使用默认域名设置
-        logger.info(f"[SERVICE_AUTH] 使用默认域名Cookie设置（与用户登录一致）")
-        cookie_path = "/"
-        
         # 生成refresh token（如果提供了service_id）
         refresh_token = None
         if service_id:
@@ -415,30 +391,24 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             except Exception as e:
                 logger.warning(f"[SERVICE_AUTH] 生成refresh token失败: {e}")
         
-        # 设置客服会话Cookie - 使用与用户登录相同的设置
-        response.set_cookie(
-            key="service_session_id",
-            value=session_id,
-            max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
-            httponly=True,  # 防止XSS攻击
-            secure=secure_value,
-            samesite=samesite_value,
-            path=cookie_path,
-            domain=cookie_domain
+        # 完全按照用户登录的方式设置Cookie - 使用CookieManager
+        CookieManager.set_session_cookies(
+            response=response,
+            session_id=session_id,
+            refresh_token=refresh_token or "dummy_refresh_token",  # 如果没有refresh_token，使用占位符
+            user_id=service_id or "",  # 使用service_id作为user_id
+            user_agent=user_agent
         )
         
-        # 设置客服refresh token Cookie（如果生成了）
-        if refresh_token:
-            response.set_cookie(
-                key="service_refresh_token",
-                value=refresh_token,
-                max_age=7 * 24 * 3600,  # 7天
-                httponly=True,  # 防止XSS攻击
-                secure=secure_value,
-                samesite=samesite_value,
-                path=cookie_path,
-                domain=cookie_domain
-            )
+        # 额外设置客服专用的Cookie标识
+        from app.config import get_settings
+        settings = get_settings()
+        
+        # 确保samesite值有效
+        samesite_value = settings.COOKIE_SAMESITE if settings.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
+        # 类型转换
+        from typing import Literal
+        samesite_literal: Literal["lax", "strict", "none"] = samesite_value  # type: ignore
         
         # 设置客服身份标识Cookie - 前端需要读取
         response.set_cookie(
@@ -446,29 +416,25 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             value="true",
             max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
             httponly=False,  # 前端需要读取
-            secure=secure_value,
-            samesite=samesite_value,
-            path=cookie_path,
-            domain=cookie_domain
+            secure=settings.COOKIE_SECURE,
+            samesite=samesite_literal,
+            path="/",
+            domain=None  # 与用户登录保持一致
         )
         
         # 设置客服ID Cookie（非敏感，用于前端显示）
         response.set_cookie(
             key="service_id",
-            value=service_id or "",  # 设置实际的service_id
+            value=service_id or "",
             max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
             httponly=False,  # 前端需要访问
-            secure=secure_value,
-            samesite=samesite_value,
-            path=cookie_path,
-            domain=cookie_domain
+            secure=settings.COOKIE_SECURE,
+            samesite=samesite_literal,
+            path="/",
+            domain=None  # 与用户登录保持一致
         )
         
-        # 移动端特殊处理
-        if is_mobile:
-            logger.info(f"[SERVICE_AUTH] 移动端客服Cookie设置: 使用主要service_session_id Cookie")
-        
-        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., service_id={service_id}, refresh_token={'是' if refresh_token else '否'}, 移动端: {is_mobile}, 隐私模式: {is_private_mode}, SameSite: {samesite_value}, Secure: {secure_value}, Domain: {cookie_domain}, Path: {cookie_path}")
+        logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., service_id={service_id}, refresh_token={'是' if refresh_token else '否'}")
         return response
         
     except Exception as e:
@@ -477,20 +443,20 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         return response
 
 def clear_service_session_cookie(response: Response) -> Response:
-    """清除客服会话Cookie"""
-    from app.config import get_settings
+    """清除客服会话Cookie（完全按照用户登录的方式）"""
+    from app.cookie_manager import CookieManager
     
-    settings = get_settings()
-    # 修复Cookie域名设置 - 不设置domain，与用户登录保持一致
-    cookie_domain = None  # 不设置domain，让Cookie使用默认域名设置
-    logger.info(f"[SERVICE_AUTH] 清除Cookie使用默认域名设置（与用户登录一致）")
-    cookie_path = "/"
-    
-    # 清除所有客服相关的Cookie
-    response.delete_cookie("service_session_id", path=cookie_path, domain=cookie_domain)
-    response.delete_cookie("service_refresh_token", path=cookie_path, domain=cookie_domain)
-    response.delete_cookie("service_authenticated", path=cookie_path, domain=cookie_domain)
-    response.delete_cookie("service_id", path=cookie_path, domain=cookie_domain)
-    
-    logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
-    return response
+    try:
+        # 使用CookieManager清除会话Cookie（与用户登录一致）
+        CookieManager.clear_auth_cookies(response)
+        
+        # 清除客服专用的Cookie
+        response.delete_cookie("service_authenticated", path="/", domain=None)
+        response.delete_cookie("service_id", path="/", domain=None)
+        
+        logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
+        return response
+        
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 客服Cookie清除失败: {e}")
+        return response
