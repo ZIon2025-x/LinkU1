@@ -102,7 +102,7 @@ def check_railway_all_env():
     print("  JWT_SECRET_KEY - JWT密钥")
     print("  JWT_ALGORITHM - JWT算法")
     print("  ACCESS_TOKEN_EXPIRE_MINUTES - 访问令牌过期时间")
-    print("  REFRESH_TOKEN_EXPIRE_DAYS - 刷新令牌过期时间")
+    print("  REFRESH_TOKEN_EXPIRE_HOURS - 刷新令牌过期时间")
     print("  SESSION_EXPIRE_HOURS - 会话过期时间")
     print("  MAX_ACTIVE_SESSIONS - 最大活跃会话数")
     print()

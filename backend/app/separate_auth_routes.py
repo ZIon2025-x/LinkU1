@@ -268,11 +268,15 @@ def service_login(
         response = create_service_session_cookie(response, session_info.session_id, user_agent, str(service.id))
         
         # 生成并设置CSRF token
-        from app.csrf import CSRFProtection
-        csrf_token = CSRFProtection.generate_csrf_token()
-        logger.info(f"[SERVICE_AUTH] 生成CSRF token: {csrf_token[:8]}...")
-        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
-        logger.info(f"[SERVICE_AUTH] CSRF cookie设置完成")
+        try:
+            from app.csrf import CSRFProtection
+            csrf_token = CSRFProtection.generate_csrf_token()
+            logger.info(f"[SERVICE_AUTH] 生成CSRF token: {csrf_token[:8]}...")
+            CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+            logger.info(f"[SERVICE_AUTH] CSRF cookie设置完成")
+        except Exception as csrf_error:
+            logger.error(f"[SERVICE_AUTH] CSRF token设置失败: {csrf_error}")
+            # 不抛出异常，继续执行
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: {service.id}")
     except Exception as e:
@@ -455,11 +459,26 @@ def service_logout(
     """客服登出（独立认证系统）"""
     logger.info(f"[SERVICE_AUTH] 客服登出: {current_service.id}")
     
-    # 获取会话ID
+    # 获取会话ID和refresh token
     service_session_id = request.cookies.get("service_session_id")
+    service_refresh_token = request.cookies.get("service_refresh_token")
+    
     if service_session_id:
         # 删除会话
         ServiceAuthManager.delete_session(service_session_id)
+        logger.info(f"[SERVICE_AUTH] 客服会话已删除: {service_session_id[:8]}...")
+    
+    # 清理refresh token
+    if service_refresh_token:
+        try:
+            from app.service_auth import USE_REDIS, redis_client
+            if USE_REDIS and redis_client:
+                # 从Redis删除refresh token
+                refresh_key = f"service_refresh_token:{service_refresh_token}"
+                redis_client.delete(refresh_key)
+                logger.info(f"[SERVICE_AUTH] 客服refresh token已删除: {service_refresh_token[:8]}...")
+        except Exception as e:
+            logger.error(f"[SERVICE_AUTH] 清理refresh token失败: {e}")
     
     # 设置客服离线状态
     current_service.is_online = 0  # type: ignore
@@ -468,6 +487,7 @@ def service_logout(
     # 清除Cookie
     response = clear_service_session_cookie(response)
     
+    logger.info(f"[SERVICE_AUTH] 客服登出完成: {current_service.id}")
     return {"message": "客服登出成功"}
 
 @router.get("/service/profile", response_model=schemas.ServiceProfileResponse)

@@ -581,11 +581,11 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                     refresh_data = {
                         "service_id": service_id,
                         "created_at": datetime.utcnow().isoformat(),
-                        "expires_at": (datetime.utcnow() + timedelta(days=30)).isoformat()
+                        "expires_at": (datetime.utcnow() + timedelta(hours=12)).isoformat()
                     }
                     redis_client.setex(
                         f"service_refresh_token:{refresh_token}",
-                        30 * 24 * 3600,  # 30天TTL
+                        12 * 3600,  # 12小时TTL
                         json.dumps(refresh_data)
                     )
                     logger.info(f"[SERVICE_AUTH] 客服refresh token已保存到Redis: {service_id}")
@@ -640,7 +640,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             response.set_cookie(
                 key="service_refresh_token",
                 value=refresh_token,
-                max_age=30 * 24 * 3600,  # 30天，与JWT过期时间一致
+                max_age=12 * 3600,  # 12小时，与JWT过期时间一致
                 httponly=True,  # 防止XSS攻击
                 secure=settings.COOKIE_SECURE,
                 samesite=samesite_literal,
@@ -660,14 +660,16 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         return response
 
 def clear_service_session_cookie(response: Response) -> Response:
-    """清除客服会话Cookie（只清除客服专用Cookie）"""
+    """清除客服会话Cookie（清除所有客服相关Cookie）"""
     try:
         # 只使用API域名，不设置domain属性
         cookie_domain = None
         
-        # 清除客服专用的Cookie
+        # 清除所有客服相关的Cookie
         response.delete_cookie("service_session_id", path="/", domain=cookie_domain)
         response.delete_cookie("service_refresh_token", path="/", domain=cookie_domain)
+        response.delete_cookie("service_id", path="/", domain=cookie_domain)
+        response.delete_cookie("csrf_token", path="/", domain=cookie_domain)
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
         return response

@@ -22,7 +22,7 @@ from app.config import get_settings
 settings = get_settings()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
+REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
 SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))
 USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "24"))
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
@@ -420,7 +420,7 @@ class SecureAuthManager:
                 continue
             
             # 检查绝对过期时间
-            if now - session.created_at > timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS):
+            if now - session.created_at > timedelta(hours=REFRESH_TOKEN_EXPIRE_HOURS):
                 session.is_active = False
                 expired_sessions.append(session_id)
                 continue

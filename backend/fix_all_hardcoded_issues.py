@@ -65,8 +65,8 @@ def fix_all_hardcoded_issues():
         # 检查硬编码的配置值
         if "ACCESS_TOKEN_EXPIRE_MINUTES = 5" in content:
             hardcoded_issues.append("硬编码的ACCESS_TOKEN_EXPIRE_MINUTES")
-        if "REFRESH_TOKEN_EXPIRE_DAYS = 7" in content:
-            hardcoded_issues.append("硬编码的REFRESH_TOKEN_EXPIRE_DAYS")
+        if "REFRESH_TOKEN_EXPIRE_HOURS = 12" in content:
+            hardcoded_issues.append("硬编码的REFRESH_TOKEN_EXPIRE_HOURS")
         if "SESSION_EXPIRE_HOURS = 24" in content:
             hardcoded_issues.append("硬编码的SESSION_EXPIRE_HOURS")
         if "MAX_ACTIVE_SESSIONS = 5" in content:
@@ -135,8 +135,8 @@ def fix_all_hardcoded_issues():
         # 检查硬编码的配置值
         if "ACCESS_TOKEN_EXPIRE_MINUTES" in content and "os.getenv" not in content:
             hardcoded_issues.append("硬编码的ACCESS_TOKEN_EXPIRE_MINUTES")
-        if "REFRESH_TOKEN_EXPIRE_DAYS" in content and "os.getenv" not in content:
-            hardcoded_issues.append("硬编码的REFRESH_TOKEN_EXPIRE_DAYS")
+        if "REFRESH_TOKEN_EXPIRE_HOURS" in content and "os.getenv" not in content:
+            hardcoded_issues.append("硬编码的REFRESH_TOKEN_EXPIRE_HOURS")
         if "SESSION_EXPIRE_HOURS" in content and "os.getenv" not in content:
             hardcoded_issues.append("硬编码的SESSION_EXPIRE_HOURS")
         if "MAX_ACTIVE_SESSIONS" in content and "os.getenv" not in content:

@@ -83,11 +83,11 @@ class CookieManager:
             domain=None  # 只使用当前域名
         )
         
-        # 设置refresh_token cookie（长期）
+        # 设置refresh_token cookie（12小时）
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
-            max_age=Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            max_age=Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60,
             httponly=Config.COOKIE_HTTPONLY,
             secure=secure_value,
             samesite=samesite_value,
@@ -100,7 +100,7 @@ class CookieManager:
             response.set_cookie(
                 key="user_id",
                 value=user_id,
-                max_age=Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+                max_age=Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60,
                 httponly=False,  # 前端需要访问
                 secure=secure_value,
                 samesite=samesite_value,
@@ -133,7 +133,7 @@ class CookieManager:
             cookie_path = "/"
             # 移动端使用更短的过期时间，避免浏览器限制
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
-            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
+            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60, 43200)  # 最多12小时
             
             # 移动端Cookie兼容性优化
             # 跨域请求必须使用SameSite=none
@@ -148,7 +148,7 @@ class CookieManager:
             cookie_path = "/"
             # 隐私模式使用更短的过期时间
             session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
-            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, 86400)  # 最多1天
+            refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60, 43200)  # 最多12小时
             # 隐私模式使用lax提高兼容性
             samesite_value = "lax"   # 隐私模式下lax兼容性更好
             secure_value = True      # HTTPS环境必须使用secure
@@ -157,7 +157,7 @@ class CookieManager:
             cookie_domain = None
             cookie_path = Config.COOKIE_PATH
             session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
-            refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+            refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60
             
             # 桌面端Cookie设置
             samesite_value = CookieManager._get_samesite_value(user_agent)
@@ -337,6 +337,34 @@ class CookieManager:
         # 清除refresh_token
         response.delete_cookie(
             key="refresh_token",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        
+        # 清除客服相关Cookie
+        response.delete_cookie(
+            key="service_session_id",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        
+        response.delete_cookie(
+            key="service_refresh_token",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        
+        response.delete_cookie(
+            key="service_id",
             httponly=Config.COOKIE_HTTPONLY,
             secure=Config.COOKIE_SECURE,
             samesite=samesite_value,

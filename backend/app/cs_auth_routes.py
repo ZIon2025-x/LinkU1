@@ -237,9 +237,28 @@ async def cs_logout(
     客服登出
     """
     try:
+        # 获取refresh token并清理Redis
+        service_refresh_token = request.cookies.get("service_refresh_token")
+        if service_refresh_token:
+            try:
+                from app.service_auth import USE_REDIS, redis_client
+                if USE_REDIS and redis_client:
+                    # 从Redis删除refresh token
+                    refresh_key = f"service_refresh_token:{service_refresh_token}"
+                    redis_client.delete(refresh_key)
+                    logger.info(f"[CS_AUTH] 客服refresh token已删除: {service_refresh_token[:8]}...")
+            except Exception as e:
+                logger.error(f"[CS_AUTH] 清理refresh token失败: {e}")
+        
         # 清除cookie
         from app.cookie_manager import CookieManager
         CookieManager.clear_all_cookies(response)
+        
+        # 设置客服离线状态
+        current_cs.is_online = 0  # type: ignore
+        from app.deps import get_sync_db
+        db = next(get_sync_db())
+        db.commit()
         
         logger.info(f"客服登出成功：{current_cs.email} (ID: {current_cs.id})")
         
