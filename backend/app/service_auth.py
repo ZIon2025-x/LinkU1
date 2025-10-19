@@ -543,6 +543,19 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             domain=cookie_domain  # 跨子域名支持
         )
         
+        # 设置客服ID Cookie（用于refresh token验证）
+        if service_id:
+            response.set_cookie(
+                key="service_id",
+                value=service_id,
+                max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
+                httponly=True,  # 防止XSS攻击
+                secure=settings.COOKIE_SECURE,
+                samesite=samesite_literal,
+                path="/",
+                domain=cookie_domain
+            )
+        
         # 设置客服refresh token Cookie（如果生成了）
         if refresh_token:
             response.set_cookie(

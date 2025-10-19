@@ -137,48 +137,52 @@ async def cs_refresh_token(
     """
     try:
         # 从cookie中获取refresh token
-        refresh_token = request.cookies.get("refresh_token")
+        refresh_token = request.cookies.get("service_refresh_token")
         if not refresh_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="未找到刷新token"
+                detail="未找到refresh token"
+            )
+        
+        # 从cookie中获取service_id
+        service_id = request.cookies.get("service_id")
+        if not service_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="未找到service_id"
+            )
+        
+        # 检查客服是否存在
+        cs = db.query(models.CustomerService).filter(
+            models.CustomerService.id == service_id
+        ).first()
+        
+        if not cs:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="客服不存在"
             )
         
         # 验证refresh token
-        try:
-            from app.security import verify_token
-            payload = verify_token(refresh_token)
-            cs_id = payload.get("sub")
-            role = payload.get("role")
-            
-            if role != "cs":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="无效的token类型"
-                )
-        except Exception:
+        from app.service_auth import verify_service_refresh_token
+        verified_service_id = verify_service_refresh_token(refresh_token)
+        if not verified_service_id or verified_service_id != service_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="无效的刷新token"
+                detail="无效的refresh token"
             )
         
-        # 验证客服是否存在且活跃
-        cs = db.query(models.CustomerService).filter(
-            models.CustomerService.id == cs_id
-        ).first()
+        # 生成新的会话
+        from app.service_auth import ServiceAuthManager, create_service_session_cookie
+        new_session = ServiceAuthManager.create_session(service_id, request)
         
-        if not cs:  # 客服模型中没有is_active字段
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="客服不存在或已被禁用"
-            )
+        # 撤销旧的refresh token
+        from app.service_auth import revoke_service_refresh_token
+        revoke_service_refresh_token(refresh_token)
         
-        # 创建新的token
-        new_access_token = create_access_token(data={"sub": cs.id, "role": "cs"})
-        new_refresh_token = create_refresh_token(data={"sub": cs.id, "role": "cs"})
-        
-        # 设置新的安全cookie
-        CookieManager.set_auth_cookies(response, new_access_token, new_refresh_token)
+        # 生成新的会话和refresh token
+        user_agent = request.headers.get("user-agent", "")
+        response = create_service_session_cookie(response, new_session.session_id, user_agent, str(cs.id))
         
         # 生成并设置新的CSRF token
         from app.csrf import CSRFProtection
@@ -190,16 +194,13 @@ async def cs_refresh_token(
         from app.security import add_security_headers
         add_security_headers(response)
         
-        # 脱敏处理日志
-        email_masked = cs.email[:3] + "***" + cs.email.split('@')[1] if '@' in cs.email else cs.email[:3] + "***"
-        cs_id_masked = cs.id[:3] + "***" if len(str(cs.id)) > 3 else str(cs.id)
-        logger.info(f"客服token刷新成功：{email_masked} (ID: {cs_id_masked})")
+        logger.info(f"客服refresh token刷新成功 - 客服: {cs.id}")
         
         return {
-            "message": "Token刷新成功",
-            "access_token": new_access_token,
-            "token_type": "bearer",
-            "expires_in": 900
+            "message": "会话刷新成功",
+            "service_id": cs.id,
+            "session_id": new_session.session_id,
+            "csrf_token": csrf_token
         }
         
     except HTTPException:
