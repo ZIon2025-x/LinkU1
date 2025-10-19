@@ -234,28 +234,8 @@ export const useAuth = () => {
     return () => clearTimeout(timer);
   }, []); // 只在组件挂载时调用一次
 
-  // 监听Cookie变化，重新检查认证状态
-  useEffect(() => {
-    const checkCookieChanges = () => {
-      const hasAdminCookie = document.cookie.includes('admin_authenticated=true');
-      const hasServiceCookie = document.cookie.includes('service_authenticated=true');
-      const hasUserCookie = document.cookie.includes('user_authenticated=true') || 
-                           document.cookie.includes('access_token=');
-      
-      console.log('Cookie变化检测:', { hasAdminCookie, hasServiceCookie, hasUserCookie, isAuthenticated: authState.isAuthenticated });
-      
-      // 如果检测到Cookie且当前未认证，重新检查认证状态
-      if ((hasAdminCookie || hasServiceCookie || hasUserCookie) && !authState.isAuthenticated) {
-        console.log('检测到Cookie变化，重新检查认证状态');
-        checkAuth();
-      }
-    };
-
-    // 每500ms检查一次Cookie变化
-    const interval = setInterval(checkCookieChanges, 500);
-    
-    return () => clearInterval(interval);
-  }, [authState.isAuthenticated, checkAuth]);
+  // 移除Cookie变化检测，避免无限循环
+  // 认证状态检查只在组件挂载时和登录/登出时进行
 
   return {
     ...authState,
