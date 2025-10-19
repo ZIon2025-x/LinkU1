@@ -30,46 +30,11 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, loading: true }));
 
     try {
-      // 首先检查Cookie标识，避免不必要的请求
-      const hasAdminCookie = document.cookie.includes('admin_authenticated=true');
-      const hasServiceCookie = document.cookie.includes('service_authenticated=true');
-      const hasUserCookie = document.cookie.includes('user_authenticated=true') || 
-                           document.cookie.includes('access_token=');
-
-      console.log('Cookie检查:', { hasAdminCookie, hasServiceCookie, hasUserCookie });
-      console.log('当前Cookie:', document.cookie);
-      
-  // 详细检查service_authenticated cookie
-  const serviceCookieMatch = document.cookie.match(/service_authenticated=([^;]+)/);
-  console.log('useAuth - service_authenticated cookie匹配结果:', serviceCookieMatch);
-  if (serviceCookieMatch) {
-    console.log('useAuth - service_authenticated cookie值:', serviceCookieMatch[1]);
-  }
-  
-  // 检查service_session_id cookie
-  const serviceSessionMatch = document.cookie.match(/service_session_id=([^;]+)/);
-  console.log('useAuth - service_session_id cookie匹配结果:', serviceSessionMatch);
-  if (serviceSessionMatch) {
-    console.log('useAuth - service_session_id cookie值:', serviceSessionMatch[1].substring(0, 20) + '...');
-  }
-  
-  // 检查所有Cookie
-  console.log('useAuth - 所有Cookie:', document.cookie);
-      
-      // 根据Cookie标识只检查对应的角色，避免跨角色检查
+      // 简化认证检查 - 直接尝试API验证，让后端处理Cookie
       const checks = [];
       
-      if (hasAdminCookie) {
-        checks.push({ role: 'admin' as AuthRole, endpoint: '/api/auth/admin/profile' });
-      } else if (hasServiceCookie) {
-        checks.push({ role: 'service' as AuthRole, endpoint: '/api/auth/service/profile' });
-      } else if (hasUserCookie) {
-        checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
-      } else {
-        // 如果没有检测到任何Cookie标识，默认只检查用户认证
-        console.log('没有检测到Cookie标识，只检查用户认证');
-        checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
-      }
+      // 只检查用户认证，客服认证由专门的组件处理
+      checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
 
       console.log('认证检查列表:', checks);
 

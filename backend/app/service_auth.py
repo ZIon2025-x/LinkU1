@@ -391,16 +391,9 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             except Exception as e:
                 logger.warning(f"[SERVICE_AUTH] 生成refresh token失败: {e}")
         
-        # 完全按照用户登录的方式设置Cookie - 使用CookieManager
-        CookieManager.set_session_cookies(
-            response=response,
-            session_id=session_id,
-            refresh_token=refresh_token or "dummy_refresh_token",  # 如果没有refresh_token，使用占位符
-            user_id=service_id or "",  # 使用service_id作为user_id
-            user_agent=user_agent
-        )
+        # 不混入用户Cookie，只设置客服专用的Cookie
+        # 直接设置客服会话Cookie，不使用CookieManager避免混入用户Cookie
         
-        # 额外设置客服专用的Cookie标识
         from app.config import get_settings
         settings = get_settings()
         
@@ -409,6 +402,34 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         # 类型转换
         from typing import Literal
         samesite_literal: Literal["lax", "strict", "none"] = samesite_value  # type: ignore
+        
+        # 修复跨子域名Cookie设置 - 支持 www.link2ur.com 和 api.link2ur.com
+        cookie_domain = ".link2ur.com"  # 设置为主域名，支持跨子域名
+        
+        # 设置客服会话Cookie - HttpOnly，后端验证用
+        response.set_cookie(
+            key="service_session_id",
+            value=session_id,
+            max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,  # 12小时
+            httponly=True,  # 防止XSS攻击
+            secure=settings.COOKIE_SECURE,
+            samesite=samesite_literal,
+            path="/",
+            domain=cookie_domain  # 跨子域名支持
+        )
+        
+        # 设置客服refresh token Cookie（如果生成了）
+        if refresh_token:
+            response.set_cookie(
+                key="service_refresh_token",
+                value=refresh_token,
+                max_age=7 * 24 * 3600,  # 7天
+                httponly=True,  # 防止XSS攻击
+                secure=settings.COOKIE_SECURE,
+                samesite=samesite_literal,
+                path="/",
+                domain=cookie_domain  # 跨子域名支持
+            )
         
         # 设置客服身份标识Cookie - 前端需要读取
         response.set_cookie(
@@ -419,7 +440,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             secure=settings.COOKIE_SECURE,
             samesite=samesite_literal,
             path="/",
-            domain=None  # 与用户登录保持一致
+            domain=cookie_domain  # 跨子域名支持
         )
         
         # 设置客服ID Cookie（非敏感，用于前端显示）
@@ -431,7 +452,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             secure=settings.COOKIE_SECURE,
             samesite=samesite_literal,
             path="/",
-            domain=None  # 与用户登录保持一致
+            domain=cookie_domain  # 跨子域名支持
         )
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., service_id={service_id}, refresh_token={'是' if refresh_token else '否'}")
@@ -443,16 +464,16 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         return response
 
 def clear_service_session_cookie(response: Response) -> Response:
-    """清除客服会话Cookie（完全按照用户登录的方式）"""
-    from app.cookie_manager import CookieManager
-    
+    """清除客服会话Cookie（只清除客服专用Cookie）"""
     try:
-        # 使用CookieManager清除会话Cookie（与用户登录一致）
-        CookieManager.clear_auth_cookies(response)
+        # 修复跨子域名Cookie清除 - 支持 www.link2ur.com 和 api.link2ur.com
+        cookie_domain = ".link2ur.com"  # 设置为主域名，支持跨子域名
         
         # 清除客服专用的Cookie
-        response.delete_cookie("service_authenticated", path="/", domain=None)
-        response.delete_cookie("service_id", path="/", domain=None)
+        response.delete_cookie("service_session_id", path="/", domain=cookie_domain)
+        response.delete_cookie("service_refresh_token", path="/", domain=cookie_domain)
+        response.delete_cookie("service_authenticated", path="/", domain=cookie_domain)
+        response.delete_cookie("service_id", path="/", domain=cookie_domain)
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
         return response
