@@ -89,6 +89,11 @@ def admin_login(
     # 设置Cookie
     response = create_admin_session_cookie(response, session_info.session_id)
     
+    # 创建并设置refresh token
+    from app.admin_auth import create_admin_refresh_token, create_admin_refresh_token_cookie
+    refresh_token = create_admin_refresh_token(str(admin.id))
+    response = create_admin_refresh_token_cookie(response, refresh_token)
+    
     # 生成并设置CSRF token
     from app.csrf import CSRFProtection
     csrf_token = CSRFProtection.generate_csrf_token()
@@ -126,13 +131,107 @@ def admin_logout(
     # 获取会话ID
     admin_session_id = request.cookies.get("admin_session_id")
     if admin_session_id:
-        # 删除会话
+        # 删除当前会话
         AdminAuthManager.delete_session(admin_session_id)
+    
+    # 删除管理员所有会话（包括其他设备的会话）
+    deleted_sessions = AdminAuthManager.delete_all_sessions(str(current_admin.id))
+    
+    # 撤销所有refresh token
+    from app.admin_auth import revoke_all_admin_refresh_tokens
+    deleted_tokens = revoke_all_admin_refresh_tokens(str(current_admin.id))
     
     # 清除Cookie
     response = clear_admin_session_cookie(response)
     
-    return {"message": "管理员登出成功"}
+    logger.info(f"[ADMIN_AUTH] 管理员登出完成: {current_admin.id}, 删除会话: {deleted_sessions}, 删除refresh token: {deleted_tokens}")
+    
+    return {
+        "message": "管理员登出成功",
+        "deleted_sessions": deleted_sessions,
+        "deleted_tokens": deleted_tokens
+    }
+
+
+@router.post("/admin/refresh")
+def admin_refresh(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db)
+):
+    """管理员refresh token刷新"""
+    from app.admin_auth import verify_admin_refresh_token, revoke_admin_refresh_token, create_admin_refresh_token, create_admin_refresh_token_cookie
+    
+    logger.info(f"[ADMIN_AUTH] 管理员refresh token刷新请求")
+    
+    try:
+        # 从cookie中获取refresh token
+        refresh_token = request.cookies.get("admin_refresh_token")
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="未找到refresh token"
+            )
+        
+        # 验证refresh token
+        admin_id = verify_admin_refresh_token(refresh_token)
+        if not admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的refresh token"
+            )
+        
+        # 检查管理员是否存在
+        admin = crud.get_admin_user_by_id(db, admin_id)
+        if not admin:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="管理员不存在"
+            )
+        
+        # 检查管理员状态
+        if not bool(admin.is_active):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="管理员账户已被禁用"
+            )
+        
+        # 撤销旧的refresh token
+        revoke_admin_refresh_token(refresh_token)
+        
+        # 创建新的会话
+        session_info = AdminAuthManager.create_session(admin_id, request)
+        
+        # 设置新的Cookie
+        response = create_admin_session_cookie(response, session_info.session_id)
+        
+        # 创建新的refresh token
+        new_refresh_token = create_admin_refresh_token(admin_id)
+        response = create_admin_refresh_token_cookie(response, new_refresh_token)
+        
+        # 生成并设置新的CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        user_agent = request.headers.get("user-agent", "")
+        CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        logger.info(f"[ADMIN_AUTH] 管理员refresh token刷新成功: {admin_id}")
+        
+        return {
+            "message": "会话刷新成功",
+            "admin_id": admin_id,
+            "session_id": session_info.session_id,
+            "csrf_token": csrf_token
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"管理员refresh token刷新异常：{str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token刷新服务异常"
+        )
 
 @router.post("/admin/send-verification-code")
 def send_admin_verification_code(
@@ -231,6 +330,11 @@ def verify_admin_code(
     
     # 设置Cookie
     response = create_admin_session_cookie(response, session_info.session_id)
+    
+    # 创建并设置refresh token
+    from app.admin_auth import create_admin_refresh_token, create_admin_refresh_token_cookie
+    refresh_token = create_admin_refresh_token(str(admin.id))
+    response = create_admin_refresh_token_cookie(response, refresh_token)
     
     # 生成并设置CSRF token
     from app.csrf import CSRFProtection

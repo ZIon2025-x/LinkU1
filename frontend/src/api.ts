@@ -855,6 +855,12 @@ export const markAllAdminNotificationsRead = async () => {
   return res.data;
 };
 
+// 管理员refresh token
+export const adminRefreshToken = async () => {
+  const res = await api.post('/api/auth/admin/refresh');
+  return res.data;
+};
+
 export const getUsersForAdmin = async (page: number = 1, size: number = 20, search?: string) => {
   const params = new URLSearchParams();
   params.append('page', page.toString());

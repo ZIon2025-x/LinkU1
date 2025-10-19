@@ -428,6 +428,135 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
 
 def clear_admin_session_cookie(response: Response) -> Response:
     """清除管理员会话Cookie"""
+    # 清除管理员相关cookie
     response.delete_cookie("admin_session_id")
     response.delete_cookie("admin_authenticated")
+    response.delete_cookie("admin_refresh_token")
+    
+    # 清除CSRF token（管理员登录时也会设置）
+    response.delete_cookie("csrf_token")
+    
+    return response
+
+
+# ==================== 管理员Refresh Token功能 ====================
+
+def create_admin_refresh_token(admin_id: str) -> str:
+    """创建管理员refresh token"""
+    import secrets
+    from datetime import datetime, timedelta
+    
+    # 生成refresh token
+    refresh_token = secrets.token_urlsafe(32)
+    
+    # 设置过期时间（12小时）
+    expire_time = datetime.utcnow() + timedelta(hours=12)
+    
+    # 存储到Redis
+    if USE_REDIS:
+        redis_key = f"admin_refresh_token:{admin_id}:{refresh_token}"
+        redis_client.setex(
+            redis_key, 
+            int(12 * 3600),  # 12小时
+            json.dumps({
+                "admin_id": admin_id,
+                "created_at": datetime.utcnow().isoformat(),
+                "expires_at": expire_time.isoformat()
+            })
+        )
+    
+    logger.info(f"[ADMIN_AUTH] 创建管理员refresh token: {admin_id}")
+    return refresh_token
+
+
+def verify_admin_refresh_token(refresh_token: str) -> Optional[str]:
+    """验证管理员refresh token"""
+    if not refresh_token:
+        return None
+    
+    if not USE_REDIS:
+        return None
+    
+    # 查找refresh token
+    pattern = f"admin_refresh_token:*:{refresh_token}"
+    keys = redis_client.keys(pattern)
+    
+    if not keys:
+        return None
+    
+    # 获取token数据
+    token_data = safe_redis_get(keys[0])
+    if not token_data:
+        return None
+    
+    # 检查是否过期
+    try:
+        expires_at = datetime.fromisoformat(token_data['expires_at'])
+        if datetime.utcnow() > expires_at:
+            # 过期了，删除token
+            redis_client.delete(keys[0])
+            return None
+    except (ValueError, KeyError):
+        return None
+    
+    return token_data.get('admin_id')
+
+
+def revoke_admin_refresh_token(refresh_token: str) -> bool:
+    """撤销管理员refresh token"""
+    if not refresh_token or not USE_REDIS:
+        return False
+    
+    # 查找并删除refresh token
+    pattern = f"admin_refresh_token:*:{refresh_token}"
+    keys = redis_client.keys(pattern)
+    
+    if keys:
+        redis_client.delete(*keys)
+        logger.info(f"[ADMIN_AUTH] 撤销管理员refresh token: {refresh_token}")
+        return True
+    
+    return False
+
+
+def revoke_all_admin_refresh_tokens(admin_id: str) -> int:
+    """撤销管理员所有refresh token"""
+    if not USE_REDIS:
+        return 0
+    
+    pattern = f"admin_refresh_token:{admin_id}:*"
+    keys = redis_client.keys(pattern)
+    
+    if keys:
+        count = redis_client.delete(*keys)
+        logger.info(f"[ADMIN_AUTH] 撤销管理员所有refresh token: {admin_id}, 删除数量: {count}")
+        return count
+    
+    return 0
+
+
+def create_admin_refresh_token_cookie(response: Response, refresh_token: str) -> Response:
+    """设置管理员refresh token Cookie"""
+    from app.config import Config
+    
+    # 确定cookie domain
+    cookie_domain = None
+    if Config.COOKIE_DOMAIN and Config.COOKIE_DOMAIN != "localhost":
+        cookie_domain = Config.COOKIE_DOMAIN
+    
+    # 确保samesite值有效
+    samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
+    
+    # 设置管理员refresh token Cookie
+    response.set_cookie(
+        key="admin_refresh_token",
+        value=refresh_token,
+        max_age=12 * 3600,  # 12小时
+        httponly=True,  # 防止XSS攻击
+        secure=Config.COOKIE_SECURE,
+        samesite=samesite_value,
+        path="/",
+        domain=cookie_domain
+    )
+    
     return response
