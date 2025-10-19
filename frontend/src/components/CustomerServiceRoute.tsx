@@ -41,7 +41,8 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
     checkAuth();
   }, []);
 
-  if (loading) {
+  // 在认证完成前，不显示任何内容
+  if (loading || isAuthorized === null) {
     // 显示加载状态
     return (
       <div style={{
@@ -50,7 +51,8 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
         alignItems: 'center',
         height: '100vh',
         fontSize: '16px',
-        color: '#666'
+        color: '#666',
+        background: '#f5f5f5'
       }}>
         验证权限中...
       </div>

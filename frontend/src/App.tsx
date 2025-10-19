@@ -96,7 +96,11 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/customer-service/login`} element={<CustomerServiceLogin />} />
           <Route path={`/${lang}/admin/login`} element={<AdminLogin />} />
           <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
-          <Route path={`/${lang}/admin/auth`} element={<AdminAuth />} />
+          <Route path={`/${lang}/admin/auth`} element={
+            <AdminRoute>
+              <AdminAuth />
+            </AdminRoute>
+          } />
           <Route path={`/${lang}/customer-service`} element={
             <CustomerServiceRoute>
               <CustomerService />
