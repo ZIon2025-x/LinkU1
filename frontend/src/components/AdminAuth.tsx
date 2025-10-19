@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface AdminLoginData {
-  username: string;
+  username_or_id: string;
   password: string;
 }
 
@@ -21,7 +21,7 @@ const AdminAuth: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [loginData, setLoginData] = useState<AdminLoginData>({
-    username: '',
+    username_or_id: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -235,8 +235,8 @@ const AdminAuth: React.FC = () => {
             </label>
             <input
               type="text"
-              value={loginData.username}
-              onChange={(e) => setLoginData({...loginData, username: e.target.value})}
+              value={loginData.username_or_id}
+              onChange={(e) => setLoginData({...loginData, username_or_id: e.target.value})}
               required
               style={{
                 width: '100%',

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 interface AdminLoginData {
-  username: string;
+  username_or_id: string;
   password: string;
 }
 
@@ -15,7 +15,7 @@ interface VerificationData {
 const AdminLoginWithVerification: React.FC = () => {
   const [step, setStep] = useState<'login' | 'verification'>('login');
   const [loginData, setLoginData] = useState<AdminLoginData>({
-    username: '',
+    username_or_id: '',
     password: ''
   });
   const [verificationData, setVerificationData] = useState<VerificationData>({
@@ -174,12 +174,12 @@ const AdminLoginWithVerification: React.FC = () => {
                   用户名或ID
                 </label>
                 <input
-                  id="username"
-                  name="username"
+                  id="username_or_id"
+                  name="username_or_id"
                   type="text"
                   required
-                  value={loginData.username}
-                  onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
+                  value={loginData.username_or_id}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, username_or_id: e.target.value }))}
                   className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                   placeholder="输入用户名或管理员ID (如: A1234)"
                 />
