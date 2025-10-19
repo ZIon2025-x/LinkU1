@@ -1,0 +1,63 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # 每周一凌晨2点运行
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Vulnerability Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner for backend
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: './backend'
+        format: 'sarif'
+        output: 'trivy-backend-results.sarif'
+        exit-code: '0'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+    
+    - name: Run Trivy vulnerability scanner for frontend
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: './frontend'
+        format: 'sarif'
+        output: 'trivy-frontend-results.sarif'
+        exit-code: '0'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+    
+    - name: Upload Trivy scan results (Backend)
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-backend-results.sarif'
+    
+    - name: Upload Trivy scan results (Frontend)
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-frontend-results.sarif'
+    
+    - name: Generate security report
+      run: |
+        echo "🔒 Security Scan Report" >> $GITHUB_STEP_SUMMARY
+        echo "=====================" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Scan completed for:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend Python dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend Node.js dependencies" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Results:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Check the Security tab for detailed vulnerability reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Review and update dependencies as needed" >> $GITHUB_STEP_SUMMARY
