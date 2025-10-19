@@ -368,13 +368,20 @@ class ServiceAuthManager:
                     data = safe_redis_get(key_str)
                     if data:
                         # 检查会话是否过期
-                        last_activity_str = data.get('last_activity', data.get('created_at'))
-                        if last_activity_str:
-                            last_activity = datetime.fromisoformat(last_activity_str)
-                            if datetime.utcnow() - last_activity > timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
-                                # 删除过期会话
-                                redis_client.delete(key_str)
-                                cleaned_count += 1
+                        # 首先检查是否被标记为不活跃
+                        if not data.get('is_active', True):
+                            # 删除不活跃的会话
+                            redis_client.delete(key_str)
+                            cleaned_count += 1
+                        else:
+                            # 检查时间过期
+                            last_activity_str = data.get('last_activity', data.get('created_at'))
+                            if last_activity_str:
+                                last_activity = datetime.fromisoformat(last_activity_str)
+                                if datetime.utcnow() - last_activity > timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
+                                    # 删除过期会话
+                                    redis_client.delete(key_str)
+                                    cleaned_count += 1
                 
                 logger.info(f"[SERVICE_AUTH] Redis清理了 {cleaned_count} 个过期会话")
             else:

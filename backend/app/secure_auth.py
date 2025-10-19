@@ -338,17 +338,28 @@ class SecureAuthManager:
                     data = safe_redis_get(key_str)
                     if data:
                         # 检查会话是否过期
-                        last_activity_str = data.get('last_activity', data.get('created_at'))
-                        if last_activity_str:
-                            last_activity = datetime.fromisoformat(last_activity_str)
-                            if datetime.utcnow() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
-                                # 删除过期会话
-                                redis_client.delete(key_str)
-                                # 从用户会话列表中移除
-                                user_id = data.get('user_id')
-                                if user_id:
-                                    redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
-                                cleaned_count += 1
+                        # 首先检查是否被标记为不活跃
+                        if not data.get('is_active', True):
+                            # 删除不活跃的会话
+                            redis_client.delete(key_str)
+                            # 从用户会话列表中移除
+                            user_id = data.get('user_id')
+                            if user_id:
+                                redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
+                            cleaned_count += 1
+                        else:
+                            # 检查时间过期
+                            last_activity_str = data.get('last_activity', data.get('created_at'))
+                            if last_activity_str:
+                                last_activity = datetime.fromisoformat(last_activity_str)
+                                if datetime.utcnow() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+                                    # 删除过期会话
+                                    redis_client.delete(key_str)
+                                    # 从用户会话列表中移除
+                                    user_id = data.get('user_id')
+                                    if user_id:
+                                        redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
+                                    cleaned_count += 1
                 
                 logger.info(f"Redis清理了 {cleaned_count} 个过期会话")
             except Exception as e:

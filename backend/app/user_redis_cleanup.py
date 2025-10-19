@@ -77,6 +77,55 @@ class UserRedisCleanup:
             logger.error(f"[USER_REDIS_CLEANUP] 清理用户会话失败: {e}")
             return 0
     
+    def cleanup_refresh_tokens(self, user_id: str = None) -> int:
+        """清理refresh token数据"""
+        if not self.redis_client:
+            return 0
+        
+        try:
+            cleaned_count = 0
+            
+            if user_id:
+                # 清理特定用户的refresh token
+                patterns = [
+                    f"refresh_token:*",  # 所有refresh token
+                    f"user_refresh_tokens:{user_id}",  # 用户refresh token列表
+                ]
+            else:
+                # 清理所有refresh token
+                patterns = [
+                    "refresh_token:*",
+                    "user_refresh_tokens:*",
+                ]
+            
+            for pattern in patterns:
+                keys = self.redis_client.keys(pattern)
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    
+                    # 检查是否是refresh token数据
+                    if key_str.startswith("refresh_token:"):
+                        data = self._get_redis_data(key_str)
+                        if data and self._is_refresh_token_expired(data):
+                            self.redis_client.delete(key_str)
+                            cleaned_count += 1
+                            logger.info(f"[USER_REDIS_CLEANUP] 删除过期refresh token: {key_str}")
+                    
+                    # 检查是否是用户refresh token列表
+                    elif key_str.startswith("user_refresh_tokens:"):
+                        # 清理空的用户refresh token列表
+                        if self.redis_client.scard(key_str) == 0:
+                            self.redis_client.delete(key_str)
+                            cleaned_count += 1
+                            logger.info(f"[USER_REDIS_CLEANUP] 删除空refresh token列表: {key_str}")
+            
+            logger.info(f"[USER_REDIS_CLEANUP] 清理了 {cleaned_count} 个refresh token相关数据")
+            return cleaned_count
+            
+        except Exception as e:
+            logger.error(f"[USER_REDIS_CLEANUP] 清理refresh token失败: {e}")
+            return 0
+    
     def cleanup_user_cache(self, user_id: str = None) -> int:
         """清理用户缓存数据"""
         if not self.redis_client:
@@ -127,6 +176,7 @@ class UserRedisCleanup:
         """清理所有用户数据"""
         result = {
             'sessions': 0,
+            'refresh_tokens': 0,
             'cache': 0,
             'total': 0
         }
@@ -135,10 +185,13 @@ class UserRedisCleanup:
             # 清理会话数据
             result['sessions'] = self.cleanup_user_sessions(user_id)
             
+            # 清理refresh token数据
+            result['refresh_tokens'] = self.cleanup_refresh_tokens(user_id)
+            
             # 清理缓存数据
             result['cache'] = self.cleanup_user_cache(user_id)
             
-            result['total'] = result['sessions'] + result['cache']
+            result['total'] = result['sessions'] + result['refresh_tokens'] + result['cache']
             
             logger.info(f"[USER_REDIS_CLEANUP] 用户数据清理完成: {result}")
             return result
@@ -156,8 +209,11 @@ class UserRedisCleanup:
             stats = {
                 'total_sessions': 0,
                 'total_user_sessions': 0,
+                'total_refresh_tokens': 0,
+                'total_user_refresh_tokens': 0,
                 'total_user_cache': 0,
                 'expired_sessions': 0,
+                'expired_refresh_tokens': 0,
                 'expired_cache': 0,
             }
             
@@ -174,6 +230,20 @@ class UserRedisCleanup:
             # 统计用户会话列表
             user_session_keys = self.redis_client.keys("user_sessions:*")
             stats['total_user_sessions'] = len(user_session_keys)
+            
+            # 统计refresh token数据
+            refresh_token_keys = self.redis_client.keys("refresh_token:*")
+            stats['total_refresh_tokens'] = len(refresh_token_keys)
+            
+            for key in refresh_token_keys:
+                key_str = key.decode() if isinstance(key, bytes) else key
+                data = self._get_redis_data(key_str)
+                if data and self._is_refresh_token_expired(data):
+                    stats['expired_refresh_tokens'] += 1
+            
+            # 统计用户refresh token列表
+            user_refresh_token_keys = self.redis_client.keys("user_refresh_tokens:*")
+            stats['total_user_refresh_tokens'] = len(user_refresh_token_keys)
             
             # 统计用户缓存
             cache_patterns = ["user:*", "user_tasks:*", "user_profile:*", "user_notifications:*", "user_reviews:*"]
@@ -212,6 +282,10 @@ class UserRedisCleanup:
     def _is_session_expired(self, data: Dict[str, Any]) -> bool:
         """检查会话是否过期"""
         try:
+            # 首先检查是否被标记为不活跃
+            if not data.get('is_active', True):
+                return True
+            
             last_activity_str = data.get('last_activity', data.get('created_at'))
             if not last_activity_str:
                 return True
@@ -221,6 +295,20 @@ class UserRedisCleanup:
             return datetime.utcnow() - last_activity > timedelta(hours=24)
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 检查会话过期失败: {e}")
+            return True
+    
+    def _is_refresh_token_expired(self, data: Dict[str, Any]) -> bool:
+        """检查refresh token是否过期"""
+        try:
+            expires_at_str = data.get('expires_at')
+            if not expires_at_str:
+                return True
+            
+            expires_at = datetime.fromisoformat(expires_at_str)
+            # 检查是否已过期
+            return datetime.utcnow() > expires_at
+        except Exception as e:
+            logger.error(f"[USER_REDIS_CLEANUP] 检查refresh token过期失败: {e}")
             return True
     
     def _is_cache_expired(self, data: Dict[str, Any]) -> bool:

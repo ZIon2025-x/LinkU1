@@ -90,6 +90,30 @@ def cleanup_cache(db: Session = Depends(get_sync_db)):
             detail=f"清理失败: {str(e)}"
         )
 
+@router.post("/cleanup/refresh-tokens")
+def cleanup_refresh_tokens(user_id: str = None, db: Session = Depends(get_sync_db)):
+    """清理过期refresh token"""
+    try:
+        logger.info(f"开始清理过期refresh token: {user_id or '所有用户'}")
+        
+        # 清理refresh token数据
+        result = user_redis_cleanup.cleanup_refresh_tokens(user_id)
+        
+        logger.info(f"refresh token清理完成: {result}")
+        
+        return {
+            "message": f"refresh token清理完成，清理了 {result} 个数据项",
+            "status": "success",
+            "cleaned_count": result
+        }
+        
+    except Exception as e:
+        logger.error(f"清理refresh token失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"清理失败: {str(e)}"
+        )
+
 @router.post("/cleanup/user-data")
 def cleanup_user_data(user_id: str = None, db: Session = Depends(get_sync_db)):
     """清理用户Redis数据"""
