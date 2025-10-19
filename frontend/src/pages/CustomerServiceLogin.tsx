@@ -37,7 +37,8 @@ const CustomerServiceLogin: React.FC = () => {
       
       // 立即跳转，让路由组件处理认证检查
       // 不依赖Cookie检测，因为Cookie设置可能有延迟
-      navigate('/customer-service', { replace: true });
+      // 使用正确的语言前缀路径
+      navigate('/en/customer-service', { replace: true });
     } catch (error: any) {
       let errorMsg = '登录失败';
       if (error?.response?.data?.detail) {

@@ -94,7 +94,7 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
 
   if (!isAuthorized) {
     // 无权限，重定向到客服登录页面
-    return <Navigate to="/customer-service/login" replace />;
+    return <Navigate to="/en/customer-service/login" replace />;
   }
 
   // 有权限，显示子组件

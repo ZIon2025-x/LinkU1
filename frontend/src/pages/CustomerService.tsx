@@ -251,10 +251,10 @@ const CustomerService: React.FC = () => {
       }
       
       // 如果认证失败，重定向到客服登录页面
-      navigate('/customer-service/login');
+      navigate('/en/customer-service/login');
     } catch (error) {
       console.error('客服认证检查失败:', error);
-      navigate('/customer-service/login');
+      navigate('/en/customer-service/login');
     }
   };
 
