@@ -105,6 +105,7 @@ const CustomerService: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isOnline, setIsOnline] = useState(false);
+  const [justToggledStatus, setJustToggledStatus] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1099,6 +1100,12 @@ const CustomerService: React.FC = () => {
 
   const loadCustomerServiceStatus = async () => {
     try {
+      // 如果刚刚进行了手动切换，跳过自动刷新
+      if (justToggledStatus) {
+        console.log('跳过自动刷新：刚刚进行了手动状态切换');
+        return;
+      }
+      
       console.log('开始加载客服状态...');
       const status = await getCustomerServiceStatus();
       console.log('客服状态数据:', status);
@@ -1127,13 +1134,20 @@ const CustomerService: React.FC = () => {
 
   const toggleOnlineStatus = async () => {
     try {
+      const newStatus = !isOnline;
       if (isOnline) {
         await setCustomerServiceOffline();
       } else {
         await setCustomerServiceOnline();
       }
-      setIsOnline(!isOnline);
-      window.alert(isOnline ? '已设置为离线状态' : '已设置为在线状态');
+      setIsOnline(newStatus);
+      setJustToggledStatus(true); // 标记刚刚进行了手动切换
+      window.alert(newStatus ? '已设置为在线状态' : '已设置为离线状态');
+      
+      // 5秒后清除手动切换标记，允许自动刷新
+      setTimeout(() => {
+        setJustToggledStatus(false);
+      }, 5000);
     } catch (error) {
       console.error('切换状态失败:', error);
       window.alert('状态切换失败');

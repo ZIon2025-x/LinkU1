@@ -374,14 +374,21 @@ async def startup_event():
 async def websocket_chat(
     websocket: WebSocket, user_id: str, db: Session = Depends(get_db)
 ):
-    # 首先尝试从Cookie中获取session_id
+    # 支持多种认证方式：用户认证和客服认证
     session_id = None
     cookies = websocket.cookies
+    is_service_auth = False
     
-    # 检查session_id cookie
+    # 检查用户session_id cookie
     if "session_id" in cookies:
         session_id = cookies["session_id"]
-        logger.info(f"Found session_id in cookies for user {user_id}")
+        logger.info(f"Found user session_id in cookies for user {user_id}")
+    
+    # 检查客服service_session_id cookie
+    elif "service_session_id" in cookies:
+        session_id = cookies["service_session_id"]
+        is_service_auth = True
+        logger.info(f"Found service_session_id in cookies for user {user_id}")
     
     # 如果Cookie中没有session_id，尝试从查询参数获取（向后兼容）
     if not session_id:
@@ -395,21 +402,39 @@ async def websocket_chat(
 
     # 验证会话
     try:
-        from app.secure_auth import SecureAuthManager
-        
-        session = SecureAuthManager.get_session(session_id, update_activity=False)
-        if not session:
-            logger.error(f"Invalid session for user {user_id}")
-            await websocket.close(code=1008, reason="Invalid session")
-            return
+        if is_service_auth:
+            # 客服认证
+            from app.service_auth import ServiceAuthManager
+            session = ServiceAuthManager.get_session(session_id)
+            if not session:
+                logger.error(f"Invalid service session for user {user_id}")
+                await websocket.close(code=1008, reason="Invalid service session")
+                return
+            
+            # 验证客服ID与WebSocket路径中的user_id是否匹配
+            if session.service_id != user_id:
+                logger.error(f"Service ID mismatch: session={session.service_id}, path={user_id}")
+                await websocket.close(code=1008, reason="Service ID mismatch")
+                return
+            
+            logger.info(f"WebSocket service authentication successful for user {user_id}")
+        else:
+            # 用户认证
+            from app.secure_auth import SecureAuthManager
+            
+            session = SecureAuthManager.get_session(session_id, update_activity=False)
+            if not session:
+                logger.error(f"Invalid session for user {user_id}")
+                await websocket.close(code=1008, reason="Invalid session")
+                return
 
-        # 验证会话中的用户ID与WebSocket路径中的user_id是否匹配
-        if session.user_id != user_id:
-            logger.error(f"User ID mismatch: session={session.user_id}, path={user_id}")
-            await websocket.close(code=1008, reason="User ID mismatch")
-            return
+            # 验证会话中的用户ID与WebSocket路径中的user_id是否匹配
+            if session.user_id != user_id:
+                logger.error(f"User ID mismatch: session={session.user_id}, path={user_id}")
+                await websocket.close(code=1008, reason="User ID mismatch")
+                return
 
-        logger.info(f"WebSocket authentication successful for user {user_id}")
+            logger.info(f"WebSocket user authentication successful for user {user_id}")
     except Exception as e:
         logger.error(f"WebSocket authentication failed for user {user_id}: {e}")
         await websocket.close(code=1008, reason="Invalid session")
