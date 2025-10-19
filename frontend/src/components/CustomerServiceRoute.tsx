@@ -18,6 +18,12 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
         const serviceSessionMatch = document.cookie.match(/service_session_id=([^;]+)/);
         const serviceIdMatch = document.cookie.match(/service_id=([^;]+)/);
         
+        // 调试：检查所有包含service的Cookie
+        const allServiceCookies = document.cookie.split(';').filter(cookie => 
+          cookie.trim().toLowerCase().includes('service')
+        );
+        console.log('所有service相关Cookie:', allServiceCookies);
+        
         console.log(`客服路由认证检查 (尝试 ${retryCount + 1}):`);
         console.log('- 所有Cookie:', document.cookie);
         console.log('- service_authenticated:', serviceAuthMatch ? serviceAuthMatch[1] : '未找到');
