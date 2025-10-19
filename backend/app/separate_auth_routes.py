@@ -760,3 +760,108 @@ def clear_service_sessions(
     """清除客服所有会话"""
     deleted_count = ServiceAuthManager.delete_all_sessions(str(current_service.id))
     return {"message": f"已清除 {deleted_count} 个会话"}
+
+
+# ==================== 管理员通知API ====================
+
+@router.get("/admin/notifications")
+def get_admin_notifications(
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_sync_db)
+):
+    """获取管理员通知列表"""
+    try:
+        # 获取所有未读提醒 + 5条最新已读提醒
+        notifications = crud.get_staff_notifications(db, current_admin.id, "admin")
+        # 获取未读数量
+        unread_count = crud.get_unread_staff_notification_count(
+            db, current_admin.id, "admin"
+        )
+
+        return {
+            "notifications": notifications,
+            "total": len(notifications),
+            "unread_count": unread_count,
+        }
+    except Exception as e:
+        logger.error(f"获取管理员通知失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取通知失败"
+        )
+
+
+@router.get("/admin/notifications/unread")
+def get_unread_admin_notifications(
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_sync_db)
+):
+    """获取管理员未读通知"""
+    try:
+        notifications = crud.get_unread_staff_notifications(db, current_admin.id, "admin")
+        unread_count = crud.get_unread_staff_notification_count(
+            db, current_admin.id, "admin"
+        )
+
+        return {
+            "notifications": notifications,
+            "unread_count": unread_count,
+        }
+    except Exception as e:
+        logger.error(f"获取管理员未读通知失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取未读通知失败"
+        )
+
+
+@router.post("/admin/notifications/{notification_id}/read")
+def mark_admin_notification_read(
+    notification_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_sync_db)
+):
+    """标记管理员通知为已读"""
+    try:
+        success = crud.mark_staff_notification_read(
+            db, notification_id, current_admin.id, "admin"
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="通知不存在或无权限"
+            )
+        
+        return {"message": "通知已标记为已读"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"标记管理员通知已读失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="标记通知已读失败"
+        )
+
+
+@router.post("/admin/notifications/read-all")
+def mark_all_admin_notifications_read(
+    current_admin: models.AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_sync_db)
+):
+    """标记所有管理员通知为已读"""
+    try:
+        count = crud.mark_all_staff_notifications_read(
+            db, current_admin.id, "admin"
+        )
+        
+        return {
+            "message": f"已标记 {count} 条通知为已读",
+            "count": count
+        }
+    except Exception as e:
+        logger.error(f"标记所有管理员通知已读失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="标记所有通知已读失败"
+        )

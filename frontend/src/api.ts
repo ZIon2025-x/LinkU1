@@ -834,6 +834,27 @@ export const getDashboardStats = async () => {
   return res.data;
 };
 
+// 管理员通知相关API
+export const getAdminNotifications = async () => {
+  const res = await api.get('/api/auth/admin/notifications');
+  return res.data;
+};
+
+export const getUnreadAdminNotifications = async () => {
+  const res = await api.get('/api/auth/admin/notifications/unread');
+  return res.data;
+};
+
+export const markAdminNotificationRead = async (notificationId: number) => {
+  const res = await api.post(`/api/auth/admin/notifications/${notificationId}/read`);
+  return res.data;
+};
+
+export const markAllAdminNotificationsRead = async () => {
+  const res = await api.post('/api/auth/admin/notifications/read-all');
+  return res.data;
+};
+
 export const getUsersForAdmin = async (page: number = 1, size: number = 20, search?: string) => {
   const params = new URLSearchParams();
   params.append('page', page.toString());
