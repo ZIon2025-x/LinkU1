@@ -342,7 +342,7 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
     """创建管理员会话Cookie（支持跨域）"""
     from app.config import Config
     
-    # 只使用当前域名
+    # 不设置domain，与用户登录保持一致
     cookie_domain = None
     
     # 确保samesite值有效
