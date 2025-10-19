@@ -189,9 +189,12 @@ def service_login(
         logger.info(f"[SERVICE_AUTH] 客服会话创建成功: {service.id}")
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 客服会话创建失败: {service.id}, 错误: {str(e)}")
+        logger.error(f"[SERVICE_AUTH] 错误详情: {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"[SERVICE_AUTH] 堆栈跟踪: {traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="会话创建失败，请稍后重试"
+            detail=f"会话创建失败: {str(e)}"
         )
     
     # 设置Cookie
