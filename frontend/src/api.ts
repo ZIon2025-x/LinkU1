@@ -762,7 +762,7 @@ export const setCustomerServiceOnline = async () => {
     console.log('✅ 客服在线API调用成功:', response.status);
     console.log('响应数据:', response.data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ 客服在线API调用失败:', error);
     console.error('错误详情:', {
       status: error.response?.status,
@@ -784,7 +784,7 @@ export const setCustomerServiceOffline = async () => {
     console.log('✅ 客服离线API调用成功:', response.status);
     console.log('响应数据:', response.data);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ 客服离线API调用失败:', error);
     console.error('错误详情:', {
       status: error.response?.status,
