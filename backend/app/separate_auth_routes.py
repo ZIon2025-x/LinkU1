@@ -146,6 +146,60 @@ def admin_change_password(
 
 # ==================== 客服认证API ====================
 
+@router.get("/service/redis-test")
+def service_redis_test():
+    """测试客服Redis连接状态"""
+    from app.service_auth import USE_REDIS, redis_client, safe_redis_get, safe_redis_set
+    
+    try:
+        # 测试Redis连接
+        if not USE_REDIS or not redis_client:
+            return {
+                "status": "error",
+                "message": "Redis未启用或连接失败",
+                "use_redis": USE_REDIS,
+                "redis_client": redis_client is not None
+            }
+        
+        # 测试ping
+        try:
+            redis_client.ping()
+            ping_status = "success"
+        except Exception as e:
+            ping_status = f"failed: {e}"
+        
+        # 测试存储和获取
+        test_key = "service_test_key"
+        test_data = {"test": "service_redis_test", "timestamp": datetime.utcnow().isoformat()}
+        
+        # 存储测试数据
+        set_result = safe_redis_set(test_key, test_data, 60)
+        
+        # 获取测试数据
+        get_result = safe_redis_get(test_key)
+        
+        # 清理测试数据
+        if redis_client:
+            redis_client.delete(test_key)
+        
+        return {
+            "status": "success",
+            "use_redis": USE_REDIS,
+            "redis_client": redis_client is not None,
+            "ping_status": ping_status,
+            "set_result": set_result,
+            "get_result": get_result,
+            "data_match": get_result == test_data if get_result else False
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"测试失败: {str(e)}",
+            "use_redis": USE_REDIS,
+            "redis_client": redis_client is not None
+        }
+
 @router.post("/service/login", response_model=schemas.ServiceLoginResponse)
 def service_login(
     login_data: schemas.CustomerServiceLogin,

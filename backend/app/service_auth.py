@@ -38,24 +38,34 @@ except Exception as e:
 def safe_redis_get(key: str) -> Optional[dict]:
     """安全地从 Redis 获取 JSON 数据"""
     if not redis_client:
+        logger.warning(f"[SERVICE_AUTH] Redis客户端不可用，无法获取key: {key}")
         return None
-    
-    data = redis_client.get(key)
-    if not data:
-        return None
-    
-    if isinstance(data, bytes):
-        data = data.decode('utf-8')
     
     try:
-        return json.loads(data)
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        logger.error(f"Failed to decode Redis data for key {key}: {e}")
+        data = redis_client.get(key)
+        if not data:
+            logger.info(f"[SERVICE_AUTH] Redis中未找到key: {key}")
+            return None
+        
+        # RedisCache使用decode_responses=False，所以data是bytes
+        if isinstance(data, bytes):
+            data = data.decode('utf-8')
+        
+        try:
+            result = json.loads(data)
+            logger.info(f"[SERVICE_AUTH] 成功从Redis获取数据: {key}")
+            return result
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logger.error(f"[SERVICE_AUTH] JSON解码失败 key={key}: {e}")
+            return None
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] Redis获取数据失败 key={key}: {e}")
         return None
 
 def safe_redis_set(key: str, value: dict, expire_seconds: Optional[int] = None):
     """安全地向 Redis 设置 JSON 数据"""
     if not redis_client:
+        logger.warning(f"[SERVICE_AUTH] Redis客户端不可用，无法设置key: {key}")
         return False
     
     try:
@@ -64,9 +74,10 @@ def safe_redis_set(key: str, value: dict, expire_seconds: Optional[int] = None):
             redis_client.setex(key, expire_seconds, json_data)
         else:
             redis_client.set(key, json_data)
+        logger.info(f"[SERVICE_AUTH] 成功设置Redis数据: {key}")
         return True
     except Exception as e:
-        logger.error(f"Failed to set Redis data for key {key}: {e}")
+        logger.error(f"[SERVICE_AUTH] Redis设置数据失败 key={key}: {e}")
         return False
 
 def safe_redis_delete(key: str):
