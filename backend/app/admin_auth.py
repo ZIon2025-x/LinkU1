@@ -394,7 +394,7 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
     """创建管理员会话Cookie（支持跨域）"""
     from app.config import Config
     
-    # 不设置domain，与用户登录保持一致
+    # 不设置domain，与客服保持一致
     cookie_domain = None
     
     # 确保samesite值有效
@@ -423,6 +423,9 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         path="/",  # 根路径，确保前端可以读取
         domain=cookie_domain  # 根据环境设置
     )
+    
+    logger.info(f"[ADMIN_AUTH] 设置管理员Cookie - session_id: {session_id[:8]}..., secure: {Config.COOKIE_SECURE}, samesite: {samesite_value}, domain: {cookie_domain}")
+    logger.info(f"[ADMIN_AUTH] 管理员Cookie设置完成 - admin_session_id 和 admin_authenticated")
     
     return response
 
@@ -539,10 +542,8 @@ def create_admin_refresh_token_cookie(response: Response, refresh_token: str) ->
     """设置管理员refresh token Cookie"""
     from app.config import Config
     
-    # 确定cookie domain
+    # 不设置domain，与客服保持一致
     cookie_domain = None
-    if Config.COOKIE_DOMAIN and Config.COOKIE_DOMAIN != "localhost":
-        cookie_domain = Config.COOKIE_DOMAIN
     
     # 确保samesite值有效
     samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"

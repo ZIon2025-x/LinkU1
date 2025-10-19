@@ -1,59 +1,42 @@
-#!/usr/bin/env python3
 """
-自动数据库迁移脚本 - 在Railway部署后自动运行
+自动数据库迁移模块
+用于在应用启动时自动运行数据库迁移
 """
 
+import logging
 import os
-import sys
-import time
 from pathlib import Path
 
-# 添加项目根目录到Python路径
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+logger = logging.getLogger(__name__)
 
 def auto_migrate():
-    """自动运行数据库迁移"""
+    """
+    自动运行数据库迁移
+    在Railway环境中，这个函数会被调用来确保数据库结构是最新的
+    """
     try:
-        print("开始自动数据库迁移...")
+        # 检查是否在Railway环境中
+        railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+        if not railway_env:
+            logger.info("非Railway环境，跳过自动迁移")
+            return
         
-        # 等待数据库连接稳定
-        time.sleep(2)
+        logger.info("开始自动数据库迁移...")
         
-        # 获取数据库URL
-        database_url = os.getenv('DATABASE_URL')
-        if not database_url:
-            print("未找到DATABASE_URL环境变量，跳过迁移")
-            return True
+        # 导入数据库相关模块
+        from app.database import sync_engine
+        from app.models import Base
         
-        print(f"连接到数据库: {database_url.split('@')[1] if '@' in database_url else 'local'}")
+        # 创建所有表（如果不存在）
+        Base.metadata.create_all(bind=sync_engine)
+        logger.info("数据库表创建/更新完成")
         
-        # 使用psycopg2直接连接
-        import psycopg2
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+        # 这里可以添加更多的迁移逻辑
+        # 例如：添加新列、创建索引等
         
-        # 连接数据库
-        conn = psycopg2.connect(database_url)
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
+        logger.info("自动数据库迁移完成")
         
-        try:
-            # 数据库迁移完成！
-            print("数据库迁移完成！")
-            return True
-            
-        except Exception as e:
-            print(f"数据库操作失败: {e}")
-            # 不抛出异常，让应用继续启动
-            return False
-        finally:
-            cursor.close()
-            conn.close()
-            
     except Exception as e:
-        print(f"迁移过程中出现错误: {e}")
+        logger.error(f"自动数据库迁移失败: {e}")
         # 不抛出异常，让应用继续启动
-        return False
-
-if __name__ == "__main__":
-    auto_migrate()
+        pass

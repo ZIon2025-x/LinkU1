@@ -105,6 +105,10 @@ def admin_login(
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员登录成功: {admin.id}")
+    logger.info(f"[ADMIN_AUTH] 管理员会话ID: {session_info.session_id}")
+    logger.info(f"[ADMIN_AUTH] 管理员refresh token: {refresh_token[:8]}...")
+    logger.info(f"[ADMIN_AUTH] 管理员CSRF token: {csrf_token[:8]}...")
+    logger.info(f"[ADMIN_AUTH] 所有管理员Cookie已设置完成")
     
     return {
         "message": "管理员登录成功",
@@ -347,6 +351,10 @@ def verify_admin_code(
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员验证码登录成功: {admin.id}")
+    logger.info(f"[ADMIN_AUTH] 管理员会话ID: {session_info.session_id}")
+    logger.info(f"[ADMIN_AUTH] 管理员refresh token: {refresh_token[:8]}...")
+    logger.info(f"[ADMIN_AUTH] 管理员CSRF token: {csrf_token[:8]}...")
+    logger.info(f"[ADMIN_AUTH] 验证码验证后所有管理员Cookie已设置完成")
     
     return {
         "message": "管理员登录成功",

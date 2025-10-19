@@ -71,7 +71,7 @@ class CustomerServiceOut(BaseModel):
 
 # 管理员相关Schema
 class AdminLogin(BaseModel):
-    username: str
+    username_or_id: str
     password: str
 
 
@@ -110,7 +110,7 @@ class AdminVerificationRequest(BaseModel):
 
 # 独立认证系统相关Schema
 class AdminUserLoginNew(BaseModel):
-    username: str
+    username_or_id: str
     password: str
 
 class AdminLoginResponse(BaseModel):

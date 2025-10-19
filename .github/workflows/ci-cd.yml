@@ -31,15 +31,45 @@ jobs:
     - name: Run basic validation
       run: |
         echo "🔍 Running backend validation..."
-        python -c "import app.main; print('✅ Backend imports successfully')"
-        python -c "from app.config import get_settings; settings = get_settings(); print('✅ Configuration loaded successfully')"
+        # 设置环境变量以避免配置错误
+        export ENVIRONMENT=development
+        export DEBUG=true
+        export USE_REDIS=false
+        export SKIP_EMAIL_VERIFICATION=true
+        export DATABASE_URL="sqlite:///./test.db"
+        export SECRET_KEY="test-secret-key"
+        
+        # 测试基本导入（逐步测试，避免一次性失败）
+        echo "Testing config import..."
+        python -c "from app.config import get_settings; print('✅ Config imported')"
+        
+        echo "Testing basic modules..."
+        python -c "import app.models; print('✅ Models imported')"
+        python -c "import app.schemas; print('✅ Schemas imported')"
+        python -c "import app.crud; print('✅ CRUD imported')"
+        
+        echo "Testing main module..."
+        python -c "import app.main; print('✅ Main module imported')"
     
     - name: Lint code
       run: |
         echo "🔍 Running code quality checks..."
+        # 设置环境变量
+        export ENVIRONMENT=development
+        export DEBUG=true
+        export USE_REDIS=false
+        export SKIP_EMAIL_VERIFICATION=true
+        export DATABASE_URL="sqlite:///./test.db"
+        export SECRET_KEY="test-secret-key"
+        
         # 检查Python语法
+        echo "Checking Python syntax..."
         python -m py_compile app/main.py
         python -m py_compile app/config.py
+        python -m py_compile app/routers.py
+        python -m py_compile app/models.py
+        python -m py_compile app/schemas.py
+        python -m py_compile app/crud.py
         echo "✅ Basic syntax check passed"
 
   # 前端测试和构建
