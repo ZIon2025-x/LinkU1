@@ -401,7 +401,12 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         samesite_value = "lax"  # 默认使用lax
         if settings.COOKIE_SAMESITE in ["lax", "strict", "none"]:
             samesite_value = settings.COOKIE_SAMESITE
-        cookie_domain = settings.COOKIE_DOMAIN if settings.IS_PRODUCTION else None
+        # 修复Cookie域名设置 - 确保在生产环境正确设置
+        cookie_domain = None
+        if settings.IS_PRODUCTION:
+            cookie_domain = settings.COOKIE_DOMAIN
+        elif settings.COOKIE_DOMAIN:  # 即使不是生产环境，如果设置了COOKIE_DOMAIN也使用
+            cookie_domain = settings.COOKIE_DOMAIN
         cookie_path = "/"
         
         # 生成refresh token（如果提供了service_id）
@@ -479,7 +484,12 @@ def clear_service_session_cookie(response: Response) -> Response:
     from app.config import get_settings
     
     settings = get_settings()
-    cookie_domain = settings.COOKIE_DOMAIN if settings.IS_PRODUCTION else None
+    # 修复Cookie域名设置 - 确保在生产环境正确设置
+    cookie_domain = None
+    if settings.IS_PRODUCTION:
+        cookie_domain = settings.COOKIE_DOMAIN
+    elif settings.COOKIE_DOMAIN:  # 即使不是生产环境，如果设置了COOKIE_DOMAIN也使用
+        cookie_domain = settings.COOKIE_DOMAIN
     cookie_path = "/"
     
     # 清除所有客服相关的Cookie

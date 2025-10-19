@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>跨域Cookie测试 - www.link2ur.com</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { margin: 5px; padding: 10px 15px; }
+        pre { background-color: #f8f9fa; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>跨域Cookie测试 - www.link2ur.com</h1>
+    
+    <div class="section info">
+        <h3>测试说明</h3>
+        <p>前端域名: www.link2ur.com</p>
+        <p>后端API: api.link2ur.com</p>
+        <p>Cookie域名: .link2ur.com (应该支持跨子域名)</p>
+    </div>
+    
+    <div class="section">
+        <h3>操作</h3>
+        <button onclick="testLogin()">测试客服登录</button>
+        <button onclick="checkCookies()">检查当前Cookie</button>
+        <button onclick="testProfile()">测试API认证</button>
+        <button onclick="clearCookies()">清除Cookie</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            
+            resultDiv.innerHTML += `
+                <div class="section ${className}">
+                    <strong>[${timestamp}]</strong> ${message}
+                </div>
+            `;
+        }
+        
+        function checkCookies() {
+            const cookies = document.cookie;
+            log(`当前所有Cookie: ${cookies || '(无)'}`);
+            
+            const serviceAuthMatch = cookies.match(/service_authenticated=([^;]+)/);
+            const serviceSessionMatch = cookies.match(/service_session_id=([^;]+)/);
+            const serviceRefreshMatch = cookies.match(/service_refresh_token=([^;]+)/);
+            const serviceIdMatch = cookies.match(/service_id=([^;]+)/);
+            
+            log(`service_authenticated: ${serviceAuthMatch ? serviceAuthMatch[1] : '未找到'}`);
+            log(`service_session_id: ${serviceSessionMatch ? '存在' : '未找到'}`);
+            log(`service_refresh_token: ${serviceRefreshMatch ? '存在' : '未找到'}`);
+            log(`service_id: ${serviceIdMatch ? serviceIdMatch[1] : '未找到'}`);
+        }
+        
+        async function testLogin() {
+            try {
+                log('开始客服登录测试...');
+                
+                const response = await fetch('https://api.link2ur.com/api/auth/service/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        cs_id: 'CS8888',
+                        password: 'password123'
+                    })
+                });
+                
+                log(`登录请求状态: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`登录成功: ${JSON.stringify(data, null, 2)}`, 'success');
+                    
+                    // 等待一下再检查Cookie
+                    setTimeout(() => {
+                        log('登录后检查Cookie...');
+                        checkCookies();
+                    }, 1000);
+                } else {
+                    const errorText = await response.text();
+                    log(`登录失败: ${response.status} - ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`登录请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testProfile() {
+            try {
+                log('开始API认证测试...');
+                
+                const response = await fetch('https://api.link2ur.com/api/auth/service/profile', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                log(`Profile请求状态: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`认证成功: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`认证失败: ${response.status} - ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`Profile请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function clearCookies() {
+            // 清除所有可能的客服Cookie
+            const cookies = ['service_authenticated', 'service_session_id', 'service_refresh_token', 'service_id'];
+            cookies.forEach(cookieName => {
+                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.link2ur.com;`;
+                document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            });
+            log('Cookie已清除', 'success');
+            checkCookies();
+        }
+        
+        // 页面加载时检查Cookie
+        window.onload = function() {
+            log('页面加载完成，检查初始Cookie状态');
+            checkCookies();
+        };
+    </script>
+</body>
+</html>
