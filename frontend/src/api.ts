@@ -753,13 +753,47 @@ export const sendCustomerServiceMessage = async (chatId: string, content: string
 };
 
 export const setCustomerServiceOnline = async () => {
-  const response = await api.post('/api/customer-service/online');
-  return response.data;
+  console.log('🔄 开始调用客服在线API...');
+  console.log('API基础URL:', api.defaults.baseURL);
+  console.log('请求URL:', '/api/customer-service/online');
+  
+  try {
+    const response = await api.post('/api/customer-service/online');
+    console.log('✅ 客服在线API调用成功:', response.status);
+    console.log('响应数据:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ 客服在线API调用失败:', error);
+    console.error('错误详情:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
 };
 
 export const setCustomerServiceOffline = async () => {
-  const response = await api.post('/api/customer-service/offline');
-  return response.data;
+  console.log('🔄 开始调用客服离线API...');
+  console.log('API基础URL:', api.defaults.baseURL);
+  console.log('请求URL:', '/api/customer-service/offline');
+  
+  try {
+    const response = await api.post('/api/customer-service/offline');
+    console.log('✅ 客服离线API调用成功:', response.status);
+    console.log('响应数据:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ 客服离线API调用失败:', error);
+    console.error('错误详情:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    throw error;
+  }
 };
 
 export const getCustomerServiceStatus = async () => {
