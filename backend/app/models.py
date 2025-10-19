@@ -332,17 +332,6 @@ class AdminUser(Base):
     last_login = Column(DateTime, nullable=True)  # 最后登录时间
 
 
-class AdminVerificationCode(Base):
-    __tablename__ = "admin_verification_codes"
-    id = Column(Integer, primary_key=True, index=True)
-    admin_id = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 管理员ID
-    code = Column(String(6), nullable=False)  # 6位数字验证码
-    expires_at = Column(DateTime, nullable=False)  # 过期时间
-    is_used = Column(Integer, default=0)  # 0=未使用, 1=已使用
-    created_at = Column(DateTime, default=get_uk_time)  # 创建时间
-    used_at = Column(DateTime, nullable=True)  # 使用时间
-
-
 class StaffNotification(Base):
     __tablename__ = "staff_notifications"
     id = Column(Integer, primary_key=True, index=True)
