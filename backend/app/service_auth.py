@@ -363,7 +363,9 @@ class ServiceAuthManager:
                 cleaned_count = 0
                 
                 for key in keys:
-                    data = safe_redis_get(key.decode())
+                    # 确保key是字符串
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    data = safe_redis_get(key_str)
                     if data:
                         # 检查会话是否过期
                         last_activity_str = data.get('last_activity', data.get('created_at'))
@@ -371,7 +373,7 @@ class ServiceAuthManager:
                             last_activity = datetime.fromisoformat(last_activity_str)
                             if datetime.utcnow() - last_activity > timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
                                 # 删除过期会话
-                                redis_client.delete(key)
+                                redis_client.delete(key_str)
                                 cleaned_count += 1
                 
                 logger.info(f"[SERVICE_AUTH] Redis清理了 {cleaned_count} 个过期会话")

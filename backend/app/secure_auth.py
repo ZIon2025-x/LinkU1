@@ -333,7 +333,9 @@ class SecureAuthManager:
                 cleaned_count = 0
                 
                 for key in session_keys:
-                    data = safe_redis_get(key)
+                    # 确保key是字符串
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    data = safe_redis_get(key_str)
                     if data:
                         # 检查会话是否过期
                         last_activity_str = data.get('last_activity', data.get('created_at'))
@@ -341,11 +343,11 @@ class SecureAuthManager:
                             last_activity = datetime.fromisoformat(last_activity_str)
                             if datetime.utcnow() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
                                 # 删除过期会话
-                                redis_client.delete(key)
+                                redis_client.delete(key_str)
                                 # 从用户会话列表中移除
                                 user_id = data.get('user_id')
                                 if user_id:
-                                    redis_client.srem(f"user_sessions:{user_id}", key.split(':')[1])
+                                    redis_client.srem(f"user_sessions:{user_id}", key_str.split(':')[1])
                                 cleaned_count += 1
                 
                 logger.info(f"Redis清理了 {cleaned_count} 个过期会话")

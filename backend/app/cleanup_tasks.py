@@ -58,6 +58,7 @@ class CleanupTasks:
             from app.secure_auth import SecureAuthManager
             from app.service_auth import ServiceAuthManager
             from app.admin_auth import AdminAuthManager
+            from app.user_redis_cleanup import user_redis_cleanup
             
             # 清理用户会话
             SecureAuthManager.cleanup_expired_sessions()
@@ -67,6 +68,9 @@ class CleanupTasks:
             
             # 清理管理员会话
             AdminAuthManager.cleanup_expired_sessions()
+            
+            # 清理用户Redis数据
+            user_redis_cleanup.cleanup_all_user_data()
             
         except Exception as e:
             logger.error(f"清理过期会话失败: {e}")
