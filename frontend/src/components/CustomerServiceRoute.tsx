@@ -27,16 +27,16 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
         console.log(`客服路由认证检查 (尝试 ${retryCount + 1}):`);
         console.log('- 所有Cookie:', document.cookie);
         console.log('- service_authenticated:', serviceAuthMatch ? serviceAuthMatch[1] : '未找到');
-        console.log('- service_session_id:', serviceSessionMatch ? '存在' : '未找到');
+        console.log('- service_session_id:', serviceSessionMatch ? '存在' : '未找到 (HttpOnly Cookie，前端无法访问)');
         console.log('- service_id:', serviceIdMatch ? serviceIdMatch[1] : '未找到');
         
         // 检查是否有客服Cookie标识
         const hasServiceCookie = serviceAuthMatch && serviceAuthMatch[1] === 'true';
-        const hasSessionCookie = !!serviceSessionMatch;
         const hasServiceId = !!serviceIdMatch;
         
-        // 如果Cookie检测失败，直接尝试API验证
-        if (!hasServiceCookie || !hasSessionCookie) {
+        // 注意：service_session_id是HttpOnly Cookie，前端无法检测
+        // 我们只需要检查service_authenticated和service_id即可
+        if (!hasServiceCookie || !hasServiceId) {
           if (retryCount < 2) { // 只重试2次
             console.log(`客服Cookie不完整，${300}ms后重试... (${retryCount + 1}/2)`);
             setTimeout(() => checkAuth(retryCount + 1), 300);
