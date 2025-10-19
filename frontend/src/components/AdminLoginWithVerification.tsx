@@ -64,7 +64,7 @@ const AdminLoginWithVerification: React.FC = () => {
         }
         
         // 跳转到管理后台
-        navigate('/zh/admin');
+        navigate('/admin');
       }
     } catch (error: any) {
       let errorMsg = '登录失败';
@@ -97,7 +97,7 @@ const AdminLoginWithVerification: React.FC = () => {
       }
       
       // 跳转到管理后台
-      navigate('/zh/admin');
+      navigate('/admin');
     } catch (error: any) {
       let errorMsg = '验证码验证失败';
       if (error?.response?.data?.detail) {

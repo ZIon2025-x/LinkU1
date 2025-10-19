@@ -259,9 +259,19 @@ def verify_admin_code(
 
 @router.get("/admin/profile", response_model=schemas.AdminProfileResponse)
 def get_admin_profile(
+    request: Request,
+    response: Response,
     current_admin: models.AdminUser = Depends(get_current_admin)
 ):
     """获取管理员个人信息"""
+    # 添加CORS头
+    origin = request.headers.get("origin")
+    if origin and origin in ["https://www.link2ur.com", "https://api.link2ur.com"]:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+    
     return {
         "id": str(current_admin.id),
         "name": str(current_admin.name),
@@ -269,8 +279,8 @@ def get_admin_profile(
         "email": str(current_admin.email),
         "is_super_admin": bool(current_admin.is_super_admin),
         "is_active": bool(current_admin.is_active),
-        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else None,  # type: ignore
-        "last_login": current_admin.last_login.isoformat() if current_admin.last_login else None  # type: ignore
+        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else "",  # type: ignore
+        "last_login": current_admin.last_login.isoformat() if current_admin.last_login else ""  # type: ignore
     }
 
 @router.post("/admin/change-password")
