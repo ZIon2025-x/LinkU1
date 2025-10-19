@@ -61,28 +61,43 @@ def get_current_admin_optional(request: Request, db: Session = Depends(get_sync_
 
 def get_current_service(request: Request, db: Session = Depends(get_sync_db)) -> models.CustomerService:
     """获取当前客服（独立认证）"""
-    logger.info(f"[SERVICE_AUTH] get_current_service - URL: {request.url}")
-    
-    # 验证客服会话
-    service_session = validate_service_session(request)
-    if not service_session:
-        logger.info("[SERVICE_AUTH] 客服会话验证失败")
+    try:
+        logger.info(f"[SERVICE_AUTH] get_current_service - URL: {request.url}")
+        logger.info(f"[SERVICE_AUTH] get_current_service - Cookies: {dict(request.cookies)}")
+        
+        # 验证客服会话
+        service_session = validate_service_session(request)
+        if not service_session:
+            logger.warning("[SERVICE_AUTH] 客服会话验证失败")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="客服认证失败，请重新登录"
+            )
+        
+        # 获取客服信息
+        service = crud.get_customer_service_by_id(db, service_session.service_id)
+        if not service:
+            logger.error(f"[SERVICE_AUTH] 客服不存在: {service_session.service_id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="客服不存在"
+            )
+        
+        logger.info(f"[SERVICE_AUTH] 客服认证成功: {service.id}")
+        return service
+        
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] get_current_service 发生未预期错误: {e}")
+        logger.error(f"[SERVICE_AUTH] 错误类型: {type(e).__name__}")
+        import traceback
+        logger.error(f"[SERVICE_AUTH] 堆栈跟踪: {traceback.format_exc()}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="客服认证失败，请重新登录"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"客服认证服务错误: {str(e)}"
         )
-    
-    # 获取客服信息
-    service = crud.get_customer_service_by_id(db, service_session.service_id)
-    if not service:
-        logger.warning(f"[SERVICE_AUTH] 客服不存在: {service_session.service_id}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="客服不存在"
-        )
-    
-    logger.info(f"[SERVICE_AUTH] 客服认证成功: {service.id}")
-    return service
 
 def get_current_service_optional(request: Request, db: Session = Depends(get_sync_db)) -> Optional[models.CustomerService]:
     """获取当前客服（可选，不抛出异常）"""

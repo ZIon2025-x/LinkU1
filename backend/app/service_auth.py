@@ -240,9 +240,14 @@ class ServiceAuthManager:
             if USE_REDIS and redis_client:
                 # 从Redis查找
                 pattern = f"service_session:*:{session_id}"
+                logger.info(f"[SERVICE_AUTH] 查找会话数据 - pattern: {pattern}")
                 keys = redis_client.keys(pattern)
+                logger.info(f"[SERVICE_AUTH] 找到的keys: {keys}")
                 if keys:
-                    return safe_redis_get(keys[0])
+                    result = safe_redis_get(keys[0])
+                    logger.info(f"[SERVICE_AUTH] 获取到的会话数据: {result}")
+                    return result
+                logger.info(f"[SERVICE_AUTH] 未找到匹配的会话数据")
                 return None
             else:
                 # 从内存查找
@@ -347,10 +352,12 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     logger.info(f"[SERVICE_AUTH] 找到service_session_id: {service_session_id[:8]}...")
     
     # 验证会话
+    logger.info(f"[SERVICE_AUTH] 开始验证会话: {service_session_id[:8]}...")
     session = ServiceAuthManager.get_session(service_session_id, update_activity=False)
     if not session:
-        logger.info(f"[SERVICE_AUTH] 客服会话验证失败: {service_session_id[:8]}...")
+        logger.warning(f"[SERVICE_AUTH] 客服会话验证失败: {service_session_id[:8]}...")
         return None
+    logger.info(f"[SERVICE_AUTH] 会话验证成功: {session.service_id}")
     
     # 验证会话是否仍然活跃
     if not session.is_active:
@@ -403,8 +410,9 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         from typing import Literal
         samesite_literal: Literal["lax", "strict", "none"] = samesite_value  # type: ignore
         
-        # 修复跨子域名Cookie设置 - 支持 www.link2ur.com 和 api.link2ur.com
-        cookie_domain = ".link2ur.com"  # 设置为主域名，支持跨子域名
+        # 不设置domain，让Cookie使用默认域名（api.link2ur.com）
+        # 前端不需要访问HttpOnly Cookie，所以不需要跨子域名支持
+        cookie_domain = None
         
         # 设置客服会话Cookie - HttpOnly，后端验证用
         response.set_cookie(
@@ -431,29 +439,8 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                 domain=cookie_domain  # 跨子域名支持
             )
         
-        # 设置客服身份标识Cookie - 前端需要读取
-        response.set_cookie(
-            key="service_authenticated",
-            value="true",
-            max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
-            httponly=False,  # 前端需要读取
-            secure=settings.COOKIE_SECURE,
-            samesite=samesite_literal,
-            path="/",
-            domain=cookie_domain  # 跨子域名支持
-        )
-        
-        # 设置客服ID Cookie（非敏感，用于前端显示）
-        response.set_cookie(
-            key="service_id",
-            value=service_id or "",
-            max_age=SERVICE_SESSION_EXPIRE_HOURS * 3600,
-            httponly=False,  # 前端需要访问
-            secure=settings.COOKIE_SECURE,
-            samesite=samesite_literal,
-            path="/",
-            domain=cookie_domain  # 跨子域名支持
-        )
+        # 前端不需要检测Cookie，所以不设置这些标识Cookie
+        # 客服认证完全由后端HttpOnly Cookie处理
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie设置成功: session_id={session_id[:8]}..., service_id={service_id}, refresh_token={'是' if refresh_token else '否'}")
         return response
@@ -466,14 +453,12 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
 def clear_service_session_cookie(response: Response) -> Response:
     """清除客服会话Cookie（只清除客服专用Cookie）"""
     try:
-        # 修复跨子域名Cookie清除 - 支持 www.link2ur.com 和 api.link2ur.com
-        cookie_domain = ".link2ur.com"  # 设置为主域名，支持跨子域名
+        # 不设置domain，让Cookie使用默认域名（api.link2ur.com）
+        cookie_domain = None
         
         # 清除客服专用的Cookie
         response.delete_cookie("service_session_id", path="/", domain=cookie_domain)
         response.delete_cookie("service_refresh_token", path="/", domain=cookie_domain)
-        response.delete_cookie("service_authenticated", path="/", domain=cookie_domain)
-        response.delete_cookie("service_id", path="/", domain=cookie_domain)
         
         logger.info(f"[SERVICE_AUTH] 客服Cookie清除成功")
         return response
