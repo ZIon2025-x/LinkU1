@@ -13,25 +13,19 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 使用Cookie认证检查用户信息
+        // 使用管理员专用端点检查管理员权限
         const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${API_BASE_URL}/api/users/profile/me`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/profile`, {
           credentials: 'include'
         });
         
         if (response.ok) {
-          const user = await response.json();
-          
-          // 只允许后台管理员访问，不允许客服
-          if (user.user_type === 'admin') {
-            setIsAuthorized(true);
-            console.log('管理员访问管理后台:', user.id);
-          } else {
-            setIsAuthorized(false);
-            console.warn('非管理员用户尝试访问管理后台:', user.user_type);
-          }
+          const admin = await response.json();
+          setIsAuthorized(true);
+          console.log('管理员访问管理后台:', admin.id);
         } else {
           setIsAuthorized(false);
+          console.warn('管理员认证失败:', response.status);
         }
       } catch (error) {
         // 认证失败
