@@ -103,6 +103,11 @@ class AdminOut(BaseModel):
     created_at: datetime.datetime
     last_login: Optional[datetime.datetime] = None
 
+
+class AdminVerificationRequest(BaseModel):
+    admin_id: str
+    code: str = Field(..., min_length=6, max_length=6, description="6位数字验证码")
+
 # 独立认证系统相关Schema
 class AdminUserLoginNew(BaseModel):
     username: str

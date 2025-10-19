@@ -3,7 +3,7 @@
 为客服和管理员提供独立的登录、登出等认证接口
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from app.deps import get_sync_db, get_current_customer_service_or_user, get_current_admin_user
@@ -12,6 +12,7 @@ from app.security import verify_password, get_password_hash
 from app.admin_auth import AdminAuthManager, create_admin_session_cookie, clear_admin_session_cookie
 from app.service_auth import ServiceAuthManager, create_service_session_cookie, clear_service_session_cookie
 from app.separate_auth_deps import get_current_admin, get_current_service, get_current_user
+from app.config import Config
 from datetime import datetime
 import logging
 
@@ -29,6 +30,8 @@ def admin_login(
     db: Session = Depends(get_sync_db)
 ):
     """管理员登录（独立认证系统）"""
+    from app.admin_verification import AdminVerificationManager
+    
     logger.info(f"[ADMIN_AUTH] 管理员登录尝试: {login_data.username}")
     
     # 查找管理员
@@ -56,6 +59,16 @@ def admin_login(
             detail="用户名或密码错误"
         )
     
+    # 检查是否启用了邮箱验证
+    if AdminVerificationManager.is_verification_enabled():
+        logger.info(f"[ADMIN_AUTH] 管理员邮箱验证已启用，需要验证码: {admin.id}")
+        raise HTTPException(
+            status_code=status.HTTP_202_ACCEPTED,
+            detail="需要邮箱验证码，请先调用发送验证码接口",
+            headers={"X-Requires-Verification": "true"}
+        )
+    
+    # 如果未启用邮箱验证，直接登录
     # 创建管理员会话
     session_info = AdminAuthManager.create_session(str(admin.id), request)
     
@@ -106,6 +119,129 @@ def admin_logout(
     response = clear_admin_session_cookie(response)
     
     return {"message": "管理员登出成功"}
+
+@router.post("/admin/send-verification-code")
+def send_admin_verification_code(
+    login_data: schemas.AdminUserLoginNew,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_sync_db)
+):
+    """发送管理员验证码"""
+    from app.admin_verification import AdminVerificationManager
+    from app.email_utils import send_admin_verification_code_email
+    
+    logger.info(f"[ADMIN_AUTH] 发送验证码请求: {login_data.username}")
+    
+    # 检查是否启用了邮箱验证
+    if not AdminVerificationManager.is_verification_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="管理员邮箱验证功能未启用"
+        )
+    
+    # 查找管理员
+    admin = AdminVerificationManager.get_admin_by_username(db, login_data.username)
+    if not admin:
+        logger.warning(f"[ADMIN_AUTH] 管理员不存在: {login_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误"
+        )
+    
+    # 检查管理员状态
+    if not bool(admin.is_active):
+        logger.warning(f"[ADMIN_AUTH] 管理员已被禁用: {admin.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="管理员账户已被禁用"
+        )
+    
+    # 验证密码
+    if not verify_password(login_data.password, str(admin.hashed_password)):
+        logger.warning(f"[ADMIN_AUTH] 管理员密码错误: {admin.id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码错误"
+        )
+    
+    # 生成验证码
+    verification_code = AdminVerificationManager.create_verification_code(db, str(admin.id))
+    
+    # 发送验证码邮件
+    admin_email = AdminVerificationManager.get_admin_email()
+    send_admin_verification_code_email(
+        background_tasks, 
+        admin_email, 
+        verification_code, 
+        str(admin.name)
+    )
+    
+    logger.info(f"[ADMIN_AUTH] 验证码已发送到管理员邮箱: {admin_email}")
+    
+    return {
+        "message": f"验证码已发送到管理员邮箱 {admin_email}",
+        "admin_id": str(admin.id),
+        "expires_in_minutes": Config.ADMIN_VERIFICATION_CODE_EXPIRE_MINUTES
+    }
+
+@router.post("/admin/verify-code")
+def verify_admin_code(
+    verification_data: schemas.AdminVerificationRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db)
+):
+    """验证管理员验证码并完成登录"""
+    from app.admin_verification import AdminVerificationManager
+    
+    logger.info(f"[ADMIN_AUTH] 验证码验证请求: {verification_data.admin_id}")
+    
+    # 验证验证码
+    if not AdminVerificationManager.verify_code(db, verification_data.admin_id, verification_data.code):
+        logger.warning(f"[ADMIN_AUTH] 验证码验证失败: {verification_data.admin_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="验证码错误或已过期"
+        )
+    
+    # 获取管理员信息
+    admin = db.query(models.AdminUser).filter(models.AdminUser.id == verification_data.admin_id).first()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="管理员不存在"
+        )
+    
+    # 创建管理员会话
+    session_info = AdminAuthManager.create_session(str(admin.id), request)
+    
+    # 设置Cookie
+    response = create_admin_session_cookie(response, session_info.session_id)
+    
+    # 生成并设置CSRF token
+    from app.csrf import CSRFProtection
+    csrf_token = CSRFProtection.generate_csrf_token()
+    user_agent = request.headers.get("user-agent", "")
+    CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
+    
+    # 更新最后登录时间
+    admin.last_login = datetime.utcnow()  # type: ignore
+    db.commit()
+    
+    logger.info(f"[ADMIN_AUTH] 管理员验证码登录成功: {admin.id}")
+    
+    return {
+        "message": "管理员登录成功",
+        "admin": {
+            "id": str(admin.id),
+            "name": str(admin.name),
+            "username": str(admin.username),
+            "email": str(admin.email),
+            "is_super_admin": bool(admin.is_super_admin),
+            "last_login": admin.last_login.isoformat() if admin.last_login else None  # type: ignore
+        },
+        "session_id": session_info.session_id
+    }
 
 @router.get("/admin/profile", response_model=schemas.AdminProfileResponse)
 def get_admin_profile(

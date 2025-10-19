@@ -10,6 +10,9 @@ load_dotenv()
 
 # 使用统一配置
 from app.config import Config
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 尝试导入SendGrid
 try:
@@ -193,3 +196,37 @@ def send_task_update_email(
     background_tasks: BackgroundTasks, to_email: str, subject: str, body: str
 ):
     background_tasks.add_task(send_email, to_email, subject, body)
+
+
+def send_admin_verification_code_email(
+    background_tasks: BackgroundTasks, to_email: str, verification_code: str, admin_name: str
+):
+    """发送管理员验证码邮件"""
+    subject = "Link²Ur 管理员登录验证码"
+    body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #333; text-align: center;">管理员登录验证码</h2>
+        <p>尊敬的 {admin_name}，</p>
+        <p>您正在尝试登录 Link²Ur 管理员系统，请使用以下验证码完成登录：</p>
+        
+        <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">{verification_code}</h1>
+        </div>
+        
+        <p style="color: #666; font-size: 14px;">
+            <strong>重要提示：</strong><br>
+            • 验证码有效期为 {Config.ADMIN_VERIFICATION_CODE_EXPIRE_MINUTES} 分钟<br>
+            • 验证码只能使用一次<br>
+            • 如果您没有尝试登录，请忽略此邮件<br>
+            • 请勿将验证码泄露给他人
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #999; font-size: 12px; text-align: center;">
+            此邮件由 Link²Ur 系统自动发送，请勿回复。
+        </p>
+    </div>
+    """
+    
+    background_tasks.add_task(send_email, to_email, subject, body)
+    logger.info(f"管理员验证码邮件已发送到: {to_email}")
