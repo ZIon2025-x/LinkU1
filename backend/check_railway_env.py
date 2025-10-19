@@ -75,7 +75,7 @@ def check_railway_environment():
     cookie_vars = [
         "COOKIE_SECURE",
         "COOKIE_SAMESITE", 
-        "COOKIE_DOMAIN",
+        # "COOKIE_DOMAIN",  # 已移除 - 现在只使用当前域名
         "COOKIE_PATH"
     ]
     

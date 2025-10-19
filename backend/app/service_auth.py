@@ -401,17 +401,9 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         samesite_value = "lax"  # 默认使用lax
         if settings.COOKIE_SAMESITE in ["lax", "strict", "none"]:
             samesite_value = settings.COOKIE_SAMESITE
-        # 修复Cookie域名设置 - 确保在生产环境正确设置
-        cookie_domain = None
-        if settings.IS_PRODUCTION:
-            cookie_domain = settings.COOKIE_DOMAIN
-        elif settings.COOKIE_DOMAIN:  # 即使不是生产环境，如果设置了COOKIE_DOMAIN也使用
-            cookie_domain = settings.COOKIE_DOMAIN
-        else:
-            # 如果环境变量未设置，但检测到是生产环境，使用默认域名
-            if 'railway' in str(request.url) or 'link2ur.com' in str(request.url):
-                cookie_domain = '.link2ur.com'
-                logger.info(f"[SERVICE_AUTH] 检测到生产环境，使用默认Cookie域名: {cookie_domain}")
+        # 修复Cookie域名设置 - 只使用api.link2ur.com域名
+        cookie_domain = None  # 不设置domain，让Cookie只对当前域名有效
+        logger.info(f"[SERVICE_AUTH] 使用当前域名Cookie: api.link2ur.com")
         cookie_path = "/"
         
         # 生成refresh token（如果提供了service_id）
@@ -489,16 +481,9 @@ def clear_service_session_cookie(response: Response) -> Response:
     from app.config import get_settings
     
     settings = get_settings()
-    # 修复Cookie域名设置 - 确保在生产环境正确设置
-    cookie_domain = None
-    if settings.IS_PRODUCTION:
-        cookie_domain = settings.COOKIE_DOMAIN
-    elif settings.COOKIE_DOMAIN:  # 即使不是生产环境，如果设置了COOKIE_DOMAIN也使用
-        cookie_domain = settings.COOKIE_DOMAIN
-    else:
-        # 如果环境变量未设置，但检测到是生产环境，使用默认域名
-        cookie_domain = '.link2ur.com'
-        logger.info(f"[SERVICE_AUTH] 清除Cookie使用默认域名: {cookie_domain}")
+    # 修复Cookie域名设置 - 只使用api.link2ur.com域名
+    cookie_domain = None  # 不设置domain，让Cookie只对当前域名有效
+    logger.info(f"[SERVICE_AUTH] 清除Cookie使用当前域名: api.link2ur.com")
     cookie_path = "/"
     
     # 清除所有客服相关的Cookie

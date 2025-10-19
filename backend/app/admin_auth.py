@@ -342,8 +342,8 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
     """创建管理员会话Cookie（支持跨域）"""
     from app.config import Config
     
-    # 根据环境设置domain
-    cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION else None
+    # 只使用当前域名
+    cookie_domain = None
     
     # 确保samesite值有效
     samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"

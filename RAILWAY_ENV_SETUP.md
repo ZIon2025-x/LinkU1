@@ -19,7 +19,7 @@ INFO:app.service_auth:[SERVICE_AUTH] 客服Cookie设置成功: session_id=servic
 
 ```bash
 IS_PRODUCTION=true
-COOKIE_DOMAIN=.link2ur.com
+# COOKIE_DOMAIN=.link2ur.com  # 已移除 - 现在只使用当前域名
 COOKIE_SECURE=true
 COOKIE_SAMESITE=lax
 ALLOWED_ORIGINS=https://www.link2ur.com,https://api.link2ur.com
@@ -30,7 +30,7 @@ ALLOWED_ORIGINS=https://www.link2ur.com,https://api.link2ur.com
 | 变量名 | 值 | 说明 |
 |--------|-----|------|
 | `IS_PRODUCTION` | `true` | 标识生产环境，启用生产配置 |
-| `COOKIE_DOMAIN` | `.link2ur.com` | Cookie域名，支持子域名共享 |
+| ~~`COOKIE_DOMAIN`~~ | ~~`.link2ur.com`~~ | ~~已移除 - 现在只使用当前域名~~ |
 | `COOKIE_SECURE` | `true` | 启用安全Cookie（HTTPS） |
 | `COOKIE_SAMESITE` | `lax` | SameSite策略，支持跨域 |
 | `ALLOWED_ORIGINS` | `https://www.link2ur.com,https://api.link2ur.com` | CORS允许的源 |

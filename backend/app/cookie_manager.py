@@ -80,7 +80,7 @@ class CookieManager:
             secure=secure_value,
             samesite=samesite_value,
             path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            domain=None  # 只使用当前域名
         )
         
         # 设置refresh_token cookie（长期）
@@ -92,7 +92,7 @@ class CookieManager:
             secure=secure_value,
             samesite=samesite_value,
             path=Config.COOKIE_PATH,
-            domain=Config.COOKIE_DOMAIN
+            domain=None  # 只使用当前域名
         )
         
         # 如果提供了user_id，设置用户ID Cookie（非敏感，用于前端显示）
@@ -105,7 +105,7 @@ class CookieManager:
                 secure=secure_value,
                 samesite=samesite_value,
                 path=Config.COOKIE_PATH,
-                domain=Config.COOKIE_DOMAIN
+                domain=None  # 只使用当前域名
             )
         
         logger.info(f"设置认证Cookie - user_id: {user_id}")
@@ -154,8 +154,8 @@ class CookieManager:
             secure_value = True      # HTTPS环境必须使用secure
         else:
             # 桌面端：开发环境不设置domain，生产环境使用配置的domain
-            if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
-                cookie_domain = Config.COOKIE_DOMAIN
+            # 只使用当前域名，不设置domain属性
+            cookie_domain = None
             else:
                 cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
@@ -241,8 +241,8 @@ class CookieManager:
             cookie_path = "/"
         else:
             # 开发环境不设置domain，生产环境使用配置的domain
-            if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN:
-                cookie_domain = Config.COOKIE_DOMAIN
+            # 只使用当前域名，不设置domain属性
+            cookie_domain = None
             else:
                 cookie_domain = None  # 开发环境不设置domain
             cookie_path = Config.COOKIE_PATH
@@ -300,7 +300,7 @@ class CookieManager:
         samesite_value = CookieManager._get_samesite_value()
         
         # 获取正确的domain设置
-        cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN else None
+        cookie_domain = None  # 只使用当前域名
         
         # 清除主要会话Cookie
         response.delete_cookie(
@@ -378,7 +378,7 @@ class CookieManager:
         samesite_value = CookieManager._get_samesite_value()
         
         # 获取正确的domain设置
-        cookie_domain = Config.COOKIE_DOMAIN if Config.IS_PRODUCTION and Config.COOKIE_DOMAIN else None
+        cookie_domain = None  # 只使用当前域名
         
         response.delete_cookie(
             key="csrf_token",

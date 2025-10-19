@@ -85,7 +85,7 @@ class SecurityConfig:
     COOKIE_SECURE = Config.COOKIE_SECURE
     COOKIE_HTTPONLY = Config.COOKIE_HTTPONLY
     COOKIE_SAMESITE = Config.COOKIE_SAMESITE
-    COOKIE_DOMAIN = Config.COOKIE_DOMAIN
+    # COOKIE_DOMAIN 已移除 - 现在只使用当前域名
 
     # CORS配置
     ALLOWED_ORIGINS = os.getenv(

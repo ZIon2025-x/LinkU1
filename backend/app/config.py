@@ -75,7 +75,7 @@ class Config:
     COOKIE_HTTPONLY = True
     # 跨子域名兼容性：生产环境使用lax而不是strict，允许跨子域名Cookie
     COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "lax")
-    COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", ".link2ur.com" if IS_PRODUCTION else None)
+    # COOKIE_DOMAIN 已移除 - 现在只使用当前域名（api.link2ur.com）的Cookie
     
     # 移动端兼容性配置
     COOKIE_PATH = "/"
