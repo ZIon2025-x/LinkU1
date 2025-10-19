@@ -24,6 +24,7 @@ settings = get_settings()
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "24"))
+USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "24"))
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
 # 会话存储
@@ -271,23 +272,20 @@ class SecureAuthManager:
     def revoke_session(session_id: str) -> bool:
         """撤销会话"""
         if USE_REDIS and redis_client:
-            # 从 Redis 撤销会话
+            # 从 Redis 直接删除会话数据
             data = safe_redis_get(f"session:{session_id}")
             if data:
-                data["is_active"] = False
-                redis_client.setex(
-                    f"session:{session_id}",
-                    SESSION_EXPIRE_HOURS * 3600,
-                    json.dumps(data)
-                )
                 # 从用户会话列表中移除
                 redis_client.srem(f"user_sessions:{data['user_id']}", session_id)
+                # 直接删除会话数据
+                redis_client.delete(f"session:{session_id}")
+                logger.info(f"会话已撤销并删除: {session_id[:8]}...")
                 return True
             return False
         else:
             # 从内存撤销会话
             if session_id in active_sessions:
-                active_sessions[session_id].is_active = False
+                del active_sessions[session_id]
                 return True
             return False
     
@@ -295,40 +293,64 @@ class SecureAuthManager:
     def revoke_user_sessions(user_id: str) -> int:
         """撤销用户的所有会话"""
         if USE_REDIS and redis_client:
-            # 从 Redis 撤销用户的所有会话
+            # 从 Redis 删除用户的所有会话
             user_sessions_key = f"user_sessions:{user_id}"
             user_sessions = redis_client.smembers(user_sessions_key)
             count = 0
             
             for session_id in user_sessions:
-                data = safe_redis_get(f"session:{session_id}")
-                if data:
-                    data["is_active"] = False
-                    redis_client.setex(
-                        f"session:{session_id}",
-                        SESSION_EXPIRE_HOURS * 3600,
-                        json.dumps(data)
-                    )
+                # 直接删除会话数据
+                if redis_client.delete(f"session:{session_id}"):
                     count += 1
             
             # 清空用户会话列表
             redis_client.delete(user_sessions_key)
+            logger.info(f"用户所有会话已撤销并删除: {user_id}, 删除数量: {count}")
             return count
         else:
-            # 从内存撤销用户的所有会话
+            # 从内存删除用户的所有会话
             count = 0
-            for session in active_sessions.values():
-                if session.user_id == user_id and session.is_active:
-                    session.is_active = False
+            sessions_to_delete = []
+            for session_id, session in active_sessions.items():
+                if session.user_id == user_id:
+                    sessions_to_delete.append(session_id)
                     count += 1
+            
+            for session_id in sessions_to_delete:
+                del active_sessions[session_id]
+            
+            logger.info(f"用户所有会话已撤销并删除: {user_id}, 删除数量: {count}")
             return count
     
     @staticmethod
     def cleanup_expired_sessions():
         """清理过期会话"""
         if USE_REDIS and redis_client:
-            # Redis 会自动清理过期的键，这里只需要清理内存中的引用
-            logger.info("Redis 自动清理过期会话")
+            # 主动清理Redis中的过期会话
+            try:
+                # 获取所有会话键
+                session_keys = redis_client.keys("session:*")
+                cleaned_count = 0
+                
+                for key in session_keys:
+                    data = safe_redis_get(key)
+                    if data:
+                        # 检查会话是否过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            last_activity = datetime.fromisoformat(last_activity_str)
+                            if datetime.utcnow() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+                                # 删除过期会话
+                                redis_client.delete(key)
+                                # 从用户会话列表中移除
+                                user_id = data.get('user_id')
+                                if user_id:
+                                    redis_client.srem(f"user_sessions:{user_id}", key.split(':')[1])
+                                cleaned_count += 1
+                
+                logger.info(f"Redis清理了 {cleaned_count} 个过期会话")
+            except Exception as e:
+                logger.error(f"Redis清理过期会话失败: {e}")
             return
         
         # 内存存储的清理逻辑
@@ -355,7 +377,7 @@ class SecureAuthManager:
             if session_id in active_sessions:
                 del active_sessions[session_id]
         
-        logger.info(f"清理了 {len(expired_sessions)} 个过期会话")
+        logger.info(f"内存清理了 {len(expired_sessions)} 个过期会话")
 
 # SecureCookieManager 已移除，请使用 app.cookie_manager.CookieManager
 

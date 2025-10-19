@@ -146,6 +146,10 @@ app.include_router(rate_limit_router, tags=["速率限制"])
 from app.time_check_endpoint import router as time_check_router
 app.include_router(time_check_router, tags=["时间检查"])
 
+# 添加清理任务端点
+from app.cleanup_routes import router as cleanup_router
+app.include_router(cleanup_router, prefix="/api/cleanup", tags=["数据清理"])
+
 # Add time validation endpoint
 from app.time_validation_endpoint import router as time_validation_router
 app.include_router(time_validation_router, tags=["时间验证"])
@@ -368,6 +372,15 @@ async def startup_event():
     logger.info("启动后台任务：清理过期会话")
     session_cleanup_thread = threading.Thread(target=run_session_cleanup_task, daemon=True)
     session_cleanup_thread.start()
+    
+    # 启动定期清理任务
+    logger.info("启动定期清理任务")
+    try:
+        from app.cleanup_tasks import start_background_cleanup
+        asyncio.create_task(start_background_cleanup())
+        logger.info("定期清理任务已启动")
+    except Exception as e:
+        logger.error(f"启动定期清理任务失败: {e}")
 
 
 @app.websocket("/ws/chat/{user_id}")
