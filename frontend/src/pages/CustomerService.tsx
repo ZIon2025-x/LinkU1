@@ -395,23 +395,23 @@ const CustomerService: React.FC = () => {
 
       switch (action) {
         case 'ban':
-          endpoint = `/api/users/admin/user/${userId}/set_status`;
+          endpoint = `/api/admin/user/${userId}/set_status`;
           body = { is_banned: 1 };
           break;
         case 'unban':
-          endpoint = `/api/users/admin/user/${userId}/set_status`;
+          endpoint = `/api/admin/user/${userId}/set_status`;
           body = { is_banned: 0 };
           break;
         case 'suspend':
-          endpoint = `/api/users/admin/user/${userId}/set_status`;
+          endpoint = `/api/admin/user/${userId}/set_status`;
           body = { is_suspended: 1 };
           break;
         case 'unsuspend':
-          endpoint = `/api/users/admin/user/${userId}/set_status`;
+          endpoint = `/api/admin/user/${userId}/set_status`;
           body = { is_suspended: 0 };
           break;
         case 'setLevel':
-          endpoint = `/api/users/admin/user/${userId}/set_level`;
+          endpoint = `/api/admin/user/${userId}/set_level`;
           body = value;
           break;
       }
@@ -460,7 +460,7 @@ const CustomerService: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/users/admin/tasks/${taskId}/delete`, {
+      const response = await fetch(`/api/admin/tasks/${taskId}/delete`, {
         method: 'DELETE',
         credentials: 'include'  // 使用Cookie认证
       });

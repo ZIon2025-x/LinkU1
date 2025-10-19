@@ -595,7 +595,7 @@ export async function getUserReceivedReviews(userId: string) {
 
 // 客服管理相关API
 export async function getAdminUsers() {
-  const res = await api.get('/api/users/admin/users');
+  const res = await api.get('/api/admin/users');
   return res.data;
 }
 
@@ -607,27 +607,27 @@ export async function getAdminTasks(params?: {
   location?: string;
   keyword?: string;
 }) {
-  const res = await api.get('/api/users/admin/tasks', { params });
+  const res = await api.get('/api/admin/tasks', { params });
   return res.data;
 }
 
 export async function getAdminTaskDetail(taskId: number) {
-  const res = await api.get(`/api/users/admin/tasks/${taskId}`);
+  const res = await api.get(`/api/admin/tasks/${taskId}`);
   return res.data;
 }
 
 export async function updateAdminTask(taskId: number, taskUpdate: any) {
-  const res = await api.put(`/api/users/admin/tasks/${taskId}`, taskUpdate);
+  const res = await api.put(`/api/admin/tasks/${taskId}`, taskUpdate);
   return res.data;
 }
 
 export async function deleteAdminTask(taskId: number) {
-  const res = await api.delete(`/api/users/admin/tasks/${taskId}`);
+  const res = await api.delete(`/api/admin/tasks/${taskId}`);
   return res.data;
 }
 
 export async function batchUpdateAdminTasks(taskIds: number[], taskUpdate: any) {
-  const res = await api.post('/api/users/admin/tasks/batch-update', {
+  const res = await api.post('/api/admin/tasks/batch-update', {
     task_ids: taskIds,
     ...taskUpdate
   });
@@ -635,7 +635,7 @@ export async function batchUpdateAdminTasks(taskIds: number[], taskUpdate: any) 
 }
 
 export async function batchDeleteAdminTasks(taskIds: number[]) {
-  const res = await api.post('/api/users/admin/tasks/batch-delete', {
+  const res = await api.post('/api/admin/tasks/batch-delete', {
     task_ids: taskIds
   });
   return res.data;
@@ -646,37 +646,37 @@ export async function getAdminCustomerServiceRequests(params?: {
   status?: string;
   priority?: string;
 }) {
-  const res = await api.get('/api/users/admin/customer-service-requests', { params });
+  const res = await api.get('/api/admin/customer-service-requests', { params });
   return res.data;
 }
 
 export async function getAdminCustomerServiceRequestDetail(requestId: number) {
-  const res = await api.get(`/api/users/admin/customer-service-requests/${requestId}`);
+  const res = await api.get(`/api/admin/customer-service-requests/${requestId}`);
   return res.data;
 }
 
 export async function updateAdminCustomerServiceRequest(requestId: number, updateData: any) {
-  const res = await api.put(`/api/users/admin/customer-service-requests/${requestId}`, updateData);
+  const res = await api.put(`/api/admin/customer-service-requests/${requestId}`, updateData);
   return res.data;
 }
 
 export async function getAdminCustomerServiceChatMessages() {
-  const res = await api.get('/api/users/admin/customer-service-chat');
+  const res = await api.get('/api/admin/customer-service-chat');
   return res.data;
 }
 
 export async function sendAdminCustomerServiceChatMessage(content: string) {
-  const res = await api.post('/api/users/admin/customer-service-chat', { content });
+  const res = await api.post('/api/admin/customer-service-chat', { content });
   return res.data;
 }
 
 export async function getAdminMessages() {
-  const res = await api.get('/api/users/admin/messages');
+  const res = await api.get('/api/admin/messages');
   return res.data;
 }
 
 export async function setUserLevel(userId: string, level: string) {
-  const res = await api.post(`/api/users/admin/user/${userId}/set_level`, level);
+  const res = await api.post(`/api/admin/user/${userId}/set_level`, level);
   return res.data;
 }
 
@@ -685,12 +685,12 @@ export async function setUserStatus(userId: string, status: {
   is_suspended?: number;
   suspend_until?: string;
 }) {
-  const res = await api.post(`/api/users/admin/user/${userId}/set_status`, status);
+  const res = await api.post(`/api/admin/user/${userId}/set_status`, status);
   return res.data;
 }
 
 export async function setTaskLevel(taskId: number, level: string) {
-  const res = await api.post(`/api/users/admin/task/${taskId}/set_level`, level);
+  const res = await api.post(`/api/admin/task/${taskId}/set_level`, level);
   return res.data;
 }
 
@@ -703,7 +703,7 @@ export async function sendAnnouncement(title: string, content: string) {
 }
 
 export async function getAdminPayments() {
-  const res = await api.get('/api/users/admin/payments');
+  const res = await api.get('/api/admin/payments');
   return res.data;
 }
 
@@ -830,7 +830,7 @@ export const customerServiceLogout = async () => {
 
 // 管理后台相关API
 export const getDashboardStats = async () => {
-  const res = await api.get('/api/users/admin/dashboard/stats');
+  const res = await api.get('/api/admin/dashboard/stats');
   return res.data;
 };
 
@@ -841,12 +841,12 @@ export const getUsersForAdmin = async (page: number = 1, size: number = 20, sear
   if (search) {
     params.append('search', search);
   }
-  const res = await api.get(`/api/users/admin/users?${params.toString()}`);
+  const res = await api.get(`/api/admin/users?${params.toString()}`);
   return res.data;
 };
 
 export const updateUserByAdmin = async (userId: string, userData: any) => {
-  const res = await api.patch(`/api/users/admin/users/${userId}`, userData);
+  const res = await api.patch(`/api/admin/users/${userId}`, userData);
   return res.data;
 };
 
@@ -855,12 +855,12 @@ export const createCustomerService = async (csData: {
   email: string;
   password: string;
 }) => {
-  const res = await api.post('/api/users/admin/customer-service', csData);
+  const res = await api.post('/api/admin/customer-service', csData);
   return res.data;
 };
 
 export const deleteCustomerService = async (csId: number) => {
-  const res = await api.delete(`/api/users/admin/customer-service/${csId}`);
+  const res = await api.delete(`/api/admin/customer-service/${csId}`);
   return res.data;
 };
 
@@ -868,7 +868,7 @@ export const getCustomerServicesForAdmin = async (page: number = 1, size: number
   const params = new URLSearchParams();
   params.append('page', page.toString());
   params.append('size', size.toString());
-  const res = await api.get(`/api/users/admin/customer-service?${params.toString()}`);
+  const res = await api.get(`/api/admin/customer-service?${params.toString()}`);
   return res.data;
 };
 
@@ -880,12 +880,12 @@ export const createAdminUser = async (adminData: {
   password: string;
   is_super_admin?: number;
 }) => {
-  const res = await api.post('/api/users/admin/admin-user', adminData);
+  const res = await api.post('/api/admin/admin-user', adminData);
   return res.data;
 };
 
 export const deleteAdminUser = async (adminId: string) => {
-  const res = await api.delete(`/api/users/admin/admin-user/${adminId}`);
+  const res = await api.delete(`/api/admin/admin-user/${adminId}`);
   return res.data;
 };
 
@@ -893,7 +893,7 @@ export const getAdminUsersForAdmin = async (page: number = 1, size: number = 20)
   const params = new URLSearchParams();
   params.append('page', page.toString());
   params.append('size', size.toString());
-  const res = await api.get(`/api/users/admin/admin-users?${params.toString()}`);
+  const res = await api.get(`/api/admin/admin-users?${params.toString()}`);
   return res.data;
 };
 
@@ -905,7 +905,7 @@ export const sendStaffNotification = async (notification: {
   content: string;
   notification_type?: string;
 }) => {
-  const res = await api.post('/api/users/admin/staff-notification', notification);
+  const res = await api.post('/api/admin/staff-notification', notification);
   return res.data;
 };
 
@@ -935,22 +935,22 @@ export const sendAdminNotification = async (notification: {
   user_ids: string[];  // 现在ID是字符串类型
   type?: string;
 }) => {
-  const res = await api.post('/api/users/admin/notifications/send', notification);
+  const res = await api.post('/api/admin/notifications/send', notification);
   return res.data;
 };
 
 export const updateTaskByAdmin = async (taskId: number, taskData: any) => {
-  const res = await api.patch(`/api/users/admin/tasks/${taskId}`, taskData);
+  const res = await api.patch(`/api/admin/tasks/${taskId}`, taskData);
   return res.data;
 };
 
 export const deleteTaskByAdmin = async (taskId: number) => {
-  const res = await api.delete(`/api/users/admin/tasks/${taskId}`);
+  const res = await api.delete(`/api/admin/tasks/${taskId}`);
   return res.data;
 };
 
 export const notifyCustomerService = async (csId: number, message: string) => {
-  const res = await api.post(`/api/users/admin/customer-service/${csId}/notify`, message);
+  const res = await api.post(`/api/admin/customer-service/${csId}/notify`, message);
   return res.data;
 };
 
@@ -962,7 +962,7 @@ export const adminLogin = async (loginData: { username: string; password: string
 
 // 系统设置相关API
 export const getSystemSettings = async () => {
-  const res = await api.get('/api/users/admin/system-settings');
+  const res = await api.get('/api/admin/system-settings');
   return res.data;
 };
 
@@ -983,7 +983,7 @@ export const updateSystemSettings = async (settings: {
   vip_to_super_completion_rate_threshold: number;
   vip_to_super_enabled: boolean;
 }) => {
-  const res = await api.put('/api/users/admin/system-settings', settings);
+  const res = await api.put('/api/admin/system-settings', settings);
   return res.data;
 };
 
