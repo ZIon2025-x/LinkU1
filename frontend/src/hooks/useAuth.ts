@@ -46,6 +46,13 @@ export const useAuth = () => {
         console.log('service_authenticated cookie值:', serviceCookieMatch[1]);
       }
       
+      // 检查service_session_id cookie
+      const serviceSessionMatch = document.cookie.match(/service_session_id=([^;]+)/);
+      console.log('service_session_id cookie匹配结果:', serviceSessionMatch);
+      if (serviceSessionMatch) {
+        console.log('service_session_id cookie值:', serviceSessionMatch[1].substring(0, 20) + '...');
+      }
+      
       // 根据Cookie标识只检查对应的角色，避免跨角色检查
       const checks = [];
       

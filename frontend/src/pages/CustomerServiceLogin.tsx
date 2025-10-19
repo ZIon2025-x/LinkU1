@@ -32,18 +32,13 @@ const CustomerServiceLogin: React.FC = () => {
         console.warn('获取CSRF token失败:', error);
       }
       
-      // 等待一下确保Cookie已设置，然后跳转到客服管理页面
+      // 登录成功后直接跳转，让CustomerServiceRoute组件处理认证检查
+      console.log('客服登录成功，准备跳转到客服管理页面');
+      
+      // 使用React Router导航而不是硬跳转
       setTimeout(() => {
-        // 检查cookie是否已设置
-        console.log('登录后检查Cookie:', document.cookie);
-        console.log('service_authenticated存在:', document.cookie.includes('service_authenticated=true'));
-        
-        // 先尝试手动触发认证检查
-        if (window.location.pathname === '/customer-service/login') {
-          // 如果还在登录页面，说明需要跳转
-          window.location.href = '/customer-service';
-        }
-      }, 1000);
+        navigate('/customer-service', { replace: true });
+      }, 500); // 减少等待时间，让路由组件处理认证
     } catch (error: any) {
       let errorMsg = '登录失败';
       if (error?.response?.data?.detail) {
