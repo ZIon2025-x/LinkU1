@@ -347,6 +347,70 @@
     "partnerCooperation": "合作伙伴，发送邮件至",
     "faq": "常见问题"
   },
+  "partners": {
+    "title": "合作伙伴",
+    "subtitle": "携手共创，为用户与社区创造更大价值",
+    "betaNotice": "当前为测试阶段（MVP/Beta）。欢迎合作与反馈。",
+    "platform": {
+      "introTitle": "关于平台",
+      "intro": "Link²Ur 连接有需求的人与能提供服务的人，聚焦安全撮合、社区信任与本地生活场景。",
+      "missionTitle": "我们的使命",
+      "mission": "通过有意义的连接，让每个人都能获得值得信赖的帮助与机会。",
+      "visionTitle": "我们的愿景",
+      "vision": "打造一个开放包容的协作市场，让合作成为日常。",
+      "goalsTitle": "目标",
+      "goals": {
+        "safety": "安全第一：风险控制、滥用防护与透明口碑。",
+        "efficiency": "高效匹配：降低信息不对称与交易摩擦。",
+        "growth": "可持续增长：赋能个人、商户与社区。"
+      }
+    },
+    "sections": {
+      "whyPartner": "为什么与我们合作",
+      "whyPartnerDesc": "我们欢迎在品牌联动、市场推广、校园渠道与产品集成等方面的战略合作。",
+      "contact": "联系"
+    },
+    "benefits": {
+      "brandExposure": "品牌曝光",
+      "brandExposureDesc": "覆盖学生社群与本地生活场景，触达更广人群。",
+      "userGrowth": "用户增长",
+      "userGrowthDesc": "通过任务场景与社区运营，获取高意向用户。"
+    },
+    "contactLine": "商务合作请发送邮件至",
+    "betaContact": "如您对此项目感兴趣或有疑问，欢迎邮件联系"
+  },
+  "merchant": {
+    "title": "商户合作",
+    "subtitle": "为本地商户带来流量、转化与数字化运营能力",
+    "betaNotice": "当前为测试阶段（MVP/Beta），欢迎有前瞻性的商户共同探索试点。",
+    "platform": {
+      "introTitle": "关于平台",
+      "intro": "Link²Ur 是一个需求—服务撮合平台，连接本地需求与可信的服务者与商户。",
+      "missionTitle": "我们的使命",
+      "mission": "帮助商户在合适的场景触达合适的用户，实现高效增长。",
+      "visionTitle": "我们的愿景",
+      "vision": "构建以服务质量与用户信任驱动的本地协作生态。",
+      "goalsTitle": "目标",
+      "goals": {
+        "digitization": "数字化：降低中小商户的数字化运营门槛。",
+        "acquisition": "获客：基于场景的活动与社区分发。",
+        "retention": "留存：口碑沉淀、反馈闭环与增值服务。"
+      }
+    },
+    "sections": {
+      "coopModels": "合作模式",
+      "coopModelsDesc": "我们支持营销合作与产品/系统集成合作，助力商户增长。",
+      "contact": "联系"
+    },
+    "models": {
+      "marketing": "营销合作",
+      "marketingDesc": "活动联名、优惠券与校园大使计划，帮助获客。",
+      "integration": "产品集成",
+      "integrationDesc": "系统对接、数据接口与定制化解决方案。"
+    },
+    "contactLine": "商务垂询请发送邮件至",
+    "betaContact": "如您有兴趣或疑问，欢迎邮件联系"
+  },
   "publishTask": {
     "title": "发布新任务",
     "subtitle": "创建您的任务，让更多人帮助您完成",

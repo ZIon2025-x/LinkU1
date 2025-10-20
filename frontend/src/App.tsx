@@ -22,7 +22,10 @@ import LanguageTest from './pages/LanguageTest';
 import InternationalizationTest from './pages/InternationalizationTest';
 import CookieTest from './pages/CookieTest';
 import TermsOfService from './pages/TermsOfService';
+import FAQ from './pages/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Partners from './pages/Partners';
+import MerchantCooperation from './pages/MerchantCooperation';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
@@ -52,6 +55,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}`} element={<Home />} />
           <Route path={`/${lang}/tasks`} element={<Tasks />} />
           <Route path={`/${lang}/about`} element={<About />} />
+              <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
           <Route path={`/${lang}/language-test`} element={<LanguageTest />} />
           <Route path={`/${lang}/i18n-test`} element={<InternationalizationTest />} />
@@ -59,6 +63,8 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/auth-test`} element={<AuthTest />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
+          <Route path={`/${lang}/partners`} element={<Partners />} />
+          <Route path={`/${lang}/merchant-cooperation`} element={<MerchantCooperation />} />
           <Route path={`/${lang}/publish`} element={
             <ProtectedRoute>
               <PublishTask />
@@ -128,12 +134,15 @@ const LanguageRoutes: React.FC = () => {
       {/* 处理没有语言前缀的旧链接 */}
       <Route path="/tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks`} replace />} />
       <Route path="/about" element={<Navigate to={`/${DEFAULT_LANGUAGE}/about`} replace />} />
+      <Route path="/faq" element={<Navigate to={`/${DEFAULT_LANGUAGE}/faq`} replace />} />
       <Route path="/join-us" element={<Navigate to={`/${DEFAULT_LANGUAGE}/join-us`} replace />} />
       <Route path="/language-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/language-test`} replace />} />
       <Route path="/i18n-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/i18n-test`} replace />} />
       <Route path="/cookie-test" element={<Navigate to={`/${DEFAULT_LANGUAGE}/cookie-test`} replace />} />
       <Route path="/terms" element={<Navigate to={`/${DEFAULT_LANGUAGE}/terms`} replace />} />
       <Route path="/privacy" element={<Navigate to={`/${DEFAULT_LANGUAGE}/privacy`} replace />} />
+      <Route path="/partners" element={<Navigate to={`/${DEFAULT_LANGUAGE}/partners`} replace />} />
+      <Route path="/merchant-cooperation" element={<Navigate to={`/${DEFAULT_LANGUAGE}/merchant-cooperation`} replace />} />
       <Route path="/publish" element={<Navigate to={`/${DEFAULT_LANGUAGE}/publish`} replace />} />
       <Route path="/profile" element={<Navigate to={`/${DEFAULT_LANGUAGE}/profile`} replace />} />
       <Route path="/message" element={<Navigate to={`/${DEFAULT_LANGUAGE}/message`} replace />} />

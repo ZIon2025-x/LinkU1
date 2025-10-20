@@ -56,7 +56,7 @@ const Footer: React.FC = () => {
                 {t('footer.support')}
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                <a href="#" style={{
+                <LocalizedLink to="/faq" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -66,8 +66,8 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.faq')}
-                </a>
-                <a href="#" style={{
+                </LocalizedLink>
+                <LocalizedLink to="/privacy" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -77,8 +77,8 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.privacyPolicy')}
-                </a>
-                <a href="#" style={{
+                </LocalizedLink>
+                <LocalizedLink to="/terms" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.termsOfService')}
-                </a>
+                </LocalizedLink>
               </div>
             </div>
             
@@ -102,7 +102,7 @@ const Footer: React.FC = () => {
                 {t('footer.cooperation')}
               </h4>
               <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                <a href="#" style={{
+                <LocalizedLink to="/partners" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -112,7 +112,7 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.partners')}
-                </a>
+                </LocalizedLink>
                 <LocalizedLink to="/task-experts" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
@@ -124,7 +124,7 @@ const Footer: React.FC = () => {
                 >
                   {t('footer.taskExperts')}
                 </LocalizedLink>
-                <a href="#" style={{
+                <LocalizedLink to="/merchant-cooperation" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',
@@ -134,7 +134,7 @@ const Footer: React.FC = () => {
                 onMouseLeave={(e) => (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.8)'}
                 >
                   {t('footer.merchantCooperation')}
-                </a>
+                </LocalizedLink>
               </div>
             </div>
           </div>

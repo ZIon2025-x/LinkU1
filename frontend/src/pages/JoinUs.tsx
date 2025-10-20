@@ -15,7 +15,8 @@ import {
   Divider,
   Tag,
   Timeline,
-  Progress
+  Progress,
+  Modal
 } from 'antd';
 import { 
   UploadOutlined, 
@@ -66,6 +67,8 @@ const JoinUs: React.FC = () => {
   const [systemSettings, setSystemSettings] = useState({});
   const [positions, setPositions] = useState<any[]>([]);
   const [positionsLoading, setPositionsLoading] = useState(true);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
 
   // 加载用户数据和通知
   useEffect(() => {
@@ -471,7 +474,17 @@ const JoinUs: React.FC = () => {
                         ))}
                       </ul>
                     </div>
-                    <Button type="primary" size="large" className="apply-button">
+                    <Button 
+                      type="primary" 
+                      size="large" 
+                      className="apply-button"
+                      onClick={() => {
+                        const displayTitle = language === 'en' && position.title_en ? position.title_en : position.title;
+                        setSelectedPosition(displayTitle);
+                        form.setFieldsValue({ position: displayTitle });
+                        setShowApplyModal(true);
+                      }}
+                    >
                       {t('joinUs.buttons.applyNow')}
                     </Button>
                   </Card>
@@ -482,122 +495,118 @@ const JoinUs: React.FC = () => {
         )}
       </div>
 
-      {/* 简历投递 */}
-      <div className="apply-section">
-        <Card className="apply-card">
-          <div className="apply-content">
-            <Title level={2}>{t('joinUs.submitResume')}</Title>
-            <Paragraph>
-              {t('joinUs.submitResumeDescription')}
-            </Paragraph>
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-              className="apply-form"
-            >
-              <Row gutter={[24, 0]}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="name"
-                    label={t('joinUs.formLabels.name')}
-                    rules={[{ required: true, message: t('joinUs.formPlaceholders.enterName') }]}
-                  >
-                    <Input prefix={<UserOutlined />} placeholder={t('joinUs.formPlaceholders.enterName')} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="phone"
-                    label={t('joinUs.formLabels.phone')}
-                    rules={[]}
-                  >
-                    <Input prefix={<PhoneOutlined />} placeholder={t('joinUs.formPlaceholders.enterPhone')} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={[24, 0]}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="email"
-                    label={t('joinUs.formLabels.email')}
-                    rules={[
-                      { required: true, message: t('joinUs.formPlaceholders.enterEmail') },
-                      { type: 'email', message: '请输入有效的邮箱地址' }
-                    ]}
-                  >
-                    <Input prefix={<MailOutlined />} placeholder={t('joinUs.formPlaceholders.enterEmail')} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="position"
-                    label={t('joinUs.formLabels.position')}
-                    rules={[{ required: true, message: t('joinUs.formPlaceholders.selectPosition') }]}
-                  >
-                    <Select placeholder={t('joinUs.formPlaceholders.selectPosition')}>
-                      {positions.map((pos, index) => {
-                        const displayTitle = language === 'en' && pos.title_en ? pos.title_en : pos.title;
-                        return (
-                          <Option key={index} value={displayTitle}>{displayTitle}</Option>
-                        );
-                      })}
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
+      {/* 简历投递弹窗 */}
+      <Modal
+        open={showApplyModal}
+        title={t('joinUs.submitResume')}
+        onCancel={() => setShowApplyModal(false)}
+        footer={null}
+        destroyOnClose
+        centered
+        width={720}
+      >
+        <Paragraph style={{ marginTop: -8 }}>
+          {t('joinUs.submitResumeDescription')}
+        </Paragraph>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={async (values) => {
+            await handleSubmit(values);
+            setShowApplyModal(false);
+          }}
+          className="apply-form"
+        >
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
               <Form.Item
-                name="experience"
-                label={t('joinUs.formLabels.experience')}
-                rules={[{ required: true, message: t('joinUs.formPlaceholders.selectExperience') }]}
+                name="name"
+                label={t('joinUs.formLabels.name')}
+                rules={[{ required: true, message: t('joinUs.formPlaceholders.enterName') }]}
               >
-                <Select placeholder={t('joinUs.formPlaceholders.selectExperience')}>
-                  <Option value="freshGraduate">{t('joinUs.experienceOptions.freshGraduate')}</Option>
-                  <Option value="lessThan1Year">{t('joinUs.experienceOptions.lessThan1Year')}</Option>
-                  <Option value="oneToThreeYears">{t('joinUs.experienceOptions.oneToThreeYears')}</Option>
-                  <Option value="threeToFiveYears">{t('joinUs.experienceOptions.threeToFiveYears')}</Option>
-                  <Option value="moreThanFiveYears">{t('joinUs.experienceOptions.moreThanFiveYears')}</Option>
+                <Input prefix={<UserOutlined />} placeholder={t('joinUs.formPlaceholders.enterName')} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="phone"
+                label={t('joinUs.formLabels.phone')}
+                rules={[]}
+              >
+                <Input prefix={<PhoneOutlined />} placeholder={t('joinUs.formPlaceholders.enterPhone')} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="email"
+                label={t('joinUs.formLabels.email')}
+                rules={[
+                  { required: true, message: t('joinUs.formPlaceholders.enterEmail') },
+                  { type: 'email', message: '请输入有效的邮箱地址' }
+                ]}
+              >
+                <Input prefix={<MailOutlined />} placeholder={t('joinUs.formPlaceholders.enterEmail')} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="position"
+                label={t('joinUs.formLabels.position')}
+                rules={[{ required: true, message: t('joinUs.formPlaceholders.selectPosition') }]}
+              >
+                <Select placeholder={t('joinUs.formPlaceholders.selectPosition')}>
+                  {positions.map((pos, index) => {
+                    const displayTitle = language === 'en' && pos.title_en ? pos.title_en : pos.title;
+                    return (
+                      <Option key={index} value={displayTitle}>{displayTitle}</Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
-              <Form.Item
-                name="resume"
-                label={t('joinUs.formLabels.resume')}
-                rules={[{ required: true, message: t('joinUs.formPlaceholders.uploadResume') }]}
-              >
-                <Upload
-                  beforeUpload={() => false}
-                  maxCount={1}
-                  accept=".pdf,.doc,.docx"
-                >
-                  <Button icon={<UploadOutlined />}>{t('joinUs.buttons.uploadResume')}</Button>
-                </Upload>
-              </Form.Item>
-              <Form.Item
-                name="introduction"
-                label={t('joinUs.formLabels.introduction')}
-                rules={[{ required: true, message: t('joinUs.formPlaceholders.enterIntroduction') }]}
-              >
-                <TextArea
-                  rows={4}
-                  placeholder={t('joinUs.formPlaceholders.enterIntroduction')}
-                />
-              </Form.Item>
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  loading={loading}
-                  icon={<SendOutlined />}
-                  className="submit-button"
-                >
-                  {loading ? t('joinUs.buttons.submitting') : t('joinUs.buttons.submitResume')}
-                </Button>
-              </Form.Item>
-            </Form>
-          </div>
-        </Card>
-      </div>
+            </Col>
+          </Row>
+          <Form.Item
+            name="experience"
+            label={t('joinUs.formLabels.experience')}
+            rules={[{ required: true, message: t('joinUs.formPlaceholders.selectExperience') }]}
+          >
+            <Select placeholder={t('joinUs.formPlaceholders.selectExperience')}>
+              <Option value="freshGraduate">{t('joinUs.experienceOptions.freshGraduate')}</Option>
+              <Option value="lessThan1Year">{t('joinUs.experienceOptions.lessThan1Year')}</Option>
+              <Option value="oneToThreeYears">{t('joinUs.experienceOptions.oneToThreeYears')}</Option>
+              <Option value="threeToFiveYears">{t('joinUs.experienceOptions.threeToFiveYears')}</Option>
+              <Option value="moreThanFiveYears">{t('joinUs.experienceOptions.moreThanFiveYears')}</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="resume"
+            label={t('joinUs.formLabels.resume')}
+            rules={[{ required: true, message: t('joinUs.formPlaceholders.uploadResume') }]}
+          >
+            <Upload
+              beforeUpload={() => false}
+              maxCount={1}
+              accept=".pdf,.doc,.docx"
+            >
+              <Button icon={<UploadOutlined />}>{t('joinUs.buttons.uploadResume')}</Button>
+            </Upload>
+          </Form.Item>
+          <Form.Item
+            name="introduction"
+            label={t('joinUs.formLabels.introduction')}
+            rules={[{ required: true, message: t('joinUs.formPlaceholders.enterIntroduction') }]}
+          >
+            <TextArea rows={4} placeholder={t('joinUs.formPlaceholders.enterIntroduction')} />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" size="large" loading={loading} icon={<SendOutlined />}>
+              {loading ? t('joinUs.buttons.submitting') : t('joinUs.buttons.submitResume')}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {/* 页脚 */}
       <Footer />

@@ -347,6 +347,70 @@
     "partnerCooperation": "Partner cooperation, send email to",
     "faq": "FAQ"
   },
+  "partners": {
+    "title": "Partner with Link²Ur",
+    "subtitle": "Join forces to create value for users and the community",
+    "betaNotice": "This project is currently in beta (MVP/testing). We welcome collaboration and feedback.",
+    "platform": {
+      "introTitle": "About the Platform",
+      "intro": "Link²Ur connects people who need help with those who can provide services. We focus on secure matching, community trust, and local life scenarios.",
+      "missionTitle": "Our Mission",
+      "mission": "Enable everyone to access trustworthy help and opportunities through meaningful connections.",
+      "visionTitle": "Our Vision",
+      "vision": "Build an inclusive marketplace where collaboration becomes a daily habit.",
+      "goalsTitle": "Goals",
+      "goals": {
+        "safety": "Safety First: risk control, abuse prevention, and transparent reputation.",
+        "efficiency": "Efficient Matching: reduce information asymmetry and transaction friction.",
+        "growth": "Sustainable Growth: empower individuals, merchants, and communities."
+      }
+    },
+    "sections": {
+      "whyPartner": "Why Partner with Us",
+      "whyPartnerDesc": "We welcome strategic cooperation in branding, marketing, campus channels and product integration.",
+      "contact": "Contact"
+    },
+    "benefits": {
+      "brandExposure": "Brand Exposure",
+      "brandExposureDesc": "Reach student communities and local life scenarios with wide coverage.",
+      "userGrowth": "User Growth",
+      "userGrowthDesc": "Acquire high-intent users via task scenarios and community operations."
+    },
+    "contactLine": "For partnership inquiries, please email",
+    "betaContact": "If you're interested or have questions, write to"
+  },
+  "merchant": {
+    "title": "Merchant Cooperation",
+    "subtitle": "Traffic, conversion and digital operations for local merchants",
+    "betaNotice": "This project is in beta (MVP/testing). We welcome forward-looking merchants to explore pilots together.",
+    "platform": {
+      "introTitle": "About the Platform",
+      "intro": "Link²Ur is a demand–service matching platform that connects local needs with trusted providers and merchants.",
+      "missionTitle": "Our Mission",
+      "mission": "Help merchants reach the right users at the right time with the right scenarios.",
+      "visionTitle": "Our Vision",
+      "vision": "A collaborative local ecosystem driven by service quality and user trust.",
+      "goalsTitle": "Goals",
+      "goals": {
+        "digitization": "Digitization: lower the barrier to digital operations for SMEs.",
+        "acquisition": "Acquisition: scenario-based campaigns and community distribution.",
+        "retention": "Retention: reputation, feedback loops, and value-added services."
+      }
+    },
+    "sections": {
+      "coopModels": "Cooperation Models",
+      "coopModelsDesc": "We support marketing cooperation and product/integration partnerships to empower merchant growth.",
+      "contact": "Contact"
+    },
+    "models": {
+      "marketing": "Marketing Cooperation",
+      "marketingDesc": "Campaigns, coupons and campus ambassador programs for customer acquisition.",
+      "integration": "Product Integration",
+      "integrationDesc": "System integration, data interfaces and customized solutions."
+    },
+    "contactLine": "For business inquiries, please email",
+    "betaContact": "Interested or have questions? Email"
+  },
   "publishTask": {
     "title": "Publish New Task",
     "subtitle": "Create your task and let more people help you complete it",
