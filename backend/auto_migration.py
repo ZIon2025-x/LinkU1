@@ -92,7 +92,7 @@ def migrate_job_positions():
                     "tags": ["React", "TypeScript", "Vue", "前端"],
                     "tags_en": ["React", "TypeScript", "Vue", "Frontend"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 },
                 {
                     "title": "后端开发工程师",
@@ -114,7 +114,7 @@ def migrate_job_positions():
                     "tags": ["Python", "FastAPI", "PostgreSQL", "Redis"],
                     "tags_en": ["Python", "FastAPI", "PostgreSQL", "Redis"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 },
                 {
                     "title": "产品经理",
@@ -136,7 +136,7 @@ def migrate_job_positions():
                     "tags": ["产品设计", "用户研究", "数据分析", "产品"],
                     "tags_en": ["Product Design", "User Research", "Data Analysis", "Product"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 },
                 {
                     "title": "UI/UX设计师",
@@ -158,7 +158,7 @@ def migrate_job_positions():
                     "tags": ["UI设计", "UX设计", "Figma", "原型设计"],
                     "tags_en": ["UI Design", "UX Design", "Figma", "Prototyping"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 },
                 {
                     "title": "运营专员",
@@ -180,7 +180,7 @@ def migrate_job_positions():
                     "tags": ["运营", "推广", "用户增长", "内容运营"],
                     "tags_en": ["Operations", "Promotion", "User Growth", "Content Operation"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 },
                 {
                     "title": "客服专员",
@@ -202,7 +202,7 @@ def migrate_job_positions():
                     "tags": ["客服", "沟通", "问题解决", "客户关系"],
                     "tags_en": ["Customer Service", "Communication", "Problem Solving", "Customer Relations"],
                     "is_active": True,
-                    "created_by": "A0001"
+                    "created_by": "A6688"
                 }
             ]
             
