@@ -3176,7 +3176,7 @@ from app.deps import check_admin, check_admin_user_status, check_super_admin
 
 @router.get("/admin/dashboard/stats")
 def get_dashboard_stats(
-    current_admin=Depends(check_admin_user_status), 
+    current_admin=Depends(get_current_admin), 
     db: Session = Depends(get_db),
     request: Request = None
 ):

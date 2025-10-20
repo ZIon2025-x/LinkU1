@@ -312,9 +312,15 @@ api.interceptors.response.use(
         // 开始刷新token
         isRefreshing = true;
         
-        // 新的认证系统使用会话管理，不需要token refresh
-        // 直接使用用户refresh端点
-        const refreshEndpoint = '/api/secure-auth/refresh';
+        // 根据当前页面确定refresh端点
+        let refreshEndpoint = '/api/secure-auth/refresh'; // 默认用户refresh端点
+        
+        // 检查当前URL路径来确定用户类型
+        if (window.location.pathname.includes('/admin')) {
+          refreshEndpoint = '/api/auth/admin/refresh';
+        } else if (window.location.pathname.includes('/customer-service') || window.location.pathname.includes('/service')) {
+          refreshEndpoint = '/api/auth/service/refresh';
+        }
         
         refreshPromise = api.post(refreshEndpoint);
         
