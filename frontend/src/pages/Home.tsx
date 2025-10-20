@@ -312,7 +312,7 @@ const Home: React.FC = () => {
     fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
       .then(data => {
         console.log('获取到的任务数据:', data);
-        const allTasks = Array.isArray(data) ? data : (data.items || []);
+        const allTasks = Array.isArray(data) ? data : (data.tasks || []);
         
         // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
         const sortedTasks = allTasks
@@ -344,7 +344,7 @@ const Home: React.FC = () => {
         // 重新获取任务数据以更新状态
         fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
           .then(data => {
-            const allTasks = Array.isArray(data) ? data : (data.items || []);
+            const allTasks = Array.isArray(data) ? data : (data.tasks || []);
             
             // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
             const sortedTasks = allTasks

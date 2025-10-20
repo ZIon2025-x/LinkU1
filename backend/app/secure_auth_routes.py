@@ -151,8 +151,7 @@ def secure_login(
                 "user_level": user.user_level,
                 "is_verified": user.is_verified,
             },
-            "session_id": session.session_id,  # 移动端需要这个值
-            "access_token": access_token,  # 移动端备用token
+            "session_id": session.session_id,  # 会话ID用于认证
             "expires_in": 300,  # 5分钟
             "mobile_auth": is_mobile,  # 标识是否为移动端
             "auth_headers": {

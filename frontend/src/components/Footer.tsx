@@ -416,9 +416,15 @@ const Footer: React.FC = () => {
             }
             
             .footer-links {
-              grid-template-columns: 1fr !important;
-              gap: 30px !important;
+              grid-template-columns: 1fr 1fr !important;
+              gap: 20px !important;
               text-align: center;
+            }
+            
+            .footer-links > div {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 8px !important;
             }
             
             .footer-contact {
