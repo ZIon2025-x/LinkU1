@@ -459,14 +459,14 @@ const JoinUs: React.FC = () => {
                     </div>
                     <Paragraph className="position-description">{displayDescription}</Paragraph>
                     <div className="position-tags">
-                      {displayTags.map((tag, tagIndex) => (
+                      {displayTags.map((tag: string, tagIndex: number) => (
                         <Tag key={tagIndex} color="purple">{tag}</Tag>
                       ))}
                     </div>
                     <div className="position-requirements">
                       <Title level={5}>{language === 'en' ? 'Requirements:' : '任职要求：'}</Title>
                       <ul>
-                        {displayRequirements.map((req, reqIndex) => (
+                        {displayRequirements.map((req: string, reqIndex: number) => (
                           <li key={reqIndex}>{req}</li>
                         ))}
                       </ul>
