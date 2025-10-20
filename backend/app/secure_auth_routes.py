@@ -236,6 +236,95 @@ def refresh_session(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="会话刷新失败"
         )
 
+@secure_auth_router.post("/refresh-token", response_model=Dict[str, Any])
+def refresh_session_with_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db),
+):
+    """使用refresh_token刷新会话 - 当session_id过期时使用"""
+    try:
+        # 从Cookie中获取refresh_token
+        refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="未找到refresh_token"
+            )
+        
+        # 验证refresh_token
+        from app.secure_auth import verify_user_refresh_token
+        user_id = verify_user_refresh_token(refresh_token)
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="refresh_token无效或已过期"
+            )
+        
+        # 获取用户信息
+        user = crud.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="用户不存在"
+            )
+        
+        # 检查用户状态
+        if user.is_suspended or user.is_banned:
+            # 撤销所有refresh_token
+            from app.secure_auth import revoke_all_user_refresh_tokens
+            revoke_all_user_refresh_tokens(user.id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="账户已被暂停或封禁"
+            )
+        
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        
+        # 创建新会话
+        session = SecureAuthManager.create_session(
+            user_id=user.id,
+            device_fingerprint=device_fingerprint,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            refresh_token=refresh_token  # 复用现有refresh_token
+        )
+        
+        # 设置新的安全Cookie
+        CookieManager.set_session_cookies(
+            response=response,
+            session_id=session.session_id,
+            refresh_token=refresh_token,
+            user_id=user.id,
+            user_agent=user_agent
+        )
+        
+        # 生成并设置CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        logger.info(f"通过refresh_token刷新会话成功 - 用户: {user.id}, 会话: {session.session_id[:8]}...")
+        
+        return {
+            "message": "会话刷新成功",
+            "session_id": session.session_id,  # 仅用于调试
+            "expires_in": 300,  # 5分钟
+            "refreshed_by": "refresh_token"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"refresh_token刷新失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="refresh_token刷新失败"
+        )
+
 @secure_auth_router.post("/logout")
 def secure_logout(
     request: Request,
