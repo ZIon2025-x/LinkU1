@@ -304,7 +304,10 @@ const PublishTask: React.FC = () => {
                 padding: isMobile ? '14px 16px' : '12px 16px', 
                 borderRadius: '12px', 
                 border: '2px solid #e5e7eb', 
-                width: '100%', 
+                // 确保不越过可见区域右边界
+                boxSizing: 'border-box',
+                maxWidth: '100%',
+                width: 'calc(100% - 12px)', 
                 fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                 outline: 'none', 
                 transition: 'all 0.3s ease',
@@ -342,7 +345,10 @@ const PublishTask: React.FC = () => {
                 padding: isMobile ? '12px 14px' : '10px 14px', 
                 borderRadius: '10px', 
                 border: '2px solid #e5e7eb', 
-                width: '100%', 
+                // 确保不越过可见区域右边界
+                boxSizing: 'border-box',
+                maxWidth: '100%',
+                width: 'calc(100% - 12px)', 
                 minHeight: isMobile ? '90px' : '100px', 
                 fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                 outline: 'none', 
@@ -420,7 +426,8 @@ const PublishTask: React.FC = () => {
                   padding: isMobile ? '12px 14px' : '10px 14px', 
                   borderRadius: '10px', 
                   border: '2px solid #e5e7eb', 
-                  width: '100%', 
+                  // 改为当前的一半宽度
+                  width: '50%', 
                   fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
