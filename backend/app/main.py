@@ -48,22 +48,6 @@ from app.error_handlers import SecurityError, ValidationError, BusinessError
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 自动数据库迁移
-def run_auto_migration():
-    """在应用启动时自动执行数据库迁移"""
-    try:
-        from auto_migration import migrate_job_positions
-        logger.info("🚀 开始自动数据库迁移...")
-        success = migrate_job_positions()
-        if success:
-            logger.info("✅ 自动数据库迁移完成")
-        else:
-            logger.warning("⚠️ 自动数据库迁移失败，但应用继续启动")
-    except Exception as e:
-        logger.warning(f"⚠️ 自动数据库迁移出错: {e}，但应用继续启动")
-
-# 在应用启动时执行迁移
-run_auto_migration()
 
 app = FastAPI(
     title="Link²Ur Task Platform",

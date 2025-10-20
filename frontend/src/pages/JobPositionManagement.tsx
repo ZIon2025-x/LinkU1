@@ -250,7 +250,7 @@ const JobPositionManagement: React.FC = () => {
       title: '操作',
       key: 'action',
       width: 150,
-      render: (_, record: JobPosition) => (
+      render: (_: any, record: JobPosition) => (
         <Space size="small">
           <Tooltip title="编辑">
             <Button
