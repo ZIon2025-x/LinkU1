@@ -106,25 +106,8 @@ const JoinUs: React.FC = () => {
         setPositions(response.positions || []);
       } catch (error) {
         console.error('加载岗位数据失败:', error);
-        // 如果API失败，使用默认数据
-        setPositions([
-          {
-            title: "前端开发工程师",
-            department: "技术部",
-            type: "全职",
-            location: "北京/远程",
-            experience: "3-5年",
-            salary: "15-25K",
-            tags: ["React", "TypeScript", "Vue", "前端"],
-            description: "负责平台前端开发，参与产品设计和用户体验优化",
-            requirements: [
-              "熟练掌握 React、Vue 等前端框架",
-              "熟悉 TypeScript、ES6+ 语法",
-              "有移动端开发经验优先",
-              "具备良好的代码规范和团队协作能力"
-            ]
-          }
-        ]);
+        // 如果API失败，显示空状态
+        setPositions([]);
       } finally {
         setPositionsLoading(false);
       }
@@ -553,9 +536,12 @@ const JoinUs: React.FC = () => {
                     rules={[{ required: true, message: t('joinUs.formPlaceholders.selectPosition') }]}
                   >
                     <Select placeholder={t('joinUs.formPlaceholders.selectPosition')}>
-                      {positions.map((pos, index) => (
-                        <Option key={index} value={pos.title}>{pos.title}</Option>
-                      ))}
+                      {positions.map((pos, index) => {
+                        const displayTitle = language === 'en' && pos.title_en ? pos.title_en : pos.title;
+                        return (
+                          <Option key={index} value={displayTitle}>{displayTitle}</Option>
+                        );
+                      })}
                     </Select>
                   </Form.Item>
                 </Col>
