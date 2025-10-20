@@ -152,11 +152,11 @@ const PublishTask: React.FC = () => {
         <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
             display: 'flex', 
-            gap: isMobile ? '12px' : '16px', 
+            gap: isMobile ? '8px' : '16px', 
             marginBottom: '20px',
-            flexDirection: isMobile ? 'column' : 'row'
+            flexDirection: 'row'
           }}>
-            <div style={{flex: 1}}>
+            <div style={{flex: 1, padding: isMobile ? '0 4px' : '0 8px'}}>
               <label style={{
                 fontWeight: '600', 
                 marginBottom: '8px', 
@@ -186,7 +186,7 @@ const PublishTask: React.FC = () => {
                 {TASK_TYPES.map((type: string) => <option key={type} value={type}>{t(`publishTask.taskTypes.${type}`)}</option>)}
               </select>
             </div>
-            <div style={{flex: 1}}>
+            <div style={{flex: 1, padding: isMobile ? '0 4px' : '0 8px'}}>
               <label style={{
                 fontWeight: '600', 
                 marginBottom: '8px', 
@@ -288,7 +288,7 @@ const PublishTask: React.FC = () => {
               {form.is_public === 1 ? t('publishTask.publicDescription') : t('publishTask.privateDescription')}
             </div>
           </div>
-          <div style={{marginBottom: '24px'}}>
+          <div style={{marginBottom: '24px', padding: isMobile ? '0 4px' : '0 8px'}}>
             <label style={{
               fontWeight: '600', 
               marginBottom: '8px', 
@@ -326,7 +326,7 @@ const PublishTask: React.FC = () => {
               {form.title.length}/50
             </div>
           </div>
-          <div style={{marginBottom: '24px'}}>
+          <div style={{marginBottom: '24px', padding: isMobile ? '0 4px' : '0 8px'}}>
             <label style={{
               fontWeight: '600', 
               marginBottom: '8px', 
@@ -367,9 +367,10 @@ const PublishTask: React.FC = () => {
           </div>
           <div style={{
             display: 'flex', 
-            gap: isMobile ? '12px' : '16px', 
+            gap: isMobile ? '8px' : '16px', 
             marginBottom: '20px',
-            flexDirection: isMobile ? 'column' : 'row'
+            flexDirection: isMobile ? 'column' : 'row',
+            padding: isMobile ? '0 4px' : '0 8px'
           }}>
             <div style={{flex: 1}}>
               <label style={{
