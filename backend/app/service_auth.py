@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 from app.config import get_settings
 settings = get_settings()
 
-SERVICE_SESSION_EXPIRE_HOURS = int(os.getenv("SERVICE_SESSION_EXPIRE_HOURS", "12"))  # 客服会话12小时
+SERVICE_SESSION_EXPIRE_HOURS = int(os.getenv("SERVICE_SESSION_EXPIRE_HOURS", "6"))  # 客服会话6小时
 SERVICE_MAX_ACTIVE_SESSIONS = int(os.getenv("SERVICE_MAX_ACTIVE_SESSIONS", "2"))  # 客服最多2个活跃会话
 
 # 会话存储

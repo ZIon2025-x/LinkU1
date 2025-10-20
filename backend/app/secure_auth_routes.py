@@ -100,16 +100,18 @@ def secure_login(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
+        # 生成并存储刷新令牌到Redis
+        from app.secure_auth import create_user_refresh_token
+        refresh_token = create_user_refresh_token(user.id)
+        
         # 创建新会话
         session = SecureAuthManager.create_session(
             user_id=user.id,
             device_fingerprint=device_fingerprint,
             ip_address=client_ip,
-            user_agent=user_agent
+            user_agent=user_agent,
+            refresh_token=refresh_token
         )
-        
-        # 生成刷新令牌
-        refresh_token = SecureAuthManager.generate_refresh_token()
         
         # 设置安全Cookie（传递User-Agent用于移动端检测）
         CookieManager.set_session_cookies(
@@ -205,8 +207,9 @@ def refresh_session(
         session.last_activity = datetime.utcnow()
         SecureAuthManager._store_session(session)
         
-        # 生成新的刷新令牌
-        refresh_token = SecureAuthManager.generate_refresh_token()
+        # 生成并存储新的刷新令牌到Redis
+        from app.secure_auth import create_user_refresh_token
+        refresh_token = create_user_refresh_token(user.id)
         
         # 设置新的安全Cookie（复用现有会话）
         CookieManager.set_session_cookies(

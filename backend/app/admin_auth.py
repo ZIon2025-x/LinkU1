@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 from app.config import get_settings
 settings = get_settings()
 
-ADMIN_SESSION_EXPIRE_HOURS = int(os.getenv("ADMIN_SESSION_EXPIRE_HOURS", "8"))  # 管理员会话8小时
+ADMIN_SESSION_EXPIRE_HOURS = int(os.getenv("ADMIN_SESSION_EXPIRE_HOURS", "2"))  # 管理员会话2小时
 ADMIN_MAX_ACTIVE_SESSIONS = int(os.getenv("ADMIN_MAX_ACTIVE_SESSIONS", "3"))  # 管理员最多3个活跃会话
 
 # 会话存储
