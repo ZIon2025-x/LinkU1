@@ -354,7 +354,8 @@ const PublishTask: React.FC = () => {
             background: '#f8fafc',
             padding: isMobile ? '24px 20px' : '28px 24px',
             borderRadius: '16px',
-            border: '2px solid #e2e8f0'
+            border: '2px solid #e2e8f0',
+            overflow: 'hidden'
           }}>
             <label style={{
               fontWeight: '700', 
@@ -371,7 +372,10 @@ const PublishTask: React.FC = () => {
                 padding: isMobile ? '18px 20px' : '16px 18px', 
                 borderRadius: '12px', 
                 border: '2px solid #e2e8f0', 
-                width: '100%',
+                width: '80%',
+                maxWidth: '80%',
+                margin: '0 auto',
+                boxSizing: 'border-box',
                 fontSize: isMobile ? '16px' : '16px',
                 outline: 'none', 
                 transition: 'all 0.3s ease',
@@ -407,7 +411,8 @@ const PublishTask: React.FC = () => {
             background: '#f8fafc',
             padding: isMobile ? '24px 20px' : '28px 24px',
             borderRadius: '16px',
-            border: '2px solid #e2e8f0'
+            border: '2px solid #e2e8f0',
+            overflow: 'hidden'
           }}>
             <label style={{
               fontWeight: '700', 
@@ -424,7 +429,10 @@ const PublishTask: React.FC = () => {
                 padding: isMobile ? '18px 20px' : '16px 18px', 
                 borderRadius: '12px', 
                 border: '2px solid #e2e8f0', 
-                width: '100%',
+                width: '80%',
+                maxWidth: '80%',
+                margin: '0 auto',
+                boxSizing: 'border-box',
                 minHeight: isMobile ? '120px' : '140px', 
                 fontSize: isMobile ? '16px' : '16px',
                 outline: 'none', 
@@ -487,7 +495,10 @@ const PublishTask: React.FC = () => {
                   padding: isMobile ? '16px 18px' : '14px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e2e8f0', 
-                  width: '100%', 
+                  width: '80%', 
+                  maxWidth: '80%',
+                  margin: '0 auto',
+                  boxSizing: 'border-box',
                   fontSize: isMobile ? '16px' : '16px',
                   outline: 'none', 
                   transition: 'all 0.3s ease',
@@ -534,7 +545,10 @@ const PublishTask: React.FC = () => {
                   padding: isMobile ? '16px 18px' : '14px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e2e8f0', 
-                  width: isMobile ? '100%' : '50%',
+                  width: '80%',
+                  maxWidth: '80%',
+                  margin: '0 auto',
+                  boxSizing: 'border-box',
                   fontSize: isMobile ? '16px' : '16px',
                   outline: 'none', 
                   transition: 'all 0.3s ease',
