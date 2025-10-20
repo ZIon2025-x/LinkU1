@@ -92,12 +92,12 @@ const PublishTask: React.FC = () => {
       padding: isMobile ? '10px' : '20px'
     }}>
       <div style={{
-        maxWidth: '800px',
+        maxWidth: isMobile ? '100%' : '600px',
         margin: '0 auto',
         background: '#fff',
         borderRadius: isMobile ? '16px' : '24px',
         boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-        padding: isMobile ? '20px' : '40px',
+        padding: isMobile ? '20px' : '30px',
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -126,7 +126,7 @@ const PublishTask: React.FC = () => {
         {/* 标题区域 */}
         <div style={{
           textAlign: 'center',
-          marginBottom: isMobile ? '24px' : '40px',
+          marginBottom: isMobile ? '20px' : '30px',
           position: 'relative',
           zIndex: 1
         }}>
@@ -152,8 +152,8 @@ const PublishTask: React.FC = () => {
         <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
           <div style={{
             display: 'flex', 
-            gap: isMobile ? '12px' : '24px', 
-            marginBottom: '24px',
+            gap: isMobile ? '12px' : '16px', 
+            marginBottom: '20px',
             flexDirection: isMobile ? 'column' : 'row'
           }}>
             <div style={{flex: 1}}>
@@ -169,8 +169,8 @@ const PublishTask: React.FC = () => {
                 value={form.task_type} 
                 onChange={handleChange} 
                 style={{
-                  padding: isMobile ? '14px 16px' : '12px 16px', 
-                  borderRadius: '12px', 
+                  padding: isMobile ? '12px 14px' : '10px 14px', 
+                  borderRadius: '10px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
                   fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
@@ -178,7 +178,7 @@ const PublishTask: React.FC = () => {
                   transition: 'all 0.3s ease',
                   background: '#fff',
                   cursor: 'pointer',
-                  minHeight: isMobile ? '48px' : 'auto'
+                  minHeight: isMobile ? '44px' : 'auto'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -199,8 +199,8 @@ const PublishTask: React.FC = () => {
                 value={form.location} 
                 onChange={handleChange} 
                 style={{
-                  padding: isMobile ? '14px 16px' : '12px 16px', 
-                  borderRadius: '12px', 
+                  padding: isMobile ? '12px 14px' : '10px 14px', 
+                  borderRadius: '10px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
                   fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
@@ -208,7 +208,7 @@ const PublishTask: React.FC = () => {
                   transition: 'all 0.3s ease',
                   background: '#fff',
                   cursor: 'pointer',
-                  minHeight: isMobile ? '48px' : 'auto'
+                  minHeight: isMobile ? '44px' : 'auto'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -339,11 +339,11 @@ const PublishTask: React.FC = () => {
               value={form.description} 
               onChange={handleChange} 
               style={{
-                padding: isMobile ? '14px 16px' : '12px 16px', 
-                borderRadius: '12px', 
+                padding: isMobile ? '12px 14px' : '10px 14px', 
+                borderRadius: '10px', 
                 border: '2px solid #e5e7eb', 
                 width: '100%', 
-                minHeight: isMobile ? '100px' : '120px', 
+                minHeight: isMobile ? '90px' : '100px', 
                 fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                 outline: 'none', 
                 transition: 'all 0.3s ease',
@@ -367,8 +367,8 @@ const PublishTask: React.FC = () => {
           </div>
           <div style={{
             display: 'flex', 
-            gap: isMobile ? '12px' : '24px', 
-            marginBottom: '24px',
+            gap: isMobile ? '12px' : '16px', 
+            marginBottom: '20px',
             flexDirection: isMobile ? 'column' : 'row'
           }}>
             <div style={{flex: 1}}>
@@ -385,15 +385,15 @@ const PublishTask: React.FC = () => {
                 value={form.deadline} 
                 onChange={handleChange} 
                 style={{
-                  padding: isMobile ? '14px 16px' : '12px 16px', 
-                  borderRadius: '12px', 
+                  padding: isMobile ? '12px 14px' : '10px 14px', 
+                  borderRadius: '10px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
                   fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
                   background: '#fff',
-                  minHeight: isMobile ? '48px' : 'auto'
+                  minHeight: isMobile ? '44px' : 'auto'
                 }} 
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -416,15 +416,15 @@ const PublishTask: React.FC = () => {
                 value={form.reward} 
                 onChange={handleChange} 
                 style={{
-                  padding: isMobile ? '14px 16px' : '12px 16px', 
-                  borderRadius: '12px', 
+                  padding: isMobile ? '12px 14px' : '10px 14px', 
+                  borderRadius: '10px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
                   fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
                   background: '#fff',
-                  minHeight: isMobile ? '48px' : 'auto'
+                  minHeight: isMobile ? '44px' : 'auto'
                 }} 
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -468,24 +468,24 @@ const PublishTask: React.FC = () => {
             disabled={loading} 
             style={{
               width: '100%',
-              padding: isMobile ? '18px 24px' : '16px 24px',
+              padding: isMobile ? '14px 20px' : '12px 20px',
               background: loading 
                 ? 'linear-gradient(135deg, #cbd5e1, #94a3b8)' 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
               color: '#fff',
               border: 'none',
-              borderRadius: isMobile ? '12px' : '16px',
-              fontSize: isMobile ? '16px' : '18px',
+              borderRadius: isMobile ? '10px' : '12px',
+              fontSize: isMobile ? '16px' : '16px',
               fontWeight: '700',
               letterSpacing: '1px',
               boxShadow: loading 
                 ? '0 4px 12px rgba(0,0,0,0.1)' 
-                : '0 8px 24px rgba(102, 126, 234, 0.3)',
+                : '0 6px 20px rgba(102, 126, 234, 0.3)',
               cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               position: 'relative',
               overflow: 'hidden',
-              minHeight: isMobile ? '56px' : 'auto'
+              minHeight: isMobile ? '48px' : 'auto'
             }}
             onMouseEnter={(e) => {
               if (!loading) {
