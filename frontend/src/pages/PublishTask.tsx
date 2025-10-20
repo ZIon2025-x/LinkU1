@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+
+// 移动端检测函数
+const isMobileDevice = () => {
+  const isSmallScreen = window.innerWidth <= 768;
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  return isSmallScreen || (isMobileUA && isTouchDevice);
+};
 
 const PublishTask: React.FC = () => {
   const { t } = useLanguage();
@@ -18,7 +27,20 @@ const PublishTask: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
+
+  // 移动端检测
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = isMobileDevice();
+      setIsMobile(mobile);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -67,15 +89,15 @@ const PublishTask: React.FC = () => {
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
+      padding: isMobile ? '10px' : '20px'
     }}>
       <div style={{
         maxWidth: '800px',
         margin: '0 auto',
         background: '#fff',
-        borderRadius: '24px',
+        borderRadius: isMobile ? '16px' : '24px',
         boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-        padding: '40px',
+        padding: isMobile ? '20px' : '40px',
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -104,16 +126,16 @@ const PublishTask: React.FC = () => {
         {/* 标题区域 */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '40px',
+          marginBottom: isMobile ? '24px' : '40px',
           position: 'relative',
           zIndex: 1
         }}>
           <div style={{
-            fontSize: '48px',
+            fontSize: isMobile ? '36px' : '48px',
             marginBottom: '16px'
           }}>📝</div>
           <h2 style={{
-            fontSize: '32px',
+            fontSize: isMobile ? '24px' : '32px',
             fontWeight: '800',
             marginBottom: '8px',
             background: 'linear-gradient(135deg, #667eea, #764ba2)',
@@ -123,12 +145,17 @@ const PublishTask: React.FC = () => {
           }}>{t('publishTask.title')}</h2>
           <p style={{
             color: '#6b7280',
-            fontSize: '16px',
+            fontSize: isMobile ? '14px' : '16px',
             margin: 0
           }}>{t('publishTask.subtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{display: 'flex', gap: '24px', marginBottom: '24px'}}>
+          <div style={{
+            display: 'flex', 
+            gap: isMobile ? '12px' : '24px', 
+            marginBottom: '24px',
+            flexDirection: isMobile ? 'column' : 'row'
+          }}>
             <div style={{flex: 1}}>
               <label style={{
                 fontWeight: '600', 
@@ -142,15 +169,16 @@ const PublishTask: React.FC = () => {
                 value={form.task_type} 
                 onChange={handleChange} 
                 style={{
-                  padding: '12px 16px', 
+                  padding: isMobile ? '14px 16px' : '12px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
-                  fontSize: '16px', 
+                  fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
                   background: '#fff',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -171,15 +199,16 @@ const PublishTask: React.FC = () => {
                 value={form.location} 
                 onChange={handleChange} 
                 style={{
-                  padding: '12px 16px', 
+                  padding: isMobile ? '14px 16px' : '12px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
-                  fontSize: '16px', 
+                  fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
                   background: '#fff',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -272,14 +301,15 @@ const PublishTask: React.FC = () => {
               value={form.title} 
               onChange={handleChange} 
               style={{
-                padding: '12px 16px', 
+                padding: isMobile ? '14px 16px' : '12px 16px', 
                 borderRadius: '12px', 
                 border: '2px solid #e5e7eb', 
                 width: '100%', 
-                fontSize: '16px', 
+                fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                 outline: 'none', 
                 transition: 'all 0.3s ease',
-                background: '#fff'
+                background: '#fff',
+                minHeight: isMobile ? '48px' : 'auto'
               }} 
               onFocus={(e) => e.target.style.borderColor = '#667eea'}
               onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -309,12 +339,12 @@ const PublishTask: React.FC = () => {
               value={form.description} 
               onChange={handleChange} 
               style={{
-                padding: '12px 16px', 
+                padding: isMobile ? '14px 16px' : '12px 16px', 
                 borderRadius: '12px', 
                 border: '2px solid #e5e7eb', 
                 width: '100%', 
-                minHeight: '120px', 
-                fontSize: '16px', 
+                minHeight: isMobile ? '100px' : '120px', 
+                fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                 outline: 'none', 
                 transition: 'all 0.3s ease',
                 background: '#fff',
@@ -335,7 +365,12 @@ const PublishTask: React.FC = () => {
               {form.description.length}/500
             </div>
           </div>
-          <div style={{display: 'flex', gap: '24px', marginBottom: '24px'}}>
+          <div style={{
+            display: 'flex', 
+            gap: isMobile ? '12px' : '24px', 
+            marginBottom: '24px',
+            flexDirection: isMobile ? 'column' : 'row'
+          }}>
             <div style={{flex: 1}}>
               <label style={{
                 fontWeight: '600', 
@@ -350,14 +385,15 @@ const PublishTask: React.FC = () => {
                 value={form.deadline} 
                 onChange={handleChange} 
                 style={{
-                  padding: '12px 16px', 
+                  padding: isMobile ? '14px 16px' : '12px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
-                  fontSize: '16px', 
+                  fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
-                  background: '#fff'
+                  background: '#fff',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }} 
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -380,14 +416,15 @@ const PublishTask: React.FC = () => {
                 value={form.reward} 
                 onChange={handleChange} 
                 style={{
-                  padding: '12px 16px', 
+                  padding: isMobile ? '14px 16px' : '12px 16px', 
                   borderRadius: '12px', 
                   border: '2px solid #e5e7eb', 
                   width: '100%', 
-                  fontSize: '16px', 
+                  fontSize: isMobile ? '16px' : '16px', // 防止iOS缩放
                   outline: 'none', 
                   transition: 'all 0.3s ease',
-                  background: '#fff'
+                  background: '#fff',
+                  minHeight: isMobile ? '48px' : 'auto'
                 }} 
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
@@ -431,14 +468,14 @@ const PublishTask: React.FC = () => {
             disabled={loading} 
             style={{
               width: '100%',
-              padding: '16px 24px',
+              padding: isMobile ? '18px 24px' : '16px 24px',
               background: loading 
                 ? 'linear-gradient(135deg, #cbd5e1, #94a3b8)' 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
               color: '#fff',
               border: 'none',
-              borderRadius: '16px',
-              fontSize: '18px',
+              borderRadius: isMobile ? '12px' : '16px',
+              fontSize: isMobile ? '16px' : '18px',
               fontWeight: '700',
               letterSpacing: '1px',
               boxShadow: loading 
@@ -447,7 +484,8 @@ const PublishTask: React.FC = () => {
               cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              minHeight: isMobile ? '56px' : 'auto'
             }}
             onMouseEnter={(e) => {
               if (!loading) {
