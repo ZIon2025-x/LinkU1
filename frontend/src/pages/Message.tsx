@@ -3029,21 +3029,22 @@ const MessagePage: React.FC = () => {
           {/* 用户聊天模式下的系统提示 */}
           {activeContact && !isServiceMode && showSystemWarning && (
             <div style={{
-              background: isMobile ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'rgba(254, 243, 199, 0.95)',
+              background: 'rgba(254, 243, 199, 0.95)',
               border: '2px solid #f59e0b',
               borderRadius: '12px',
               padding: '16px 20px',
-              margin: isMobile ? '16px' : '0',
-              boxShadow: isMobile ? '0 4px 12px rgba(245, 158, 11, 0.2)' : '0 8px 32px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-              position: isMobile ? 'sticky' : 'fixed',
-              top: isMobile ? '100px' : '120px',
-              left: isMobile ? 'auto' : 'calc(50% + 175px)',
+              margin: '0',
+              boxShadow: '0 8px 32px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+              position: 'fixed',
+              top: isMobile ? '80px' : '120px',
+              left: isMobile ? '16px' : 'calc(50% + 175px)',
+              right: isMobile ? '16px' : 'auto',
               transform: isMobile ? 'none' : 'translateX(-50%)',
               width: isMobile ? 'auto' : '90%',
               maxWidth: isMobile ? 'none' : '600px',
-              zIndex: isMobile ? 15 : 1000,
-              backdropFilter: isMobile ? 'none' : 'blur(10px)',
-              WebkitBackdropFilter: isMobile ? 'none' : 'blur(10px)'
+              zIndex: 1000,
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)'
             }}>
               <div style={{
                 display: 'flex',
@@ -3102,11 +3103,11 @@ const MessagePage: React.FC = () => {
               background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
               display: 'flex', 
               flexDirection: 'column',
-              minHeight: isMobile ? 'calc(100vh - 200px)' : 'auto',
-              maxHeight: isMobile ? 'calc(100vh - 200px)' : 'none',
+              minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
+              maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
               position: 'relative',
               paddingTop: isMobile ? '20px' : '20px',
-              marginTop: isMobile ? '92px' : '0'
+              marginTop: isMobile ? '0' : '0'
             }}>
           {isServiceMode ? (
               <div style={{ 
