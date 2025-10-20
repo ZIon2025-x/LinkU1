@@ -3203,7 +3203,7 @@ def get_users_for_admin(
     page: int = 1,
     size: int = 20,
     search: str = None,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员获取用户列表"""
@@ -3222,7 +3222,7 @@ def get_users_for_admin(
 def update_user_by_admin(
     user_id: str,
     user_update: schemas.AdminUserUpdate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """后台管理员更新用户信息"""
@@ -3239,7 +3239,7 @@ def update_user_by_admin(
 def get_admin_users_for_super_admin(
     page: int = 1,
     size: int = 20,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员获取管理员列表"""
@@ -3263,7 +3263,7 @@ def get_admin_users_for_super_admin(
 @router.post("/admin/admin-user")
 def create_admin_user_by_super_admin(
     admin_data: schemas.AdminUserCreate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员创建管理员账号"""
@@ -3303,7 +3303,7 @@ def create_admin_user_by_super_admin(
 @router.delete("/admin/admin-user/{admin_id}")
 def delete_admin_user_by_super_admin(
     admin_id: str,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员删除管理员账号"""
@@ -3330,7 +3330,7 @@ def delete_admin_user_by_super_admin(
 @router.post("/admin/staff-notification")
 def send_staff_notification(
     notification: schemas.StaffNotificationCreate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员发送员工提醒"""
@@ -3505,7 +3505,7 @@ def mark_all_staff_notifications_read(
 @router.post("/admin/customer-service")
 def create_customer_service_by_admin(
     cs_data: schemas.AdminCustomerServiceCreate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员创建客服账号"""
@@ -3553,7 +3553,7 @@ def create_customer_service_by_admin(
 @router.delete("/admin/customer-service/{cs_id}")
 def delete_customer_service_by_admin(
     cs_id: int,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员删除客服账号"""
@@ -3568,7 +3568,7 @@ def delete_customer_service_by_admin(
 def get_customer_services_for_admin(
     page: int = 1,
     size: int = 20,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员获取客服列表"""
@@ -3586,7 +3586,7 @@ def get_customer_services_for_admin(
 @router.post("/admin/notifications/send")
 def send_admin_notification(
     notification: schemas.AdminNotificationCreate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员发送通知"""
@@ -3608,7 +3608,7 @@ def send_admin_notification(
 def update_task_by_admin(
     task_id: int,
     task_update: schemas.AdminTaskUpdate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员更新任务信息"""
@@ -3624,7 +3624,7 @@ def update_task_by_admin(
 @router.delete("/admin/tasks/{task_id}")
 def delete_task_by_admin(
     task_id: int,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员删除任务"""
@@ -3639,7 +3639,7 @@ def delete_task_by_admin(
 def notify_customer_service(
     cs_id: int,
     message: str = Body(...),
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """超级管理员给指定客服发送提醒"""
@@ -3670,7 +3670,7 @@ def notify_customer_service(
 # 系统设置相关API
 @router.get("/admin/system-settings")
 def get_system_settings(
-    current_admin=Depends(check_admin_user_status), db: Session = Depends(get_db)
+    current_admin=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     """获取系统设置"""
     settings_dict = crud.get_system_settings_dict(db)
@@ -3705,7 +3705,7 @@ def get_system_settings(
 @router.put("/admin/system-settings")
 def update_system_settings(
     settings_data: schemas.SystemSettingsBulkUpdate,
-    current_admin=Depends(check_admin_user_status),
+    current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """更新系统设置"""
