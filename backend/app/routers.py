@@ -1510,7 +1510,7 @@ def update_avatar(
 def admin_set_user_level(
     user_id: str,
     level: str = Body(...),
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     user = crud.get_user_by_id(db, user_id)
@@ -1527,7 +1527,7 @@ def admin_set_user_status(
     is_banned: int = Body(None),
     is_suspended: int = Body(None),
     suspend_until: str = Body(None),
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     user = crud.get_user_by_id(db, user_id)
@@ -1549,7 +1549,7 @@ def admin_set_user_status(
 def admin_set_task_level(
     task_id: int,
     level: str = Body(...),
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     task = crud.get_task(db, task_id)
@@ -1730,7 +1730,7 @@ def mark_chat_messages_read_api(
 
 @router.get("/admin/messages", response_model=list[schemas.MessageOut])
 def get_admin_messages_api(
-    current_user=Depends(admin_required), db: Session = Depends(get_db)
+    current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     return crud.get_admin_messages(db, current_user.id)
 
@@ -1791,7 +1791,7 @@ def mark_all_notifications_read_api(
 @router.post("/notifications/send-announcement")
 def send_announcement_api(
     announcement: dict = Body(...),
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """发送平台公告给所有用户"""
@@ -1893,7 +1893,7 @@ def admin_get_tasks(
     task_type: str = None,
     location: str = None,
     keyword: str = None,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员获取任务列表（支持分页和筛选）"""
@@ -1939,7 +1939,7 @@ def admin_get_tasks(
 
 @router.get("/admin/tasks/{task_id}")
 def admin_get_task_detail(
-    task_id: int, current_user=Depends(admin_required), db: Session = Depends(get_db)
+    task_id: int, current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     """管理员获取任务详情"""
     task = crud.get_task(db, task_id)
@@ -1956,7 +1956,7 @@ def admin_get_task_detail(
 def admin_update_task(
     task_id: int,
     task_update: schemas.TaskUpdate,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员更新任务信息"""
@@ -1979,7 +1979,7 @@ def admin_update_task(
 
 @router.delete("/admin/tasks/{task_id}")
 def admin_delete_task(
-    task_id: int, current_user=Depends(admin_required), db: Session = Depends(get_db)
+    task_id: int, current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     """管理员删除任务"""
     task = crud.get_task(db, task_id)
@@ -2004,7 +2004,7 @@ def admin_delete_task(
 def admin_batch_update_tasks(
     task_ids: list[int],
     task_update: schemas.TaskUpdate,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员批量更新任务"""
@@ -2041,7 +2041,7 @@ def admin_batch_update_tasks(
 @router.post("/admin/tasks/batch-delete")
 def admin_batch_delete_tasks(
     task_ids: list[int],
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员批量删除任务"""
@@ -2156,7 +2156,7 @@ def admin_get_customer_service_request_detail(
 def admin_update_customer_service_request(
     request_id: int,
     request_update: dict,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员更新客服请求状态和回复"""
@@ -2187,7 +2187,7 @@ def admin_update_customer_service_request(
 
 @router.get("/admin/customer-service-chat")
 def admin_get_customer_service_chat_messages(
-    current_user=Depends(admin_required), db: Session = Depends(get_db)
+    current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     """管理员获取与客服的聊天记录"""
     from app.models import AdminChatMessage, CustomerService
@@ -2227,7 +2227,7 @@ def admin_get_customer_service_chat_messages(
 @router.post("/admin/customer-service-chat")
 def admin_send_customer_service_chat_message(
     message_data: dict,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员发送消息给客服"""
@@ -2246,7 +2246,7 @@ def admin_send_customer_service_chat_message(
 
 @router.get("/admin/payments")
 def admin_get_payments(
-    current_user=Depends(admin_required), db: Session = Depends(get_db)
+    current_user=Depends(get_current_admin), db: Session = Depends(get_db)
 ):
     from app.models import Task
 
@@ -2403,7 +2403,7 @@ def get_shared_tasks(
 
 @router.get("/admin/cancel-requests", response_model=list[schemas.TaskCancelRequestOut])
 def admin_get_cancel_requests(
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
     status: str = None,
 ):
@@ -2416,7 +2416,7 @@ def admin_get_cancel_requests(
 def admin_review_cancel_request(
     request_id: int,
     review: schemas.TaskCancelRequestReview,
-    current_user=Depends(admin_required),
+    current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
     """管理员审核任务取消请求"""
