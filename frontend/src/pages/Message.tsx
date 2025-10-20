@@ -3103,11 +3103,15 @@ const MessagePage: React.FC = () => {
               background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
               display: 'flex', 
               flexDirection: 'column',
-              minHeight: isMobile ? 'calc(100vh - 160px)' : 'auto',
-              maxHeight: isMobile ? 'calc(100vh - 160px)' : 'none',
+              minHeight: 0, // 允许flex收缩
               position: 'relative',
               paddingTop: isMobile ? '20px' : '20px',
-              marginTop: isMobile ? '0' : '0'
+              marginTop: isMobile ? '0' : '0',
+              // 移动端确保不超出视口
+              ...(isMobile && {
+                maxHeight: 'calc(100vh - 140px)', // 为头部和输入区域预留空间
+                WebkitOverflowScrolling: 'touch' // iOS平滑滚动
+              })
             }}>
           {isServiceMode ? (
               <div style={{ 
@@ -3495,12 +3499,18 @@ const MessagePage: React.FC = () => {
 
           {/* 输入区域 */}
           <div style={{ 
-            padding: isMobile ? '16px' : '24px 30px', 
+            padding: isMobile ? '12px 16px' : '24px 30px', 
             borderTop: '1px solid #e2e8f0', 
             background: '#fff',
             position: 'relative',
             flexShrink: 0,
-            minHeight: isMobile ? '80px' : 'auto'
+            minHeight: isMobile ? '70px' : 'auto',
+            // 移动端确保输入区域始终可见
+            ...(isMobile && {
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 10
+            })
           }}>
             {/* 功能按钮行 */}
             <div style={{ 
