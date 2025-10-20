@@ -591,3 +591,69 @@ class SystemSettingsBulkUpdate(BaseModel):
     vip_to_super_rating_threshold: float = 4.5  # 平均评分阈值
     vip_to_super_completion_rate_threshold: float = 0.8  # 任务完成率阈值
     vip_to_super_enabled: bool = True  # 是否启用自动晋升
+
+
+# 岗位相关Schema
+class JobPositionBase(BaseModel):
+    title: str = Field(..., max_length=100, description="岗位名称")
+    title_en: Optional[str] = Field(None, max_length=100, description="岗位名称（英文）")
+    department: str = Field(..., max_length=50, description="部门")
+    department_en: Optional[str] = Field(None, max_length=50, description="部门（英文）")
+    type: str = Field(..., max_length=20, description="工作类型")
+    type_en: Optional[str] = Field(None, max_length=20, description="工作类型（英文）")
+    location: str = Field(..., max_length=100, description="工作地点")
+    location_en: Optional[str] = Field(None, max_length=100, description="工作地点（英文）")
+    experience: str = Field(..., max_length=50, description="经验要求")
+    experience_en: Optional[str] = Field(None, max_length=50, description="经验要求（英文）")
+    salary: str = Field(..., max_length=50, description="薪资范围")
+    salary_en: Optional[str] = Field(None, max_length=50, description="薪资范围（英文）")
+    description: str = Field(..., description="岗位描述")
+    description_en: Optional[str] = Field(None, description="岗位描述（英文）")
+    requirements: List[str] = Field(..., description="任职要求")
+    requirements_en: Optional[List[str]] = Field(None, description="任职要求（英文）")
+    tags: Optional[List[str]] = Field(None, description="技能标签")
+    tags_en: Optional[List[str]] = Field(None, description="技能标签（英文）")
+    is_active: bool = Field(True, description="是否启用")
+
+
+class JobPositionCreate(JobPositionBase):
+    pass
+
+
+class JobPositionUpdate(BaseModel):
+    title: Optional[str] = Field(None, max_length=100)
+    title_en: Optional[str] = Field(None, max_length=100)
+    department: Optional[str] = Field(None, max_length=50)
+    department_en: Optional[str] = Field(None, max_length=50)
+    type: Optional[str] = Field(None, max_length=20)
+    type_en: Optional[str] = Field(None, max_length=20)
+    location: Optional[str] = Field(None, max_length=100)
+    location_en: Optional[str] = Field(None, max_length=100)
+    experience: Optional[str] = Field(None, max_length=50)
+    experience_en: Optional[str] = Field(None, max_length=50)
+    salary: Optional[str] = Field(None, max_length=50)
+    salary_en: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = None
+    description_en: Optional[str] = None
+    requirements: Optional[List[str]] = None
+    requirements_en: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    tags_en: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+
+class JobPositionOut(JobPositionBase):
+    id: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    created_by: str
+
+    class Config:
+        from_attributes = True
+
+
+class JobPositionList(BaseModel):
+    positions: List[JobPositionOut]
+    total: int
+    page: int
+    size: int

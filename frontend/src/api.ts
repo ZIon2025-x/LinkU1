@@ -1073,4 +1073,92 @@ export const logout = async () => {
   }
 };
 
+// 岗位管理API
+export const getJobPositions = async (params?: {
+  page?: number;
+  size?: number;
+  is_active?: boolean;
+  department?: string;
+  type?: string;
+}) => {
+  const res = await api.get('/api/admin/job-positions', { params });
+  return res.data;
+};
+
+export const getJobPosition = async (positionId: number) => {
+  const res = await api.get(`/api/admin/job-positions/${positionId}`);
+  return res.data;
+};
+
+export const createJobPosition = async (position: {
+  title: string;
+  title_en?: string;
+  department: string;
+  department_en?: string;
+  type: string;
+  type_en?: string;
+  location: string;
+  location_en?: string;
+  experience: string;
+  experience_en?: string;
+  salary: string;
+  salary_en?: string;
+  description: string;
+  description_en?: string;
+  requirements: string[];
+  requirements_en?: string[];
+  tags?: string[];
+  tags_en?: string[];
+  is_active: boolean;
+}) => {
+  const res = await api.post('/api/admin/job-positions', position);
+  return res.data;
+};
+
+export const updateJobPosition = async (positionId: number, position: {
+  title?: string;
+  title_en?: string;
+  department?: string;
+  department_en?: string;
+  type?: string;
+  type_en?: string;
+  location?: string;
+  location_en?: string;
+  experience?: string;
+  experience_en?: string;
+  salary?: string;
+  salary_en?: string;
+  description?: string;
+  description_en?: string;
+  requirements?: string[];
+  requirements_en?: string[];
+  tags?: string[];
+  tags_en?: string[];
+  is_active?: boolean;
+}) => {
+  const res = await api.put(`/api/admin/job-positions/${positionId}`, position);
+  return res.data;
+};
+
+export const deleteJobPosition = async (positionId: number) => {
+  const res = await api.delete(`/api/admin/job-positions/${positionId}`);
+  return res.data;
+};
+
+export const toggleJobPositionStatus = async (positionId: number) => {
+  const res = await api.patch(`/api/admin/job-positions/${positionId}/toggle-status`);
+  return res.data;
+};
+
+// 公开API - 获取启用的岗位列表（用于join页面）
+export const getPublicJobPositions = async (params?: {
+  page?: number;
+  size?: number;
+  department?: string;
+  type?: string;
+}) => {
+  const res = await api.get('/api/job-positions', { params });
+  return res.data;
+};
+
 export default api; 

@@ -4352,3 +4352,320 @@ async def get_private_file(
 
 # 旧的图片存储优化API已删除 - 现在使用私密图片系统
 # 旧的图片存储优化API已删除 - 现在使用私密图片系统
+
+
+# 岗位管理API
+@router.get("/admin/job-positions")
+def get_job_positions(
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页数量"),
+    is_active: Optional[bool] = Query(None, description="是否启用"),
+    department: Optional[str] = Query(None, description="部门筛选"),
+    type: Optional[str] = Query(None, description="工作类型筛选"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取岗位列表"""
+    try:
+        skip = (page - 1) * size
+        positions, total = crud.get_job_positions(
+            db=db,
+            skip=skip,
+            limit=size,
+            is_active=is_active,
+            department=department,
+            type=type
+        )
+        
+        # 处理JSON字段
+        import json
+        processed_positions = []
+        for position in positions:
+            position_dict = {
+                "id": position.id,
+                "title": position.title,
+                "title_en": position.title_en,
+                "department": position.department,
+                "department_en": position.department_en,
+                "type": position.type,
+                "type_en": position.type_en,
+                "location": position.location,
+                "location_en": position.location_en,
+                "experience": position.experience,
+                "experience_en": position.experience_en,
+                "salary": position.salary,
+                "salary_en": position.salary_en,
+                "description": position.description,
+                "description_en": position.description_en,
+                "requirements": json.loads(position.requirements) if position.requirements else [],
+                "requirements_en": json.loads(position.requirements_en) if position.requirements_en else [],
+                "tags": json.loads(position.tags) if position.tags else [],
+                "tags_en": json.loads(position.tags_en) if position.tags_en else [],
+                "is_active": bool(position.is_active),
+                "created_at": position.created_at.isoformat() if position.created_at else None,
+                "updated_at": position.updated_at.isoformat() if position.updated_at else None,
+                "created_by": position.created_by
+            }
+            processed_positions.append(position_dict)
+        
+        return {
+            "positions": processed_positions,
+            "total": total,
+            "page": page,
+            "size": size
+        }
+    except Exception as e:
+        logger.error(f"获取岗位列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取岗位列表失败")
+
+
+@router.get("/admin/job-positions/{position_id}")
+def get_job_position(
+    position_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取单个岗位详情"""
+    try:
+        position = crud.get_job_position(db=db, position_id=position_id)
+        if not position:
+            raise HTTPException(status_code=404, detail="岗位不存在")
+        
+        import json
+        position_dict = {
+            "id": position.id,
+            "title": position.title,
+            "title_en": position.title_en,
+            "department": position.department,
+            "department_en": position.department_en,
+            "type": position.type,
+            "type_en": position.type_en,
+            "location": position.location,
+            "location_en": position.location_en,
+            "experience": position.experience,
+            "experience_en": position.experience_en,
+            "salary": position.salary,
+            "salary_en": position.salary_en,
+            "description": position.description,
+            "description_en": position.description_en,
+            "requirements": json.loads(position.requirements) if position.requirements else [],
+            "requirements_en": json.loads(position.requirements_en) if position.requirements_en else [],
+            "tags": json.loads(position.tags) if position.tags else [],
+            "tags_en": json.loads(position.tags_en) if position.tags_en else [],
+            "is_active": bool(position.is_active),
+            "created_at": position.created_at.isoformat() if position.created_at else None,
+            "updated_at": position.updated_at.isoformat() if position.updated_at else None,
+            "created_by": position.created_by
+        }
+        
+        return position_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取岗位详情失败: {e}")
+        raise HTTPException(status_code=500, detail="获取岗位详情失败")
+
+
+@router.post("/admin/job-positions")
+def create_job_position(
+    position: schemas.JobPositionCreate,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """创建新岗位"""
+    try:
+        db_position = crud.create_job_position(
+            db=db,
+            position=position,
+            created_by=current_admin.id
+        )
+        
+        import json
+        position_dict = {
+            "id": db_position.id,
+            "title": db_position.title,
+            "title_en": db_position.title_en,
+            "department": db_position.department,
+            "department_en": db_position.department_en,
+            "type": db_position.type,
+            "type_en": db_position.type_en,
+            "location": db_position.location,
+            "location_en": db_position.location_en,
+            "experience": db_position.experience,
+            "experience_en": db_position.experience_en,
+            "salary": db_position.salary,
+            "salary_en": db_position.salary_en,
+            "description": db_position.description,
+            "description_en": db_position.description_en,
+            "requirements": json.loads(db_position.requirements) if db_position.requirements else [],
+            "requirements_en": json.loads(db_position.requirements_en) if db_position.requirements_en else [],
+            "tags": json.loads(db_position.tags) if db_position.tags else [],
+            "tags_en": json.loads(db_position.tags_en) if db_position.tags_en else [],
+            "is_active": bool(db_position.is_active),
+            "created_at": db_position.created_at.isoformat() if db_position.created_at else None,
+            "updated_at": db_position.updated_at.isoformat() if db_position.updated_at else None,
+            "created_by": db_position.created_by
+        }
+        
+        return position_dict
+    except Exception as e:
+        logger.error(f"创建岗位失败: {e}")
+        raise HTTPException(status_code=500, detail="创建岗位失败")
+
+
+@router.put("/admin/job-positions/{position_id}")
+def update_job_position(
+    position_id: int,
+    position: schemas.JobPositionUpdate,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """更新岗位"""
+    try:
+        db_position = crud.update_job_position(
+            db=db,
+            position_id=position_id,
+            position=position
+        )
+        
+        if not db_position:
+            raise HTTPException(status_code=404, detail="岗位不存在")
+        
+        import json
+        position_dict = {
+            "id": db_position.id,
+            "title": db_position.title,
+            "title_en": db_position.title_en,
+            "department": db_position.department,
+            "department_en": db_position.department_en,
+            "type": db_position.type,
+            "type_en": db_position.type_en,
+            "location": db_position.location,
+            "location_en": db_position.location_en,
+            "experience": db_position.experience,
+            "experience_en": db_position.experience_en,
+            "salary": db_position.salary,
+            "salary_en": db_position.salary_en,
+            "description": db_position.description,
+            "description_en": db_position.description_en,
+            "requirements": json.loads(db_position.requirements) if db_position.requirements else [],
+            "requirements_en": json.loads(db_position.requirements_en) if db_position.requirements_en else [],
+            "tags": json.loads(db_position.tags) if db_position.tags else [],
+            "tags_en": json.loads(db_position.tags_en) if db_position.tags_en else [],
+            "is_active": bool(db_position.is_active),
+            "created_at": db_position.created_at.isoformat() if db_position.created_at else None,
+            "updated_at": db_position.updated_at.isoformat() if db_position.updated_at else None,
+            "created_by": db_position.created_by
+        }
+        
+        return position_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新岗位失败: {e}")
+        raise HTTPException(status_code=500, detail="更新岗位失败")
+
+
+@router.delete("/admin/job-positions/{position_id}")
+def delete_job_position(
+    position_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """删除岗位"""
+    try:
+        success = crud.delete_job_position(db=db, position_id=position_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="岗位不存在")
+        
+        return {"message": "岗位删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除岗位失败: {e}")
+        raise HTTPException(status_code=500, detail="删除岗位失败")
+
+
+@router.patch("/admin/job-positions/{position_id}/toggle-status")
+def toggle_job_position_status(
+    position_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """切换岗位启用状态"""
+    try:
+        db_position = crud.toggle_job_position_status(db=db, position_id=position_id)
+        if not db_position:
+            raise HTTPException(status_code=404, detail="岗位不存在")
+        
+        return {
+            "message": "状态切换成功",
+            "is_active": bool(db_position.is_active)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"切换岗位状态失败: {e}")
+        raise HTTPException(status_code=500, detail="切换岗位状态失败")
+
+
+# 公开API - 获取启用的岗位列表（用于join页面）
+@router.get("/job-positions")
+def get_public_job_positions(
+    page: int = Query(1, ge=1, description="页码"),
+    size: int = Query(20, ge=1, le=100, description="每页数量"),
+    department: Optional[str] = Query(None, description="部门筛选"),
+    type: Optional[str] = Query(None, description="工作类型筛选"),
+    db: Session = Depends(get_db),
+):
+    """获取公开的岗位列表（仅显示启用的岗位）"""
+    try:
+        skip = (page - 1) * size
+        positions, total = crud.get_job_positions(
+            db=db,
+            skip=skip,
+            limit=size,
+            is_active=True,  # 只获取启用的岗位
+            department=department,
+            type=type
+        )
+        
+        # 处理JSON字段
+        import json
+        processed_positions = []
+        for position in positions:
+            position_dict = {
+                "id": position.id,
+                "title": position.title,
+                "title_en": position.title_en,
+                "department": position.department,
+                "department_en": position.department_en,
+                "type": position.type,
+                "type_en": position.type_en,
+                "location": position.location,
+                "location_en": position.location_en,
+                "experience": position.experience,
+                "experience_en": position.experience_en,
+                "salary": position.salary,
+                "salary_en": position.salary_en,
+                "description": position.description,
+                "description_en": position.description_en,
+                "requirements": json.loads(position.requirements) if position.requirements else [],
+                "requirements_en": json.loads(position.requirements_en) if position.requirements_en else [],
+                "tags": json.loads(position.tags) if position.tags else [],
+                "tags_en": json.loads(position.tags_en) if position.tags_en else [],
+                "is_active": bool(position.is_active),
+                "created_at": position.created_at.isoformat() if position.created_at else None,
+                "updated_at": position.updated_at.isoformat() if position.updated_at else None
+            }
+            processed_positions.append(position_dict)
+        
+        return {
+            "positions": processed_positions,
+            "total": total,
+            "page": page,
+            "size": size
+        }
+    except Exception as e:
+        logger.error(f"获取公开岗位列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取岗位列表失败")

@@ -19,6 +19,7 @@ import NotificationModal from '../components/NotificationModal';
 import TaskManagement from '../components/TaskManagement';
 import CustomerServiceManagement from '../components/CustomerServiceManagement';
 import SystemSettings from '../components/SystemSettings';
+import JobPositionManagement from './JobPositionManagement';
 import dayjs from 'dayjs';
 
 interface DashboardStats {
@@ -76,6 +77,7 @@ const AdminDashboard: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showJobPositionManagement, setShowJobPositionManagement] = useState(false);
 
   // 表单状态
   const [newCustomerService, setNewCustomerService] = useState({
@@ -1264,6 +1266,22 @@ const AdminDashboard: React.FC = () => {
           style={{
             padding: '10px 20px',
             border: 'none',
+            background: '#ff6b35',
+            color: 'white',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginRight: '10px'
+          }}
+          onClick={() => setShowJobPositionManagement(true)}
+        >
+          岗位管理
+        </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
             background: activeTab === 'notifications' ? '#007bff' : '#f0f0f0',
             color: activeTab === 'notifications' ? 'white' : 'black',
             cursor: 'pointer',
@@ -1589,6 +1607,62 @@ const AdminDashboard: React.FC = () => {
         <SystemSettings
           onClose={() => setShowSystemSettings(false)}
         />
+      )}
+
+      {/* 岗位管理弹窗 */}
+      {showJobPositionManagement && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            width: '95%',
+            height: '90%',
+            maxWidth: '1400px',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              zIndex: 1001
+            }}>
+              <button
+                onClick={() => setShowJobPositionManagement(false)}
+                style={{
+                  background: '#ff4757',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ height: '100%', overflow: 'auto' }}>
+              <JobPositionManagement />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -31,7 +31,7 @@ import {
   HeartOutlined,
   TrophyOutlined
 } from '@ant-design/icons';
-import { fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead } from '../api';
+import { fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicJobPositions } from '../api';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
@@ -54,7 +54,7 @@ interface Notification {
 }
 
 const JoinUs: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -64,6 +64,8 @@ const JoinUs: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [systemSettings, setSystemSettings] = useState({});
+  const [positions, setPositions] = useState<any[]>([]);
+  const [positionsLoading, setPositionsLoading] = useState(true);
 
   // 加载用户数据和通知
   useEffect(() => {
@@ -93,6 +95,42 @@ const JoinUs: React.FC = () => {
     };
     
     loadUserData();
+  }, []);
+
+  // 加载岗位数据
+  useEffect(() => {
+    const loadPositions = async () => {
+      try {
+        setPositionsLoading(true);
+        const response = await getPublicJobPositions({ page: 1, size: 100 });
+        setPositions(response.positions || []);
+      } catch (error) {
+        console.error('加载岗位数据失败:', error);
+        // 如果API失败，使用默认数据
+        setPositions([
+          {
+            title: "前端开发工程师",
+            department: "技术部",
+            type: "全职",
+            location: "北京/远程",
+            experience: "3-5年",
+            salary: "15-25K",
+            tags: ["React", "TypeScript", "Vue", "前端"],
+            description: "负责平台前端开发，参与产品设计和用户体验优化",
+            requirements: [
+              "熟练掌握 React、Vue 等前端框架",
+              "熟悉 TypeScript、ES6+ 语法",
+              "有移动端开发经验优先",
+              "具备良好的代码规范和团队协作能力"
+            ]
+          }
+        ]);
+      } finally {
+        setPositionsLoading(false);
+      }
+    };
+    
+    loadPositions();
   }, []);
 
   // 标记通知为已读
@@ -129,104 +167,6 @@ const JoinUs: React.FC = () => {
     }
   };
 
-  const positions = [
-    {
-      title: "前端开发工程师",
-      department: "技术部",
-      type: "全职",
-      location: "北京/远程",
-      experience: "3-5年",
-      salary: "15-25K",
-      tags: ["React", "TypeScript", "Vue", "前端"],
-      description: "负责平台前端开发，参与产品设计和用户体验优化",
-      requirements: [
-        "熟练掌握 React、Vue 等前端框架",
-        "熟悉 TypeScript、ES6+ 语法",
-        "有移动端开发经验优先",
-        "具备良好的代码规范和团队协作能力"
-      ]
-    },
-    {
-      title: "后端开发工程师",
-      department: "技术部",
-      type: "全职",
-      location: "北京/远程",
-      experience: "3-5年",
-      salary: "18-30K",
-      tags: ["Python", "FastAPI", "PostgreSQL", "Redis"],
-      description: "负责平台后端开发，API设计和数据库优化",
-      requirements: [
-        "熟练掌握 Python 及相关框架",
-        "熟悉 FastAPI、Django 等 Web 框架",
-        "有数据库设计和优化经验",
-        "了解微服务架构和云服务"
-      ]
-    },
-    {
-      title: "产品经理",
-      department: "产品部",
-      type: "全职",
-      location: "北京",
-      experience: "2-4年",
-      salary: "12-20K",
-      tags: ["产品设计", "用户研究", "数据分析", "产品"],
-      description: "负责产品规划和设计，用户需求分析和产品迭代",
-      requirements: [
-        "有互联网产品经验",
-        "熟悉产品设计流程",
-        "具备数据分析能力",
-        "有平台类产品经验优先"
-      ]
-    },
-    {
-      title: "UI/UX 设计师",
-      department: "设计部",
-      type: "全职",
-      location: "北京/远程",
-      experience: "2-4年",
-      salary: "10-18K",
-      tags: ["UI设计", "UX设计", "Figma", "设计"],
-      description: "负责产品界面设计和用户体验优化",
-      requirements: [
-        "熟练掌握设计工具",
-        "有移动端设计经验",
-        "了解设计规范和用户心理",
-        "有平台类产品设计经验优先"
-      ]
-    },
-    {
-      title: "运营专员",
-      department: "运营部",
-      type: "全职",
-      location: "北京",
-      experience: "1-3年",
-      salary: "8-15K",
-      tags: ["用户运营", "内容运营", "数据分析", "运营"],
-      description: "负责用户运营和内容运营，提升用户活跃度",
-      requirements: [
-        "有互联网运营经验",
-        "熟悉社交媒体运营",
-        "具备数据分析能力",
-        "有社区运营经验优先"
-      ]
-    },
-    {
-      title: "客服专员",
-      department: "客服部",
-      type: "全职",
-      location: "北京/远程",
-      experience: "1-2年",
-      salary: "6-10K",
-      tags: ["客户服务", "沟通能力", "问题解决", "客服"],
-      description: "负责用户咨询和问题处理，维护用户关系",
-      requirements: [
-        "具备良好的沟通能力",
-        "有客服工作经验",
-        "熟悉在线客服工具",
-        "有耐心和责任心"
-      ]
-    }
-  ];
 
   const benefits = [
     {
@@ -482,49 +422,81 @@ const JoinUs: React.FC = () => {
             {t('joinUs.openPositionsSubtitle')}
           </Paragraph>
         </div>
-        <Row gutter={[24, 24]}>
-          {positions.map((position, index) => (
-            <Col xs={24} lg={12} key={index}>
-              <Card className="position-card" hoverable>
-                <div className="position-header">
-                  <Title level={4} className="position-title">{position.title}</Title>
-                  <div className="position-meta">
-                    <Tag color="blue">{position.department}</Tag>
-                    <Tag color="green">{position.type}</Tag>
-                    <Tag color="orange">{position.location}</Tag>
-                  </div>
-                </div>
-                <div className="position-info">
-                  <div className="info-item">
-                    <Text strong>经验要求：</Text>
-                    <Text>{position.experience}</Text>
-                  </div>
-                  <div className="info-item">
-                    <Text strong>薪资范围：</Text>
-                    <Text>{position.salary}</Text>
-                  </div>
-                </div>
-                <Paragraph className="position-description">{position.description}</Paragraph>
-                <div className="position-tags">
-                  {position.tags.map((tag, tagIndex) => (
-                    <Tag key={tagIndex} color="purple">{tag}</Tag>
-                  ))}
-                </div>
-                <div className="position-requirements">
-                  <Title level={5}>任职要求：</Title>
-                  <ul>
-                    {position.requirements.map((req, reqIndex) => (
-                      <li key={reqIndex}>{req}</li>
-                    ))}
-                  </ul>
-                </div>
-                <Button type="primary" size="large" className="apply-button">
-                  {t('joinUs.buttons.applyNow')}
-                </Button>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        {positionsLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <div style={{
+              display: 'inline-block',
+              width: '40px',
+              height: '40px',
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #007bff',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{ marginTop: '16px', color: '#666' }}>加载岗位信息中...</p>
+          </div>
+        ) : positions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <p style={{ color: '#666', fontSize: '16px' }}>暂无招聘岗位</p>
+          </div>
+        ) : (
+          <Row gutter={[24, 24]}>
+            {positions.map((position, index) => {
+              // 根据语言选择显示的内容
+              const displayTitle = language === 'en' && position.title_en ? position.title_en : position.title;
+              const displayDepartment = language === 'en' && position.department_en ? position.department_en : position.department;
+              const displayType = language === 'en' && position.type_en ? position.type_en : position.type;
+              const displayLocation = language === 'en' && position.location_en ? position.location_en : position.location;
+              const displayExperience = language === 'en' && position.experience_en ? position.experience_en : position.experience;
+              const displaySalary = language === 'en' && position.salary_en ? position.salary_en : position.salary;
+              const displayDescription = language === 'en' && position.description_en ? position.description_en : position.description;
+              const displayRequirements = language === 'en' && position.requirements_en && position.requirements_en.length > 0 ? position.requirements_en : position.requirements;
+              const displayTags = language === 'en' && position.tags_en && position.tags_en.length > 0 ? position.tags_en : position.tags;
+              
+              return (
+                <Col xs={24} lg={12} key={index}>
+                  <Card className="position-card" hoverable>
+                    <div className="position-header">
+                      <Title level={4} className="position-title">{displayTitle}</Title>
+                      <div className="position-meta">
+                        <Tag color="blue">{displayDepartment}</Tag>
+                        <Tag color="green">{displayType}</Tag>
+                        <Tag color="orange">{displayLocation}</Tag>
+                      </div>
+                    </div>
+                    <div className="position-info">
+                      <div className="info-item">
+                        <Text strong>{language === 'en' ? 'Experience:' : '经验要求：'}</Text>
+                        <Text>{displayExperience}</Text>
+                      </div>
+                      <div className="info-item">
+                        <Text strong>{language === 'en' ? 'Salary:' : '薪资范围：'}</Text>
+                        <Text>{displaySalary}</Text>
+                      </div>
+                    </div>
+                    <Paragraph className="position-description">{displayDescription}</Paragraph>
+                    <div className="position-tags">
+                      {displayTags.map((tag, tagIndex) => (
+                        <Tag key={tagIndex} color="purple">{tag}</Tag>
+                      ))}
+                    </div>
+                    <div className="position-requirements">
+                      <Title level={5}>{language === 'en' ? 'Requirements:' : '任职要求：'}</Title>
+                      <ul>
+                        {displayRequirements.map((req, reqIndex) => (
+                          <li key={reqIndex}>{req}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <Button type="primary" size="large" className="apply-button">
+                      {t('joinUs.buttons.applyNow')}
+                    </Button>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        )}
       </div>
 
       {/* 简历投递 */}

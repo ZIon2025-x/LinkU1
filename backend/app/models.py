@@ -491,3 +491,42 @@ class TaskApplication(Base):
         Index("ix_task_applications_applicant_id", applicant_id),
         Index("ix_task_applications_status", status),
     )
+
+
+class JobPosition(Base):
+    """岗位模型"""
+    __tablename__ = "job_positions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(100), nullable=False)  # 岗位名称
+    title_en = Column(String(100), nullable=True)  # 岗位名称（英文）
+    department = Column(String(50), nullable=False)  # 部门
+    department_en = Column(String(50), nullable=True)  # 部门（英文）
+    type = Column(String(20), nullable=False)  # 全职/兼职/实习
+    type_en = Column(String(20), nullable=True)  # 工作类型（英文）
+    location = Column(String(100), nullable=False)  # 工作地点
+    location_en = Column(String(100), nullable=True)  # 工作地点（英文）
+    experience = Column(String(50), nullable=False)  # 经验要求
+    experience_en = Column(String(50), nullable=True)  # 经验要求（英文）
+    salary = Column(String(50), nullable=False)  # 薪资范围
+    salary_en = Column(String(50), nullable=True)  # 薪资范围（英文）
+    description = Column(Text, nullable=False)  # 岗位描述
+    description_en = Column(Text, nullable=True)  # 岗位描述（英文）
+    requirements = Column(Text, nullable=False)  # 任职要求（JSON格式存储）
+    requirements_en = Column(Text, nullable=True)  # 任职要求（英文，JSON格式存储）
+    tags = Column(Text, nullable=True)  # 技能标签（JSON格式存储）
+    tags_en = Column(Text, nullable=True)  # 技能标签（英文，JSON格式存储）
+    is_active = Column(Integer, default=1)  # 是否启用
+    created_at = Column(DateTime, default=get_uk_time_naive)
+    updated_at = Column(DateTime, default=get_uk_time_naive, onupdate=get_uk_time_naive)
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
+    
+    # 索引
+    __table_args__ = (
+        Index("ix_job_positions_title", title),
+        Index("ix_job_positions_department", department),
+        Index("ix_job_positions_type", type),
+        Index("ix_job_positions_location", location),
+        Index("ix_job_positions_is_active", is_active),
+        Index("ix_job_positions_created_at", created_at),
+    )
