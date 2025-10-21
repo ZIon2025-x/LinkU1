@@ -10,23 +10,93 @@
     <meta name="theme-color" content="#1890ff" />
     <meta
       name="description"
-      content="Link²Ur - Professional task publishing and assignment platform, linking skilled people with those in need, making value creation more efficient"
+      content="Link²Ur - 专业的任务发布和技能匹配平台，连接有技能的人与需要帮助的人，让价值创造更高效。提供任务发布、技能匹配、项目协作等服务。"
     />
-    <meta name="keywords" content="task publishing,skill assignment,freelance,project collaboration,Link²Ur,connection platform" />
+    <meta name="keywords" content="任务发布,技能匹配,自由职业,项目协作,Link²Ur,连接平台,任务平台,技能服务,项目外包,人才匹配" />
     <meta name="author" content="Link²Ur Team" />
-    <meta property="og:title" content="Link²Ur - Link You and Me, Create the Future Together" />
-    <meta property="og:description" content="Professional task publishing and assignment platform, linking skilled people with those in need, making value creation more efficient" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    <link rel="canonical" href="https://www.link2ur.com" />
+    
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.link2ur.com" />
+    <meta property="og:title" content="Link²Ur - 连接你我，共创未来" />
+    <meta property="og:description" content="专业的任务发布和技能匹配平台，连接有技能的人与需要帮助的人，让价值创造更高效。" />
+    <meta property="og:image" content="https://www.link2ur.com/static/og-image.jpg" />
+    <meta property="og:site_name" content="Link²Ur" />
+    <meta property="og:locale" content="zh_CN" />
+    
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Link²Ur - Link You and Me, Create the Future Together" />
-    <meta name="twitter:description" content="Professional task publishing and assignment platform, linking skilled people with those in need, making value creation more efficient" />
+    <meta name="twitter:url" content="https://www.link2ur.com" />
+    <meta name="twitter:title" content="Link²Ur - 连接你我，共创未来" />
+    <meta name="twitter:description" content="专业的任务发布和技能匹配平台，连接有技能的人与需要帮助的人，让价值创造更高效。" />
+    <meta name="twitter:image" content="https://www.link2ur.com/static/twitter-image.jpg" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="theme-color" content="#1890ff" />
+    <meta name="msapplication-TileColor" content="#1890ff" />
+    <meta name="application-name" content="Link²Ur" />
+    <meta name="apple-mobile-web-app-title" content="Link²Ur" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/static/favicon.ico" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Link²Ur",
+      "alternateName": "Link2Ur",
+      "url": "https://www.link2ur.com",
+      "description": "专业的任务发布和技能匹配平台，连接有技能的人与需要帮助的人，让价值创造更高效。",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://www.link2ur.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Link²Ur Team",
+        "url": "https://www.link2ur.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://www.link2ur.com/static/logo.png"
+        }
+      },
+      "sameAs": [
+        "https://www.link2ur.com"
+      ]
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Link²Ur",
+      "url": "https://www.link2ur.com",
+      "logo": "https://www.link2ur.com/static/logo.png",
+      "description": "专业的任务发布和技能匹配平台，连接有技能的人与需要帮助的人，让价值创造更高效。",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "url": "https://www.link2ur.com/contact"
+      },
+      "sameAs": [
+        "https://www.link2ur.com"
+      ]
+    }
+    </script>
+    
     <!--
       Notice the use of %PUBLIC_URL% in the tags above.
       It will be replaced with the URL of the `public` folder during the build.
@@ -36,7 +106,7 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-    <title>Link²Ur - Link You and Me, Create the Future Together</title>
+    <title>Link²Ur - 连接你我，共创未来 | 专业任务发布与技能匹配平台</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
