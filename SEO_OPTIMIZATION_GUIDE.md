@@ -36,7 +36,14 @@ npm run build
 
 # 部署到Vercel
 vercel --prod
+
+# 或者通过Git推送（推荐）
+git add .
+git commit -m "Fix sitemap.xml routing and SEO optimization"
+git push origin main
 ```
+
+**重要**：由于修复了Vercel路由配置，必须重新部署才能生效！
 
 ### 2. **提交到搜索引擎**
 
@@ -108,6 +115,9 @@ Sitemap: https://www.link2ur.com/sitemap.xml
 - [x] 设置robots.txt
 - [x] 优化页面标题
 - [x] 添加canonical链接
+- [x] 修复Vercel路由配置
+- [ ] 重新部署网站
+- [ ] 验证sitemap.xml返回XML格式
 - [ ] 检查页面加载速度
 - [ ] 优化图片alt标签
 - [ ] 添加内部链接
@@ -122,10 +132,14 @@ Sitemap: https://www.link2ur.com/sitemap.xml
 
 ## 🆘 **如果仍然无法找到**
 
-1. **检查DNS设置**：确保域名正确解析
-2. **检查服务器状态**：确保网站正常运行
-3. **检查robots.txt**：确保没有阻止搜索引擎
-4. **联系技术支持**：检查是否有技术问题
+1. **重新部署网站**：Vercel路由配置需要重新部署才能生效
+2. **验证sitemap.xml**：确保返回XML格式而不是HTML
+3. **检查DNS设置**：确保域名正确解析
+4. **检查服务器状态**：确保网站正常运行
+5. **检查robots.txt**：确保没有阻止搜索引擎
+6. **联系技术支持**：检查是否有技术问题
+
+**详细修复指南**：请查看 `SITEMAP_FIX_GUIDE.md` 文件
 
 ## 📞 **需要帮助？**
 
