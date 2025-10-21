@@ -355,7 +355,7 @@ def cs_login(
     
     # 设置客服会话Cookie
     user_agent = request.headers.get("user-agent", "")
-    response = create_service_session_cookie(response, session_id, user_agent, str(cs.id))
+    response = create_service_session_cookie(response, session_id, user_agent, str(cs.id), request)
     
     # 更新客服在线状态
     crud.update_customer_service_online_status(db, cs.id, True)

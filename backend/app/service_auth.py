@@ -564,7 +564,7 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
     return session
 
-def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None) -> Response:
+def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None, request: Optional[Request] = None) -> Response:
     """创建客服会话Cookie（完全按照用户登录的方式）"""
     from app.cookie_manager import CookieManager
     
@@ -576,12 +576,16 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                 # 使用简单的随机字符串，和用户refresh token一样
                 refresh_token = secrets.token_urlsafe(32)
                 
-                # 保存refresh token到Redis
-                if USE_REDIS and redis_client:
+                # 保存refresh token到Redis，绑定IP和设备指纹
+                if USE_REDIS and redis_client and request:
+                    from app.secure_auth import get_client_ip, get_device_fingerprint
                     refresh_data = {
                         "service_id": service_id,
+                        "ip_address": get_client_ip(request),
+                        "device_fingerprint": get_device_fingerprint(request),
                         "created_at": datetime.utcnow().isoformat(),
-                        "expires_at": (datetime.utcnow() + timedelta(hours=12)).isoformat()
+                        "expires_at": (datetime.utcnow() + timedelta(hours=12)).isoformat(),
+                        "last_used": None  # 记录最后使用时间，用于频率限制
                     }
                     redis_client.setex(
                         f"service_refresh_token:{refresh_token}",
@@ -636,14 +640,15 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
             )
         
         # 设置客服refresh token Cookie（如果生成了）
+        # service_refresh_token 使用 SameSite=None 以支持跨域请求
         if refresh_token:
             response.set_cookie(
                 key="service_refresh_token",
                 value=refresh_token,
                 max_age=12 * 3600,  # 12小时，与JWT过期时间一致
                 httponly=True,  # 防止XSS攻击
-                secure=settings.COOKIE_SECURE,
-                samesite=samesite_literal,
+                secure=True,  # SameSite=None 必须使用 Secure
+                samesite="none",  # 仅 service_refresh_token 使用 none
                 path="/",
                 domain=cookie_domain
             )
@@ -678,8 +683,8 @@ def clear_service_session_cookie(response: Response) -> Response:
         logger.error(f"[SERVICE_AUTH] 客服Cookie清除失败: {e}")
         return response
 
-def verify_service_refresh_token(refresh_token: str) -> Optional[str]:
-    """验证客服refresh token"""
+def verify_service_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
+    """验证客服refresh token，检查IP和设备指纹绑定"""
     try:
         if not USE_REDIS or not redis_client:
             return None
@@ -697,6 +702,31 @@ def verify_service_refresh_token(refresh_token: str) -> Optional[str]:
                 # 过期了，删除
                 redis_client.delete(f"service_refresh_token:{refresh_token}")
                 return None
+        
+        # 检查IP绑定
+        stored_ip = data.get('ip_address', '')
+        if stored_ip and ip_address and stored_ip != ip_address:
+            logger.warning(f"[SERVICE_AUTH] 客服refresh token IP不匹配: 存储={stored_ip}, 当前={ip_address}")
+            return None
+        
+        # 检查设备指纹绑定
+        stored_device = data.get('device_fingerprint', '')
+        if stored_device and device_fingerprint and stored_device != device_fingerprint:
+            logger.warning(f"[SERVICE_AUTH] 客服refresh token 设备指纹不匹配: 存储={stored_device}, 当前={device_fingerprint}")
+            return None
+        
+        # 检查频率限制（20分钟内最多使用一次）
+        last_used_str = data.get('last_used')
+        if last_used_str:
+            last_used = datetime.fromisoformat(last_used_str)
+            if datetime.utcnow() - last_used < timedelta(minutes=20):
+                logger.warning(f"[SERVICE_AUTH] 客服refresh token 使用过于频繁: {refresh_token}")
+                return None
+        
+        # 更新最后使用时间
+        current_time = datetime.utcnow()
+        data['last_used'] = current_time.isoformat()
+        redis_client.setex(f"service_refresh_token:{refresh_token}", 12 * 3600, json.dumps(data))
         
         return data.get('service_id')
         

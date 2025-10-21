@@ -91,7 +91,8 @@ def admin_login(
     
     # 创建并设置refresh token
     from app.admin_auth import create_admin_refresh_token, create_admin_refresh_token_cookie
-    refresh_token = create_admin_refresh_token(str(admin.id))
+    from app.secure_auth import get_client_ip, get_device_fingerprint
+    refresh_token = create_admin_refresh_token(str(admin.id), get_client_ip(request), get_device_fingerprint(request))
     response = create_admin_refresh_token_cookie(response, refresh_token)
     
     # 生成并设置CSRF token
@@ -178,7 +179,8 @@ def admin_refresh(
             )
         
         # 验证refresh token
-        admin_id = verify_admin_refresh_token(refresh_token)
+        from app.secure_auth import get_client_ip, get_device_fingerprint
+        admin_id = verify_admin_refresh_token(refresh_token, get_client_ip(request), get_device_fingerprint(request))
         if not admin_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -210,7 +212,7 @@ def admin_refresh(
         response = create_admin_session_cookie(response, session_info.session_id)
         
         # 创建新的refresh token
-        new_refresh_token = create_admin_refresh_token(admin_id)
+        new_refresh_token = create_admin_refresh_token(admin_id, get_client_ip(request), get_device_fingerprint(request))
         response = create_admin_refresh_token_cookie(response, new_refresh_token)
         
         # 生成并设置新的CSRF token
@@ -337,7 +339,8 @@ def verify_admin_code(
     
     # 创建并设置refresh token
     from app.admin_auth import create_admin_refresh_token, create_admin_refresh_token_cookie
-    refresh_token = create_admin_refresh_token(str(admin.id))
+    from app.secure_auth import get_client_ip, get_device_fingerprint
+    refresh_token = create_admin_refresh_token(str(admin.id), get_client_ip(request), get_device_fingerprint(request))
     response = create_admin_refresh_token_cookie(response, refresh_token)
     
     # 生成并设置CSRF token
@@ -537,7 +540,7 @@ def service_login(
     # 设置Cookie
     try:
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(service.id))
+        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(service.id), request)
         
         # 生成并设置CSRF token
         try:
@@ -671,7 +674,8 @@ def service_refresh_token(
         
         # 验证refresh token
         from app.service_auth import verify_service_refresh_token
-        verified_service_id = verify_service_refresh_token(refresh_token)
+        from app.secure_auth import get_client_ip, get_device_fingerprint
+        verified_service_id = verify_service_refresh_token(refresh_token, get_client_ip(request), get_device_fingerprint(request))
         if not verified_service_id or verified_service_id != service_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -688,7 +692,7 @@ def service_refresh_token(
         
         # 生成新的会话和refresh token
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, new_session.session_id, user_agent, str(service.id))
+        response = create_service_session_cookie(response, new_session.session_id, user_agent, str(service.id), request)
         
         # 生成新的CSRF token
         from app.csrf import CSRFProtection

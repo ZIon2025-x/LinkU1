@@ -444,8 +444,8 @@ def clear_admin_session_cookie(response: Response) -> Response:
 
 # ==================== 管理员Refresh Token功能 ====================
 
-def create_admin_refresh_token(admin_id: str) -> str:
-    """创建管理员refresh token"""
+def create_admin_refresh_token(admin_id: str, ip_address: str = "", device_fingerprint: str = "") -> str:
+    """创建管理员refresh token，绑定IP和设备指纹"""
     import secrets
     from datetime import datetime, timedelta
     
@@ -455,7 +455,7 @@ def create_admin_refresh_token(admin_id: str) -> str:
     # 设置过期时间（12小时）
     expire_time = datetime.utcnow() + timedelta(hours=12)
     
-    # 存储到Redis
+    # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS:
         redis_key = f"admin_refresh_token:{admin_id}:{refresh_token}"
         redis_client.setex(
@@ -463,17 +463,20 @@ def create_admin_refresh_token(admin_id: str) -> str:
             int(12 * 3600),  # 12小时
             json.dumps({
                 "admin_id": admin_id,
+                "ip_address": ip_address,
+                "device_fingerprint": device_fingerprint,
                 "created_at": datetime.utcnow().isoformat(),
-                "expires_at": expire_time.isoformat()
+                "expires_at": expire_time.isoformat(),
+                "last_used": None  # 记录最后使用时间，用于频率限制
             })
         )
     
-    logger.info(f"[ADMIN_AUTH] 创建管理员refresh token: {admin_id}")
+    logger.info(f"[ADMIN_AUTH] 创建管理员refresh token: {admin_id}, IP: {ip_address}, 设备: {device_fingerprint}")
     return refresh_token
 
 
-def verify_admin_refresh_token(refresh_token: str) -> Optional[str]:
-    """验证管理员refresh token"""
+def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
+    """验证管理员refresh token，检查IP和设备指纹绑定"""
     if not refresh_token:
         return None
     
@@ -501,6 +504,31 @@ def verify_admin_refresh_token(refresh_token: str) -> Optional[str]:
             return None
     except (ValueError, KeyError):
         return None
+    
+    # 检查IP绑定
+    stored_ip = token_data.get('ip_address', '')
+    if stored_ip and ip_address and stored_ip != ip_address:
+        logger.warning(f"[ADMIN_AUTH] 管理员refresh token IP不匹配: 存储={stored_ip}, 当前={ip_address}")
+        return None
+    
+    # 检查设备指纹绑定
+    stored_device = token_data.get('device_fingerprint', '')
+    if stored_device and device_fingerprint and stored_device != device_fingerprint:
+        logger.warning(f"[ADMIN_AUTH] 管理员refresh token 设备指纹不匹配: 存储={stored_device}, 当前={device_fingerprint}")
+        return None
+    
+    # 检查频率限制（20分钟内最多使用一次）
+    last_used_str = token_data.get('last_used')
+    if last_used_str:
+        last_used = datetime.fromisoformat(last_used_str)
+        if datetime.utcnow() - last_used < timedelta(minutes=20):
+            logger.warning(f"[ADMIN_AUTH] 管理员refresh token 使用过于频繁: {refresh_token}")
+            return None
+    
+    # 更新最后使用时间
+    current_time = datetime.utcnow()
+    token_data['last_used'] = current_time.isoformat()
+    redis_client.setex(keys[0], int(12 * 3600), json.dumps(token_data))
     
     return token_data.get('admin_id')
 
@@ -549,13 +577,14 @@ def create_admin_refresh_token_cookie(response: Response, refresh_token: str) ->
     samesite_value = Config.COOKIE_SAMESITE if Config.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
     
     # 设置管理员refresh token Cookie
+    # admin_refresh_token 使用 SameSite=None 以支持跨域请求
     response.set_cookie(
         key="admin_refresh_token",
         value=refresh_token,
         max_age=12 * 3600,  # 12小时
         httponly=True,  # 防止XSS攻击
-        secure=Config.COOKIE_SECURE,
-        samesite=samesite_value,
+        secure=True,  # SameSite=None 必须使用 Secure
+        samesite="none",  # 仅 admin_refresh_token 使用 none
         path="/",
         domain=cookie_domain
     )

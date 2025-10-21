@@ -86,7 +86,7 @@ async def cs_login(
         
         # 设置客服会话Cookie
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(cs.id))
+        response = create_service_session_cookie(response, session_info.session_id, user_agent, str(cs.id), request)
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
@@ -165,7 +165,8 @@ async def cs_refresh_token(
         
         # 验证refresh token
         from app.service_auth import verify_service_refresh_token
-        verified_service_id = verify_service_refresh_token(refresh_token)
+        from app.secure_auth import get_client_ip, get_device_fingerprint
+        verified_service_id = verify_service_refresh_token(refresh_token, get_client_ip(request), get_device_fingerprint(request))
         if not verified_service_id or verified_service_id != service_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -196,7 +197,7 @@ async def cs_refresh_token(
         # 生成新的refresh token（复用现有会话）
         from app.service_auth import create_service_session_cookie
         user_agent = request.headers.get("user-agent", "")
-        response = create_service_session_cookie(response, existing_session_id, user_agent, str(cs.id))
+        response = create_service_session_cookie(response, existing_session_id, user_agent, str(cs.id), request)
         
         # 生成并设置新的CSRF token
         from app.csrf import CSRFProtection

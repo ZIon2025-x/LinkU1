@@ -23,8 +23,8 @@ settings = get_settings()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
-SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "4"))  # 减少到4小时
-USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "4"))  # 减少到4小时
+SESSION_EXPIRE_HOURS = int(os.getenv("SESSION_EXPIRE_HOURS", "1"))  # 默认1小时，保持与Cookie一致
+USER_SESSION_EXPIRE_HOURS = int(os.getenv("USER_SESSION_EXPIRE_HOURS", "1"))  # 默认1小时
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "5"))
 
 # 会话存储
@@ -138,6 +138,49 @@ class SecureAuthManager:
         except Exception as e:
             logger.error(f"[SECURE_AUTH] 撤销用户会话失败: {e}")
             return False
+
+    @staticmethod
+    def revoke_other_sessions(user_id: str, keep_session_id: str, keep_refresh_token: str = "") -> int:
+        """撤销该用户除指定会话以外的所有会话，并清理对应refresh token。
+        返回撤销的会话数量。
+        """
+        revoked_count = 0
+        try:
+            if USE_REDIS and redis_client:
+                # 遍历用户会话集合
+                user_sessions_key = f"user_sessions:{user_id}"
+                session_ids = redis_client.smembers(user_sessions_key)
+                for raw_id in session_ids:
+                    session_id = raw_id.decode() if isinstance(raw_id, bytes) else raw_id
+                    if session_id == keep_session_id:
+                        continue
+                    # 删除会话键
+                    redis_client.delete(f"session:{session_id}")
+                    # 从集合移除
+                    redis_client.srem(user_sessions_key, session_id)
+                    revoked_count += 1
+
+                # 清理该用户的所有refresh token，保留当前会话的refresh token（若提供）
+                pattern = f"user_refresh_token:{user_id}:*"
+                keys = redis_client.keys(pattern)
+                for key in keys:
+                    key_str = key.decode() if isinstance(key, bytes) else key
+                    # 如果提供了需要保留的refresh token，则跳过
+                    if keep_refresh_token and key_str.endswith(keep_refresh_token):
+                        continue
+                    redis_client.delete(key)
+            else:
+                # 内存模式：简单清理
+                to_delete: List[str] = []
+                for sid, session in active_sessions.items():
+                    if session.user_id == user_id and sid != keep_session_id:
+                        to_delete.append(sid)
+                for sid in to_delete:
+                    del active_sessions[sid]
+                    revoked_count += 1
+        except Exception as e:
+            logger.error(f"[SECURE_AUTH] 撤销其它会话失败: {e}")
+        return revoked_count
     
     @staticmethod
     def _store_session(session: SessionInfo) -> None:
@@ -605,8 +648,8 @@ def clear_user_session_cookie(response: Response) -> Response:
 
 # ==================== 用户Refresh Token功能 ====================
 
-def create_user_refresh_token(user_id: str) -> str:
-    """创建用户refresh token"""
+def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerprint: str = "") -> str:
+    """创建用户refresh token，绑定IP和设备指纹"""
     import secrets
     from datetime import datetime, timedelta
     
@@ -616,7 +659,7 @@ def create_user_refresh_token(user_id: str) -> str:
     # 设置过期时间（12小时）
     expire_time = datetime.utcnow() + timedelta(hours=12)
     
-    # 存储到Redis
+    # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS and redis_client:
         redis_key = f"user_refresh_token:{user_id}:{refresh_token}"
         redis_client.setex(
@@ -624,17 +667,20 @@ def create_user_refresh_token(user_id: str) -> str:
             int(12 * 3600),  # 12小时
             json.dumps({
                 "user_id": user_id,
+                "ip_address": ip_address,
+                "device_fingerprint": device_fingerprint,
                 "created_at": datetime.utcnow().isoformat(),
-                "expires_at": expire_time.isoformat()
+                "expires_at": expire_time.isoformat(),
+                "last_used": None  # 记录最后使用时间，用于频率限制
             })
         )
-        logger.info(f"[SECURE_AUTH] 创建用户refresh token: {user_id}")
+        logger.info(f"[SECURE_AUTH] 创建用户refresh token: {user_id}, IP: {ip_address}, 设备: {device_fingerprint}")
     
     return refresh_token
 
 
-def verify_user_refresh_token(refresh_token: str) -> Optional[str]:
-    """验证用户refresh token"""
+def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_fingerprint: str = "") -> Optional[str]:
+    """验证用户refresh token，检查IP和设备指纹绑定"""
     if not refresh_token:
         return None
     
@@ -661,6 +707,31 @@ def verify_user_refresh_token(refresh_token: str) -> Optional[str]:
             # 过期了，删除
             redis_client.delete(keys[0])
             return None
+    
+    # 检查IP绑定
+    stored_ip = data.get('ip_address', '')
+    if stored_ip and ip_address and stored_ip != ip_address:
+        logger.warning(f"[SECURE_AUTH] refresh token IP不匹配: 存储={stored_ip}, 当前={ip_address}")
+        return None
+    
+    # 检查设备指纹绑定
+    stored_device = data.get('device_fingerprint', '')
+    if stored_device and device_fingerprint and stored_device != device_fingerprint:
+        logger.warning(f"[SECURE_AUTH] refresh token 设备指纹不匹配: 存储={stored_device}, 当前={device_fingerprint}")
+        return None
+    
+    # 检查频率限制（20分钟内最多使用一次）
+    last_used_str = data.get('last_used')
+    if last_used_str:
+        last_used = datetime.fromisoformat(last_used_str)
+        if datetime.utcnow() - last_used < timedelta(minutes=20):
+            logger.warning(f"[SECURE_AUTH] refresh token 使用过于频繁: {refresh_token}")
+            return None
+    
+    # 更新最后使用时间
+    current_time = datetime.utcnow()
+    data['last_used'] = current_time.isoformat()
+    redis_client.setex(keys[0], int(12 * 3600), json.dumps(data))
     
     return data.get('user_id')
 
@@ -699,7 +770,12 @@ def revoke_all_user_refresh_tokens(user_id: str) -> int:
 
 
 def cleanup_expired_sessions_aggressive() -> int:
-    """激进清理过期会话（超过20分钟不活跃就清理，减少Redis存储压力）"""
+    """激进清理过期会话与refresh token。
+    规则：
+    - 优先依据数据中的 expires_at 判断是否过期；
+    - 若无 expires_at，则回退到 last_activity 超过60分钟（安全阈值）；
+    - 追加清理 user_refresh_token:*，同样按 expires_at 判断。
+    """
     if not USE_REDIS or not redis_client:
         return 0
     
@@ -715,17 +791,32 @@ def cleanup_expired_sessions_aggressive() -> int:
             try:
                 data = safe_redis_get(key)
                 if data:
-                    last_activity_str = data.get('last_activity', data.get('created_at'))
-                    if last_activity_str:
-                        last_activity = datetime.fromisoformat(last_activity_str)
-                        # 更激进的清理：超过20分钟就清理
-                        if current_time - last_activity > timedelta(minutes=20):
-                            redis_client.delete(key)
-                            # 同时清理用户会话集合中的引用
-                            user_id = data.get('user_id')
-                            if user_id:
-                                redis_client.srem(f"user_sessions:{user_id}", key.split(':')[1])
-                            cleaned_count += 1
+                    # 1) 优先按 expires_at 判断
+                    expires_at_str = data.get('expires_at')
+                    should_delete = False
+                    if expires_at_str:
+                        try:
+                            expires_at = datetime.fromisoformat(expires_at_str)
+                            if current_time > expires_at:
+                                should_delete = True
+                        except Exception:
+                            # 解析失败则回退到last_activity规则
+                            pass
+                    # 2) 回退规则：基于last_activity的60分钟阈值
+                    if not should_delete:
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            last_activity = datetime.fromisoformat(last_activity_str)
+                            if current_time - last_activity > timedelta(minutes=60):
+                                should_delete = True
+
+                    if should_delete:
+                        redis_client.delete(key)
+                        # 同时清理用户会话集合中的引用
+                        user_id = data.get('user_id')
+                        if user_id:
+                            redis_client.srem(f"user_sessions:{user_id}", key.split(':')[1])
+                        cleaned_count += 1
             except Exception as e:
                 logger.warning(f"[SECURE_AUTH] 清理会话失败 {key}: {e}")
                 continue
@@ -742,6 +833,29 @@ def cleanup_expired_sessions_aggressive() -> int:
                     cleaned_count += 1
             except Exception as e:
                 logger.warning(f"[SECURE_AUTH] 清理用户会话集合失败 {key}: {e}")
+                continue
+
+        # 追加：清理用户 refresh token（user_refresh_token:*）
+        refresh_pattern = "user_refresh_token:*"
+        refresh_keys = redis_client.keys(refresh_pattern)
+        for key in refresh_keys:
+            try:
+                data = safe_redis_get(key)
+                if not data:
+                    continue
+                expires_at_str = data.get('expires_at')
+                if not expires_at_str:
+                    continue
+                try:
+                    expires_at = datetime.fromisoformat(expires_at_str)
+                    if current_time > expires_at:
+                        redis_client.delete(key)
+                        cleaned_count += 1
+                except Exception:
+                    # 忽略解析错误
+                    continue
+            except Exception as e:
+                logger.warning(f"[SECURE_AUTH] 清理refresh token失败 {key}: {e}")
                 continue
         
         logger.info(f"[SECURE_AUTH] 激进清理完成，清理了 {cleaned_count} 个过期会话")

@@ -41,7 +41,7 @@ def main():
         print(f"   客服会话: {len(service_session_keys)}")
         print(f"   总计: {len(session_keys) + len(user_sessions_keys) + len(admin_session_keys) + len(service_session_keys)}")
         
-        # 执行激进清理（超过20分钟不活跃就清理）
+        # 执行激进清理（超过60分钟不活跃就清理）
         cleaned_count = cleanup_expired_sessions_aggressive()
         
         # 获取清理后的统计

@@ -6,6 +6,9 @@ const Settings: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
+  const [sessions, setSessions] = useState<Array<any>>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,6 +30,13 @@ const Settings: React.FC = () => {
     // 加载用户数据
     loadUserData();
   }, []);
+
+  // 切换到安全设置时加载会话列表
+  useEffect(() => {
+    if (activeTab === 'security') {
+      void loadSessions();
+    }
+  }, [activeTab]);
 
   const loadUserData = async () => {
     try {
@@ -91,6 +101,53 @@ const Settings: React.FC = () => {
   const handleDeleteAccount = () => {
     if (window.confirm('确定要删除账户吗？此操作不可恢复！')) {
       alert('删除账户功能开发中...');
+    }
+  };
+
+  const loadSessions = async () => {
+    try {
+      setSessionsLoading(true);
+      setSessionsError('');
+      const res = await fetch('/api/secure-auth/sessions', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        throw new Error(`加载会话失败: ${res.status}`);
+      }
+      const data = await res.json();
+      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+    } catch (e: any) {
+      console.error(e);
+      setSessionsError(e?.message || '加载会话失败');
+      setSessions([]);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const logoutOthers = async () => {
+    if (!window.confirm('确定要登出其它设备吗？这会使其它设备立即失效。')) {
+      return;
+    }
+    try {
+      setSessionsLoading(true);
+      setSessionsError('');
+      const res = await fetch('/api/secure-auth/logout-others', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`登出其它设备失败: ${res.status} ${text}`);
+      }
+      await loadSessions();
+      alert('已登出其它设备');
+    } catch (e: any) {
+      console.error(e);
+      setSessionsError(e?.message || '登出其它设备失败');
+    } finally {
+      setSessionsLoading(false);
     }
   };
 
@@ -613,6 +670,87 @@ const Settings: React.FC = () => {
                 <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🛡️ 安全设置</h2>
                 
                 <div style={{ display: 'grid', gap: '20px' }}>
+                  {/* 会话管理 */}
+                  <div style={{
+                    padding: '20px',
+                    background: '#f8f9fa',
+                    borderRadius: '12px',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <h3 style={{ color: '#333', margin: 0 }}>🖥️ 会话管理</h3>
+                      <div>
+                        <button
+                          onClick={() => void loadSessions()}
+                          style={{
+                            background: '#e5e7eb',
+                            color: '#111827',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: '20px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            marginRight: '8px'
+                          }}
+                        >
+                          刷新
+                        </button>
+                        <button
+                          onClick={() => void logoutOthers()}
+                          style={{
+                            background: '#f59e0b',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 14px',
+                            borderRadius: '20px',
+                            cursor: 'pointer',
+                            fontSize: '13px'
+                          }}
+                        >
+                          登出其它设备
+                        </button>
+                      </div>
+                    </div>
+
+                    {sessionsLoading && (
+                      <div style={{ color: '#666', fontSize: '14px' }}>加载会话中...</div>
+                    )}
+                    {sessionsError && (
+                      <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '8px' }}>{sessionsError}</div>
+                    )}
+                    {!sessionsLoading && !sessionsError && (
+                      <div style={{ display: 'grid', gap: '10px' }}>
+                        {sessions.length === 0 && (
+                          <div style={{ color: '#666', fontSize: '14px' }}>暂无会话</div>
+                        )}
+                        {sessions.map((s, idx) => (
+                          <div key={idx} style={{
+                            padding: '12px',
+                            background: '#fff',
+                            borderRadius: '10px',
+                            border: '1px solid #e5e7eb',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <div style={{ color: '#111827' }}>
+                              <div style={{ fontWeight: 'bold' }}>{s.session_id}</div>
+                              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                IP: {s.ip_address || '-'} | 设备: {s.device_fingerprint || '-'}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                创建: {s.created_at} | 活动: {s.last_activity}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '12px', color: s.is_current ? '#10b981' : '#6b7280' }}>
+                              {s.is_current ? '当前设备' : '其它设备'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div style={{
                     padding: '20px',
                     background: '#f8f9fa',

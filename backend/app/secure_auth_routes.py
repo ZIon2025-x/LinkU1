@@ -102,7 +102,7 @@ def secure_login(
         
         # 生成并存储刷新令牌到Redis
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id)
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
         
         # 创建新会话
         session = SecureAuthManager.create_session(
@@ -209,7 +209,7 @@ def refresh_session(
         
         # 生成并存储新的刷新令牌到Redis
         from app.secure_auth import create_user_refresh_token
-        refresh_token = create_user_refresh_token(user.id)
+        refresh_token = create_user_refresh_token(user.id, get_client_ip(request), get_device_fingerprint(request))
         
         # 设置新的安全Cookie（复用现有会话）
         CookieManager.set_session_cookies(
@@ -252,9 +252,13 @@ def refresh_session_with_token(
                 detail="未找到refresh_token"
             )
         
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        
         # 验证refresh_token
         from app.secure_auth import verify_user_refresh_token
-        user_id = verify_user_refresh_token(refresh_token)
+        user_id = verify_user_refresh_token(refresh_token, client_ip, device_fingerprint)
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 
@@ -443,6 +447,43 @@ def get_active_sessions(
         logger.error(f"获取会话列表失败: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="获取会话列表失败"
+        )
+
+@secure_auth_router.post("/logout-others")
+def logout_other_sessions(
+    request: Request,
+    response: Response,
+):
+    """一键登出其它设备：保留当前会话，撤销该用户其它所有会话，并清理对应refresh token。"""
+    try:
+        # 当前会话
+        session = validate_session(request)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效"
+            )
+
+        # 获取当前请求中携带的refresh_token（如有则保留）
+        keep_refresh = request.cookies.get("refresh_token", "")
+
+        # 撤销其它会话
+        from app.secure_auth import SecureAuthManager
+        revoked = SecureAuthManager.revoke_other_sessions(
+            user_id=session.user_id,
+            keep_session_id=session.session_id,
+            keep_refresh_token=keep_refresh,
+        )
+
+        return {
+            "message": "已登出其它设备",
+            "revoked_sessions": revoked
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"一键登出其它设备失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="操作失败"
         )
 
 @secure_auth_router.delete("/sessions/{session_id}")

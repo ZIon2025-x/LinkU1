@@ -131,8 +131,8 @@ class CookieManager:
             # 移动端：完全移除domain限制，使用根路径
             cookie_domain = None
             cookie_path = "/"
-            # 移动端使用更短的过期时间，避免浏览器限制
-            session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
+            # 统一将会话有效期设置为1小时
+            session_max_age = 3600
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60, 43200)  # 最多12小时
             
             # 移动端Cookie兼容性优化
@@ -146,8 +146,8 @@ class CookieManager:
             # 隐私模式特殊处理：使用最兼容的Cookie设置
             cookie_domain = None  # 隐私模式下不设置domain
             cookie_path = "/"
-            # 隐私模式使用更短的过期时间
-            session_max_age = min(Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60, 1800)  # 最多30分钟
+            # 统一将会话有效期设置为1小时
+            session_max_age = 3600
             refresh_max_age = min(Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60, 43200)  # 最多12小时
             # 隐私模式使用lax提高兼容性
             samesite_value = "lax"   # 隐私模式下lax兼容性更好
@@ -156,7 +156,8 @@ class CookieManager:
             # 桌面端：只使用当前域名，不设置domain属性
             cookie_domain = None
             cookie_path = Config.COOKIE_PATH
-            session_max_age = Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            # 统一将会话有效期设置为1小时
+            session_max_age = 3600
             refresh_max_age = Config.REFRESH_TOKEN_EXPIRE_HOURS * 60 * 60
             
             # 桌面端Cookie设置
@@ -184,13 +185,14 @@ class CookieManager:
         )
         
         # 设置刷新令牌Cookie（长期，用于刷新会话）
+        # refresh_token 使用 SameSite=None 以支持跨域请求
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             max_age=refresh_max_age,
             httponly=Config.COOKIE_HTTPONLY,
-            secure=secure_value,
-            samesite=samesite_value,
+            secure=True,  # SameSite=None 必须使用 Secure
+            samesite="none",  # 仅 refresh_token 使用 none
             path=cookie_path,
             domain=cookie_domain
         )
