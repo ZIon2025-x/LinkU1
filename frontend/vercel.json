@@ -27,6 +27,10 @@
       "dest": "/robots.txt"
     },
     {
+      "src": "/baidu_verify_codeva-N1G3JdDSeL.html",
+      "dest": "/baidu_verify_codeva-N1G3JdDSeL.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
