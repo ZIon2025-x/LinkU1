@@ -288,6 +288,13 @@ def refresh_session_with_token(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
+        # 创建新会话 - refresh token应该总是创建新会话
+        # 先撤销现有会话，然后创建新会话
+        existing_session_id = request.cookies.get("session_id")
+        if existing_session_id:
+            SecureAuthManager.revoke_session(existing_session_id)
+            logger.info(f"撤销现有会话: {existing_session_id[:8]}...")
+        
         # 创建新会话
         session = SecureAuthManager.create_session(
             user_id=user.id,

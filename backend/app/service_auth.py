@@ -743,3 +743,22 @@ def revoke_service_refresh_token(refresh_token: str) -> bool:
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] 撤销refresh token失败: {e}")
         return False
+
+def revoke_all_service_refresh_tokens(service_id: str) -> int:
+    """撤销客服所有refresh token"""
+    try:
+        if not USE_REDIS or not redis_client:
+            return 0
+        
+        pattern = f"service_refresh_token:{service_id}:*"
+        keys = redis_client.keys(pattern)
+        
+        if keys:
+            count = redis_client.delete(*keys)
+            logger.info(f"[SERVICE_AUTH] 撤销客服所有refresh token: {service_id}, 删除数量: {count}")
+            return count
+        
+        return 0
+    except Exception as e:
+        logger.error(f"[SERVICE_AUTH] 撤销客服所有refresh token失败: {e}")
+        return 0

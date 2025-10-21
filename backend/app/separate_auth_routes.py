@@ -83,6 +83,13 @@ def admin_login(
         )
     
     # 如果未启用邮箱验证，直接登录
+    
+    # 先撤销该管理员的所有旧refresh token
+    from app.admin_auth import revoke_all_admin_refresh_tokens
+    revoked_tokens = revoke_all_admin_refresh_tokens(str(admin.id))
+    if revoked_tokens > 0:
+        logger.info(f"[ADMIN_AUTH] 撤销了 {revoked_tokens} 个旧的refresh token: {admin.id}")
+    
     # 创建管理员会话
     session_info = AdminAuthManager.create_session(str(admin.id), request)
     
@@ -523,6 +530,12 @@ def service_login(
             detail="用户名或密码错误"
         )
     
+    # 先撤销该客服的所有旧refresh token
+    from app.service_auth import revoke_all_service_refresh_tokens
+    revoked_tokens = revoke_all_service_refresh_tokens(str(service.id))
+    if revoked_tokens > 0:
+        logger.info(f"[SERVICE_AUTH] 撤销了 {revoked_tokens} 个旧的refresh token: {service.id}")
+    
     # 创建客服会话
     try:
         session_info = ServiceAuthManager.create_session(str(service.id), request)
@@ -712,8 +725,8 @@ def service_refresh_token(
                 "is_online": bool(service.is_online),
                 "created_at": service.created_at.isoformat() if service.created_at else None  # type: ignore
             },
-            "access_token": new_access_token,
-            "refresh_token": new_refresh_token
+            "session_id": new_session.session_id,
+            "csrf_token": csrf_token
         }
         
     except HTTPException:
