@@ -7,10 +7,40 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.link2ur.com/tasks</loc>
+    <loc>https://link2ur.com/tasks</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://link2ur.com/tasks?type=Housekeeping</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://link2ur.com/tasks?type=Skill%20Service</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://link2ur.com/tasks?type=Transportation</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://link2ur.com/tasks?location=London</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://link2ur.com/tasks?location=Online</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.link2ur.com/partners</loc>

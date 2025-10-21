@@ -58,6 +58,70 @@ const TaskDetail: React.FC = () => {
     fetchCurrentUser().then(setUser).catch(() => setUser(null));
   }, [id]);
 
+  // SEO优化：动态更新页面标题和Meta标签
+  useEffect(() => {
+    if (task) {
+      // 更新页面标题
+      const seoTitle = `${task.title} - ${task.location} | Link²Ur任务平台`;
+      document.title = seoTitle;
+      
+      // 更新meta描述
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        const seoDescription = `在${task.location}寻找${task.task_type}？${task.title}，赏金£${task.reward}，截止${task.deadline ? new Date(task.deadline).toLocaleDateString('zh-CN') : '待定'}。立即申请这个任务！`;
+        metaDescription.setAttribute('content', seoDescription);
+      }
+      
+      // 更新meta关键词
+      const metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (metaKeywords) {
+        const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;
+        metaKeywords.setAttribute('content', keywords);
+      }
+      
+      // 添加结构化数据
+      const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        "title": task.title,
+        "description": task.description,
+        "hiringOrganization": {
+          "@type": "Organization",
+          "name": "Link²Ur",
+          "url": "https://link2ur.com"
+        },
+        "jobLocation": {
+          "@type": "Place",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": task.location,
+            "addressCountry": "UK"
+          }
+        },
+        "employmentType": "CONTRACTOR",
+        "baseSalary": {
+          "@type": "MonetaryAmount",
+          "currency": "GBP",
+          "value": task.reward.toString()
+        },
+        "datePosted": task.created_at,
+        "validThrough": task.deadline
+      };
+      
+      // 移除旧的structured data
+      const oldScript = document.querySelector('script[type="application/ld+json"]');
+      if (oldScript) {
+        oldScript.remove();
+      }
+      
+      // 添加新的structured data
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(structuredData);
+      document.head.appendChild(script);
+    }
+  }, [task]);
+
   // 当用户信息加载后，如果是任务发布者，加载申请者列表
   useEffect(() => {
     if (user && task && task.poster_id === user.id) {
