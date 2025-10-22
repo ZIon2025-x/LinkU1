@@ -52,14 +52,8 @@ export function detectBrowserLanguage(): Language {
     return DEFAULT_LANGUAGE;
   }
   
-  const browserLang = navigator.language.toLowerCase();
-  
-  // 检查是否支持中文
-  if (browserLang.startsWith('zh')) {
-    return 'zh';
-  }
-  
-  // 默认返回英文
+  // 优先返回英文，确保搜索引擎结果点击进入时显示英文页面
+  // 用户可以通过语言切换器手动切换到中文
   return DEFAULT_LANGUAGE;
 }
 

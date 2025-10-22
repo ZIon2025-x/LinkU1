@@ -1,25 +1,64 @@
 {
   "short_name": "Link²Ur",
   "name": "Link²Ur - Link You and Me, Create the Future Together",
+  "description": "Professional task publishing and skill matching platform",
   "icons": [
     {
-      "src": "static/favicon.ico",
+      "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "static/favicon.ico",
-      "type": "image/x-icon",
-      "sizes": "192x192"
+      "src": "favicon.png",
+      "sizes": "16x16",
+      "type": "image/png"
     },
     {
-      "src": "static/favicon.ico",
-      "type": "image/x-icon",
-      "sizes": "512x512"
+      "src": "favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "logo192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#1890ff",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en"
 }

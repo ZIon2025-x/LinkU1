@@ -785,16 +785,16 @@ const MyTasks: React.FC = () => {
                 {activeTab === 'all' && t('myTasks.emptyStates.noTasks')}
                 {activeTab === 'posted' && t('myTasks.emptyStates.noPosted')}
                 {activeTab === 'taken' && t('myTasks.emptyStates.noTaken')}
-                {activeTab === 'pending' && '暂无等待审核的申请'}
+                {activeTab === 'pending' && t('myTasks.emptyStates.noPendingApplications')}
                 {activeTab === 'completed' && t('myTasks.emptyStates.noCompleted')}
                 {activeTab === 'cancelled' && t('myTasks.emptyStates.noCancelled')}
               </div>
               <div style={{ fontSize: 14 }}>
                 {activeTab === 'posted' && t('myTasks.emptyStates.postFirst')}
                 {activeTab === 'taken' && t('myTasks.emptyStates.browseTasks')}
-                {activeTab === 'pending' && '您还没有申请任何任务，去任务大厅看看吧！'}
-                {activeTab === 'completed' && '完成任务后，它们会出现在这里'}
-                {activeTab === 'cancelled' && '取消的任务会显示在这里'}
+                {activeTab === 'pending' && t('myTasks.emptyStates.noPendingApplicationsDesc')}
+                {activeTab === 'completed' && t('myTasks.emptyStates.completedTasksDesc')}
+                {activeTab === 'cancelled' && t('myTasks.emptyStates.cancelledTasksDesc')}
               </div>
             </div>
           ) : (
@@ -834,7 +834,7 @@ const MyTasks: React.FC = () => {
                         gap: '4px'
                       }}>
                         <span>⏳</span>
-                        <span>等待审核</span>
+                        <span>{t('myTasks.tabs.pending')}</span>
                       </div>
 
                       {/* 任务标题 */}
@@ -860,7 +860,7 @@ const MyTasks: React.FC = () => {
                           color: '#6b7280'
                         }}>
                           <span>💰</span>
-                          <span>奖励: £{application.task_reward}</span>
+                          <span>{t('tasks.taskReward')}: £{application.task_reward}</span>
                         </div>
                         <div style={{
                           display: 'flex',
@@ -881,7 +881,7 @@ const MyTasks: React.FC = () => {
                           color: '#6b7280'
                         }}>
                           <span>📅</span>
-                          <span>申请时间: {TimeHandlerV2.formatUtcToLocal(application.created_at, 'YYYY-MM-DD HH:mm')}</span>
+                          <span>{t('myTasks.applicationTime')}: {TimeHandlerV2.formatUtcToLocal(application.created_at, 'YYYY-MM-DD HH:mm')}</span>
                         </div>
                       </div>
 
@@ -900,7 +900,7 @@ const MyTasks: React.FC = () => {
                             marginBottom: '4px',
                             fontWeight: '500'
                           }}>
-                            申请留言:
+                            {t('myTasks.applicationMessage')}:
                           </div>
                           <div style={{
                             fontSize: '14px',
@@ -940,7 +940,7 @@ const MyTasks: React.FC = () => {
                             e.currentTarget.style.borderColor = '#d1d5db';
                           }}
                         >
-                          查看任务
+                          {t('myTasks.actions.viewDetails')}
                         </button>
                       </div>
                     </div>
@@ -1386,7 +1386,7 @@ const MyTasks: React.FC = () => {
                                 color: '#1e293b',
                                 fontSize: '13px'
                               }}>
-                                用户 {review.user_id}
+                                {t('myTasks.user')} {review.user_id}
                               </div>
                               <div style={{
                                 color: '#f59e0b',
@@ -1451,7 +1451,7 @@ const MyTasks: React.FC = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                ← 上一页
+                ← {t('myTasks.previousPage')}
               </button>
               
                     <div className="page-numbers" style={{
@@ -1501,7 +1501,7 @@ const MyTasks: React.FC = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                下一页 →
+                {t('myTasks.nextPage')} →
               </button>
             </div>
           )}
@@ -1552,7 +1552,7 @@ const MyTasks: React.FC = () => {
                 color: '#1e293b',
                 fontSize: '16px'
               }}>
-                评分 (0.5-5星)
+                {t('myTasks.ratingLabel')} (0.5-5{t('myTasks.stars')})
               </label>
               <div style={{
                 display: 'flex', 
@@ -1592,7 +1592,7 @@ const MyTasks: React.FC = () => {
                 transform: reviewRating > 0 ? 'scale(1.05)' : 'scale(1)',
                 transition: 'all 0.3s ease'
               }}>
-                当前评分: {reviewRating} 星
+                {t('myTasks.currentRating')}: {reviewRating} {t('myTasks.stars')}
               </div>
             </div>
 
@@ -1604,7 +1604,7 @@ const MyTasks: React.FC = () => {
                 color: '#1e293b',
                 fontSize: '16px'
               }}>
-{t('myTasks.reviewPlaceholder')} (可选)
+                {t('myTasks.reviewPlaceholder')} ({t('myTasks.optional')})
               </label>
               <textarea
                 value={reviewComment}
@@ -1642,7 +1642,7 @@ const MyTasks: React.FC = () => {
 {t('myTasks.actions.review')}
                 </span>
                 <span style={{fontSize: '12px', color: '#64748b'}}>
-{t('myTasks.anonymousReviewNote')}
+                  {t('myTasks.anonymousReviewNote')}
                 </span>
               </label>
             </div>
@@ -1681,7 +1681,7 @@ const MyTasks: React.FC = () => {
                   }
                 }}
               >
-                {actionLoading === currentReviewTask.id ? t('myTasks.actions.processing') : t('myTasks.actions.review')}
+                {actionLoading === currentReviewTask.id ? t('myTasks.actions.processing') : t('myTasks.actions.submitReview')}
               </button>
               <button
                 onClick={() => {
@@ -1711,7 +1711,7 @@ const MyTasks: React.FC = () => {
                   e.currentTarget.style.borderColor = '#e2e8f0';
                 }}
               >
-{t('myTasks.actions.cancelTask')}
+{t('myTasks.actions.cancel')}
               </button>
             </div>
           </div>

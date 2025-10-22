@@ -660,7 +660,11 @@
       "noCompleted": "您还没有完成的任务",
       "noCancelled": "您没有已取消的任务",
       "postFirst": "点击首页的\"发布任务\"按钮开始发布您的第一个任务",
-      "browseTasks": "浏览首页的任务列表，接受您感兴趣的任务"
+      "browseTasks": "浏览首页的任务列表，接受您感兴趣的任务",
+      "noPendingApplications": "暂无等待审核的申请",
+      "noPendingApplicationsDesc": "您还没有申请任何任务，去任务大厅看看吧！",
+      "completedTasksDesc": "完成任务后，它们会出现在这里",
+      "cancelledTasksDesc": "取消的任务会显示在这里"
     },
     "taskStatus": {
       "open": "开放中",
@@ -670,31 +674,62 @@
       "completed": "已完成",
       "cancelled": "已取消"
     },
-    "taskLevel": {
-      "normal": "普通",
-      "super": "🔥 超级"
-    },
     "userRole": {
       "poster": "发布者",
       "taker": "接受者",
       "unknown": "未知"
     },
+    "taskLevel": {
+      "normal": "普通任务",
+      "super": "超级任务"
+    },
     "actions": {
       "viewDetails": "查看详情",
+      "processing": "处理中...",
       "setPrivate": "设为私密",
       "setPublic": "设为公开",
-      "processing": "处理中...",
-      "waitingApproval": "等待发布者同意",
+      "waitingApproval": "等待审核中",
       "markComplete": "标记完成",
       "confirmComplete": "确认完成",
       "cancelTask": "取消任务",
-      "contactTaker": "联系接受者",
-      "contactPoster": "联系发布者",
-      "review": "⭐ 评价",
-      "hideReviews": "隐藏评价",
+      "contactTaker": "联系对方",
+      "review": "评价",
       "viewReviews": "查看评价",
-      "deleteTask": "删除任务"
+      "hideReviews": "隐藏评价",
+      "deleteTask": "删除任务",
+      "submitReview": "提交评价",
+      "cancel": "取消"
     },
+    "alerts": {
+      "markReadFailed": "标记已读失败",
+      "markAllReadFailed": "标记所有已读失败",
+      "taskMarkedComplete": "任务已标记为完成",
+      "taskConfirmedComplete": "任务已确认完成",
+      "taskCancelled": "任务已取消",
+      "visibilityUpdated": "可见性已更新",
+      "taskDeleted": "任务已删除",
+      "reviewSubmitted": "评价已提交",
+      "operationFailed": "操作失败"
+    },
+    "confirmDelete": "确定要删除这个任务吗？",
+    "cancelReason": "请输入取消原因（可选）：",
+    "reviewPlaceholder": "请输入您的评价内容",
+    "anonymousReviewNote": "（匿名评价）",
+    "loading": "加载中...",
+    "buttons": {
+      "backToHome": "返回首页"
+    },
+    "applicationTime": "申请时间",
+    "applicationMessage": "申请留言",
+    "ratingLabel": "评分",
+    "stars": "星",
+    "currentRating": "当前评分",
+    "optional": "可选",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "user": "用户",
+    "submitReview": "提交评价",
+    "cancel": "取消"
     "buttons": {
       "backToHome": "← 返回首页"
     },

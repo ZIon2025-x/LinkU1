@@ -661,6 +661,75 @@
     },
     "emptyStates": {
       "noTasks": "No tasks available",
+      "noPendingApplications": "No pending applications",
+      "noPendingApplicationsDesc": "You haven't applied to any tasks yet. Check out the task hall!",
+      "completedTasksDesc": "Completed tasks will appear here",
+      "cancelledTasksDesc": "Cancelled tasks will be displayed here"
+    },
+    "taskStatus": {
+      "open": "Open",
+      "taken": "Taken",
+      "in_progress": "In Progress",
+      "pending_confirmation": "Pending Confirmation",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "userRole": {
+      "poster": "Poster",
+      "taker": "Taker",
+      "unknown": "Unknown"
+    },
+    "taskLevel": {
+      "normal": "Normal Task",
+      "super": "Super Task"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "processing": "Processing...",
+      "setPrivate": "Set Private",
+      "setPublic": "Set Public",
+      "waitingApproval": "Waiting for Approval",
+      "markComplete": "Mark Complete",
+      "confirmComplete": "Confirm Complete",
+      "cancelTask": "Cancel Task",
+      "contactTaker": "Contact Taker",
+      "review": "Review",
+      "viewReviews": "View Reviews",
+      "hideReviews": "Hide Reviews",
+      "deleteTask": "Delete Task",
+      "submitReview": "Submit Review",
+      "cancel": "Cancel"
+    },
+    "alerts": {
+      "markReadFailed": "Failed to mark as read",
+      "markAllReadFailed": "Failed to mark all as read",
+      "taskMarkedComplete": "Task marked as complete",
+      "taskConfirmedComplete": "Task confirmed as complete",
+      "taskCancelled": "Task cancelled",
+      "visibilityUpdated": "Visibility updated",
+      "taskDeleted": "Task deleted",
+      "reviewSubmitted": "Review submitted",
+      "operationFailed": "Operation failed"
+    },
+    "confirmDelete": "Are you sure you want to delete this task?",
+    "cancelReason": "Please enter cancellation reason (optional):",
+    "reviewPlaceholder": "Please enter your review content",
+    "anonymousReviewNote": "(Anonymous review)",
+    "loading": "Loading...",
+    "buttons": {
+      "backToHome": "Back to Home"
+    },
+    "applicationTime": "Application Time",
+    "applicationMessage": "Application Message",
+    "ratingLabel": "Rating",
+    "stars": "stars",
+    "currentRating": "Current Rating",
+    "optional": "Optional",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "user": "User",
+    "submitReview": "Submit Review",
+    "cancel": "Cancel"
       "noPosted": "You haven't posted any tasks yet",
       "noTaken": "You haven't taken any tasks yet",
       "noCompleted": "You don't have any completed tasks yet",
