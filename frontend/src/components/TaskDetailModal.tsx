@@ -6,6 +6,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from './LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -18,6 +19,7 @@ interface TaskDetailModalProps {
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, taskId }) => {
+  const { t } = useLanguage();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,7 +68,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } catch (error: any) {
       console.error('获取任务详情失败:', error);
       console.error('错误详情:', error.response?.data);
-      setError('任务不存在');
+      setError(t('taskDetail.taskNotFound'));
     } finally {
       setLoading(false);
     }
@@ -177,14 +179,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   };
 
   const handleApproveApplication = async (applicantId: string) => {
-    if (!window.confirm('确定要批准这个申请者吗？批准后其他申请者将被自动拒绝。')) {
+    if (!window.confirm(t('taskDetail.confirmApprove'))) {
       return;
     }
 
     setActionLoading(true);
     try {
       await approveApplication(taskId!, applicantId);
-      alert('申请者批准成功！');
+      alert(t('taskDetail.approveSuccess'));
       
       // 重新加载任务信息和申请者列表
       const res = await api.get(`/api/tasks/${taskId}`);
@@ -192,7 +194,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       await loadApplications();
     } catch (error: any) {
       console.error('批准申请者失败:', error);
-      alert(error.response?.data?.detail || '批准申请者失败');
+      alert(error.response?.data?.detail || t('taskDetail.approveFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -200,14 +202,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const handleChat = async () => {
     if (!task?.poster_id) {
-      alert('无法获取发布者信息，请联系客服');
+      alert(t('taskDetail.cannotGetPosterInfo'));
       return;
     }
 
     // 如果用户还没有接受任务，自动发送一条消息
     if (!hasAcceptedTask(user, task)) {
       try {
-        const messageContent = `你好，我们可以聊聊"${task.title}"吗？`;
+        const messageContent = t('taskDetail.chatMessage').replace('{taskTitle}', task.title);
         await sendMessage({
           receiver_id: task.poster_id,
           content: messageContent
@@ -246,10 +248,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       console.log('接受任务API调用成功:', result);
       
       if (!response.ok) {
-        throw new Error(result.detail || '接受任务失败');
+        throw new Error(result.detail || t('taskDetail.taskApplyFailed'));
       }
       
-      alert('任务申请成功！\n\n请等待任务发布者审核您的申请，审核通过后您就可以开始执行任务了。');
+      alert(t('taskDetail.taskApplySuccess'));
       
       // 隐藏申请按钮
       setHasApplied(true);
@@ -266,13 +268,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         setTask(res.data);
         
         if (res.data.status === 'taken' && res.data.taker_id === user.id) {
-          alert('您已经接受过这个任务了！\n\n请等待任务发布者同意您接受此任务。');
+          alert(t('taskDetail.alreadyApplied'));
         } else {
-          alert(error.response?.data?.detail || '接受任务失败');
+          alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
         }
       } catch (refreshError) {
         console.error('重新获取任务信息失败:', refreshError);
-        alert(error.response?.data?.detail || '接受任务失败');
+        alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
       }
     } finally {
       setActionLoading(false);
@@ -287,7 +289,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setActionLoading(true);
     try {
       await completeTask(taskId!);
-      alert('任务已标记为完成，等待发布者确认！');
+      alert(t('taskDetail.taskMarkedComplete'));
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
@@ -305,7 +307,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setActionLoading(true);
     try {
       await confirmTaskCompletion(taskId!);
-      alert('任务已确认完成！');
+      alert(t('taskDetail.taskConfirmedComplete'));
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
@@ -322,19 +324,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     const price = parseFloat(newPrice);
     if (isNaN(price) || price <= 0) {
-      alert('请输入有效的价格');
+      alert(t('taskDetail.enterValidPrice'));
       return;
     }
     setActionLoading(true);
     try {
       await updateTaskReward(taskId!, price);
-      alert('价格更新成功！');
+      alert(t('taskDetail.priceUpdateSuccess'));
       setShowPriceEdit(false);
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
       setNewPrice(res.data.reward.toString());
     } catch (error: any) {
-      alert(error.response?.data?.detail || '更新价格失败');
+      alert(error.response?.data?.detail || t('taskDetail.priceUpdateFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -348,7 +350,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setActionLoading(true);
     try {
       await approveTaskTaker(taskId!);
-      alert('已同意接受者进行任务！');
+      alert(t('taskDetail.takerApproved'));
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
@@ -363,13 +365,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setShowLoginModal(true);
       return;
     }
-    if (!window.confirm('确定要拒绝这个接受者吗？任务将重新开放给其他人。')) {
+    if (!window.confirm(t('taskDetail.confirmReject'))) {
       return;
     }
     setActionLoading(true);
     try {
       await rejectTaskTaker(taskId!);
-      alert('已拒绝接受者，任务重新开放！');
+      alert(t('taskDetail.rejectSuccess'));
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
@@ -385,20 +387,20 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       return;
     }
     if (reviewRating < 1 || reviewRating > 5) {
-      alert('请选择有效的评分');
+      alert(t('taskDetail.selectValidRating'));
       return;
     }
     setActionLoading(true);
     try {
       await createReview(taskId!, reviewRating, reviewComment, isAnonymous);
-      alert('评价提交成功！');
+      alert(t('taskDetail.reviewSubmitted'));
       setShowReviewModal(false);
       setReviewRating(5);
       setReviewComment('');
       setIsAnonymous(false);
       await loadTaskReviews();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '评价提交失败');
+      alert(error.response?.data?.detail || t('taskDetail.reviewSubmitFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -441,7 +443,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           width: '100%'
         }}>
           <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
-          <div style={{ fontSize: 18, color: '#333' }}>加载中...</div>
+          <div style={{ fontSize: 18, color: '#333' }}>{t('taskDetail.loading')}</div>
         </div>
       </div>
     );
@@ -471,7 +473,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           width: '100%'
         }}>
           <div style={{ fontSize: 48, marginBottom: 20, color: 'red' }}>❌</div>
-          <div style={{ fontSize: 18, color: 'red', marginBottom: 20 }}>{error || '任务不存在'}</div>
+          <div style={{ fontSize: 18, color: 'red', marginBottom: 20 }}>{error || t('taskDetail.taskNotFound')}</div>
           <button
             onClick={onClose}
             style={{
@@ -484,7 +486,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               cursor: 'pointer'
             }}
           >
-            关闭
+            {t('taskDetail.close')}
           </button>
         </div>
       </div>
@@ -502,12 +504,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'open': return '开放中';
-      case 'taken': return '开放中';
-      case 'in_progress': return '进行中';
-      case 'pending_confirmation': return '待确认';
-      case 'completed': return '已完成';
-      case 'cancelled': return '已取消';
+      case 'open': return t('myTasks.status.open');
+      case 'taken': return t('myTasks.status.open');
+      case 'in_progress': return t('myTasks.status.inProgress');
+      case 'pending_confirmation': return t('myTasks.status.pendingConfirmation');
+      case 'completed': return t('myTasks.status.completed');
+      case 'cancelled': return t('myTasks.status.cancelled');
       default: return status;
     }
   };
@@ -515,11 +517,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const getTaskLevelText = (level: string) => {
     switch (level) {
       case 'vip':
-        return '⭐ VIP任务';
+        return t('myTasks.level.vip');
       case 'super':
-        return '🔥 超级任务';
+        return t('myTasks.level.super');
       default:
-        return '普通任务';
+        return t('myTasks.level.normal');
     }
   };
 
@@ -574,14 +576,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         }}>
           <div style={{ fontSize: 48, marginBottom: 20 }}>🔒</div>
           <h2 style={{ fontSize: 24, fontWeight: 800, color: '#A67C52', marginBottom: 16 }}>
-            {!user ? '需要登录' : '权限不足'}
+            {!user ? t('taskDetail.loginRequired') : t('taskDetail.insufficientPermissions')}
           </h2>
           <p style={{ fontSize: 16, color: '#666', marginBottom: 20 }}>
-            {!user ? '此任务需要登录后才能查看' : `此任务需要${task.task_level === 'vip' ? 'VIP' : '超级VIP'}用户才能查看`}
+            {!user ? t('taskDetail.loginToView') : t('taskDetail.upgradeRequired').replace('{level}', task.task_level === 'vip' ? 'VIP' : '超级VIP')}
           </p>
           {user && (
             <p style={{ fontSize: 14, color: '#999', marginBottom: 30 }}>
-              您的当前等级：{user.user_level === 'normal' ? '普通用户' : user.user_level === 'vip' ? 'VIP用户' : '超级VIP用户'}
+              {t('taskDetail.currentLevel').replace('{level}', user.user_level === 'normal' ? '普通用户' : user.user_level === 'vip' ? 'VIP用户' : '超级VIP用户')}
             </p>
           )}
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -598,7 +600,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 cursor: 'pointer'
               }}
             >
-              关闭
+              {t('taskDetail.close')}
             </button>
             {!user && (
               <button
@@ -614,7 +616,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   cursor: 'pointer'
                 }}
               >
-                立即登录
+                {t('taskDetail.loginNow')}
               </button>
             )}
           </div>
@@ -764,7 +766,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>📋</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务类型</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.taskTypeLabel')}</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{task.task_type}</div>
           </div>
           
@@ -779,7 +781,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               {task.location === 'Online' ? '🌐' : '📍'}
             </div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-              {task.location === 'Online' ? '任务类型' : '所在城市'}
+              {task.location === 'Online' ? t('taskDetail.onlineTaskType') : t('taskDetail.offlineLocation')}
             </div>
             <div style={{ 
               fontSize: '16px', 
@@ -798,7 +800,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务赏金</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.rewardLabel')}</div>
             <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{task.reward.toFixed(2)}</div>
           </div>
           
@@ -810,9 +812,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.deadlineLabel')}</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (英国时间)
+              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} {t('taskDetail.ukTime')}
             </div>
           </div>
         </div>
@@ -839,7 +841,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               fontWeight: '600',
               color: '#1e293b',
               margin: 0
-            }}>任务描述</h3>
+            }}>{t('taskDetail.descriptionLabel')}</h3>
           </div>
           <div style={{
             fontSize: '16px',
@@ -872,7 +874,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 fontWeight: '600',
                 color: '#92400e',
                 margin: 0
-              }}>修改赏金</h3>
+              }}>{t('taskDetail.modifyReward')}</h3>
             </div>
             <div style={{
               display: 'flex',
@@ -893,7 +895,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   background: '#fff',
                   minWidth: '120px'
                 }}
-                placeholder="新价格"
+                placeholder={t('taskDetail.newPrice')}
               />
               <button
                 onClick={handleUpdatePrice}
@@ -910,7 +912,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   transition: 'all 0.3s ease'
                 }}
               >
-                {actionLoading ? '更新中...' : '确认修改'}
+                {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmModify')}
               </button>
               <button
                 onClick={() => {
@@ -929,7 +931,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   transition: 'all 0.3s ease'
                 }}
               >
-                取消
+                {t('taskDetail.cancel')}
               </button>
             </div>
           </div>
@@ -950,7 +952,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               fontSize: '18px',
               fontWeight: '600',
               color: '#1e293b'
-            }}>赏金：</span>
+            }}>{t('taskDetail.rewardDisplay')}</span>
             <span style={{
               fontSize: '24px',
               fontWeight: '700',
@@ -972,7 +974,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   transition: 'all 0.3s ease'
                 }}
               >
-                修改
+                {t('taskDetail.modify')}
               </button>
             )}
           </div>
@@ -1000,7 +1002,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               fontWeight: '600',
               color: '#1e293b',
               margin: 0
-            }}>任务详情</h3>
+            }}>{t('taskDetail.taskDetailsLabel')}</h3>
           </div>
           
           <div style={{
@@ -1013,9 +1015,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               gap: '8px',
               fontSize: '14px'
             }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>截止时间：</span>
+              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.deadlineTime')}：</span>
               <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} (英国时间)
+                {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} {t('taskDetail.ukTime')}
               </span>
             </div>
             
@@ -1025,7 +1027,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               gap: '8px',
               fontSize: '14px'
             }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>任务等级：</span>
+              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.taskLevel')}：</span>
               <span style={{ color: '#1e293b', fontWeight: '500' }}>
                 {getTaskLevelText(task.task_level || 'normal')}
               </span>
@@ -1037,7 +1039,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               gap: '8px',
               fontSize: '14px'
             }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>可见性：</span>
+              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.visibilityLabel')}：</span>
               <span style={{
                 color: task.is_public === 1 ? '#059669' : '#dc2626',
                 fontWeight: '600',
@@ -1046,7 +1048,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 background: task.is_public === 1 ? '#d1fae5' : '#fee2e2',
                 border: `1px solid ${task.is_public === 1 ? '#a7f3d0' : '#fecaca'}`
               }}>
-                {task.is_public === 1 ? '🌍 公开显示' : '🔒 仅自己可见'}
+                {task.is_public === 1 ? t('taskDetail.publicVisible') : t('taskDetail.privateVisible')}
               </span>
             </div>
             
@@ -1056,12 +1058,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               gap: '8px',
               fontSize: '14px'
             }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>发布者：</span>
+              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.posterLabel')}：</span>
               <span style={{ color: '#1e293b', fontWeight: '500' }}>
                 {task.poster_id}
                 {task.poster_id && (
                   <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>
-                    (点击下方按钮进行沟通)
+                    {t('taskDetail.contactHint')}
                   </span>
                 )}
               </span>
@@ -1117,12 +1119,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               {actionLoading ? (
                 <>
                   <span>⏳</span>
-                  处理中...
+                  {t('taskDetail.processing')}
                 </>
               ) : (
                 <>
                   <span>✅</span>
-                  申请任务
+                  {t('taskDetail.applyTaskButton')}
                 </>
               )}
             </button>
@@ -1176,22 +1178,22 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               </div>
               <div>
                 <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '18px'}}>
-                  {userApplication.status === 'pending' ? '等待发布者审核' :
+                  {userApplication.status === 'pending' ? t('taskDetail.waitingApproval') :
                    userApplication.status === 'approved' ? 
-                     (task.status === 'pending_confirmation' ? '任务已完成' : '申请已通过') : 
-                   '申请被拒绝'}
+                     (task.status === 'pending_confirmation' ? t('taskDetail.taskCompleted') : t('taskDetail.applicationPassed')) : 
+                   t('taskDetail.applicationRejected')}
                 </div>
                 <div style={{fontSize: '14px', fontWeight: 'normal', lineHeight: 1.5}}>
-                  {userApplication.status === 'pending' ? '您已成功申请此任务，请等待任务发布者审核您的申请。' :
+                  {userApplication.status === 'pending' ? t('taskDetail.waitingApprovalDesc') :
                    userApplication.status === 'approved' ? 
                      (task.status === 'pending_confirmation' ? 
-                       '恭喜！您已完成任务，请等待发布者确认任务完成。' : 
-                       '恭喜！您的申请已通过，现在可以开始执行任务了。') :
-                   '很抱歉，您的申请被拒绝了。'}
+                       t('taskDetail.taskCompletedDesc') : 
+                       t('taskDetail.applicationPassedDesc')) :
+                   t('taskDetail.applicationRejectedDesc')}
                 </div>
                 {userApplication.message && (
                   <div style={{fontSize: '12px', marginTop: '8px', fontStyle: 'italic'}}>
-                    申请留言：{userApplication.message}
+                    {t('taskDetail.applicationMessage')}{userApplication.message}
                   </div>
                 )}
               </div>
@@ -1218,10 +1220,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               <div style={{fontSize: '32px'}}>⏳</div>
               <div>
                 <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '18px'}}>
-                  等待发布者同意
+                  {t('taskDetail.waitingPublisherApproval')}
                 </div>
                 <div style={{fontSize: '14px', fontWeight: 'normal', lineHeight: 1.5}}>
-                  您已成功接受此任务，请等待任务发布者同意后即可开始执行。
+                  {t('taskDetail.waitingApprovalDescOld')}
                 </div>
               </div>
             </div>
@@ -1237,12 +1239,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               border: '1px solid #e9ecef'
             }}>
               <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
-                申请者列表 ({applications.length})
+                {t('taskDetail.applicantList').replace('{count}', applications.length.toString())}
               </h3>
               
               {loadingApplications ? (
                 <div style={{ textAlign: 'center', padding: '20px' }}>
-                  加载中...
+                  {t('taskDetail.loadingApplicants')}
                 </div>
               ) : applications.length === 0 ? (
                 <div style={{ 
@@ -1253,7 +1255,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   borderRadius: '8px',
                   border: '1px solid #e9ecef'
                 }}>
-                  暂无申请者
+                  {t('taskDetail.noApplicants')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1277,7 +1279,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                           </div>
                         )}
                         <div style={{ color: '#999', fontSize: '12px' }}>
-                          申请时间: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
+                          {t('taskDetail.applicationTime')}: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -1294,7 +1296,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                             fontSize: '14px'
                           }}
                         >
-                          联系
+                          {t('taskDetail.contact')}
                         </button>
                         <button
                           onClick={() => handleApproveApplication(app.applicant_id)}
@@ -1311,7 +1313,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                             fontSize: '14px'
                           }}
                         >
-                          {actionLoading ? '处理中...' : '批准'}
+                          {actionLoading ? t('taskDetail.processing') : t('taskDetail.approve')}
                         </button>
                       </div>
                     </div>
@@ -1338,7 +1340,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 opacity: actionLoading ? 0.6 : 1
               }}
             >
-              {actionLoading ? '处理中...' : '标记完成'}
+              {actionLoading ? t('taskDetail.processing') : t('taskDetail.markCompleteButton')}
             </button>
           )}
 
@@ -1358,7 +1360,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 marginRight: '16px'
               }}
             >
-              💬 联系接收者
+              💬 {t('taskDetail.contactTaker')}
             </button>
           )}
 
@@ -1378,7 +1380,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 opacity: actionLoading ? 0.6 : 1
               }}
             >
-              {actionLoading ? '处理中...' : '确认完成'}
+              {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmCompleteButton')}
             </button>
           )}
           
@@ -1397,7 +1399,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               }}
               title="点击联系任务发布者进行沟通"
             >
-              联系发布者
+              {t('taskDetail.contactPosterButton')}
             </button>
           )}
 
@@ -1416,7 +1418,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 cursor: 'pointer'
               }}
             >
-              ⭐ 评价任务
+              ⭐ {t('taskDetail.reviewTaskButton')}
             </button>
           )}
         </div>
@@ -1444,11 +1446,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               maxHeight: '80vh',
               overflow: 'auto'
             }}>
-              <h2 style={{marginBottom: 24, color: '#A67C52', textAlign: 'center'}}>评价任务</h2>
+              <h2 style={{marginBottom: 24, color: '#A67C52', textAlign: 'center'}}>{t('taskDetail.reviewModal.title')}</h2>
               
               <div style={{marginBottom: 20}}>
                 <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                  评分 (0.5-5星)
+                  {t('taskDetail.reviewModal.ratingLabel')}
                 </label>
                 <div style={{display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center'}}>
                   {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(star => (
@@ -1483,18 +1485,18 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   transform: reviewRating > 0 ? 'scale(1.05)' : 'scale(1)',
                   transition: 'all 0.3s ease'
                 }}>
-                  当前评分: {reviewRating} 星
+                  {t('taskDetail.reviewModal.currentRating').replace('{rating}', reviewRating.toString())}
                 </div>
               </div>
 
               <div style={{marginBottom: 24}}>
                 <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                  评价内容 (可选)
+                  {t('taskDetail.reviewModal.commentLabel')}
                 </label>
                 <textarea
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="请分享您对这次任务的体验..."
+                  placeholder={t('taskDetail.reviewModal.commentPlaceholder')}
                   style={{
                     width: '100%',
                     minHeight: 100,
@@ -1516,10 +1518,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     style={{transform: 'scale(1.2)'}}
                   />
                   <span style={{fontWeight: 600, color: '#333'}}>
-                    匿名评价
+                    {t('taskDetail.reviewModal.anonymousLabel')}
                   </span>
                   <span style={{fontSize: 12, color: '#666'}}>
-                    (选择匿名后，您的评价将不会显示您的身份信息)
+                    {t('taskDetail.reviewModal.anonymousNote')}
                   </span>
                 </label>
               </div>
@@ -1540,7 +1542,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     opacity: actionLoading ? 0.6 : 1
                   }}
                 >
-                  {actionLoading ? '提交中...' : '提交评价'}
+                  {actionLoading ? t('taskDetail.reviewModal.submitting') : t('taskDetail.reviewModal.submit')}
                 </button>
                 <button
                   onClick={() => {
@@ -1560,7 +1562,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     cursor: 'pointer'
                   }}
                 >
-                  取消
+                  {t('taskDetail.reviewModal.cancel')}
                 </button>
               </div>
             </div>

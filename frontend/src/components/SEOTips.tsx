@@ -36,14 +36,14 @@ const SEOTips: React.FC<SEOTipsProps> = ({
     if (!taskTitle.includes(location) && location !== 'Online') {
       tips.push({
         type: 'info',
-        message: t('seo.tips.includeLocation', { location })
+        message: t('seo.tips.includeLocation').replace('{location}', location)
       });
     }
     
     if (!taskTitle.includes(taskType)) {
       tips.push({
         type: 'info',
-        message: t('seo.tips.includeTaskType', { taskType })
+        message: t('seo.tips.includeTaskType').replace('{taskType}', taskType)
       });
     }
     
@@ -58,14 +58,14 @@ const SEOTips: React.FC<SEOTipsProps> = ({
     if (!taskDescription.includes(taskType)) {
       tips.push({
         type: 'info',
-        message: t('seo.tips.mentionTaskType', { taskType })
+        message: t('seo.tips.mentionTaskType').replace('{taskType}', taskType)
       });
     }
     
     if (!taskDescription.includes(location) && location !== 'Online') {
       tips.push({
         type: 'info',
-        message: t('seo.tips.mentionLocation', { location })
+        message: t('seo.tips.mentionLocation').replace('{location}', location)
       });
     }
     

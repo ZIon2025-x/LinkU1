@@ -1358,7 +1358,7 @@ const MessagePage: React.FC = () => {
       
       // 更新页面标题
       if (newCount > 0) {
-        document.title = t('notifications.pageTitleWithCount', { count: newCount });
+        document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
       } else {
         document.title = t('notifications.pageTitle');
       }
@@ -1512,7 +1512,7 @@ const MessagePage: React.FC = () => {
                     const newCount = prev + 1;
                     // 更新页面标题
                     if (newCount > 0) {
-                      document.title = t('notifications.pageTitleWithCount', { count: newCount });
+                      document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
                     } else {
                       document.title = t('notifications.pageTitle');
                     }
@@ -1827,7 +1827,7 @@ const MessagePage: React.FC = () => {
               const newCount = Math.max(0, prev - result.marked_count);
               // 更新页面标题
               if (newCount > 0) {
-                document.title = t('notifications.pageTitleWithCount', { count: newCount });
+                document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
               } else {
                 document.title = t('notifications.pageTitle');
               }
