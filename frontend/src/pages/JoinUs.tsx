@@ -374,32 +374,6 @@ const JoinUs: React.FC = () => {
         </Row>
       </div>
 
-      {/* 招聘流程 */}
-      <div className="process-section">
-        <div className="section-header">
-          <Title level={2}>{t('joinUs.recruitmentProcess')}</Title>
-          <Paragraph className="section-subtitle">
-            {t('joinUs.recruitmentProcessSubtitle')}
-          </Paragraph>
-        </div>
-        <div className="process-timeline">
-          <Timeline>
-            {processSteps.map((step, index) => (
-              <Timeline.Item
-                key={index}
-                dot={step.icon}
-                color="#667eea"
-              >
-                <div className="process-step">
-                  <Title level={4} className="step-title">{step.title}</Title>
-                  <Paragraph className="step-description">{step.description}</Paragraph>
-                </div>
-              </Timeline.Item>
-            ))}
-          </Timeline>
-        </div>
-      </div>
-
       {/* 职位列表 */}
       <div className="positions-section">
         <div className="section-header">
@@ -493,6 +467,32 @@ const JoinUs: React.FC = () => {
             })}
           </Row>
         )}
+      </div>
+
+      {/* 招聘流程 */}
+      <div className="process-section">
+        <div className="section-header">
+          <Title level={2}>{t('joinUs.recruitmentProcess')}</Title>
+          <Paragraph className="section-subtitle">
+            {t('joinUs.recruitmentProcessSubtitle')}
+          </Paragraph>
+        </div>
+        <div className="process-timeline">
+          <Timeline>
+            {processSteps.map((step, index) => (
+              <Timeline.Item
+                key={index}
+                dot={step.icon}
+                color="#667eea"
+              >
+                <div className="process-step">
+                  <Title level={4} className="step-title">{step.title}</Title>
+                  <Paragraph className="step-description">{step.description}</Paragraph>
+                </div>
+              </Timeline.Item>
+            ))}
+          </Timeline>
+        </div>
       </div>
 
       {/* 简历投递弹窗 */}
