@@ -86,7 +86,7 @@
   },
   "home": {
     "welcome": "欢迎来到 Link²Ur Platform",
-    "subtitle": "连接、协作、创造",
+    "subtitle": "连接、能力、创造",
     "getStarted": "开始使用",
     "learnMore": "了解更多",
     "featuredTasks": "精选任务",
@@ -144,6 +144,9 @@
   },
   "tasks": {
     "title": "所有任务",
+    "pageTitle": "任务大厅 - 寻找技能服务与兼职机会 | Link²Ur",
+    "seoDescription": "在Link²Ur任务大厅发现各种技能服务、兼职机会和任务。从家政服务到技能服务，找到适合您的任务或发布您的需求。",
+    "seoKeywords": "任务大厅,技能服务,兼职机会,任务平台,家政服务,校园生活,二手交易,跑腿服务,社交帮助,交通服务,Link²Ur",
     "publishTask": "发布任务",
     "myTasks": "任务大厅",
     "taskDetail": "任务详情",
@@ -249,7 +252,7 @@
     "title": "关于 Link²Ur Platform",
     "subtitle": "连接人才，创造机会",
     "mission": "我们的使命",
-    "missionText": "创建一个平台，让有才华的个人能够连接、协作并共同创造令人惊叹的项目。我们相信社区的力量和每个人的潜力。",
+    "missionText": "创建一个平台，让有才华的个人能够连接他们的能力并共同创造令人惊叹的项目。我们相信社区的力量和每个人的潜力。",
     "vision": "我们的愿景",
     "ourStory": "我们的故事",
     "ourStoryText": "Link²Ur Platform 诞生于一个简单的想法：让每个人都能找到属于自己的机会。我们相信，无论背景如何，每个人都有独特的才能和价值。",
@@ -546,6 +549,8 @@
   },
   "notifications": {
     "title": "通知",
+    "pageTitle": "通知 - Link²Ur",
+    "pageTitleWithCount": "通知 ({count}) - Link²Ur",
     "markAllRead": "全部标记为已读",
     "noNotifications": "暂无通知",
     "newNotification": "新通知",
@@ -615,6 +620,7 @@
   },
   "myTasks": {
     "title": "我的任务",
+    "pageTitle": "我的任务 - 管理您的任务 | Link²Ur",
     "subtitle": "管理您发布和申请的任务",
     "publishedTasks": "已发布任务",
     "appliedTasks": "已申请任务",
@@ -1815,5 +1821,17 @@
       "content": "就本隐私通知或个人数据事宜，随时联系：info@link2ur.com"
     },
     "importantNotice": "重要提示：本隐私通知是您与Link²Ur之间关于个人信息处理的协议。我们承诺按照本通知保护您的隐私权益。"
+  },
+  "seo": {
+    "tips": {
+      "title": "SEO优化建议",
+      "viewTips": "查看SEO优化建议",
+      "titleTooShort": "标题太短，建议包含更多关键词，如地点和任务类型",
+      "includeLocation": "建议在标题中包含地点\"{location}\"，提高本地搜索可见性",
+      "includeTaskType": "建议在标题中包含任务类型\"{taskType}\"，提高搜索匹配度",
+      "descriptionTooShort": "描述太短，建议详细描述任务内容和要求，提高搜索引擎理解",
+      "mentionTaskType": "建议在描述中多次提及\"{taskType}\"相关词汇",
+      "mentionLocation": "建议在描述中提及地点\"{location}\"相关信息"
+    }
   }
 }

@@ -86,7 +86,7 @@
   },
   "home": {
     "welcome": "Welcome to Link²Ur",
-    "subtitle": "Connect, Collaborate, Create",
+    "subtitle": "connect, capability, create",
     "getStarted": "Get Started",
     "learnMore": "Learn More",
     "featuredTasks": "Featured Tasks",
@@ -144,6 +144,9 @@
   },
   "tasks": {
     "title": "All Tasks",
+    "pageTitle": "Task Hall - Find Skill Services & Part-time Opportunities | Link²Ur",
+    "seoDescription": "Discover various skill services, part-time opportunities and tasks at Link²Ur Task Hall. From home services to skill services, find tasks that suit you or publish your needs.",
+    "seoKeywords": "task hall,skill services,part-time opportunities,task platform,home services,campus life,second-hand trading,errand services,social help,transportation services,Link²Ur",
     "publishTask": "Publish Task",
     "myTasks": "Task Hall",
     "taskDetail": "Task Detail",
@@ -249,7 +252,7 @@
     "title": "About Link²Ur Platform",
     "subtitle": "Connecting Talents, Creating Opportunities",
     "mission": "Our Mission",
-    "missionText": "To create a platform where talented individuals can connect, collaborate, and create amazing projects together. We believe in the power of community and the potential of every individual.",
+    "missionText": "To create a platform where talented individuals can connect their capabilities and create amazing projects together. We believe in the power of community and the potential of every individual.",
     "vision": "Our Vision",
     "ourStory": "Our Story",
     "ourStoryText": "Link²Ur Platform was born from a simple idea: to help everyone find their own opportunities. We believe that regardless of background, everyone has unique talents and value.",
@@ -546,6 +549,8 @@
   },
   "notifications": {
     "title": "Notifications",
+    "pageTitle": "Notifications - Link²Ur",
+    "pageTitleWithCount": "Notifications ({count}) - Link²Ur",
     "markAllRead": "Mark All as Read",
     "noNotifications": "No notifications",
     "newNotification": "New notification",
@@ -621,6 +626,7 @@
   },
   "myTasks": {
     "title": "My Tasks",
+    "pageTitle": "My Tasks - Manage Your Tasks | Link²Ur",
     "subtitle": "Manage your published and applied tasks",
     "publishedTasks": "Published Tasks",
     "appliedTasks": "Applied Tasks",
@@ -1860,5 +1866,17 @@
       "content": "For this privacy notice or personal data matters, contact us anytime: info@link2ur.com"
     },
     "importantNotice": "Important Notice: This privacy notice is an agreement between you and Link²Ur regarding personal information processing. We are committed to protecting your privacy rights in accordance with this notice."
+  },
+  "seo": {
+    "tips": {
+      "title": "SEO Optimization Tips",
+      "viewTips": "View SEO Tips",
+      "titleTooShort": "Title too short, suggest including more keywords like location and task type",
+      "includeLocation": "Suggest including location \"{location}\" in title to improve local search visibility",
+      "includeTaskType": "Suggest including task type \"{taskType}\" in title to improve search matching",
+      "descriptionTooShort": "Description too short, suggest detailed description of task content and requirements to improve search engine understanding",
+      "mentionTaskType": "Suggest mentioning \"{taskType}\" related terms multiple times in description",
+      "mentionLocation": "Suggest mentioning location \"{location}\" related information in description"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SEOTipsProps {
   taskTitle: string;
@@ -17,6 +18,7 @@ const SEOTips: React.FC<SEOTipsProps> = ({
   onTitleChange,
   onDescriptionChange
 }) => {
+  const { t } = useLanguage();
   const [showTips, setShowTips] = useState(false);
 
   // 生成SEO优化建议
@@ -27,21 +29,21 @@ const SEOTips: React.FC<SEOTipsProps> = ({
     if (taskTitle.length < 20) {
       tips.push({
         type: 'warning',
-        message: '标题太短，建议包含更多关键词，如地点和任务类型'
+        message: t('seo.tips.titleTooShort')
       });
     }
     
     if (!taskTitle.includes(location) && location !== 'Online') {
       tips.push({
         type: 'info',
-        message: `建议在标题中包含地点"${location}"，提高本地搜索可见性`
+        message: t('seo.tips.includeLocation', { location })
       });
     }
     
     if (!taskTitle.includes(taskType)) {
       tips.push({
         type: 'info',
-        message: `建议在标题中包含任务类型"${taskType}"，提高搜索匹配度`
+        message: t('seo.tips.includeTaskType', { taskType })
       });
     }
     
@@ -49,21 +51,21 @@ const SEOTips: React.FC<SEOTipsProps> = ({
     if (taskDescription.length < 100) {
       tips.push({
         type: 'warning',
-        message: '描述太短，建议详细描述任务内容和要求，提高搜索引擎理解'
+        message: t('seo.tips.descriptionTooShort')
       });
     }
     
     if (!taskDescription.includes(taskType)) {
       tips.push({
         type: 'info',
-        message: `建议在描述中多次提及"${taskType}"相关词汇`
+        message: t('seo.tips.mentionTaskType', { taskType })
       });
     }
     
     if (!taskDescription.includes(location) && location !== 'Online') {
       tips.push({
         type: 'info',
-        message: `建议在描述中提及地点"${location}"相关信息`
+        message: t('seo.tips.mentionLocation', { location })
       });
     }
     
@@ -128,7 +130,7 @@ const SEOTips: React.FC<SEOTipsProps> = ({
       >
         <span>{hasWarnings ? '⚠️' : '💡'}</span>
         <span>
-          {hasWarnings ? 'SEO优化建议' : '查看SEO优化建议'}
+          {hasWarnings ? t('seo.tips.title') : t('seo.tips.viewTips')}
         </span>
         <span style={{ marginLeft: 'auto' }}>
           {showTips ? '▲' : '▼'}

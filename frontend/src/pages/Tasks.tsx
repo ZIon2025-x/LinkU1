@@ -319,20 +319,20 @@ const Tasks: React.FC = () => {
 
   // SEO优化：设置页面标题和Meta标签
   useEffect(() => {
-    document.title = '任务大厅 - 寻找技能服务与兼职机会 | Link²Ur';
+    document.title = t('tasks.pageTitle');
     
     // 更新meta描述
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute('content', '在Link²Ur任务大厅发现各种技能服务、兼职机会和任务。从家政服务到技能服务，找到适合您的任务或发布您的需求。');
+      metaDescription.setAttribute('content', t('tasks.seoDescription'));
     }
     
     // 更新meta关键词
     const metaKeywords = document.querySelector('meta[name="keywords"]');
     if (metaKeywords) {
-      metaKeywords.setAttribute('content', '任务大厅,技能服务,兼职机会,任务平台,家政服务,校园生活,二手交易,跑腿服务,社交帮助,交通服务,Link²Ur');
+      metaKeywords.setAttribute('content', t('tasks.seoKeywords'));
     }
-  }, []);
+  }, [t]);
 
   // 检测屏幕尺寸
   useEffect(() => {

@@ -7,6 +7,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 私密图片显示组件
 const PrivateImageDisplay: React.FC<{
@@ -14,7 +15,7 @@ const PrivateImageDisplay: React.FC<{
   currentUserId: string;
   style: React.CSSProperties;
   alt?: string;
-}> = ({ imageId, currentUserId, style, alt = "私密图片" }) => {
+}> = ({ imageId, currentUserId, style, alt = "Private Image" }) => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -87,7 +88,7 @@ const PrivateImageDisplay: React.FC<{
         color: '#6b7280',
         minHeight: '100px'
       }}>
-        <div style={{ fontSize: '14px' }}>加载中...</div>
+        <div style={{ fontSize: '14px' }}>Loading...</div>
       </div>
     );
   }
@@ -109,10 +110,10 @@ const PrivateImageDisplay: React.FC<{
       }}>
         <div style={{ fontSize: '20px', marginBottom: '6px' }}>🔒</div>
         <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '12px' }}>
-          私密图片加载失败
+          Private image loading failed
         </div>
         <div style={{ fontSize: '10px', opacity: 0.7 }}>
-          权限不足或网络错误
+          Insufficient permissions or network error
         </div>
       </div>
     );
@@ -192,6 +193,8 @@ interface CustomerServiceChat {
 }
 
 const MessagePage: React.FC = () => {
+  const { t } = useLanguage();
+  
   // 添加CSS动画样式
   React.useEffect(() => {
     const style = document.createElement('style');
@@ -1355,14 +1358,14 @@ const MessagePage: React.FC = () => {
       
       // 更新页面标题
       if (newCount > 0) {
-        document.title = `(${newCount}) 消息中心 - Link²Ur`;
+        document.title = t('notifications.pageTitleWithCount', { count: newCount });
       } else {
-        document.title = '消息中心 - Link²Ur';
+        document.title = t('notifications.pageTitle');
       }
     } catch (error) {
       console.error('加载未读消息数量失败:', error);
     }
-  }, [user]);
+  }, [user, t]);
 
   // 加载每个联系人的未读消息数量
   const loadContactUnreadCounts = useCallback(async () => {
@@ -1509,9 +1512,9 @@ const MessagePage: React.FC = () => {
                     const newCount = prev + 1;
                     // 更新页面标题
                     if (newCount > 0) {
-                      document.title = `(${newCount}) 消息中心 - Link²Ur`;
+                      document.title = t('notifications.pageTitleWithCount', { count: newCount });
                     } else {
-                      document.title = '消息中心 - Link²Ur';
+                      document.title = t('notifications.pageTitle');
                     }
                     return newCount;
                   });
@@ -1824,9 +1827,9 @@ const MessagePage: React.FC = () => {
               const newCount = Math.max(0, prev - result.marked_count);
               // 更新页面标题
               if (newCount > 0) {
-                document.title = `(${newCount}) 消息中心 - Link²Ur`;
+                document.title = t('notifications.pageTitleWithCount', { count: newCount });
               } else {
-                document.title = '消息中心 - Link²Ur';
+                document.title = t('notifications.pageTitle');
               }
               return newCount;
             });
