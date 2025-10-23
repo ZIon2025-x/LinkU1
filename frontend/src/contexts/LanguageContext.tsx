@@ -23,20 +23,20 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  // 从localStorage或浏览器语言检测语言，如果没有则使用默认语言
+  // 从URL路径或localStorage检测语言
   const [language, setLanguage] = useState<Language>(() => {
-    // 首先尝试从localStorage获取
+    // 首先尝试从URL检测（如果可用）
+    if (typeof window !== 'undefined') {
+      const urlLanguage = getLanguageFromPath(window.location.pathname);
+      if (urlLanguage && ['en', 'zh'].includes(urlLanguage)) {
+        return urlLanguage;
+      }
+    }
+    
+    // 然后尝试从localStorage获取
     const savedLanguage = localStorage.getItem('language') as Language;
     if (savedLanguage && ['en', 'zh'].includes(savedLanguage)) {
       return savedLanguage;
-    }
-    
-    // 然后尝试从URL检测（如果可用）
-    if (typeof window !== 'undefined') {
-      const urlLanguage = getLanguageFromPath(window.location.pathname);
-      if (urlLanguage !== DEFAULT_LANGUAGE) {
-        return urlLanguage;
-      }
     }
     
     // 最后使用浏览器语言检测

@@ -11,6 +11,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // 配置dayjs插件
@@ -888,8 +889,9 @@ const Tasks: React.FC = () => {
             </div>
           </div>
 
-          {/* 通知按钮和汉堡菜单 */}
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
             <NotificationButton
               user={user}
               unreadCount={unreadCount}

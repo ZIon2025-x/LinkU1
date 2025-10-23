@@ -52,8 +52,15 @@ export function detectBrowserLanguage(): Language {
     return DEFAULT_LANGUAGE;
   }
   
-  // 优先返回英文，确保搜索引擎结果点击进入时显示英文页面
-  // 用户可以通过语言切换器手动切换到中文
+  // 检测浏览器语言设置
+  const browserLang = navigator.language || (navigator as any).userLanguage;
+  
+  // 如果浏览器语言是中文，返回中文
+  if (browserLang.startsWith('zh')) {
+    return 'zh';
+  }
+  
+  // 否则返回英文
   return DEFAULT_LANGUAGE;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
@@ -16,6 +16,23 @@ const Partners: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [systemSettings, setSystemSettings] = useState({});
+
+  // SEO优化：设置页面标题和Meta标签
+  useEffect(() => {
+    document.title = t('partners.pageTitle');
+    
+    // 更新meta描述
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', t('partners.seoDescription'));
+    }
+    
+    // 更新meta关键词
+    const metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (metaKeywords) {
+      metaKeywords.setAttribute('content', t('partners.seoKeywords'));
+    }
+  }, [t]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

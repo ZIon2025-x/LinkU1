@@ -40,14 +40,43 @@ import AdminAuth from './components/AdminAuth';
 import ServiceAuth from './components/ServiceAuth';
 import AuthTest from './pages/AuthTest';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
-import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from './utils/i18n';
+import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
+
+// 语言重定向组件
+const LanguageRedirect: React.FC = () => {
+  const [language, setLanguage] = React.useState<Language | null>(null);
+
+  React.useEffect(() => {
+    // 检测用户语言偏好
+    const detectedLanguage = detectBrowserLanguage();
+    setLanguage(detectedLanguage);
+  }, []);
+
+  if (language === null) {
+    // 在检测语言时显示加载状态
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  return <Navigate to={`/${language}`} replace />;
+};
 
 // 语言路由组件
 const LanguageRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* 根路径重定向到默认语言 */}
-      <Route path="/" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
+      {/* 根路径重定向到用户语言偏好或默认语言 */}
+      <Route path="/" element={<LanguageRedirect />} />
       
       {/* 语言路由 */}
       {SUPPORTED_LANGUAGES.map((lang) => (

@@ -21,7 +21,7 @@ dayjs.extend(timezone);
 // 剩余时间计算函数 - 使用英国时间
 function getRemainTime(deadline: string, t: (key: string) => string) {
   try {
-    // 解析UTC时间并转换为英国时间
+    // Parse UTC time and convert to UK time
     let utcTime;
     if (deadline.endsWith('Z')) {
       utcTime = dayjs.utc(deadline);
@@ -45,15 +45,15 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
     }
     return `${minutes}${t('home.minutes')}`;
   } catch (error) {
-    console.error('剩余时间计算错误:', error);
+    console.error('Remaining time calculation error:', error);
     return t('home.taskExpired');
   }
 }
 
-// 检查是否即将过期 - 使用英国时间
+// Check if task is expiring soon - using UK time
 function isExpiringSoon(deadline: string) {
   try {
-    // 解析UTC时间并转换为英国时间
+    // Parse UTC time and convert to UK time
     let utcTime;
     if (deadline.endsWith('Z')) {
       utcTime = dayjs.utc(deadline);
@@ -69,15 +69,15 @@ function isExpiringSoon(deadline: string) {
     
     return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
   } catch (error) {
-    console.error('过期检查错误:', error);
+    console.error('Expiration check error:', error);
     return false;
   }
 }
 
-// 检查是否已过期 - 使用英国时间
+// Check if task has expired - using UK time
 function isExpired(deadline: string) {
   try {
-    // 解析UTC时间并转换为英国时间
+    // Parse UTC time and convert to UK time
     let utcTime;
     if (deadline.endsWith('Z')) {
       utcTime = dayjs.utc(deadline);
@@ -91,12 +91,12 @@ function isExpired(deadline: string) {
     const endUK = utcTime.tz('Europe/London');
     return nowUK.isAfter(endUK);
   } catch (error) {
-    console.error('过期检查错误:', error);
-    return true; // 如果解析失败，假设已过期
+    console.error('Expiration check error:', error);
+    return true; // If parsing fails, assume expired
   }
 }
 
-// 添加可爱的动画样式
+// Add cute animation styles
 const bellStyles = `
   @keyframes bellShake {
     0%, 100% { transform: rotate(0deg); }
@@ -133,11 +133,11 @@ const bellStyles = `
   }
 `;
 
-// 注入样式到页面
+// Inject styles into page
 if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
   styleElement.textContent = bellStyles + `
-    /* 响应式背景样式 */
+    /* Responsive background styles */
     @media (max-width: 768px) {
       .hero-section {
         min-height: 100vh !important;
@@ -161,7 +161,7 @@ if (typeof document !== 'undefined') {
       }
     }
     
-    /* 确保背景图片完美适配 */
+    /* Ensure background image perfect fit */
     .hero-section {
       background-attachment: fixed;
     }
@@ -194,7 +194,7 @@ const Home: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   
-  // 任务类型数组 - 使用翻译
+  // Task types array - using translations
   const TASK_TYPES = [
     t('taskCategories.housekeeping'),
     t('taskCategories.campusLife'),
@@ -208,50 +208,50 @@ const Home: React.FC = () => {
     t('taskCategories.other')
   ];
   
-  // 联调相关状态
+  // Debug related states
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 用户登录与头像逻辑
+  // User login and avatar logic
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
   
-  // 通知相关状态
+  // Notification related states
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   
-  // 系统设置状态
+  // System settings state
   const [systemSettings, setSystemSettings] = useState<any>({
     vip_button_visible: false
   });
   
-  // 登录弹窗状态
+  // Login modal states
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   
-  // 任务详情弹窗状态
+  // Task detail modal states
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        // 直接尝试获取用户信息，HttpOnly Cookie会自动发送
+        // Directly try to get user info, HttpOnly Cookie will be sent automatically
         const userData = await fetchCurrentUser();
-        console.log('获取用户资料成功:', userData);
+        console.log('User data loaded successfully:', userData);
         setUser(userData);
       } catch (error: any) {
-        console.log('获取用户资料失败:', error);
-        console.log('错误详情:', error.response?.status, error.response?.data);
+        console.log('Failed to load user data:', error);
+        console.log('Error details:', error.response?.status, error.response?.data);
         setUser(null);
       }
     };
     
-    // 添加短暂延迟，确保页面完全加载后再获取用户资料
+    // Add short delay to ensure page is fully loaded before getting user data
     const timer = setTimeout(loadUserData, 100);
     
-    // 加载系统设置
+    // Load system settings
     getPublicSystemSettings().then(setSystemSettings).catch(() => {
       setSystemSettings({ vip_button_visible: false });
     });
@@ -259,30 +259,30 @@ const Home: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // 获取通知数据
+  // Get notification data
   useEffect(() => {
     if (user) {
-      console.log('获取通知数据，用户ID:', user.id);
-      // 获取通知列表 - 获取所有未读通知和最近10条已读通知
+      console.log('Getting notification data, user ID:', user.id);
+      // Get notification list - get all unread notifications and recent 10 read notifications
       getNotificationsWithRecentRead(10).then(notifications => {
-        console.log('获取到的通知列表（未读+最近已读）:', notifications);
+        console.log('Notification list loaded (unread + recent read):', notifications);
         setNotifications(notifications);
       }).catch(error => {
-        console.error('获取通知失败:', error);
-        // 如果获取失败，则获取最近的通知
+        console.error('Failed to get notifications:', error);
+        // If getting failed, get recent notifications
         getNotifications(20).then(notifications => {
-          console.log('获取到的通知列表:', notifications);
+          console.log('Notification list loaded:', notifications);
           setNotifications(notifications);
         }).catch(error => {
-          console.error('获取通知失败:', error);
+          console.error('Failed to get notifications:', error);
         });
       });
-      // 获取未读数量
+      // Get unread count
       getUnreadNotificationCount().then(count => {
-        console.log('获取到的未读通知数量:', count);
+        console.log('Unread notification count:', count);
         setUnreadCount(count);
       }).catch(error => {
-        console.error('获取未读数量失败:', error);
+        console.error('Failed to get unread count:', error);
       });
     }
   }, [user]);
