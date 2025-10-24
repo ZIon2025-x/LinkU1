@@ -957,7 +957,7 @@ const Tasks: React.FC = () => {
               WebkitTextFillColor: 'transparent',
               letterSpacing: '1px'
             }}>
-              {t('tasks.pageTitle')}
+              {t('tasks.title')}
             </h1>
             <p style={{
               fontSize: '16px',
