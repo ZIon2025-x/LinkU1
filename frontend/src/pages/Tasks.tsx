@@ -941,35 +941,15 @@ const Tasks: React.FC = () => {
           maxWidth: '1200px',
           margin: '0 auto'
         }}>
-          {/* 页面标题 */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: '32px',
-            padding: '20px 0'
+          {/* SEO优化：隐藏的H1标签，仅用于搜索引擎 */}
+          <h1 style={{ 
+            position: 'absolute', 
+            left: '-9999px', 
+            top: '-9999px',
+            visibility: 'hidden'
           }}>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: '700',
-              color: '#1f2937',
-              margin: '0 0 8px 0',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '1px'
-            }}>
-              {t('tasks.title')}
-            </h1>
-            <p style={{
-              fontSize: '16px',
-              color: '#6b7280',
-              margin: '0',
-              maxWidth: '600px',
-              marginLeft: 'auto',
-              marginRight: 'auto'
-            }}>
-              {t('tasks.seoDescription')}
-            </p>
-          </div>
+            {t('tasks.title')}
+          </h1>
           {/* 分类图标行 */}
           <div className="category-section" style={{
             background: '#fff',
