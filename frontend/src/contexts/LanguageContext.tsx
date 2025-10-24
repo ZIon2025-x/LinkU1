@@ -25,7 +25,7 @@ interface LanguageProviderProps {
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   // 从URL路径或localStorage检测语言
   const [language, setLanguage] = useState<Language>(() => {
-    // 首先尝试从URL检测（如果可用）
+    // 首先尝试从URL检测（如果可用）- 优先级最高
     if (typeof window !== 'undefined') {
       const urlLanguage = getLanguageFromPath(window.location.pathname);
       if (urlLanguage && ['en', 'zh'].includes(urlLanguage)) {
@@ -42,6 +42,17 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     // 最后使用浏览器语言检测
     return detectBrowserLanguage();
   });
+
+  // 监听URL变化，同步语言状态
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlLanguage = getLanguageFromPath(window.location.pathname);
+      if (urlLanguage && ['en', 'zh'].includes(urlLanguage) && urlLanguage !== language) {
+        setLanguage(urlLanguage);
+        localStorage.setItem('language', urlLanguage);
+      }
+    }
+  }, [language]);
 
   // 保存语言设置到localStorage并更新URL
   const handleSetLanguage = (lang: Language) => {
