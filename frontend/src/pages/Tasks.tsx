@@ -1341,8 +1341,8 @@ const Tasks: React.FC = () => {
                   🕒
                 </div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600' }}>最新发布</div>
-                  <div style={{ fontSize: '11px', opacity: 0.8 }}>按时间排序</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600' }}>{t('tasks.sorting.latest')}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('tasks.sorting.byTime')}</div>
                 </div>
               </div>
 
@@ -1399,11 +1399,11 @@ const Tasks: React.FC = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                      {rewardSort === 'desc' ? '金额降序' : 
-                       rewardSort === 'asc' ? '金额升序' : '金额排序'}
+                      {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
+                       rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
                     </div>
                     <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                      {rewardSort ? '按金额排序' : '选择排序方式'}
+                      {rewardSort ? t('tasks.sorting.byReward') : t('tasks.sorting.selectSort')}
                     </div>
                   </div>
                   <div style={{
@@ -1462,7 +1462,7 @@ const Tasks: React.FC = () => {
                       }}>
                         💰
                       </div>
-                      <span>金额排序</span>
+                      <span>{t('tasks.sorting.rewardSort')}</span>
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
@@ -1494,7 +1494,7 @@ const Tasks: React.FC = () => {
                       }}>
                         💰
                       </div>
-                      <span>金额降序</span>
+                      <span>{t('tasks.sorting.rewardDesc')}</span>
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
@@ -1525,7 +1525,7 @@ const Tasks: React.FC = () => {
                       }}>
                         💰
                       </div>
-                      <span>金额升序</span>
+                      <span>{t('tasks.sorting.rewardAsc')}</span>
                     </div>
                   </div>
                 )}
@@ -1584,11 +1584,11 @@ const Tasks: React.FC = () => {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                      {deadlineSort === 'asc' ? '截止升序' : 
-                       deadlineSort === 'desc' ? '截止降序' : '截止时间排序'}
+                      {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
+                       deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
                     </div>
                     <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                      {deadlineSort ? '按截止时间排序' : '选择排序方式'}
+                      {deadlineSort ? t('tasks.sorting.byDeadline') : t('tasks.sorting.selectSort')}
                     </div>
                   </div>
                   <div style={{
@@ -1647,7 +1647,7 @@ const Tasks: React.FC = () => {
                       }}>
                         ⏰
                       </div>
-                      <span>截止时间排序</span>
+                      <span>{t('tasks.sorting.deadlineSort')}</span>
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
@@ -1679,7 +1679,7 @@ const Tasks: React.FC = () => {
                       }}>
                         ⏰
                       </div>
-                      <span>截止时间升序</span>
+                      <span>{t('tasks.sorting.deadlineAsc')}</span>
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
@@ -1710,7 +1710,7 @@ const Tasks: React.FC = () => {
                       }}>
                         ⏰
                       </div>
-                      <span>截止时间降序</span>
+                      <span>{t('tasks.sorting.deadlineDesc')}</span>
                     </div>
                   </div>
                 )}
@@ -1732,7 +1732,7 @@ const Tasks: React.FC = () => {
               }}>
                 <input
                   type="text"
-                  placeholder="搜索任务..."
+                  placeholder={t('tasks.search.placeholder')}
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   style={{ 
@@ -1776,7 +1776,7 @@ const Tasks: React.FC = () => {
                 whiteSpace: 'nowrap',
                 minWidth: '80px'
               }}>
-                {keyword ? `${tasks.length}个结果` : `${tasks.length}个任务`}
+                {keyword ? `${tasks.length}${t('tasks.search.results')}` : `${tasks.length}${t('tasks.search.tasks')}`}
               </div>
             </div>
           </div>
@@ -1795,7 +1795,7 @@ const Tasks: React.FC = () => {
           }}>
             <span style={{fontSize: '20px'}}>⏰</span>
             <span style={{color: '#856404', fontSize: '14px', fontWeight: '500'}}>
-              系统会自动取消超过截止日期的任务，确保任务时效性
+              {t('tasks.systemNotice')}
             </span>
           </div>
 
@@ -1813,14 +1813,14 @@ const Tasks: React.FC = () => {
               color: '#6b7280',
               fontWeight: '500'
             }}>
-              找到 <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> 个任务
+              {t('tasks.search.foundTasks', { count: filteredTasks.length })}
               {tasks.length !== filteredTasks.length && (
                 <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
-                  (共 {tasks.length} 个)
+                  ({t('tasks.search.total', { count: tasks.length })})
                 </span>
               )}
             </div>
-            {taskLevel !== '全部等级' && (
+            {taskLevel !== t('tasks.levels.all') && (
               <div style={{
                 fontSize: '12px',
                 color: '#6b7280',
@@ -1831,10 +1831,10 @@ const Tasks: React.FC = () => {
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                <span>筛选:</span>
+                <span>{t('tasks.search.filter')}</span>
                 <span style={{ fontWeight: '500' }}>{taskLevel}</span>
                 <button
-                  onClick={() => setTaskLevel('全部等级')}
+                  onClick={() => setTaskLevel(t('tasks.levels.all'))}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -1880,11 +1880,11 @@ const Tasks: React.FC = () => {
               }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
                 <div>
-                  {tasks.length === 0 ? '暂无任务' : '没有找到符合条件的任务'}
+                  {tasks.length === 0 ? t('tasks.search.noTasks') : t('tasks.search.noMatchingTasks')}
                 </div>
                 {tasks.length > 0 && (
                   <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
-                    尝试调整筛选条件
+                    {t('tasks.search.tryAdjustFilter')}
                   </div>
                 )}
               </div>

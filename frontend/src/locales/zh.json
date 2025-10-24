@@ -186,7 +186,32 @@
       "super": "超级任务",
       "taskLevel": "任务等级",
       "selectLevel": "选择任务等级"
-    }
+    },
+    "sorting": {
+      "latest": "最新发布",
+      "byTime": "按时间排序",
+      "rewardSort": "金额排序",
+      "rewardAsc": "金额升序",
+      "rewardDesc": "金额降序",
+      "byReward": "按金额排序",
+      "deadlineSort": "截止时间排序",
+      "deadlineAsc": "截止升序",
+      "deadlineDesc": "截止降序",
+      "byDeadline": "按截止时间排序",
+      "selectSort": "选择排序方式"
+    },
+    "search": {
+      "placeholder": "搜索任务...",
+      "results": "个结果",
+      "tasks": "个任务",
+      "foundTasks": "找到 {count} 个任务",
+      "total": "共 {count} 个",
+      "filter": "筛选:",
+      "tryAdjustFilter": "尝试调整筛选条件",
+      "noTasks": "暂无任务",
+      "noMatchingTasks": "没有找到符合条件的任务"
+    },
+    "systemNotice": "系统会自动取消超过截止日期的任务，确保任务时效性"
   },
   "profile": {
     "title": "个人资料",

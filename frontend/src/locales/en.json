@@ -186,7 +186,32 @@
       "super": "Super Task",
       "taskLevel": "Task Level",
       "selectLevel": "Select Task Level"
-    }
+    },
+    "sorting": {
+      "latest": "Latest",
+      "byTime": "Sort by Time",
+      "rewardSort": "Reward Sort",
+      "rewardAsc": "Reward Ascending",
+      "rewardDesc": "Reward Descending",
+      "byReward": "Sort by Reward",
+      "deadlineSort": "Deadline Sort",
+      "deadlineAsc": "Deadline Ascending",
+      "deadlineDesc": "Deadline Descending",
+      "byDeadline": "Sort by Deadline",
+      "selectSort": "Select Sort Method"
+    },
+    "search": {
+      "placeholder": "Search tasks...",
+      "results": " results",
+      "tasks": " tasks",
+      "foundTasks": "Found {count} tasks",
+      "total": "Total {count}",
+      "filter": "Filter:",
+      "tryAdjustFilter": "Try adjusting filter conditions",
+      "noTasks": "No tasks available",
+      "noMatchingTasks": "No matching tasks found"
+    },
+    "systemNotice": "The system will automatically cancel tasks that exceed the deadline to ensure timeliness."
   },
   "profile": {
     "title": "Profile",
