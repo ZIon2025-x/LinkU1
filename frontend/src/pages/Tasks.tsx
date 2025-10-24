@@ -238,17 +238,17 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
       const months = Math.floor(days / 30);
       const remainingDays = days % 30;
       if (remainingDays > 0) {
-        return `${months}个月${remainingDays}天`;
+        return `${months}个月 · ${remainingDays}天`;
       }
       return `${months}个月`;
     } else if (days > 0) {
       if (hours > 0) {
-        return `${days}天${hours}小时`;
+        return `${days}天 · ${hours}小时`;
       }
       return `${days}天`;
     } else if (hours > 0) {
       if (minutes > 0) {
-        return `${hours}小时${minutes}分钟`;
+        return `${hours}小时 · ${minutes}分钟`;
       }
       return `${hours}小时`;
     } else {
