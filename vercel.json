@@ -9,6 +9,48 @@
       }
     }
   ],
+  "redirects": [
+    {
+      "source": "/tasks",
+      "destination": "/en/tasks",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/en/about",
+      "permanent": true
+    },
+    {
+      "source": "/partners",
+      "destination": "/en/partners",
+      "permanent": true
+    },
+    {
+      "source": "/faq",
+      "destination": "/en/faq",
+      "permanent": true
+    },
+    {
+      "source": "/join-us",
+      "destination": "/en/join-us",
+      "permanent": true
+    },
+    {
+      "source": "/terms",
+      "destination": "/en/terms",
+      "permanent": true
+    },
+    {
+      "source": "/privacy",
+      "destination": "/en/privacy",
+      "permanent": true
+    },
+    {
+      "source": "/merchant-cooperation",
+      "destination": "/en/merchant-cooperation",
+      "permanent": true
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -29,6 +71,10 @@
     {
       "src": "/baidu_verify_codeva-N1G3JdDSeL.html",
       "dest": "/baidu_verify_codeva-N1G3JdDSeL.html"
+    },
+    {
+      "src": "/BingSiteAuth.xml",
+      "dest": "/BingSiteAuth.xml"
     },
     {
       "src": "/(.*)",

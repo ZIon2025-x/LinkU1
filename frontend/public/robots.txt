@@ -1,10 +1,27 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Disallow: /api/
+Disallow: /admin/
+Disallow: /customer-service/
+Disallow: /static/private/
+Allow: /static/public/
 Allow: /
+
+# 特定搜索引擎优化
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
 
 # Sitemap location
 Sitemap: https://www.link2ur.com/sitemap.xml
 
-# Crawl delay (optional)
+# 爬取延迟
 Crawl-delay: 1

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- 主要页面 - 使用www子域名作为规范版本 -->
   <url>
     <loc>https://www.link2ur.com/</loc>
     <lastmod>2024-01-15</lastmod>
@@ -7,57 +8,101 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://link2ur.com/tasks</loc>
+    <loc>https://www.link2ur.com/en</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.link2ur.com/zh</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- 任务相关页面 -->
+  <url>
+    <loc>https://www.link2ur.com/en/tasks</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://link2ur.com/tasks?type=Housekeeping</loc>
+    <loc>https://www.link2ur.com/zh/tasks</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- 任务分类页面 -->
+  <url>
+    <loc>https://www.link2ur.com/en/tasks?type=Housekeeping</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://link2ur.com/tasks?type=Skill%20Service</loc>
+    <loc>https://www.link2ur.com/en/tasks?type=Skill%20Service</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://link2ur.com/tasks?type=Transportation</loc>
+    <loc>https://www.link2ur.com/en/tasks?type=Transportation</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- 地点筛选页面 -->
+  <url>
+    <loc>https://www.link2ur.com/en/tasks?location=London</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://link2ur.com/tasks?location=London</loc>
+    <loc>https://www.link2ur.com/en/tasks?location=Online</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
+  
+  <!-- 其他重要页面 -->
   <url>
-    <loc>https://link2ur.com/tasks?location=Online</loc>
-    <lastmod>2024-01-15</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.link2ur.com/partners</loc>
+    <loc>https://www.link2ur.com/en/partners</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.link2ur.com/about</loc>
+    <loc>https://www.link2ur.com/zh/partners</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.link2ur.com/en/about</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://www.link2ur.com/contact</loc>
+    <loc>https://www.link2ur.com/zh/about</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.link2ur.com/en/faq</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.link2ur.com/zh/faq</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
