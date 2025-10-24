@@ -229,13 +229,31 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
     
     if (diff <= 0) return t('home.taskExpired');
     
-    const hours = Math.floor(diff / 60);
+    const days = Math.floor(diff / (24 * 60));
+    const hours = Math.floor((diff % (24 * 60)) / 60);
     const minutes = diff % 60;
     
-    if (hours > 0) {
-      return `${hours}${t('home.hours')}${minutes}${t('home.minutes')}`;
+    // 优化时间显示格式
+    if (days >= 30) {
+      const months = Math.floor(days / 30);
+      const remainingDays = days % 30;
+      if (remainingDays > 0) {
+        return `${months}个月${remainingDays}天`;
+      }
+      return `${months}个月`;
+    } else if (days > 0) {
+      if (hours > 0) {
+        return `${days}天${hours}小时`;
+      }
+      return `${days}天`;
+    } else if (hours > 0) {
+      if (minutes > 0) {
+        return `${hours}小时${minutes}分钟`;
+      }
+      return `${hours}小时`;
+    } else {
+      return `${minutes}分钟`;
     }
-    return `${minutes}${t('home.minutes')}`;
   } catch (error) {
     console.error('剩余时间计算错误:', error);
     return t('home.taskExpired');
@@ -923,6 +941,35 @@ const Tasks: React.FC = () => {
           maxWidth: '1200px',
           margin: '0 auto'
         }}>
+          {/* 页面标题 */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '32px',
+            padding: '20px 0'
+          }}>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: '#1f2937',
+              margin: '0 0 8px 0',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '1px'
+            }}>
+              {t('tasks.pageTitle')}
+            </h1>
+            <p style={{
+              fontSize: '16px',
+              color: '#6b7280',
+              margin: '0',
+              maxWidth: '600px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}>
+              {t('tasks.seoDescription')}
+            </p>
+          </div>
           {/* 分类图标行 */}
           <div className="category-section" style={{
             background: '#fff',
@@ -1807,35 +1854,6 @@ const Tasks: React.FC = () => {
             )}
           </div>
 
-          {/* 页面标题 */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: '32px',
-            padding: '20px 0'
-          }}>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: '700',
-              color: '#1f2937',
-              margin: '0 0 8px 0',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '1px'
-            }}>
-              {t('tasks.pageTitle')}
-            </h1>
-            <p style={{
-              fontSize: '16px',
-              color: '#6b7280',
-              margin: '0',
-              maxWidth: '600px',
-              marginLeft: 'auto',
-              marginRight: 'auto'
-            }}>
-              {t('tasks.seoDescription')}
-            </p>
-          </div>
 
           {/* 任务列表 */}
           <div className="tasks-grid" style={{

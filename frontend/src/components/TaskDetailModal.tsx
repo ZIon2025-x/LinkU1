@@ -504,12 +504,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'open': return t('myTasks.status.open');
-      case 'taken': return t('myTasks.status.open');
-      case 'in_progress': return t('myTasks.status.inProgress');
-      case 'pending_confirmation': return t('myTasks.status.pendingConfirmation');
-      case 'completed': return t('myTasks.status.completed');
-      case 'cancelled': return t('myTasks.status.cancelled');
+      case 'open': return t('myTasks.taskStatus.open');
+      case 'taken': return t('myTasks.taskStatus.taken');
+      case 'in_progress': return t('myTasks.taskStatus.in_progress');
+      case 'pending_confirmation': return t('myTasks.taskStatus.pending_confirmation');
+      case 'completed': return t('myTasks.taskStatus.completed');
+      case 'cancelled': return t('myTasks.taskStatus.cancelled');
       default: return status;
     }
   };
@@ -517,11 +517,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const getTaskLevelText = (level: string) => {
     switch (level) {
       case 'vip':
-        return t('myTasks.level.vip');
+        return '⭐ VIP';
       case 'super':
-        return t('myTasks.level.super');
+        return t('myTasks.taskLevel.super');
       default:
-        return t('myTasks.level.normal');
+        return t('myTasks.taskLevel.normal');
     }
   };
 

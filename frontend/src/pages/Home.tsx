@@ -37,13 +37,31 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
     
     if (diff <= 0) return t('home.taskExpired');
     
-    const hours = Math.floor(diff / 60);
+    const days = Math.floor(diff / (24 * 60));
+    const hours = Math.floor((diff % (24 * 60)) / 60);
     const minutes = diff % 60;
     
-    if (hours > 0) {
-      return `${hours}${t('home.hours')}${minutes}${t('home.minutes')}`;
+    // 优化时间显示格式
+    if (days >= 30) {
+      const months = Math.floor(days / 30);
+      const remainingDays = days % 30;
+      if (remainingDays > 0) {
+        return `${months}个月${remainingDays}天`;
+      }
+      return `${months}个月`;
+    } else if (days > 0) {
+      if (hours > 0) {
+        return `${days}天${hours}小时`;
+      }
+      return `${days}天`;
+    } else if (hours > 0) {
+      if (minutes > 0) {
+        return `${hours}小时${minutes}分钟`;
+      }
+      return `${hours}小时`;
+    } else {
+      return `${minutes}分钟`;
     }
-    return `${minutes}${t('home.minutes')}`;
   } catch (error) {
     console.error('Remaining time calculation error:', error);
     return t('home.taskExpired');
@@ -1050,47 +1068,11 @@ const Home: React.FC = () => {
           </div>
         )}
       </main>
-      {/* 新手引导/操作流程区块 */}
-      <section style={{background: '#fff', padding: '48px 0'}}>
-        <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>{t('home.newUserGuide')}</h3>
-          <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
-            <div style={{minWidth: 180}}>
-              <div style={{fontSize: 32, color: '#8b5cf6', marginBottom: 8}}>📝</div>
-              <div style={{fontWeight: 600, marginBottom: 4, color: '#A67C52'}}>1. {t('home.step1')}</div>
-              <div style={{color: '#888'}}>{t('home.step1Desc')}</div>
-            </div>
-            <div style={{minWidth: 180}}>
-              <div style={{fontSize: 32, color: '#A67C52', marginBottom: 8}}>🔍</div>
-              <div style={{fontWeight: 600, marginBottom: 4, color: '#A67C52'}}>2. {t('home.step2')}</div>
-              <div style={{color: '#888'}}>{t('home.step2Desc')}</div>
-            </div>
-            <div style={{minWidth: 180}}>
-              <div style={{fontSize: 32, color: '#A67C52', marginBottom: 8}}>🤝</div>
-              <div style={{fontWeight: 600, marginBottom: 4, color: '#A67C52'}}>3. {t('home.step3')}</div>
-              <div style={{color: '#888'}}>{t('home.step3Desc')}</div>
-            </div>
-            <div style={{minWidth: 180}}>
-              <div style={{fontSize: 32, color: '#A67C52', marginBottom: 8}}>💬</div>
-              <div style={{fontWeight: 600, marginBottom: 4, color: '#A67C52'}}>4. {t('home.step4')}</div>
-              <div style={{color: '#888'}}>{t('home.step4Desc')}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* 用户反馈/平台公告区块 */}
+      {/* 平台公告区块 */}
       <section style={{background: '#f8fbff', padding: '48px 0'}}>
         <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>用户反馈 & 平台公告</h3>
+          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>平台公告</h3>
           <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
-            <div style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}>
-              <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>“平台很靠谱，接单流程很顺畅！”</div>
-              <div style={{color: '#888'}}>—— 用户A</div>
-            </div>
-            <div style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #8b5cf6'}}>
-              <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>“任务种类多，结算也很安全。”</div>
-              <div style={{color: '#888'}}>—— 用户B</div>
-            </div>
             <div style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}>
               <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>【公告】目前平台属于测试阶段，如有问题欢迎发送邮件至 support@link2ur.com</div>
               <div style={{color: '#888'}}>2025-10-09</div>
