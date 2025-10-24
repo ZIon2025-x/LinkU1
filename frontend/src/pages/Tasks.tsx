@@ -1807,6 +1807,36 @@ const Tasks: React.FC = () => {
             )}
           </div>
 
+          {/* 页面标题 */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '32px',
+            padding: '20px 0'
+          }}>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: '#1f2937',
+              margin: '0 0 8px 0',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '1px'
+            }}>
+              {t('tasks.pageTitle')}
+            </h1>
+            <p style={{
+              fontSize: '16px',
+              color: '#6b7280',
+              margin: '0',
+              maxWidth: '600px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
+            }}>
+              {t('tasks.seoDescription')}
+            </p>
+          </div>
+
           {/* 任务列表 */}
           <div className="tasks-grid" style={{
             display: 'grid',
