@@ -1813,10 +1813,10 @@ const Tasks: React.FC = () => {
               color: '#6b7280',
               fontWeight: '500'
             }}>
-              {t('tasks.search.foundTasks', { count: filteredTasks.length })}
+              找到 <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> 个任务
               {tasks.length !== filteredTasks.length && (
                 <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
-                  ({t('tasks.search.total', { count: tasks.length })})
+                  (共 {tasks.length} 个)
                 </span>
               )}
             </div>

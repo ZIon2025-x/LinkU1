@@ -204,8 +204,6 @@
       "placeholder": "Search tasks...",
       "results": " results",
       "tasks": " tasks",
-      "foundTasks": "Found {count} tasks",
-      "total": "Total {count}",
       "filter": "Filter:",
       "tryAdjustFilter": "Try adjusting filter conditions",
       "noTasks": "No tasks available",

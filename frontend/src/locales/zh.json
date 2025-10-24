@@ -204,8 +204,6 @@
       "placeholder": "搜索任务...",
       "results": "个结果",
       "tasks": "个任务",
-      "foundTasks": "找到 {count} 个任务",
-      "total": "共 {count} 个",
       "filter": "筛选:",
       "tryAdjustFilter": "尝试调整筛选条件",
       "noTasks": "暂无任务",
