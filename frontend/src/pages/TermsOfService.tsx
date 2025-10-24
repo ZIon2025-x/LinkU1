@@ -147,6 +147,12 @@ const TermsOfService: React.FC = () => {
                 {t('termsOfService.serviceNature.title')}
               </h2>
               <p>{t('termsOfService.serviceNature.content')}</p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                {t('termsOfService.serviceNature.testingPhase')}
+              </p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                {t('termsOfService.serviceNature.paymentLimitation')}
+              </p>
 
               {/* 2. 用户类型与资格 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
@@ -161,6 +167,12 @@ const TermsOfService: React.FC = () => {
               </h2>
               <p>{t('termsOfService.platformPosition.content')}</p>
               <p>{t('termsOfService.platformPosition.offPlatform')}</p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                {t('termsOfService.platformPosition.employmentStatus')}
+              </p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                {t('termsOfService.platformPosition.offlineTransactions')}
+              </p>
 
               {/* 4. 费用与平台规则 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>

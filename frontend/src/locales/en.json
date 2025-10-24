@@ -1839,7 +1839,9 @@
     "contact": "Contact: info@link2ur.com",
     "serviceNature": {
       "title": "1. Nature of Service",
-      "content": "This service is an early beta version (Beta/MVP) designed for matching and communication, and does not provide payment or fund custody within the platform. We may change, suspend or terminate access at any time."
+      "content": "This service is an early beta version (Beta/MVP) designed for matching and communication, and does not provide payment or fund custody within the platform. We may change, suspend or terminate access at any time.",
+      "testingPhase": "Testing Phase Statement: The platform is currently in testing phase, features may be incomplete and services may be unstable. Users using this platform acknowledge and accept the risks that may exist during the testing phase.",
+      "paymentLimitation": "Payment Limitations: The platform currently has no online payment channels and does not support online payment functions. All transactions must be completed offline by users themselves, and the platform does not participate in any fund flows."
     },
     "userTypes": {
       "title": "2. User Types and Eligibility",
@@ -1848,8 +1850,10 @@
     },
     "platformPosition": {
       "title": "3. Platform Position and Off-Platform Transactions",
-      "content": "We are a matching online platform, not an employer, contractor or agent for any tasks/projects.",
-      "offPlatform": "Off-Platform Transactions: Parties may pay/settle offline or through other channels. We are not responsible for or guarantee off-platform transactions related to contracts, quality, delivery, refunds, taxes and disputes, unless due to our own fault. We recommend parties maintain written agreements and records and conduct their own due diligence."
+      "content": "We are a matching online platform, not an employer, contractor or agent for any tasks/projects. The platform only provides information matching services and does not participate in actual transaction execution.",
+      "offPlatform": "Off-Platform Transactions: Parties may pay/settle offline or through other channels. We are not responsible for or guarantee off-platform transactions related to contracts, quality, delivery, refunds, taxes and disputes, unless due to our own fault. We recommend parties maintain written agreements and records and conduct their own due diligence.",
+      "employmentStatus": "Employment Relationship Statement: There is no employment relationship between the platform and users. Users provide services as self-employed/independent contractors and bear full responsibility for their services, including but not limited to service quality, tax reporting, insurance, etc. The platform is not responsible for users' service quality, safety or any losses.",
+      "offlineTransactions": "Offline Transaction Disclaimer: For offline transactions between users, the platform assumes no responsibility. Users should assess transaction risks themselves, and the platform bears no responsibility for transaction outcomes, service quality, fund safety, etc."
     },
     "feesAndRules": {
       "title": "4. Fees and Platform Rules",
