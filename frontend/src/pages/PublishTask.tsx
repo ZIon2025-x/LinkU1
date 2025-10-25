@@ -53,15 +53,9 @@ const PublishTask: React.FC = () => {
     const loadSystemSettings = async () => {
       try {
         const settings = await getPublicSystemSettings();
-        console.log('任务发布页面系统设置加载成功:', settings);
-        console.log('VIP阈值:', settings.vip_price_threshold);
-        console.log('超级VIP阈值:', settings.super_vip_price_threshold);
-        console.log('VIP启用:', settings.vip_enabled);
-        console.log('超级VIP启用:', settings.super_vip_enabled);
         setSystemSettings(settings);
       } catch (error) {
         console.error('加载系统设置失败:', error);
-        console.error('错误详情:', error);
       }
     };
 
@@ -76,21 +70,17 @@ const PublishTask: React.FC = () => {
   const getTaskLevelHint = (reward: number) => {
     if (!reward || reward <= 0) return '';
     
-    console.log('任务等级提示调试:', {
-      reward,
-      vipThreshold: systemSettings.vip_price_threshold,
-      superVipThreshold: systemSettings.super_vip_price_threshold,
-      vipEnabled: systemSettings.vip_enabled,
-      superVipEnabled: systemSettings.super_vip_enabled,
-      systemSettings: systemSettings
-    });
+    // 获取阈值
+    const vipThreshold = systemSettings.vip_price_threshold || 10.0;
+    const superVipThreshold = systemSettings.super_vip_price_threshold || 50.0;
     
-    if (systemSettings.super_vip_enabled && reward >= systemSettings.super_vip_price_threshold) {
-      return `💰 超级任务 (≥${systemSettings.super_vip_price_threshold}元)`;
-    } else if (systemSettings.vip_enabled && reward >= systemSettings.vip_price_threshold) {
-      return `⭐ VIP任务 (≥${systemSettings.vip_price_threshold}元)`;
+    // 任务等级显示只根据金额和阈值，与VIP升级功能无关
+    if (reward >= superVipThreshold) {
+      return `💰 超级任务 (≥${superVipThreshold}元)`;
+    } else if (reward >= vipThreshold) {
+      return `⭐ VIP任务 (≥${vipThreshold}元)`;
     } else {
-      return `📝 普通任务 (<${systemSettings.vip_price_threshold}元)`;
+      return `📝 普通任务 (<${vipThreshold}元)`;
     }
   };
 
@@ -645,9 +635,9 @@ const PublishTask: React.FC = () => {
                   fontSize: isMobile ? '13px' : '14px',
                   fontWeight: '500',
                   textAlign: 'center',
-                  background: systemSettings.super_vip_enabled && parseFloat(form.reward) >= systemSettings.super_vip_price_threshold 
+                  background: parseFloat(form.reward) >= (systemSettings.super_vip_price_threshold || 50.0)
                     ? 'linear-gradient(135deg, #8b5cf6, #a855f7)' 
-                    : systemSettings.vip_enabled && parseFloat(form.reward) >= systemSettings.vip_price_threshold
+                    : parseFloat(form.reward) >= (systemSettings.vip_price_threshold || 10.0)
                     ? 'linear-gradient(135deg, #f59e0b, #fbbf24)'
                     : 'linear-gradient(135deg, #6b7280, #9ca3af)',
                   color: '#fff',
