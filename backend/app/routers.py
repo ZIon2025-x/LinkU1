@@ -2824,9 +2824,34 @@ def send_customer_service_message(
 
 
 # 结束对话和评分相关接口
+@router.post("/users/customer-service/end-chat/{chat_id}")
+def end_customer_service_chat_user(
+    chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+):
+    """用户结束客服对话"""
+    # 验证chat_id是否存在且用户有权限
+    chat = crud.get_customer_service_chat(db, chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    # 检查权限：只有对话的用户可以结束对话
+    if chat["user_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to end this chat")
+
+    # 检查对话状态
+    if chat["is_ended"] == 1:
+        raise HTTPException(status_code=400, detail="Chat already ended")
+
+    # 结束对话
+    success = crud.end_customer_service_chat(db, chat_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to end chat")
+
+    return {"message": "Chat ended successfully"}
+
 @router.post("/customer-service/end-chat/{chat_id}")
 def end_customer_service_chat(
-    chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+    chat_id: str, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
 ):
     """结束客服对话"""
     # 验证chat_id是否存在且用户有权限

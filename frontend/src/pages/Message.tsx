@@ -2138,37 +2138,7 @@ const MessagePage: React.FC = () => {
     
     try {
       console.log('正在调用 endCustomerServiceChat API...');
-      const response = await fetch(`${API_BASE_URL}/api/users/customer-service/end-chat/${currentChatId}`, {
-        method: 'POST',
-        credentials: 'include'  // 使用Cookie认证
-      });
-      
-      if (!response.ok) {
-        // 如果返回400或404，说明对话不存在或已结束，清理localStorage
-        if (response.status === 400 || response.status === 404) {
-          console.log('对话不存在或已结束，清理localStorage并重置状态');
-          // 保存chat_id用于评价（如果存在）
-          if (currentChatId) {
-            setRatingChatId(currentChatId);
-            setShowRatingModal(true);
-          }
-          localStorage.removeItem('currentCustomerServiceChat');
-          setServiceConnected(false);
-          setCurrentChatId(null);
-          setCurrentChat(null);
-          // setService(null); // 已移除service状态
-          
-          const cleanupMessage: Message = {
-            id: Date.now(),
-            from: '系统',
-            content: '对话已结束，状态已重置',
-            created_at: new Date().toISOString()
-          };
-          setMessages(prev => [...prev, cleanupMessage]);
-          return;
-        }
-        throw new Error('结束对话失败');
-      }
+      const response = await api.post(`/api/users/customer-service/end-chat/${currentChatId}`);
       
       console.log('endCustomerServiceChat API 调用成功');
       
@@ -2195,8 +2165,32 @@ const MessagePage: React.FC = () => {
       // 显示评价弹窗
       setShowRatingModal(true);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('结束对话失败:', error);
+      
+      // 如果返回400或404，说明对话不存在或已结束，清理localStorage
+      if (error.response?.status === 400 || error.response?.status === 404) {
+        console.log('对话不存在或已结束，清理localStorage并重置状态');
+        // 保存chat_id用于评价（如果存在）
+        if (currentChatId) {
+          setRatingChatId(currentChatId);
+          setShowRatingModal(true);
+        }
+        localStorage.removeItem('currentCustomerServiceChat');
+        setServiceConnected(false);
+        setCurrentChatId(null);
+        setCurrentChat(null);
+        
+        const cleanupMessage: Message = {
+          id: Date.now(),
+          from: '系统',
+          content: '对话已结束，状态已重置',
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, cleanupMessage]);
+        return;
+      }
+      
       const errorMessage: Message = {
         id: Date.now(),
         from: '系统',
