@@ -1021,7 +1021,7 @@ export const updateSystemSettings = async (settings: {
 };
 
 export const getPublicSystemSettings = async () => {
-  const res = await api.get('/api/users/system-settings/public');
+  const res = await api.get('/api/system-settings/public');
   return res.data;
 };
 
