@@ -18,9 +18,6 @@ import Wallet from './pages/Wallet';
 import Settings from './pages/Settings';
 import About from './pages/About';
 import JoinUs from './pages/JoinUs';
-import LanguageTest from './pages/LanguageTest';
-import InternationalizationTest from './pages/InternationalizationTest';
-import CookieTest from './pages/CookieTest';
 import TermsOfService from './pages/TermsOfService';
 import FAQ from './pages/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -38,7 +35,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import CookieManager from './components/CookieManager';
 import AdminAuth from './components/AdminAuth';
 import ServiceAuth from './components/ServiceAuth';
-import AuthTest from './pages/AuthTest';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
 
@@ -86,10 +82,6 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/about`} element={<About />} />
               <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
-          <Route path={`/${lang}/language-test`} element={<LanguageTest />} />
-          <Route path={`/${lang}/i18n-test`} element={<InternationalizationTest />} />
-          <Route path={`/${lang}/cookie-test`} element={<CookieTest />} />
-          <Route path={`/${lang}/auth-test`} element={<AuthTest />} />
           <Route path={`/${lang}/terms`} element={<TermsOfService />} />
           <Route path={`/${lang}/privacy`} element={<PrivacyPolicy />} />
           <Route path={`/${lang}/partners`} element={<Partners />} />

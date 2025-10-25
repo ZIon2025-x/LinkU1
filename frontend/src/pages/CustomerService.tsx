@@ -2372,7 +2372,25 @@ const CustomerService: React.FC = () => {
   return (
     <div className="customer-service">
       <div className="header">
-        <h1>客服管理系统</h1>
+        {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
+        <h1 style={{
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
+        }}>
+          客服管理系统
+        </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* 客服在线状态控制 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
