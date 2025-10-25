@@ -869,6 +869,7 @@
     "loginNow": "立即登录",
     "taskTypeLabel": "任务类型",
     "locationLabel": "所在城市",
+    "onlineTaskMethod": "任务地点",
     "rewardLabel": "任务赏金",
     "deadlineLabel": "截止时间",
     "descriptionLabel": "任务描述",

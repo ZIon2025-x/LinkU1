@@ -781,7 +781,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               {task.location === 'Online' ? '🌐' : '📍'}
             </div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-              {task.location === 'Online' ? t('taskDetail.onlineTaskType') : t('taskDetail.offlineLocation')}
+              {task.location === 'Online' ? t('taskDetail.onlineTaskMethod') : t('taskDetail.offlineLocation')}
             </div>
             <div style={{ 
               fontSize: '16px', 

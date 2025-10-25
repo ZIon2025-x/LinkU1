@@ -177,9 +177,9 @@ class AsyncTaskCRUD:
                 raise HTTPException(status_code=404, detail="User not found")
             
             # 获取系统设置中的价格阈值
-            # 使用默认值，避免同步调用问题
-            vip_price_threshold = 10.0
-            super_vip_price_threshold = 50.0
+            settings = await AsyncTaskCRUD.get_system_settings_dict(db)
+            vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
+            super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
             
             # 任务等级分配逻辑
             user_level = str(user.user_level) if user.user_level is not None else "normal"
@@ -608,6 +608,47 @@ class AsyncTaskCRUD:
             await db.rollback()
             logger.error(f"Error approving application: {e}")
             return None
+
+    @staticmethod
+    async def get_system_settings_dict(db: AsyncSession) -> Dict[str, Any]:
+        """异步获取系统设置字典"""
+        try:
+            result = await db.execute(select(models.SystemSettings))
+            settings = result.scalars().all()
+            
+            settings_dict = {}
+            for setting in settings:
+                # 获取字段值，确保是字符串类型
+                setting_type = str(getattr(setting, 'setting_type', 'string'))  # type: ignore
+                setting_value = str(getattr(setting, 'setting_value', ''))  # type: ignore
+                setting_key = str(getattr(setting, 'setting_key', ''))  # type: ignore
+                
+                if setting_type == "boolean":
+                    settings_dict[setting_key] = setting_value.lower() == "true"
+                elif setting_type == "number":
+                    try:
+                        # 尝试解析为浮点数，如果是整数则返回整数
+                        float_val = float(setting_value)  # type: ignore
+                        if float_val.is_integer():
+                            settings_dict[setting_key] = int(float_val)
+                        else:
+                            settings_dict[setting_key] = float_val
+                    except ValueError:
+                        settings_dict[setting_key] = 0
+                else:
+                    settings_dict[setting_key] = setting_value
+            return settings_dict
+        except Exception as e:
+            logger.error(f"Error getting system settings: {e}")
+            # 返回默认设置
+            return {
+                "vip_enabled": True,
+                "super_vip_enabled": True,
+                "vip_price_threshold": 10.0,
+                "super_vip_price_threshold": 50.0,
+                "vip_task_threshold": 5,
+                "super_vip_task_threshold": 20,
+            }
 
 
 # 异步消息操作

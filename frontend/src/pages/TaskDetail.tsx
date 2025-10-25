@@ -754,7 +754,7 @@ const TaskDetail: React.FC = () => {
               {task.location === 'Online' ? '🌐' : '📍'}
             </div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>
-              {task.location === 'Online' ? '任务类型' : '所在城市'}
+              {task.location === 'Online' ? '任务方式' : '所在城市'}
             </div>
             <div style={{ 
               fontSize: '16px', 
