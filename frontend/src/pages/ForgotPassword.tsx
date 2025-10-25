@@ -62,6 +62,20 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <Wrapper>
+      {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
+      <h1 style={{ 
+        position: 'absolute',
+        width: '1px',
+        height: '1px',
+        padding: '0',
+        margin: '-1px',
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        whiteSpace: 'nowrap',
+        border: '0'
+      }}>
+        忘记密码
+      </h1>
       <StyledCard title="Forgot Password">
         {errorMsg && <ErrorMsg>{errorMsg}</ErrorMsg>}
         {successMsg && <div style={{ color: '#52c41a', marginBottom: 12, textAlign: 'center' }}>{successMsg}</div>}

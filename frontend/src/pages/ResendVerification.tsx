@@ -50,6 +50,20 @@ const ResendVerification: React.FC = () => {
   if (success) {
     return (
       <Wrapper>
+        {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
+        <h1 style={{ 
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0'
+        }}>
+          重发验证邮件
+        </h1>
         <StyledCard>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }}>📧</div>
@@ -80,6 +94,20 @@ const ResendVerification: React.FC = () => {
 
   return (
     <Wrapper>
+      {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
+      <h1 style={{ 
+        position: 'absolute',
+        width: '1px',
+        height: '1px',
+        padding: '0',
+        margin: '-1px',
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        whiteSpace: 'nowrap',
+        border: '0'
+      }}>
+        重发验证邮件
+      </h1>
       <StyledCard title={t('auth.resendVerification')}>
         <p style={{ marginBottom: 24, color: '#666' }}>
           {t('auth.checkEmail')}
