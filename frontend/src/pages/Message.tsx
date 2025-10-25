@@ -2338,17 +2338,16 @@ const MessagePage: React.FC = () => {
       overflow: 'hidden',
       boxSizing: 'border-box'
     }}>
-      {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
+      {/* SEO优化：H1标签，可见但样式简洁 */}
       <h1 style={{ 
-        position: 'absolute',
-        width: '1px',
-        height: '1px',
-        padding: '0',
-        margin: '-1px',
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        border: '0'
+        fontSize: '28px',
+        fontWeight: '700',
+        marginBottom: '20px',
+        color: '#2d3748',
+        textAlign: 'center',
+        padding: '20px 0',
+        background: '#fff',
+        borderBottom: '1px solid #e2e8f0'
       }}>
         消息中心
       </h1>
