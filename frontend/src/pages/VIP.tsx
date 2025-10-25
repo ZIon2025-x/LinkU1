@@ -7,7 +7,13 @@ import { useLanguage } from '../contexts/LanguageContext';
 const VIP: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [systemSettings, setSystemSettings] = useState({ vip_button_visible: true });
+  const [systemSettings, setSystemSettings] = useState({
+    vip_button_visible: true,
+    vip_price_threshold: 10.0,
+    super_vip_price_threshold: 50.0,
+    vip_enabled: true,
+    super_vip_enabled: true
+  });
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -30,7 +36,13 @@ const VIP: React.FC = () => {
         console.log('VIP页面系统设置加载成功:', settings);
       } catch (error) {
         console.error('加载系统设置失败:', error);
-        setSystemSettings({ vip_button_visible: true }); // 默认显示
+        setSystemSettings({ 
+          vip_button_visible: true,
+          vip_price_threshold: 10.0,
+          super_vip_price_threshold: 50.0,
+          vip_enabled: true,
+          super_vip_enabled: true
+        }); // 默认显示
       }
     };
 
