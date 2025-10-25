@@ -331,7 +331,7 @@ const Tasks: React.FC = () => {
   const [showRewardDropdown, setShowRewardDropdown] = useState(false);
   const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
-  const [taskLevel, setTaskLevel] = useState('all');
+  const [taskLevel, setTaskLevel] = useState(t('tasks.levels.all'));
   const [isMobile, setIsMobile] = useState(false);
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -690,11 +690,11 @@ const Tasks: React.FC = () => {
     let filtered = [...tasks];
 
     // 按任务等级筛选
-    if (taskLevel !== 'all') {
+    if (taskLevel !== t('tasks.levels.all')) {
       const levelMap: { [key: string]: string } = {
-        [t('home.normalTask')]: 'normal',
-        [t('home.vipTask')]: 'vip',
-        [t('home.superTask')]: 'super'
+        [t('tasks.levels.normal')]: 'normal',
+        [t('tasks.levels.vip')]: 'vip',
+        [t('tasks.levels.super')]: 'super'
       };
       
       const targetLevel = levelMap[taskLevel];
