@@ -275,9 +275,9 @@ function isExpiringSoon(deadline: string) {
     
     const nowUK = dayjs().tz('Europe/London');
     const endUK = utcTime.tz('Europe/London');
-    const twoHoursLater = nowUK.add(2, 'hour');
+    const oneDayLater = nowUK.add(1, 'day');
     
-    return nowUK.isBefore(endUK) && endUK.isBefore(twoHoursLater);
+    return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
   } catch (error) {
     console.error('过期检查错误:', error);
     return false;
@@ -331,7 +331,7 @@ const Tasks: React.FC = () => {
   const [showRewardDropdown, setShowRewardDropdown] = useState(false);
   const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
-  const [taskLevel, setTaskLevel] = useState('全部等级');
+  const [taskLevel, setTaskLevel] = useState('all');
   const [isMobile, setIsMobile] = useState(false);
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -690,11 +690,11 @@ const Tasks: React.FC = () => {
     let filtered = [...tasks];
 
     // 按任务等级筛选
-    if (taskLevel !== t('tasks.levels.all')) {
+    if (taskLevel !== 'all') {
       const levelMap: { [key: string]: string } = {
-        [t('tasks.levels.normal')]: 'normal',
-        [t('tasks.levels.vip')]: 'vip',
-        [t('tasks.levels.super')]: 'super'
+        [t('home.normalTask')]: 'normal',
+        [t('home.vipTask')]: 'vip',
+        [t('home.superTask')]: 'super'
       };
       
       const targetLevel = levelMap[taskLevel];
@@ -941,14 +941,17 @@ const Tasks: React.FC = () => {
           maxWidth: '1200px',
           margin: '0 auto'
         }}>
-          {/* SEO优化：H1标签，可见但样式简洁 */}
+          {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
           <h1 style={{ 
-            fontSize: '32px',
-            fontWeight: '700',
-            marginBottom: '24px',
-            color: '#2d3748',
-            textAlign: 'center',
-            padding: '20px 0'
+            position: 'absolute',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '-1px',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0'
           }}>
             {t('tasks.title')}
           </h1>
@@ -1031,8 +1034,7 @@ const Tasks: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '20px',
-            flexWrap: 'nowrap',
-            overflowX: 'auto'
+            flexWrap: 'wrap'
           }}>
             {/* 排序控制区域 - 重新设计 */}
             <div className="sort-controls" style={{
@@ -1041,8 +1043,7 @@ const Tasks: React.FC = () => {
               flex: '1',
               minWidth: '0',
               alignItems: 'center',
-              flexWrap: 'nowrap',
-              overflowX: 'auto'
+              flexWrap: 'wrap'
             }}>
               {/* 任务等级下拉菜单 */}
               <div className="level-dropdown-container" style={{ position: 'relative' }}>
@@ -1266,55 +1267,73 @@ const Tasks: React.FC = () => {
                 fontWeight: '500',
                 flexShrink: 0
               }}>
-                <span>排序方式:</span>
+                <span>排序:</span>
               </div>
 
-              {/* 最新发布按钮 */}
-              <button
+              {/* 最新发布卡片 */}
+              <div
                 onClick={() => {
                   setSortBy('latest');
                   setRewardSort('');
                   setDeadlineSort('');
                 }}
-                style={{
+                  style={{
                   background: sortBy === 'latest' 
                     ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
                     : '#ffffff',
                   color: sortBy === 'latest' ? '#ffffff' : '#374151',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
+                  borderRadius: '16px',
+                  padding: '12px 20px',
+                    cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                  gap: '8px',
                   flexShrink: 0,
                   boxShadow: sortBy === 'latest' 
-                    ? '0 2px 8px rgba(102, 126, 234, 0.3)' 
-                    : '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  whiteSpace: 'nowrap'
+                    ? '0 8px 25px rgba(102, 126, 234, 0.3)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                  transform: sortBy === 'latest' ? 'translateY(-2px)' : 'translateY(0)',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
                 onMouseEnter={(e) => {
                   if (sortBy !== 'latest') {
-                    e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (sortBy !== 'latest') {
-                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
                   }
                 }}
               >
-                <span>🕒</span>
-                <span>{t('tasks.sorting.latest')}</span>
-              </button>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: sortBy === 'latest' 
+                    ? 'rgba(255, 255, 255, 0.2)' 
+                    : '#f3f4f6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px'
+                }}>
+                  🕒
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600' }}>{t('tasks.sorting.latest')}</div>
+                  <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('tasks.sorting.byTime')}</div>
+                </div>
+              </div>
 
-              {/* 金额排序下拉菜单 */}
+              {/* 金额排序卡片 */}
               <div className="reward-dropdown-container" style={{ position: 'relative' }}>
-                <button
+                <div
                   onClick={() => setShowRewardDropdown(!showRewardDropdown)}
                   style={{
                     background: rewardSort 
@@ -1322,46 +1341,65 @@ const Tasks: React.FC = () => {
                       : '#ffffff',
                     color: rewardSort ? '#ffffff' : '#374151',
                     border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
+                    borderRadius: '16px',
+                    padding: '12px 20px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '8px',
                     flexShrink: 0,
                     boxShadow: rewardSort 
-                      ? '0 2px 8px rgba(240, 147, 251, 0.3)' 
-                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap'
+                      ? '0 8px 25px rgba(240, 147, 251, 0.3)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    transform: rewardSort ? 'translateY(-2px)' : 'translateY(0)',
+                    minWidth: '140px'
                   }}
                   onMouseEnter={(e) => {
                     if (!rewardSort) {
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!rewardSort) {
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
                     }
                   }}
                 >
-                  <span>💰</span>
-                  <span>
-                    {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
-                     rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
-                  </span>
-                  <span style={{
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: rewardSort 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : '#fef3c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>
+                    💰
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
+                       rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                      {rewardSort ? t('tasks.sorting.byReward') : t('tasks.sorting.selectSort')}
+                    </div>
+                  </div>
+                  <div style={{
                     color: rewardSort ? '#ffffff' : '#9ca3af',
-                    fontSize: '10px',
-                    transition: 'transform 0.2s ease',
+                    fontSize: '12px',
+                    transition: 'color 0.3s ease',
                     transform: showRewardDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
                   }}>
                     ▼
-                  </span>
-                </button>
+                  </div>
+                </div>
                 
                 {/* 自定义下拉菜单 */}
                 {showRewardDropdown && (
@@ -1478,9 +1516,9 @@ const Tasks: React.FC = () => {
                 )}
               </div>
 
-              {/* 截止时间排序下拉菜单 */}
+              {/* 截止日期排序卡片 */}
               <div className="deadline-dropdown-container" style={{ position: 'relative' }}>
-                <button
+                <div
                   onClick={() => setShowDeadlineDropdown(!showDeadlineDropdown)}
                   style={{
                     background: deadlineSort 
@@ -1488,46 +1526,65 @@ const Tasks: React.FC = () => {
                       : '#ffffff',
                     color: deadlineSort ? '#ffffff' : '#374151',
                     border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
+                    borderRadius: '16px',
+                    padding: '12px 20px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '8px',
                     flexShrink: 0,
                     boxShadow: deadlineSort 
-                      ? '0 2px 8px rgba(79, 172, 254, 0.3)' 
-                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap'
+                      ? '0 8px 25px rgba(79, 172, 254, 0.3)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    transform: deadlineSort ? 'translateY(-2px)' : 'translateY(0)',
+                    minWidth: '160px'
                   }}
                   onMouseEnter={(e) => {
                     if (!deadlineSort) {
-                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!deadlineSort) {
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
                     }
                   }}
                 >
-                  <span>⏰</span>
-                  <span>
-                    {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
-                     deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
-                  </span>
-                  <span style={{
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: deadlineSort 
+                      ? 'rgba(255, 255, 255, 0.2)' 
+                      : '#fef3c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>
+                    ⏰
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                      {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
+                       deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                      {deadlineSort ? t('tasks.sorting.byDeadline') : t('tasks.sorting.selectSort')}
+                    </div>
+                  </div>
+                  <div style={{
                     color: deadlineSort ? '#ffffff' : '#9ca3af',
-                    fontSize: '10px',
-                    transition: 'transform 0.2s ease',
+                    fontSize: '12px',
+                    transition: 'color 0.3s ease',
                     transform: showDeadlineDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
                   }}>
                     ▼
-                  </span>
-                </button>
+                  </div>
+                </div>
                 
                 {/* 自定义下拉菜单 */}
                 {showDeadlineDropdown && (
@@ -2263,7 +2320,7 @@ const Tasks: React.FC = () => {
             
             /* 分类区域滚动提示 */
             .category-section::after {
-              content: '← ' + t('tasks.swipeToSeeMore') + ' →' !important;
+              content: '← 滑动查看更多 →' !important;
               position: absolute !important;
               bottom: 4px !important;
               left: 50% !important;
