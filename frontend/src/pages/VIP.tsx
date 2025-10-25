@@ -94,10 +94,21 @@ const VIP: React.FC = () => {
         }}>
           🚫
         </div>
-        <h1 style={{
-          fontSize: '24px',
-          color: '#333',
-          marginBottom: '16px'
+        <h1 style={{ 
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
         }}>
           VIP功能暂时不可用
         </h1>
@@ -135,11 +146,20 @@ const VIP: React.FC = () => {
         {/* 页面标题 */}
         <div style={{ textAlign: 'center', marginBottom: '60px' }}>
           <h1 style={{ 
-            fontSize: '48px', 
-            fontWeight: 'bold', 
-            color: '#fff', 
-            marginBottom: '20px',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
           }}>
             ✨ VIP会员中心
           </h1>

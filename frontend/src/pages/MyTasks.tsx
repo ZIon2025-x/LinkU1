@@ -620,10 +620,20 @@ const MyTasks: React.FC = () => {
           }}>
             <div style={{ fontSize: '24px' }}>📋</div>
             <h1 style={{ 
-              margin: 0, 
-              fontSize: '28px', 
-              fontWeight: '600',
-              color: '#1f2937'
+              position: 'absolute',
+              top: '-100px',
+              left: '-100px',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '0',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              fontSize: '1px',
+              color: 'transparent',
+              background: 'transparent'
             }}>
 {t('myTasks.title')}
             </h1>

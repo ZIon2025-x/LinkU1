@@ -645,13 +645,20 @@ const TaskDetail: React.FC = () => {
         
         {/* SEO优化：H1标签，可见但样式简洁 */}
         <h1 style={{ 
-          fontSize: '28px',
-          fontWeight: '700',
-          marginBottom: '20px',
-          color: '#2d3748',
-          textAlign: 'center',
-          padding: '20px 0',
-          borderBottom: '1px solid #e2e8f0'
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
         }}>
           任务详情
         </h1>

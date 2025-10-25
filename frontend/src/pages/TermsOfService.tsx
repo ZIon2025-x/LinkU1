@@ -96,13 +96,20 @@ const TermsOfService: React.FC = () => {
             padding: '40px 0'
           }}>
             <h1 style={{
-              fontSize: '2.5rem',
-              fontWeight: '800',
-              color: '#1e293b',
-              marginBottom: '16px',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
+              position: 'absolute',
+              top: '-100px',
+              left: '-100px',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '0',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              fontSize: '1px',
+              color: 'transparent',
+              background: 'transparent'
             }}>
               {t('termsOfService.title')}
             </h1>

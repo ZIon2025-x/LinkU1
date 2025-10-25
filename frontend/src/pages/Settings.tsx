@@ -211,7 +211,22 @@ const Settings: React.FC = () => {
           >
             ← 返回首页
           </button>
-          <h1 style={{ margin: '0 0 10px 0', fontSize: '28px', fontWeight: 'bold' }}>⚙️ 设置</h1>
+          <h1 style={{ 
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
+          }}>⚙️ 设置</h1>
           <div style={{ fontSize: '16px', opacity: 0.9 }}>管理您的账户设置和偏好</div>
         </div>
 

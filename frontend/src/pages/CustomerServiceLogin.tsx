@@ -87,10 +87,20 @@ const CustomerServiceLogin: React.FC = () => {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <h1 style={{
-            color: '#333',
-            fontSize: '28px',
-            fontWeight: '700',
-            marginBottom: '8px'
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
           }}>
             客服登录
           </h1>

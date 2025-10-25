@@ -219,9 +219,20 @@ const Profile: React.FC = () => {
           
           <div style={{ fontSize: 48, marginBottom: 16, filter: 'brightness(0) invert(1)' }}>👤</div>
           <h1 style={{ 
-            margin: '0 0 10px 0', 
-            fontSize: '32px', 
-            fontWeight: 'bold' 
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
           }}>
             {t('profile.personalProfile')}
           </h1>
@@ -341,10 +352,20 @@ const Profile: React.FC = () => {
           </div>
           
           <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '800', 
-            color: '#1e293b',
-            marginBottom: '8px'
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
           }}>
             {user.name || `用户${user.id}`}
           </h1>

@@ -249,12 +249,20 @@ const TaskExperts: React.FC = () => {
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
           <h1 style={{
-            fontSize: '36px',
-            fontWeight: '800',
-            marginBottom: '16px',
-            background: 'linear-gradient(45deg, #fff, #f0f9ff)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
           }}>
             {t('taskExperts.title')}
           </h1>

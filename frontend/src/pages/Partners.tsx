@@ -90,7 +90,22 @@ const Partners: React.FC = () => {
         <section style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%)', color: '#fff', padding: '72px 16px 56px' }}>
           <div style={{ maxWidth: 900, margin: '0 auto' }}>
             <div style={{ opacity: 0.9, fontSize: 12, letterSpacing: 1 }}>{t('partners.betaNotice')}</div>
-            <h1 style={{ fontSize: 40, margin: '8px 0 0 0', fontWeight: 900, lineHeight: 1.2 }}>{t('partners.title')}</h1>
+            <h1 style={{ 
+              position: 'absolute',
+              top: '-100px',
+              left: '-100px',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '0',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              fontSize: '1px',
+              color: 'transparent',
+              background: 'transparent'
+            }}>{t('partners.title')}</h1>
             <p style={{ marginTop: 14, fontSize: 18, opacity: 0.95 }}>{t('partners.subtitle')}</p>
           </div>
         </section>

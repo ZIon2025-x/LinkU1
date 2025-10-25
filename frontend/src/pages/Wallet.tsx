@@ -95,7 +95,22 @@ const Wallet: React.FC = () => {
           >
             ← 返回首页
           </button>
-          <h1 style={{ margin: '0 0 20px 0', fontSize: '28px', fontWeight: 'bold' }}>💰 我的钱包</h1>
+          <h1 style={{ 
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
+          }}>💰 我的钱包</h1>
           <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
             £{balance.toFixed(2)}
           </div>

@@ -36,10 +36,20 @@ const InternationalizationTest: React.FC = () => {
         boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
       }}>
         <h1 style={{ 
-          textAlign: 'center', 
-          marginBottom: '40px',
-          color: '#333',
-          fontSize: '2.5rem'
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
         }}>
           🌍 国际化功能测试 / Internationalization Test
         </h1>

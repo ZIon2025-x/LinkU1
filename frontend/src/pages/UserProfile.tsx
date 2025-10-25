@@ -256,13 +256,20 @@ const UserProfile: React.FC = () => {
             </div>
             
             <h1 style={{ 
-              fontSize: 36, 
-              fontWeight: 800, 
-              background: 'linear-gradient(45deg, #667eea, #764ba2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              marginBottom: 16,
-              letterSpacing: '-0.5px'
+              position: 'absolute',
+              top: '-100px',
+              left: '-100px',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '0',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              fontSize: '1px',
+              color: 'transparent',
+              background: 'transparent'
             }}>
               {profile.user.name}
             </h1>

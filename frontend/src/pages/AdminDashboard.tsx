@@ -1143,7 +1143,22 @@ const AdminDashboard: React.FC = () => {
         paddingBottom: '10px',
         borderBottom: '1px solid #eee'
       }}>
-        <h1 style={{ margin: 0, color: '#333' }}>管理后台</h1>
+        <h1 style={{ 
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
+        }}>管理后台</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* 提醒按钮 */}
           <NotificationBell 

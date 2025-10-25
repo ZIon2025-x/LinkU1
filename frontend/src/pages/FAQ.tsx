@@ -63,7 +63,22 @@ const FAQ: React.FC = () => {
 
       {/* FAQ 主体 */}
       <main style={{maxWidth: 900, margin: '0 auto', padding: '24px'}}>
-        <h1 style={{fontSize: 28, fontWeight: 800, marginBottom: 16, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+        <h1 style={{ 
+          position: 'absolute',
+          top: '-100px',
+          left: '-100px',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '0',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: '0',
+          fontSize: '1px',
+          color: 'transparent',
+          background: 'transparent'
+        }}>
           {L('常见问题（FAQ）', 'Frequently Asked Questions (FAQ)')}
         </h1>
         <p style={{color: '#64748b', marginBottom: 24}}>
