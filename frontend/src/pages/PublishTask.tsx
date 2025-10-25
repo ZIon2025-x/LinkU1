@@ -53,10 +53,15 @@ const PublishTask: React.FC = () => {
     const loadSystemSettings = async () => {
       try {
         const settings = await getPublicSystemSettings();
-        setSystemSettings(settings);
         console.log('任务发布页面系统设置加载成功:', settings);
+        console.log('VIP阈值:', settings.vip_price_threshold);
+        console.log('超级VIP阈值:', settings.super_vip_price_threshold);
+        console.log('VIP启用:', settings.vip_enabled);
+        console.log('超级VIP启用:', settings.super_vip_enabled);
+        setSystemSettings(settings);
       } catch (error) {
         console.error('加载系统设置失败:', error);
+        console.error('错误详情:', error);
       }
     };
 
@@ -70,6 +75,15 @@ const PublishTask: React.FC = () => {
   // 获取任务等级提示
   const getTaskLevelHint = (reward: number) => {
     if (!reward || reward <= 0) return '';
+    
+    console.log('任务等级提示调试:', {
+      reward,
+      vipThreshold: systemSettings.vip_price_threshold,
+      superVipThreshold: systemSettings.super_vip_price_threshold,
+      vipEnabled: systemSettings.vip_enabled,
+      superVipEnabled: systemSettings.super_vip_enabled,
+      systemSettings: systemSettings
+    });
     
     if (systemSettings.super_vip_enabled && reward >= systemSettings.super_vip_price_threshold) {
       return `💰 超级任务 (≥${systemSettings.super_vip_price_threshold}元)`;
