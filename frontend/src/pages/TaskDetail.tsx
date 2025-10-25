@@ -641,6 +641,16 @@ const TaskDetail: React.FC = () => {
           opacity: 0.1
         }} />
         
+        {/* SEO优化：隐藏的H1标签，仅用于搜索引擎 */}
+        <h1 style={{ 
+          position: 'absolute', 
+          left: '-9999px', 
+          top: '-9999px',
+          visibility: 'hidden'
+        }}>
+          任务详情
+        </h1>
+        
         {/* 标题区域 */}
         <div style={{
           display: 'flex',

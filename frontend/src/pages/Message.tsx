@@ -2338,6 +2338,15 @@ const MessagePage: React.FC = () => {
       overflow: 'hidden',
       boxSizing: 'border-box'
     }}>
+      {/* SEO优化：隐藏的H1标签，仅用于搜索引擎 */}
+      <h1 style={{ 
+        position: 'absolute', 
+        left: '-9999px', 
+        top: '-9999px',
+        visibility: 'hidden'
+      }}>
+        消息中心
+      </h1>
       <div style={{ 
         width: '100%',
         height: '100vh',
