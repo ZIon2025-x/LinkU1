@@ -224,6 +224,7 @@
       "selectLevel": "Select Task Level"
     },
     "sorting": {
+      "sortBy": "Sort by",
       "latest": "Latest",
       "byTime": "Sort by Time",
       "rewardSort": "Reward Sort",

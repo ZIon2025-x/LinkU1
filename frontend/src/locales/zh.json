@@ -224,6 +224,7 @@
       "selectLevel": "选择任务等级"
     },
     "sorting": {
+      "sortBy": "排序方式",
       "latest": "最新发布",
       "byTime": "按时间排序",
       "rewardSort": "金额排序",
