@@ -96,12 +96,17 @@ const PublishTask: React.FC = () => {
       overscrollBehavior: 'contain',
       WebkitOverflowScrolling: 'touch'
     }}>
-      {/* SEO优化：隐藏的H1标签，仅用于搜索引擎 */}
+      {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
       <h1 style={{ 
-        position: 'absolute', 
-        left: '-9999px', 
-        top: '-9999px',
-        visibility: 'hidden'
+        position: 'absolute',
+        width: '1px',
+        height: '1px',
+        padding: '0',
+        margin: '-1px',
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        whiteSpace: 'nowrap',
+        border: '0'
       }}>
         发布任务
       </h1>
