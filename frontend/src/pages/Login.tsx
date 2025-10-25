@@ -98,6 +98,15 @@ const Login: React.FC = () => {
 
   return (
     <Wrapper>
+      {/* SEO优化：隐藏的H1标签，仅用于搜索引擎 */}
+      <h1 style={{ 
+        position: 'absolute', 
+        left: '-9999px', 
+        top: '-9999px',
+        visibility: 'hidden'
+      }}>
+        用户登录
+      </h1>
       <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
         <LanguageSwitcher />
       </div>

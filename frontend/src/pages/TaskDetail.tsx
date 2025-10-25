@@ -68,7 +68,9 @@ const TaskDetail: React.FC = () => {
       // 更新meta描述
       const metaDescription = document.querySelector('meta[name="description"]');
       if (metaDescription) {
-        const seoDescription = `在${task.location}寻找${task.task_type}？${task.title}，赏金£${task.reward}，截止${task.deadline ? new Date(task.deadline).toLocaleDateString('zh-CN') : '待定'}。立即申请这个任务！`;
+        // 创建简洁的描述，控制在120字符以内
+        const shortTitle = task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title;
+        const seoDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward}，地点${task.location}。立即申请！`;
         metaDescription.setAttribute('content', seoDescription);
       }
       
