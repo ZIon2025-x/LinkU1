@@ -221,8 +221,8 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
 
     # 获取系统设置中的价格阈值
     settings = get_system_settings_dict(db)
-    vip_price_threshold = settings.get("vip_price_threshold", 10.0)
-    super_vip_price_threshold = settings.get("super_vip_price_threshold", 50.0)
+    vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
+    super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
 
     # 任务等级分配逻辑
     if user.user_level == "super":
@@ -1858,11 +1858,11 @@ def check_and_upgrade_vip_to_super(db: Session, user_id: str):
         return False
 
     # 获取晋升条件阈值
-    task_count_threshold = settings.get("vip_to_super_task_count_threshold", 50)
-    rating_threshold = settings.get("vip_to_super_rating_threshold", 4.5)
-    completion_rate_threshold = settings.get(
+    task_count_threshold = int(settings.get("vip_to_super_task_count_threshold", 50))
+    rating_threshold = float(settings.get("vip_to_super_rating_threshold", 4.5))
+    completion_rate_threshold = float(settings.get(
         "vip_to_super_completion_rate_threshold", 0.8
-    )
+    ))
 
     # 计算用户的任务统计
     # 发布任务数量

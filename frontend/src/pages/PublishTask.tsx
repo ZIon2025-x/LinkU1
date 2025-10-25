@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TASK_TYPES, CITIES } from './Tasks';
-import api from '../api';
+import api, { getPublicSystemSettings } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // 移动端检测函数
@@ -28,6 +28,12 @@ const PublishTask: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>({
+    vip_price_threshold: 10.0,
+    super_vip_price_threshold: 50.0,
+    vip_enabled: true,
+    super_vip_enabled: true
+  });
   const navigate = useNavigate();
 
   // 移动端检测
@@ -42,8 +48,36 @@ const PublishTask: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // 加载系统设置
+  useEffect(() => {
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+        console.log('任务发布页面系统设置加载成功:', settings);
+      } catch (error) {
+        console.error('加载系统设置失败:', error);
+      }
+    };
+
+    loadSystemSettings();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // 获取任务等级提示
+  const getTaskLevelHint = (reward: number) => {
+    if (!reward || reward <= 0) return '';
+    
+    if (systemSettings.super_vip_enabled && reward >= systemSettings.super_vip_price_threshold) {
+      return `💰 超级任务 (≥${systemSettings.super_vip_price_threshold}元)`;
+    } else if (systemSettings.vip_enabled && reward >= systemSettings.vip_price_threshold) {
+      return `⭐ VIP任务 (≥${systemSettings.vip_price_threshold}元)`;
+    } else {
+      return `📝 普通任务 (<${systemSettings.vip_price_threshold}元)`;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -588,6 +622,26 @@ const PublishTask: React.FC = () => {
                 required 
                 placeholder={t('publishTask.rewardPlaceholder')} 
               />
+              {/* 任务等级提示 */}
+              {form.reward && parseFloat(form.reward) > 0 && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: isMobile ? '13px' : '14px',
+                  fontWeight: '500',
+                  textAlign: 'center',
+                  background: systemSettings.super_vip_enabled && parseFloat(form.reward) >= systemSettings.super_vip_price_threshold 
+                    ? 'linear-gradient(135deg, #8b5cf6, #a855f7)' 
+                    : systemSettings.vip_enabled && parseFloat(form.reward) >= systemSettings.vip_price_threshold
+                    ? 'linear-gradient(135deg, #f59e0b, #fbbf24)'
+                    : 'linear-gradient(135deg, #6b7280, #9ca3af)',
+                  color: '#fff',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  {getTaskLevelHint(parseFloat(form.reward))}
+                </div>
+              )}
             </div>
           </div>
           {error && (

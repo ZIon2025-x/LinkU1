@@ -3750,11 +3750,53 @@ def get_public_system_settings(db: Session = Depends(get_db)):
     """获取公开的系统设置（前端使用）"""
     settings_dict = crud.get_system_settings_dict(db)
 
-    # 只返回前端需要的公开设置
+    # 默认设置（如果数据库中没有设置）
+    default_settings = {
+        "vip_enabled": True,
+        "super_vip_enabled": True,
+        "vip_task_threshold": 5,
+        "super_vip_task_threshold": 20,
+        "vip_price_threshold": 10.0,
+        "super_vip_price_threshold": 50.0,
+        "vip_button_visible": True,
+        "vip_auto_upgrade_enabled": False,
+        "vip_benefits_description": "优先任务推荐、专属客服服务、任务发布数量翻倍",
+        "super_vip_benefits_description": "所有VIP功能、无限任务发布、专属高级客服、任务优先展示、专属会员标识",
+        # VIP晋升超级VIP的条件
+        "vip_to_super_task_count_threshold": 50,
+        "vip_to_super_rating_threshold": 4.5,
+        "vip_to_super_completion_rate_threshold": 0.8,
+        "vip_to_super_enabled": True,
+    }
+
+    # 合并数据库设置和默认设置
+    for key, value in default_settings.items():
+        if key not in settings_dict:
+            settings_dict[key] = value
+
+    # 返回前端需要的所有公开设置
     public_settings = {
+        # VIP功能开关
         "vip_enabled": settings_dict.get("vip_enabled", True),
         "super_vip_enabled": settings_dict.get("super_vip_enabled", True),
         "vip_button_visible": settings_dict.get("vip_button_visible", True),
+        
+        # 价格阈值设置
+        "vip_price_threshold": float(settings_dict.get("vip_price_threshold", 10.0)),
+        "super_vip_price_threshold": float(settings_dict.get("super_vip_price_threshold", 50.0)),
+        
+        # 任务数量阈值
+        "vip_task_threshold": int(settings_dict.get("vip_task_threshold", 5)),
+        "super_vip_task_threshold": int(settings_dict.get("super_vip_task_threshold", 20)),
+        
+        # VIP晋升设置
+        "vip_auto_upgrade_enabled": settings_dict.get("vip_auto_upgrade_enabled", False),
+        "vip_to_super_task_count_threshold": int(settings_dict.get("vip_to_super_task_count_threshold", 50)),
+        "vip_to_super_rating_threshold": float(settings_dict.get("vip_to_super_rating_threshold", 4.5)),
+        "vip_to_super_completion_rate_threshold": float(settings_dict.get("vip_to_super_completion_rate_threshold", 0.8)),
+        "vip_to_super_enabled": settings_dict.get("vip_to_super_enabled", True),
+        
+        # 描述信息
         "vip_benefits_description": settings_dict.get(
             "vip_benefits_description", "优先任务推荐、专属客服服务、任务发布数量翻倍"
         ),
