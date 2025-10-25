@@ -616,11 +616,11 @@ const Home: React.FC = () => {
             margin: '0 auto'
           }}>
             <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>测试版</div>
+              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>{t('home.betaVersion')}</div>
               <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('about.teamText')}</div>
           </div>
             <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>英国</div>
+              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>{t('home.coverageArea')}</div>
               <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('profile.tasksCompleted')}</div>
           </div>
             <div style={{textAlign: 'center'}}>

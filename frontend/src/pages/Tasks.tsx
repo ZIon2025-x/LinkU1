@@ -1034,7 +1034,8 @@ const Tasks: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             gap: '20px',
-            flexWrap: 'wrap'
+            flexWrap: 'nowrap',
+            overflowX: 'auto'
           }}>
             {/* 排序控制区域 - 重新设计 */}
             <div className="sort-controls" style={{
@@ -1043,7 +1044,8 @@ const Tasks: React.FC = () => {
               flex: '1',
               minWidth: '0',
               alignItems: 'center',
-              flexWrap: 'wrap'
+              flexWrap: 'nowrap',
+              overflowX: 'auto'
             }}>
               {/* 任务等级下拉菜单 */}
               <div className="level-dropdown-container" style={{ position: 'relative' }}>
