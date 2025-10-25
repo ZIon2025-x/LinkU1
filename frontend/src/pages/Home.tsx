@@ -83,9 +83,9 @@ function isExpiringSoon(deadline: string) {
     
     const nowUK = dayjs().tz('Europe/London');
     const endUK = utcTime.tz('Europe/London');
-    const oneDayLater = nowUK.add(1, 'day');
+    const twoHoursLater = nowUK.add(2, 'hour');
     
-    return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
+    return nowUK.isBefore(endUK) && endUK.isBefore(twoHoursLater);
   } catch (error) {
     console.error('Expiration check error:', error);
     return false;
@@ -549,7 +549,7 @@ const Home: React.FC = () => {
             margin: '0 auto 40px',
             lineHeight: '1.6'
           }}>
-            {t('about.missionText')}
+            {t('home.heroDescription')}
           </p>
           
           <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '60px'}}>
@@ -616,11 +616,11 @@ const Home: React.FC = () => {
             margin: '0 auto'
           }}>
             <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>1000+</div>
+              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>测试版</div>
               <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('about.teamText')}</div>
           </div>
             <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>5000+</div>
+              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>英国</div>
               <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('profile.tasksCompleted')}</div>
           </div>
             <div style={{textAlign: 'center'}}>

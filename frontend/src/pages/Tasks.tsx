@@ -275,9 +275,9 @@ function isExpiringSoon(deadline: string) {
     
     const nowUK = dayjs().tz('Europe/London');
     const endUK = utcTime.tz('Europe/London');
-    const oneDayLater = nowUK.add(1, 'day');
+    const twoHoursLater = nowUK.add(2, 'hour');
     
-    return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
+    return nowUK.isBefore(endUK) && endUK.isBefore(twoHoursLater);
   } catch (error) {
     console.error('过期检查错误:', error);
     return false;
@@ -331,7 +331,7 @@ const Tasks: React.FC = () => {
   const [showRewardDropdown, setShowRewardDropdown] = useState(false);
   const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
-  const [taskLevel, setTaskLevel] = useState('all');
+  const [taskLevel, setTaskLevel] = useState('全部等级');
   const [isMobile, setIsMobile] = useState(false);
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -690,11 +690,11 @@ const Tasks: React.FC = () => {
     let filtered = [...tasks];
 
     // 按任务等级筛选
-    if (taskLevel !== 'all') {
+    if (taskLevel !== t('tasks.levels.all')) {
       const levelMap: { [key: string]: string } = {
-        [t('home.normalTask')]: 'normal',
-        [t('home.vipTask')]: 'vip',
-        [t('home.superTask')]: 'super'
+        [t('tasks.levels.normal')]: 'normal',
+        [t('tasks.levels.vip')]: 'vip',
+        [t('tasks.levels.super')]: 'super'
       };
       
       const targetLevel = levelMap[taskLevel];
@@ -1267,7 +1267,7 @@ const Tasks: React.FC = () => {
                 fontWeight: '500',
                 flexShrink: 0
               }}>
-                <span>排序:</span>
+                <span>{t('tasks.sorting.sortBy')}:</span>
               </div>
 
               {/* 最新发布卡片 */}
@@ -2320,7 +2320,7 @@ const Tasks: React.FC = () => {
             
             /* 分类区域滚动提示 */
             .category-section::after {
-              content: '← 滑动查看更多 →' !important;
+              content: '← ' + t('tasks.swipeToSeeMore') + ' →' !important;
               position: absolute !important;
               bottom: 4px !important;
               left: 50% !important;

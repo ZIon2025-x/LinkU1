@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCurrentUser, updateAvatar } from '../api';
+import { fetchCurrentUser, updateAvatar, getPublicSystemSettings } from '../api';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -48,6 +48,7 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [systemSettings, setSystemSettings] = useState({ vip_button_visible: true });
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -70,6 +71,16 @@ const Profile: React.FC = () => {
       setLoading(true);
       const userInfo = await fetchCurrentUser();
       console.log('Profile页面加载的用户数据:', userInfo);
+      
+      // 加载系统设置
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+        console.log('系统设置加载成功:', settings);
+      } catch (error) {
+        console.error('加载系统设置失败:', error);
+        setSystemSettings({ vip_button_visible: true }); // 默认显示
+      }
       console.log('用户头像字段:', userInfo.avatar);
       setUser(userInfo);
       
@@ -406,44 +417,46 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* VIP会员按钮 */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '30px'
-          }}>
-            <button
-              onClick={() => navigate('/vip')}
-              style={{
-                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                color: '#8B4513',
-                border: 'none',
-                padding: '16px 32px',
-                borderRadius: '25px',
-                fontSize: '18px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                minWidth: '200px',
-                justifyContent: 'center'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.4)';
-              }}
-            >
-              <span style={{ fontSize: '20px' }}>👑</span>
-              {t('profile.vipMember')}
-            </button>
-          </div>
+          {/* VIP会员按钮 - 根据系统设置控制显示 */}
+          {systemSettings.vip_button_visible && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '30px'
+            }}>
+              <button
+                onClick={() => navigate('/vip')}
+                style={{
+                  background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                  color: '#8B4513',
+                  border: 'none',
+                  padding: '16px 32px',
+                  borderRadius: '25px',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  minWidth: '200px',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.4)';
+                }}
+              >
+                <span style={{ fontSize: '20px' }}>👑</span>
+                {t('profile.vipMember')}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 统计信息卡片 */}

@@ -307,19 +307,15 @@ const About: React.FC = () => {
         <Row gutter={[48, 48]} align="middle">
           <Col xs={24} lg={12}>
             <div className="story-content">
-              <Title level={2}>我们的故事</Title>
+              <Title level={2}>{t('about.ourStory')}</Title>
               <Paragraph>
-                2023年，一群充满激情的年轻人聚在一起，他们看到了传统工作模式的局限性，
-                也看到了数字时代带来的无限可能。于是，Link²Ur 应运而生。
+                {t('about.ourStoryText1')}
               </Paragraph>
               <Paragraph>
-                我们相信，每个人都有独特的技能和才华，每个任务都值得被认真对待。
-                通过我们的平台，技能者可以找到合适的工作机会，需求方可以获得专业的服务，
-                实现真正的双赢。
+                {t('about.ourStoryText2')}
               </Paragraph>
               <Paragraph>
-                从最初的小团队到现在的规模，我们始终坚持初心：
-                <Text strong> 让工作更简单，让生活更美好。</Text>
+                {t('about.ourStoryText3')}
               </Paragraph>
             </div>
           </Col>

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { getPublicSystemSettings } from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const VIP: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [systemSettings, setSystemSettings] = useState({ vip_button_visible: true });
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -19,7 +23,19 @@ const VIP: React.FC = () => {
       }
     };
 
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+        console.log('VIP页面系统设置加载成功:', settings);
+      } catch (error) {
+        console.error('加载系统设置失败:', error);
+        setSystemSettings({ vip_button_visible: true }); // 默认显示
+      }
+    };
+
     loadUser();
+    loadSystemSettings();
   }, []);
 
   const getLevelColor = (level: string) => {
@@ -56,6 +72,59 @@ const VIP: React.FC = () => {
         color: '#666'
       }}>
         加载中...
+      </div>
+    );
+  }
+
+  // 如果VIP按钮被禁用，显示提示并重定向
+  if (!systemSettings.vip_button_visible) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          fontSize: '48px',
+          marginBottom: '20px'
+        }}>
+          🚫
+        </div>
+        <h1 style={{
+          fontSize: '24px',
+          color: '#333',
+          marginBottom: '16px'
+        }}>
+          VIP功能暂时不可用
+        </h1>
+        <p style={{
+          fontSize: '16px',
+          color: '#666',
+          marginBottom: '24px',
+          maxWidth: '400px'
+        }}>
+          管理员已暂时禁用VIP功能，请稍后再试或联系客服了解详情。
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            color: '#fff',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          返回首页
+        </button>
       </div>
     );
   }

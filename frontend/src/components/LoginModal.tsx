@@ -4,6 +4,7 @@ import { message } from 'antd';
 import api from '../api';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import VerificationModal from './VerificationModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   onShowForgotPassword, 
   onHideForgotPassword 
 }) => {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -118,20 +120,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
       } else {
         // 注册逻辑
         if (formData.password !== formData.confirmPassword) {
-          setError('密码确认不匹配');
+          setError(t('auth.passwordMismatch'));
           setLoading(false);
           return;
         }
         
         if (!agreedToTerms) {
-          setError('请先同意用户协议和隐私政策');
+          setError(t('auth.agreeToTermsFirst'));
           setLoading(false);
           return;
         }
         
         // 检查密码强度
         if (!passwordValidation.is_valid) {
-          setError('密码不符合安全要求，请查看下方提示');
+          setError(t('auth.passwordNotSecure'));
           setLoading(false);
           return;
         }
@@ -152,7 +154,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           setRegisteredEmail(res.data.email);
           setShowVerificationModal(true);
         } else {
-          message.success(res.data.message || '注册成功！');
+          message.success(res.data.message || t('auth.registerSuccess'));
           // 开发环境：直接跳转到登录页面
           setTimeout(() => {
             navigate('/login');
@@ -173,7 +175,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       console.error('注册/登录错误:', err);
       console.error('错误响应:', err?.response?.data);
       
-      let msg = isLogin ? '登录失败' : '注册失败';
+      let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
       
       // 优先处理HTTP响应错误
       if (err?.response?.data) {
@@ -217,7 +219,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleGoogleLogin = () => {
     // Google登录逻辑（暂时显示提示）
-    alert('Google登录功能暂未实现');
+    alert(t('auth.googleLoginNotImplemented'));
   };
 
   if (!isOpen) return null;
@@ -287,7 +289,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           marginBottom: '8px',
           textAlign: 'center'
         }}>
-          {isLogin ? '登录' : '注册'}
+          {isLogin ? t('auth.loginTitle') : t('register.title')}
         </h2>
 
         {/* 欢迎礼品横幅 */}
@@ -302,7 +304,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <span style={{ fontSize: '20px' }}>💎</span>
             <span style={{ fontSize: '14px', color: '#1976d2' }}>
-              {isLogin ? '登录' : '注册'}即可获得 <strong style={{ fontSize: '16px' }}>£66</strong> 欢迎礼品
+              {t('home.welcomeGift')}
             </span>
           </div>
         </div>
@@ -333,14 +335,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
               color: '#333',
               marginBottom: '8px'
             }}>
-              邮箱地址
+              {t('common.email')}
             </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="请输入邮箱地址"
+              placeholder={t('common.email')}
               required
               style={{
                 width: '100%',
@@ -371,14 +373,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   color: '#333',
                   marginBottom: '8px'
                 }}>
-                  用户名
+                  {t('common.username')}
                 </label>
                 <input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="请输入用户名"
+                  placeholder={t('common.username')}
                   required
                   style={{
                     width: '100%',
@@ -406,14 +408,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   color: '#333',
                   marginBottom: '8px'
                 }}>
-                  手机号
+                  {t('common.phone')}
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="请输入手机号（可选）"
+                  placeholder={t('common.phoneOptional')}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -443,14 +445,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
               color: '#333',
               marginBottom: '8px'
             }}>
-              密码
+              {t('common.password')}
             </label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              placeholder={isLogin ? "请输入密码" : "至少12位，包含大小写字母、数字和特殊字符"}
+              placeholder={isLogin ? t('common.password') : t('auth.passwordRequirements')}
               required
               style={{
                 width: '100%',
@@ -485,9 +487,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     fontWeight: 'bold',
                     fontSize: '13px'
                   }}>
-                    密码强度: {passwordValidation.strength === 'weak' ? '弱' : 
-                           passwordValidation.strength === 'medium' ? '中等' :
-                           passwordValidation.strength === 'strong' ? '强' : '很强'} 
+                    {t('auth.passwordStrength')}: {passwordValidation.strength === 'weak' ? t('auth.weak') : 
+                           passwordValidation.strength === 'medium' ? t('auth.medium') :
+                           passwordValidation.strength === 'strong' ? t('auth.strong') : t('auth.veryStrong')} 
                     ({passwordValidation.score}/100)
                   </span>
                 </div>
@@ -531,7 +533,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     padding: '0'
                   }}
                 >
-                  忘记密码？
+                  {t('auth.forgotPassword')}
                 </button>
               </div>
             )}
@@ -548,14 +550,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 color: '#333',
                 marginBottom: '8px'
               }}>
-                确认密码
+                {t('auth.confirmPassword')}
               </label>
               <input
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                placeholder="请再次输入密码"
+                placeholder={t('auth.confirmPassword')}
                 required
                 style={{
                   width: '100%',
@@ -604,7 +606,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 />
               </div>
               <div style={{ flex: 1 }}>
-                我已阅读并同意
+                {t('auth.agreeToTerms')}
                 <a 
                   href="/terms" 
                   target="_blank"
@@ -627,9 +629,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     navigate('/privacy');
                   }}
                 >
-                  隐私政策
-                </a>，
-                并接收短信通知。标准短信费率可能适用。
+                  {t('common.privacyPolicy')}
+                </a>，{t('auth.smsNotification')}
               </div>
             </div>
           )}
@@ -662,7 +663,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
               }
             }}
           >
-            {loading ? '处理中...' : (isLogin ? '登录' : '注册')}
+            {loading ? t('common.processing') : (isLogin ? t('auth.login') : t('auth.register'))}
           </button>
 
           {/* 切换登录/注册 */}
@@ -683,7 +684,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 textDecoration: 'underline'
               }}
             >
-              {isLogin ? '没有账号？立即注册' : '已有账号？立即登录'}
+              {isLogin ? t('auth.noAccount') : t('auth.haveAccount')}
             </button>
           </div>
 
@@ -751,7 +752,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             }}>
               G
             </div>
-            使用 Google 继续
+            {t('auth.continueWithGoogle')}
           </button>
         </form>
         </div>
