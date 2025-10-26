@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -108,15 +109,8 @@ const Settings: React.FC = () => {
     try {
       setSessionsLoading(true);
       setSessionsError('');
-      const res = await fetch('/api/secure-auth/sessions', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      if (!res.ok) {
-        throw new Error(`加载会话失败: ${res.status}`);
-      }
-      const data = await res.json();
-      setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+      const res = await api.get('/api/secure-auth/sessions');
+      setSessions(Array.isArray(res.data.sessions) ? res.data.sessions : []);
     } catch (e: any) {
       console.error(e);
       setSessionsError(e?.message || '加载会话失败');
