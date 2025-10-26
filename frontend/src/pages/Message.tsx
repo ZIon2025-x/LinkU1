@@ -1276,6 +1276,7 @@ const MessagePage: React.FC = () => {
     };
     
     handleContactSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeContact, user, isServiceMode, serviceConnected]);
 
   // 自动滚动到底部 - 仅针对真正的新消息（发送和接收），不包括系统消息和历史消息
