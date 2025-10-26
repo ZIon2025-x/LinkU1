@@ -235,13 +235,14 @@ async def create_task_async(
 @async_router.post("/tasks/{task_id}/apply", response_model=dict)
 async def apply_for_task(
     task_id: int,
-    message: Optional[str] = Body(None),
+    request_data: dict = Body({}),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """申请任务（异步版本）"""
-    print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}")
+    message = request_data.get('message', None)
+    print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
     application = await async_crud.async_task_crud.apply_for_task(
         db, task_id, current_user.id, message
     )
