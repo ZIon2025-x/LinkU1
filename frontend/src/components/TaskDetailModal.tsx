@@ -1165,14 +1165,18 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '18px'}}>
                   {userApplication.status === 'pending' ? t('taskDetail.waitingApproval') :
                    userApplication.status === 'approved' ? 
-                     (task.status === 'pending_confirmation' ? t('taskDetail.taskCompleted') : t('taskDetail.applicationPassed')) : 
+                     (task.status === 'completed' ? t('taskDetail.taskCompleted') : 
+                      task.status === 'pending_confirmation' ? (isTaskTaker ? t('taskDetail.taskCompleted') : t('taskDetail.waitingConfirmation')) : 
+                      t('taskDetail.applicationPassed')) : 
                    t('taskDetail.applicationRejected')}
                 </div>
                 <div style={{fontSize: '14px', fontWeight: 'normal', lineHeight: 1.5}}>
                   {userApplication.status === 'pending' ? t('taskDetail.waitingApprovalDesc') :
                    userApplication.status === 'approved' ? 
-                     (task.status === 'pending_confirmation' ? 
-                       t('taskDetail.taskCompletedDesc') : 
+                     (task.status === 'completed' ? 
+                       (canReview() && !hasUserReviewed() ? t('taskDetail.completedNeedReview') : t('taskDetail.taskCompletedDesc')) :
+                      task.status === 'pending_confirmation' ? 
+                       (isTaskTaker ? t('taskDetail.taskCompletedDesc') : t('taskDetail.waitingConfirmationDesc')) : 
                        t('taskDetail.applicationPassedDesc')) :
                    t('taskDetail.applicationRejectedDesc')}
                 </div>

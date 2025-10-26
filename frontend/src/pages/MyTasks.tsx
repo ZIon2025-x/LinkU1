@@ -322,9 +322,10 @@ const MyTasks: React.FC = () => {
   const handleSubmitReview = async () => {
     if (!currentReviewTask) return;
     
-    setActionLoading(currentReviewTask.id);
+    const taskId = currentReviewTask.id;
+    setActionLoading(taskId);
     try {
-      await createReview(currentReviewTask.id, reviewRating, reviewComment, isAnonymous);
+      await createReview(taskId, reviewRating, reviewComment, isAnonymous);
       alert(t('myTasks.alerts.reviewSubmitted'));
       // 评价提交成功，任务数据会重新加载
       setShowReviewModal(false);
@@ -332,7 +333,12 @@ const MyTasks: React.FC = () => {
       setReviewComment('');
       setIsAnonymous(false);
       setCurrentReviewTask(null);
+      
+      // 重新加载任务和评价数据
       await loadTasks();
+      
+      // 强制重新加载该任务的评价数据
+      await loadTaskReviews(taskId);
     } catch (error: any) {
       alert(error.response?.data?.detail || t('myTasks.alerts.reviewSubmitFailed'));
     } finally {
@@ -370,6 +376,7 @@ const MyTasks: React.FC = () => {
       return false; // 暂时返回false，等数据加载完成后再重新渲染
     }
     
+    // 检查是否有用户自己的评价（即使匿名评价也会记录user_id）
     return taskReviews[task.id].some((review: any) => review.user_id === user.id);
   };
 
@@ -1532,15 +1539,16 @@ const MyTasks: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               zIndex: 1000,
-              backdropFilter: 'blur(4px)'
+              backdropFilter: 'blur(4px)',
+              padding: '10px'
             }}>
               <div className="review-modal" style={{
                 background: '#fff',
-                borderRadius: '20px',
-                padding: '40px',
+                borderRadius: '16px',
+                padding: '20px',
                 maxWidth: '500px',
                 width: '90%',
-                maxHeight: '80vh',
+                maxHeight: '90vh',
                 overflow: 'auto',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
               }}>
@@ -1562,34 +1570,40 @@ const MyTasks: React.FC = () => {
                 color: '#1e293b',
                 fontSize: '16px'
               }}>
-                {t('myTasks.ratingLabel')} (0.5-5{t('myTasks.stars')})
+                {t('myTasks.ratingLabel')}
               </label>
+              {/* 移动端优化的星星选择 */}
               <div style={{
-                display: 'flex', 
-                gap: '6px', 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                marginBottom: '12px'
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(5, 1fr)', 
+                gap: '8px', 
+                marginBottom: '12px',
+                maxWidth: '100%'
               }}>
-                {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(star => (
+                {[1, 2, 3, 4, 5].map(star => (
                   <button
                     key={star}
                     onClick={() => setReviewRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
+                    onTouchStart={() => setHoverRating(star)}
+                    onTouchEnd={() => setHoverRating(0)}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: star % 1 === 0 ? 28 : 20,
+                      background: star <= (hoverRating || reviewRating) ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : '#f3f4f6',
+                      border: star <= (hoverRating || reviewRating) ? '2px solid #f59e0b' : '2px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '12px 8px',
                       cursor: 'pointer',
-                      color: star <= (hoverRating || reviewRating) ? '#f59e0b' : '#d1d5db',
-                      transition: 'all 0.3s ease',
-                      padding: '4px',
-                      transform: star <= (hoverRating || reviewRating) ? 'scale(1.2)' : 'scale(1)',
-                      filter: star <= (hoverRating || reviewRating) ? 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))' : 'none'
+                      fontSize: '24px',
+                      transition: 'all 0.2s ease',
+                      transform: star <= (hoverRating || reviewRating) ? 'scale(1.05)' : 'scale(1)',
+                      minHeight: '60px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
-                    {star <= (hoverRating || reviewRating) ? '⭐' : '☆'}
+                    ⭐
                   </button>
                 ))}
               </div>
