@@ -235,8 +235,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     try {
       console.log('开始申请任务...', { taskId, currentStatus: task?.status });
       
-      // 使用测试端点
-      const result = await api.post(`/api/tasks/${taskId}/apply-test`, { message: "" });
+      // 使用 apply 端点，创建申请记录等待发布者同意
+      const result = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
       console.log('申请任务API调用成功:', result.data);
       
       alert(t('taskDetail.taskApplySuccess'));

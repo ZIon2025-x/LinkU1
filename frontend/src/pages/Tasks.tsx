@@ -608,8 +608,8 @@ const Tasks: React.FC = () => {
     }
 
     try {
-      // 使用测试端点
-      const data = await api.post(`/api/tasks/${taskId}/apply-test`, { message: "" });
+      // 使用 apply 端点，创建申请记录等待发布者同意
+      const data = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
       
       alert(t('tasks.acceptSuccess'));
       // 将任务添加到已申请列表，隐藏申请按钮

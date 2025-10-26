@@ -492,33 +492,43 @@ class AsyncTaskCRUD:
                 status="pending"
             )
             db.add(application)
+            await db.commit()
+            await db.refresh(application)
+            print(f"DEBUG: 成功创建申请记录，ID: {application.id}")
             
             # 更新任务状态为taken（如果有申请者）
-            await db.execute(
-                update(models.Task)
-                .where(models.Task.id == task_id)
-                .values(status="taken")
-            )
+            try:
+                await db.execute(
+                    update(models.Task)
+                    .where(models.Task.id == task_id)
+                    .values(status="taken")
+                )
+                await db.commit()
+                print(f"DEBUG: 已更新任务 {task_id} 状态为 taken")
+            except Exception as e:
+                print(f"DEBUG: 更新任务状态失败（不影响申请流程）: {e}")
             
             # 自动发送消息给任务发布者
             try:
                 from app.models import Message
                 
+                # 获取任务发布者 ID（确保是字符串）
+                poster_id = str(getattr(task, 'poster_id', ''))
+                print(f"DEBUG: 发布者 ID: {poster_id}")
+                
                 # 创建自动消息
                 auto_message = Message(
                     sender_id=applicant_id,
-                    receiver_id=str(task.poster_id),
+                    receiver_id=poster_id,
                     content=f"我申请了您的任务：{task.title}。{f'申请留言：{message}' if message else ''}"
                 )
                 db.add(auto_message)
+                await db.commit()
                 print(f"DEBUG: 已添加申请消息到数据库")
             except Exception as e:
-                print(f"DEBUG: 添加自动消息失败: {e}")
-                # 不影响申请流程，只记录错误
+                print(f"DEBUG: 添加自动消息失败（不影响申请流程）: {e}")
                 logger.error(f"Failed to add auto message for task application: {e}")
             
-            await db.commit()
-            await db.refresh(application)
             print(f"DEBUG: 成功申请任务 {task_id}，申请者: {applicant_id}")
             
             return application
