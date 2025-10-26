@@ -761,8 +761,10 @@ async def get_task_reviews_async(
         if current_user:
             print(f"DEBUG: 当前用户已登录: {current_user.id}")
             for review in all_reviews:
-                print(f"DEBUG: 检查评价 - review.user_id: {review.user_id}, is_anonymous: {review.is_anonymous}")
-                if review.user_id == current_user.id:
+                print(f"DEBUG: 检查评价 - review.user_id: {review.user_id}, is_anonymous: {review.is_anonymous}, current_user.id: {current_user.id}")
+                is_current_user_review = str(review.user_id) == str(current_user.id)
+                print(f"DEBUG: 是否当前用户评价: {is_current_user_review}")
+                if is_current_user_review:
                     # 始终包含当前用户自己的评价，即使是匿名的
                     print(f"DEBUG: 包含当前用户自己的评价: {review.id}")
                     public_reviews.append(review)
@@ -778,6 +780,8 @@ async def get_task_reviews_async(
                     public_reviews.append(review)
         
         print(f"DEBUG: 返回评价数量: {len(public_reviews)}")
+        print(f"DEBUG: 返回的评价ID: {[r.id for r in public_reviews]}")
+        print(f"DEBUG: 返回的评价用户ID: {[r.user_id for r in public_reviews]}")
         return public_reviews
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")
