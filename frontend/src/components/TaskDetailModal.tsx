@@ -1333,7 +1333,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                           onClick={() => {
                             console.log('点击联系申请者，用户ID:', app.applicant_id);
                             navigate(`/message?uid=${app.applicant_id}`); // 跳转到聊天页面
-                            onClose(); // 关闭任务详情弹窗
+                            setTimeout(() => {
+                              onClose(); // 关闭任务详情弹窗
+                            }, 50);
                           }}
                           style={{
                             background: '#007bff',
@@ -1400,7 +1402,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               onClick={() => {
                 console.log('点击联系接收者，用户ID:', task.taker_id);
                 navigate(`/message?uid=${task.taker_id}`);
-                onClose();
+                setTimeout(() => {
+                  onClose();
+                }, 50);
               }}
               style={{
                 background: '#007bff',
@@ -1443,7 +1447,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               onClick={() => {
                 console.log('点击联系发布者，用户ID:', task.poster_id);
                 navigate(`/message?uid=${task.poster_id}`);
-                onClose();
+                setTimeout(() => {
+                  onClose();
+                }, 50);
               }}
               style={{
                 background: '#A67C52',
