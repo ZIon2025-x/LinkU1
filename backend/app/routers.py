@@ -3920,14 +3920,7 @@ async def timeout_end_customer_service_chat(
             logger.info(f"对话 {chat_id} 已经结束")
             raise HTTPException(status_code=400, detail="对话已结束")
 
-        # 结束对话
-        logger.info(f"正在结束对话 {chat_id}")
-        success = crud.end_customer_service_chat(db, chat_id)
-        if not success:
-            logger.error(f"结束对话 {chat_id} 失败")
-            raise HTTPException(status_code=500, detail="结束对话失败")
-
-        # 发送系统消息给用户 - 由于长时间没有收到你的信息，本次对话已结束
+        # 先发送系统消息给用户 - 由于长时间没有收到你的信息，本次对话已结束
         logger.info(f"为用户 {chat['user_id']} 发送系统消息")
         try:
             crud.save_customer_service_message(
@@ -3941,6 +3934,13 @@ async def timeout_end_customer_service_chat(
         except Exception as e:
             logger.error(f"发送系统消息失败: {e}")
             # 不影响流程继续
+
+        # 结束对话（在发送消息后再结束）
+        logger.info(f"正在结束对话 {chat_id}")
+        success = crud.end_customer_service_chat(db, chat_id)
+        if not success:
+            logger.error(f"结束对话 {chat_id} 失败")
+            raise HTTPException(status_code=500, detail="结束对话失败")
 
         # 发送超时通知给用户
         logger.info(f"为用户 {chat['user_id']} 创建超时通知")

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markCustomerServiceMessagesRead, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
+import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -1749,18 +1749,13 @@ const MessagePage: React.FC = () => {
             }
           }, 50);
         }
-          
-          // 标记客服对话消息为已读
-          try {
-            await markCustomerServiceMessagesRead(chatId);
-            console.log('客服对话消息已标记为已读');
-          } catch (error) {
-            console.error('标记客服消息为已读失败:', error);
-          }
-          
-          return;
-        }
+        
+        // 注意：用户端不应调用markCustomerServiceMessagesRead，这是客服专用的接口
+        // 用户端通过WebSocket接收消息，消息会被自动标记为已读
+        
+        return;
       }
+    }
       
       // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
       if (!chatId && !isServiceMode && !serviceConnected) {
