@@ -1309,7 +1309,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                         <button
                           onClick={() => {
                             onClose();
-                            navigate(`/message?uid=${app.applicant_id}`);
+                            setTimeout(() => {
+                              navigate(`/message?uid=${app.applicant_id}`);
+                            }, 100);
                           }}
                           style={{
                             background: '#007bff',
@@ -1375,7 +1377,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <button
               onClick={() => {
                 onClose();
-                navigate(`/message?uid=${task.taker_id}`);
+                setTimeout(() => {
+                  navigate(`/message?uid=${task.taker_id}`);
+                }, 100);
               }}
               style={{
                 background: '#007bff',
@@ -1417,7 +1421,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <button
               onClick={() => {
                 onClose();
-                navigate(`/message?uid=${task.poster_id}`);
+                setTimeout(() => {
+                  navigate(`/message?uid=${task.poster_id}`);
+                }, 100);
               }}
               style={{
                 background: '#A67C52',
