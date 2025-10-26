@@ -203,7 +203,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   };
 
   const handleChat = (userId: string) => {
-    navigate(`/message?uid=${userId}`);
+    console.log('handleChat被调用，用户ID:', userId);
+    console.log('当前URL:', window.location.href);
+    const targetUrl = `/message?uid=${userId}`;
+    console.log('目标URL:', targetUrl);
+    navigate(targetUrl);
+    console.log('navigate已调用');
   };
 
   const handleAcceptTask = async () => {
