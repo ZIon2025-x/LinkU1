@@ -1317,9 +1317,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                             e.stopPropagation();
                             console.log('🟢 Contact Applicant - app.applicant_id:', app.applicant_id);
                             console.log('🟢 即将跳转到:', `/message?uid=${app.applicant_id}`);
-                            setTimeout(() => {
-                              navigate(`/message?uid=${app.applicant_id}`);
-                            }, 10);
+                            navigate(`/message?uid=${app.applicant_id}`);
+                            window.location.href = `/message?uid=${app.applicant_id}`;
                           }}
                           style={{
                             background: '#007bff',
@@ -1388,9 +1387,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 e.stopPropagation();
                 console.log('🔵 Contact Taker - task.taker_id:', task.taker_id);
                 console.log('🔵 即将跳转到:', `/message?uid=${task.taker_id}`);
-                setTimeout(() => {
-                  navigate(`/message?uid=${task.taker_id}`);
-                }, 10);
+                navigate(`/message?uid=${task.taker_id}`);
+                window.location.href = `/message?uid=${task.taker_id}`;
               }}
               style={{
                 background: '#007bff',
@@ -1435,9 +1433,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 e.stopPropagation();
                 console.log('🟡 Contact Poster - task.poster_id:', task.poster_id);
                 console.log('🟡 即将跳转到:', `/message?uid=${task.poster_id}`);
-                setTimeout(() => {
-                  navigate(`/message?uid=${task.poster_id}`);
-                }, 10);
+                navigate(`/message?uid=${task.poster_id}`);
+                window.location.href = `/message?uid=${task.poster_id}`;
               }}
               style={{
                 background: '#A67C52',
