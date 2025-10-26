@@ -1008,11 +1008,23 @@ const MessagePage: React.FC = () => {
 
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
-    console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search, contactsLoading });
+    console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search, locationHash: window.location.hash, contactsLoading });
     console.log('URL参数处理条件检查:', { user: !!user, contactsLoading, shouldProcess: user && !contactsLoading });
     if (user && !contactsLoading) { // 等待联系人列表加载完成
-      const urlParams = new URLSearchParams(location.search);
-      const targetUserId = urlParams.get('uid');
+      // 尝试从hash中解析参数
+      let targetUserId: string | null = null;
+      if (window.location.hash.includes('?')) {
+        const hashQuery = window.location.hash.split('?')[1];
+        const urlParams = new URLSearchParams(hashQuery);
+        targetUserId = urlParams.get('uid');
+        console.log('从hash中获取uid:', targetUserId);
+      }
+      // 如果hash中没有，尝试从location.search中获取
+      if (!targetUserId && location.search) {
+        const urlParams = new URLSearchParams(location.search);
+        targetUserId = urlParams.get('uid');
+        console.log('从location.search中获取uid:', targetUserId);
+      }
       
       if (targetUserId) {
         console.log('从URL参数获取目标用户ID:', targetUserId, '当前activeContact:', activeContact?.id);
@@ -1064,7 +1076,7 @@ const MessagePage: React.FC = () => {
         }
       }
     }
-  }, [user, location.search, contacts, contactsLoading]);
+  }, [user, window.location.hash, contacts, contactsLoading]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
