@@ -1312,12 +1312,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            console.log('🟢 Contact Applicant - app.applicant_id:', app.applicant_id);
-                            console.log('🟢 即将跳转到:', `/message?uid=${app.applicant_id}`);
-                            navigate(`/message?uid=${app.applicant_id}`);
+                          onClick={() => {
                             window.location.href = `/message?uid=${app.applicant_id}`;
                           }}
                           style={{
@@ -1382,12 +1377,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🔵 Contact Taker - task.taker_id:', task.taker_id);
-                console.log('🔵 即将跳转到:', `/message?uid=${task.taker_id}`);
-                navigate(`/message?uid=${task.taker_id}`);
+              onClick={() => {
                 window.location.href = `/message?uid=${task.taker_id}`;
               }}
               style={{
@@ -1428,12 +1418,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('🟡 Contact Poster - task.poster_id:', task.poster_id);
-                console.log('🟡 即将跳转到:', `/message?uid=${task.poster_id}`);
-                navigate(`/message?uid=${task.poster_id}`);
+              onClick={() => {
                 window.location.href = `/message?uid=${task.poster_id}`;
               }}
               style={{
