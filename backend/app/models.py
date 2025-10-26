@@ -34,7 +34,7 @@ def get_uk_time_online():
     """通过网络获取真实的英国时间，使用多个API作为备用"""
     import requests
     import pytz
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     # 导入Railway配置
     try:
@@ -238,7 +238,7 @@ class Message(Base):
     )  # 允许为NULL，用于系统消息
     receiver_id = Column(String(8), ForeignKey("users.id"))
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.utcnow())  # 统一存储UTC时间
+    created_at = Column(DateTime, default=lambda: datetime.now())  # 统一存储UTC时间
     is_read = Column(Integer, default=0)  # 0=unread, 1=read
     image_id = Column(String(100), nullable=True)  # 私密图片ID
 

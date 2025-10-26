@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, B
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 
 from app import async_crud, models, schemas
 from app.database import check_database_health, get_pool_status
@@ -351,10 +351,31 @@ async def apply_for_task(
             )
         
         # 先返回成功响应，避免等待通知发送
+        # 从 application 对象获取属性前先确保其有效
+        if hasattr(application, 'id') and application.id:
+            application_id = application.id
+            application_status = application.status if hasattr(application, 'status') else "pending"
+        else:
+            # 如果无法获取属性，从数据库重新查询
+            app_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.task_id == task_id,
+                    models.TaskApplication.applicant_id == applicant_id
+                )
+            ).order_by(models.TaskApplication.id.desc())
+            app_result = await db.execute(app_query)
+            app = app_result.scalar_one_or_none()
+            if app:
+                application_id = app.id
+                application_status = app.status
+            else:
+                application_id = 0
+                application_status = "pending"
+        
         response_data = {
             "message": "申请成功，请等待发布者审核",
-            "application_id": application.id,
-            "status": application.status
+            "application_id": application_id,
+            "status": application_status
         }
         
         # 申请成功后发送通知和邮件给发布者（异步）
