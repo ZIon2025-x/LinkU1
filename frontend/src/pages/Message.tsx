@@ -1014,9 +1014,9 @@ const MessagePage: React.FC = () => {
       const targetUserId = urlParams.get('uid');
       
       if (targetUserId) {
-        console.log('从URL参数获取目标用户ID:', targetUserId);
+        console.log('从URL参数获取目标用户ID:', targetUserId, '当前activeContact:', activeContact?.id);
         
-        // 检查当前activeContact是否已经是目标用户，避免重复设置
+        // 检查当前activeContact是否已经是目标用户
         if (activeContact?.id === targetUserId) {
           console.log('已经是目标用户，无需重复设置');
           return;
@@ -1063,7 +1063,7 @@ const MessagePage: React.FC = () => {
         }
       }
     }
-  }, [user, location.search]);
+  }, [user, location.search, activeContact?.id, contacts]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
