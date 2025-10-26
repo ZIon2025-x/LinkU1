@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -3894,7 +3895,7 @@ def cleanup_old_customer_service_chats(
 
 
 @router.post("/customer-service/timeout-end-chat/{chat_id}")
-def timeout_end_customer_service_chat(
+async def timeout_end_customer_service_chat(
     chat_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
     db: Session = Depends(get_db),
@@ -3926,6 +3927,21 @@ def timeout_end_customer_service_chat(
             logger.error(f"结束对话 {chat_id} 失败")
             raise HTTPException(status_code=500, detail="结束对话失败")
 
+        # 发送系统消息给用户 - 由于长时间没有收到你的信息，本次对话已结束
+        logger.info(f"为用户 {chat['user_id']} 发送系统消息")
+        try:
+            crud.save_customer_service_message(
+                db=db,
+                chat_id=chat_id,
+                sender_id="system",  # 系统消息
+                sender_type="system",
+                content="由于长时间没有收到你的信息，本次对话已结束"
+            )
+            logger.info(f"已发送系统消息到对话 {chat_id}")
+        except Exception as e:
+            logger.error(f"发送系统消息失败: {e}")
+            # 不影响流程继续
+
         # 发送超时通知给用户
         logger.info(f"为用户 {chat['user_id']} 创建超时通知")
         crud.create_notification(
@@ -3936,6 +3952,28 @@ def timeout_end_customer_service_chat(
             content="您的客服对话因超时（2分钟无活动）已自动结束。如需继续咨询，请重新联系客服。",
             related_id=chat_id,
         )
+
+        # 通过WebSocket通知用户对话已结束
+        try:
+            from app.main import active_connections
+            if chat["user_id"] in active_connections:
+                logger.info(f"通过WebSocket通知用户 {chat['user_id']} 对话已结束")
+                timeout_message = {
+                    "type": "chat_timeout",
+                    "chat_id": chat_id,
+                    "content": "由于长时间没有收到你的信息，本次对话已结束"
+                }
+                try:
+                    await active_connections[chat["user_id"]].send_text(
+                        json.dumps(timeout_message)
+                    )
+                    logger.info(f"已通过WebSocket发送超时消息给用户 {chat['user_id']}")
+                except Exception as ws_error:
+                    logger.error(f"WebSocket发送失败: {ws_error}")
+            else:
+                logger.info(f"用户 {chat['user_id']} 不在线，无法通过WebSocket发送")
+        except Exception as e:
+            logger.error(f"WebSocket通知失败: {e}")
 
         logger.info(f"对话 {chat_id} 超时结束成功")
         return {"message": "对话已超时结束", "chat_id": chat_id, "user_notified": True}

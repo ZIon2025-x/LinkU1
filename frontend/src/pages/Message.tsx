@@ -1479,11 +1479,18 @@ const MessagePage: React.FC = () => {
               if (currentChat) {
                 setCurrentChat({ ...currentChat, is_ended: 1 });
               }
-              // 显示系统消息
+              // 断开客服连接
+              setServiceConnected(false);
+              setCurrentChatId(null);
+              
+              // 清除localStorage中的客服对话信息
+              localStorage.removeItem('currentCustomerServiceChat');
+              
+              // 显示系统消息，根据事件类型使用不同的内容
               const endMessage: Message = {
                 id: Date.now(),
                 from: '系统',
-                content: '对话已结束',
+                content: msg.type === 'chat_timeout' && msg.content ? msg.content : '对话已结束',
                 created_at: new Date().toISOString(),
               };
               setMessages(prev => [...prev, endMessage]);
@@ -1651,6 +1658,13 @@ const MessagePage: React.FC = () => {
             if (chatData.is_ended === 1) {
               console.log('检测到对话已结束');
               setCurrentChat(prev => prev ? { ...prev, is_ended: 1 } : null);
+              
+              // 断开客服连接
+              setServiceConnected(false);
+              setCurrentChatId(null);
+              
+              // 清除localStorage中的客服对话信息
+              localStorage.removeItem('currentCustomerServiceChat');
               
               // 显示系统消息
               const endMessage: Message = {
