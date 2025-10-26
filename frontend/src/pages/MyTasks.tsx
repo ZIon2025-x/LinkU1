@@ -82,6 +82,9 @@ const MyTasks: React.FC = () => {
   // 已操作任务状态
   const [completedTasks, setCompletedTasks] = useState<Set<number>>(new Set());
   
+  // 已提交取消审核的任务
+  const [pendingCancelTasks, setPendingCancelTasks] = useState<Set<number>>(new Set());
+  
   // 任务详情弹窗状态
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -263,13 +266,32 @@ const MyTasks: React.FC = () => {
 
   const handleCancelTask = async (taskId: number) => {
     const reason = prompt(t('myTasks.cancelReason'));
+    if (reason === null) return; // 用户取消了输入
+    
     setActionLoading(taskId);
     try {
-      await cancelTask(taskId, reason || undefined);
-      alert(t('myTasks.alerts.taskCancelled'));
+      const result = await cancelTask(taskId, reason || undefined);
+      
+      // 检查返回的消息，判断是直接取消还是提交审核
+      if (result && result.request_id) {
+        // 已提交审核请求，添加到待审核列表
+        setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
+        alert('已成功提交取消审核请求，等待客服审核');
+      } else {
+        // 直接取消成功
+        alert(t('myTasks.alerts.taskCancelled'));
+      }
+      
       loadTasks();
     } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      // 检查是否是"已有待审核请求"的错误
+      if (error.response?.data?.detail?.includes('already pending')) {
+        // 如果已经有待审核请求，也添加到列表中
+        setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
+        alert('您的取消请求正在审核中，请耐心等待');
+      } else {
+        alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      }
     } finally {
       setActionLoading(null);
     }
@@ -1238,23 +1260,23 @@ const MyTasks: React.FC = () => {
 
                       {(task.status === 'open' || task.status === 'taken' || task.status === 'pending_confirmation') && (
                         <button
-                          onClick={() => handleCancelTask(task.id)}
-                          disabled={actionLoading === task.id}
+                          onClick={() => !pendingCancelTasks.has(task.id) && handleCancelTask(task.id)}
+                          disabled={actionLoading === task.id || pendingCancelTasks.has(task.id)}
                           style={{
                             padding: '10px 18px',
                             border: 'none',
                             borderRadius: '6px',
-                            background: '#3b82f6',
+                            background: pendingCancelTasks.has(task.id) ? '#9ca3af' : '#3b82f6',
                             color: '#fff',
-                            cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
+                            cursor: (actionLoading === task.id || pendingCancelTasks.has(task.id)) ? 'not-allowed' : 'pointer',
                             fontSize: '13px',
                             fontWeight: '500',
-                            opacity: actionLoading === task.id ? 0.6 : 1,
+                            opacity: (actionLoading === task.id || pendingCancelTasks.has(task.id)) ? 0.6 : 1,
                             transition: 'all 0.2s ease',
                             minWidth: '80px'
                           }}
                         >
-                          {actionLoading === task.id ? t('myTasks.actions.processing') : t('myTasks.actions.cancelTask')}
+                          {pendingCancelTasks.has(task.id) ? '待审核' : (actionLoading === task.id ? t('myTasks.actions.processing') : t('myTasks.actions.cancelTask'))}
                         </button>
                       )}
 

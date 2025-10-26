@@ -81,12 +81,21 @@ interface TaskCancelRequest {
   id: number;
   task_id: number;
   requester_id: string;  // 现在ID是字符串类型
+  requester_name?: string;
   reason: string;
   status: string;
   admin_id: string | null;  // 现在ID是字符串类型
   admin_comment: string | null;
   created_at: string;
   reviewed_at: string | null;
+  task?: {
+    id: number;
+    title: string;
+    status: string;
+    poster_id: string;
+    taker_id: string | null;
+  };
+  user_role?: string;  // "发布者" 或 "接收者"
 }
 
 interface UserSession {
@@ -147,6 +156,7 @@ const CustomerService: React.FC = () => {
   const [adminComment, setAdminComment] = useState('');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
+  const selectedSessionRef = useRef<UserSession | null>(null);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -1005,6 +1015,7 @@ const CustomerService: React.FC = () => {
 
   const selectSession = async (session: UserSession) => {
     setSelectedSession(session);
+    selectedSessionRef.current = session;
     
     // 清除之前的超时检查定时器
     if (timeoutCheckInterval) {
@@ -1049,6 +1060,11 @@ const CustomerService: React.FC = () => {
     }
   };
 
+  // 保持 ref 与 state 同步
+  useEffect(() => {
+    selectedSessionRef.current = selectedSession;
+  }, [selectedSession]);
+
   // WebSocket 连接 - 只在currentUser改变时重新连接
   useEffect(() => {
     if (currentUser) {
@@ -1079,7 +1095,10 @@ const CustomerService: React.FC = () => {
           try {
             const msg = JSON.parse(event.data);
             
+            console.log('客服WebSocket收到消息:', msg);
+            
             if (msg.error) {
+              console.log('客服WebSocket收到错误消息:', msg.error);
               return;
             }
             
@@ -1089,10 +1108,24 @@ const CustomerService: React.FC = () => {
               return;
             }
             
+            // 使用 ref 获取最新的 selectedSession
+            const latestSelectedSession = selectedSessionRef.current;
+            
+            // 检查是否有聊天ID和选中会话
+            console.log('检查消息条件:', {
+              chat_id: msg.chat_id,
+              selectedSession_chat_id: latestSelectedSession?.chat_id,
+              from: msg.from,
+              receiver_id: msg.receiver_id,
+              content: msg.content?.substring(0, 50)
+            });
+            
             // 处理客服对话消息
-            if (msg.chat_id && selectedSession && msg.chat_id === selectedSession.chat_id) {
+            if (msg.chat_id && latestSelectedSession && msg.chat_id === latestSelectedSession.chat_id) {
+              console.log('匹配chat_id，处理消息');
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
+                console.log('添加消息到聊天记录');
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
@@ -1110,15 +1143,19 @@ const CustomerService: React.FC = () => {
                     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
                   }
                 }, 100);
+              } else {
+                console.log('跳过自己发送的消息或空内容');
               }
             }
             // 兼容旧的普通消息格式
-            else if (selectedSession && (
-              (msg.from === selectedSession.user_id && msg.receiver_id === currentUser.id) ||
-              (msg.from === currentUser.id && msg.receiver_id === selectedSession.user_id)
+            else if (latestSelectedSession && (
+              (msg.from === latestSelectedSession.user_id && msg.receiver_id === currentUser.id) ||
+              (msg.from === currentUser.id && msg.receiver_id === latestSelectedSession.user_id)
             )) {
+              console.log('匹配旧格式消息条件');
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
+                console.log('添加旧格式消息到聊天记录');
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
@@ -1137,9 +1174,11 @@ const CustomerService: React.FC = () => {
                   }
                 }, 100);
               }
+            } else {
+              console.log('消息不匹配任何条件，已忽略');
             }
           } catch (error) {
-            // 静默处理解析错误
+            console.error('客服WebSocket消息解析错误:', error);
           }
         };
         
@@ -2653,20 +2692,89 @@ const CustomerService: React.FC = () => {
       {/* 审核取消请求弹窗 */}
       {selectedCancelRequest && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div className="modal" style={{maxWidth: '600px'}}>
             <h3>审核取消请求</h3>
-            <div className="request-info">
-              <p><strong>任务ID:</strong> {selectedCancelRequest.task_id}</p>
-              <p><strong>请求者ID:</strong> {selectedCancelRequest.requester_id}</p>
-              <p><strong>取消原因:</strong> {selectedCancelRequest.reason || '无'}</p>
-              <p><strong>请求时间:</strong> {TimeHandlerV2.formatDetailedTime(selectedCancelRequest.created_at, userTimezone)}</p>
+            <div className="request-info" style={{ 
+              marginBottom: '20px',
+              padding: '16px',
+              background: '#f9fafb',
+              borderRadius: '8px'
+            }}>
+              <div style={{marginBottom: '12px'}}>
+                <strong>任务标题:</strong> {selectedCancelRequest.task?.title || '未知'}
+              </div>
+              <div style={{marginBottom: '12px'}}>
+                <strong>任务状态:</strong> 
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  marginLeft: '8px',
+                  background: selectedCancelRequest.task?.status === 'in_progress' ? '#dbeafe' : 
+                              selectedCancelRequest.task?.status === 'completed' ? '#dcfce7' :
+                              selectedCancelRequest.task?.status === 'cancelled' ? '#fee2e2' : '#f3f4f6'
+                }}>
+                  {selectedCancelRequest.task?.status === 'open' ? '待接取' :
+                   selectedCancelRequest.task?.status === 'taken' ? '已被接取' :
+                   selectedCancelRequest.task?.status === 'in_progress' ? '进行中' :
+                   selectedCancelRequest.task?.status === 'completed' ? '已完成' :
+                   selectedCancelRequest.task?.status === 'cancelled' ? '已取消' :
+                   selectedCancelRequest.task?.status === 'deleted' ? '任务已删除' :
+                   '未知'}
+                </span>
+              </div>
+              <div style={{marginBottom: '12px'}}>
+                <strong>请求者:</strong> {selectedCancelRequest.requester_name || selectedCancelRequest.requester_id}
+              </div>
+              <div style={{marginBottom: '12px'}}>
+                <strong>用户身份:</strong> 
+                <span style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  marginLeft: '8px',
+                  background: selectedCancelRequest.user_role === '发布者' ? '#e0f2fe' : '#fef3c7',
+                  color: selectedCancelRequest.user_role === '发布者' ? '#0369a1' : '#92400e'
+                }}>
+                  {selectedCancelRequest.user_role || '未知'}
+                </span>
+              </div>
+              <div style={{marginBottom: '12px'}}>
+                <strong>任务ID:</strong> {selectedCancelRequest.task_id}
+              </div>
+              <div style={{marginBottom: '12px'}}>
+                <strong>取消原因:</strong> 
+                <div style={{
+                  marginTop: '4px',
+                  padding: '8px',
+                  background: 'white',
+                  borderRadius: '4px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  {selectedCancelRequest.reason || '无'}
+                </div>
+              </div>
+              <div>
+                <strong>请求时间:</strong> {TimeHandlerV2.formatDetailedTime(selectedCancelRequest.created_at, userTimezone)}
+              </div>
             </div>
-            <textarea
-              value={adminComment}
-              onChange={(e) => setAdminComment(e.target.value)}
-              placeholder="输入审核意见（可选）..."
-              rows={4}
-            />
+            <div style={{marginBottom: '16px'}}>
+              <label style={{display: 'block', marginBottom: '8px', fontWeight: '600'}}>
+                审核意见:
+              </label>
+              <textarea
+                value={adminComment}
+                onChange={(e) => setAdminComment(e.target.value)}
+                placeholder="输入审核意见（可选）..."
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
             <div className="modal-actions">
               <button 
                 onClick={() => reviewCancelRequest(selectedCancelRequest.id, 'approved')} 

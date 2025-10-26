@@ -3032,15 +3032,49 @@ def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/customer-service/cancel-requests", response_model=list[schemas.TaskCancelRequestOut])
+@router.get("/customer-service/cancel-requests")
 def cs_get_cancel_requests(
     current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
     status: str = None,
 ):
     """客服获取任务取消请求列表"""
+    from app.models import TaskCancelRequest, Task, User
+    
     requests = crud.get_task_cancel_requests(db, status)
-    return requests
+    
+    # 为每个请求添加任务信息和用户身份
+    result = []
+    for req in requests:
+        task = crud.get_task(db, req.task_id)
+        requester = crud.get_user_by_id(db, req.requester_id)
+        
+        # 判断请求者是发布者还是接收者
+        is_poster = task and task.poster_id == req.requester_id
+        is_taker = task and task.taker_id == req.requester_id
+        
+        result.append({
+            "id": req.id,
+            "task_id": req.task_id,
+            "requester_id": req.requester_id,
+            "requester_name": requester.name if requester else "未知用户",
+            "reason": req.reason,
+            "status": req.status,
+            "admin_id": req.admin_id,
+            "admin_comment": req.admin_comment,
+            "created_at": req.created_at,
+            "reviewed_at": req.reviewed_at,
+            "task": {
+                "id": task.id if task else None,
+                "title": task.title if task else "任务已删除",
+                "status": task.status if task else "deleted",
+                "poster_id": task.poster_id if task else None,
+                "taker_id": task.taker_id if task else None,
+            },
+            "user_role": "发布者" if is_poster else ("接收者" if is_taker else "未知")
+        })
+    
+    return result
 
 
 @router.post("/customer-service/cancel-requests/{request_id}/review")
