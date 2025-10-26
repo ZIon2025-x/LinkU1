@@ -1435,7 +1435,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={handleChat}
+              onClick={() => {
+                onClose();
+                navigate(`/message?uid=${task.poster_id}`);
+              }}
               style={{
                 background: '#A67C52',
                 color: '#fff',
