@@ -982,6 +982,13 @@ const CustomerService: React.FC = () => {
       // 清空输入框
       setInputMessage('');
       
+      // 滚动到底部
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      
       // 重新检查超时状态（因为发送了新消息）
       if (selectedSession.is_ended === 0) {
         setTimeout(() => {
@@ -1096,6 +1103,13 @@ const CustomerService: React.FC = () => {
                   is_admin_msg: 0,
                   sender_type: msg.sender_type || 'user'
                 }]);
+                
+                // 滚动到底部
+                setTimeout(() => {
+                  if (messagesEndRef.current) {
+                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }, 100);
               }
             }
             // 兼容旧的普通消息格式
@@ -1115,6 +1129,13 @@ const CustomerService: React.FC = () => {
                   is_admin_msg: 0,
                   sender_type: msg.sender_type || 'user'
                 }]);
+                
+                // 滚动到底部
+                setTimeout(() => {
+                  if (messagesEndRef.current) {
+                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }, 100);
               }
             }
           } catch (error) {

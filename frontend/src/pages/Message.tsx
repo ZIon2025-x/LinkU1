@@ -1273,7 +1273,8 @@ const MessagePage: React.FC = () => {
         const lastMessage = messages[messages.length - 1];
       
       // 只对发送的消息或接收的消息自动滚动到底部，不包括系统消息
-      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方')) {
+      // 包括：我、对方、客服、管理员
+      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方' || lastMessage.from === '客服' || lastMessage.from === '管理员')) {
           setTimeout(() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
