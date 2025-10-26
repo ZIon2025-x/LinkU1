@@ -1009,6 +1009,7 @@ const MessagePage: React.FC = () => {
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
     console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search, contactsLoading });
+    console.log('URL参数处理条件检查:', { user: !!user, contactsLoading, shouldProcess: user && !contactsLoading });
     if (user && !contactsLoading) { // 等待联系人列表加载完成
       const urlParams = new URLSearchParams(location.search);
       const targetUserId = urlParams.get('uid');
@@ -1063,7 +1064,7 @@ const MessagePage: React.FC = () => {
         }
       }
     }
-  }, [user, location.search, contacts, contactsLoading, activeContact?.id]);
+  }, [user, location.search, contacts, contactsLoading]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
@@ -1254,6 +1255,7 @@ const MessagePage: React.FC = () => {
   // 选择联系人时加载聊天历史
   useEffect(() => {
     const handleContactSelection = async () => {
+      console.log('handleContactSelection触发:', { activeContact: activeContact?.id, user: !!user, isServiceMode, serviceConnected });
       if (activeContact && user && !isServiceMode) {
         // 切换普通聊天模式时的清理
         if (serviceConnected) {
@@ -1264,7 +1266,7 @@ const MessagePage: React.FC = () => {
         }
         
         // 加载聊天记录
-        console.log('加载聊天记录，联系人ID:', activeContact.id);
+        console.log('✅ 准备加载聊天记录，联系人ID:', activeContact.id);
         // 使用setTimeout让UI先更新，然后异步加载聊天记录
         setTimeout(() => {
           loadChatHistory(activeContact.id);
