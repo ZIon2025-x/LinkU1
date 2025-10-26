@@ -1312,7 +1312,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => navigate(`/message?uid=${app.applicant_id}`)}
+                          onClick={() => {
+                            console.log('🟢 Contact Applicant - app.applicant_id:', app.applicant_id);
+                            console.log('🟢 即将跳转到:', `/message?uid=${app.applicant_id}`);
+                            navigate(`/message?uid=${app.applicant_id}`);
+                          }}
                           style={{
                             background: '#007bff',
                             color: '#fff',
@@ -1375,7 +1379,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={() => navigate(`/message?uid=${task.taker_id}`)}
+              onClick={() => {
+                console.log('🔵 Contact Taker - task.taker_id:', task.taker_id);
+                console.log('🔵 即将跳转到:', `/message?uid=${task.taker_id}`);
+                navigate(`/message?uid=${task.taker_id}`);
+              }}
               style={{
                 background: '#007bff',
                 color: '#fff',
@@ -1414,7 +1422,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={() => navigate(`/message?uid=${task.poster_id}`)}
+              onClick={() => {
+                console.log('🟡 Contact Poster - task.poster_id:', task.poster_id);
+                console.log('🟡 即将跳转到:', `/message?uid=${task.poster_id}`);
+                navigate(`/message?uid=${task.poster_id}`);
+              }}
               style={{
                 background: '#A67C52',
                 color: '#fff',
