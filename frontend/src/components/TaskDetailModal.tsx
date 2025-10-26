@@ -829,7 +829,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               fontWeight: '600', 
               color: task.location === 'Online' ? '#2563eb' : '#1e293b' 
             }}>
-              {task.location}
+              {t(`tasks.cities.${task.location}`) || task.location}
             </div>
           </div>
           
