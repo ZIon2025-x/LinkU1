@@ -1,5 +1,4 @@
-import datetime
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone, datetime
 
 from sqlalchemy import (
     Column,
@@ -28,7 +27,7 @@ def get_uk_time():
     import pytz
 
     uk_tz = pytz.timezone("Europe/London")
-    return datetime.datetime.now(uk_tz)
+    return datetime.now(uk_tz)
 
 def get_uk_time_online():
     """通过网络获取真实的英国时间，使用多个API作为备用"""
@@ -136,11 +135,11 @@ def get_uk_time_naive_legacy():
     # 暂时禁用在线时间获取，直接使用本地时间确保准确性
     # TODO: 在线时间API有时区问题，暂时使用本地时间
     uk_tz = pytz.timezone("Europe/London")
-    uk_time = datetime.datetime.now(uk_tz)
+    uk_time = datetime.now(uk_tz)
     
     print(f"使用本地英国时间: {uk_time}")
     print(f"时区: {uk_time.tzinfo}")
-    print(f"是否夏令时: {uk_time.dst() != datetime.timedelta(0)}")
+    print(f"是否夏令时: {uk_time.dst() != timedelta(0)}")
     
     # 移除时区信息，用于数据库存储
     return uk_time.replace(tzinfo=None)
