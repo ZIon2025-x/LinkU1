@@ -1022,7 +1022,8 @@ const MessagePage: React.FC = () => {
           console.log('在现有联系人中找到目标联系人:', targetContact);
           setActiveContact(targetContact);
           setIsServiceMode(false);
-          // 不清空消息列表，让loadChatHistory处理消息加载
+          // 清空消息列表，准备加载新的聊天记录
+          setMessages([]);
           
           // 移动端从URL参数进入聊天时，确保不显示联系人列表
           if (isMobile) {
@@ -1046,7 +1047,8 @@ const MessagePage: React.FC = () => {
           console.log('创建临时联系人:', tempContact);
           setActiveContact(tempContact);
           setIsServiceMode(false);
-          // 不清空消息列表，让loadChatHistory处理消息加载
+          // 清空消息列表，准备加载新的聊天记录
+          setMessages([]);
           
           // 移动端从URL参数进入聊天时，确保不显示联系人列表
           if (isMobile) {
@@ -1246,24 +1248,17 @@ const MessagePage: React.FC = () => {
   // 选择联系人时加载聊天历史
   useEffect(() => {
     const handleContactSelection = async () => {
-      if (activeContact && user) {
-        // 如果选择了联系人，切换到普通聊天模式
-        if (!isServiceMode || serviceConnected) {
-          console.log('切换到普通聊天模式，清空消息并加载聊天记录');
-          setIsServiceMode(false);
+      if (activeContact && user && !isServiceMode) {
+        // 切换普通聊天模式时的清理
+        if (serviceConnected) {
+          console.log('从客服模式切换到普通聊天模式');
           setServiceConnected(false);
           setCurrentChatId(null);
           setCurrentChat(null);
-          // 清空当前消息列表，确保聊天框重置
-          setMessages([]);
-          // setService(null); // 已移除service状态
         }
         
-        // 取消滚动标志重置
-        // setShouldScrollToBottom(false);
-        
         // 加载聊天记录
-        console.log('加载聊天记录，当前消息数量:', messages.length);
+        console.log('加载聊天记录，联系人ID:', activeContact.id);
         // 使用setTimeout让UI先更新，然后异步加载聊天记录
         setTimeout(() => {
           loadChatHistory(activeContact.id);
