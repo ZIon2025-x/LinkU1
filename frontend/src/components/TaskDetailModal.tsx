@@ -209,6 +209,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     console.log('目标URL:', targetUrl);
     navigate(targetUrl);
     console.log('navigate已调用');
+    // 强制更新hash，确保参数被保留
+    setTimeout(() => {
+      if (!window.location.hash.includes('uid=')) {
+        window.location.hash = targetUrl;
+        console.log('使用window.location.hash设置URL');
+      }
+    }, 0);
   };
 
   const handleAcceptTask = async () => {
