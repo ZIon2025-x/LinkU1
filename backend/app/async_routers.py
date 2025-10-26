@@ -716,19 +716,52 @@ async def get_database_pool_status():
 @async_router.get("/tasks/{task_id}/reviews", response_model=List[schemas.ReviewOut])
 async def get_task_reviews_async(
     task_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取任务评价（异步版本）"""
     try:
-        # 获取任务评价
-        reviews_query = select(models.Review).where(
-            models.Review.task_id == task_id,
-            models.Review.is_anonymous == 0
+        # 先获取所有评价（用于当前用户自己的评价检查）
+        all_reviews_query = select(models.Review).where(
+            models.Review.task_id == task_id
         )
-        reviews_result = await db.execute(reviews_query)
-        reviews = reviews_result.scalars().all()
+        all_reviews_result = await db.execute(all_reviews_query)
+        all_reviews = all_reviews_result.scalars().all()
         
-        return reviews
+        # 尝试获取当前用户
+        current_user = None
+        try:
+            # 尝试从Cookie中获取用户
+            session_id = request.cookies.get("session_id")
+            if session_id:
+                from app.secure_auth import validate_session
+                session_info = validate_session(session_id, request, update_activity=False)
+                if session_info:
+                    user_query = select(models.User).where(models.User.id == session_info.user_id)
+                    user_result = await db.execute(user_query)
+                    current_user = user_result.scalar_one_or_none()
+        except Exception:
+            pass  # 未登录用户
+        
+        # 过滤出非匿名评价供公开显示
+        # 如果当前用户已评价，也要返回他们自己的评价（包括匿名）
+        public_reviews = []
+        
+        if current_user:
+            for review in all_reviews:
+                if review.user_id == current_user.id:
+                    # 始终包含当前用户自己的评价，即使是匿名的
+                    public_reviews.append(review)
+                elif review.is_anonymous == 0:
+                    # 只包含非匿名的其他用户评价
+                    public_reviews.append(review)
+        else:
+            # 未登录用户只看到非匿名评价
+            for review in all_reviews:
+                if review.is_anonymous == 0:
+                    public_reviews.append(review)
+        
+        return public_reviews
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get task reviews: {str(e)}")

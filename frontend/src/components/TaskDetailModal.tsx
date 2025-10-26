@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import dayjs from 'dayjs';
@@ -20,6 +21,7 @@ interface TaskDetailModalProps {
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, taskId }) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -383,7 +385,27 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setReviewRating(5);
       setReviewComment('');
       setIsAnonymous(false);
+      
+      // 重新加载评价数据和任务数据
+      console.log('重新加载评价数据...');
       await loadTaskReviews();
+      console.log('评价数据已重新加载');
+      
+      // 强制重新检查用户申请状态和刷新任务状态
+      if (user && task) {
+        console.log('重新检查用户申请状态...');
+        await checkUserApplication();
+        console.log('用户申请状态已更新');
+      }
+      
+      // 重新加载任务信息，确保状态更新
+      if (taskId) {
+        console.log('重新加载任务信息...');
+        await loadTaskData();
+        console.log('任务信息已重新加载');
+      }
+      
+      console.log('评价提交完成，所有数据已刷新');
     } catch (error: any) {
       alert(error.response?.data?.detail || t('taskDetail.reviewSubmitFailed'));
     } finally {
@@ -397,8 +419,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   };
 
   const hasUserReviewed = () => {
-    if (!user) return false;
-    return reviews.some(review => review.user_id === user.id);
+    if (!user) {
+      console.log('hasUserReviewed: 用户未登录');
+      return false;
+    }
+    const hasReviewed = reviews.some(review => review.user_id === user.id);
+    console.log('hasUserReviewed:', hasReviewed, { 
+      userId: user.id, 
+      reviews: reviews.map(r => ({ id: r.id, user_id: r.user_id, task_id: r.task_id }))
+    });
+    return hasReviewed;
   };
 
   // 如果弹窗未打开，不渲染任何内容
@@ -1273,7 +1303,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => window.open(`/message?uid=${app.applicant_id}`, '_blank')}
+                          onClick={() => {
+                            onClose(); // 关闭任务详情弹窗
+                            navigate(`/message?uid=${app.applicant_id}`); // 跳转到聊天页面
+                          }}
                           style={{
                             background: '#007bff',
                             color: '#fff',
