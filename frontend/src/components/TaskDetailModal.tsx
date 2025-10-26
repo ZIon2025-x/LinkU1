@@ -222,12 +222,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       }
     }
 
-    // 先跳转到消息页面，再关闭弹窗
-    navigate(`/message?uid=${task.poster_id}`);
-    // 使用setTimeout确保页面跳转完成后再关闭弹窗
+    // 关闭弹窗并跳转到消息页面
+    onClose(); // 先关闭弹窗
     setTimeout(() => {
-      onClose();
-    }, 100);
+      navigate(`/message?uid=${task.poster_id}`);
+    }, 0);
   };
 
   const handleAcceptTask = async () => {
