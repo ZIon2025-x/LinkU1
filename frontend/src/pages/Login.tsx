@@ -98,19 +98,24 @@ const Login: React.FC = () => {
 
   return (
     <Wrapper>
-      {/* SEO优化：H1标签，使用clip隐藏但保持SEO价值 */}
+      {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',
+        top: '-100px',
+        left: '-100px',
         width: '1px',
         height: '1px',
         padding: '0',
-        margin: '-1px',
+        margin: '0',
         overflow: 'hidden',
         clip: 'rect(0, 0, 0, 0)',
         whiteSpace: 'nowrap',
-        border: '0'
+        border: '0',
+        fontSize: '1px',
+        color: 'transparent',
+        background: 'transparent'
       }}>
-        用户登录
+        用户登录 - Link²Ur
       </h1>
       <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
         <LanguageSwitcher />
