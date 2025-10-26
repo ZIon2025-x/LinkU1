@@ -730,37 +730,54 @@ async def get_task_reviews_async(
         
         # 尝试获取当前用户
         current_user = None
+        print(f"DEBUG: Cookie headers: {request.headers.get('cookie')}")
+        print(f"DEBUG: 请求Cookie: {request.cookies}")
         try:
             # 尝试从Cookie中获取用户
             session_id = request.cookies.get("session_id")
+            print(f"DEBUG: 从Cookie获取的session_id: {session_id}")
             if session_id:
                 from app.secure_auth import validate_session
                 session_info = validate_session(session_id, request, update_activity=False)
+                print(f"DEBUG: 验证session结果: {session_info}")
                 if session_info:
                     user_query = select(models.User).where(models.User.id == session_info.user_id)
                     user_result = await db.execute(user_query)
                     current_user = user_result.scalar_one_or_none()
-        except Exception:
+                    print(f"DEBUG: 获取到当前用户: {current_user.id if current_user else None}")
+        except Exception as e:
+            print(f"DEBUG: 获取用户失败: {e}")
+            import traceback
+            traceback.print_exc()
             pass  # 未登录用户
+        
+        print(f"DEBUG: 所有评价数量: {len(all_reviews)}")
+        print(f"DEBUG: 当前用户ID: {current_user.id if current_user else None}")
         
         # 过滤出非匿名评价供公开显示
         # 如果当前用户已评价，也要返回他们自己的评价（包括匿名）
         public_reviews = []
         
         if current_user:
+            print(f"DEBUG: 当前用户已登录: {current_user.id}")
             for review in all_reviews:
+                print(f"DEBUG: 检查评价 - review.user_id: {review.user_id}, is_anonymous: {review.is_anonymous}")
                 if review.user_id == current_user.id:
                     # 始终包含当前用户自己的评价，即使是匿名的
+                    print(f"DEBUG: 包含当前用户自己的评价: {review.id}")
                     public_reviews.append(review)
                 elif review.is_anonymous == 0:
                     # 只包含非匿名的其他用户评价
+                    print(f"DEBUG: 包含非匿名评价: {review.id}")
                     public_reviews.append(review)
         else:
             # 未登录用户只看到非匿名评价
+            print(f"DEBUG: 用户未登录，只返回非匿名评价")
             for review in all_reviews:
                 if review.is_anonymous == 0:
                     public_reviews.append(review)
         
+        print(f"DEBUG: 返回评价数量: {len(public_reviews)}")
         return public_reviews
     except Exception as e:
         logger.error(f"Error getting task reviews for {task_id}: {e}")
