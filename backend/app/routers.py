@@ -1326,8 +1326,9 @@ def get_my_profile(
         
         # 计算用户的任务统计
         user_tasks = crud.get_user_tasks(db, current_user.id, limit=1000)
-        posted_tasks = [t for t in user_tasks if t.poster_id == current_user.id]
-        taken_tasks = [t for t in user_tasks if t.taker_id == current_user.id]
+        # 排除已取消的任务
+        posted_tasks = [t for t in user_tasks if t.poster_id == current_user.id and t.status != "cancelled"]
+        taken_tasks = [t for t in user_tasks if t.taker_id == current_user.id and t.status != "cancelled"]
         total_tasks = len(posted_tasks) + len(taken_tasks)
         completed_tasks = len([t for t in taken_tasks if t.status == "completed"])
         

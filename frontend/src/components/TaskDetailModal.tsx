@@ -224,8 +224,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
     // 关闭弹窗并跳转到消息页面
     onClose();
-    // 使用window.location.href在当前页面跳转，而不是打开新标签页
-    window.location.href = `/message?uid=${task.poster_id}`;
+    // 使用navigate在React Router中跳转
+    navigate(`/message?uid=${task.poster_id}`);
   };
 
   const handleAcceptTask = async () => {
@@ -1395,7 +1395,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={() => window.open(`/message?uid=${task.taker_id}`, '_blank')}
+              onClick={() => navigate(`/message?uid=${task.taker_id}`)}
               style={{
                 background: '#007bff',
                 color: '#fff',

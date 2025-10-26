@@ -640,8 +640,8 @@ const Tasks: React.FC = () => {
   };
 
   // 处理联系发布者
-  const handleContactPoster = (taskId: number) => {
-    navigate(`/message?uid=${taskId}`);
+  const handleContactPoster = (posterId: string) => {
+    navigate(`/message?uid=${posterId}`);
   };
 
   // 检查用户是否可以查看/申请任务（等级匹配）
