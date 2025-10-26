@@ -202,31 +202,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   };
 
-  const handleChat = async () => {
-    if (!task?.poster_id) {
-      alert(t('taskDetail.cannotGetPosterInfo'));
-      return;
-    }
-
-    // 如果用户还没有接受任务，自动发送一条消息
-    if (!hasAcceptedTask(user, task)) {
-      try {
-        const messageContent = t('taskDetail.chatMessage').replace('{taskTitle}', task.title);
-        await sendMessage({
-          receiver_id: task.poster_id,
-          content: messageContent
-        });
-        console.log('已自动发送消息:', messageContent);
-      } catch (error) {
-        console.error('自动发送消息失败:', error);
-      }
-    }
-
-    // 关闭弹窗并跳转到消息页面
-    onClose(); // 先关闭弹窗
-    setTimeout(() => {
-      navigate(`/message?uid=${task.poster_id}`);
-    }, 0);
+  const handleChat = (userId: string) => {
+    navigate(`/message?uid=${userId}`);
   };
 
   const handleAcceptTask = async () => {
@@ -1330,10 +1307,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => {
-                            console.log('🟢 任务详情弹窗 - 点击联系申请者，用户ID:', app.applicant_id);
-                            navigate(`/message?uid=${app.applicant_id}`); // 跳转到聊天页面
-                          }}
+                          onClick={() => handleChat(app.applicant_id)}
                           style={{
                             background: '#007bff',
                             color: '#fff',
@@ -1396,10 +1370,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={() => {
-                console.log('🔵 任务详情弹窗 - 点击联系接收者，用户ID:', task.taker_id);
-                navigate(`/message?uid=${task.taker_id}`);
-              }}
+              onClick={() => handleChat(task.taker_id)}
               style={{
                 background: '#007bff',
                 color: '#fff',
@@ -1438,10 +1409,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={() => {
-                console.log('🟡 任务详情弹窗 - 点击联系发布者，用户ID:', task.poster_id);
-                navigate(`/message?uid=${task.poster_id}`);
-              }}
+              onClick={() => handleChat(task.poster_id)}
               style={{
                 background: '#A67C52',
                 color: '#fff',
