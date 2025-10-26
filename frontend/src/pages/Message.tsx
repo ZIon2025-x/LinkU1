@@ -2308,7 +2308,7 @@ const MessagePage: React.FC = () => {
     
     try {
       // 使用 api.post 自动包含 CSRF token
-      await api.post(`/api/customer-service/rate/${ratingChatId}`, {
+      await api.post(`/api/users/customer-service/rate/${ratingChatId}`, {
         rating: rating,
         comment: ratingComment
       });
