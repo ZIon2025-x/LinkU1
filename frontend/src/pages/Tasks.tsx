@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
@@ -445,7 +445,7 @@ const Tasks: React.FC = () => {
   
   const { navigate } = useLocalizedNavigation();
 
-  // 加载用户信息
+  // 加载用户信息和已申请任务
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -456,6 +456,18 @@ const Tasks: React.FC = () => {
         // 设置用户位置
         if (userData && userData.location) {
           setUserLocation(userData.location);
+        }
+        
+        // 加载已申请的任务列表
+        try {
+          const applications = await getUserApplications();
+          console.log('已申请的任务列表:', applications);
+          
+          // 将申请的任务ID添加到状态中
+          const taskIds = applications.map((app: any) => Number(app.task_id)).filter((id: number) => !isNaN(id));
+          setAppliedTasks(new Set(taskIds));
+        } catch (error) {
+          console.error('加载已申请任务失败:', error);
         }
       } catch (error: any) {
         console.error('Tasks页面加载用户信息失败:', error);
