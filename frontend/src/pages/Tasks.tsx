@@ -600,7 +600,7 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // 处理任务接受
+  // 处理任务申请
   const handleAcceptTask = async (taskId: number) => {
     if (!user) {
       setShowLoginModal(true);
@@ -608,15 +608,15 @@ const Tasks: React.FC = () => {
     }
 
     try {
-      // 使用 api 实例自动处理 CSRF token
-      const data = await api.post(`/api/tasks/${taskId}/accept`, {});
+      // 使用 apply 端点而不是 accept 端点，创建申请记录等待发布者同意
+      const data = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
       
       alert(t('tasks.acceptSuccess'));
       // 将任务添加到已申请列表，隐藏申请按钮
       setAppliedTasks(prev => new Set([...Array.from(prev), taskId]));
       loadTasks(); // 重新加载任务列表
     } catch (error: any) {
-      console.error('接受任务失败:', error);
+      console.error('申请任务失败:', error);
       alert(error.response?.data?.detail || t('tasks.acceptFailed'));
     }
   };

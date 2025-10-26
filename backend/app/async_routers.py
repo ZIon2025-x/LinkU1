@@ -6,7 +6,7 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status, BackgroundTasks, Body
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -235,7 +235,7 @@ async def create_task_async(
 @async_router.post("/tasks/{task_id}/apply", response_model=dict)
 async def apply_for_task(
     task_id: int,
-    message: str = None,
+    message: Optional[str] = Body(None),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
     background_tasks: BackgroundTasks = BackgroundTasks(),

@@ -233,11 +233,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     setActionLoading(true);
     try {
-      console.log('开始接受任务...', { taskId, currentStatus: task?.status });
+      console.log('开始申请任务...', { taskId, currentStatus: task?.status });
       
-      // 使用 api 实例自动处理 CSRF token
-      const result = await api.post(`/api/tasks/${taskId}/accept`, {});
-      console.log('接受任务API调用成功:', result.data);
+      // 使用 apply 端点而不是 accept 端点，创建申请记录等待发布者同意
+      const result = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
+      console.log('申请任务API调用成功:', result.data);
       
       alert(t('taskDetail.taskApplySuccess'));
       
@@ -248,18 +248,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
     } catch (error: any) {
-      console.error('接受任务失败:', error);
+      console.error('申请任务失败:', error);
       
       // 重新获取任务信息以更新状态
       try {
         const res = await api.get(`/api/tasks/${taskId}`);
         setTask(res.data);
         
-        if (res.data.status === 'taken' && res.data.taker_id === user.id) {
-          alert(t('taskDetail.alreadyApplied'));
-        } else {
-          alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
-        }
+        // 检查是否已经申请过
+        alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
       } catch (refreshError) {
         console.error('重新获取任务信息失败:', refreshError);
         alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
