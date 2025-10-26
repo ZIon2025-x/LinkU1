@@ -123,6 +123,7 @@
     "welcomeGift": "Beta version, user feedback welcome.",
     "betaVersion": "Beta",
     "coverageArea": "UK",
+    "userSatisfactionGoal": "User Satisfaction Goal",
     "getStarted": "Get Started",
     "learnMore": "Learn More",
     "featuredTasks": "Featured Tasks",
@@ -332,25 +333,26 @@
     "registeredUsers": "Registered Users",
     "completedTasks": "Completed Tasks",
     "userSatisfaction": "User Satisfaction",
+    "available": "Available",
     "onlineService": "Online Service",
     "teamMembers": {
       "founder": {
         "name": "Zhang Zixiong",
         "role": "Founder & CEO",
-        "description": "10 years of internet product experience, focused on user experience design"
+        "description": "Daydreamer"
       },
       "cto": {
-        "name": "Li Xiaohong",
+        "name": "TBD",
         "role": "CTO",
         "description": "Senior full-stack engineer, passionate about technology innovation"
       },
       "coo": {
-        "name": "Wang Xiaoqiang",
+        "name": "Liu Shiying",
         "role": "COO",
         "description": "Community operations expert, committed to building an active user ecosystem"
       },
       "pm": {
-        "name": "Zhao Xiaomei",
+        "name": "Ding Yingfei",
         "role": "Product Manager",
         "description": "User experience designer, focused on product details and user needs"
       }

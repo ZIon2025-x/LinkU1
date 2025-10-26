@@ -123,6 +123,7 @@
     "welcomeGift": "测试版，欢迎用户反馈。",
     "betaVersion": "测试版",
     "coverageArea": "英国",
+    "userSatisfactionGoal": "用户满意度的目标",
     "getStarted": "开始使用",
     "learnMore": "了解更多",
     "featuredTasks": "精选任务",
@@ -332,25 +333,26 @@
     "registeredUsers": "注册用户",
     "completedTasks": "完成任务",
     "userSatisfaction": "用户满意度",
+    "available": "可用的",
     "onlineService": "在线服务",
     "teamMembers": {
       "founder": {
         "name": "张子雄",
         "role": "创始人 & CEO",
-        "description": "10年互联网产品经验，专注于用户体验设计"
+        "description": "白日梦想家"
       },
       "cto": {
-        "name": "李小红",
+        "name": "暂无",
         "role": "技术总监",
         "description": "资深全栈工程师，热爱技术创新"
       },
       "coo": {
-        "name": "王小强",
+        "name": "刘世英",
         "role": "运营总监",
         "description": "社区运营专家，致力于构建活跃的用户生态"
       },
       "pm": {
-        "name": "赵小美",
+        "name": "丁映斐",
         "role": "产品经理",
         "description": "用户体验设计师，关注产品细节和用户需求"
       }

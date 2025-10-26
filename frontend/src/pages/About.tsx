@@ -108,25 +108,25 @@ const About: React.FC = () => {
     {
       name: t('about.teamMembers.founder.name'),
       role: t('about.teamMembers.founder.role'),
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangzixiong&gender=male",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhangzixiong&gender=male&skinColor=ffdbb4",
       description: t('about.teamMembers.founder.description')
     },
     {
       name: t('about.teamMembers.cto.name'),
       role: t('about.teamMembers.cto.role'),
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=li",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=li&skinColor=ffdbb4",
       description: t('about.teamMembers.cto.description')
     },
     {
       name: t('about.teamMembers.coo.name'),
       role: t('about.teamMembers.coo.role'),
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=wang",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=liushiying&skinColor=ffdbb4",
       description: t('about.teamMembers.coo.description')
     },
     {
       name: t('about.teamMembers.pm.name'),
       role: t('about.teamMembers.pm.role'),
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=zhao",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=girlfriend&skinColor=ffdbb4",
       description: t('about.teamMembers.pm.description')
     }
   ];
@@ -155,10 +155,10 @@ const About: React.FC = () => {
   ];
 
   const stats = [
-    { number: "50,000+", label: t('about.registeredUsers') },
-    { number: "100,000+", label: t('about.completedTasks') },
-    { number: "98%", label: t('about.userSatisfaction') },
-    { number: "24/7", label: t('about.onlineService') }
+    { number: "NA", label: t('about.registeredUsers') },
+    { number: "NA", label: t('about.completedTasks') },
+    { number: "NA", label: t('about.userSatisfaction') },
+    { number: t('about.available'), label: t('about.onlineService') }
   ];
 
   return (

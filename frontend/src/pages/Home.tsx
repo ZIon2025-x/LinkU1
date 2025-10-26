@@ -624,8 +624,8 @@ const Home: React.FC = () => {
               <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('profile.tasksCompleted')}</div>
           </div>
             <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>98%</div>
-              <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('profile.rating')}</div>
+              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>100%</div>
+              <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('home.userSatisfactionGoal')}</div>
             </div>
           </div>
         </div>
