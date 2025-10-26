@@ -822,6 +822,22 @@ const Home: React.FC = () => {
             gap: '32px'
           }}>
             {tasks.map(task => {
+              // 判断是否应该对非相关用户隐藏真实状态（显示为open）
+              const shouldHideStatus = () => {
+                if (!task || !user) return false;
+                const isPoster = task.poster_id === user.id;
+                const isTaker = task.taker_id === user.id;
+                
+                // 如果用户不是发布者或接收者，且状态是taken，应显示为open
+                if (!isPoster && !isTaker && task.status === 'taken') {
+                  return true;
+                }
+                return false;
+              };
+              
+              // 获取显示的状态
+              const displayStatus = shouldHideStatus() ? 'open' : task.status;
+              
               // 任务等级标签样式
               const getTaskLevelStyle = (level: string) => {
                 switch (level) {
@@ -972,23 +988,23 @@ const Home: React.FC = () => {
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          background: (task.status === 'open' || task.status === 'taken') ? '#48bb78' : 
-                                     task.status === 'in_progress' ? '#4299e1' : 
-                                     task.status === 'completed' ? '#9f7aea' : 
-                                     task.status === 'cancelled' ? '#f56565' : '#a0aec0'
+                          background: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                     displayStatus === 'in_progress' ? '#4299e1' : 
+                                     displayStatus === 'completed' ? '#9f7aea' : 
+                                     displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
                         }} />
                         <span style={{
-                          color: (task.status === 'open' || task.status === 'taken') ? '#48bb78' : 
-                                 task.status === 'in_progress' ? '#4299e1' : 
-                                 task.status === 'completed' ? '#9f7aea' : 
-                                 task.status === 'cancelled' ? '#f56565' : '#a0aec0',
+                          color: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                 displayStatus === 'in_progress' ? '#4299e1' : 
+                                 displayStatus === 'completed' ? '#9f7aea' : 
+                                 displayStatus === 'cancelled' ? '#f56565' : '#a0aec0',
                           fontWeight: '600',
                           fontSize: '14px'
                       }}>
-                        {(task.status === 'open' || task.status === 'taken') ? t('taskStatuses.published') :
-                         task.status === 'in_progress' ? t('taskStatuses.inProgress') :
-                         task.status === 'completed' ? t('taskStatuses.completed') :
-                         task.status === 'cancelled' ? t('taskStatuses.cancelled') : task.status}
+                        {(displayStatus === 'open' || displayStatus === 'taken') ? t('taskStatuses.published') :
+                         displayStatus === 'in_progress' ? t('taskStatuses.inProgress') :
+                         displayStatus === 'completed' ? t('taskStatuses.completed') :
+                         displayStatus === 'cancelled' ? t('taskStatuses.cancelled') : displayStatus}
                       </span>
                     </div>
                       

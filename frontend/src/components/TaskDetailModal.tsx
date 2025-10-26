@@ -521,7 +521,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     !userApplication &&
     !hasApplied;
 
+  // 判断是否应该对非相关用户隐藏真实状态（显示为open）
+  const shouldHideStatus = () => {
+    if (!task || !user) return false;
+    const isPoster = task.poster_id === user.id;
+    const isTaker = task.taker_id === user.id;
+    const isApplicant = hasApplied || userApplication;
+    
+    // 如果用户不是发布者、接收者或申请者，且状态是taken，应显示为open
+    if (!isPoster && !isTaker && !isApplicant && task.status === 'taken') {
+      return true;
+    }
+    return false;
+  };
+
   const getStatusText = (status: string) => {
+    // 对非相关用户，taken状态显示为open
+    if (shouldHideStatus()) {
+      status = 'open';
+    }
+    
     switch (status) {
       case 'open': return t('myTasks.taskStatus.open');
       case 'taken': return t('myTasks.taskStatus.taken');
@@ -752,13 +771,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 borderRadius: '16px',
                 fontSize: '12px',
                 fontWeight: '600',
-                background: (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
+                background: shouldHideStatus() ? '#d1fae5' :
+                           (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
-                color: (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
+                color: shouldHideStatus() ? '#065f46' :
+                       (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
-                border: `1px solid ${(task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
+                border: `1px solid ${shouldHideStatus() ? '#a7f3d0' :
+                                   (task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
               }}>

@@ -783,6 +783,23 @@ const MessagePage: React.FC = () => {
     console.log('ws:', ws);
     console.log('ws.readyState:', ws ? ws.readyState : 'null');
     
+    // 检查客服对话是否已结束
+    if (isServiceMode && currentChat && currentChat.is_ended === 1) {
+      console.log('对话已结束，无法发送消息');
+      setIsSending(false);
+      const errorMessage: Message = {
+        id: Date.now(),
+        from: '系统',
+        content: '对话已结束，无法发送消息',
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // 显示提示并引导用户重新联系
+      alert('对话已结束。如需继续咨询，请重新联系客服。');
+      return;
+    }
+    
     const messageContent = input.trim();
     setInput('');
     
@@ -798,7 +815,6 @@ const MessagePage: React.FC = () => {
       from: '我',
       content: messageContent,
       created_at: new Date().toISOString(),
-      is_admin_msg: 0
     };
     console.log('发送消息前，当前消息数量:', messages.length);
     setMessages(prev => {
@@ -1456,6 +1472,24 @@ const MessagePage: React.FC = () => {
               return;
             }
             
+            // 处理对话结束事件
+            if (msg.type === 'chat_ended' || msg.type === 'chat_timeout') {
+              console.log('收到对话结束通知:', msg);
+              // 更新currentChat状态
+              if (currentChat) {
+                setCurrentChat({ ...currentChat, is_ended: 1 });
+              }
+              // 显示系统消息
+              const endMessage: Message = {
+                id: Date.now(),
+                from: '系统',
+                content: '对话已结束',
+                created_at: new Date().toISOString(),
+              };
+              setMessages(prev => [...prev, endMessage]);
+              return;
+            }
+            
             // 处理接收到的消息
             if (msg.type === 'message_sent') {
               // 这是发送确认消息，不需要显示，只记录日志
@@ -1599,6 +1633,46 @@ const MessagePage: React.FC = () => {
       };
     }
   }, [user?.id]);
+
+  // 定期检查客服对话是否已结束
+  useEffect(() => {
+    if (isServiceMode && currentChatId && currentChat && currentChat.is_ended === 0) {
+      const checkChatStatus = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChatId}`, {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const chatData = await response.json();
+            console.log('客服对话状态:', chatData);
+            
+            // 如果对话已结束，更新状态
+            if (chatData.is_ended === 1) {
+              console.log('检测到对话已结束');
+              setCurrentChat(prev => prev ? { ...prev, is_ended: 1 } : null);
+              
+              // 显示系统消息
+              const endMessage: Message = {
+                id: Date.now(),
+                from: '系统',
+                content: '对话已结束',
+                created_at: new Date().toISOString(),
+              };
+              setMessages(prev => [...prev, endMessage]);
+            }
+          }
+        } catch (error) {
+          console.error('检查客服对话状态失败:', error);
+        }
+      };
+      
+      // 每10秒检查一次
+      const interval = setInterval(checkChatStatus, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isServiceMode, currentChatId, currentChat?.is_ended]);
 
   const loadChatHistory = useCallback(async (contactId: string, chatId?: string, page: number = 1, isLoadMore: boolean = false) => {
     try {

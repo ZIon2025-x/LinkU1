@@ -893,9 +893,9 @@ const CustomerService: React.FC = () => {
         credentials: 'include'  // 使用Cookie认证
       });
       
+      console.log('超时结束响应状态:', response.status, response.statusText);
+      
       if (response.ok) {
-        const result = await response.json();
-        
         // 先更新本地状态，避免状态不一致
         setSessions(prevSessions => 
           prevSessions.map(session => 
@@ -916,6 +916,14 @@ const CustomerService: React.FC = () => {
           setTimeoutCheckInterval(null);
         }
         
+        // 尝试解析响应，如果失败也不影响成功流程
+        try {
+          const result = await response.json();
+          console.log('超时结束成功，结果:', result);
+        } catch (parseError) {
+          console.log('无法解析响应为JSON，但操作已成功');
+        }
+        
         // 显示成功消息
         alert('对话已超时结束，用户已收到通知');
         
@@ -924,11 +932,19 @@ const CustomerService: React.FC = () => {
           loadSessions();
         }, 100);
         
-        return result;
+        return { success: true };
       } else {
-        const errorData = await response.json();
-        console.error('超时结束失败:', errorData);
-        alert('超时结束失败: ' + (errorData.detail || '未知错误'));
+        // 尝试解析错误响应
+        let errorMessage = '未知错误';
+        try {
+          const errorData = await response.json();
+          console.error('超时结束失败:', errorData);
+          errorMessage = errorData.detail || '未知错误';
+        } catch (parseError) {
+          console.error('无法解析错误响应:', response.statusText);
+          errorMessage = response.statusText || '未知错误';
+        }
+        alert('超时结束失败: ' + errorMessage);
         return null;
       }
     } catch (error) {
@@ -2714,7 +2730,7 @@ const CustomerService: React.FC = () => {
                               selectedCancelRequest.task?.status === 'cancelled' ? '#fee2e2' : '#f3f4f6'
                 }}>
                   {selectedCancelRequest.task?.status === 'open' ? '待接取' :
-                   selectedCancelRequest.task?.status === 'taken' ? '已被接取' :
+                   selectedCancelRequest.task?.status === 'taken' ? '待审核申请' :
                    selectedCancelRequest.task?.status === 'in_progress' ? '进行中' :
                    selectedCancelRequest.task?.status === 'completed' ? '已完成' :
                    selectedCancelRequest.task?.status === 'cancelled' ? '已取消' :
