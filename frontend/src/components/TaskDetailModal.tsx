@@ -207,8 +207,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     console.log('当前URL:', window.location.href);
     const targetUrl = `/message?uid=${userId}`;
     console.log('目标URL:', targetUrl);
-    navigate(targetUrl);
-    console.log('navigate已调用');
+    console.log('当前hash:', window.location.hash);
+    window.location.hash = targetUrl;
+    console.log('已设置hash');
   };
 
   const handleAcceptTask = async () => {
