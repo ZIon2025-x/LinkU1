@@ -956,7 +956,7 @@ const Home: React.FC = () => {
                         fontWeight: '500',
                         border: task.location === 'Online' ? '1px solid #93c5fd' : '1px solid #e2e8f0'
                       }}>
-                        {task.location === 'Online' ? '🌐' : '📍'} {t(`tasks.cities.${task.location}`) || task.location}
+                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
                       </span>
                     </div>
                     

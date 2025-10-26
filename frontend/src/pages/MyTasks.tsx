@@ -1123,7 +1123,7 @@ const MyTasks: React.FC = () => {
                             color: task.location === 'Online' ? '#2563eb' : '#1e293b',
                             fontWeight: task.location === 'Online' ? '600' : 'normal'
                           }}>
-                            {t(`tasks.cities.${task.location}`) || task.location}
+                            {task.location}
                           </span>
                         </div>
                         <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

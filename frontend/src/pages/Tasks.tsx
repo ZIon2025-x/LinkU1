@@ -1976,7 +1976,7 @@ const Tasks: React.FC = () => {
                       color: '#6b7280'
                     }}>
                       <span>
-                        {task.location === 'Online' ? '🌐' : '📍'} {t(`tasks.cities.${task.location}`) || task.location}
+                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
                       </span>
                       <span>•</span>
                       <span>🏷️ {task.task_type}</span>
