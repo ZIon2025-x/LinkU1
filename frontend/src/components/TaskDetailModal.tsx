@@ -1313,6 +1313,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                           onClick={() => {
+                            console.log('🟢 Contact Applicant - app.applicant_id:', app.applicant_id);
                             window.location.href = `/message?uid=${app.applicant_id}`;
                           }}
                           style={{
@@ -1378,6 +1379,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
               onClick={() => {
+                console.log('🔵 Contact Taker - task.taker_id:', task.taker_id);
                 window.location.href = `/message?uid=${task.taker_id}`;
               }}
               style={{
@@ -1419,6 +1421,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
               onClick={() => {
+                console.log('🟡 Contact Poster - task.poster_id:', task.poster_id);
                 window.location.href = `/message?uid=${task.poster_id}`;
               }}
               style={{
