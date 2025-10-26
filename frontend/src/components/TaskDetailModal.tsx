@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import dayjs from 'dayjs';
@@ -8,6 +7,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from './LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -21,7 +21,7 @@ interface TaskDetailModalProps {
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, taskId }) => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

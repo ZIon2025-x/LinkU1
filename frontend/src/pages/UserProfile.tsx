@@ -852,7 +852,7 @@ const UserProfile: React.FC = () => {
               color: '#999',
               marginTop: 8
             }}>
-              完成更多任务来获得评价吧！
+              {t('userProfile.encourageReview')}
             </div>
           </div>
         )}

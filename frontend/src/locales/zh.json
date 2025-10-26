@@ -585,7 +585,8 @@
     "detailedStats": "详细统计",
     "postedTasks": "📤 发布的任务",
     "takenTasks": "📥 接受的任务",
-    "completionRate": "✅ 完成率"
+    "completionRate": "✅ 完成率",
+    "encourageReview": "完成更多任务来获得评价吧！"
   },
   "taskExperts": {
     "title": "任务达人",

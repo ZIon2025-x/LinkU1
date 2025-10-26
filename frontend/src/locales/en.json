@@ -585,7 +585,8 @@
     "detailedStats": "Detailed Statistics",
     "postedTasks": "📤 Posted Tasks",
     "takenTasks": "📥 Taken Tasks",
-    "completionRate": "✅ Completion Rate"
+    "completionRate": "✅ Completion Rate",
+    "encourageReview": "Complete more tasks to earn reviews!"
   },
   "taskExperts": {
     "title": "Task Experts",
