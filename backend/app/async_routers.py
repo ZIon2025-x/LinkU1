@@ -293,28 +293,71 @@ async def apply_for_task(
         )
         print(f"DEBUG: 申请结果: {application}")
         
+        # 如果申请返回 None，尝试提供更详细的错误信息
         if not application:
-            # 检查是否是等级不匹配的问题
+            print(f"DEBUG: 申请返回 None，尝试获取详细信息")
+            # 检查任务是否存在
             task_query = select(models.Task).where(models.Task.id == task_id)
             task_result = await db.execute(task_query)
             task = task_result.scalar_one_or_none()
             
-            if task:
-                level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
-                user_level_value = level_hierarchy.get(current_user.user_level, 1)
-                task_level_value = level_hierarchy.get(task.task_level, 1)
-                
-                if user_level_value < task_level_value:
-                    raise HTTPException(
-                        status_code=403, 
-                        detail=f"您的用户等级不足以申请此任务。此任务需要{task.task_level.upper()}用户才能申请。"
-                    )
+            if not task:
+                raise HTTPException(status_code=404, detail="任务不存在")
             
+            # 检查任务状态
+            task_status = str(task.status) if task.status else "unknown"
+            print(f"DEBUG: 任务状态: {task_status}")
+            
+            if task_status not in ["open", "taken"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"任务状态为 {task_status}，不允许申请"
+                )
+            
+            # 检查是否已经申请过
+            existing_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.task_id == task_id,
+                    models.TaskApplication.applicant_id == applicant_id
+                )
+            )
+            existing_result = await db.execute(existing_query)
+            existing = existing_result.scalar_one_or_none()
+            
+            if existing:
+                print(f"DEBUG: 已经申请过，返回已申请的信息")
+                return {
+                    "message": "您已经申请过此任务",
+                    "application_id": existing.id,
+                    "status": existing.status
+                }
+            
+            # 检查等级匹配
+            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+            user_level_value = level_hierarchy.get(str(current_user.user_level or 'normal'), 1)
+            task_level_value = level_hierarchy.get(str(task.task_level or 'normal'), 1)
+            
+            if user_level_value < task_level_value:
+                task_level_name = task.task_level.upper() if task.task_level else "VIP"
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"您的用户等级不足以申请此任务。此任务需要{task_level_name}用户才能申请。"
+                )
+            
+            # 如果都不匹配，返回通用错误
             raise HTTPException(
-                status_code=400, detail="Task not available or already applied"
+                status_code=400, 
+                detail="无法申请此任务"
             )
         
-        # 申请成功后发送通知和邮件给发布者
+        # 先返回成功响应，避免等待通知发送
+        response_data = {
+            "message": "申请成功，请等待发布者审核",
+            "application_id": application.id,
+            "status": application.status
+        }
+        
+        # 申请成功后发送通知和邮件给发布者（异步）
         try:
             print(f"DEBUG: 开始发送任务申请通知，任务ID: {task_id}")
             # 获取任务和发布者信息
@@ -356,11 +399,7 @@ async def apply_for_task(
             # 通知发送失败不影响申请流程
             logger.error(f"Failed to send task application notification: {e}")
         
-        return {
-            "message": "申请成功，请等待发布者审核",
-            "application_id": application.id,
-            "status": application.status
-        }
+        return response_data
         
     except HTTPException:
         raise
