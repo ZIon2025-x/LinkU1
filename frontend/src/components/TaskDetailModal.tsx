@@ -1315,7 +1315,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                           onClick={() => {
                             onClose();
                             setTimeout(() => {
-                              navigate(`/message?uid=${app.applicant_id}`);
+                              handleChat(app.applicant_id);
                             }, 100);
                           }}
                           style={{
@@ -1383,7 +1383,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               onClick={() => {
                 onClose();
                 setTimeout(() => {
-                  navigate(`/message?uid=${task.taker_id}`);
+                  handleChat(task.taker_id);
                 }, 100);
               }}
               style={{
@@ -1427,7 +1427,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               onClick={() => {
                 onClose();
                 setTimeout(() => {
-                  navigate(`/message?uid=${task.poster_id}`);
+                  handleChat(task.poster_id);
                 }, 100);
               }}
               style={{
