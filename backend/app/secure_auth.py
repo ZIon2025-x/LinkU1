@@ -666,8 +666,12 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
         old_keys = redis_client.keys(old_token_pattern)
         if old_keys:
             logger.info(f"[SECURE_AUTH] 删除用户 {user_id} 的旧refresh token，共 {len(old_keys)} 个")
+            # 将 keys 转换为字符串（如果是从Redis返回的bytes）
+            key_strings = []
             for key in old_keys:
-                redis_client.delete(key)
+                key_str = key.decode() if isinstance(key, bytes) else key
+                key_strings.append(key_str)
+            redis_client.delete(*key_strings)
         
         redis_key = f"user_refresh_token:{user_id}:{refresh_token}"
         redis_client.setex(

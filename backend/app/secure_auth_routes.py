@@ -419,27 +419,32 @@ def get_active_sessions(
         # 获取用户的所有活跃会话
         user_sessions = []
         
-        if SecureAuthManager.USE_REDIS and SecureAuthManager.redis_client:
+        # 导入模块级变量
+        from app.secure_auth import USE_REDIS, redis_client
+        
+        if USE_REDIS and redis_client:
             # 从 Redis 获取用户会话
             user_sessions_key = f"user_sessions:{current_session.user_id}"
-            session_ids = SecureAuthManager.redis_client.smembers(user_sessions_key)
+            session_ids = redis_client.smembers(user_sessions_key)
             
-            for session_id in session_ids:
-                session_data = SecureAuthManager.redis_client.get(f"session:{session_id}")
+            for raw_id in session_ids:
+                session_id = raw_id.decode() if isinstance(raw_id, bytes) else raw_id
+                session_data = redis_client.get(f"session:{session_id}")
                 if session_data:
                     data = json.loads(session_data)
                     if data.get("is_active", False):
                         user_sessions.append({
                             "session_id": session_id[:8] + "...",
-                            "device_fingerprint": data["device_fingerprint"],
-                            "ip_address": data["ip_address"],
-                            "created_at": data["created_at"],
-                            "last_activity": data["last_activity"],
+                            "device_fingerprint": data.get("device_fingerprint", ""),
+                            "ip_address": data.get("ip_address", ""),
+                            "created_at": data.get("created_at", ""),
+                            "last_activity": data.get("last_activity", data.get("created_at", "")),
                             "is_current": session_id == current_session.session_id
                         })
         else:
             # 从内存获取用户会话
-            for session in SecureAuthManager.active_sessions.values():
+            from app.secure_auth import active_sessions
+            for session in active_sessions.values():
                 if session.user_id == current_session.user_id and session.is_active:
                     user_sessions.append({
                         "session_id": session.session_id[:8] + "...",
@@ -516,14 +521,26 @@ def revoke_session(
             )
         
         # 查找要撤销的会话
-        target_session = SecureAuthManager.active_sessions.get(session_id)
-        if not target_session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
-            )
+        from app.secure_auth import USE_REDIS, redis_client, safe_redis_get, active_sessions
+        
+        # 获取目标会话
+        if USE_REDIS and redis_client:
+            session_data = safe_redis_get(f"session:{session_id}")
+            if not session_data or not session_data.get("is_active", False):
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
+                )
+            target_user_id = session_data.get("user_id")
+        else:
+            target_session = active_sessions.get(session_id)
+            if not target_session or not target_session.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在"
+                )
+            target_user_id = target_session.user_id
         
         # 检查权限（只能撤销自己的会话）
-        if target_session.user_id != current_session.user_id:
+        if target_user_id != current_session.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="无权撤销此会话"
             )
@@ -685,4 +702,88 @@ def get_redis_status():
             "message": f"Redis 连接失败: {str(e)}",
             "error_details": str(e),
             "timestamp": datetime.now().isoformat()
+        }
+
+@secure_auth_router.post("/cleanup-refresh-tokens")
+def cleanup_old_refresh_tokens_endpoint(
+    request: Request,
+):
+    """清理旧的refresh token（手动触发）"""
+    try:
+        # 验证会话
+        current_session = validate_session(request)
+        if not current_session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="会话无效"
+            )
+        from app.secure_auth import USE_REDIS, redis_client
+        
+        if not USE_REDIS or not redis_client:
+            return {
+                "success": False,
+                "message": "Redis不可用"
+            }
+        
+        # 获取所有refresh token
+        pattern = "user_refresh_token:*"
+        all_keys = redis_client.keys(pattern)
+        
+        if not all_keys:
+            return {
+                "success": True,
+                "message": "没有需要清理的refresh token",
+                "deleted": 0
+            }
+        
+        # 按用户分组
+        user_tokens = {}
+        for key in all_keys:
+            key_str = key.decode() if isinstance(key, bytes) else key
+            # 格式: user_refresh_token:USER_ID:TOKEN
+            parts = key_str.split(':')
+            if len(parts) >= 3:
+                user_id = parts[1]
+                if user_id not in user_tokens:
+                    user_tokens[user_id] = []
+                user_tokens[user_id].append(key_str)
+        
+        # 对于每个用户，如果有多个token，只保留最新的一个
+        total_deleted = 0
+        for user_id, token_keys in user_tokens.items():
+            if len(token_keys) > 1:
+                # 获取所有token的创建时间
+                token_times = []
+                for token_key in token_keys:
+                    try:
+                        data = redis_client.get(token_key)
+                        if data:
+                            data_str = data.decode() if isinstance(data, bytes) else data
+                            token_data = json.loads(data_str)
+                            created_at = token_data.get('created_at', '')
+                            token_times.append((token_key, created_at))
+                    except Exception as e:
+                        logger.warning(f"获取token数据失败 {token_key}: {e}")
+                        token_times.append((token_key, ''))
+                
+                # 按创建时间排序，保留最新的一个
+                if token_times:
+                    token_times.sort(key=lambda x: x[1], reverse=True)
+                    # 删除旧的token
+                    old_tokens = [k for k, _ in token_times[1:]]
+                    if old_tokens:
+                        redis_client.delete(*old_tokens)
+                        total_deleted += len(old_tokens)
+                        logger.info(f"用户 {user_id}: 保留了1个最新token，删除了{len(old_tokens)}个旧token")
+        
+        return {
+            "success": True,
+            "message": f"清理完成，共删除 {total_deleted} 个旧refresh token",
+            "deleted": total_deleted
+        }
+        
+    except Exception as e:
+        logger.error(f"清理refresh token失败: {e}")
+        return {
+            "success": False,
+            "message": f"清理失败: {str(e)}"
         }
