@@ -322,6 +322,8 @@ api.interceptors.response.use(
           refreshEndpoint = '/api/auth/service/refresh';
         }
         
+        // 对于用户，先尝试使用refresh端点（需要session仍然有效）
+        // 如果失败，再尝试使用refresh-token端点（使用refresh_token重新创建session）
         refreshPromise = api.post(refreshEndpoint);
         
         try {
@@ -337,12 +339,44 @@ api.interceptors.response.use(
           }
           return api.request(error.config);
         } catch (refreshError) {
-          console.log('Token刷新失败，用户需要重新登录');
-          // 增加全局重试计数
-          GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
-          // HttpOnly Cookie会自动处理，无需手动清理
-          // 让各个组件自己处理认证失败的情况
-          return Promise.reject(error);
+          console.log('会话refresh失败，尝试使用refresh-token重新创建会话:', refreshError);
+          
+          // 如果refresh端点失败（session已过期），尝试使用refresh-token端点
+          if (!window.location.pathname.includes('/admin') && 
+              !window.location.pathname.includes('/customer-service') && 
+              !window.location.pathname.includes('/service')) {
+            try {
+              console.log('尝试使用refresh-token端点重新创建会话');
+              refreshPromise = api.post('/api/secure-auth/refresh-token');
+              const refreshTokenResponse = await refreshPromise;
+              console.log('使用refresh-token成功，重试原始请求');
+              
+              // 增加全局重试计数
+              GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
+              
+              // 重试原始请求
+              if (isAcceptTaskApi) {
+                retryCounters.set(requestKey, currentRetryCount + 1);
+              }
+              return api.request(error.config);
+            } catch (refreshTokenError) {
+              console.log('Refresh-token也失败，用户需要重新登录:', refreshTokenError);
+              // 增加全局重试计数
+              GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
+              // HttpOnly Cookie会自动处理，无需手动清理
+              // 让各个组件自己处理认证失败的情况
+              return Promise.reject(refreshTokenError);
+            } finally {
+              refreshPromise = null;
+            }
+          } else {
+            console.log('Token刷新失败，用户需要重新登录');
+            // 增加全局重试计数
+            GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
+            // HttpOnly Cookie会自动处理，无需手动清理
+            // 让各个组件自己处理认证失败的情况
+            return Promise.reject(refreshError);
+          }
         } finally {
           // 重置刷新状态
           isRefreshing = false;

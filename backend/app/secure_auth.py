@@ -649,7 +649,7 @@ def clear_user_session_cookie(response: Response) -> Response:
 # ==================== 用户Refresh Token功能 ====================
 
 def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerprint: str = "") -> str:
-    """创建用户refresh token，绑定IP和设备指纹"""
+    """创建用户refresh token，绑定IP和设备指纹（只允许一个设备）"""
     import secrets
     from datetime import datetime, timedelta
     
@@ -661,6 +661,14 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     
     # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS and redis_client:
+        # 删除该用户的所有旧refresh token（只允许一个设备）
+        old_token_pattern = f"user_refresh_token:{user_id}:*"
+        old_keys = redis_client.keys(old_token_pattern)
+        if old_keys:
+            logger.info(f"[SECURE_AUTH] 删除用户 {user_id} 的旧refresh token，共 {len(old_keys)} 个")
+            for key in old_keys:
+                redis_client.delete(key)
+        
         redis_key = f"user_refresh_token:{user_id}:{refresh_token}"
         redis_client.setex(
             redis_key, 

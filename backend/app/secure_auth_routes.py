@@ -288,6 +288,13 @@ def refresh_session_with_token(
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         
+        # 验证成功后，撤销旧的refresh_token，生成新的refresh_token
+        from app.secure_auth import create_user_refresh_token, revoke_user_refresh_token
+        revoke_user_refresh_token(refresh_token)
+        
+        # 创建新的refresh_token（这会自动删除用户的所有旧refresh token）
+        new_refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        
         # 创建新会话 - refresh token应该总是创建新会话
         # 先撤销现有会话，然后创建新会话
         existing_session_id = request.cookies.get("session_id")
@@ -301,14 +308,14 @@ def refresh_session_with_token(
             device_fingerprint=device_fingerprint,
             ip_address=client_ip,
             user_agent=user_agent,
-            refresh_token=refresh_token  # 复用现有refresh_token
+            refresh_token=new_refresh_token  # 使用新的refresh_token
         )
         
         # 设置新的安全Cookie
         CookieManager.set_session_cookies(
             response=response,
             session_id=session.session_id,
-            refresh_token=refresh_token,
+            refresh_token=new_refresh_token,
             user_id=user.id,
             user_agent=user_agent
         )
