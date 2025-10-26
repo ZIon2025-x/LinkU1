@@ -449,10 +449,17 @@ const MessagePage: React.FC = () => {
     } else {
       // WebSocket未连接，使用HTTP API
       if (isServiceMode && currentChat) {
+        // 获取 CSRF token
+        const csrfToken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrf_token='))
+          ?.split('=')[1];
+          
         const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
           },
           credentials: 'include',  // 使用Cookie认证
           body: JSON.stringify({ content: messageContent })
@@ -859,10 +866,17 @@ const MessagePage: React.FC = () => {
         console.log('WebSocket未连接，状态:', ws ? ws.readyState : 'null');
         // WebSocket未连接，使用HTTP API作为备用
         if (isServiceMode && currentChat) {
+          // 获取 CSRF token
+          const csrfToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrf_token='))
+            ?.split('=')[1];
+            
           const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
             },
             credentials: 'include',  // 使用Cookie认证
             body: JSON.stringify({ content: messageContent })
@@ -2209,10 +2223,17 @@ const MessagePage: React.FC = () => {
     }
     
     try {
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+        
       const response = await fetch(`${API_BASE_URL}/api/users/customer-service/rate/${ratingChatId}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify({
