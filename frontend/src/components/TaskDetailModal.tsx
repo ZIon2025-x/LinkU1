@@ -1331,6 +1331,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                           onClick={() => {
+                            console.log('点击联系申请者，用户ID:', app.applicant_id);
                             navigate(`/message?uid=${app.applicant_id}`); // 跳转到聊天页面
                             onClose(); // 关闭任务详情弹窗
                           }}
@@ -1397,6 +1398,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
               onClick={() => {
+                console.log('点击联系接收者，用户ID:', task.taker_id);
                 navigate(`/message?uid=${task.taker_id}`);
                 onClose();
               }}
@@ -1439,6 +1441,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
               onClick={() => {
+                console.log('点击联系发布者，用户ID:', task.poster_id);
                 navigate(`/message?uid=${task.poster_id}`);
                 onClose();
               }}
