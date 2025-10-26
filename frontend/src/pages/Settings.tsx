@@ -133,8 +133,18 @@ const Settings: React.FC = () => {
     try {
       setSessionsLoading(true);
       setSessionsError('');
+      
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const res = await fetch('/api/secure-auth/logout-others', {
         method: 'POST',
+        headers: {
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
         credentials: 'include'
       });
       if (!res.ok) {

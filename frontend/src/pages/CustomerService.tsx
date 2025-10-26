@@ -315,10 +315,18 @@ const CustomerService: React.FC = () => {
     try {
       // 这里需要实现发送公告的API
       // 暂时使用通知API作为示例
+      
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/users/notifications/send-announcement`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify({
@@ -685,10 +693,18 @@ const CustomerService: React.FC = () => {
   const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
       console.log('审核取消请求:', { requestId, status, adminComment: adminComment });
+      
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cancel-requests/${requestId}/review`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify({
@@ -722,10 +738,18 @@ const CustomerService: React.FC = () => {
 
     try {
       console.log('提交管理请求:', { selectedRequestType, requestTitle, requestDescription, requestPriority });
+      
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CS_ADMIN_REQUESTS}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify({
@@ -763,10 +787,18 @@ const CustomerService: React.FC = () => {
 
     try {
       console.log('发送管理消息:', newAdminMessage);
+      
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
         body: JSON.stringify({
