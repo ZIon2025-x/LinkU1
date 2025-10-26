@@ -207,9 +207,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     console.log('当前URL:', window.location.href);
     const targetUrl = `/message?uid=${userId}`;
     console.log('目标URL:', targetUrl);
-    console.log('当前hash:', window.location.hash);
-    window.location.hash = targetUrl;
-    console.log('已设置hash');
+    navigate(targetUrl);
+    console.log('navigate已调用');
   };
 
   const handleAcceptTask = async () => {
@@ -1314,10 +1313,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                           onClick={() => {
+                            handleChat(app.applicant_id);
                             onClose();
-                            setTimeout(() => {
-                              handleChat(app.applicant_id);
-                            }, 100);
                           }}
                           style={{
                             background: '#007bff',
@@ -1382,10 +1379,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
               onClick={() => {
+                handleChat(task.taker_id);
                 onClose();
-                setTimeout(() => {
-                  handleChat(task.taker_id);
-                }, 100);
               }}
               style={{
                 background: '#007bff',
@@ -1426,10 +1421,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
               onClick={() => {
+                handleChat(task.poster_id);
                 onClose();
-                setTimeout(() => {
-                  handleChat(task.poster_id);
-                }, 100);
               }}
               style={{
                 background: '#A67C52',
