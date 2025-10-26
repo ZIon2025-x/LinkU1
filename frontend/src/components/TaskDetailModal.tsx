@@ -1314,7 +1314,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                         <button
                           onClick={() => {
                             console.log('🟢 Contact Applicant - app.applicant_id:', app.applicant_id);
-                            window.location.href = `/message?uid=${app.applicant_id}`;
+                            window.location.href = `/#/message?uid=${app.applicant_id}`;
                           }}
                           style={{
                             background: '#007bff',
@@ -1380,7 +1380,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <button
               onClick={() => {
                 console.log('🔵 Contact Taker - task.taker_id:', task.taker_id);
-                window.location.href = `/message?uid=${task.taker_id}`;
+                window.location.href = `/#/message?uid=${task.taker_id}`;
               }}
               style={{
                 background: '#007bff',
@@ -1422,7 +1422,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <button
               onClick={() => {
                 console.log('🟡 Contact Poster - task.poster_id:', task.poster_id);
-                window.location.href = `/message?uid=${task.poster_id}`;
+                window.location.href = `/#/message?uid=${task.poster_id}`;
               }}
               style={{
                 background: '#A67C52',
