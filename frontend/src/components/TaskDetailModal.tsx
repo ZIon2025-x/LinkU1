@@ -203,19 +203,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   };
 
   const handleChat = (userId: string) => {
-    console.log('handleChat被调用，用户ID:', userId);
-    console.log('当前URL:', window.location.href);
-    const targetUrl = `/message?uid=${userId}`;
-    console.log('目标URL:', targetUrl);
-    navigate(targetUrl);
-    console.log('navigate已调用');
-    // 强制更新hash，确保参数被保留
-    setTimeout(() => {
-      if (!window.location.hash.includes('uid=')) {
-        window.location.hash = targetUrl;
-        console.log('使用window.location.hash设置URL');
-      }
-    }, 0);
+    navigate(`/message?uid=${userId}`);
   };
 
   const handleAcceptTask = async () => {
