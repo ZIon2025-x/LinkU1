@@ -2067,6 +2067,24 @@ const Tasks: React.FC = () => {
                         </button>
                       )}
                       
+                      {/* 已申请状态 */}
+                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && appliedTasks.has(task.id) && (
+                        <div style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: '#e5e7eb',
+                          color: '#6b7280',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          textAlign: 'center',
+                          cursor: 'not-allowed',
+                          opacity: 0.6
+                        }}>
+                          ✓ {t('tasks.applied')}
+                        </div>
+                      )}
+                      
                       {/* 等级不足提示 */}
                       {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && !canViewTask(user, task) && (
                         <div style={{

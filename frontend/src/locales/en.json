@@ -189,6 +189,7 @@
     "taskDetail": "Task Detail",
     "acceptSuccess": "Task accepted successfully!",
     "acceptFailed": "Failed to accept task",
+    "applied": "Applied",
     "taskTitle": "Task Title",
     "taskDescription": "Description",
     "taskCategory": "Category",

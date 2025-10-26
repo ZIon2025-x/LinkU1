@@ -189,6 +189,7 @@
     "taskDetail": "任务详情",
     "acceptSuccess": "任务接受成功！",
     "acceptFailed": "接受任务失败",
+    "applied": "已申请",
     "taskTitle": "任务标题",
     "taskDescription": "描述",
     "taskCategory": "分类",

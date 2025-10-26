@@ -1251,8 +1251,8 @@ const MyTasks: React.FC = () => {
                         </button>
                       )}
 
-                      {/* 聊天按钮 */}
-                      {(task.status === 'taken' || task.status === 'pending_confirmation') && (
+                      {/* 聊天按钮 - 只有在任务进行中且有接收者时才显示 */}
+                      {(task.status === 'in_progress' && task.taker_id) && (
                         <button
                           onClick={() => handleChat(isPoster ? task.taker_id! : task.poster_id)}
                           style={{
