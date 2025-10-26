@@ -1312,7 +1312,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => handleChat(app.applicant_id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('点击联系申请者，ID:', app.applicant_id);
+                            window.location.href = `/message?uid=${app.applicant_id}`;
+                          }}
                           style={{
                             background: '#007bff',
                             color: '#fff',
@@ -1375,7 +1380,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={() => handleChat(task.taker_id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('点击联系接收者，ID:', task.taker_id);
+                window.location.href = `/message?uid=${task.taker_id}`;
+              }}
               style={{
                 background: '#007bff',
                 color: '#fff',
@@ -1414,7 +1424,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={() => handleChat(task.poster_id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('点击联系发布者，ID:', task.poster_id);
+                window.location.href = `/message?uid=${task.poster_id}`;
+              }}
               style={{
                 background: '#A67C52',
                 color: '#fff',

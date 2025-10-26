@@ -897,6 +897,7 @@
     "loginNow": "Login Now",
     "taskTypeLabel": "Task Type",
     "locationLabel": "Location",
+    "onlineTaskMethod": "Task Location",
     "rewardLabel": "Task Reward",
     "deadlineLabel": "Deadline",
     "descriptionLabel": "Task Description",
