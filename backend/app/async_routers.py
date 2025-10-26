@@ -243,8 +243,10 @@ async def apply_for_task(
     """申请任务（异步版本）"""
     message = request_data.get('message', None)
     print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
+    # 将 current_user.id 转换为字符串
+    applicant_id = str(current_user.id) if current_user.id else None
     application = await async_crud.async_task_crud.apply_for_task(
-        db, task_id, current_user.id, message
+        db, task_id, applicant_id, message
     )
     print(f"DEBUG: 申请结果: {application}")
     if not application:
@@ -298,7 +300,7 @@ async def apply_for_task(
                         background_tasks=background_tasks,
                         task=task,
                         applicant=current_user,
-                        application_message=message
+                        application_message=message or ""
                     )
                     print(f"DEBUG: 通知函数调用完成")
                 finally:

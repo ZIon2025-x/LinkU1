@@ -457,8 +457,12 @@ class AsyncTaskCRUD:
             
             # 等级匹配检查
             level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
-            user_level_str = str(user.user_level) if user.user_level is not None else "normal"
-            task_level_str = str(task.task_level) if task.task_level is not None else "normal"
+            # 从 SQLAlchemy 对象中获取实际值
+            user_level_actual = getattr(user, 'user_level', None)
+            task_level_actual = getattr(task, 'task_level', None)
+            
+            user_level_str = str(user_level_actual) if user_level_actual is not None else "normal"
+            task_level_str = str(task_level_actual) if task_level_actual is not None else "normal"
             user_level_value = level_hierarchy.get(user_level_str, 1)
             task_level_value = level_hierarchy.get(task_level_str, 1)
             
