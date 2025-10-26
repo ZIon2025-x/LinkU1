@@ -2307,28 +2307,11 @@ const MessagePage: React.FC = () => {
     }
     
     try {
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-        
-      const response = await fetch(`${API_BASE_URL}/api/users/customer-service/rate/${ratingChatId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify({
-          rating: rating,
-          comment: ratingComment
-        })
+      // 使用 api.post 自动包含 CSRF token
+      await api.post(`/api/users/customer-service/rate/${ratingChatId}`, {
+        rating: rating,
+        comment: ratingComment
       });
-      
-      if (!response.ok) {
-        throw new Error('评分提交失败');
-      }
       
       // 关闭评价弹窗
       setShowRatingModal(false);

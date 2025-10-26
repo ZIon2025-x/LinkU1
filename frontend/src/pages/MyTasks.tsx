@@ -569,7 +569,12 @@ const MyTasks: React.FC = () => {
           </div>
 
           {/* 通知按钮和汉堡菜单 */}
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <div style={{
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            flexShrink: 0  // 防止被压缩
+          }}>
             <NotificationButton
               user={user}
               unreadCount={unreadCount}
@@ -589,6 +594,33 @@ const MyTasks: React.FC = () => {
               systemSettings={systemSettings}
             />
           </div>
+          
+          {/* 移动端样式调整 */}
+          <style>{`
+            @media (max-width: 480px) {
+              /* 缩小Logo字体 */
+              header > div > div:first-child {
+                font-size: 18px !important;
+                padding: 2px 4px !important;
+              }
+              
+              /* 缩小通知按钮 */
+              .notification-btn {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                flex-shrink: 0 !important;
+              }
+              
+              /* 缩小汉堡菜单按钮 */
+              .hamburger-btn {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                flex-shrink: 0 !important;
+              }
+            }
+          `}</style>
         </div>
       </header>
 
