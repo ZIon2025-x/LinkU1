@@ -119,15 +119,9 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     from app.models import Task
-    from app.redis_cache import get_user_tasks, cache_user_tasks
     
-    # 尝试从Redis缓存获取
-    cache_key = f"{user_id}_{limit}_{offset}"
-    cached_tasks = get_user_tasks(cache_key)
-    if cached_tasks:
-        return cached_tasks
-    
-    # 缓存未命中，从数据库查询
+    # 直接从数据库查询，不使用缓存（避免缓存不一致问题）
+    # 用户任务数据更新频繁，缓存TTL短且容易导致数据不一致
     tasks = (
         db.query(Task)
         .filter((Task.poster_id == user_id) | (Task.taker_id == user_id))
@@ -137,8 +131,6 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
         .all()
     )
     
-    # 缓存任务列表 - 使用正确的缓存键格式
-    cache_user_tasks(cache_key, tasks)
     return tasks
 
 

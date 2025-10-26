@@ -254,8 +254,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // 对于某些API，不尝试刷新token，直接返回错误
       const skipRefreshApis = [
-        '/api/users/profile/me',
         '/api/secure-auth/refresh',
+        '/api/secure-auth/refresh-token',
         '/api/cs/refresh',
         '/api/admin/refresh',
         '/api/users/messages/mark-chat-read'

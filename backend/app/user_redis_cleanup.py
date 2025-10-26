@@ -271,11 +271,27 @@ class UserRedisCleanup:
             if not data:
                 return None
             
+            # 尝试解码bytes数据
             if isinstance(data, bytes):
-                data = data.decode('utf-8')
+                try:
+                    # 首先尝试utf-8
+                    data = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    # 如果utf-8失败，尝试latin-1（兼容所有字节值）
+                    data = data.decode('latin-1')
             
+            # 尝试解析JSON
             import json
-            return json.loads(data)
+            parsed_data = json.loads(data)
+            
+            # 如果解码得到的是字符串，再次尝试解析
+            if isinstance(parsed_data, str):
+                parsed_data = json.loads(parsed_data)
+            
+            return parsed_data
+        except (UnicodeDecodeError, json.JSONDecodeError) as e:
+            logger.error(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
+            return None
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
             return None
