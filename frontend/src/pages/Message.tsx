@@ -1008,8 +1008,8 @@ const MessagePage: React.FC = () => {
 
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
-    console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search });
-    if (user) {
+    console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search, contactsLoading });
+    if (user && !contactsLoading) { // 等待联系人列表加载完成
       const urlParams = new URLSearchParams(location.search);
       const targetUserId = urlParams.get('uid');
       
@@ -1063,7 +1063,7 @@ const MessagePage: React.FC = () => {
         }
       }
     }
-  }, [user, location.search, activeContact?.id, contacts]);
+  }, [user, location.search, contacts, contactsLoading, activeContact?.id]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
