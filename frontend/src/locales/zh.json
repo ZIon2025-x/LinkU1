@@ -904,7 +904,7 @@
     "waitingApprovalDesc": "您已成功申请此任务，请等待任务发布者审核您的申请。",
     "applicationPassedDesc": "恭喜！您的申请已通过，现在可以开始执行任务了。",
     "taskCompletedDesc": "恭喜！您已完成任务，请等待发布者确认任务完成。",
-    "waitingConfirmationDesc": "接收者已标记任务完成，请确认任务是否已完成",
+    "waitingConfirmationDesc": "请确认任务是否已完成",
     "completedNeedReview": "请根据此次任务进行评价。",
     "applicationRejectedDesc": "很抱歉，您的申请被拒绝了。",
     "applicationMessage": "申请留言：",

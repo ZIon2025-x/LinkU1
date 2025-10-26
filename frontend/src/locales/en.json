@@ -928,7 +928,7 @@
     "waitingApprovalDesc": "You have successfully applied for this task, please wait for the task publisher to review your application.",
     "applicationPassedDesc": "Congratulations! Your application has been approved, you can now start executing the task.",
     "taskCompletedDesc": "Congratulations! You have completed the task, please wait for the publisher to confirm task completion.",
-    "waitingConfirmationDesc": "Taker has marked the task as completed, please confirm whether the task has been completed",
+    "waitingConfirmationDesc": "Please confirm whether the task has been completed",
     "completedNeedReview": "Please rate this task.",
     "applicationRejectedDesc": "Sorry, your application was rejected.",
     "applicationMessage": "Application Message:",
