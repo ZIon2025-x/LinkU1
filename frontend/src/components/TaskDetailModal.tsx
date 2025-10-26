@@ -1308,8 +1308,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                           onClick={() => {
-                            handleChat(app.applicant_id);
                             onClose();
+                            navigate(`/message?uid=${app.applicant_id}`);
                           }}
                           style={{
                             background: '#007bff',
@@ -1374,8 +1374,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
               onClick={() => {
-                handleChat(task.taker_id);
                 onClose();
+                navigate(`/message?uid=${task.taker_id}`);
               }}
               style={{
                 background: '#007bff',
@@ -1416,8 +1416,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
               onClick={() => {
-                handleChat(task.poster_id);
                 onClose();
+                navigate(`/message?uid=${task.poster_id}`);
               }}
               style={{
                 background: '#A67C52',
