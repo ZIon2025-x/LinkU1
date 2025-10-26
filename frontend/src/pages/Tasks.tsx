@@ -608,34 +608,16 @@ const Tasks: React.FC = () => {
     }
 
     try {
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
+      // 使用 api 实例自动处理 CSRF token
+      const data = await api.post(`/api/tasks/${taskId}/accept`, {});
       
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        alert(t('tasks.acceptSuccess'));
-        // 将任务添加到已申请列表，隐藏申请按钮
-        setAppliedTasks(prev => new Set([...Array.from(prev), taskId]));
-        loadTasks(); // 重新加载任务列表
-      } else {
-        alert(data.detail || t('tasks.acceptFailed'));
-      }
-    } catch (error) {
+      alert(t('tasks.acceptSuccess'));
+      // 将任务添加到已申请列表，隐藏申请按钮
+      setAppliedTasks(prev => new Set([...Array.from(prev), taskId]));
+      loadTasks(); // 重新加载任务列表
+    } catch (error: any) {
       console.error('接受任务失败:', error);
-      alert(t('tasks.acceptFailed'));
+      alert(error.response?.data?.detail || t('tasks.acceptFailed'));
     }
   };
 

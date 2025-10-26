@@ -235,27 +235,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     try {
       console.log('开始接受任务...', { taskId, currentStatus: task?.status });
       
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',
-      });
-      
-      const result = await response.json();
-      console.log('接受任务API调用成功:', result);
-      
-      if (!response.ok) {
-        throw new Error(result.detail || t('taskDetail.taskApplyFailed'));
-      }
+      // 使用 api 实例自动处理 CSRF token
+      const result = await api.post(`/api/tasks/${taskId}/accept`, {});
+      console.log('接受任务API调用成功:', result.data);
       
       alert(t('taskDetail.taskApplySuccess'));
       
