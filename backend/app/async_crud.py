@@ -507,7 +507,7 @@ class AsyncTaskCRUD:
                 # 创建自动消息
                 auto_message = Message(
                     sender_id=applicant_id,
-                    receiver_id=task.poster_id,
+                    receiver_id=str(task.poster_id),
                     content=f"我申请了您的任务：{task.title}。{f'申请留言：{message}' if message else ''}"
                 )
                 db.add(auto_message)

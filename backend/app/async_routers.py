@@ -232,6 +232,44 @@ async def create_task_async(
         raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
 
 
+@async_router.post("/tasks/{task_id}/apply-test", response_model=dict)
+async def apply_for_task_test(
+    task_id: int,
+    request_data: dict = Body({}),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """申请任务测试端点（简化版本）"""
+    try:
+        message = request_data.get('message', None)
+        print(f"DEBUG: 测试申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
+        
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        print(f"DEBUG: 任务存在: {task.title}")
+        
+        return {
+            "message": "测试成功",
+            "task_id": task_id,
+            "user_id": str(current_user.id),
+            "task_title": task.title
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Test error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Test error: {str(e)}")
+
+
 @async_router.post("/tasks/{task_id}/apply", response_model=dict)
 async def apply_for_task(
     task_id: int,
@@ -241,82 +279,96 @@ async def apply_for_task(
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """申请任务（异步版本）"""
-    message = request_data.get('message', None)
-    print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
-    # 将 current_user.id 转换为字符串
-    applicant_id = str(current_user.id) if current_user.id else None
-    application = await async_crud.async_task_crud.apply_for_task(
-        db, task_id, applicant_id, message
-    )
-    print(f"DEBUG: 申请结果: {application}")
-    if not application:
-        # 检查是否是等级不匹配的问题
-        task_query = select(models.Task).where(models.Task.id == task_id)
-        task_result = await db.execute(task_query)
-        task = task_result.scalar_one_or_none()
-        
-        if task:
-            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
-            user_level_value = level_hierarchy.get(current_user.user_level, 1)
-            task_level_value = level_hierarchy.get(task.task_level, 1)
-            
-            if user_level_value < task_level_value:
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"您的用户等级不足以申请此任务。此任务需要{task.task_level.upper()}用户才能申请。"
-                )
-        
-        raise HTTPException(
-            status_code=400, detail="Task not available or already applied"
-        )
-    
-    # 申请成功后发送通知和邮件给发布者
     try:
-        print(f"DEBUG: 开始发送任务申请通知，任务ID: {task_id}")
-        # 获取任务和发布者信息
-        task_query = select(models.Task).where(models.Task.id == task_id)
-        task_result = await db.execute(task_query)
-        task = task_result.scalar_one_or_none()
+        message = request_data.get('message', None)
+        print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
         
-        if task:
-            print(f"DEBUG: 找到任务: {task.title}")
-            # 获取发布者信息
-            poster_query = select(models.User).where(models.User.id == task.poster_id)
-            poster_result = await db.execute(poster_query)
-            poster = poster_result.scalar_one_or_none()
+        # 将 current_user.id 转换为字符串
+        applicant_id = str(current_user.id) if current_user.id else None
+        if not applicant_id:
+            raise HTTPException(status_code=400, detail="Invalid user ID")
             
-            if poster:
-                print(f"DEBUG: 找到发布者: {poster.name}")
-                # 发送通知和邮件
-                from app.task_notifications import send_task_application_notification
-                from app.database import get_db
+        application = await async_crud.async_task_crud.apply_for_task(
+            db, task_id, applicant_id, message
+        )
+        print(f"DEBUG: 申请结果: {application}")
+        
+        if not application:
+            # 检查是否是等级不匹配的问题
+            task_query = select(models.Task).where(models.Task.id == task_id)
+            task_result = await db.execute(task_query)
+            task = task_result.scalar_one_or_none()
+            
+            if task:
+                level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+                user_level_value = level_hierarchy.get(current_user.user_level, 1)
+                task_level_value = level_hierarchy.get(task.task_level, 1)
                 
-                # 创建同步数据库会话用于通知
-                sync_db = next(get_db())
-                try:
-                    print(f"DEBUG: 调用通知函数")
-                    send_task_application_notification(
-                        db=sync_db,
-                        background_tasks=background_tasks,
-                        task=task,
-                        applicant=current_user,
-                        application_message=message or ""
+                if user_level_value < task_level_value:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail=f"您的用户等级不足以申请此任务。此任务需要{task.task_level.upper()}用户才能申请。"
                     )
-                    print(f"DEBUG: 通知函数调用完成")
-                finally:
-                    sync_db.close()
-            else:
-                print(f"DEBUG: 未找到发布者")
+            
+            raise HTTPException(
+                status_code=400, detail="Task not available or already applied"
+            )
+        
+        # 申请成功后发送通知和邮件给发布者
+        try:
+            print(f"DEBUG: 开始发送任务申请通知，任务ID: {task_id}")
+            # 获取任务和发布者信息
+            task_query = select(models.Task).where(models.Task.id == task_id)
+            task_result = await db.execute(task_query)
+            task = task_result.scalar_one_or_none()
+            
+            if task:
+                print(f"DEBUG: 找到任务: {task.title}")
+                # 获取发布者信息
+                poster_query = select(models.User).where(models.User.id == task.poster_id)
+                poster_result = await db.execute(poster_query)
+                poster = poster_result.scalar_one_or_none()
+                
+                if poster:
+                    print(f"DEBUG: 找到发布者: {poster.name}")
+                    # 发送通知和邮件
+                    from app.task_notifications import send_task_application_notification
+                    from app.database import get_db
                     
+                    # 创建同步数据库会话用于通知
+                    sync_db = next(get_db())
+                    try:
+                        print(f"DEBUG: 调用通知函数")
+                        send_task_application_notification(
+                            db=sync_db,
+                            background_tasks=background_tasks,
+                            task=task,
+                            applicant=current_user,
+                            application_message=message or ""
+                        )
+                        print(f"DEBUG: 通知函数调用完成")
+                    finally:
+                        sync_db.close()
+                else:
+                    print(f"DEBUG: 未找到发布者")
+                        
+        except Exception as e:
+            # 通知发送失败不影响申请流程
+            logger.error(f"Failed to send task application notification: {e}")
+        
+        return {
+            "message": "申请成功，请等待发布者审核",
+            "application_id": application.id,
+            "status": application.status
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        # 通知发送失败不影响申请流程
-        logger.error(f"Failed to send task application notification: {e}")
-    
-    return {
-        "message": "申请成功，请等待发布者审核",
-        "application_id": application.id,
-        "status": application.status
-    }
+        logger.error(f"Unexpected error in apply_for_task: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 
