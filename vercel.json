@@ -11,6 +11,17 @@
   ],
   "redirects": [
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "link2ur.com"
+        }
+      ],
+      "destination": "https://www.link2ur.com/$1",
+      "permanent": true
+    },
+    {
       "source": "/tasks",
       "destination": "/en/tasks",
       "permanent": true
