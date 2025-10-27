@@ -12,7 +12,11 @@ import {
   getAdminUsersForAdmin,
   sendAdminNotification,
   notifyCustomerService,
-  sendStaffNotification
+  sendStaffNotification,
+  getTaskExperts,
+  createTaskExpert,
+  updateTaskExpert,
+  deleteTaskExpert
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -115,6 +119,36 @@ const AdminDashboard: React.FC = () => {
     content: ''
   });
 
+  // 任务达人相关状态
+  const [taskExperts, setTaskExperts] = useState<any[]>([]);
+  const [showTaskExpertModal, setShowTaskExpertModal] = useState(false);
+  const [taskExpertForm, setTaskExpertForm] = useState<any>({
+    id: undefined,
+    name: '',
+    avatar: '',
+    user_level: 'normal',
+    bio: '',
+    bio_en: '',
+    avg_rating: 0,
+    completed_tasks: 0,
+    total_tasks: 0,
+    completion_rate: 0,
+    expertise_areas: [] as string[],
+    expertise_areas_en: [] as string[],
+    featured_skills: [] as string[],
+    featured_skills_en: [] as string[],
+    achievements: [] as string[],
+    achievements_en: [] as string[],
+    response_time: '',
+    response_time_en: '',
+    success_rate: 0,
+    is_verified: 0,
+    is_active: 1,
+    is_featured: 1,
+    display_order: 0,
+    category: 'programming'
+  });
+
   // 刷新提醒数量的函数
   const handleNotificationRead = () => {
     if (notificationBellRef.current) {
@@ -148,6 +182,11 @@ const AdminDashboard: React.FC = () => {
         setAdminUsers(adminData.admin_users || []);
         
         setTotalPages(Math.ceil((csData.total || 0) / 20));
+      } else if (activeTab === 'task-experts') {
+        // 加载任务达人数据
+        const expertsData = await getTaskExperts({ page: currentPage, size: 20 });
+        setTaskExperts(expertsData.task_experts || []);
+        setTotalPages(Math.ceil((expertsData.total || 0) / 20));
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -1019,6 +1058,590 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const renderTaskExperts = () => (
+    <div>
+      <h2>任务达人管理</h2>
+      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button
+          onClick={() => {
+            setTaskExpertForm({
+              id: undefined,
+              name: '',
+              avatar: '',
+              user_level: 'normal',
+              bio: '',
+              bio_en: '',
+              avg_rating: 0,
+              completed_tasks: 0,
+              total_tasks: 0,
+              completion_rate: 0,
+              expertise_areas: [],
+              expertise_areas_en: [],
+              featured_skills: [],
+              featured_skills_en: [],
+              achievements: [],
+              achievements_en: [],
+              response_time: '',
+              response_time_en: '',
+              success_rate: 0,
+              is_verified: 0,
+              is_active: 1,
+              is_featured: 1,
+              display_order: 0,
+              category: 'programming'
+            });
+            setShowTaskExpertModal(true);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#28a745',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          + 添加任务达人
+        </button>
+      </div>
+
+      <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6' }}>ID</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>名称</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>类别</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>等级</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>评分</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>状态</th>
+              <th style={{ padding: '12px', textAlign: 'left' }}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {taskExperts.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  暂无任务达人，点击"添加任务达人"按钮创建
+                </td>
+              </tr>
+            ) : (
+              taskExperts.map((expert) => (
+                <tr key={expert.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{expert.id}</td>
+                  <td style={{ padding: '12px' }}>{expert.name}</td>
+                  <td style={{ padding: '12px' }}>{expert.category || '-'}</td>
+                  <td style={{ padding: '12px' }}>{expert.user_level}</td>
+                  <td style={{ padding: '12px' }}>{expert.avg_rating?.toFixed(1) || '0.0'}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      background: expert.is_active ? '#d4edda' : '#f8d7da',
+                      color: expert.is_active ? '#155724' : '#721c24'
+                    }}>
+                      {expert.is_active ? '已启用' : '已禁用'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <button
+                      onClick={() => {
+                        setTaskExpertForm(expert);
+                        setShowTaskExpertModal(true);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        marginRight: '4px',
+                        border: '1px solid #007bff',
+                        background: 'white',
+                        color: '#007bff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('确定要删除这个任务达人吗？')) {
+                          try {
+                            await deleteTaskExpert(expert.id);
+                            await loadDashboardData();
+                          } catch (error) {
+                            console.error('删除失败:', error);
+                          }
+                        }
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        border: '1px solid #dc3545',
+                        background: 'white',
+                        color: '#dc3545',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showTaskExpertModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            maxWidth: '1200px',
+            width: '95%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0' }}>任务达人表单</h3>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>名称 *</label>
+              <input
+                type="text"
+                value={taskExpertForm.name}
+                onChange={(e) => setTaskExpertForm({...taskExpertForm, name: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>头像URL</label>
+              <input
+                type="text"
+                value={taskExpertForm.avatar}
+                onChange={(e) => setTaskExpertForm({...taskExpertForm, avatar: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>等级 *</label>
+                <select
+                  value={taskExpertForm.user_level}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, user_level: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <option value="normal">普通</option>
+                  <option value="vip">VIP</option>
+                  <option value="super">超级</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>类别</label>
+                <select
+                  value={taskExpertForm.category}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, category: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <option value="programming">编程开发</option>
+                  <option value="design">设计创意</option>
+                  <option value="marketing">营销推广</option>
+                  <option value="writing">文案写作</option>
+                  <option value="translation">翻译服务</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>简介（中文）</label>
+              <textarea
+                value={taskExpertForm.bio}
+                onChange={(e) => setTaskExpertForm({...taskExpertForm, bio: e.target.value})}
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  resize: 'vertical'
+                }}
+                placeholder="请输入任务达人简介（中文）"
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>简介（英文）</label>
+              <textarea
+                value={taskExpertForm.bio_en}
+                onChange={(e) => setTaskExpertForm({...taskExpertForm, bio_en: e.target.value})}
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  resize: 'vertical'
+                }}
+                placeholder="Task Expert Bio (English)"
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>响应时间（中文）</label>
+                <input
+                  type="text"
+                  value={taskExpertForm.response_time}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, response_time: e.target.value})}
+                  placeholder="如：2小时内"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>响应时间（英文）</label>
+                <input
+                  type="text"
+                  value={taskExpertForm.response_time_en}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, response_time_en: e.target.value})}
+                  placeholder="e.g. Within 2 hours"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>平均评分</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="5"
+                  value={taskExpertForm.avg_rating}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, avg_rating: parseFloat(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>成功率 (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={taskExpertForm.success_rate}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, success_rate: parseFloat(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>已完成任务数</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={taskExpertForm.completed_tasks}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, completed_tasks: parseInt(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>总任务数</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={taskExpertForm.total_tasks}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, total_tasks: parseInt(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>完成率 (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={taskExpertForm.completion_rate}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, completion_rate: parseFloat(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>专业领域（中文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.expertise_areas) ? taskExpertForm.expertise_areas.join(', ') : taskExpertForm.expertise_areas}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, expertise_areas: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="如：编程开发, 网站建设, 移动应用"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>专业领域（英文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.expertise_areas_en) ? taskExpertForm.expertise_areas_en.join(', ') : taskExpertForm.expertise_areas_en}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, expertise_areas_en: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="e.g. Programming, Web Development, Mobile Apps"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>特色技能（中文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.featured_skills) ? taskExpertForm.featured_skills.join(', ') : taskExpertForm.featured_skills}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, featured_skills: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="如：React, Node.js, Python, Vue.js"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>特色技能（英文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.featured_skills_en) ? taskExpertForm.featured_skills_en.join(', ') : taskExpertForm.featured_skills_en}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, featured_skills_en: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="e.g. React, Node.js, Python, Vue.js"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>成就徽章（中文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.achievements) ? taskExpertForm.achievements.join(', ') : taskExpertForm.achievements}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, achievements: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="如：技术认证, 优秀贡献者, 年度达人"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>成就徽章（英文，用逗号分隔）</label>
+                <input
+                  type="text"
+                  value={Array.isArray(taskExpertForm.achievements_en) ? taskExpertForm.achievements_en.join(', ') : taskExpertForm.achievements_en}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, achievements_en: e.target.value.split(',').map(s => s.trim())})}
+                  placeholder="e.g. Technical Certification, Top Contributor, Expert of the Year"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>显示顺序</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={taskExpertForm.display_order}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, display_order: parseInt(e.target.value) || 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>状态</label>
+                <select
+                  value={taskExpertForm.is_active}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, is_active: e.target.value === '1' ? 1 : 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <option value="1">已启用</option>
+                  <option value="0">已禁用</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>是否精选</label>
+                <select
+                  value={taskExpertForm.is_featured}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, is_featured: e.target.value === '1' ? 1 : 0})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <option value="1">是</option>
+                  <option value="0">否</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    if (taskExpertForm.name) {
+                      if (taskExpertForm.id) {
+                        await updateTaskExpert(taskExpertForm.id, taskExpertForm);
+                      } else {
+                        await createTaskExpert(taskExpertForm);
+                      }
+                      setShowTaskExpertModal(false);
+                      await loadDashboardData();
+                    }
+                  } catch (error) {
+                    console.error('保存失败:', error);
+                  }
+                }}
+                disabled={!taskExpertForm.name}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: !taskExpertForm.name ? '#ccc' : '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: !taskExpertForm.name ? 'not-allowed' : 'pointer',
+                  opacity: !taskExpertForm.name ? 0.6 : 1
+                }}
+              >
+                保存
+              </button>
+              <button
+                onClick={() => setShowTaskExpertModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderNotifications = () => (
     <div>
       <h2>发送通知</h2>
@@ -1297,6 +1920,22 @@ const AdminDashboard: React.FC = () => {
           style={{
             padding: '10px 20px',
             border: 'none',
+            background: activeTab === 'task-experts' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'task-experts' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginRight: '10px'
+          }}
+          onClick={() => setActiveTab('task-experts')}
+        >
+          任务达人
+        </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
             background: activeTab === 'notifications' ? '#007bff' : '#f0f0f0',
             color: activeTab === 'notifications' ? 'white' : 'black',
             cursor: 'pointer',
@@ -1377,6 +2016,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'dashboard' && renderDashboard()}
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'personnel' && renderPersonnelManagement()}
+            {activeTab === 'task-experts' && renderTaskExperts()}
             {activeTab === 'notifications' && renderNotifications()}
           </>
         )}

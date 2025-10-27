@@ -1173,4 +1173,42 @@ export const getPublicJobPositions = async (params?: {
   return res.data;
 };
 
+// ==================== 任务达人管理 API ====================
+
+// 管理员 API - 获取任务达人列表
+export const getTaskExperts = async (params?: {
+  page?: number;
+  size?: number;
+  category?: string;
+  is_active?: number;
+}) => {
+  const res = await api.get('/api/admin/task-experts', { params });
+  return res.data;
+};
+
+// 管理员 API - 创建任务达人
+export const createTaskExpert = async (expertData: any) => {
+  const res = await api.post('/api/admin/task-expert', expertData);
+  return res.data;
+};
+
+// 管理员 API - 更新任务达人
+export const updateTaskExpert = async (expertId: number, expertData: any) => {
+  const res = await api.put(`/api/admin/task-expert/${expertId}`, expertData);
+  return res.data;
+};
+
+// 管理员 API - 删除任务达人
+export const deleteTaskExpert = async (expertId: number) => {
+  const res = await api.delete(`/api/admin/task-expert/${expertId}`);
+  return res.data;
+};
+
+// 公开 API - 获取任务达人列表（用于前端展示）
+export const getPublicTaskExperts = async (category?: string) => {
+  const params = category ? { category } : {};
+  const res = await api.get('/api/task-experts', { params });
+  return res.data;
+};
+
 export default api; 

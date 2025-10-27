@@ -4834,3 +4834,235 @@ def get_public_job_positions(
     except Exception as e:
         logger.error(f"获取公开岗位列表失败: {e}")
         raise HTTPException(status_code=500, detail="获取岗位列表失败")
+
+
+# ==================== 任务达人管理 API ====================
+
+@router.get("/admin/task-experts")
+def get_task_experts(
+    page: int = 1,
+    size: int = 20,
+    category: Optional[str] = None,
+    is_active: Optional[int] = None,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取任务达人列表（管理员）"""
+    try:
+        query = db.query(models.FeaturedTaskExpert)
+        
+        # 筛选
+        if category:
+            query = query.filter(models.FeaturedTaskExpert.category == category)
+        if is_active is not None:
+            query = query.filter(models.FeaturedTaskExpert.is_active == is_active)
+        
+        # 排序
+        query = query.order_by(
+            models.FeaturedTaskExpert.display_order,
+            models.FeaturedTaskExpert.created_at.desc()
+        )
+        
+        total = query.count()
+        skip = (page - 1) * size
+        experts = query.offset(skip).limit(size).all()
+        
+        return {
+            "task_experts": [
+                {
+                    "id": expert.id,
+                    "user_id": expert.user_id,
+                    "name": expert.name,
+                    "avatar": expert.avatar,
+                    "user_level": expert.user_level,
+                    "bio": expert.bio,
+                    "bio_en": expert.bio_en,
+                    "avg_rating": expert.avg_rating,
+                    "completed_tasks": expert.completed_tasks,
+                    "total_tasks": expert.total_tasks,
+                    "completion_rate": expert.completion_rate,
+                    "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+                    "expertise_areas_en": json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else [],
+                    "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+                    "featured_skills_en": json.loads(expert.featured_skills_en) if expert.featured_skills_en else [],
+                    "achievements": json.loads(expert.achievements) if expert.achievements else [],
+                    "achievements_en": json.loads(expert.achievements_en) if expert.achievements_en else [],
+                    "response_time": expert.response_time,
+                    "response_time_en": expert.response_time_en,
+                    "success_rate": expert.success_rate,
+                    "is_verified": bool(expert.is_verified),
+                    "is_active": bool(expert.is_active),
+                    "is_featured": bool(expert.is_featured),
+                    "display_order": expert.display_order,
+                    "category": expert.category,
+                    "created_at": expert.created_at.isoformat() if expert.created_at else None,
+                    "updated_at": expert.updated_at.isoformat() if expert.updated_at else None,
+                }
+                for expert in experts
+            ],
+            "total": total,
+            "page": page,
+            "size": size
+        }
+    except Exception as e:
+        logger.error(f"获取任务达人列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取任务达人列表失败")
+
+
+@router.post("/admin/task-expert")
+def create_task_expert(
+    expert_data: dict,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """创建任务达人（管理员）"""
+    try:
+        # 将数组字段转换为 JSON
+        for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
+            if field in expert_data and isinstance(expert_data[field], list):
+                expert_data[field] = json.dumps(expert_data[field])
+        
+        new_expert = models.FeaturedTaskExpert(
+            **expert_data,
+            created_by=current_admin.id
+        )
+        db.add(new_expert)
+        db.commit()
+        db.refresh(new_expert)
+        
+        logger.info(f"创建任务达人成功: {new_expert.id}")
+        
+        return {
+            "message": "创建任务达人成功",
+            "task_expert": {
+                "id": new_expert.id,
+                "name": new_expert.name,
+            }
+        }
+    except Exception as e:
+        logger.error(f"创建任务达人失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"创建任务达人失败: {str(e)}")
+
+
+@router.put("/admin/task-expert/{expert_id}")
+def update_task_expert(
+    expert_id: int,
+    expert_data: dict,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """更新任务达人（管理员）"""
+    try:
+        expert = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.id == expert_id
+        ).first()
+        
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 将数组字段转换为 JSON
+        for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
+            if field in expert_data and isinstance(expert_data[field], list):
+                expert_data[field] = json.dumps(expert_data[field])
+        
+        # 更新字段
+        for key, value in expert_data.items():
+            if hasattr(expert, key):
+                setattr(expert, key, value)
+        
+        expert.updated_at = datetime.now()
+        db.commit()
+        db.refresh(expert)
+        
+        logger.info(f"更新任务达人成功: {expert_id}")
+        
+        return {
+            "message": "更新任务达人成功",
+            "task_expert": {"id": expert.id, "name": expert.name}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新任务达人失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新任务达人失败: {str(e)}")
+
+
+@router.delete("/admin/task-expert/{expert_id}")
+def delete_task_expert(
+    expert_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """删除任务达人（管理员）"""
+    try:
+        expert = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.id == expert_id
+        ).first()
+        
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        db.delete(expert)
+        db.commit()
+        
+        logger.info(f"删除任务达人成功: {expert_id}")
+        
+        return {"message": "删除任务达人成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除任务达人失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"删除任务达人失败: {str(e)}")
+
+
+# 公开 API - 获取任务达人列表（前端使用）
+@router.get("/task-experts")
+def get_public_task_experts(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """获取任务达人列表（公开）"""
+    try:
+        query = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.is_active == 1
+        )
+        
+        if category:
+            query = query.filter(models.FeaturedTaskExpert.category == category)
+        
+        # 排序
+        query = query.order_by(
+            models.FeaturedTaskExpert.display_order,
+            models.FeaturedTaskExpert.created_at.desc()
+        )
+        
+        experts = query.all()
+        
+        return {
+            "task_experts": [
+                {
+                    "id": str(expert.id),
+                    "name": expert.name,
+                    "avatar": expert.avatar,
+                    "user_level": expert.user_level,
+                    "avg_rating": expert.avg_rating,
+                    "completed_tasks": expert.completed_tasks,
+                    "total_tasks": expert.total_tasks,
+                    "completion_rate": expert.completion_rate,
+                    "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+                    "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+                    "achievements": json.loads(expert.achievements) if expert.achievements else [],
+                    "is_verified": bool(expert.is_verified),
+                    "bio": expert.bio,
+                    "response_time": expert.response_time,
+                    "success_rate": expert.success_rate,
+                }
+                for expert in experts
+            ]
+        }
+    except Exception as e:
+        logger.error(f"获取任务达人列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取任务达人列表失败")

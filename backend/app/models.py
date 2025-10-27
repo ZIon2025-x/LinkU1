@@ -538,3 +538,53 @@ class JobPosition(Base):
         Index("ix_job_positions_is_active", is_active),
         Index("ix_job_positions_created_at", created_at),
     )
+
+
+class FeaturedTaskExpert(Base):
+    """精选任务达人模型"""
+    __tablename__ = "featured_task_experts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id"), unique=True, nullable=True)  # 关联到实际用户
+    name = Column(String(50), nullable=False)  # 显示名称
+    avatar = Column(String(200), default="")  # 头像URL
+    user_level = Column(String(20), default="normal")  # normal, vip, super
+    bio = Column(Text, nullable=True)  # 个人简介
+    bio_en = Column(Text, nullable=True)  # 个人简介（英文）
+    
+    # 统计数据（如果关联用户ID，这些可以从用户数据获取）
+    avg_rating = Column(Float, default=0.0)  # 平均评分
+    completed_tasks = Column(Integer, default=0)  # 已完成任务数
+    total_tasks = Column(Integer, default=0)  # 总任务数
+    completion_rate = Column(Float, default=0.0)  # 完成率
+    
+    # 专业领域和技能（JSON格式存储）
+    expertise_areas = Column(Text, nullable=True)  # 专业领域
+    expertise_areas_en = Column(Text, nullable=True)  # 专业领域（英文）
+    featured_skills = Column(Text, nullable=True)  # 特色技能
+    featured_skills_en = Column(Text, nullable=True)  # 特色技能（英文）
+    achievements = Column(Text, nullable=True)  # 成就徽章
+    achievements_en = Column(Text, nullable=True)  # 成就徽章（英文）
+    
+    response_time = Column(String(50), nullable=True)  # 响应时间
+    response_time_en = Column(String(50), nullable=True)  # 响应时间（英文）
+    success_rate = Column(Float, default=0.0)  # 成功率
+    is_verified = Column(Integer, default=0)  # 是否认证
+    is_active = Column(Integer, default=1)  # 是否显示
+    is_featured = Column(Integer, default=1)  # 是否精选推荐
+    display_order = Column(Integer, default=0)  # 显示顺序
+    category = Column(String(50), nullable=True)  # 分类（programming, design, marketing, writing, translation）
+    
+    created_at = Column(DateTime, default=get_uk_time_naive)
+    updated_at = Column(DateTime, default=get_uk_time_naive, onupdate=get_uk_time_naive)
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
+    
+    # 索引
+    __table_args__ = (
+        Index("ix_task_experts_user_id", user_id),
+        Index("ix_task_experts_category", category),
+        Index("ix_task_experts_is_active", is_active),
+        Index("ix_task_experts_is_featured", is_featured),
+        Index("ix_task_experts_display_order", display_order),
+        Index("ix_task_experts_created_at", created_at),
+    )
