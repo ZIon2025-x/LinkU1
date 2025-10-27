@@ -49,7 +49,6 @@ const PrivateImageDisplay: React.FC<{
             const blob = await imgResponse.blob();
             const blobUrl = URL.createObjectURL(blob);
             setImageUrl(blobUrl);
-            console.log('私密图片加载成功:', imageId);
           } else {
             throw new Error(`HTTP ${imgResponse.status}: ${imgResponse.statusText}`);
           }
@@ -156,6 +155,9 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 // 旧的时间处理函数已移除，现在使用 TimeHandlerV2 统一处理
+
+// 表情列表 - 提取到组件外部，避免每次渲染重新创建
+const EMOJI_LIST = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
 
 interface Message {
   id?: number;
@@ -286,10 +288,6 @@ const MessagePage: React.FC = () => {
     }
   };
 
-
-  // 表情列表
-  const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'];
-
   // 添加表情到输入框
   const addEmoji = (emoji: string) => {
     setInput(prev => prev + emoji);
@@ -371,16 +369,12 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('image', selectedImage);
       
-      console.log('开始上传图片:', selectedImage.name, '大小:', selectedImage.size);
-      
       // 上传图片到服务器
       const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/image`, {
         method: 'POST',
         credentials: 'include',  // 使用Cookie认证
         body: formData
       });
-      
-      console.log('上传响应状态:', uploadResponse.status);
       
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
@@ -389,7 +383,6 @@ const MessagePage: React.FC = () => {
       }
       
       const uploadResult = await uploadResponse.json();
-      console.log('上传成功结果:', uploadResult);
       
       if (!uploadResult.image_id) {
         throw new Error('服务器未返回图片ID');
@@ -513,16 +506,12 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
       
-      console.log('开始上传文件:', selectedFile.name, '大小:', selectedFile.size);
-      
       // 上传文件到服务器
       const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/file`, {
         method: 'POST',
         credentials: 'include',  // 使用Cookie认证
         body: formData
       });
-      
-      console.log('上传响应状态:', uploadResponse.status);
       
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
@@ -531,7 +520,6 @@ const MessagePage: React.FC = () => {
       }
       
       const uploadResult = await uploadResponse.json();
-      console.log('上传成功结果:', uploadResult);
       
       if (!uploadResult.url) {
         throw new Error('服务器未返回文件URL');
@@ -573,8 +561,6 @@ const MessagePage: React.FC = () => {
         // 清除文件选择
         setSelectedFile(null);
         setFilePreview(null);
-        
-        console.log('文件发送成功');
       } else {
         throw new Error('WebSocket未连接');
       }
@@ -763,29 +749,18 @@ const MessagePage: React.FC = () => {
 
   // 发送消息
   const handleSend = async () => {
-    console.log('handleSend 被调用');
-    console.log('input:', input);
-    
     if (isSending) {
-      console.log('正在发送中，忽略重复点击');
       return;
     }
     
     if (!input.trim()) {
-      console.log('输入内容为空，返回');
       return;
     }
     
     setIsSending(true);
-    console.log('isServiceMode:', isServiceMode);
-    console.log('currentChat:', currentChat);
-    console.log('activeContact:', activeContact);
-    console.log('ws:', ws);
-    console.log('ws.readyState:', ws ? ws.readyState : 'null');
     
     // 检查客服对话是否已结束
     if (isServiceMode && currentChat && currentChat.is_ended === 1) {
-      console.log('对话已结束，无法发送消息');
       setIsSending(false);
       const errorMessage: Message = {
         id: Date.now(),
@@ -816,12 +791,7 @@ const MessagePage: React.FC = () => {
       content: messageContent,
       created_at: new Date().toISOString(),
     };
-    console.log('发送消息前，当前消息数量:', messages.length);
-    setMessages(prev => {
-      const newMessages = [...prev, newMessage];
-      console.log('发送消息后，新消息数量:', newMessages.length);
-      return newMessages;
-    });
+    setMessages(prev => [...prev, newMessage]);
     
     // 标记为新消息，触发自动滚动
     setIsNewMessage(true);
@@ -838,7 +808,6 @@ const MessagePage: React.FC = () => {
             timezone: userTimezone, // 添加时区信息
             local_time: new Date().toLocaleString('en-GB', { timeZone: userTimezone }) // 添加本地时间
           };
-          console.log('用户发送客服消息:', messageData);
           ws.send(JSON.stringify(messageData));
         } else if (activeContact) {
           // 普通聊天模式发送消息
@@ -849,7 +818,6 @@ const MessagePage: React.FC = () => {
             timezone: userTimezone, // 添加时区信息
             local_time: new Date().toLocaleString('en-GB', { timeZone: userTimezone }) // 添加本地时间
           };
-          console.log('用户发送普通消息:', messageData);
           ws.send(JSON.stringify(messageData));
         }
         
@@ -857,8 +825,6 @@ const MessagePage: React.FC = () => {
         if (activeContact && !isServiceMode) {
           updateContactOrder(activeContact.id, newMessage.created_at);
         }
-        
-        console.log('消息发送成功，已添加到本地状态');
         
         // 发送成功后，使用HTTP API作为备用确认
         try {
@@ -876,10 +842,9 @@ const MessagePage: React.FC = () => {
             }
           }
         } catch (error) {
-          console.warn('HTTP备用发送失败，但WebSocket已发送:', error);
+          // HTTP备用发送失败，但WebSocket已发送
         }
       } else {
-        console.log('WebSocket未连接，状态:', ws ? ws.readyState : 'null');
         // WebSocket未连接，使用HTTP API作为备用
         if (isServiceMode && currentChat) {
           // 获取 CSRF token
@@ -901,8 +866,6 @@ const MessagePage: React.FC = () => {
           if (!response.ok) {
             throw new Error('发送消息失败');
           }
-          
-          console.log('客服消息发送成功，已添加到本地状态');
         } else if (activeContact) {
           const response = await sendMessage({
             receiver_id: activeContact.id,
@@ -920,8 +883,6 @@ const MessagePage: React.FC = () => {
             if (activeContact && !isServiceMode) {
               updateContactOrder(activeContact.id, new Date().toISOString());
             }
-            
-            console.log('普通消息发送成功，已添加到本地状态');
           }
         }
       }
@@ -941,7 +902,6 @@ const MessagePage: React.FC = () => {
   useEffect(() => {
     const checkMobile = () => {
       const mobile = isMobileDevice();
-      console.log('检测移动端设备:', mobile);
       setIsMobile(mobile);
     };
     checkMobile();
@@ -949,10 +909,6 @@ const MessagePage: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 调试移动端状态
-  useEffect(() => {
-    console.log('移动端状态更新:', { isMobile, showContactsList, activeContact: !!activeContact });
-  }, [isMobile, showContactsList, activeContact]);
 
   // 移动端初始化时显示联系人列表
   useEffect(() => {
@@ -1000,7 +956,6 @@ const MessagePage: React.FC = () => {
     if (user && location.search.includes('uid=')) {
       // 如果联系人列表为空，才重新加载
       if (contacts.length === 0) {
-        console.log('联系人列表为空，重新加载联系人列表');
         loadContacts();
       }
     }
@@ -1008,37 +963,30 @@ const MessagePage: React.FC = () => {
 
   // 处理URL参数，自动选择指定的联系人
   useEffect(() => {
-    console.log('URL参数处理useEffect触发:', { user: !!user, contactsLength: contacts.length, locationSearch: location.search, locationHash: window.location.hash, contactsLoading });
-    console.log('URL参数处理条件检查:', { user: !!user, contactsLoading, shouldProcess: user && !contactsLoading });
     if (user && !contactsLoading) { // 等待联系人列表加载完成
       // 尝试从hash中解析参数
       let targetUserId: string | null = null;
-      if (window.location.hash.includes('?')) {
-        const hashQuery = window.location.hash.split('?')[1];
+      if (location.hash && location.hash.includes('?')) {
+        const hashQuery = location.hash.split('?')[1];
         const urlParams = new URLSearchParams(hashQuery);
         targetUserId = urlParams.get('uid');
-        console.log('从hash中获取uid:', targetUserId);
       }
       // 如果hash中没有，尝试从location.search中获取
       if (!targetUserId && location.search) {
         const urlParams = new URLSearchParams(location.search);
         targetUserId = urlParams.get('uid');
-        console.log('从location.search中获取uid:', targetUserId);
       }
       
       if (targetUserId) {
-        console.log('从URL参数获取目标用户ID:', targetUserId, '当前activeContact:', activeContact?.id);
         
         // 检查当前activeContact是否已经是目标用户
         if (activeContact?.id === targetUserId) {
-          console.log('已经是目标用户，无需重复设置');
           return;
         }
         
         // 首先尝试在现有联系人中查找
         const targetContact = contacts.find(contact => contact.id === targetUserId);
         if (targetContact) {
-          console.log('在现有联系人中找到目标联系人:', targetContact);
           setActiveContact(targetContact);
           setIsServiceMode(false);
           // 清空消息列表，准备加载新的聊天记录
@@ -1049,7 +997,6 @@ const MessagePage: React.FC = () => {
             setShowContactsList(false);
           }
         } else {
-          console.log('未在现有联系人中找到，创建临时联系人信息');
           // 如果不在现有联系人中，创建一个临时的联系人信息
           const tempContact: Contact = {
             id: targetUserId,
@@ -1063,7 +1010,6 @@ const MessagePage: React.FC = () => {
             is_verified: false
           };
           
-          console.log('创建临时联系人:', tempContact);
           setActiveContact(tempContact);
           setIsServiceMode(false);
           // 清空消息列表，准备加载新的聊天记录
@@ -1076,7 +1022,7 @@ const MessagePage: React.FC = () => {
         }
       }
     }
-  }, [user, window.location.hash, contacts, contactsLoading]);
+  }, [user, location.hash, location.search, contacts, contactsLoading, activeContact?.id, isMobile]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
@@ -1098,12 +1044,6 @@ const MessagePage: React.FC = () => {
       const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
       if (serverTimezoneInfo) {
         setTimezoneInfo(serverTimezoneInfo);
-        console.log('时区信息已加载:', {
-          userTimezone: detectedTimezone,
-          serverTimezone: serverTimezoneInfo.server_timezone,
-          serverTime: serverTimezoneInfo.server_time,
-          isDST: serverTimezoneInfo.is_dst
-        });
       }
     } catch (error) {
       console.error('初始化时区信息失败:', error);
@@ -1116,12 +1056,10 @@ const MessagePage: React.FC = () => {
       const savedChat = localStorage.getItem('currentCustomerServiceChat');
       if (savedChat) {
         const chatData = JSON.parse(savedChat);
-        console.log('发现已保存的客服对话:', chatData);
         
         // 检查对话是否已结束
         if (chatData.chat && chatData.chat.is_ended === 0) {
           // 对话未结束，验证对话是否仍然有效
-          console.log('验证对话是否仍然有效...');
           try {
             const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
               credentials: 'include'  // 使用Cookie认证
@@ -1129,7 +1067,6 @@ const MessagePage: React.FC = () => {
             
             if (response.ok) {
               // 对话仍然有效，恢复现有对话
-              console.log('对话仍然有效，恢复现有客服对话');
               setIsServiceMode(true);
               setServiceConnected(true);
               setCurrentChatId(chatData.chat.chat_id);
@@ -1140,7 +1077,6 @@ const MessagePage: React.FC = () => {
               await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
             } else {
               // 对话无效，清除localStorage并重置状态
-              console.log('对话无效，清除localStorage并重置状态');
               localStorage.removeItem('currentCustomerServiceChat');
               setServiceConnected(false);
               setCurrentChatId(null);
@@ -1158,7 +1094,6 @@ const MessagePage: React.FC = () => {
           }
         } else {
           // 对话已结束，清除localStorage并重置状态
-          console.log('保存的对话已结束，清除localStorage并重置状态');
           localStorage.removeItem('currentCustomerServiceChat');
           setServiceConnected(false);
           setCurrentChatId(null);
@@ -1180,12 +1115,10 @@ const MessagePage: React.FC = () => {
     // 如果已经加载过且不是强制重新加载，且距离上次加载不到30秒，则跳过
     const now = Date.now();
     if (contactsLoaded && !forceReload && (now - lastLoadTime) < 30000) {
-      console.log('联系人列表已缓存，跳过加载');
       return;
     }
     
     try {
-      console.log('开始加载联系人列表...');
       setContactsLoading(true);
       
       // 并行加载联系人列表和未读消息数量
@@ -1196,11 +1129,9 @@ const MessagePage: React.FC = () => {
       ]);
       
       if (contactsData.status === 'fulfilled') {
-        console.log('联系人API响应:', contactsData.value);
         setContacts(contactsData.value || []);
         setContactsLoaded(true);
         setLastLoadTime(now);
-        console.log('联系人列表已更新，数量:', (contactsData.value || []).length);
       } else {
         console.error('加载联系人失败:', contactsData.reason);
         setContacts([]);
@@ -1236,21 +1167,17 @@ const MessagePage: React.FC = () => {
     const checkCustomerServiceChat = async () => {
       try {
         const savedChat = localStorage.getItem('currentCustomerServiceChat');
-        console.log('页面加载时检查localStorage:', savedChat);
         if (savedChat && user) {
           const chatData = JSON.parse(savedChat);
-          console.log('发现保存的客服对话:', chatData);
           
           // 检查对话是否已结束
           if (chatData.chat.is_ended === 1) {
-            console.log('对话已结束，清除localStorage');
             localStorage.removeItem('currentCustomerServiceChat');
             return;
           }
           
           // 只保存数据，不自动切换到客服模式
           // 用户需要主动点击"联系在线客服"才会恢复会话
-          console.log('客服对话数据已准备，等待用户主动连接');
         }
       } catch (error) {
         console.error('检查客服对话失败:', error);
@@ -1267,18 +1194,15 @@ const MessagePage: React.FC = () => {
   // 选择联系人时加载聊天历史
   useEffect(() => {
     const handleContactSelection = async () => {
-      console.log('handleContactSelection触发:', { activeContact: activeContact?.id, user: !!user, isServiceMode, serviceConnected });
       if (activeContact && user && !isServiceMode) {
         // 切换普通聊天模式时的清理
         if (serviceConnected) {
-          console.log('从客服模式切换到普通聊天模式');
           setServiceConnected(false);
           setCurrentChatId(null);
           setCurrentChat(null);
         }
         
         // 加载聊天记录
-        console.log('✅ 准备加载聊天记录，联系人ID:', activeContact.id);
         // 使用setTimeout让UI先更新，然后异步加载聊天记录
         setTimeout(() => {
           loadChatHistory(activeContact.id);
@@ -1389,7 +1313,7 @@ const MessagePage: React.FC = () => {
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (error) {
-      console.log('无法播放提示音:', error);
+      // 无法播放提示音
     }
   };
 
@@ -1400,7 +1324,6 @@ const MessagePage: React.FC = () => {
     try {
       const response = await api.get('/api/users/messages/unread/count');
       const newCount = response.data.unread_count || 0;
-      console.log('📊 未读消息数量更新:', newCount);
       setTotalUnreadCount(newCount);
       
       // 更新页面标题
@@ -1420,7 +1343,6 @@ const MessagePage: React.FC = () => {
     
     try {
       const data = await getContactUnreadCounts();
-      console.log('📊 联系人未读消息数量:', data.contact_unread_counts);
       setContactUnreadCounts(data.contact_unread_counts || {});
     } catch (error) {
       console.error('加载联系人未读消息数量失败:', error);
@@ -1469,7 +1391,6 @@ const MessagePage: React.FC = () => {
         socket = new WebSocket(wsUrl);
         
         socket.onopen = () => {
-          console.log('用户WebSocket连接已建立');
           setWs(socket);
           reconnectAttempts = 0; // 重置重连次数
         };
@@ -1484,13 +1405,11 @@ const MessagePage: React.FC = () => {
             
             // 处理心跳消息
             if (msg.type === 'heartbeat') {
-              console.log('收到心跳消息:', msg.timestamp);
               return;
             }
             
             // 处理对话结束事件
             if (msg.type === 'chat_ended' || msg.type === 'chat_timeout') {
-              console.log('收到对话结束通知:', msg);
               // 更新currentChat状态
               if (currentChat) {
                 setCurrentChat({ ...currentChat, is_ended: 1 });
@@ -1515,8 +1434,7 @@ const MessagePage: React.FC = () => {
             
             // 处理接收到的消息
             if (msg.type === 'message_sent') {
-              // 这是发送确认消息，不需要显示，只记录日志
-              console.log('收到发送确认消息:', msg);
+              // 这是发送确认消息，不需要显示
               return;
             }
             
@@ -1541,9 +1459,6 @@ const MessagePage: React.FC = () => {
                 
                 // 检查是否已经存在相同的消息（避免重复显示）
                 setMessages(prev => {
-                  console.log('WebSocket收到消息，当前消息数量:', prev.length);
-                  console.log('收到消息内容:', msg.content, 'from:', fromName);
-                  
                   // 检查是否已经存在相同内容、相同发送者、时间相近的消息
                   const exists = prev.some(m => 
                     m.content === msg.content.trim() && 
@@ -1552,19 +1467,15 @@ const MessagePage: React.FC = () => {
                   );
                   
                   if (exists) {
-                    console.log('检测到重复消息，跳过添加:', msg.content);
                     return prev; // 如果已存在，不添加
                   }
                   
-                  console.log('添加新消息:', msg.content, 'from:', fromName);
-                  const newMessages = [...prev, {
+                  return [...prev, {
                     id: messageId,
                     from: fromName,
                     content: msg.content.trim(), 
                     created_at: msg.created_at 
                   }];
-                  console.log('添加消息后，新消息数量:', newMessages.length);
-                  return newMessages;
                 });
                 
                 // 标记为新消息，触发自动滚动（只对非系统消息）
@@ -1627,18 +1538,16 @@ const MessagePage: React.FC = () => {
         };
         
         socket.onclose = (event) => {
-          console.log('用户WebSocket连接已关闭', event.code, event.reason);
           setWs(null);
           
           // 只在异常关闭时重连（代码1000是正常关闭）
           if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            console.log(`用户WebSocket异常关闭，尝试重连 (${reconnectAttempts}/${maxReconnectAttempts})`);
             setTimeout(() => {
               connectWebSocket();
             }, reconnectDelay);
           } else if (event.code === 1000) {
-            console.log('用户WebSocket正常关闭，不重连');
+            // 正常关闭，不重连
           } else {
             console.error('用户WebSocket重连失败，已达到最大重连次数');
           }
@@ -1668,11 +1577,9 @@ const MessagePage: React.FC = () => {
           
           if (response.ok) {
             const chatData = await response.json();
-            console.log('客服对话状态:', chatData);
             
             // 如果对话已结束，更新状态
             if (chatData.is_ended === 1) {
-              console.log('检测到对话已结束');
               setCurrentChat(prev => prev ? { ...prev, is_ended: 1 } : null);
               
               // 断开客服连接
@@ -1706,8 +1613,6 @@ const MessagePage: React.FC = () => {
 
   const loadChatHistory = useCallback(async (contactId: string, chatId?: string, page: number = 1, isLoadMore: boolean = false) => {
     try {
-      console.log('加载聊天历史:', { contactId, chatId, isServiceMode, serviceConnected, page, isLoadMore });
-      
       // 如果是加载更多，设置加载状态
       if (isLoadMore) {
         setLoadingMoreMessages(true);
@@ -1715,21 +1620,13 @@ const MessagePage: React.FC = () => {
       
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
       if (chatId) {
-        console.log('使用客服对话API加载消息');
         const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatId}/messages`, {
           credentials: 'include'  // 使用Cookie认证
         });
         
         if (response.ok) {
           const chatData = await response.json();
-          console.log('客服对话聊天记录:', chatData);
           const formattedMessages = chatData.map((msg: any) => {
-            console.log('格式化消息:', {
-              msg_sender_type: msg.sender_type,
-              user_id: user.id,
-              is_me: msg.sender_type === 'user',
-              is_system: msg.sender_type === 'system'
-            });
             return {
               id: msg.id,
               from: msg.sender_type === 'user' ? '我' : (msg.sender_type === 'system' ? '系统' : '客服'),
@@ -1747,11 +1644,6 @@ const MessagePage: React.FC = () => {
         });
         
         // 对于客服聊天，始终确保最新的消息在最后（不需要反转，因为我们已经按时间升序排序）
-        console.log('客服聊天消息排序后:', formattedMessages.map((msg: any) => ({
-          content: msg.content.substring(0, 20) + '...',
-          time: msg.created_at,
-          from: msg.from
-        })));
         
         setMessages(formattedMessages);
         
@@ -1775,7 +1667,6 @@ const MessagePage: React.FC = () => {
       
       // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
       if (!chatId && !isServiceMode && !serviceConnected) {
-        console.log('使用普通聊天API加载消息');
         
         // 如果不是加载更多，显示加载状态
         if (!isLoadMore) {
@@ -1815,13 +1706,6 @@ const MessagePage: React.FC = () => {
         });
         
         // 对于普通聊天，始终确保最新的消息在最后（不需要反转，因为我们已经按时间升序排序）
-        console.log('普通聊天消息排序后:', formattedMessages.map((msg: any) => ({
-          content: msg.content.substring(0, 20) + '...',
-          time: msg.created_at,
-          from: msg.from
-        })));
-        
-        console.log('loadChatHistory: 设置消息列表，消息数量:', formattedMessages.length);
         
         // 处理消息列表
         setMessages(prev => {
@@ -1865,24 +1749,15 @@ const MessagePage: React.FC = () => {
                   
                   // 调整滚动位置，保持用户当前查看的内容不变
                   messagesContainer.scrollTop = currentScrollTop + scrollAdjustment;
-                  
-                  console.log('加载更多消息，保持滚动位置:', {
-                    currentScrollTop,
-                    newScrollTop: messagesContainer.scrollTop,
-                    scrollAdjustment,
-                    newMessageCount
-                  });
                 }
               }
             }, 50);
             
-            console.log('加载更多消息完成，最终消息数量:', uniqueMessages.length);
             return uniqueMessages;
           } else {
             // 初始加载：替换消息列表
             // 如果当前有消息且新加载的消息为空，保留现有消息
             if (filteredPrev.length > 0 && formattedMessages.length === 0) {
-              console.log('保持现有消息，新加载的消息为空');
               return filteredPrev;
             }
             
@@ -1906,7 +1781,6 @@ const MessagePage: React.FC = () => {
             // 按时间排序
             uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             
-            console.log('消息去重完成，最终消息数量:', uniqueMessages.length);
             return uniqueMessages;
           }
         });
@@ -1931,9 +1805,7 @@ const MessagePage: React.FC = () => {
         
         // 标记普通聊天的未读消息为已读
         try {
-          console.log('🔍 开始标记联系人消息为已读:', contactId);
           const result = await markChatMessagesAsRead(contactId);
-          console.log('✅ 普通聊天消息已标记为已读:', result);
           
           // 立即更新未读消息数量（减少已标记的数量）
           if (result && result.marked_count) {
@@ -1995,7 +1867,6 @@ const MessagePage: React.FC = () => {
       return;
     }
     
-    console.log('开始加载更多消息，当前页:', currentPage + 1);
     setCurrentPage(prev => prev + 1);
     await loadChatHistory(activeContact.id, undefined, currentPage + 1, true);
   }, [activeContact, loadingMoreMessages, hasMoreMessages, currentPage, loadChatHistory]);
@@ -2012,7 +1883,6 @@ const MessagePage: React.FC = () => {
       
       // 当滚动到顶部附近时（距离顶部50px内），加载更多消息
       if (scrollTop <= 50 && hasMoreMessages && !loadingMoreMessages) {
-        console.log('检测到滚动到顶部，开始加载更多消息');
         loadMoreMessages();
       }
       
@@ -2041,7 +1911,6 @@ const MessagePage: React.FC = () => {
   const handleContactCustomerService = async () => {
     // 首先检查客服是否在线
     if (!serviceAvailable) {
-      console.log('客服不在线，无法连接');
       const noServiceMessage: Message = {
         id: Date.now(),
         from: '系统',
@@ -2054,17 +1923,14 @@ const MessagePage: React.FC = () => {
 
     // 先检查localStorage中是否已有活跃的客服对话
     const savedChat = localStorage.getItem('currentCustomerServiceChat');
-    console.log('联系在线客服时检查localStorage:', savedChat);
     
     if (savedChat) {
       try {
         const chatData = JSON.parse(savedChat);
-        console.log('发现已保存的客服对话:', chatData);
         
         // 检查对话是否已结束
         if (chatData.chat.is_ended === 0) {
           // 对话未结束，验证对话是否仍然有效
-          console.log('验证对话是否仍然有效...');
           try {
             const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
               credentials: 'include'  // 使用Cookie认证
@@ -2072,7 +1938,6 @@ const MessagePage: React.FC = () => {
             
             if (response.ok) {
               // 对话仍然有效，恢复现有对话
-              console.log('对话仍然有效，恢复现有客服对话');
               setIsConnectingToService(true);
               setIsServiceMode(true);
               setActiveContact(null);
@@ -2087,7 +1952,6 @@ const MessagePage: React.FC = () => {
               return; // 直接返回，不创建新对话
             } else {
               // 对话无效，清除localStorage并重置状态
-              console.log('对话无效，清除localStorage并重置状态');
               localStorage.removeItem('currentCustomerServiceChat');
               setServiceConnected(false);
               setCurrentChatId(null);
@@ -2105,7 +1969,6 @@ const MessagePage: React.FC = () => {
           }
         } else {
           // 对话已结束，清除localStorage并重置状态
-          console.log('保存的对话已结束，清除localStorage并重置状态');
           localStorage.removeItem('currentCustomerServiceChat');
           setServiceConnected(false);
           setCurrentChatId(null);
@@ -2123,20 +1986,15 @@ const MessagePage: React.FC = () => {
     }
     
     // 如果没有未结束的对话，尝试连接客服
-    console.log('没有未结束的客服对话，尝试连接客服');
     setIsConnectingToService(true);
     
     try {
       // 检查客服在线状态
-      console.log('检查客服在线状态...');
       const isServiceAvailable = await checkCustomerServiceAvailabilityLocal();
-      console.log('客服在线状态:', isServiceAvailable);
       
       if (isServiceAvailable) {
         // 客服在线，尝试分配客服
-        console.log('客服在线，尝试分配客服...');
         const response = await assignCustomerService();
-        console.log('客服分配响应:', response);
         
         if (response.error) {
           console.error('客服连接失败:', response.error);
@@ -2151,7 +2009,6 @@ const MessagePage: React.FC = () => {
         }
         
         // 连接成功
-        console.log('客服连接成功，响应:', response);
         setServiceConnected(true);
         setCurrentChatId(response.chat.chat_id);
         setCurrentChat(response.chat);
@@ -2181,7 +2038,6 @@ const MessagePage: React.FC = () => {
         setMessages(prev => [...prev, successMessage]);
       } else {
         // 客服不在线，显示系统提示
-        console.log('客服不在线，显示系统提示');
         const noServiceMessage: Message = {
           id: Date.now(),
           from: '系统',
@@ -2208,7 +2064,6 @@ const MessagePage: React.FC = () => {
   const checkCustomerServiceAvailabilityLocal = async (): Promise<boolean> => {
     try {
       const response = await checkCustomerServiceAvailability();
-      console.log('客服在线状态:', response);
       return response.available;
       } catch (error) {
       console.error('检查客服可用性失败:', error);
@@ -2223,7 +2078,6 @@ const MessagePage: React.FC = () => {
     try {
       const isAvailable = await checkCustomerServiceAvailabilityLocal();
       setServiceAvailable(isAvailable);
-      console.log('客服在线状态已更新:', isAvailable);
     } catch (error) {
       console.error('检查客服状态失败:', error);
       setServiceAvailable(false);
@@ -2234,10 +2088,6 @@ const MessagePage: React.FC = () => {
 
   // 结束客服对话
   const handleEndConversation = async () => {
-    console.log('handleEndConversation 被调用');
-    console.log('currentChatId:', currentChatId);
-    console.log('serviceConnected:', serviceConnected);
-    
     if (!currentChatId) {
       console.error('没有活跃的客服对话');
       const errorMessage: Message = {
@@ -2251,10 +2101,7 @@ const MessagePage: React.FC = () => {
     }
     
     try {
-      console.log('正在调用 endCustomerServiceChat API...');
       const response = await api.post(`/api/users/customer-service/end-chat/${currentChatId}`);
-      
-      console.log('endCustomerServiceChat API 调用成功');
       
       // 显示系统消息
       const endMessage: Message = {
@@ -2284,7 +2131,6 @@ const MessagePage: React.FC = () => {
       
       // 如果返回400或404，说明对话不存在或已结束，清理localStorage
       if (error.response?.status === 400 || error.response?.status === 404) {
-        console.log('对话不存在或已结束，清理localStorage并重置状态');
         // 保存chat_id用于评价（如果存在）
         if (currentChatId) {
           setRatingChatId(currentChatId);
@@ -2621,17 +2467,14 @@ const MessagePage: React.FC = () => {
               onClick={async () => {
                 // 先检查localStorage中是否已有活跃的客服对话
                 const savedChat = localStorage.getItem('currentCustomerServiceChat');
-                console.log('点击客服中心时检查localStorage:', savedChat);
                 
                 if (savedChat) {
                   try {
                     const chatData = JSON.parse(savedChat);
-                    console.log('发现已保存的客服对话:', chatData);
                     
                     // 检查对话是否已结束
                     if (chatData.chat.is_ended === 0) {
                       // 对话未结束，恢复现有对话
-                      console.log('恢复现有客服对话');
                       setIsConnectingToService(true);
                       setIsServiceMode(true);
                       setActiveContact(null);
@@ -2651,7 +2494,6 @@ const MessagePage: React.FC = () => {
                       return; // 直接返回，不创建新对话
                     } else {
                       // 对话已结束，清除localStorage并重置状态
-                      console.log('保存的对话已结束，清除localStorage并重置状态');
                       localStorage.removeItem('currentCustomerServiceChat');
                       setServiceConnected(false);
                       setCurrentChatId(null);
@@ -2669,7 +2511,6 @@ const MessagePage: React.FC = () => {
                 }
                 
                 // 如果没有未结束的对话，只显示客服聊天框
-                console.log('没有未结束的客服对话，显示客服聊天框');
                 setIsServiceMode(true);
                 setActiveContact(null);
                 setMessages([]);
@@ -3033,9 +2874,6 @@ const MessagePage: React.FC = () => {
                       boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
                       transition: 'none' // 禁用过渡效果，防止形变
                     }}
-                    onLoad={(e) => {
-                      console.log('客服头像加载成功:', e.currentTarget.src);
-                    }}
                     onError={(e) => {
                       console.error('客服头像加载失败:', e.currentTarget.src);
                       e.currentTarget.src = '/static/avatar1.png'; // 备用头像
@@ -3335,19 +3173,15 @@ const MessagePage: React.FC = () => {
                     我们的客服团队随时为您提供帮助，请点击下方按钮开始对话
                   </div>
                   <button
-                    onClick={async () => {
-                      console.log('开始对话按钮被点击');
-                      setIsConnectingToService(true);
-                      try {
-                        // 检查客服在线状态
-                        console.log('检查客服在线状态...');
-                        const isServiceAvailable = await checkCustomerServiceAvailabilityLocal();
-                        console.log('客服在线状态:', isServiceAvailable);
+                  onClick={async () => {
+                    setIsConnectingToService(true);
+                    try {
+                      // 检查客服在线状态
+                      const isServiceAvailable = await checkCustomerServiceAvailabilityLocal();
                         
                         if (isServiceAvailable) {
                           // 客服在线，尝试分配客服
                           const response = await assignCustomerService();
-                          console.log('客服分配响应:', response);
                           
                           if (response.error) {
                             console.error('客服连接失败:', response.error);
@@ -3362,7 +3196,6 @@ const MessagePage: React.FC = () => {
                           }
                           
                           // 连接成功
-                          console.log('客服连接成功，响应:', response);
                           setServiceConnected(true);
                           setCurrentChatId(response.chat.chat_id);
                           setCurrentChat(response.chat);
@@ -3838,32 +3671,6 @@ const MessagePage: React.FC = () => {
                     </button>
                   )}
                   
-                  {/* 调试按钮 - 临时添加 */}
-                  {serviceConnected && (
-                        <button
-                      onClick={() => {
-                        console.log('调试按钮被点击');
-                        console.log('currentChatId:', currentChatId);
-                        console.log('serviceConnected:', serviceConnected);
-                        alert(`调试信息:\ncurrentChatId: ${currentChatId}\nserviceConnected: ${serviceConnected}`);
-                      }}
-                          style={{
-                        background: 'linear-gradient(135deg, #6b7280, #4b5563)',
-                        border: '2px solid #6b7280',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 8px rgba(107, 114, 128, 0.2)',
-                            color: '#fff',
-                        fontWeight: '600',
-                        marginLeft: '8px'
-                      }}
-                    >
-                      🔧 调试
-                        </button>
-                  )}
                 </>
               )}
             </div>
@@ -4118,7 +3925,7 @@ const MessagePage: React.FC = () => {
                     </button>
                   </div>
                   
-                  {emojis.map((emoji, index) => (
+                  {EMOJI_LIST.map((emoji, index) => (
                   <button
                       key={index}
                       onClick={() => addEmoji(emoji)}
@@ -4197,15 +4004,6 @@ const MessagePage: React.FC = () => {
                   const condition1 = !activeContact && !(isServiceMode && serviceConnected);
                   const condition2 = !input.trim();
                   const isDisabled = condition1 || condition2;
-                  console.log('发送按钮状态检查:', {
-                    activeContact: !!activeContact,
-                    isServiceMode,
-                    serviceConnected,
-                    input: input.trim(),
-                    condition1,
-                    condition2,
-                    isDisabled
-                  });
                   return isDisabled;
                 })()}
               >
