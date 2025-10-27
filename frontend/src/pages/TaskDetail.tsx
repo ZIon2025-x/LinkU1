@@ -68,9 +68,9 @@ const TaskDetail: React.FC = () => {
       // 更新meta描述
       const metaDescription = document.querySelector('meta[name="description"]');
       if (metaDescription) {
-        // 创建简洁的描述，控制在120字符以内
-        const shortTitle = task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title;
-        const seoDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward}，地点${task.location}。立即申请！`;
+        // 创建简洁的描述，控制在120-160字符范围内
+        const shortTitle = task.title.length > 40 ? task.title.substring(0, 40) + '...' : task.title;
+        const seoDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward}，地点${task.location}。Link²Ur专业匹配平台，提供安全保障。立即申请！`;
         metaDescription.setAttribute('content', seoDescription);
       }
       
