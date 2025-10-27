@@ -156,6 +156,8 @@ class UserValidator(BaseValidator):
     email: str = Field(..., max_length=254)
     password: str = Field(..., min_length=8, max_length=128)
     phone: Optional[str] = Field(None, max_length=20)
+    agreed_to_terms: Optional[bool] = Field(False)
+    terms_agreed_at: Optional[str] = Field(None)
     
     @validator('name')
     def validate_name(cls, v):

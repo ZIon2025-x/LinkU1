@@ -72,7 +72,7 @@ class AsyncUserCRUD:
             
             # 处理同意时间
             terms_agreed_at = None
-            if hasattr(user, 'terms_agreed_at') and user.terms_agreed_at:
+            if user.terms_agreed_at:
                 terms_agreed_at = datetime.fromisoformat(user.terms_agreed_at.replace('Z', '+00:00'))
             
             db_user = models.User(
@@ -84,7 +84,7 @@ class AsyncUserCRUD:
                 avatar=user.avatar or "",
                 user_level="normal",
                 timezone="Europe/London",
-                agreed_to_terms=1 if getattr(user, "agreed_to_terms", False) else 0,
+                agreed_to_terms=1 if user.agreed_to_terms else 0,
                 terms_agreed_at=terms_agreed_at,
             )
             db.add(db_user)

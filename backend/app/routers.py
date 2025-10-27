@@ -173,6 +173,14 @@ async def register(
             detail="用户名不能包含客服相关关键词"
         )
     
+    # 检查用户是否同意条款（防止绕过前端验证）
+    agreed_to_terms = validated_data.get('agreed_to_terms', False)
+    if not agreed_to_terms:
+        raise HTTPException(
+            status_code=400,
+            detail="您必须同意用户协议和隐私政策才能注册"
+        )
+    
     # 验证密码强度
     password_validation = password_validator.validate_password(
         validated_data['password'], 
