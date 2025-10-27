@@ -77,7 +77,6 @@ const Profile: React.FC = () => {
       try {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
-        console.log('系统设置加载成功:', settings);
       } catch (error) {
         console.error('加载系统设置失败:', error);
         setSystemSettings({ vip_button_visible: true }); // 默认显示

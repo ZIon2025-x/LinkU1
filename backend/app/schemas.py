@@ -173,6 +173,7 @@ class UserOut(UserBase):
     is_suspended: Optional[int] = 0
     is_customer_service: Optional[int] = 0
     task_count: Optional[int] = 0
+    completed_task_count: Optional[int] = 0
     avg_rating: Optional[float] = 0.0
     timezone: Optional[str] = "UTC"
     user_type: Optional[str] = "normal_user"  # 添加用户类型字段

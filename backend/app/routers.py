@@ -1323,6 +1323,8 @@ def get_my_profile(
         if fresh_user:
             current_user = fresh_user
             logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
+            logger.info(f"[DEBUG] task_count: {getattr(fresh_user, 'task_count', None)}")
+            logger.info(f"[DEBUG] completed_task_count: {getattr(fresh_user, 'completed_task_count', None)}")
         
         # 计算平均评分
         from app.models import Review
@@ -1346,6 +1348,8 @@ def get_my_profile(
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating
         }
+        
+        print(f"[DEBUG] get_my_profile 返回数据: task_count={formatted_user['task_count']}, completed_task_count={formatted_user['completed_task_count']}")
         
         return formatted_user
     except Exception as e:

@@ -33,7 +33,6 @@ const VIP: React.FC = () => {
       try {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
-        console.log('VIP页面系统设置加载成功:', settings);
       } catch (error) {
         console.error('加载系统设置失败:', error);
         setSystemSettings({ 
