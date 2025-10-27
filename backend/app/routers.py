@@ -1324,14 +1324,6 @@ def get_my_profile(
             current_user = fresh_user
             logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
         
-        # 计算用户的任务统计
-        user_tasks = crud.get_user_tasks(db, current_user.id, limit=1000)
-        # 排除已取消的任务
-        posted_tasks = [t for t in user_tasks if t.poster_id == current_user.id and t.status != "cancelled"]
-        taken_tasks = [t for t in user_tasks if t.taker_id == current_user.id and t.status != "cancelled"]
-        total_tasks = len(posted_tasks) + len(taken_tasks)
-        completed_tasks = len([t for t in taken_tasks if t.status == "completed"])
-        
         # 计算平均评分
         from app.models import Review
         user_reviews = db.query(Review).filter(Review.user_id == current_user.id).all()
@@ -1350,9 +1342,7 @@ def get_my_profile(
             "avatar": getattr(current_user, 'avatar', ''),
             "created_at": getattr(current_user, 'created_at', None),
             "user_type": "normal_user",
-            "total_tasks": total_tasks,
             "task_count": getattr(current_user, 'task_count', 0),
-            "completed_tasks": completed_tasks,
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating
         }
