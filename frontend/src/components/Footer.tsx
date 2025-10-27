@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import LocalizedLink from './LocalizedLink';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
+  const [showWechatModal, setShowWechatModal] = useState(false);
   
   return (
     <footer style={{
@@ -223,20 +224,15 @@ const Footer: React.FC = () => {
         }}>
           {/* 左侧 - Logo和版权 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '20px',
-              fontWeight: 'bold',
-              color: '#fff'
-            }}>
-              L
-            </div>
+            <img 
+              src="/static/logo.png" 
+              alt="Link²Ur Logo" 
+              style={{
+                width: '40px',
+                height: '40px',
+                objectFit: 'contain'
+              }}
+            />
             <div>
               <div style={{
                 fontSize: '18px',
@@ -375,38 +371,161 @@ const Footer: React.FC = () => {
               📷
             </a>
             
-            <a href="#" style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
+            <button 
+              onClick={() => setShowWechatModal(true)}
+              style={{
+                width: '32px',
+                height: '32px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'all 0.2s ease',
+                padding: '0'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              title="微信二维码"
             >
-              微
-            </a>
+              <img 
+                src="https://img.icons8.com/color/32/wechat.png" 
+                alt="微信" 
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)'
+                }}
+              />
+            </button>
           </div>
         </div>
       </div>
       
+      {/* 微信二维码弹窗 */}
+      {showWechatModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            animation: 'fadeIn 0.2s ease-in'
+          }}
+          onClick={() => setShowWechatModal(false)}
+        >
+          <div 
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+              animation: 'slideUp 0.3s ease-out',
+              position: 'relative',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowWechatModal(false)}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: '#666',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f5f5f5';
+                e.currentTarget.style.color = '#333';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
+                e.currentTarget.style.color = '#666';
+              }}
+            >
+              ×
+            </button>
+            <h3 style={{
+              marginTop: '8px',
+              marginBottom: '16px',
+              color: '#333',
+              fontSize: '20px',
+              fontWeight: '600'
+            }}>
+              添加我们的微信客服
+            </h3>
+            <img 
+              src="/static/wechat.jpg" 
+              alt="微信二维码" 
+              style={{
+                width: '100%',
+                maxWidth: '300px',
+                height: 'auto',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0'
+              }}
+            />
+            <p style={{
+              marginTop: '16px',
+              color: '#666',
+              fontSize: '14px'
+            }}>
+              扫码添加客服
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* 移动端响应式样式 */}
       <style>
         {`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          @keyframes slideUp {
+            from { 
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to { 
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
           /* 移动端适配 */
           @media (max-width: 768px) {
             .footer-main-content {
