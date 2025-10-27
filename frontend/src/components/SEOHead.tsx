@@ -57,6 +57,27 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       metaTag.content = content;
     };
 
+    // 更新或创建link标签
+    const updateLinkTag = (rel: string, href: string, hreflang?: string) => {
+      let selector = `link[rel="${rel}"]`;
+      if (hreflang) {
+        selector += `[hreflang="${hreflang}"]`;
+      }
+      
+      let linkTag = document.querySelector(selector) as HTMLLinkElement;
+      
+      if (!linkTag) {
+        linkTag = document.createElement('link');
+        linkTag.rel = rel;
+        if (hreflang) {
+          linkTag.setAttribute('hreflang', hreflang);
+        }
+        document.head.appendChild(linkTag);
+      }
+      
+      linkTag.href = href;
+    };
+
     // 更新description
     if (description) {
       updateMetaTag('description', description);
@@ -96,7 +117,19 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('twitter:image', twitterImage);
     }
 
-  }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, twitterTitle, twitterDescription, twitterImage, noindex]);
+    // 更新 hreflang 标签 - 基于当前路径生成不同语言版本的 URL
+    const currentPath = location.pathname;
+    const currentBasePath = currentPath === '/' ? '' : currentPath.replace(/^\/(en|zh)/, '');
+    
+    // 生成各种语言版本的 URL
+    const enUrl = `https://www.link2ur.com/en${currentBasePath}`;
+    const zhUrl = `https://www.link2ur.com/zh${currentBasePath}`;
+    
+    updateLinkTag('alternate', enUrl, 'en');
+    updateLinkTag('alternate', zhUrl, 'zh');
+    updateLinkTag('alternate', enUrl, 'x-default');
+
+  }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, twitterTitle, twitterDescription, twitterImage, noindex, location.pathname]);
 
   return (
     <>

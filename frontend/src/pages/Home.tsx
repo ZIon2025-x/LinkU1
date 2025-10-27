@@ -215,8 +215,12 @@ const Home: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   
-  // 生成canonical URL
-  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
+  // 生成canonical URL - 确保包含语言前缀
+  // 如果路径是 `/`（根路径），需要重定向，所以这个组件实际上不会在这里渲染
+  // 如果路径是 `/zh` 或 `/en`，保留完整路径
+  const canonicalUrl = location.pathname === '/' 
+    ? 'https://www.link2ur.com/en'  // 根路径的canonical指向默认语言版本
+    : `https://www.link2ur.com${location.pathname}`;
   
   // Task types array - using translations
   const TASK_TYPES = [

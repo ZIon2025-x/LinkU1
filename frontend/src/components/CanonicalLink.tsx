@@ -24,7 +24,12 @@ const CanonicalLink: React.FC<CanonicalLinkProps> = ({ url }) => {
     } else {
       // 自动生成canonical URL
       const baseUrl = 'https://www.link2ur.com';
-      const pathname = location.pathname;
+      let pathname = location.pathname;
+      
+      // 如果路径是根路径，重定向到默认语言版本
+      if (pathname === '/') {
+        pathname = '/en';
+      }
       
       // 确保路径以/开头
       const cleanPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
