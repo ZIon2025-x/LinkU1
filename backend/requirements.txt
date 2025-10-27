@@ -1,37 +1,36 @@
 # Link²Ur平台核心依赖
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
+fastapi>=0.104.0,<0.115.0
+uvicorn[standard]>=0.24.0,<0.32.0
+python-multipart>=0.0.6,<0.1.0
 
 # 数据库相关
-sqlalchemy[asyncio]>=2.0.0
-pydantic>=2.0.0
-alembic>=1.16.0
-asyncpg>=0.29.0
-aiopg>=1.4.0
-psycopg2-binary>=2.9.0
+sqlalchemy[asyncio]>=2.0.0,<3.0.0
+pydantic>=2.0.0,<3.0.0
+alembic>=1.12.0,<1.14.0
+asyncpg>=0.29.0,<0.30.0
+aiopg>=1.4.0,<1.5.0
+psycopg2-binary>=2.9.0,<3.0.0
 
 # 认证和安全
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-python-multipart>=0.0.6
-redis>=4.5.0
-PyJWT>=2.8.0
-slowapi>=0.1.9
+redis>=4.5.0,<6.0.0
+PyJWT>=2.8.0,<3.0.0
+slowapi>=0.1.9,<0.2.0
 
 # 邮件服务
-fastapi-mail>=1.4.0
-resend>=0.8.0
+fastapi-mail>=1.4.0,<2.0.0
+resend>=0.8.0,<2.0.0
 
 # 支付服务
-stripe>=7.0.0
+stripe>=7.0.0,<10.0.0
 
 # 时区处理
 pytz>=2023.3
 
 # 网络请求
-requests>=2.31.0
+requests>=2.31.0,<3.0.0
 
 # 其他工具
-python-dotenv>=1.0.0
-itsdangerous>=2.0.0
+python-dotenv>=1.0.0,<2.0.0
+itsdangerous>=2.0.0,<3.0.0

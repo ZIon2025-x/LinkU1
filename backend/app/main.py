@@ -20,6 +20,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketState
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app import crud
@@ -340,6 +341,17 @@ async def startup_event():
     """应用启动时初始化数据库并启动后台任务"""
     logger.info("应用启动中...")
     
+    # ⚠️ 环境变量验证 - 高优先级修复
+    required_env_vars = ["DATABASE_URL"]
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        error_msg = f"❌ 缺少必要的环境变量: {missing_vars}"
+        logger.error(error_msg)
+        raise RuntimeError(error_msg)
+    else:
+        logger.info("✅ 所有必要的环境变量已设置")
+    
     # 环境检测和配置信息
     environment = os.getenv("ENVIRONMENT", "development")
     debug_mode = os.getenv("DEBUG", "true").lower() == "true"
@@ -360,12 +372,16 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 自动运行数据库迁移
-        try:
-            from auto_migrate import auto_migrate
-            auto_migrate()
-        except Exception as e:
-            logger.warning(f"自动迁移失败，但应用继续启动: {e}")
+        # ⚠️ 生产环境禁用自动迁移
+        if environment == "production":
+            logger.info("ℹ️  生产环境跳过自动迁移，请使用: railway run alembic upgrade head")
+        else:
+            # 开发环境可以尝试自动迁移
+            try:
+                from auto_migrate import auto_migrate
+                auto_migrate()
+            except Exception as e:
+                logger.warning(f"自动迁移失败，但应用继续启动: {e}")
         
         # 验证表是否创建成功
         from sqlalchemy import inspect
@@ -873,9 +889,69 @@ def read_root():
 
 
 @app.get("/health")
-def health_check():
-    """健康检查端点 - 不依赖数据库"""
-    return {"status": "healthy"}
+async def health_check():
+    """完整的健康检查 - 高优先级优化"""
+    from datetime import datetime
+    from sqlalchemy import text
+    
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "checks": {}
+    }
+    
+    # 检查数据库连接
+    try:
+        from app.database import sync_engine
+        with sync_engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
+            result.fetchone()
+        health_status["checks"]["database"] = "ok"
+        logger.debug("✅ 数据库连接检查通过")
+    except Exception as e:
+        health_status["checks"]["database"] = f"error: {str(e)}"
+        health_status["status"] = "degraded"
+        logger.error(f"❌ 数据库连接失败: {e}")
+    
+    # 检查Redis连接
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            redis_client.ping()
+            health_status["checks"]["redis"] = "ok"
+            logger.debug("✅ Redis连接检查通过")
+        else:
+            health_status["checks"]["redis"] = "not configured"
+            logger.info("ℹ️  Redis未配置")
+    except Exception as e:
+        health_status["checks"]["redis"] = f"error: {str(e)}"
+        logger.warning(f"⚠️  Redis连接失败: {e}")
+    
+    # 检查磁盘空间（上传目录）
+    try:
+        from pathlib import Path
+        upload_dir = Path("uploads")
+        if upload_dir.exists():
+            stat = upload_dir.stat()
+            health_status["checks"]["disk"] = "ok"
+            logger.debug("✅ 磁盘空间检查通过")
+        else:
+            health_status["checks"]["disk"] = "directory missing"
+            logger.warning("⚠️  上传目录不存在")
+    except Exception as e:
+        health_status["checks"]["disk"] = f"error: {str(e)}"
+        logger.error(f"❌ 磁盘检查失败: {e}")
+    
+    # 根据检查结果决定最终状态
+    if health_status["status"] == "healthy":
+        return health_status
+    else:
+        # 如果数据库不可用，返回503状态码
+        return JSONResponse(
+            status_code=503,
+            content=health_status
+        )
 
 @app.get("/ping")
 def ping():

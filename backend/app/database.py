@@ -29,18 +29,19 @@ except ImportError:
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT == "production"
 
+# ⚠️ 由于混合使用同步/异步操作，增加了连接池大小
 if IS_PRODUCTION:
-    # 生产环境配置
-    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "20"))
-    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "30"))
+    # 生产环境配置 - 增加以支持混合使用
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "30"))  # 从20增加到30
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "40"))  # 从30增加到40
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
     POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "1800"))  # 30分钟
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
     QUERY_TIMEOUT = int(os.getenv("DB_QUERY_TIMEOUT", "30"))
 else:
-    # 开发环境配置
-    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
-    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    # 开发环境配置 - 增加以支持混合使用
+    POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))  # 从5增加到10
+    MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))  # 从10增加到20
     POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", "30"))
     POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "3600"))  # 1小时
     POOL_PRE_PING = os.getenv("DB_POOL_PRE_PING", "true").lower() == "true"
