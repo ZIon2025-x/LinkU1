@@ -665,7 +665,9 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             is_active=1,
             user_level="normal",
             avatar="",  # 默认空头像，前端会显示默认头像
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
+            agreed_to_terms=pending_user.agreed_to_terms,
+            terms_agreed_at=pending_user.terms_agreed_at
         )
         
         db.add(user)

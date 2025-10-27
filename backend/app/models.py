@@ -470,6 +470,8 @@ class PendingUser(Base):
     verification_token = Column(String(64), unique=True, nullable=False)
     created_at = Column(DateTime, default=get_uk_time)
     expires_at = Column(DateTime, nullable=False)
+    agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
+    terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
     
     # 索引
     __table_args__ = (

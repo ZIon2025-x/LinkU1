@@ -37,6 +37,13 @@ class EmailVerificationManager:
         verification_token: str
     ) -> models.PendingUser:
         """创建待验证用户"""
+        from datetime import datetime as dt
+        
+        # 处理同意时间
+        terms_agreed_at = None
+        if user_data.terms_agreed_at:
+            terms_agreed_at = dt.fromisoformat(user_data.terms_agreed_at.replace('Z', '+00:00'))
+        
         # 检查是否已存在待验证用户
         existing_pending = db.query(models.PendingUser).filter(
             models.PendingUser.email == user_data.email
@@ -50,6 +57,8 @@ class EmailVerificationManager:
             existing_pending.verification_token = verification_token
             existing_pending.created_at = datetime.utcnow()
             existing_pending.expires_at = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+            existing_pending.agreed_to_terms = 1 if user_data.agreed_to_terms else 0
+            existing_pending.terms_agreed_at = terms_agreed_at
             db.commit()
             db.refresh(existing_pending)
             return existing_pending
@@ -62,7 +71,9 @@ class EmailVerificationManager:
             phone=user_data.phone,
             verification_token=verification_token,
             created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+            expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
+            agreed_to_terms=1 if user_data.agreed_to_terms else 0,
+            terms_agreed_at=terms_agreed_at
         )
         
         db.add(pending_user)
@@ -141,7 +152,9 @@ class EmailVerificationManager:
                         is_active=1,    # 激活
                         is_customer_service=0,
                         user_level="normal",
-                        created_at=datetime.utcnow()
+                        created_at=datetime.utcnow(),
+                        agreed_to_terms=pending_user.agreed_to_terms,
+                        terms_agreed_at=pending_user.terms_agreed_at
                     )
                     
                     db.add(user)
