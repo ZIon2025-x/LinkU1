@@ -33,6 +33,10 @@ const MAX_RETRY_ATTEMPTS = 2; // 减少最大重试次数
 const GLOBAL_RETRY_COUNTER = new Map<string, number>(); // 全局重试计数器
 const MAX_GLOBAL_RETRIES = 5; // 全局最大重试次数
 
+// 防抖计时器
+const debounceTimers = new Map<string, NodeJS.Timeout>();
+const DEFAULT_DEBOUNCE_MS = 300; // 默认防抖时间300ms
+
 // 缓存配置
 const CACHE_TTL = {
   USER_INFO: 5 * 60 * 1000,    // 用户信息缓存5分钟
@@ -55,7 +59,8 @@ async function cachedRequest<T>(
   url: string, 
   requestFn: () => Promise<T>, 
   ttl: number = CACHE_TTL.DEFAULT,
-  params?: any
+  params?: any,
+  debounceMs?: number
 ): Promise<T> {
   const cacheKey = getCacheKey(url, params);
   
@@ -66,6 +71,38 @@ async function cachedRequest<T>(
     return cached.data;
   }
   
+  // 防抖处理
+  if (debounceMs) {
+    // 清除旧的计时器
+    if (debounceTimers.has(cacheKey)) {
+      clearTimeout(debounceTimers.get(cacheKey));
+    }
+    
+    // 返回一个包装的Promise，实现防抖
+    return new Promise((resolve, reject) => {
+      debounceTimers.set(cacheKey, setTimeout(async () => {
+        try {
+          const result = await executeRequest<T>(cacheKey, requestFn, ttl);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          debounceTimers.delete(cacheKey);
+        }
+      }, debounceMs));
+    });
+  }
+  
+  // 无防抖，直接执行
+  return executeRequest<T>(cacheKey, requestFn, ttl);
+}
+
+// 执行请求的辅助函数
+async function executeRequest<T>(
+  cacheKey: string,
+  requestFn: () => Promise<T>,
+  ttl: number
+): Promise<T> {
   // 检查是否有正在进行的相同请求
   if (pendingRequests.has(cacheKey)) {
     console.log('等待进行中的请求:', cacheKey);

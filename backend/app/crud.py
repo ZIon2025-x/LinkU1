@@ -131,12 +131,20 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     from app.models import Task
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import or_
     
     # 直接从数据库查询，不使用缓存（避免缓存不一致问题）
     # 用户任务数据更新频繁，缓存TTL短且容易导致数据不一致
+    # 使用预加载避免N+1查询
     tasks = (
         db.query(Task)
-        .filter((Task.poster_id == user_id) | (Task.taker_id == user_id))
+        .options(
+            selectinload(Task.poster),  # 预加载发布者
+            selectinload(Task.taker),   # 预加载接受者
+            selectinload(Task.reviews)   # 预加载评论
+        )
+        .filter(or_(Task.poster_id == user_id, Task.taker_id == user_id))
         .order_by(Task.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -287,81 +295,79 @@ def list_tasks(
     keyword: str = None,
     sort_by: str = "latest",
 ):
-    from sqlalchemy import or_
-
+    from sqlalchemy import or_, and_
+    from sqlalchemy.orm import selectinload
     from app.models import Task, User
     from app.time_utils_v2 import TimeHandlerV2
-    from datetime import timezone
 
     # 使用UTC时间进行过滤
     now_utc = TimeHandlerV2.get_utc_now()
 
-    # 使用数据库查询直接过滤过期任务，提高效率
-    from sqlalchemy import and_, or_
-    
-    # 构建基础查询，直接在数据库层面过滤过期任务
-    query = db.query(Task).filter(
-        and_(
-            Task.status == "open",
-            or_(
-                # 情况1：deadline有时区信息，直接比较
-                and_(
-                    Task.deadline.isnot(None),
-                    Task.deadline > now_utc
-                ),
-                # 情况2：deadline没有时区信息，假设是UTC时间
-                and_(
-                    Task.deadline.isnot(None),
-                    Task.deadline > now_utc.replace(tzinfo=None)
+    # 构建基础查询，直接在数据库层面完成所有过滤
+    query = (
+        db.query(Task)
+        .options(selectinload(Task.poster))  # 预加载发布者信息，避免N+1查询
+        .filter(
+            and_(
+                Task.status == "open",
+                or_(
+                    # 情况1：deadline有时区信息，直接比较
+                    and_(
+                        Task.deadline.isnot(None),
+                        Task.deadline > now_utc
+                    ),
+                    # 情况2：deadline没有时区信息，假设是UTC时间
+                    and_(
+                        Task.deadline.isnot(None),
+                        Task.deadline > now_utc.replace(tzinfo=None)
+                    )
                 )
             )
         )
     )
     
-    # 获取有效的未过期任务
-    valid_tasks = query.all()
-
-    # 添加任务类型筛选
+    # 在数据库层面添加任务类型筛选
     if task_type and task_type.strip():
-        valid_tasks = [task for task in valid_tasks if task.task_type == task_type]
+        query = query.filter(Task.task_type == task_type.strip())
 
-    # 添加城市筛选
+    # 在数据库层面添加城市筛选
     if location and location.strip():
-        valid_tasks = [task for task in valid_tasks if task.location == location]
+        query = query.filter(Task.location == location.strip())
 
-    # 添加关键词搜索
+    # 在数据库层面添加关键词搜索
     if keyword and keyword.strip():
-        keyword = keyword.strip()
-        # 搜索标题、描述、任务类型、城市
-        valid_tasks = [task for task in valid_tasks if 
-                      keyword.lower() in task.title.lower() or
-                      keyword.lower() in task.description.lower() or
-                      keyword.lower() in task.task_type.lower() or
-                      keyword.lower() in task.location.lower()]
-
-    # 根据排序参数进行排序
+        keyword_pattern = f"%{keyword.strip()}%"
+        query = query.filter(
+            or_(
+                Task.title.ilike(keyword_pattern),
+                Task.description.ilike(keyword_pattern),
+                Task.task_type.ilike(keyword_pattern),
+                Task.location.ilike(keyword_pattern)
+            )
+        )
+    
+    # 在数据库层面完成排序
     if sort_by == "latest":
-        valid_tasks.sort(key=lambda x: x.created_at, reverse=True)
+        query = query.order_by(Task.created_at.desc())
     elif sort_by == "reward_asc":
-        valid_tasks.sort(key=lambda x: x.reward)
+        query = query.order_by(Task.reward.asc())
     elif sort_by == "reward_desc":
-        valid_tasks.sort(key=lambda x: x.reward, reverse=True)
+        query = query.order_by(Task.reward.desc())
     elif sort_by == "deadline_asc":
-        valid_tasks.sort(key=lambda x: x.deadline)
+        query = query.order_by(Task.deadline.asc())
     elif sort_by == "deadline_desc":
-        valid_tasks.sort(key=lambda x: x.deadline, reverse=True)
+        query = query.order_by(Task.deadline.desc())
     else:
         # 默认按创建时间降序
-        valid_tasks.sort(key=lambda x: x.created_at, reverse=True)
+        query = query.order_by(Task.created_at.desc())
 
-    # 执行分页
-    tasks = valid_tasks[skip:skip + limit]
+    # 执行分页和查询
+    tasks = query.offset(skip).limit(limit).all()
 
-    # 为每个任务添加发布者时区信息
+    # 为每个任务添加发布者时区信息（poster已经预加载，无需额外查询）
     for task in tasks:
-        poster = db.query(User).filter(User.id == task.poster_id).first()
-        if poster:
-            task.poster_timezone = poster.timezone if poster.timezone else "UTC"
+        if task.poster:
+            task.poster_timezone = task.poster.timezone if task.poster.timezone else "UTC"
         else:
             task.poster_timezone = "UTC"
 

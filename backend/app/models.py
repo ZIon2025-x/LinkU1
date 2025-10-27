@@ -451,6 +451,12 @@ Index("ix_tasks_level_status", Task.task_level, Task.status)
 Index("ix_messages_sender_receiver", Message.sender_id, Message.receiver_id)
 Index("ix_notifications_user_read", Notification.user_id, Notification.is_read)
 
+# 新增高性能复合索引
+Index("ix_tasks_status_deadline", Task.status, Task.deadline)  # 过滤开放任务和截止日期
+Index("ix_tasks_type_location_status", Task.task_type, Task.location, Task.status)  # 任务类型+城市+状态组合查询
+Index("ix_tasks_status_created_at", Task.status, Task.created_at)  # 按状态和创建时间排序
+Index("ix_tasks_poster_created_at", Task.poster_id, Task.created_at)  # 用户的发布任务排序
+
 
 class PendingUser(Base):
     """待验证用户模型"""

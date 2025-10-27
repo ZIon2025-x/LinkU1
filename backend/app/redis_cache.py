@@ -211,8 +211,17 @@ DEFAULT_TTL = {
 }
 
 def get_cache_key(prefix: str, *args) -> str:
-    """生成缓存键"""
-    return f"{prefix}:{':'.join(str(arg) for arg in args)}"
+    """生成缓存键，对长键进行哈希优化"""
+    import hashlib
+    
+    arg_str = ':'.join(str(arg) for arg in args)
+    
+    # 如果键太长，使用哈希缩短（避免内存浪费）
+    if len(arg_str) > 50:
+        arg_hash = hashlib.md5(arg_str.encode()).hexdigest()
+        return f"{prefix}:{arg_hash}"
+    
+    return f"{prefix}:{arg_str}"
 
 def cache_user_info(user_id: str, user_data: Any, ttl: int = DEFAULT_TTL['USER_INFO']) -> bool:
     """缓存用户信息"""
@@ -254,6 +263,35 @@ def get_tasks_list(params: dict) -> Optional[Any]:
     param_str = '_'.join(f"{k}_{v}" for k, v in sorted(params.items()))
     key = get_cache_key(CACHE_PREFIXES['TASKS'], param_str)
     return redis_cache.get(key)
+
+def cache_tasks_list_safe(params: dict, fetch_fn, ttl: int = DEFAULT_TTL['TASKS_LIST']) -> Any:
+    """安全的任务列表缓存，防止缓存穿透和雪崩"""
+    param_str = '_'.join(f"{k}_{v}" for k, v in sorted(params.items()))
+    key = get_cache_key(CACHE_PREFIXES['TASKS'], param_str)
+    
+    # 1. 先查缓存
+    cached = redis_cache.get(key)
+    if cached is not None:
+        return cached
+    
+    # 2. 查询数据库
+    try:
+        tasks = fetch_fn()
+        
+        # 3. 缓存结果
+        if tasks:
+            # 正常数据，正常TTL
+            redis_cache.set(key, tasks, ttl)
+        else:
+            # 空结果，设置较长TTL防止穿透
+            redis_cache.set(key, [], ttl=ttl * 5)
+        
+        return tasks
+    except Exception as e:
+        logger.error(f"获取任务列表失败: {e}")
+        # 失败时缓存空结果，防止反复查数据库
+        redis_cache.set(key, [], ttl=ttl)
+        return []
 
 def invalidate_user_cache(user_id: str):
     """使用户相关缓存失效"""
