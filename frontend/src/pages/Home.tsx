@@ -526,6 +526,7 @@ const Home: React.FC = () => {
         }} />
         
         <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
+          {/* SEO 优化的主标题 */}
           <h1 className="hero-title" style={{
             fontSize: '48px',
             fontWeight: '800',
@@ -535,8 +536,9 @@ const Home: React.FC = () => {
             lineHeight: '1.2'
           }}>
             {t('home.welcome')}
-            <br />
-            <span style={{color: '#FFD700'}}>{t('home.subtitle')}</span>
+            <span style={{display: 'block', color: '#FFD700', marginTop: '0.5em'}}>
+              {t('home.subtitle')}
+            </span>
           </h1>
           
           <p className="hero-subtitle" style={{
