@@ -24,7 +24,9 @@ interface User {
   created_at: string;
   avg_rating?: number;
   total_tasks?: number;
+  task_count?: number;
   completed_tasks?: number;
+  completed_task_count?: number;
 }
 
 interface Review {
@@ -500,7 +502,7 @@ const Profile: React.FC = () => {
             }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
-                {user.total_tasks || 0}
+                {user.task_count || user.total_tasks || 0}
               </div>
               <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.totalTasks')}</div>
             </div>
@@ -515,7 +517,7 @@ const Profile: React.FC = () => {
             }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
-                {user.completed_tasks || 0}
+                {user.completed_task_count || user.completed_tasks || 0}
               </div>
               <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.completedTasks')}</div>
             </div>

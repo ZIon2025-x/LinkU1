@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markChatMessagesAsRead, getContactUnreadCounts } from '../api';
+import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markChatMessagesAsRead, getContactUnreadCounts, getUserProfile } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -176,6 +176,7 @@ interface Contact {
   email?: string;
   user_level?: number;
   task_count?: number;
+  completed_task_count?: number;
   avg_rating?: number;
 }
 
@@ -997,28 +998,59 @@ const MessagePage: React.FC = () => {
             setShowContactsList(false);
           }
         } else {
-          // 如果不在现有联系人中，创建一个临时的联系人信息
-          const tempContact: Contact = {
-            id: targetUserId,
-            name: `用户${targetUserId}`,
-            avatar: "/static/avatar1.png",
-            email: "",
-            user_level: 1, // 1 = normal, 2 = vip, 3 = super
-            task_count: 0,
-            avg_rating: 0.0,
-            last_message_time: null,
-            is_verified: false
+          // 如果不在现有联系人中，从后端获取用户的完整信息
+          const fetchUserInfo = async () => {
+            try {
+              const userData = await getUserProfile(targetUserId!);
+              const tempContact: Contact = {
+                id: targetUserId!,
+                name: userData.user?.name || `用户${targetUserId}`,
+                avatar: userData.user?.avatar || "/static/avatar1.png",
+                email: userData.user?.email || "",
+                user_level: userData.user?.user_level || 1,
+                task_count: userData.user?.task_count || 0,
+                avg_rating: userData.user?.avg_rating || 0.0,
+                last_message_time: null,
+                is_verified: userData.user?.is_verified || false,
+                completed_task_count: userData.user?.completed_task_count || 0
+              };
+              
+              setActiveContact(tempContact);
+              setIsServiceMode(false);
+              // 清空消息列表，准备加载新的聊天记录
+              setMessages([]);
+              
+              // 移动端从URL参数进入聊天时，确保不显示联系人列表
+              if (isMobile) {
+                setShowContactsList(false);
+              }
+            } catch (error) {
+              console.error('获取用户信息失败:', error);
+              // 如果获取失败，使用默认值
+              const tempContact: Contact = {
+                id: targetUserId!,
+                name: `用户${targetUserId}`,
+                avatar: "/static/avatar1.png",
+                email: "",
+                user_level: 1,
+                task_count: 0,
+                completed_task_count: 0,
+                avg_rating: 0.0,
+                last_message_time: null,
+                is_verified: false
+              };
+              
+              setActiveContact(tempContact);
+              setIsServiceMode(false);
+              setMessages([]);
+              
+              if (isMobile) {
+                setShowContactsList(false);
+              }
+            }
           };
           
-          setActiveContact(tempContact);
-          setIsServiceMode(false);
-          // 清空消息列表，准备加载新的聊天记录
-          setMessages([]);
-          
-          // 移动端从URL参数进入聊天时，确保不显示联系人列表
-          if (isMobile) {
-            setShowContactsList(false);
-          }
+          fetchUserInfo();
         }
       }
     }

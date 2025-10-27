@@ -17,6 +17,7 @@ interface UserProfileType {
     avg_rating: number;
     days_since_joined: number;
     task_count: number;
+    completed_task_count: number;
   };
   stats: {
     total_tasks: number;
@@ -335,7 +336,7 @@ const UserProfile: React.FC = () => {
                 boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
               }}>
                 <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.stats.total_tasks}
+                  {profile.user.task_count}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {t('userProfile.totalTasks')}
@@ -350,7 +351,7 @@ const UserProfile: React.FC = () => {
                 boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)'
               }}>
                 <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.stats.completed_tasks}
+                  {profile.user.completed_task_count}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {t('userProfile.completedTasks')}
@@ -528,7 +529,7 @@ const UserProfile: React.FC = () => {
               }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
-                  {Math.round((profile.stats.completed_tasks / Math.max(profile.stats.taken_tasks, 1)) * 100)}%
+                  {Math.round((profile.user.completed_task_count / Math.max(profile.stats.taken_tasks, 1)) * 100)}%
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {t('userProfile.completionRate')}

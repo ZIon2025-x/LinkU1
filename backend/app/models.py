@@ -157,6 +157,7 @@ class User(Base):
     is_verified = Column(Integer, default=0)  # 1=verified, 0=not verified
     user_level = Column(String(20), default="normal")  # normal, vip, super
     task_count = Column(Integer, default=0)
+    completed_task_count = Column(Integer, default=0)  # 已完成任务数量
     avg_rating = Column(Float, default=0.0)
     avatar = Column(String(200), default="")
     is_suspended = Column(Integer, default=0)  # 1=suspended, 0=not

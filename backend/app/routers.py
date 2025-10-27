@@ -1351,7 +1351,9 @@ def get_my_profile(
             "created_at": getattr(current_user, 'created_at', None),
             "user_type": "normal_user",
             "total_tasks": total_tasks,
+            "task_count": getattr(current_user, 'task_count', 0),
             "completed_tasks": completed_tasks,
+            "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating
         }
         
@@ -1453,6 +1455,7 @@ def user_profile(
             "avg_rating": avg_rating,
             "days_since_joined": days_since_joined,
             "task_count": user.task_count,
+            "completed_task_count": user.completed_task_count,
         },
         "stats": {
             "total_tasks": total_tasks,

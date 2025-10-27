@@ -53,13 +53,24 @@ def get_all_users(db: Session):
 
 
 def update_user_statistics(db: Session, user_id: str):
-    """自动更新用户的统计信息：task_count 和 avg_rating"""
+    """自动更新用户的统计信息：task_count, completed_task_count 和 avg_rating"""
     from app.models import Review, Task
 
     # 计算用户的总任务数（发布的任务 + 接受的任务）
     posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
     taken_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
     total_tasks = posted_tasks + taken_tasks
+
+    # 计算用户已完成的任务数（作为接受者完成的）和作为发布者被别人完成的任务数
+    completed_taken_tasks = db.query(Task).filter(
+        Task.taker_id == user_id, 
+        Task.status == "completed"
+    ).count()
+    completed_posted_tasks = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.status == "completed"
+    ).count()
+    completed_tasks = completed_taken_tasks + completed_posted_tasks
 
     # 计算用户的平均评分
     avg_rating_result = (
@@ -71,11 +82,12 @@ def update_user_statistics(db: Session, user_id: str):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
         user.task_count = total_tasks
+        user.completed_task_count = completed_tasks
         user.avg_rating = avg_rating
         db.commit()
         db.refresh(user)
 
-    return {"task_count": total_tasks, "avg_rating": avg_rating}
+    return {"task_count": total_tasks, "completed_task_count": completed_tasks, "avg_rating": avg_rating}
 
 
 def create_user(db: Session, user: schemas.UserCreate):
