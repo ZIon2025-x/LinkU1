@@ -268,15 +268,15 @@ class AsyncTaskCRUD:
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
-            # 添加关键词搜索
+            # 添加关键词搜索（使用 pg_trgm 优化）
             if keyword:
                 keyword = keyword.strip()
                 query = query.where(
                     or_(
+                        func.similarity(models.Task.title, keyword) > 0.2,
+                        func.similarity(models.Task.description, keyword) > 0.2,
                         models.Task.title.ilike(f"%{keyword}%"),
-                        models.Task.description.ilike(f"%{keyword}%"),
-                        models.Task.task_type.ilike(f"%{keyword}%"),
-                        models.Task.location.ilike(f"%{keyword}%"),
+                        models.Task.description.ilike(f"%{keyword}%")
                     )
                 )
 

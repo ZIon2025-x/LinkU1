@@ -1943,15 +1943,18 @@ def admin_get_tasks(
     if location and location.strip():
         query = query.filter(Task.location == location)
 
-    # 添加关键词搜索
+    # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
-        keyword = keyword.strip()
+        from sqlalchemy import func
+        keyword_clean = keyword.strip()
         query = query.filter(
             or_(
-                Task.title.ilike(f"%{keyword}%"),
-                Task.description.ilike(f"%{keyword}%"),
-                Task.task_type.ilike(f"%{keyword}%"),
-                Task.location.ilike(f"%{keyword}%"),
+                func.similarity(Task.title, keyword_clean) > 0.2,
+                func.similarity(Task.description, keyword_clean) > 0.2,
+                func.similarity(Task.task_type, keyword_clean) > 0.2,
+                func.similarity(Task.location, keyword_clean) > 0.2,
+                Task.title.ilike(f"%{keyword_clean}%"),
+                Task.description.ilike(f"%{keyword_clean}%")
             )
         )
 

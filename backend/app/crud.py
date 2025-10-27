@@ -334,15 +334,21 @@ def list_tasks(
     if location and location.strip():
         query = query.filter(Task.location == location.strip())
 
-    # 在数据库层面添加关键词搜索
+    # 在数据库层面添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
-        keyword_pattern = f"%{keyword.strip()}%"
+        from sqlalchemy import func
+        keyword_clean = keyword.strip()
+        
+        # 使用相似度匹配，阈值设为 0.2（可以根据需要调整）
+        # 这样可以支持拼写错误和部分匹配
         query = query.filter(
             or_(
-                Task.title.ilike(keyword_pattern),
-                Task.description.ilike(keyword_pattern),
-                Task.task_type.ilike(keyword_pattern),
-                Task.location.ilike(keyword_pattern)
+                func.similarity(Task.title, keyword_clean) > 0.2,
+                func.similarity(Task.description, keyword_clean) > 0.2,
+                func.similarity(Task.task_type, keyword_clean) > 0.2,
+                func.similarity(Task.location, keyword_clean) > 0.2,
+                Task.title.ilike(f"%{keyword_clean}%"),  # 保留原始搜索作为备选
+                Task.description.ilike(f"%{keyword_clean}%")
             )
         )
     
@@ -410,15 +416,15 @@ def count_tasks(
     if location and location.strip():
         query = query.filter(Task.location == location)
 
-    # 添加关键词搜索
+    # 添加关键词搜索（使用 pg_trgm 优化）
     if keyword and keyword.strip():
-        keyword = keyword.strip()
+        from sqlalchemy import func
+        keyword_clean = keyword.strip()
         query = query.filter(
             or_(
-                Task.title.ilike(f"%{keyword}%"),
-                Task.description.ilike(f"%{keyword}%"),
-                Task.task_type.ilike(f"%{keyword}%"),
-                Task.location.ilike(f"%{keyword}%"),
+                func.similarity(Task.title, keyword_clean) > 0.2,
+                func.similarity(Task.description, keyword_clean) > 0.2,
+                Task.title.ilike(f"%{keyword_clean}%")
             )
         )
 
@@ -1239,11 +1245,17 @@ def get_users_for_admin(
     query = db.query(models.User)
 
     if search:
+        from sqlalchemy import func
+        search_clean = search.strip()
+        
+        # 使用 pg_trgm 实现智能搜索
         query = query.filter(
             or_(
-                models.User.id.contains(search),  # 支持ID搜索
-                models.User.name.contains(search),  # 支持用户名搜索
-                models.User.email.contains(search),  # 支持邮箱搜索
+                func.similarity(models.User.name, search_clean) > 0.2,
+                func.similarity(models.User.email, search_clean) > 0.2,
+                models.User.id.contains(search_clean),  # 保留 ID 精确搜索
+                models.User.name.ilike(f"%{search_clean}%"),  # 模糊匹配作为备选
+                models.User.email.ilike(f"%{search_clean}%")
             )
         )
 

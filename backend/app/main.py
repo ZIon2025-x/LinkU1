@@ -372,6 +372,17 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
+        # 创建优化索引（使用 pg_trgm）
+        try:
+            database_url = os.getenv("DATABASE_URL")
+            if database_url:
+                import sys
+                sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+                from create_indexes import create_trgm_indexes
+                create_trgm_indexes(database_url)
+        except Exception as e:
+            logger.warning(f"创建索引时出错（可继续运行）: {e}")
+        
         # ⚠️ 生产环境禁用自动迁移
         if environment == "production":
             logger.info("ℹ️  生产环境跳过自动迁移，请使用: railway run alembic upgrade head")
