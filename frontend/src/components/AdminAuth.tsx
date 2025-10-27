@@ -39,7 +39,6 @@ const AdminAuth: React.FC = () => {
       const hasAdminCookie = document.cookie.includes('admin_authenticated=true');
       
       if (!hasAdminCookie) {
-        console.log('没有检测到管理员Cookie标识，直接设置为未登录');
         setIsLoggedIn(false);
         setAdminProfile(null);
         return;

@@ -263,7 +263,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
               actionLoading={actionLoading}
               onApproveApplication={async (applicantId) => {
                 // 实现批准申请逻辑
-                console.log('Approve applicant:', applicantId);
               }}
               t={t}
             />
@@ -275,7 +274,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
             onClose={() => setShowReviewModal(false)}
             onSubmit={async () => {
               // 实现提交评价逻辑
-              console.log('Submit review');
             }}
             reviewRating={reviewRating}
             setReviewRating={setReviewRating}

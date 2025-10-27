@@ -2584,7 +2584,6 @@ const MessagePage: React.FC = () => {
                   transition: 'none' // 禁用过渡效果，防止形变
                 }} 
                 onLoad={(e) => {
-                  console.log('客服头像加载成功:', e.currentTarget.src);
                 }}
                 onError={(e) => {
                   console.error('客服头像加载失败:', e.currentTarget.src);

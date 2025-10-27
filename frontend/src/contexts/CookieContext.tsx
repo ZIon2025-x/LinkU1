@@ -122,23 +122,19 @@ export const CookieProvider: React.FC<CookieProviderProps> = ({ children }) => {
     
     if (prefs.analytics) {
       // 启用分析Cookie
-      console.log('Analytics cookies enabled');
     }
     
     if (prefs.marketing) {
       // 启用营销Cookie
-      console.log('Marketing cookies enabled');
     }
     
     if (prefs.functional) {
       // 启用功能Cookie
-      console.log('Functional cookies enabled');
     }
   };
 
   const clearNonEssentialCookies = () => {
     // 清除非必要的Cookie
-    console.log('Clearing non-essential cookies');
   };
 
   const value: CookieContextType = {

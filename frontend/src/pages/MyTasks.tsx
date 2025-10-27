@@ -143,7 +143,6 @@ const MyTasks: React.FC = () => {
         // 只在页面可见时才更新
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
-            console.log('定期更新未读通知数量:', count);
             setUnreadCount(count);
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
@@ -158,11 +157,9 @@ const MyTasks: React.FC = () => {
   const loadUserApplications = async () => {
     if (!user) return;
     
-    console.log('开始加载用户申请记录...');
     setLoadingApplications(true);
     try {
       const applicationsData = await getUserApplications();
-      console.log('申请记录加载成功:', applicationsData);
       setApplications(applicationsData);
     } catch (error) {
       console.error('加载申请记录失败:', error);
@@ -205,7 +202,6 @@ const MyTasks: React.FC = () => {
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
-      console.log('通知标记为已读成功');
     } catch (error) {
       console.error('标记通知为已读失败:', error);
       // 可以添加用户提示，比如toast通知
@@ -221,7 +217,6 @@ const MyTasks: React.FC = () => {
         prev.map(notif => ({ ...notif, is_read: 1 }))
       );
       setUnreadCount(0);
-      console.log('所有通知标记为已读成功');
     } catch (error) {
       console.error('标记所有通知已读失败:', error);
       // 可以添加用户提示，比如toast通知
@@ -586,7 +581,6 @@ const MyTasks: React.FC = () => {
                 try {
                   await logout();
                 } catch (error) {
-                  console.log('登出请求失败:', error);
                 }
                 window.location.reload();
               }}

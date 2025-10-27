@@ -263,11 +263,8 @@ const Home: React.FC = () => {
       try {
         // Directly try to get user info, HttpOnly Cookie will be sent automatically
         const userData = await fetchCurrentUser();
-        console.log('User data loaded successfully:', userData);
         setUser(userData);
       } catch (error: any) {
-        console.log('Failed to load user data:', error);
-        console.log('Error details:', error.response?.status, error.response?.data);
         setUser(null);
       }
     };
@@ -286,16 +283,13 @@ const Home: React.FC = () => {
   // Get notification data
   useEffect(() => {
     if (user) {
-      console.log('Getting notification data, user ID:', user.id);
       // Get notification list - get all unread notifications and recent 10 read notifications
       getNotificationsWithRecentRead(10).then(notifications => {
-        console.log('Notification list loaded (unread + recent read):', notifications);
         setNotifications(notifications);
       }).catch(error => {
         console.error('Failed to get notifications:', error);
         // If getting failed, get recent notifications
         getNotifications(20).then(notifications => {
-          console.log('Notification list loaded:', notifications);
           setNotifications(notifications);
         }).catch(error => {
           console.error('Failed to get notifications:', error);
@@ -303,7 +297,6 @@ const Home: React.FC = () => {
       });
       // Get unread count
       getUnreadNotificationCount().then(count => {
-        console.log('Unread notification count:', count);
         setUnreadCount(count);
       }).catch(error => {
         console.error('Failed to get unread count:', error);
@@ -318,7 +311,6 @@ const Home: React.FC = () => {
         // 只在页面可见时才更新
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
-            console.log('定期更新未读通知数量:', count);
             setUnreadCount(count);
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
@@ -332,10 +324,8 @@ const Home: React.FC = () => {
   // 获取任务数据 - 只显示赏金最高且最新的3个任务
   useEffect(() => {
     setLoading(true);
-    console.log('开始获取首页任务数据');
     fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
       .then(data => {
-        console.log('获取到的任务数据:', data);
         const allTasks = Array.isArray(data) ? data : (data.tasks || []);
         
         // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
@@ -424,7 +414,6 @@ const Home: React.FC = () => {
       
       // 更新未读数量
       setUnreadCount(prev => Math.max(0, prev - 1));
-      console.log('通知标记为已读成功');
     } catch (error) {
       console.error('标记通知为已读失败:', error);
       alert('标记通知为已读失败，请重试');
@@ -438,7 +427,6 @@ const Home: React.FC = () => {
       setUnreadCount(0);
       // 更新通知列表，标记所有为已读
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
-      console.log('所有通知标记为已读成功');
     } catch (error) {
       console.error('标记所有通知为已读失败:', error);
       alert('标记所有通知为已读失败，请重试');
@@ -489,7 +477,6 @@ const Home: React.FC = () => {
                 try {
                   await logout();
                 } catch (error) {
-                  console.log('登出请求失败:', error);
                 }
                 window.location.reload();
               }}

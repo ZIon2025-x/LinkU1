@@ -75,7 +75,6 @@ const JoinUs: React.FC = () => {
     const loadUserData = async () => {
       try {
         const userData = await fetchCurrentUser();
-        console.log('获取用户资料成功:', userData);
         setUser(userData);
         
         // 加载通知数据
@@ -88,11 +87,9 @@ const JoinUs: React.FC = () => {
             setNotifications(notificationsData);
             setUnreadCount(unreadCountData.unread_count);
           } catch (error) {
-            console.log('获取通知失败:', error);
           }
         }
       } catch (error: any) {
-        console.log('获取用户资料失败:', error);
         setUser(null);
       }
     };
@@ -131,7 +128,6 @@ const JoinUs: React.FC = () => {
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
-      console.log('通知标记为已读成功');
     } catch (error) {
       console.error('标记通知已读失败:', error);
       alert('标记通知为已读失败，请重试');
@@ -146,7 +142,6 @@ const JoinUs: React.FC = () => {
         prev.map(notif => ({ ...notif, is_read: 1 }))
       );
       setUnreadCount(0);
-      console.log('所有通知标记为已读成功');
     } catch (error) {
       console.error('标记所有通知已读失败:', error);
       alert('标记所有通知为已读失败，请重试');
@@ -274,7 +269,6 @@ const JoinUs: React.FC = () => {
                 try {
                   // await logout();
                 } catch (error) {
-                  console.log('登出请求失败:', error);
                 }
                 window.location.reload();
               }}

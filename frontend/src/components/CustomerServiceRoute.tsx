@@ -23,7 +23,6 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
         if (response.ok) {
           const service = await response.json();
           setIsAuthorized(true);
-          console.log('客服认证成功，访问客服管理页面:', service.id);
         } else {
           setIsAuthorized(false);
           console.warn('客服认证失败:', response.status, response.statusText);

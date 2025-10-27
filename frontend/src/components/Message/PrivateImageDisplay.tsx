@@ -47,7 +47,6 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
           const blob = await imgResponse.blob();
           const blobUrl = URL.createObjectURL(blob);
           setImageUrl(blobUrl);
-          console.log('私密图片加载成功:', imageId);
         } else {
           throw new Error(`HTTP ${imgResponse.status}: ${imgResponse.statusText}`);
         }
@@ -60,7 +59,6 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
       
       // 如果是网络错误，尝试重试
       if (retry < 2) {
-        console.log(`私密图片加载失败，${1000 * (retry + 1)}ms后重试...`);
         setTimeout(() => {
           loadImage(retry + 1);
         }, 1000 * (retry + 1));

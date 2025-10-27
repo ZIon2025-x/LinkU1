@@ -81,7 +81,6 @@ const Profile: React.FC = () => {
         console.error('加载系统设置失败:', error);
         setSystemSettings({ vip_button_visible: true }); // 默认显示
       }
-      console.log('用户头像字段:', userInfo.avatar);
       setUser(userInfo);
       
       // 加载用户评价数据
@@ -104,13 +103,10 @@ const Profile: React.FC = () => {
   const handleAvatarChange = async (newAvatar: string) => {
     if (!user) return;
     
-    console.log('开始更新头像:', newAvatar);
     setSaving(true);
     try {
       const result = await updateAvatar(newAvatar);
-      console.log('头像更新API返回结果:', result);
       setUser({ ...user, avatar: newAvatar });
-      console.log('前端用户状态已更新:', { ...user, avatar: newAvatar });
       setShowAvatars(false);
     } catch (error) {
       console.error('更新头像失败:', error);
@@ -260,7 +256,6 @@ const Profile: React.FC = () => {
                   e.currentTarget.src = '/static/avatar1.png';
                 }}
                 onLoad={(e) => {
-                  console.log('头像加载成功:', e.currentTarget.src);
                 }}
                 style={{
                   width: '120px',

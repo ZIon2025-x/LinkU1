@@ -42,7 +42,6 @@ export const useWebSocket = ({
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket连接已建立');
         setIsConnected(true);
         setReconnectAttempts(0);
         onConnect?.();
@@ -71,7 +70,6 @@ export const useWebSocket = ({
       };
 
       ws.onclose = (event) => {
-        console.log('WebSocket连接已关闭:', event.code, event.reason);
         setIsConnected(false);
         onDisconnect?.();
         
@@ -83,7 +81,6 @@ export const useWebSocket = ({
         
         // 如果不是正常关闭，尝试重连
         if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-          console.log(`WebSocket重连中... (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
           setReconnectAttempts(prev => prev + 1);
           
           reconnectTimeoutRef.current = setTimeout(() => {

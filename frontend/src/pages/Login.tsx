@@ -51,7 +51,6 @@ const Login: React.FC = () => {
       })
       .catch(() => {
         // 用户未登录，继续显示登录页面
-        console.log(t('auth.notLoggedIn'));
       });
   }, [navigate]);
 
@@ -64,12 +63,10 @@ const Login: React.FC = () => {
       });
       
       // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
-      console.log('使用HttpOnly Cookie认证，无需localStorage存储');
       
       // 登录成功后获取CSRF token
       try {
         await api.get('/api/csrf/token');
-        console.log('登录成功后获取CSRF token');
       } catch (error) {
         console.warn('获取CSRF token失败:', error);
       }

@@ -116,7 +116,6 @@ class NetworkDiagnostics {
   // 清除错误记录
   clearErrors() {
     this.errors = [];
-    console.log('网络错误记录已清除');
   }
 
   // 导出错误数据
@@ -165,7 +164,6 @@ export const setupNetworkMonitoring = () => {
       }
     });
 
-    console.log('网络监控已启动');
   }
 };
 

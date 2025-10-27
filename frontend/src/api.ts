@@ -67,7 +67,6 @@ async function cachedRequest<T>(
   // 检查缓存
   const cached = requestCache.get(cacheKey);
   if (cached && isCacheValid(cached.timestamp, cached.ttl)) {
-    console.log('使用缓存数据:', cacheKey);
     return cached.data;
   }
   
@@ -105,7 +104,6 @@ async function executeRequest<T>(
 ): Promise<T> {
   // 检查是否有正在进行的相同请求
   if (pendingRequests.has(cacheKey)) {
-    console.log('等待进行中的请求:', cacheKey);
     return pendingRequests.get(cacheKey)!;
   }
   
@@ -143,7 +141,6 @@ export async function getCSRFToken(): Promise<string> {
     if (!csrfToken) {
       throw new Error('CSRF token为空');
     }
-    console.log('获取到新的CSRF token:', csrfToken.substring(0, 8) + '...');
     return csrfToken;
   } catch (error) {
     console.error('获取CSRF token失败:', error);
@@ -163,7 +160,6 @@ function isMobileDevice(): boolean {
 
 api.interceptors.request.use(async config => {
   // 所有设备都使用HttpOnly Cookie认证，不再区分移动端和桌面端
-  console.log('使用HttpOnly Cookie认证');
   
   // 对于写操作，添加CSRF token
   // 但跳过登录相关的请求，因为它们不需要CSRF保护
@@ -175,15 +171,12 @@ api.interceptors.request.use(async config => {
       try {
         const token = await getCSRFToken();
         config.headers['X-CSRF-Token'] = token;
-        console.log('设置CSRF token到Header:', token.substring(0, 8) + '...');
       } catch (error) {
         console.warn('无法获取CSRF token，请求可能失败:', error);
       }
     }
   }
   
-  console.log('发送请求到:', config.url);
-  console.log('请求配置:', {
     method: config.method,
     url: config.url,
     headers: config.headers,
@@ -196,13 +189,11 @@ api.interceptors.request.use(async config => {
 function clearRetryCounters() {
   retryCounters.clear();
   GLOBAL_RETRY_COUNTER.clear();
-  console.log('已清理所有重试计数器');
 }
 
 // 响应拦截器 - 处理认证失败、token刷新和CSRF错误
 api.interceptors.response.use(
   response => {
-    console.log('收到响应:', {
       status: response.status,
       url: response.config.url,
       data: response.data
@@ -213,14 +204,12 @@ api.interceptors.response.use(
       const globalKey = 'global_401_retry';
       if (GLOBAL_RETRY_COUNTER.has(globalKey)) {
         GLOBAL_RETRY_COUNTER.delete(globalKey);
-        console.log('成功响应，清理全局重试计数器');
       }
     }
     
     return response;
   },
   async error => {
-    console.log('请求错误:', {
       status: error.response?.status,
       url: error.config?.url,
       method: error.config?.method,
@@ -236,7 +225,6 @@ api.interceptors.response.use(
       const requestKey = `${error.config?.method}_${error.config?.url}`;
       const currentRetryCount = retryCounters.get(requestKey) || 0;
       
-      console.log(`CSRF验证失败 - 请求: ${requestKey}, 重试次数: ${currentRetryCount}, 错误详情:`, error.response?.data);
       
       if (currentRetryCount >= MAX_RETRY_ATTEMPTS) {
         console.error('CSRF token重试次数已达上限，停止重试');
@@ -255,7 +243,6 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       
-      console.log(`CSRF token验证失败，尝试重新获取token并重试请求 (第${currentRetryCount + 1}次)`);
       retryCounters.set(requestKey, currentRetryCount + 1);
       
       try {
@@ -264,7 +251,6 @@ api.interceptors.response.use(
         
         // 重新获取CSRF token
         const newToken = await getCSRFToken();
-        console.log('获取到新的CSRF token:', newToken.substring(0, 8) + '...');
         
         // 重试原始请求
         const retryConfig = {
@@ -275,11 +261,9 @@ api.interceptors.response.use(
           }
         };
         
-        console.log('重试请求配置:', retryConfig);
         const result = await api.request(retryConfig);
         // 成功后清除重试计数
         retryCounters.delete(requestKey);
-        console.log('重试请求成功');
         return result;
       } catch (retryError) {
         console.error('重试请求失败:', retryError);
@@ -299,7 +283,6 @@ api.interceptors.response.use(
       ];
       
       if (skipRefreshApis.some(api => error.config?.url?.includes(api))) {
-        console.log('跳过token刷新，直接返回401错误:', error.config?.url);
         return Promise.reject(error);
       }
       
@@ -338,7 +321,6 @@ api.interceptors.response.use(
             }
             return api.request(error.config);
           } catch (refreshError) {
-            console.log('等待token刷新失败');
             return Promise.reject(error);
           }
         } else {
@@ -365,7 +347,6 @@ api.interceptors.response.use(
         
         try {
           const refreshResponse = await refreshPromise;
-          console.log('Token刷新成功，重试原始请求');
           
           // 增加全局重试计数
           GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
@@ -376,17 +357,14 @@ api.interceptors.response.use(
           }
           return api.request(error.config);
         } catch (refreshError) {
-          console.log('会话refresh失败，尝试使用refresh-token重新创建会话:', refreshError);
           
           // 如果refresh端点失败（session已过期），尝试使用refresh-token端点
           if (!window.location.pathname.includes('/admin') && 
               !window.location.pathname.includes('/customer-service') && 
               !window.location.pathname.includes('/service')) {
             try {
-              console.log('尝试使用refresh-token端点重新创建会话');
               refreshPromise = api.post('/api/secure-auth/refresh-token');
               const refreshTokenResponse = await refreshPromise;
-              console.log('使用refresh-token成功，重试原始请求');
               
               // 增加全局重试计数
               GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
@@ -397,7 +375,6 @@ api.interceptors.response.use(
               }
               return api.request(error.config);
             } catch (refreshTokenError) {
-              console.log('Refresh-token也失败，用户需要重新登录:', refreshTokenError);
               // 增加全局重试计数
               GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
               // HttpOnly Cookie会自动处理，无需手动清理
@@ -407,7 +384,6 @@ api.interceptors.response.use(
               refreshPromise = null;
             }
           } else {
-            console.log('Token刷新失败，用户需要重新登录');
             // 增加全局重试计数
             GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
             // HttpOnly Cookie会自动处理，无需手动清理
@@ -440,12 +416,9 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10 
   params.page = page;
   params.page_size = pageSize;
   
-  console.log('fetchTasks 请求参数:', params);
-  console.log('fetchTasks 请求URL:', '/api/tasks');
   
   try {
     const res = await api.get('/api/tasks', { params });
-    console.log('fetchTasks 响应数据:', res.data);
     return res.data;
   } catch (error) {
     console.error('fetchTasks 请求失败:', error);
@@ -807,10 +780,8 @@ export const markCustomerServiceMessagesRead = async (chatId: string) => {
 
 // 标记普通聊天的消息为已读
 export const markChatMessagesAsRead = async (contactId: string) => {
-  console.log('📤 调用标记已读API:', `/api/users/messages/mark-chat-read/${contactId}`);
   try {
     const response = await api.post(`/api/users/messages/mark-chat-read/${contactId}`);
-    console.log('📥 标记已读API响应:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ 标记已读API错误:', error);
@@ -830,14 +801,9 @@ export const sendCustomerServiceMessage = async (chatId: string, content: string
 };
 
 export const setCustomerServiceOnline = async () => {
-  console.log('🔄 开始调用客服在线API...');
-  console.log('API基础URL:', api.defaults.baseURL);
-  console.log('请求URL:', '/api/customer-service/online');
   
   try {
     const response = await api.post('/api/customer-service/online');
-    console.log('✅ 客服在线API调用成功:', response.status);
-    console.log('响应数据:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('❌ 客服在线API调用失败:', error);
@@ -852,14 +818,9 @@ export const setCustomerServiceOnline = async () => {
 };
 
 export const setCustomerServiceOffline = async () => {
-  console.log('🔄 开始调用客服离线API...');
-  console.log('API基础URL:', api.defaults.baseURL);
-  console.log('请求URL:', '/api/customer-service/offline');
   
   try {
     const response = await api.post('/api/customer-service/offline');
-    console.log('✅ 客服离线API调用成功:', response.status);
-    console.log('响应数据:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('❌ 客服离线API调用失败:', error);
@@ -1107,7 +1068,6 @@ export const login = async (email: string, password: string) => {
   const res = await api.post('/api/secure-auth/login', { email, password });
   
   // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
-  console.log('使用HttpOnly Cookie认证，无需localStorage存储');
   
   return res.data;
 };
@@ -1140,7 +1100,6 @@ export const logout = async () => {
     clearCSRFToken();
     // 清理重试计数器
     clearRetryCounters();
-    console.log('用户已登出，重试计数器已清理');
   }
 };
 

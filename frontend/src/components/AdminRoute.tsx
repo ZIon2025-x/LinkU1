@@ -22,7 +22,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         if (response.ok) {
           const admin = await response.json();
           setIsAuthorized(true);
-          console.log('管理员访问管理后台:', admin.id);
         } else {
           setIsAuthorized(false);
           console.warn('管理员认证失败:', response.status);

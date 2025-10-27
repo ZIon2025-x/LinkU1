@@ -94,7 +94,6 @@ export const applyHttp1Fix = () => {
       }
     });
     
-    console.log('HTTP/1.1修复已应用');
   }
 };
 
@@ -107,10 +106,8 @@ export const detectAndFixHttp2 = () => {
                           'Notification' in window;
     
     if (supportsHttp2) {
-      console.log('检测到HTTP/2支持，应用修复措施');
       applyHttp1Fix();
     } else {
-      console.log('浏览器不支持HTTP/2，无需修复');
     }
   }
 };

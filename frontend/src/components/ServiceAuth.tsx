@@ -38,7 +38,6 @@ const ServiceAuth: React.FC = () => {
       const hasServiceCookie = document.cookie.includes('service_authenticated=true');
       
       if (!hasServiceCookie) {
-        console.log('没有检测到客服Cookie标识，直接设置为未登录');
         setIsLoggedIn(false);
         setServiceProfile(null);
         return;
@@ -86,7 +85,6 @@ const ServiceAuth: React.FC = () => {
         setError('');
         
         // 不保存session_id到localStorage，使用HttpOnly Cookie
-        console.log('客服登录成功，使用HttpOnly Cookie认证');
         
         // 跳转到客服面板
         navigate('/service/dashboard');

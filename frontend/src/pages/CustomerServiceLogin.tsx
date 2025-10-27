@@ -22,18 +22,15 @@ const CustomerServiceLogin: React.FC = () => {
       
       // 新的客服登录使用Cookie认证，不需要保存token
       // 只需要跳转到客服管理页面
-      console.log('客服登录成功:', service);
       
       // 登录成功后获取CSRF token
       try {
         await api.get('/api/csrf/token');
-        console.log('客服登录成功后获取CSRF token');
       } catch (error) {
         console.warn('获取CSRF token失败:', error);
       }
       
       // 登录成功后立即跳转
-      console.log('客服登录成功，准备跳转到客服管理页面');
       
       // 立即跳转，让路由组件处理认证检查
       // 不依赖Cookie检测，因为Cookie设置可能有延迟

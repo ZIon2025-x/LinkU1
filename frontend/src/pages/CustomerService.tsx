@@ -235,7 +235,6 @@ const CustomerService: React.FC = () => {
       const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
       if (serverTimezoneInfo) {
         setTimezoneInfo(serverTimezoneInfo);
-        console.log('客服页面时区信息已加载:', {
           userTimezone: detectedTimezone,
           serverTimezone: serverTimezoneInfo.server_timezone,
           serverTime: serverTimezoneInfo.server_time,
@@ -534,7 +533,6 @@ const CustomerService: React.FC = () => {
         
         // 处理心跳消息
         if (msg.type === 'heartbeat') {
-          console.log('客服收到心跳消息:', msg.timestamp);
           return;
         }
         
@@ -555,7 +553,6 @@ const CustomerService: React.FC = () => {
         
         // 实时处理聊天消息
         if (msg.from && msg.receiver_id === currentUser.id && msg.from !== currentUser.id) {
-          console.log('客服实时收到用户消息:', msg);
           
           // 如果当前选中的会话是发送消息的用户，立即更新聊天记录
           if (selectedSession && selectedSession.user_id === msg.from) {
@@ -614,7 +611,6 @@ const CustomerService: React.FC = () => {
     setNotificationWs(notificationSocket);
     
     return () => {
-      console.log('清理客服通知WebSocket连接');
       notificationSocket.close();
     };
   }, [currentUser?.id]); // 只在用户ID改变时重新建立通知WebSocket连接
@@ -682,13 +678,11 @@ const CustomerService: React.FC = () => {
 
   const loadAdminChatMessages = async () => {
     try {
-      console.log('开始加载管理聊天记录...');
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/admin-chat`, {
         credentials: 'include'  // 使用Cookie认证
       });
       if (response.ok) {
         const messagesData = await response.json();
-        console.log('管理聊天记录:', messagesData);
         setAdminChatMessages(messagesData);
       } else {
         console.error('加载管理聊天记录失败:', response.statusText);
@@ -702,7 +696,6 @@ const CustomerService: React.FC = () => {
 
   const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
-      console.log('审核取消请求:', { requestId, status, adminComment: adminComment });
       
       // 获取 CSRF token
       const csrfToken = document.cookie
@@ -724,7 +717,6 @@ const CustomerService: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('审核成功');
         setSelectedCancelRequest(null);
         setAdminComment('');
         await loadCancelRequests(); // 重新加载取消请求列表
@@ -747,7 +739,6 @@ const CustomerService: React.FC = () => {
     }
 
     try {
-      console.log('提交管理请求:', { selectedRequestType, requestTitle, requestDescription, requestPriority });
       
       // 获取 CSRF token
       const csrfToken = document.cookie
@@ -771,7 +762,6 @@ const CustomerService: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('管理请求提交成功');
         setShowRequestForm(false);
         setSelectedRequestType('');
         setRequestTitle('');
@@ -796,7 +786,6 @@ const CustomerService: React.FC = () => {
     }
 
     try {
-      console.log('发送管理消息:', newAdminMessage);
       
       // 获取 CSRF token
       const csrfToken = document.cookie
@@ -817,7 +806,6 @@ const CustomerService: React.FC = () => {
       });
 
       if (response.ok) {
-        console.log('管理消息发送成功');
         setNewAdminMessage('');
         await loadAdminChatMessages(); // 重新加载聊天记录
       } else {
@@ -833,15 +821,12 @@ const CustomerService: React.FC = () => {
 
   const loadChatMessages = async (chatId: string) => {
     try {
-      console.log('开始加载聊天消息，chatId:', chatId);
       const messagesData = await getCustomerServiceMessages(chatId);
-      console.log('聊天消息数据:', messagesData);
       
       // 确保 messagesData 是数组
       if (Array.isArray(messagesData)) {
         // 直接设置服务器返回的消息，确保只显示当前chat_id的消息
         setChatMessages(messagesData);
-        console.log('聊天消息设置成功，数量:', messagesData.length);
       } else {
         console.error('聊天消息数据格式错误:', messagesData);
         setChatMessages([]);
@@ -865,7 +850,6 @@ const CustomerService: React.FC = () => {
       
       if (response.ok) {
         const status = await response.json();
-        console.log('超时状态检查结果:', status);
         setChatTimeoutStatus(status);
         return status;
       } else {
@@ -893,7 +877,6 @@ const CustomerService: React.FC = () => {
         credentials: 'include'  // 使用Cookie认证
       });
       
-      console.log('超时结束响应状态:', response.status, response.statusText);
       
       if (response.ok) {
         // 先更新本地状态，避免状态不一致
@@ -919,9 +902,7 @@ const CustomerService: React.FC = () => {
         // 尝试解析响应，如果失败也不影响成功流程
         try {
           const result = await response.json();
-          console.log('超时结束成功，结果:', result);
         } catch (parseError) {
-          console.log('无法解析响应为JSON，但操作已成功');
         }
         
         // 显示成功消息
@@ -1022,7 +1003,6 @@ const CustomerService: React.FC = () => {
         }, 1000); // 延迟1秒检查，确保后端已处理消息
       }
       
-      console.log('消息发送成功，已立即显示');
     } catch (error) {
       console.error('发送消息失败:', error);
       window.alert('发送消息失败');
@@ -1111,16 +1091,13 @@ const CustomerService: React.FC = () => {
           try {
             const msg = JSON.parse(event.data);
             
-            console.log('客服WebSocket收到消息:', msg);
             
             if (msg.error) {
-              console.log('客服WebSocket收到错误消息:', msg.error);
               return;
             }
             
             // 处理心跳消息
             if (msg.type === 'heartbeat') {
-              console.log('收到心跳消息:', msg.timestamp);
               return;
             }
             
@@ -1128,7 +1105,6 @@ const CustomerService: React.FC = () => {
             const latestSelectedSession = selectedSessionRef.current;
             
             // 检查是否有聊天ID和选中会话
-            console.log('检查消息条件:', {
               chat_id: msg.chat_id,
               selectedSession_chat_id: latestSelectedSession?.chat_id,
               from: msg.from,
@@ -1138,10 +1114,8 @@ const CustomerService: React.FC = () => {
             
             // 处理客服对话消息
             if (msg.chat_id && latestSelectedSession && msg.chat_id === latestSelectedSession.chat_id) {
-              console.log('匹配chat_id，处理消息');
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
-                console.log('添加消息到聊天记录');
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
@@ -1160,7 +1134,6 @@ const CustomerService: React.FC = () => {
                   }
                 }, 100);
               } else {
-                console.log('跳过自己发送的消息或空内容');
               }
             }
             // 兼容旧的普通消息格式
@@ -1168,10 +1141,8 @@ const CustomerService: React.FC = () => {
               (msg.from === latestSelectedSession.user_id && msg.receiver_id === currentUser.id) ||
               (msg.from === currentUser.id && msg.receiver_id === latestSelectedSession.user_id)
             )) {
-              console.log('匹配旧格式消息条件');
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
-                console.log('添加旧格式消息到聊天记录');
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
@@ -1191,7 +1162,6 @@ const CustomerService: React.FC = () => {
                 }, 100);
               }
             } else {
-              console.log('消息不匹配任何条件，已忽略');
             }
           } catch (error) {
             console.error('客服WebSocket消息解析错误:', error);
@@ -1203,18 +1173,15 @@ const CustomerService: React.FC = () => {
         };
         
         socket.onclose = (event) => {
-          console.log('客服WebSocket连接关闭:', event.code, event.reason);
           setWsConnectionStatus('disconnected');
           
           // 只在异常关闭时重连（代码1000是正常关闭）
           if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            console.log(`客服WebSocket异常关闭，尝试重连 (${reconnectAttempts}/${maxReconnectAttempts})`);
             setTimeout(() => {
               connectWebSocket();
             }, reconnectDelay);
           } else if (event.code === 1000) {
-            console.log('客服WebSocket正常关闭，不重连');
           } else {
             console.error('客服WebSocket重连失败，已达到最大重连次数');
           }
@@ -1236,19 +1203,16 @@ const CustomerService: React.FC = () => {
   // 当选择会话时，加载聊天消息
   useEffect(() => {
     if (selectedSession && selectedSession.chat_id) {
-      console.log('选择新会话，加载聊天消息:', selectedSession.chat_id);
       loadChatMessages(selectedSession.chat_id);
       
       // 设置定期刷新聊天记录（作为实时消息的补充，频率更低）
       const interval = setInterval(() => {
         if (selectedSession && selectedSession.chat_id) {
-          console.log('定期刷新聊天消息（补充实时消息）:', selectedSession.chat_id);
           loadChatMessages(selectedSession.chat_id);
         }
       }, 30000); // 每30秒刷新一次，作为实时消息的补充
       
       return () => {
-        console.log('清理聊天消息刷新定时器');
         clearInterval(interval);
       };
     }
@@ -1261,7 +1225,6 @@ const CustomerService: React.FC = () => {
   // 组件卸载时清理所有WebSocket连接和定时器
   useEffect(() => {
     return () => {
-      console.log('组件卸载，清理所有WebSocket连接和定时器');
       if (ws) {
         ws.close();
       }
@@ -1278,13 +1241,10 @@ const CustomerService: React.FC = () => {
     try {
       // 如果刚刚进行了手动切换，跳过自动刷新
       if (justToggledStatus) {
-        console.log('跳过自动刷新：刚刚进行了手动状态切换');
         return;
       }
       
-      console.log('开始加载客服状态...');
       const status = await getCustomerServiceStatus();
-      console.log('客服状态数据:', status);
       setIsOnline(status.is_online);
       
       // 更新当前用户的评分数据（只在数据真正改变时更新）
@@ -1302,7 +1262,6 @@ const CustomerService: React.FC = () => {
         }
       }
       
-      console.log('客服状态设置成功:', status.is_online);
     } catch (error) {
       console.error('加载客服状态失败:', error);
     }
@@ -1357,12 +1316,9 @@ const CustomerService: React.FC = () => {
   // 获取当前客服名字
   const loadCurrentServiceName = async () => {
     try {
-      console.log('开始加载客服名字...');
       const data = await getCustomerServiceStatus();
-      console.log('客服名字数据:', data);
       if (data.service && data.service.name) {
         setCurrentServiceName(data.service.name);
-        console.log('客服名字设置成功:', data.service.name);
       }
     } catch (error) {
       console.error('获取客服名字失败:', error);

@@ -146,7 +146,6 @@ const Register: React.FC = () => {
         }
       }
       
-      console.log('Displaying error message:', msg);
       setErrorMsg(msg);
     }
   };

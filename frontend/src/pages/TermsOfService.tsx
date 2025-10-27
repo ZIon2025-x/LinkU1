@@ -71,7 +71,6 @@ const TermsOfService: React.FC = () => {
                 try {
                   await logout();
                 } catch (error) {
-                  console.log('登出请求失败:', error);
                 }
                 window.location.reload();
               }}

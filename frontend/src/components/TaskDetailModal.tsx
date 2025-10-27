@@ -53,13 +53,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const loadTaskData = async () => {
     if (!taskId) return;
     
-    console.log('任务详情弹窗加载，任务ID:', taskId);
     setLoading(true);
     setError('');
     
     try {
       const res = await api.get(`/api/tasks/${taskId}`);
-      console.log('任务详情API响应:', res.data);
       setTask(res.data);
       setNewPrice(res.data.reward.toString());
       
@@ -100,16 +98,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const checkUserApplication = async () => {
     if (!user || !task || user.id === task.poster_id) {
-      console.log('不是申请者或没有登录，跳过申请状态检查');
       return;
     }
     
-    console.log('开始检查用户申请状态...', { userId: user.id, taskId: task.id });
     try {
       const userApplications = await getUserApplications();
-      console.log('用户申请记录:', userApplications);
       const userApp = userApplications.find((app: any) => app.task_id === task.id);
-      console.log('当前任务的申请状态:', userApp);
       setUserApplication(userApp);
     } catch (error) {
       console.error('检查用户申请状态失败:', error);
@@ -120,9 +114,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     if (!taskId) return;
     
     try {
-      console.log('开始加载任务评价数据，任务ID:', taskId);
       const reviewsData = await getTaskReviews(taskId);
-      console.log('评价数据加载成功:', reviewsData);
       setReviews(reviewsData);
     } catch (error) {
       console.error('加载评价失败:', error);
@@ -131,15 +123,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const loadApplications = async () => {
     if (!user || !task || user.id !== task.poster_id || !taskId) {
-      console.log('不是任务发布者，跳过加载申请者列表');
       return;
     }
     
-    console.log('开始加载申请者列表...');
     setLoadingApplications(true);
     try {
       const res = await getTaskApplications(taskId);
-      console.log('申请者列表加载成功:', res);
       setApplications(res);
     } catch (error) {
       console.error('加载申请者列表失败:', error);
@@ -213,11 +202,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     setActionLoading(true);
     try {
-      console.log('开始申请任务...', { taskId, currentStatus: task?.status });
       
       // 使用 apply 端点，创建申请记录等待发布者同意
       const result = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
-      console.log('申请任务API调用成功:', result.data);
       
       alert(t('taskDetail.taskApplySuccess'));
       
@@ -365,25 +352,18 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setIsAnonymous(false);
       
       // 重新加载评价数据和任务数据
-      console.log('重新加载评价数据...');
       await loadTaskReviews();
-      console.log('评价数据已重新加载');
       
       // 强制重新检查用户申请状态和刷新任务状态
       if (user && task) {
-        console.log('重新检查用户申请状态...');
         await checkUserApplication();
-        console.log('用户申请状态已更新');
       }
       
       // 重新加载任务信息，确保状态更新
       if (taskId) {
-        console.log('重新加载任务信息...');
         await loadTaskData();
-        console.log('任务信息已重新加载');
       }
       
-      console.log('评价提交完成，所有数据已刷新');
     } catch (error: any) {
       alert(error.response?.data?.detail || t('taskDetail.reviewSubmitFailed'));
     } finally {
@@ -398,13 +378,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   const hasUserReviewed = () => {
     if (!user || !task) {
-      console.log('hasUserReviewed: 用户未登录或任务不存在');
       return false;
     }
     // 直接从 reviews 数组中查找当前用户的评价
     const userReview = reviews.find(review => review.user_id === user.id);
     const hasReviewed = !!userReview;
-    console.log('hasUserReviewed:', hasReviewed, { 
       userId: user.id, 
       taskId: task.id,
       totalReviews: reviews.length,

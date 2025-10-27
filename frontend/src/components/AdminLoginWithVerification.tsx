@@ -38,11 +38,9 @@ const AdminLoginWithVerification: React.FC = () => {
       
       // 检查是否需要邮箱验证码
       if (response.status === 202) {
-        console.log('需要邮箱验证码，发送验证码...');
         
         // 发送验证码
         const verificationResponse = await api.post('/api/auth/admin/send-verification-code', loginData);
-        console.log('验证码已发送:', verificationResponse.data);
         
         // 保存管理员ID并切换到验证码输入步骤
         setVerificationData(prev => ({
@@ -53,12 +51,10 @@ const AdminLoginWithVerification: React.FC = () => {
         setSuccess('验证码已发送到管理员邮箱，请检查邮箱并输入验证码');
       } else {
         // 正常登录成功（未启用邮箱验证）
-        console.log('管理员登录成功，使用HttpOnly Cookie认证');
         
         // 登录成功后获取CSRF token
         try {
           await api.get('/api/csrf/token');
-          console.log('管理员登录成功后获取CSRF token');
         } catch (error) {
           console.warn('获取CSRF token失败:', error);
         }
@@ -86,12 +82,10 @@ const AdminLoginWithVerification: React.FC = () => {
 
     try {
       const response = await api.post('/api/auth/admin/verify-code', verificationData);
-      console.log('验证码验证成功:', response.data);
       
       // 验证成功后获取CSRF token
       try {
         await api.get('/api/csrf/token');
-        console.log('验证成功后获取CSRF token');
       } catch (error) {
         console.warn('获取CSRF token失败:', error);
       }
@@ -117,7 +111,6 @@ const AdminLoginWithVerification: React.FC = () => {
 
     try {
       const response = await api.post('/api/auth/admin/send-verification-code', loginData);
-      console.log('验证码重新发送:', response.data);
       setSuccess('验证码已重新发送到管理员邮箱');
     } catch (error: any) {
       let errorMsg = '重新发送验证码失败';

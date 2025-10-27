@@ -10,9 +10,6 @@ export const WS_BASE_URL = isProduction
   : 'ws://localhost:8000';
 
 // 调试信息
-console.log('API_BASE_URL:', API_BASE_URL);
-console.log('WS_BASE_URL:', WS_BASE_URL);
-console.log('isProduction:', isProduction);
 
 // 导出API端点
 export const API_ENDPOINTS = {

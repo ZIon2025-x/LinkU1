@@ -36,20 +36,16 @@ export const useAuth = () => {
       // 只检查用户认证，客服认证由专门的组件处理
       checks.push({ role: 'user' as AuthRole, endpoint: '/api/users/profile/me' });
 
-      console.log('认证检查列表:', checks);
 
       for (const check of checks) {
         try {
-          console.log(`检查${check.role}认证状态:`, check.endpoint);
           const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}${check.endpoint}`, {
             credentials: 'include'
           });
 
-          console.log(`${check.role}认证响应:`, response.status);
 
           if (response.ok) {
             const userData = await response.json();
-            console.log(`${check.role}认证成功:`, userData);
             setAuthState({
               isAuthenticated: true,
               role: check.role,
@@ -64,7 +60,6 @@ export const useAuth = () => {
       }
 
       // 如果所有检查都失败
-      console.log('所有认证检查都失败');
       setAuthState({
         isAuthenticated: false,
         role: null,
@@ -113,7 +108,6 @@ export const useAuth = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('登录成功，响应数据:', data);
         
         // 登录成功后获取CSRF token
         try {
@@ -122,7 +116,6 @@ export const useAuth = () => {
             credentials: 'include'
           });
           if (csrfResponse.ok) {
-            console.log('登录成功后获取CSRF token');
           }
         } catch (error) {
           console.warn('获取CSRF token失败:', error);
@@ -146,7 +139,6 @@ export const useAuth = () => {
         });
         
         // 登录成功后直接设置认证状态，避免重新检查
-        console.log('登录成功，设置认证状态:', { role, user: userData });
         
         return true;
       } else {

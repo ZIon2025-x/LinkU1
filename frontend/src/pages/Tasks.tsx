@@ -450,7 +450,6 @@ const Tasks: React.FC = () => {
     const loadUser = async () => {
       try {
         const userData = await fetchCurrentUser();
-        console.log('Tasks页面获取用户资料成功:', userData);
         setUser(userData);
         
         // 设置用户位置
@@ -461,7 +460,6 @@ const Tasks: React.FC = () => {
         // 加载已申请的任务列表
         try {
           const applications = await getUserApplications();
-          console.log('已申请的任务列表:', applications);
           
           // 将申请的任务ID添加到状态中
           const taskIds = applications.map((app: any) => Number(app.task_id)).filter((id: number) => !isNaN(id));
@@ -471,7 +469,6 @@ const Tasks: React.FC = () => {
         }
       } catch (error: any) {
         console.error('Tasks页面加载用户信息失败:', error);
-        console.log('错误详情:', error.response?.status, error.response?.data);
         // 如果获取用户信息失败，设置为未登录状态
         setUser(null);
       }
@@ -513,7 +510,6 @@ const Tasks: React.FC = () => {
         // 只在页面可见时才更新
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
-            console.log('定期更新未读通知数量:', count);
             setUnreadCount(count);
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
@@ -537,8 +533,6 @@ const Tasks: React.FC = () => {
         sort_by: sortBy,
       };
       
-      console.log('Tasks页面请求参数:', params);
-      console.log('当前城市状态:', city);
       
       const response = await api.get('/api/tasks', { params });
       const data = response.data;
@@ -922,7 +916,6 @@ const Tasks: React.FC = () => {
                         try {
                           await logout();
                         } catch (error) {
-                          console.log('登出请求失败:', error);
                         }
                         window.location.reload();
                       }}

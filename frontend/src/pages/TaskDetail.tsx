@@ -36,11 +36,9 @@ const TaskDetail: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('任务详情页面加载，任务ID:', id);
     setLoading(true);
     api.get(`/api/tasks/${id}`)
       .then(res => {
-        console.log('任务详情API响应:', res.data);
         setTask(res.data);
         setNewPrice(res.data.reward.toString());
         // 如果任务已完成，加载评价
@@ -141,17 +139,13 @@ const TaskDetail: React.FC = () => {
   // 检查用户申请状态
   const checkUserApplication = async () => {
     if (!user || !task || user.id === task.poster_id) {
-      console.log('不是申请者或没有登录，跳过申请状态检查');
       return; // 不是申请者或没有登录
     }
     
-    console.log('开始检查用户申请状态...', { userId: user.id, taskId: task.id });
     try {
       // 获取用户的所有申请记录
       const userApplications = await getUserApplications();
-      console.log('用户申请记录:', userApplications);
       const userApp = userApplications.find((app: any) => app.task_id === task.id);
-      console.log('当前任务的申请状态:', userApp);
       setUserApplication(userApp);
     } catch (error) {
       console.error('检查用户申请状态失败:', error);
@@ -195,9 +189,7 @@ const TaskDetail: React.FC = () => {
 
   const loadTaskReviews = async () => {
     try {
-      console.log('开始加载任务评价数据，任务ID:', id);
       const reviewsData = await getTaskReviews(Number(id));
-      console.log('评价数据加载成功:', reviewsData);
       setReviews(reviewsData);
     } catch (error) {
       console.error('加载评价失败:', error);
@@ -206,15 +198,12 @@ const TaskDetail: React.FC = () => {
 
   const loadApplications = async () => {
     if (!user || !task || user.id !== task.poster_id) {
-      console.log('不是任务发布者，跳过加载申请者列表');
       return;
     }
     
-    console.log('开始加载申请者列表...');
     setLoadingApplications(true);
     try {
       const res = await getTaskApplications(Number(id));
-      console.log('申请者列表加载成功:', res);
       setApplications(res);
     } catch (error) {
       console.error('加载申请者列表失败:', error);
@@ -247,8 +236,6 @@ const TaskDetail: React.FC = () => {
 
   const handleChat = async () => {
     // 跳转到消息页并带上发布者id
-    console.log('任务详情:', task);
-    console.log('发布者ID:', task.poster_id);
     if (!task.poster_id) {
       alert('无法获取发布者信息，请联系客服');
       return;
@@ -262,14 +249,12 @@ const TaskDetail: React.FC = () => {
           receiver_id: task.poster_id,
           content: messageContent
         });
-        console.log('已自动发送消息:', messageContent);
       } catch (error) {
         console.error('自动发送消息失败:', error);
         // 即使发送失败，也继续跳转到聊天页面
       }
     }
 
-    console.log('跳转到消息页面，URL:', `/message?uid=${task.poster_id}`);
     navigate(`/message?uid=${task.poster_id}`);
   };
 
@@ -280,9 +265,7 @@ const TaskDetail: React.FC = () => {
     }
     setActionLoading(true);
     try {
-      console.log('开始接受任务...', { taskId: id, currentStatus: task?.status });
       const result = await applyForTask(Number(id));
-      console.log('接受任务API调用成功:', result);
       
       alert('任务申请成功！\n\n请等待任务发布者审核您的申请，审核通过后您就可以开始执行任务了。');
       
@@ -290,19 +273,15 @@ const TaskDetail: React.FC = () => {
       setHasApplied(true);
       
       // 重新获取任务信息
-      console.log('重新获取任务信息...');
       const res = await api.get(`/api/tasks/${id}`);
-      console.log('重新获取任务信息成功:', res.data);
       setTask(res.data);
     } catch (error: any) {
       console.error('接受任务失败:', error);
       console.error('错误详情:', error.response?.data);
       
       // 即使接受任务失败，也要重新获取任务信息，因为可能任务已经被接受了
-      console.log('重新获取任务信息以更新状态...');
       try {
         const res = await api.get(`/api/tasks/${id}`);
-        console.log('重新获取任务信息成功:', res.data);
         setTask(res.data);
         
         // 如果任务已经被当前用户接受，显示不同的提示
@@ -466,7 +445,6 @@ const TaskDetail: React.FC = () => {
   const canReview = () => {
     if (!user || !task) return false;
     // 只有任务参与者且任务已确认完成才能评价
-    console.log('canReview检查:', {
       user_id: user.id,
       poster_id: task.poster_id,
       taker_id: task.taker_id,
@@ -478,7 +456,6 @@ const TaskDetail: React.FC = () => {
 
   const hasUserReviewed = () => {
     if (!user) return false;
-    console.log('hasUserReviewed检查:', {
       userId: user.id,
       reviewsLength: reviews.length,
       reviews: reviews,
