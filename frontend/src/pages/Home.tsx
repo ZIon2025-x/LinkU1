@@ -530,7 +530,7 @@ const Home: React.FC = () => {
         }} />
         
         <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
-          {/* SEO 优化的主标题 */}
+          {/* SEO 优化的主标题 - 使用 h2 因为 index.html 已经有 h1 */}
           <h2 className="hero-title" style={{
             fontSize: '48px',
             fontWeight: '800',
