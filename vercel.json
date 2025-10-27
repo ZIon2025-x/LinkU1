@@ -85,54 +85,54 @@
       ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://api.link2ur.com/api/$1"
+      "source": "/api/(.*)",
+      "destination": "https://api.link2ur.com/api/$1"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
     },
     {
-      "src": "/sitemap.xml",
-      "dest": "/sitemap.xml"
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
     },
     {
-      "src": "/robots.txt",
-      "dest": "/robots.txt"
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
     },
     {
-      "src": "/baidu_verify_codeva-N1G3JdDSeL.html",
-      "dest": "/baidu_verify_codeva-N1G3JdDSeL.html"
+      "source": "/baidu_verify_codeva-N1G3JdDSeL.html",
+      "destination": "/baidu_verify_codeva-N1G3JdDSeL.html"
     },
     {
-      "src": "/BingSiteAuth.xml",
-      "dest": "/BingSiteAuth.xml"
+      "source": "/BingSiteAuth.xml",
+      "destination": "/BingSiteAuth.xml"
     },
     {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico"
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
     },
     {
-      "src": "/favicon.png",
-      "dest": "/favicon.png"
+      "source": "/favicon.png",
+      "destination": "/favicon.png"
     },
     {
-      "src": "/logo192.png",
-      "dest": "/logo192.png"
+      "source": "/logo192.png",
+      "destination": "/logo192.png"
     },
     {
-      "src": "/logo512.png",
-      "dest": "/logo512.png"
+      "source": "/logo512.png",
+      "destination": "/logo512.png"
     },
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json"
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "env": {
