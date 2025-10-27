@@ -38,33 +38,14 @@ import ServiceAuth from './components/ServiceAuth';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
 
-// 语言重定向组件 - 优化重定向策略
+// 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
-  const [language, setLanguage] = React.useState<Language | null>(null);
-
-  React.useEffect(() => {
-    // 检测用户语言偏好
-    const detectedLanguage = detectBrowserLanguage();
-    setLanguage(detectedLanguage);
-    
-    // 立即重定向，避免长时间加载
-    const redirectPath = `/${detectedLanguage}`;
-    window.location.replace(redirectPath);
-  }, []);
-
-  // 显示重定向状态
-  return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      height: '100vh',
-      fontSize: '18px',
-      color: '#666'
-    }}>
-      Redirecting to your preferred language...
-    </div>
-  );
+  const detectedLanguage = detectBrowserLanguage();
+  const redirectPath = `/${detectedLanguage}`;
+  
+  // 使用Navigate组件而不是window.location.replace，避免页面重新加载
+  // 这样可以避免Bing爬虫遇到JavaScript重定向问题
+  return <Navigate to={redirectPath} replace />;
 };
 
 // 语言路由组件
