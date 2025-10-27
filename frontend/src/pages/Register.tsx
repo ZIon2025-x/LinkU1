@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, message, Alert, Typography } from 'antd';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import LoginModal from '../components/LoginModal';
 import api from '../api';
+import SEOHead from '../components/SEOHead';
 
 const { Text, Paragraph } = Typography;
 
@@ -41,6 +42,7 @@ const PasswordRequirementItem = styled.div<{ valid: boolean }>`
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +55,9 @@ const Register: React.FC = () => {
     errors: [],
     suggestions: []
   });
+  
+  // 生成canonical URL
+  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
 
   // 密码验证函数
   const validatePassword = async (pwd: string) => {
@@ -148,6 +153,12 @@ const Register: React.FC = () => {
 
   return (
     <Wrapper>
+      <SEOHead 
+        title="注册 - Link²Ur"
+        description="注册Link²Ur账户，加入本地生活服务平台"
+        canonicalUrl={canonicalUrl}
+        noindex={true}
+      />
       {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',

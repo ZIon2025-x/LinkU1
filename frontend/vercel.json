@@ -51,8 +51,23 @@
       "permanent": true
     },
     {
+      "source": "/en",
+      "destination": "/en/",
+      "permanent": true
+    },
+    {
+      "source": "/en",
+      "destination": "/en/",
+      "permanent": true
+    },
+    {
       "source": "/zh",
       "destination": "/zh/",
+      "permanent": true
+    },
+    {
+      "source": "/contact",
+      "destination": "/en/faq",
       "permanent": true
     }
   ],

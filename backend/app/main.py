@@ -73,6 +73,19 @@ app.add_middleware(
 #     return await check_security_middleware(request, call_next)
 
 @app.middleware("http")
+async def add_noindex_header(request: Request, call_next):
+    """为API端点添加noindex头，防止搜索引擎索引"""
+    response = await call_next(request)
+    
+    # 检查是否是API端点
+    if request.url.path.startswith("/api"):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    elif request.url.hostname == "api.link2ur.com" or request.url.hostname == "api.link2ur.com/":
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    
+    return response
+
+@app.middleware("http")
 async def custom_cors_middleware(request: Request, call_next):
     """自定义CORS中间件，覆盖Railway默认设置"""
     # 处理OPTIONS预检请求

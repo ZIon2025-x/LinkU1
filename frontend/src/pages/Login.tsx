@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
+import SEOHead from '../components/SEOHead';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -29,11 +30,15 @@ const ErrorMsg = styled.div`
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 生成canonical URL
+  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
 
   // 检查用户是否已登录
   useEffect(() => {
@@ -98,6 +103,12 @@ const Login: React.FC = () => {
 
   return (
     <Wrapper>
+      <SEOHead 
+        title="登录 - Link²Ur"
+        description="登录Link²Ur，探索本地生活服务机会"
+        canonicalUrl={canonicalUrl}
+        noindex={true}
+      />
       {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -11,6 +12,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
@@ -209,8 +211,12 @@ interface Notification {
 }
 
 const Home: React.FC = () => {
+  const location = useLocation();
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  
+  // 生成canonical URL
+  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
   
   // Task types array - using translations
   const TASK_TYPES = [
@@ -458,6 +464,11 @@ const Home: React.FC = () => {
 
   return (
     <div>
+      <SEOHead 
+        title="Link²Ur - 本地生活服务平台"
+        description="探索本地生活服务机会，连接需求与服务提供者"
+        canonicalUrl={canonicalUrl}
+      />
       {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
