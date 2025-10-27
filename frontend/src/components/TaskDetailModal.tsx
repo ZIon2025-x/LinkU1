@@ -383,11 +383,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     // 直接从 reviews 数组中查找当前用户的评价
     const userReview = reviews.find(review => review.user_id === user.id);
     const hasReviewed = !!userReview;
-      userId: user.id, 
-      taskId: task.id,
-      totalReviews: reviews.length,
-      reviews: reviews.map(r => ({ id: r.id, user_id: r.user_id, task_id: r.task_id, is_anonymous: r.is_anonymous }))
-    });
     return hasReviewed;
   };
 

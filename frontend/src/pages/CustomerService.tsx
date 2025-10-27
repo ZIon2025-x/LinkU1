@@ -235,11 +235,6 @@ const CustomerService: React.FC = () => {
       const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
       if (serverTimezoneInfo) {
         setTimezoneInfo(serverTimezoneInfo);
-          userTimezone: detectedTimezone,
-          serverTimezone: serverTimezoneInfo.server_timezone,
-          serverTime: serverTimezoneInfo.server_time,
-          isDST: serverTimezoneInfo.is_dst
-        });
       }
     } catch (error) {
       console.error('初始化时区信息失败:', error);
@@ -1104,14 +1099,6 @@ const CustomerService: React.FC = () => {
             // 使用 ref 获取最新的 selectedSession
             const latestSelectedSession = selectedSessionRef.current;
             
-            // 检查是否有聊天ID和选中会话
-              chat_id: msg.chat_id,
-              selectedSession_chat_id: latestSelectedSession?.chat_id,
-              from: msg.from,
-              receiver_id: msg.receiver_id,
-              content: msg.content?.substring(0, 50)
-            });
-            
             // 处理客服对话消息
             if (msg.chat_id && latestSelectedSession && msg.chat_id === latestSelectedSession.chat_id) {
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
@@ -1133,7 +1120,6 @@ const CustomerService: React.FC = () => {
                     messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
                   }
                 }, 100);
-              } else {
               }
             }
             // 兼容旧的普通消息格式
@@ -1161,7 +1147,6 @@ const CustomerService: React.FC = () => {
                   }
                 }, 100);
               }
-            } else {
             }
           } catch (error) {
             console.error('客服WebSocket消息解析错误:', error);
@@ -1181,8 +1166,7 @@ const CustomerService: React.FC = () => {
             setTimeout(() => {
               connectWebSocket();
             }, reconnectDelay);
-          } else if (event.code === 1000) {
-          } else {
+          } else if (event.code !== 1000) {
             console.error('客服WebSocket重连失败，已达到最大重连次数');
           }
         };

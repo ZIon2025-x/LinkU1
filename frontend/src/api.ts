@@ -177,11 +177,6 @@ api.interceptors.request.use(async config => {
     }
   }
   
-    method: config.method,
-    url: config.url,
-    headers: config.headers,
-    withCredentials: config.withCredentials
-  });
   return config;
 });
 
@@ -194,11 +189,6 @@ function clearRetryCounters() {
 // 响应拦截器 - 处理认证失败、token刷新和CSRF错误
 api.interceptors.response.use(
   response => {
-      status: response.status,
-      url: response.config.url,
-      data: response.data
-    });
-    
     // 成功响应后清理重试计数器
     if (response.status >= 200 && response.status < 300) {
       const globalKey = 'global_401_retry';
@@ -210,14 +200,6 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
-      status: error.response?.status,
-      url: error.config?.url,
-      method: error.config?.method,
-      message: error.message,
-      data: error.response?.data,
-      headers: error.config?.headers
-    });
-    
     // 首先检查是否是CSRF token验证失败
     if ((error.response?.status === 401 || error.response?.status === 403) && 
         error.response?.data?.detail?.includes('CSRF token验证失败')) {

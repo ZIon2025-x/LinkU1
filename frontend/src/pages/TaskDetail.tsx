@@ -445,22 +445,11 @@ const TaskDetail: React.FC = () => {
   const canReview = () => {
     if (!user || !task) return false;
     // 只有任务参与者且任务已确认完成才能评价
-      user_id: user.id,
-      poster_id: task.poster_id,
-      taker_id: task.taker_id,
-      status: task.status,
-      can_review: (task.poster_id === user.id || task.taker_id === user.id) && task.status === 'completed'
-    });
     return (task.poster_id === user.id || task.taker_id === user.id) && task.status === 'completed';
   };
 
   const hasUserReviewed = () => {
     if (!user) return false;
-      userId: user.id,
-      reviewsLength: reviews.length,
-      reviews: reviews,
-      hasReviewed: reviews.some(review => review.user_id === user.id)
-    });
     return reviews.some(review => review.user_id === user.id);
   };
 
