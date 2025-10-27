@@ -81,9 +81,26 @@ else:
     AsyncSessionLocal = None
 
 # 为了向后兼容，保留同步引擎（用于Alembic等工具）
-
-sync_engine = create_engine(DATABASE_URL, echo=False, future=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+# 优化同步引擎连接池配置
+sync_engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    future=True,
+    pool_size=POOL_SIZE,
+    max_overflow=MAX_OVERFLOW,
+    pool_timeout=POOL_TIMEOUT,
+    pool_recycle=POOL_RECYCLE,
+    pool_pre_ping=POOL_PRE_PING,
+    connect_args={
+        "options": "-c statement_timeout=30000"  # 30秒查询超时
+    }
+)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=sync_engine,
+    expire_on_commit=False  # 提高性能，避免不必要的session刷新
+)
 
 
 # 异步数据库依赖
