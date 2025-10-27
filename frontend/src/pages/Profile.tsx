@@ -501,7 +501,7 @@ const Profile: React.FC = () => {
             }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
-                {user.task_count || 0}
+                {user.task_count}
               </div>
               <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.totalTasks')}</div>
             </div>
@@ -516,7 +516,7 @@ const Profile: React.FC = () => {
             }}>
               <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
               <div style={{ fontSize: '24px', fontWeight: '800', marginBottom: '4px' }}>
-                {user.completed_task_count || 0}
+                {user.completed_task_count}
               </div>
               <div style={{ fontSize: '14px', opacity: 0.9 }}>{t('profile.completedTasks')}</div>
             </div>
