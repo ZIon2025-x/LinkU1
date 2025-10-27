@@ -316,59 +316,7 @@ const Footer: React.FC = () => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
             >
-              ▶
-            </a>
-            
-            <a href="#" style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-            >
               in
-            </a>
-            
-            <a href="#" style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-            >
-              📷
             </a>
             
             <button 
@@ -405,8 +353,7 @@ const Footer: React.FC = () => {
                 style={{
                   width: '20px',
                   height: '20px',
-                  objectFit: 'contain',
-                  filter: 'brightness(0) invert(1)'
+                  objectFit: 'contain'
                 }}
               />
             </button>
