@@ -318,77 +318,6 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* 统计数据网格 */}
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-              gap: 24,
-              marginBottom: 32,
-              maxWidth: 600,
-              margin: '0 auto 32px'
-            }}>
-              <div style={{
-                padding: '20px 16px',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                borderRadius: 16,
-                color: '#fff',
-                textAlign: 'center',
-                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)'
-              }}>
-                <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.user.task_count}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.totalTasks')}
-                </div>
-              </div>
-              <div style={{
-                padding: '20px 16px',
-                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                borderRadius: 16,
-                color: '#fff',
-                textAlign: 'center',
-                boxShadow: '0 8px 25px rgba(76, 175, 80, 0.3)'
-              }}>
-                <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.user.completed_task_count}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.completedTasks')}
-                </div>
-              </div>
-              <div style={{
-                padding: '20px 16px',
-                background: 'linear-gradient(135deg, #2196F3, #1976D2)',
-                borderRadius: 16,
-                color: '#fff',
-                textAlign: 'center',
-                boxShadow: '0 8px 25px rgba(33, 150, 243, 0.3)'
-              }}>
-                <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.stats.total_reviews}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.totalReviews')}
-                </div>
-              </div>
-              <div style={{
-                padding: '20px 16px',
-                background: 'linear-gradient(135deg, #FF9800, #F57C00)',
-                borderRadius: 16,
-                color: '#fff',
-                textAlign: 'center',
-                boxShadow: '0 8px 25px rgba(255, 152, 0, 0.3)'
-              }}>
-                <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
-                  {profile.user.days_since_joined}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.joinDays')}
-                </div>
-              </div>
-            </div>
-
             {!isOwnProfile && (
               <button
                 onClick={handleChat}
@@ -529,10 +458,10 @@ const UserProfile: React.FC = () => {
               }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
-                  {Math.round((profile.user.completed_task_count / Math.max(profile.stats.taken_tasks, 1)) * 100)}%
+                  {profile.user.completed_task_count}
                 </div>
                 <div style={{ fontSize: 14, opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {t('userProfile.completionRate')}
+                  {t('userProfile.completedTasks')}
                 </div>
               </div>
             </div>
