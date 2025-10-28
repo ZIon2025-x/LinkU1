@@ -16,6 +16,7 @@ class UserCreate(UserBase):
     avatar: Optional[str] = ""
     agreed_to_terms: Optional[bool] = False
     terms_agreed_at: Optional[str] = None
+    inviter_id: Optional[str] = None
 
 
 class UserUpdate(BaseModel):

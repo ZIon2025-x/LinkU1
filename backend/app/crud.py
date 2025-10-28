@@ -122,6 +122,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         avatar=user.avatar or "",
         agreed_to_terms=1 if user.agreed_to_terms else 0,
         terms_agreed_at=terms_agreed_at,
+        inviter_id=user.inviter_id,
     )
     db.add(db_user)
     db.commit()

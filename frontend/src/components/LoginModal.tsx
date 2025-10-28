@@ -32,7 +32,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
     password: '',
     confirmPassword: '',
     username: '',
-    phone: ''
+    phone: '',
+    inviterId: ''
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -141,6 +142,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: formData.password,
           name: formData.username,  // 改为 name
           phone: formData.phone,
+          inviter_id: formData.inviterId || null,  // 邀请者ID
           agreed_to_terms: agreedToTerms,  // 记录用户同意状态
           terms_agreed_at: new Date().toISOString()  // 记录同意时间
         });
@@ -166,7 +168,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: '',
           confirmPassword: '',
           username: '',
-          phone: ''
+          phone: '',
+          inviterId: ''
         });
       }
     } catch (err: any) {
@@ -414,6 +417,41 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder={t('common.phoneOptional')}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#ddd';
+                  }}
+                />
+              </div>
+
+              {/* 邀请者ID输入框 */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#333',
+                  marginBottom: '8px'
+                }}>
+                  邀请者ID (选填)
+                </label>
+                <input
+                  type="text"
+                  name="inviterId"
+                  value={formData.inviterId}
+                  onChange={handleInputChange}
+                  placeholder="请输入邀请者ID"
                   style={{
                     width: '100%',
                     padding: '12px 16px',
