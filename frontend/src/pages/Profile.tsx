@@ -391,10 +391,103 @@ const Profile: React.FC = () => {
               fontFamily: 'monospace',
               background: 'rgba(59, 130, 246, 0.1)',
               padding: '4px 8px',
-              borderRadius: '8px'
-            }}>
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => {
+              navigator.clipboard.writeText(user.id);
+              // 可以添加一个简单的提示
+              const button = document.querySelector('[data-copy-id]') as HTMLElement;
+              if (button) {
+                const originalText = button.textContent;
+                button.textContent = t('profile.idCopied');
+                setTimeout(() => {
+                  button.textContent = originalText;
+                }, 2000);
+              }
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            data-copy-id>
               {user.id}
             </span>
+          </div>
+          
+          {/* 邀请提示 */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '20px',
+            padding: '12px 16px',
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+            borderRadius: '12px',
+            border: '1px solid rgba(34, 197, 94, 0.2)',
+            position: 'relative'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#059669'
+            }}>
+              <span>{t('profile.inviteTip')}</span>
+            </div>
+            <div style={{
+              fontSize: '13px',
+              color: '#047857',
+              textAlign: 'center',
+              lineHeight: '1.4'
+            }}>
+              {t('profile.inviteDescription')}
+            </div>
+            <button
+              style={{
+                background: 'linear-gradient(135deg, #22c55e 0%, #10b981 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
+              }}
+              onClick={() => {
+                navigator.clipboard.writeText(user.id);
+                const button = document.querySelector('[data-copy-invite]') as HTMLElement;
+                if (button) {
+                  const originalText = button.textContent;
+                  button.textContent = t('profile.idCopied');
+                  button.style.background = 'linear-gradient(135deg, #16a34a 0%, #059669 100%)';
+                  setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(135deg, #22c55e 0%, #10b981 100%)';
+                  }, 2000);
+                }
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 8px rgba(34, 197, 94, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(34, 197, 94, 0.2)';
+              }}
+              data-copy-invite>
+              {t('profile.copyId')}
+            </button>
           </div>
           
           <div style={{
