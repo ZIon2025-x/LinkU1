@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import enTranslations from '../locales/en.json';
 import zhTranslations from '../locales/zh.json';
 import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, DEFAULT_LANGUAGE } from '../utils/i18n';
@@ -7,7 +7,7 @@ export type Language = 'en' | 'zh';
 
 interface LanguageContextType {
   language: Language;
-  setLanguage: (lang: Language) => void;
+  setLanguage: (lang: Language, navigate?: (path: string) => void) => void;
   t: (key: string) => string;
 }
 
@@ -24,7 +24,7 @@ interface LanguageProviderProps {
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   // 从URL路径或localStorage检测语言
-  const [language, setLanguage] = useState<Language>(() => {
+  const [language, setLanguageState] = useState<Language>(() => {
     // 首先尝试从URL检测（如果可用）- 优先级最高
     if (typeof window !== 'undefined') {
       const urlLanguage = getLanguageFromPath(window.location.pathname);
@@ -43,20 +43,29 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return detectBrowserLanguage();
   });
 
-  // 监听URL变化，同步语言状态
+  // 监听路由变化，同步语言状态（浏览器前进/后退按钮）
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlLanguage = getLanguageFromPath(window.location.pathname);
-      if (urlLanguage && ['en', 'zh'].includes(urlLanguage) && urlLanguage !== language) {
-        setLanguage(urlLanguage);
-        localStorage.setItem('language', urlLanguage);
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const urlLanguage = getLanguageFromPath(window.location.pathname);
+        if (urlLanguage && ['en', 'zh'].includes(urlLanguage) && urlLanguage !== language) {
+          setLanguageState(urlLanguage);
+          localStorage.setItem('language', urlLanguage);
+        }
       }
-    }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [language]);
 
   // 保存语言设置到localStorage并更新URL
-  const handleSetLanguage = (lang: Language) => {
-    setLanguage(lang);
+  const handleSetLanguage = useCallback((lang: Language, navigate?: (path: string) => void) => {
+    // 先更新状态
+    setLanguageState(lang);
     localStorage.setItem('language', lang);
 
     // 更新URL以反映新的语言设置
@@ -65,9 +74,15 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
 
     // 如果路径发生变化，进行导航
     if (newPath !== currentPath) {
-      window.location.href = newPath;
+      // 优先使用客户端导航（如果可用）
+      if (navigate) {
+        navigate(newPath);
+      } else {
+        // 降级到强制刷新
+        window.location.href = newPath;
+      }
     }
-  };
+  }, []);
 
   // 翻译函数
   const t = (key: string): string => {
@@ -94,8 +109,14 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     return typeof value === 'string' ? value : key;
   };
 
+  const value = React.useMemo(() => ({
+    language,
+    setLanguage: handleSetLanguage,
+    t
+  }), [language, handleSetLanguage]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Select } from 'antd';
 import { GlobalOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import styled from 'styled-components';
 
@@ -31,9 +32,10 @@ const LanguageSwitcherContainer = styled.div`
 
 const LanguageSwitcher: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
 
   const handleLanguageChange = (value: string) => {
-    setLanguage(value as 'en' | 'zh');
+    setLanguage(value as 'en' | 'zh', navigate);
   };
 
   return (
