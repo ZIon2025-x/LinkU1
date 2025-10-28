@@ -530,8 +530,8 @@ const Home: React.FC = () => {
         }} />
         
         <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
-          {/* SEO 优化的主标题 - 使用 h2 因为 index.html 已经有 h1 */}
-          <h2 className="hero-title" style={{
+          {/* SEO 优化的主标题 - 使用 h1 作为页面主标题 */}
+          <h1 className="hero-title" style={{
             fontSize: '48px',
             fontWeight: '800',
             marginBottom: '24px',
@@ -543,7 +543,7 @@ const Home: React.FC = () => {
             <span style={{display: 'block', color: '#FFD700', marginTop: '0.5em'}}>
               {t('home.subtitle')}
             </span>
-          </h2>
+          </h1>
           
           <p className="hero-subtitle" style={{
             fontSize: '20px',
