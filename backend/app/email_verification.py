@@ -73,7 +73,8 @@ class EmailVerificationManager:
             created_at=datetime.utcnow(),
             expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
             agreed_to_terms=1 if user_data.agreed_to_terms else 0,
-            terms_agreed_at=terms_agreed_at
+            terms_agreed_at=terms_agreed_at,
+            inviter_id=user_data.inviter_id if hasattr(user_data, 'inviter_id') else None
         )
         
         db.add(pending_user)
@@ -154,7 +155,8 @@ class EmailVerificationManager:
                         user_level="normal",
                         created_at=datetime.utcnow(),
                         agreed_to_terms=pending_user.agreed_to_terms,
-                        terms_agreed_at=pending_user.terms_agreed_at
+                        terms_agreed_at=pending_user.terms_agreed_at,
+                        inviter_id=pending_user.inviter_id
                     )
                     
                     db.add(user)

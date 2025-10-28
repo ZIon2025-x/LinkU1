@@ -473,6 +473,7 @@ class PendingUser(Base):
     expires_at = Column(DateTime, nullable=False)
     agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
+    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请者ID
     
     # 索引
     __table_args__ = (
