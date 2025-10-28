@@ -16,10 +16,6 @@ echo "=== 文件检查 ==="
 ls -la app/
 echo "app/main.py 存在: $([ -f app/main.py ] && echo 'YES' || echo 'NO')"
 
-# 运行数据库迁移
-echo "=== 数据库迁移 ==="
-python migrate_inviter_id.py
-
 # 检查导入
 echo "=== 导入测试 ==="
 python -c "import app.main; print('导入成功')" || exit 1
