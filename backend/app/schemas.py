@@ -221,11 +221,13 @@ QS_TOP100_CITIES = [
 TASK_TYPES = [
     "Housekeeping",
     "Campus Life",
-    "Second-hand Goods",
+    "Second-hand & Rental",
     "Errand Running",
     "Skill Service",
     "Social Help",
     "Transportation",
+    "Pet Care",
+    "Life Convenience",
     "Other",
 ]
 

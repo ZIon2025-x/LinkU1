@@ -14,8 +14,8 @@ const LOCATION_OPTIONS = [
 
 // 任务类型列表常量
 const TASK_TYPE_OPTIONS = [
-  'Housekeeping', 'Campus Life', 'Second-hand Goods', 'Errand Running', 
-  'Skill Service', 'Social Help', 'Transportation', 'Other'
+  'Housekeeping', 'Campus Life', 'Second-hand & Rental', 'Errand Running', 
+  'Skill Service', 'Social Help', 'Transportation', 'Pet Care', 'Life Convenience', 'Other'
 ];
 
 const Settings: React.FC = () => {
