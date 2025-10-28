@@ -383,18 +383,6 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"创建索引时出错（可继续运行）: {e}")
         
-        # 添加 pending_users.inviter_id 列迁移
-        try:
-            database_url = os.getenv("DATABASE_URL")
-            if database_url:
-                import sys
-                sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-                from migrate_pending_users_inviter_id import add_pending_users_inviter_id_column
-                add_pending_users_inviter_id_column()
-                logger.info("✅ pending_users.inviter_id 列迁移完成")
-        except Exception as e:
-            logger.warning(f"pending_users.inviter_id 列迁移失败（可继续运行）: {e}")
-        
         # ⚠️ 生产环境禁用自动迁移
         if environment == "production":
             logger.info("ℹ️  生产环境跳过自动迁移，请使用: railway run alembic upgrade head")
