@@ -588,3 +588,27 @@ class FeaturedTaskExpert(Base):
         Index("ix_task_experts_display_order", display_order),
         Index("ix_task_experts_created_at", created_at),
     )
+
+
+class UserPreferences(Base):
+    """用户任务偏好模型"""
+    __tablename__ = "user_preferences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id"), unique=True, nullable=False)  # 关联用户
+    task_types = Column(Text, nullable=True)  # JSON格式存储偏好的任务类型
+    locations = Column(Text, nullable=True)  # JSON格式存储偏好的地点
+    task_levels = Column(Text, nullable=True)  # JSON格式存储偏好的任务等级
+    keywords = Column(Text, nullable=True)  # JSON格式存储偏好关键词
+    min_deadline_days = Column(Integer, default=1)  # 最少截止时间（天）
+    created_at = Column(DateTime, default=get_uk_time)
+    updated_at = Column(DateTime, default=get_uk_time, onupdate=get_uk_time)
+    
+    # 关系
+    user = relationship("User", backref="preferences")
+    
+    # 索引
+    __table_args__ = (
+        Index("ix_user_preferences_user_id", user_id),
+        Index("ix_user_preferences_updated_at", updated_at),
+    )

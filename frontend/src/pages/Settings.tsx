@@ -10,6 +10,7 @@ const Settings: React.FC = () => {
   const [sessions, setSessions] = useState<Array<any>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string>('');
+  const [newKeyword, setNewKeyword] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,6 +25,13 @@ const Settings: React.FC = () => {
       profile_public: true,
       show_contact: false,
       show_tasks: true
+    },
+    preferences: {
+      task_types: [] as string[],
+      locations: [] as string[],
+      task_levels: [] as string[],
+      min_deadline_days: 1,
+      keywords: [] as string[]
     }
   });
 
@@ -42,14 +50,34 @@ const Settings: React.FC = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
-      // TODO: 调用真实的用户设置API
-      // const userData = await getUserSettings();
-      // setUser(userData);
-      // setFormData(userData.settings);
+      
+      // 加载用户偏好设置
+      try {
+        const preferencesResponse = await fetch('/api/user-preferences', {
+          credentials: 'include'
+        });
+        
+        if (preferencesResponse.ok) {
+          const preferences = await preferencesResponse.json();
+          setFormData(prev => ({
+            ...prev,
+            preferences: {
+              task_types: preferences.task_types || [],
+              locations: preferences.locations || [],
+              task_levels: preferences.task_levels || [],
+              min_deadline_days: preferences.min_deadline_days || 1,
+              keywords: preferences.keywords || []
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('加载用户偏好失败:', error);
+      }
       
       // 暂时显示空数据，等待后端API实现
       setUser(null);
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: '',
         email: '',
         phone: '',
@@ -64,7 +92,7 @@ const Settings: React.FC = () => {
           show_contact: false,
           show_tasks: true
         }
-      });
+      }));
     } catch (error) {
       console.error('加载用户设置失败:', error);
       setUser(null);
@@ -75,14 +103,17 @@ const Settings: React.FC = () => {
 
   const handleInputChange = (field: string, value: any) => {
     if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent as keyof typeof prev] as any),
-          [child]: value
+      const parts = field.split('.');
+      setFormData(prev => {
+        const newData = { ...prev };
+        let current: any = newData;
+        for (let i = 0; i < parts.length - 1; i++) {
+          current[parts[i]] = { ...current[parts[i]] };
+          current = current[parts[i]];
         }
-      }));
+        current[parts[parts.length - 1]] = value;
+        return newData;
+      });
     } else {
       setFormData(prev => ({
         ...prev,
@@ -91,8 +122,50 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
-    alert('设置已保存！');
+  const handleSave = async () => {
+    try {
+      // 保存任务偏好设置
+      const preferencesResponse = await fetch('/api/user-preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData.preferences)
+      });
+
+      if (preferencesResponse.ok) {
+        alert('偏好设置已保存！');
+      } else {
+        const error = await preferencesResponse.json();
+        alert(`保存失败: ${error.detail || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('保存偏好设置失败:', error);
+      alert('保存失败，请稍后重试');
+    }
+  };
+
+  const addKeyword = () => {
+    if (newKeyword.trim() && 
+        !formData.preferences.keywords.includes(newKeyword.trim()) &&
+        formData.preferences.keywords.length < 20) {
+      const newKeywords = [...formData.preferences.keywords, newKeyword.trim()];
+      handleInputChange('preferences.keywords', newKeywords);
+      setNewKeyword('');
+    }
+  };
+
+  const removeKeyword = (keyword: string) => {
+    const newKeywords = formData.preferences.keywords.filter(k => k !== keyword);
+    handleInputChange('preferences.keywords', newKeywords);
+  };
+
+  const handleKeywordKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addKeyword();
+    }
   };
 
   const handleChangePassword = () => {
@@ -172,6 +245,7 @@ const Settings: React.FC = () => {
 
   const tabs = [
     { id: 'profile', label: '个人资料', icon: '👤' },
+    { id: 'preferences', label: '任务偏好', icon: '🎯' },
     { id: 'notifications', label: '通知设置', icon: '🔔' },
     { id: 'privacy', label: '隐私设置', icon: '🔒' },
     { id: 'security', label: '安全设置', icon: '🛡️' }
@@ -302,15 +376,21 @@ const Settings: React.FC = () => {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      disabled
                       style={{
                         width: '100%',
                         padding: '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        background: '#f8f9fa',
+                        color: '#666',
+                        cursor: 'not-allowed'
                       }}
                     />
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                      暂不支持修改
+                    </p>
                   </div>
 
                   <div>
@@ -320,15 +400,21 @@ const Settings: React.FC = () => {
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      disabled
                       style={{
                         width: '100%',
                         padding: '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        background: '#f8f9fa',
+                        color: '#666',
+                        cursor: 'not-allowed'
                       }}
                     />
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                      暂不支持修改
+                    </p>
                   </div>
 
                   <div>
@@ -339,6 +425,7 @@ const Settings: React.FC = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
+                      placeholder="请输入手机号"
                       style={{
                         width: '100%',
                         padding: '12px',
@@ -355,13 +442,16 @@ const Settings: React.FC = () => {
                     </label>
                     <select
                       value={formData.timezone}
-                      onChange={(e) => handleInputChange('timezone', e.target.value)}
+                      disabled
                       style={{
                         width: '100%',
                         padding: '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        background: '#f8f9fa',
+                        color: '#666',
+                        cursor: 'not-allowed'
                       }}
                     >
                       <option value="UTC">UTC</option>
@@ -369,6 +459,324 @@ const Settings: React.FC = () => {
                       <option value="America/New_York">纽约时间</option>
                       <option value="Europe/London">伦敦时间</option>
                     </select>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                      暂不支持修改
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'preferences' && (
+              <div>
+                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🎯 任务偏好</h2>
+                
+                <div style={{ display: 'grid', gap: '30px' }}>
+                  {/* 偏好的任务类型 */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: '16px'
+                    }}>
+                      📋 偏好的任务类型
+                    </label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      选择您感兴趣的任务类型，系统会优先为您推荐这些类型的任务
+                    </p>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      {['家政服务', '校园生活', '二手租赁', '跑腿代办', '技能服务', '社交帮助', '交通出行', '宠物护理', '生活便利', '其他'].map(type => (
+                        <label key={type} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          padding: '12px',
+                          border: formData.preferences.task_types.includes(type) ? '2px solid #3b82f6' : '1px solid #ddd',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: formData.preferences.task_types.includes(type) ? '#eff6ff' : '#fff',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={formData.preferences.task_types.includes(type)}
+                            onChange={(e) => {
+                              const newTypes = e.target.checked
+                                ? [...formData.preferences.task_types, type]
+                                : formData.preferences.task_types.filter(t => t !== type);
+                              handleInputChange('preferences.task_types', newTypes);
+                            }}
+                            style={{ marginRight: '8px', width: '16px', height: '16px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '14px' }}>{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 偏好的地点 */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: '16px'
+                    }}>
+                      📍 偏好的地点
+                    </label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      选择您希望接收任务的地理位置
+                    </p>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      {['Online', 'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow', 'Bristol', 'Sheffield', 'Leeds', 'Nottingham'].map(location => (
+                        <label key={location} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          padding: '12px',
+                          border: formData.preferences.locations.includes(location) ? '2px solid #3b82f6' : '1px solid #ddd',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: formData.preferences.locations.includes(location) ? '#eff6ff' : '#fff',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={formData.preferences.locations.includes(location)}
+                            onChange={(e) => {
+                              const newLocations = e.target.checked
+                                ? [...formData.preferences.locations, location]
+                                : formData.preferences.locations.filter(l => l !== location);
+                              handleInputChange('preferences.locations', newLocations);
+                            }}
+                            style={{ marginRight: '8px', width: '16px', height: '16px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '14px' }}>{location}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 偏好的任务等级 */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: '16px'
+                    }}>
+                      🌟 偏好的任务等级
+                    </label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      选择您感兴趣的任務等級
+                    </p>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: '12px'
+                    }}>
+                      {['Normal', 'VIP', 'Super'].map(level => (
+                        <label key={level} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          padding: '12px',
+                          border: formData.preferences.task_levels.includes(level) ? '2px solid #3b82f6' : '1px solid #ddd',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: formData.preferences.task_levels.includes(level) ? '#eff6ff' : '#fff',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={formData.preferences.task_levels.includes(level)}
+                            onChange={(e) => {
+                              const newLevels = e.target.checked
+                                ? [...formData.preferences.task_levels, level]
+                                : formData.preferences.task_levels.filter(l => l !== level);
+                              handleInputChange('preferences.task_levels', newLevels);
+                            }}
+                            style={{ marginRight: '8px', width: '16px', height: '16px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '14px' }}>{level}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 最少截止时间 */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: '16px'
+                    }}>
+                      ⏰ 最少截止时间
+                    </label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      设置任务截止时间至少需要多少天，系统将只推荐符合此条件的任务
+                    </p>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <input
+                        type="number"
+                        value={formData.preferences.min_deadline_days}
+                        onChange={(e) => handleInputChange('preferences.min_deadline_days', parseInt(e.target.value) || 1)}
+                        min="1"
+                        max="30"
+                        style={{
+                          width: '120px',
+                          padding: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px'
+                        }}
+                      />
+                      <span style={{ color: '#666' }}>天</span>
+                      <span style={{ fontSize: '14px', color: '#999' }}>
+                        （至少 1 天，最多 30 天）
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 偏好关键词 */}
+                  <div>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '12px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: '16px'
+                    }}>
+                      🔍 偏好关键词
+                    </label>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                      添加您感兴趣的关键词，系统会优先推荐包含这些关键词的任务
+                    </p>
+                    
+                    {/* 添加关键词输入框 */}
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '8px',
+                      marginBottom: '16px'
+                    }}>
+                      <input
+                        type="text"
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        onKeyPress={handleKeywordKeyPress}
+                        placeholder="输入关键词，如：编程、设计、翻译..."
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px'
+                        }}
+                      />
+                      <button
+                        onClick={addKeyword}
+                        disabled={!newKeyword.trim() || 
+                                 formData.preferences.keywords.includes(newKeyword.trim()) ||
+                                 formData.preferences.keywords.length >= 20}
+                        style={{
+                          padding: '12px 20px',
+                          background: '#3b82f6',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          opacity: (!newKeyword.trim() || 
+                                   formData.preferences.keywords.includes(newKeyword.trim()) ||
+                                   formData.preferences.keywords.length >= 20) ? 0.5 : 1,
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        添加
+                      </button>
+                    </div>
+
+                    {/* 已添加的关键词标签 */}
+                    {formData.preferences.keywords.length > 0 && (
+                      <div style={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                      }}>
+                        {formData.preferences.keywords.map((keyword, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 12px',
+                              background: '#eff6ff',
+                              border: '1px solid #3b82f6',
+                              borderRadius: '20px',
+                              fontSize: '14px',
+                              color: '#1e40af'
+                            }}
+                          >
+                            <span>{keyword}</span>
+                            <button
+                              onClick={() => removeKeyword(keyword)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#1e40af',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                padding: '0',
+                                width: '20px',
+                                height: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#dc2626';
+                                e.currentTarget.style.color = '#fff';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'none';
+                                e.currentTarget.style.color = '#1e40af';
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 提示信息 */}
+                    <p style={{ 
+                      fontSize: '12px', 
+                      color: '#999', 
+                      marginTop: '8px',
+                      marginBottom: '0'
+                    }}>
+                      最多可添加 20 个关键词，按回车键快速添加
+                    </p>
                   </div>
                 </div>
               </div>
