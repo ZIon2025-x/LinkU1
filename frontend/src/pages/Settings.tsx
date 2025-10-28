@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
+// 地点列表常量
+const LOCATION_OPTIONS = [
+  'Online', 'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow', 
+  'Bristol', 'Sheffield', 'Leeds', 'Nottingham', 'Newcastle', 'Southampton', 
+  'Liverpool', 'Cardiff', 'Coventry', 'Exeter', 'Leicester', 'York', 
+  'Aberdeen', 'Bath', 'Dundee', 'Reading', 'St Andrews', 'Belfast', 
+  'Brighton', 'Durham', 'Norwich', 'Swansea', 'Loughborough', 'Lancaster', 
+  'Warwick', 'Cambridge', 'Oxford', 'Other'
+];
+
+// 任务类型列表常量
+const TASK_TYPE_OPTIONS = [
+  'Housekeeping', 'Campus Life', 'Second-hand Goods', 'Errand Running', 
+  'Skill Service', 'Social Help', 'Transportation', 'Other'
+];
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -491,7 +507,7 @@ const Settings: React.FC = () => {
                       gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
                       gap: '12px'
                     }}>
-                      {['家政服务', '校园生活', '二手租赁', '跑腿代办', '技能服务', '社交帮助', '交通出行', '宠物护理', '生活便利', '其他'].map(type => (
+                      {TASK_TYPE_OPTIONS.map(type => (
                         <label key={type} style={{ 
                           display: 'flex', 
                           alignItems: 'center',
@@ -538,7 +554,7 @@ const Settings: React.FC = () => {
                       gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
                       gap: '12px'
                     }}>
-                      {['Online', 'London', 'Edinburgh', 'Manchester', 'Birmingham', 'Glasgow', 'Bristol', 'Sheffield', 'Leeds', 'Nottingham'].map(location => (
+                      {LOCATION_OPTIONS.map(location => (
                         <label key={location} style={{ 
                           display: 'flex', 
                           alignItems: 'center',
