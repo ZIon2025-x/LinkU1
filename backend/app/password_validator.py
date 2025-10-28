@@ -123,19 +123,19 @@ class PasswordValidator:
         # 计算最终分数
         score = max(0, min(100, score))
         
-        # 生成建议
-        if score < 50:
-            suggestions.extend([
-                "使用至少12个字符的密码",
-                "包含大小写字母、数字和特殊字符",
-                "避免使用个人信息",
-                "避免使用常见单词"
-            ])
-        elif score < 80:
-            suggestions.extend([
-                "考虑使用更长的密码",
-                "添加更多特殊字符"
-            ])
+        # 生成建议（已禁用，因为有自动检测会显示具体错误）
+        # if score < 50:
+        #     suggestions.extend([
+        #         "使用至少12个字符的密码",
+        #         "包含大小写字母、数字和特殊字符",
+        #         "避免使用个人信息",
+        #         "避免使用常见单词"
+        #     ])
+        # elif score < 80:
+        #     suggestions.extend([
+        #         "考虑使用更长的密码",
+        #         "添加更多特殊字符"
+        #     ])
         
         # 确定强度等级
         if score < 30:
