@@ -115,20 +115,10 @@ class PasswordValidator:
                 errors.append("密码不能包含邮箱前缀")
                 score -= 20
         
-        # 重复字符检查
+        # 重复字符检查（放宽限制）
         if self._has_repeating_chars(password):
-            errors.append("密码不能包含重复的字符序列")
-            score -= 10
-        
-        # 序列字符检查
-        if self._has_sequential_chars(password):
-            errors.append("密码不能包含连续的字符序列")
-            score -= 10
-        
-        # 键盘模式检查
-        if self._has_keyboard_pattern(password):
-            errors.append("密码不能包含键盘模式")
-            score -= 15
+            suggestions.append("避免使用重复的字符序列")
+            score -= 5
         
         # 计算最终分数
         score = max(0, min(100, score))
@@ -139,13 +129,12 @@ class PasswordValidator:
                 "使用至少12个字符的密码",
                 "包含大小写字母、数字和特殊字符",
                 "避免使用个人信息",
-                "避免使用常见单词或模式"
+                "避免使用常见单词"
             ])
         elif score < 80:
             suggestions.extend([
                 "考虑使用更长的密码",
-                "添加更多特殊字符",
-                "避免可预测的模式"
+                "添加更多特殊字符"
             ])
         
         # 确定强度等级

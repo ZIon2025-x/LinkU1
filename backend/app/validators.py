@@ -59,18 +59,28 @@ class StringValidator(BaseValidator):
     @staticmethod
     def validate_password(password: str) -> str:
         """验证密码强度"""
-        if len(password) < 8:
-            raise ValueError("密码至少需要8个字符")
+        if len(password) < 12:
+            raise ValueError("密码至少需要12个字符")
         
         if len(password) > 128:
             raise ValueError("密码不能超过128个字符")
         
-        # 检查是否包含至少一个字母和一个数字
-        if not re.search(r'[A-Za-z]', password):
-            raise ValueError("密码必须包含至少一个字母")
+        # 检查是否包含至少一个大写字母
+        if not re.search(r'[A-Z]', password):
+            raise ValueError("密码必须包含至少一个大写字母")
         
+        # 检查是否包含至少一个小写字母
+        if not re.search(r'[a-z]', password):
+            raise ValueError("密码必须包含至少一个小写字母")
+        
+        # 检查是否包含至少一个数字
         if not re.search(r'\d', password):
             raise ValueError("密码必须包含至少一个数字")
+        
+        # 检查是否包含至少一个特殊字符
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not re.search(f'[{re.escape(special_chars)}]', password):
+            raise ValueError("密码必须包含至少一个特殊字符")
         
         return password
     
@@ -154,7 +164,7 @@ class UserValidator(BaseValidator):
     
     name: str = Field(..., min_length=2, max_length=50)
     email: str = Field(..., max_length=254)
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=12, max_length=128)
     phone: Optional[str] = Field(None, max_length=20)
     agreed_to_terms: Optional[bool] = Field(False)
     terms_agreed_at: Optional[str] = Field(None)
@@ -235,12 +245,16 @@ def validate_input(data: Dict[str, Any], validator_class: BaseValidator) -> Dict
         # 提取具体的验证错误信息
         error_message = str(e)
         if "String should have at least" in error_message:
-            error_message = "密码至少需要8个字符"
+            error_message = "密码至少需要12个字符"
         elif "Value error" in error_message:
-            if "至少一个字母" in error_message:
-                error_message = "密码必须包含至少一个字母"
+            if "至少一个大写字母" in error_message:
+                error_message = "密码必须包含至少一个大写字母"
+            elif "至少一个小写字母" in error_message:
+                error_message = "密码必须包含至少一个小写字母"
             elif "至少一个数字" in error_message:
                 error_message = "密码必须包含至少一个数字"
+            elif "至少一个特殊字符" in error_message:
+                error_message = "密码必须包含至少一个特殊字符"
             elif "邮箱格式不正确" in error_message:
                 error_message = "邮箱格式不正确，请输入有效的邮箱地址"
         
