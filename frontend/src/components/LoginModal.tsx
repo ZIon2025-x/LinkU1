@@ -466,14 +466,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   color: '#333',
                   marginBottom: '8px'
                 }}>
-                  {t('common.phone')}
+                  {t('auth.phone')}
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder={t('common.phoneOptional')}
+                  placeholder={t('auth.phonePlaceholder')}
                   style={{
                     width: '100%',
                     padding: '12px 16px',

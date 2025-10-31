@@ -117,6 +117,8 @@
     "smsNotification": "并接收短信通知。标准短信费率可能适用。",
     "inviterId": "邀请者ID (选填)",
     "inviterIdPlaceholder": "请输入邀请者ID",
+    "phone": "手机号 (选填)",
+    "phonePlaceholder": "请输入手机号",
     "passwordTooShort": "密码长度至少需要{minLength}个字符",
     "passwordTooShort12": "密码长度至少需要12个字符",
     "passwordTooLong": "密码长度不能超过{maxLength}个字符",

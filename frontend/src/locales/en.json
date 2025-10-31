@@ -117,6 +117,8 @@
     "smsNotification": "and receive SMS notifications. Standard SMS rates may apply.",
     "inviterId": "Inviter ID (Optional)",
     "inviterIdPlaceholder": "Please enter inviter ID",
+    "phone": "Phone Number (Optional)",
+    "phonePlaceholder": "Please enter phone number",
     "passwordTooShort": "Password must be at least {minLength} characters long",
     "passwordTooShort12": "Password must be at least 12 characters long",
     "passwordTooLong": "Password cannot exceed {maxLength} characters",
