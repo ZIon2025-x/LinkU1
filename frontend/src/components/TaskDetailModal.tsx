@@ -20,7 +20,7 @@ interface TaskDetailModalProps {
 }
 
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, taskId }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -651,11 +651,42 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         }}>
           {/* 分享按钮 */}
           <button
-            onClick={() => {
-              if (taskId) {
-                // 先关闭弹窗
+            onClick={async () => {
+              if (taskId && task) {
+                // 构建分享URL（使用当前语言）
+                const basePath = `/${language}/tasks/${taskId}`;
+                const shareUrl = `${window.location.origin}${basePath}`;
+                const shareTitle = `${task.title} - Link²Ur任务平台`;
+                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+                
+                // 先尝试使用Web Share API（需要在用户交互上下文中）
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: shareTitle,
+                      text: shareText,
+                      url: shareUrl
+                    });
+                    // 分享成功后关闭弹窗并跳转
+                    onClose();
+                    navigate(`/tasks/${taskId}`);
+                    return;
+                  } catch (error: any) {
+                    // 如果用户取消分享，不做任何操作
+                    if (error.name === 'AbortError') {
+                      return;
+                    }
+                    // 如果出错，继续执行跳转逻辑
+                    console.log('分享失败，跳转到详情页:', error);
+                  }
+                }
+                
+                // 如果Web Share API不可用或失败，先关闭弹窗，然后跳转到详情页
                 onClose();
-                // 跳转到任务详情页并带上分享参数
+                navigate(`/tasks/${taskId}?share=true`);
+              } else if (taskId) {
+                // 如果任务数据还没加载，先跳转到详情页再触发分享
+                onClose();
                 navigate(`/tasks/${taskId}?share=true`);
               }
             }}

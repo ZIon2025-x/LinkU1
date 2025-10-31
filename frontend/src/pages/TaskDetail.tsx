@@ -1,18 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
+import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import Footer from '../components/Footer';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
 // 配置dayjs插件
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+interface Notification {
+  id: number;
+  content: string;
+  is_read: number;
+  created_at: string;
+  type?: string;
+}
+
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
+  const { t } = useLanguage();
+  const { navigate } = useLocalizedNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -34,8 +51,51 @@ const TaskDetail: React.FC = () => {
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [userApplication, setUserApplication] = useState<any>(null);
   const [hasApplied, setHasApplied] = useState(false);
-  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>({});
 
+  // 加载用户数据、通知和系统设置
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+        
+        // 加载通知数据
+        if (userData) {
+          try {
+            const [notificationsData, unreadCountData] = await Promise.all([
+              getNotificationsWithRecentRead(10),
+              getUnreadNotificationCount()
+            ]);
+            setNotifications(notificationsData);
+            setUnreadCount(unreadCountData.unread_count);
+          } catch (error) {
+            console.error('加载通知失败:', error);
+          }
+        }
+      } catch (error: any) {
+        setUser(null);
+      }
+    };
+    
+    loadUserData();
+
+    // 加载系统设置
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+      } catch (error) {
+        console.error('加载系统设置失败:', error);
+      }
+    };
+    loadSystemSettings();
+  }, []);
+
+  // 加载任务数据
   useEffect(() => {
     setLoading(true);
     api.get(`/api/tasks/${id}`)
@@ -54,31 +114,75 @@ const TaskDetail: React.FC = () => {
         setError('任务不存在');
       })
       .finally(() => setLoading(false));
-    fetchCurrentUser().then(setUser).catch(() => setUser(null));
   }, [id]);
+
+  // 更新或创建meta标签的工具函数
+  const updateMetaTag = (name: string, content: string, property?: boolean) => {
+    const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+    let metaTag = document.querySelector(selector) as HTMLMetaElement;
+    
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
+      }
+      document.head.appendChild(metaTag);
+    }
+    
+    metaTag.content = content;
+  };
 
   // SEO优化：动态更新页面标题和Meta标签
   useEffect(() => {
     if (task) {
+      // 构建任务详情页的URL
+      const taskUrl = `${window.location.origin}${window.location.pathname}`;
+      
       // 更新页面标题
       const seoTitle = `${task.title} - ${task.location} | Link²Ur任务平台`;
       document.title = seoTitle;
       
+      // 创建任务相关的描述
+      const shortTitle = task.title.length > 40 ? task.title.substring(0, 40) + '...' : task.title;
+      const taskDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}。${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}`;
+      const seoDescription = taskDescription.substring(0, 160); // 限制在160字符内
+      
       // 更新meta描述
-      const metaDescription = document.querySelector('meta[name="description"]');
-      if (metaDescription) {
-        // 创建简洁的描述，控制在120-160字符范围内
-        const shortTitle = task.title.length > 40 ? task.title.substring(0, 40) + '...' : task.title;
-        const seoDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward}，地点${task.location}。Link²Ur专业匹配平台，提供安全保障。立即申请！`;
-        metaDescription.setAttribute('content', seoDescription);
-      }
+      updateMetaTag('description', seoDescription);
       
       // 更新meta关键词
-      const metaKeywords = document.querySelector('meta[name="keywords"]');
-      if (metaKeywords) {
-        const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;
-        metaKeywords.setAttribute('content', keywords);
-      }
+      const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;
+      updateMetaTag('keywords', keywords);
+      
+      // 更新Open Graph标签（用于社交媒体分享，包括微信）
+      updateMetaTag('og:type', 'article', true);
+      updateMetaTag('og:title', `${task.title} - Link²Ur任务平台`, true);
+      updateMetaTag('og:description', seoDescription, true);
+      updateMetaTag('og:url', taskUrl, true);
+      
+      // 设置平台logo作为og:image（微信和社交媒体分享会使用）
+      // 使用public/static/logo.png
+      const shareImageUrl = `${window.location.origin}/static/logo.png`;
+      updateMetaTag('og:image', shareImageUrl, true);
+      updateMetaTag('og:image:width', '1200', true);
+      updateMetaTag('og:image:height', '630', true);
+      updateMetaTag('og:image:type', 'image/png', true);
+      updateMetaTag('og:image:alt', `${task.title} - Link²Ur任务平台`, true);
+      updateMetaTag('og:site_name', 'Link²Ur', true);
+      updateMetaTag('og:locale', 'zh_CN', true);
+      
+      // 更新Twitter Card标签
+      updateMetaTag('twitter:card', 'summary_large_image');
+      updateMetaTag('twitter:title', `${task.title} - Link²Ur任务平台`);
+      updateMetaTag('twitter:description', seoDescription);
+      updateMetaTag('twitter:image', shareImageUrl);
+      updateMetaTag('twitter:url', taskUrl);
+      
+      // 微信分享特殊处理 - 微信可能需要额外的标签
+      // 确保图片URL是绝对路径且可通过HTTPS访问
+      // 微信分享会读取og:image, og:title, og:description等标签
       
       // 添加结构化数据
       const structuredData = {
@@ -123,56 +227,108 @@ const TaskDetail: React.FC = () => {
     }
   }, [task]);
 
-  // 处理分享功能
+  // 标记通知为已读
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await markNotificationRead(notificationId);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, is_read: 1 }
+            : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('标记通知已读失败:', error);
+      alert(t('notificationPanel.markAsReadFailed') || '标记已读失败');
+    }
+  };
+
+  // 标记所有通知为已读
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, is_read: 1 }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('标记所有通知已读失败:', error);
+      alert(t('notificationPanel.markAllReadFailed') || '标记全部已读失败');
+    }
+  };
+
+  // 处理分享功能 - 使用useRef避免重复触发
+  const shareTriggeredRef = React.useRef(false);
+  
   useEffect(() => {
     const shouldShare = searchParams.get('share') === 'true';
     
-    if (shouldShare && task && !loading) {
+    // 检查是否已经触发过分享，避免重复触发
+    if (shouldShare && task && !loading && !shareTriggeredRef.current) {
+      shareTriggeredRef.current = true; // 标记为已触发
+      
       // 移除URL中的share参数
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('share');
       setSearchParams(newSearchParams, { replace: true });
       
-      // 检查浏览器是否支持Web Share API
-      if (navigator.share) {
-        // 构建分享内容
-        const shareUrl = window.location.href.split('?')[0]; // 移除查询参数
-        const shareTitle = `${task.title} - Link²Ur任务平台`;
-        const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
-        
-        // 延迟一小段时间以确保页面完全加载
-        setTimeout(() => {
-          navigator.share({
-            title: shareTitle,
-            text: shareText,
-            url: shareUrl
-          }).catch((error) => {
-            // 用户取消分享或出错时不做任何处理
-            console.log('分享已取消或出错:', error);
-          });
-        }, 300);
-      } else {
-        // 如果不支持Web Share API，使用传统的复制链接方式
-        const shareUrl = window.location.href.split('?')[0];
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          alert('链接已复制到剪贴板！');
-        }).catch(() => {
-          // 如果复制失败，使用备用方法
-          const textArea = document.createElement('textarea');
-          textArea.value = shareUrl;
-          textArea.style.position = 'fixed';
-          textArea.style.left = '-999999px';
-          document.body.appendChild(textArea);
-          textArea.select();
-          try {
-            document.execCommand('copy');
+      // 延迟执行，确保页面完全渲染
+      const triggerShare = () => {
+        // 检查浏览器是否支持Web Share API
+        if (navigator.share) {
+          // 构建分享内容
+          const shareUrl = window.location.origin + window.location.pathname;
+          const shareTitle = `${task.title} - Link²Ur任务平台`;
+          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+          
+          console.log('触发原生分享:', { title: shareTitle, text: shareText, url: shareUrl });
+          
+          // 使用setTimeout确保在下一个事件循环中执行，这样可以保持用户交互的上下文
+          setTimeout(() => {
+            navigator.share({
+              title: shareTitle,
+              text: shareText,
+              url: shareUrl
+            }).catch((error) => {
+              // 用户取消分享或出错时不做任何处理
+              console.log('分享已取消或出错:', error);
+            });
+          }, 100);
+        } else {
+          // 如果不支持Web Share API，使用传统的复制链接方式
+          const shareUrl = window.location.origin + window.location.pathname;
+          console.log('不支持Web Share API，使用复制链接方式:', shareUrl);
+          
+          navigator.clipboard.writeText(shareUrl).then(() => {
             alert('链接已复制到剪贴板！');
-          } catch (err) {
-            alert(`请手动复制链接：${shareUrl}`);
-          }
-          document.body.removeChild(textArea);
-        });
-      }
+          }).catch(() => {
+            // 如果复制失败，使用备用方法
+            const textArea = document.createElement('textarea');
+            textArea.value = shareUrl;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              document.execCommand('copy');
+              alert('链接已复制到剪贴板！');
+            } catch (err) {
+              alert(`请手动复制链接：${shareUrl}`);
+            }
+            document.body.removeChild(textArea);
+          });
+        }
+      };
+      
+      // 延迟执行，确保页面完全加载
+      setTimeout(triggerShare, 500);
+    }
+    
+    // 如果share参数被移除，重置触发器
+    if (!shouldShare && shareTriggeredRef.current) {
+      shareTriggeredRef.current = false;
     }
   }, [task, loading, searchParams, setSearchParams]);
 
@@ -507,8 +663,131 @@ const TaskDetail: React.FC = () => {
     return reviews.some(review => review.user_id === user.id);
   };
 
-  if (loading) return <div style={{textAlign:'center',padding:40}}>加载中...</div>;
-  if (error || !task) return <div style={{color:'red',textAlign:'center',padding:40}}>{error || '任务不存在'}</div>;
+  if (loading) {
+    return (
+      <div>
+        {/* 导航栏 */}
+        <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+            <div 
+              style={{
+                fontWeight: 'bold', 
+                fontSize: 24, 
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                flexShrink: 0
+              }}
+              onClick={() => navigate('/')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+                (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+                (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+              }}
+            >
+              Link²Ur
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <LanguageSwitcher />
+              <NotificationButton
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => setShowNotifications(prev => !prev)}
+              />
+              <HamburgerMenu
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+              />
+            </div>
+          </div>
+        </header>
+        <div style={{height: 60}} />
+        <div style={{textAlign:'center',padding:40}}>加载中...</div>
+      </div>
+    );
+  }
+  
+  if (error || !task) {
+    return (
+      <div>
+        {/* 导航栏 */}
+        <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+            <div 
+              style={{
+                fontWeight: 'bold', 
+                fontSize: 24, 
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                flexShrink: 0
+              }}
+              onClick={() => navigate('/')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+                (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+                (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+              }}
+            >
+              Link²Ur
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <LanguageSwitcher />
+              <NotificationButton
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => setShowNotifications(prev => !prev)}
+              />
+              <HamburgerMenu
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+              />
+            </div>
+          </div>
+        </header>
+        <div style={{height: 60}} />
+        <div style={{color:'red',textAlign:'center',padding:40}}>{error || '任务不存在'}</div>
+      </div>
+    );
+  }
 
   const isTaskPoster = user && user.id === task.poster_id;
   const isTaskTaker = user && user.id === task.taker_id;
@@ -626,21 +905,92 @@ const TaskDetail: React.FC = () => {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
-    }}>
+    <div>
+      {/* 顶部导航栏 */}
+      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo */}
+          <div 
+            style={{
+              fontWeight: 'bold', 
+              fontSize: 24, 
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              WebkitBackgroundClip: 'text', 
+              WebkitTextFillColor: 'transparent',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              padding: '4px 8px',
+              borderRadius: '8px',
+              flexShrink: 0
+            }}
+            onClick={() => navigate('/')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+              (e.currentTarget.style as any).webkitBackgroundClip = 'text';
+              (e.currentTarget.style as any).webkitTextFillColor = 'transparent';
+            }}
+          >
+            Link²Ur
+          </div>
+          
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
+        </div>
+      </header>
+      {/* 占位，防止内容被导航栏遮挡 */}
+      <div style={{height: 60}} />
+
+      {/* 通知面板 */}
+      <NotificationPanel
+        isOpen={showNotifications && !!user}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+
       <div style={{
-        maxWidth: '900px',
-        margin: '0 auto',
-        background: '#fff',
-        borderRadius: '24px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-        padding: '40px',
-        position: 'relative',
-        overflow: 'hidden'
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '20px'
       }}>
+        <div style={{
+          maxWidth: '900px',
+          margin: '0 auto',
+          background: '#fff',
+          borderRadius: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          padding: '40px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
         {/* 装饰性背景 */}
         <div style={{
           position: 'absolute',
@@ -1617,7 +1967,11 @@ const TaskDetail: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+        </div>
       </div>
+
+      {/* 页脚 */}
+      <Footer />
     </div>
   );
 };
