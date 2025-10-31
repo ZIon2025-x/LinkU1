@@ -114,7 +114,21 @@
     "strong": "强",
     "veryStrong": "很强",
     "passwordRequirements": "至少12位，包含大小写字母、数字和特殊字符",
-    "smsNotification": "并接收短信通知。标准短信费率可能适用。"
+    "smsNotification": "并接收短信通知。标准短信费率可能适用。",
+    "inviterId": "邀请者ID (选填)",
+    "inviterIdPlaceholder": "请输入邀请者ID",
+    "passwordTooShort": "密码长度至少需要{minLength}个字符",
+    "passwordTooShort12": "密码长度至少需要12个字符",
+    "passwordTooLong": "密码长度不能超过{maxLength}个字符",
+    "passwordMissingUppercase": "密码必须包含至少一个大写字母",
+    "passwordMissingLowercase": "密码必须包含至少一个小写字母",
+    "passwordMissingDigit": "密码必须包含至少一个数字",
+    "passwordMissingSpecial": "密码必须包含至少一个特殊字符",
+    "passwordTooCommon": "密码过于常见，请选择更复杂的密码",
+    "passwordContainsUsername": "密码不能包含用户名",
+    "passwordContainsEmail": "密码不能包含邮箱前缀",
+    "passwordAvoidRepeating": "避免使用重复的字符序列",
+    "suggestions": "建议"
   },
   "home": {
     "welcome": "欢迎来到 Link²Ur Platform",

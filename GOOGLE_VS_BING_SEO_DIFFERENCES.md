@@ -290,3 +290,4 @@ Allow: /static/favicon.ico
 3. **定期检查**：使用Bing网站管理员工具监控
 4. **保持耐心**：Bing索引更新确实比Google慢得多
 
+

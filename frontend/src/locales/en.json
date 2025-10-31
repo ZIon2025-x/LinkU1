@@ -114,7 +114,21 @@
     "strong": "Strong",
     "veryStrong": "Very Strong",
     "passwordRequirements": "At least 12 characters, including uppercase, lowercase, numbers and special characters",
-    "smsNotification": "and receive SMS notifications. Standard SMS rates may apply."
+    "smsNotification": "and receive SMS notifications. Standard SMS rates may apply.",
+    "inviterId": "Inviter ID (Optional)",
+    "inviterIdPlaceholder": "Please enter inviter ID",
+    "passwordTooShort": "Password must be at least {minLength} characters long",
+    "passwordTooShort12": "Password must be at least 12 characters long",
+    "passwordTooLong": "Password cannot exceed {maxLength} characters",
+    "passwordMissingUppercase": "Password must contain at least one uppercase letter",
+    "passwordMissingLowercase": "Password must contain at least one lowercase letter",
+    "passwordMissingDigit": "Password must contain at least one digit",
+    "passwordMissingSpecial": "Password must contain at least one special character",
+    "passwordTooCommon": "Password is too common, please choose a more complex password",
+    "passwordContainsUsername": "Password cannot contain username",
+    "passwordContainsEmail": "Password cannot contain email prefix",
+    "passwordAvoidRepeating": "Avoid using repeating character sequences",
+    "suggestions": "Suggestions"
   },
   "home": {
     "welcome": "Welcome to Link²Ur",

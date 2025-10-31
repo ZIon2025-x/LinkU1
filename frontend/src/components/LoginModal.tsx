@@ -25,7 +25,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   onShowForgotPassword, 
   onHideForgotPassword 
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -48,6 +48,63 @@ const LoginModal: React.FC<LoginModalProps> = ({
     suggestions: []
   });
   const navigate = useNavigate();
+
+  // 翻译密码验证错误信息
+  const translatePasswordError = (errorText: string): string => {
+    // 匹配密码长度错误
+    const tooShortMatch = errorText.match(/密码长度至少需要(\d+)个字符/);
+    if (tooShortMatch) {
+      const minLength = tooShortMatch[1];
+      return t('auth.passwordTooShort').replace('{minLength}', minLength);
+    }
+    
+    const tooShort12Match = errorText.match(/密码长度至少需要12个字符/);
+    if (tooShort12Match) {
+      return t('auth.passwordTooShort12');
+    }
+    
+    const tooLongMatch = errorText.match(/密码长度不能超过(\d+)个字符/);
+    if (tooLongMatch) {
+      const maxLength = tooLongMatch[1];
+      return t('auth.passwordTooLong').replace('{maxLength}', maxLength);
+    }
+    
+    // 匹配字符类型错误
+    if (errorText.includes('密码必须包含至少一个大写字母')) {
+      return t('auth.passwordMissingUppercase');
+    }
+    if (errorText.includes('密码必须包含至少一个小写字母')) {
+      return t('auth.passwordMissingLowercase');
+    }
+    if (errorText.includes('密码必须包含至少一个数字')) {
+      return t('auth.passwordMissingDigit');
+    }
+    if (errorText.includes('密码必须包含至少一个特殊字符')) {
+      return t('auth.passwordMissingSpecial');
+    }
+    
+    // 匹配其他错误
+    if (errorText.includes('密码过于常见')) {
+      return t('auth.passwordTooCommon');
+    }
+    if (errorText.includes('密码不能包含用户名')) {
+      return t('auth.passwordContainsUsername');
+    }
+    if (errorText.includes('密码不能包含邮箱前缀')) {
+      return t('auth.passwordContainsEmail');
+    }
+    
+    // 如果没有匹配，返回原文
+    return errorText;
+  };
+
+  // 翻译密码验证建议信息
+  const translatePasswordSuggestion = (suggestionText: string): string => {
+    if (suggestionText.includes('避免使用重复的字符序列')) {
+      return t('auth.passwordAvoidRepeating');
+    }
+    return suggestionText;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -444,14 +501,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   color: '#333',
                   marginBottom: '8px'
                 }}>
-                  邀请者ID (选填)
+                  {t('auth.inviterId')}
                 </label>
                 <input
                   type="text"
                   name="inviterId"
                   value={formData.inviterId}
                   onChange={handleInputChange}
-                  placeholder="请输入邀请者ID"
+                  placeholder={t('auth.inviterIdPlaceholder')}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -533,16 +590,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 {passwordValidation.errors.length > 0 && (
                   <div style={{ color: '#ff4d4f', marginBottom: '6px', fontSize: '12px' }}>
                     {passwordValidation.errors.map((error, index) => (
-                      <div key={index}>• {error}</div>
+                      <div key={index}>• {translatePasswordError(error)}</div>
                     ))}
                   </div>
                 )}
                 
                 {passwordValidation.suggestions.length > 0 && (
                   <div style={{ color: '#1890ff', fontSize: '12px' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>建议:</div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{t('auth.suggestions')}:</div>
                     {passwordValidation.suggestions.map((suggestion, index) => (
-                      <div key={index}>• {suggestion}</div>
+                      <div key={index}>• {translatePasswordSuggestion(suggestion)}</div>
                     ))}
                   </div>
                 )}
@@ -642,7 +699,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 />
               </div>
               <div style={{ flex: 1 }}>
-                {t('auth.agreeToTerms')}
+                {t('auth.agreeToTerms')}{' '}
                 <a 
                   href="/terms" 
                   target="_blank"
@@ -653,8 +710,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     navigate('/terms');
                   }}
                 >
-                  用户协议
-                </a>、
+                  {t('auth.termsOfService')}
+                </a>
+                {language === 'zh' ? '、' : ', '}
                 <a 
                   href="/privacy" 
                   target="_blank"
@@ -666,7 +724,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   }}
                 >
                   {t('common.privacyPolicy')}
-                </a>，{t('auth.smsNotification')}
+                </a>
+                {language === 'zh' ? '，' : ', '}{t('auth.smsNotification')}
               </div>
             </div>
           )}
