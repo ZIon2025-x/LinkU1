@@ -640,36 +640,79 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        {/* 关闭按钮 */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '16px',
-            right: '16px',
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#666',
-            zIndex: 10,
-            width: '32px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f0f0f0';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          ×
-        </button>
+        {/* 关闭按钮和分享按钮 */}
+        <div style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          display: 'flex',
+          gap: '8px',
+          zIndex: 10
+        }}>
+          {/* 分享按钮 */}
+          <button
+            onClick={() => {
+              if (taskId) {
+                // 先关闭弹窗
+                onClose();
+                // 跳转到任务详情页并带上分享参数
+                navigate(`/tasks/${taskId}?share=true`);
+              }
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: '#fff',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+            }}
+            title={t('taskDetail.shareTask') || '分享任务'}
+          >
+            📤
+          </button>
+          {/* 关闭按钮 */}
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#666',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f0f0f0';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            ×
+          </button>
+        </div>
         
         <div style={{
           padding: '40px',

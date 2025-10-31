@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -13,6 +13,7 @@ dayjs.extend(timezone);
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -121,6 +122,59 @@ const TaskDetail: React.FC = () => {
       document.head.appendChild(script);
     }
   }, [task]);
+
+  // 处理分享功能
+  useEffect(() => {
+    const shouldShare = searchParams.get('share') === 'true';
+    
+    if (shouldShare && task && !loading) {
+      // 移除URL中的share参数
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('share');
+      setSearchParams(newSearchParams, { replace: true });
+      
+      // 检查浏览器是否支持Web Share API
+      if (navigator.share) {
+        // 构建分享内容
+        const shareUrl = window.location.href.split('?')[0]; // 移除查询参数
+        const shareTitle = `${task.title} - Link²Ur任务平台`;
+        const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+        
+        // 延迟一小段时间以确保页面完全加载
+        setTimeout(() => {
+          navigator.share({
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl
+          }).catch((error) => {
+            // 用户取消分享或出错时不做任何处理
+            console.log('分享已取消或出错:', error);
+          });
+        }, 300);
+      } else {
+        // 如果不支持Web Share API，使用传统的复制链接方式
+        const shareUrl = window.location.href.split('?')[0];
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          alert('链接已复制到剪贴板！');
+        }).catch(() => {
+          // 如果复制失败，使用备用方法
+          const textArea = document.createElement('textarea');
+          textArea.value = shareUrl;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            alert('链接已复制到剪贴板！');
+          } catch (err) {
+            alert(`请手动复制链接：${shareUrl}`);
+          }
+          document.body.removeChild(textArea);
+        });
+      }
+    }
+  }, [task, loading, searchParams, setSearchParams]);
 
   // 当用户信息加载后，如果是任务发布者，加载申请者列表
   useEffect(() => {
