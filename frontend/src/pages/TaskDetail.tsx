@@ -95,6 +95,37 @@ const TaskDetail: React.FC = () => {
     loadSystemSettings();
   }, []);
 
+  // 更新或创建meta标签的工具函数（必须在useEffect之前定义）
+  const updateMetaTag = (name: string, content: string, property?: boolean) => {
+    const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+    let metaTag = document.querySelector(selector) as HTMLMetaElement;
+    
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
+      }
+      document.head.appendChild(metaTag);
+    }
+    
+    metaTag.content = content;
+  };
+
+  // 立即更新基础meta标签（在数据加载前就设置，避免爬虫抓取到默认值）
+  useEffect(() => {
+    // 即使任务数据还没加载，也先更新URL和类型，确保不会被抓取到默认值
+    const taskUrl = `${window.location.origin}${window.location.pathname}`;
+    updateMetaTag('og:url', taskUrl, true);
+    updateMetaTag('og:type', 'article', true);
+    // 设置logo图片（带版本号避免缓存问题）
+    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:image:type', 'image/png', true);
+    updateMetaTag('twitter:image', shareImageUrl);
+  }, [id]);
+
   // 加载任务数据
   useEffect(() => {
     setLoading(true);
@@ -116,24 +147,6 @@ const TaskDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // 更新或创建meta标签的工具函数
-  const updateMetaTag = (name: string, content: string, property?: boolean) => {
-    const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
-    let metaTag = document.querySelector(selector) as HTMLMetaElement;
-    
-    if (!metaTag) {
-      metaTag = document.createElement('meta');
-      if (property) {
-        metaTag.setAttribute('property', name);
-      } else {
-        metaTag.setAttribute('name', name);
-      }
-      document.head.appendChild(metaTag);
-    }
-    
-    metaTag.content = content;
-  };
-
   // SEO优化：动态更新页面标题和Meta标签
   useEffect(() => {
     if (task) {
@@ -149,7 +162,7 @@ const TaskDetail: React.FC = () => {
       const taskDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}。${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}`;
       const seoDescription = taskDescription.substring(0, 160); // 限制在160字符内
       
-      // 更新meta描述
+      // 更新meta描述（必须同时更新description和og:description，微信可能读取不同的标签）
       updateMetaTag('description', seoDescription);
       
       // 更新meta关键词
@@ -157,14 +170,20 @@ const TaskDetail: React.FC = () => {
       updateMetaTag('keywords', keywords);
       
       // 更新Open Graph标签（用于社交媒体分享，包括微信）
+      // 注意：微信会缓存这些标签，所以必须确保每次都更新
       updateMetaTag('og:type', 'article', true);
       updateMetaTag('og:title', `${task.title} - Link²Ur任务平台`, true);
       updateMetaTag('og:description', seoDescription, true);
       updateMetaTag('og:url', taskUrl, true);
       
       // 设置平台logo作为og:image（微信和社交媒体分享会使用）
-      // 使用public/static/logo.png
-      const shareImageUrl = `${window.location.origin}/static/logo.png`;
+      // 使用public/static/logo.png，添加版本号避免缓存问题
+      const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+      // 强制更新og:image（通过先移除再添加的方式）
+      const existingOgImage = document.querySelector('meta[property="og:image"]');
+      if (existingOgImage) {
+        existingOgImage.remove();
+      }
       updateMetaTag('og:image', shareImageUrl, true);
       updateMetaTag('og:image:width', '1200', true);
       updateMetaTag('og:image:height', '630', true);
@@ -177,12 +196,38 @@ const TaskDetail: React.FC = () => {
       updateMetaTag('twitter:card', 'summary_large_image');
       updateMetaTag('twitter:title', `${task.title} - Link²Ur任务平台`);
       updateMetaTag('twitter:description', seoDescription);
+      // 强制更新twitter:image
+      const existingTwitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (existingTwitterImage) {
+        existingTwitterImage.remove();
+      }
       updateMetaTag('twitter:image', shareImageUrl);
       updateMetaTag('twitter:url', taskUrl);
       
-      // 微信分享特殊处理 - 微信可能需要额外的标签
+      // 微信分享特殊处理
+      // 1. 确保所有标签都在head的前面部分（微信爬虫可能只读取前几个标签）
+      // 2. 添加额外的微信友好标签
       // 确保图片URL是绝对路径且可通过HTTPS访问
       // 微信分享会读取og:image, og:title, og:description等标签
+      
+      // 将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
+      const moveToTop = (selector: string) => {
+        const element = document.querySelector(selector);
+        if (element && element.parentNode) {
+          const head = document.head;
+          const firstChild = head.firstChild;
+          if (firstChild && element !== firstChild) {
+            head.insertBefore(element, firstChild);
+          }
+        }
+      };
+      
+      // 将关键标签移到前面
+      setTimeout(() => {
+        moveToTop('meta[property="og:image"]');
+        moveToTop('meta[property="og:title"]');
+        moveToTop('meta[property="og:description"]');
+      }, 0);
       
       // 添加结构化数据
       const structuredData = {
