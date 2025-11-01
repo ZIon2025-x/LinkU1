@@ -117,10 +117,31 @@ const TaskDetail: React.FC = () => {
   useEffect(() => {
     // 即使任务数据还没加载，也先更新URL和类型，确保不会被抓取到默认值
     const taskUrl = `${window.location.origin}${window.location.pathname}`;
+    
+    // 强制移除默认的描述标签，避免被微信缓存
+    const existingOgDescription = document.querySelector('meta[property="og:description"]');
+    if (existingOgDescription) {
+      existingOgDescription.remove();
+    }
+    const existingDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (existingDescription && existingDescription.content && existingDescription.content.includes('Professional task publishing')) {
+      existingDescription.remove();
+    }
+    const existingTwitterDescription = document.querySelector('meta[name="twitter:description"]') as HTMLMetaElement;
+    if (existingTwitterDescription && existingTwitterDescription.content && existingTwitterDescription.content.includes('Professional task publishing')) {
+      existingTwitterDescription.remove();
+    }
+    
     updateMetaTag('og:url', taskUrl, true);
     updateMetaTag('og:type', 'article', true);
+    
     // 设置logo图片（带版本号避免缓存问题）
     const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    // 强制移除旧的图片标签
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
     updateMetaTag('og:image', shareImageUrl, true);
     updateMetaTag('og:image:type', 'image/png', true);
     updateMetaTag('twitter:image', shareImageUrl);
@@ -157,13 +178,31 @@ const TaskDetail: React.FC = () => {
       const seoTitle = `${task.title} - ${task.location} | Link²Ur任务平台`;
       document.title = seoTitle;
       
-      // 创建任务相关的描述
-      const shortTitle = task.title.length > 40 ? task.title.substring(0, 40) + '...' : task.title;
-      const taskDescription = `${shortTitle} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}。${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}`;
-      const seoDescription = taskDescription.substring(0, 160); // 限制在160字符内
+      // 创建任务相关的描述（简化版本，只包含核心信息）
+      // 格式：任务标题 - 任务类型，赏金£XX，地点XX
+      const taskDescription = `${task.title} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`;
+      const seoDescription = taskDescription.substring(0, 120); // 限制在120字符内，确保简洁
       
-      // 更新meta描述（必须同时更新description和og:description，微信可能读取不同的标签）
+      // 强制更新meta描述（先移除旧标签再创建新标签，避免微信缓存问题）
+      const existingDescription = document.querySelector('meta[name="description"]');
+      if (existingDescription) {
+        existingDescription.remove();
+      }
       updateMetaTag('description', seoDescription);
+      
+      // 强制更新og:description（先移除旧标签再创建新标签）
+      const existingOgDescription = document.querySelector('meta[property="og:description"]');
+      if (existingOgDescription) {
+        existingOgDescription.remove();
+      }
+      updateMetaTag('og:description', seoDescription, true);
+      
+      // 强制更新twitter:description
+      const existingTwitterDescription = document.querySelector('meta[name="twitter:description"]');
+      if (existingTwitterDescription) {
+        existingTwitterDescription.remove();
+      }
+      updateMetaTag('twitter:description', seoDescription);
       
       // 更新meta关键词
       const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;
@@ -172,8 +211,14 @@ const TaskDetail: React.FC = () => {
       // 更新Open Graph标签（用于社交媒体分享，包括微信）
       // 注意：微信会缓存这些标签，所以必须确保每次都更新
       updateMetaTag('og:type', 'article', true);
+      
+      // 强制更新og:title
+      const existingOgTitle = document.querySelector('meta[property="og:title"]');
+      if (existingOgTitle) {
+        existingOgTitle.remove();
+      }
       updateMetaTag('og:title', `${task.title} - Link²Ur任务平台`, true);
-      updateMetaTag('og:description', seoDescription, true);
+      
       updateMetaTag('og:url', taskUrl, true);
       
       // 设置平台logo作为og:image（微信和社交媒体分享会使用）
