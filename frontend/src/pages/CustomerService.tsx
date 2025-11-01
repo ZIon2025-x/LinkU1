@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import { updateCustomerServiceName, getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
+import api, { updateCustomerServiceName, getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -700,77 +700,60 @@ const CustomerService: React.FC = () => {
 
   const reviewCancelRequest = async (requestId: number, status: 'approved' | 'rejected') => {
     try {
-      
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
       // 准备请求体，确保数据格式正确
       const requestBody: { status: string; admin_comment?: string | null } = {
         status: status
       };
       
-      // 只有当 adminComment 不为空时才添加该字段，或者显式设置为 null
+      // 只有当 adminComment 不为空时才添加该字段
+      // 如果为空字符串，不包含该字段（让后端使用默认值 None）
       if (adminComment && adminComment.trim()) {
         requestBody.admin_comment = adminComment.trim();
-      } else {
-        requestBody.admin_comment = null; // 空字符串时显式设置为 null
+      }
+      // 如果 adminComment 为空，不包含该字段，让后端使用默认值 None
+      
+      // 使用 api 实例，自动处理 CSRF token 和错误
+      const result = await api.post(`/api/customer-service/cancel-requests/${requestId}/review`, requestBody);
+      
+      setSelectedCancelRequest(null);
+      setAdminComment('');
+      await loadCancelRequests(); // 重新加载取消请求列表
+      alert(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
+      
+    } catch (error: any) {
+      console.error('审核取消请求失败:', error);
+      
+      // 处理不同的错误格式
+      let errorMessage = '审核失败';
+      
+      if (error.response) {
+        // 有响应，说明是服务器返回的错误
+        const errorData = error.response.data;
+        console.error('审核失败响应:', errorData);
+        
+        if (errorData?.detail) {
+          if (Array.isArray(errorData.detail)) {
+            // Pydantic验证错误
+            errorMessage = errorData.detail.map((err: any) => {
+              if (typeof err === 'string') return err;
+              const field = err.loc?.join('.') || '未知字段';
+              const msg = err.msg || '验证失败';
+              return `${field}: ${msg}`;
+            }).join('; ');
+          } else if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail;
+          } else {
+            errorMessage = JSON.stringify(errorData.detail);
+          }
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        } else {
+          errorMessage = `审核失败 (${error.response.status}): ${error.response.statusText || '未知错误'}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cancel-requests/${requestId}/review`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify(requestBody)
-      });
-
-      if (response.ok) {
-        setSelectedCancelRequest(null);
-        setAdminComment('');
-        await loadCancelRequests(); // 重新加载取消请求列表
-        alert(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
-      } else {
-        // 尝试解析错误响应
-        let errorMessage = '审核失败';
-        try {
-          const errorData = await response.json();
-          console.error('审核失败响应:', errorData);
-          
-          // 处理不同的错误格式
-          if (errorData.detail) {
-            if (Array.isArray(errorData.detail)) {
-              // Pydantic验证错误
-              errorMessage = errorData.detail.map((err: any) => {
-                if (typeof err === 'string') return err;
-                return `${err.loc?.join('.')}: ${err.msg}`;
-              }).join('; ');
-            } else if (typeof errorData.detail === 'string') {
-              errorMessage = errorData.detail;
-            } else {
-              errorMessage = JSON.stringify(errorData.detail);
-            }
-          } else if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch (parseError) {
-          // 如果无法解析JSON，使用状态文本
-          errorMessage = `审核失败 (${response.status}): ${response.statusText}`;
-        }
-        alert(errorMessage);
-      }
-    } catch (error) {
-      console.error('审核取消请求失败:', error);
-      let errorMessage = '审核失败: ';
-      if (error instanceof Error) {
-        errorMessage += error.message;
-      } else {
-        errorMessage += '未知错误';
-      }
       alert(errorMessage);
     }
   };
