@@ -106,6 +106,34 @@ const LoginModal: React.FC<LoginModalProps> = ({
     return suggestionText;
   };
 
+  // 密码验证防抖定时器
+  const passwordValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // 触发密码验证（带防抖）
+  const triggerPasswordValidation = (password: string) => {
+    // 清除之前的定时器
+    if (passwordValidationTimeoutRef.current) {
+      clearTimeout(passwordValidationTimeoutRef.current);
+    }
+    
+    // 立即清空密码为空时的验证结果
+    if (!password) {
+      setPasswordValidation({
+        is_valid: false,
+        score: 0,
+        strength: 'weak',
+        errors: [],
+        suggestions: []
+      });
+      return;
+    }
+    
+    // 设置防抖，延迟300ms后验证（避免移动端输入法频繁触发）
+    passwordValidationTimeoutRef.current = setTimeout(() => {
+      validatePassword(password);
+    }, 300);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -114,9 +142,27 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }));
     setError('');
     
-    // 如果是密码字段且是注册模式，进行密码验证
+    // 如果是密码字段且是注册模式，进行防抖密码验证
     if (name === 'password' && !isLogin) {
-      validatePassword(value);
+      triggerPasswordValidation(value);
+    }
+  };
+
+  // 处理输入事件（移动端支持，用于处理输入法的实时输入）
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    
+    // 对于密码字段，确保状态同步（移动端输入法可能需要）
+    if (name === 'password') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // 如果是注册模式，进行防抖密码验证
+      if (!isLogin) {
+        triggerPasswordValidation(value);
+      }
     }
   };
 
@@ -144,6 +190,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
       console.error('密码验证失败:', error);
     }
   };
+
+  // 组件卸载时清理定时器
+  React.useEffect(() => {
+    return () => {
+      if (passwordValidationTimeoutRef.current) {
+        clearTimeout(passwordValidationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -558,8 +613,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
               name="password"
               value={formData.password}
               onChange={handleInputChange}
+              onInput={handleInput}
               placeholder={isLogin ? t('common.password') : t('auth.passwordRequirements')}
               required
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
               style={{
                 width: '100%',
                 padding: '12px 16px',
