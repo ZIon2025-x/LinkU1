@@ -156,11 +156,18 @@ const Settings: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       // 保存个人资料（常住城市、语言偏好）
       const profileResponse = await fetch('/api/users/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -180,6 +187,7 @@ const Settings: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
         body: JSON.stringify(formData.preferences)

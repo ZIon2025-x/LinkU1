@@ -472,8 +472,17 @@ const CustomerService: React.FC = () => {
     }
 
     try {
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`/api/admin/tasks/${taskId}/delete`, {
         method: 'DELETE',
+        headers: {
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
         credentials: 'include'  // 使用Cookie认证
       });
 

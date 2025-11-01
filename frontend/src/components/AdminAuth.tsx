@@ -106,8 +106,17 @@ const AdminAuth: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/admin/logout`, {
         method: 'POST',
+        headers: {
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
         credentials: 'include'
       });
 
@@ -123,10 +132,17 @@ const AdminAuth: React.FC = () => {
 
   const handleChangePassword = async (oldPassword: string, newPassword: string) => {
     try {
+      // 获取 CSRF token
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/auth/admin/change-password`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
         body: JSON.stringify({
