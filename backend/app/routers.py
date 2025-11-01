@@ -1358,7 +1358,7 @@ def get_my_profile(
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating,
             "residence_city": getattr(current_user, 'residence_city', None),
-            "language_preference": getattr(current_user, 'language_preference', 'zh')
+            "language_preference": getattr(current_user, 'language_preference', 'en')
         }
         
         print(f"[DEBUG] get_my_profile 返回数据: task_count={formatted_user['task_count']}, completed_task_count={formatted_user['completed_task_count']}")

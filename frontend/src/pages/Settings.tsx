@@ -32,7 +32,7 @@ const Settings: React.FC = () => {
     email: '',
     phone: '',
     residence_city: '',
-    language_preference: 'zh',
+    language_preference: 'en',
     notifications: {
       email: true,
       sms: false,
@@ -106,7 +106,7 @@ const Settings: React.FC = () => {
             email: userData.email || '',
             phone: userData.phone || '',
             residence_city: userData.residence_city || '',
-            language_preference: userData.language_preference || 'zh',
+            language_preference: userData.language_preference || 'en',
             notifications: {
               email: true,
               sms: false,
