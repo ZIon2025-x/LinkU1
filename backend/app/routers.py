@@ -4977,6 +4977,7 @@ def get_task_experts(
                     "is_featured": bool(expert.is_featured),
                     "display_order": expert.display_order,
                     "category": expert.category,
+                    "location": expert.location,  # 添加城市字段
                     "created_at": expert.created_at.isoformat() if expert.created_at else None,
                     "updated_at": expert.updated_at.isoformat() if expert.updated_at else None,
                 }
@@ -5141,6 +5142,7 @@ def get_public_task_experts(
                     "bio": expert.bio,
                     "response_time": expert.response_time,
                     "success_rate": expert.success_rate,
+                    "location": expert.location,  # 添加城市字段
                 }
                 for expert in experts
             ]

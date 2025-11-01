@@ -26,6 +26,11 @@ import SystemSettings from '../components/SystemSettings';
 import JobPositionManagement from './JobPositionManagement';
 import dayjs from 'dayjs';
 
+// 城市列表 - 与任务达人页面保持一致
+const CITIES = [
+  "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
+];
+
 interface DashboardStats {
   total_users: number;
   total_tasks: number;
@@ -146,7 +151,8 @@ const AdminDashboard: React.FC = () => {
     is_active: 1,
     is_featured: 1,
     display_order: 0,
-    category: 'programming'
+    category: 'programming',
+    location: 'Online' // 默认城市
   });
 
   // 刷新提醒数量的函数
@@ -1088,7 +1094,8 @@ const AdminDashboard: React.FC = () => {
               is_active: 1,
               is_featured: 1,
               display_order: 0,
-              category: 'programming'
+              category: 'programming',
+              location: 'Online'
             });
             setShowTaskExpertModal(true);
           }}
@@ -1285,6 +1292,28 @@ const AdminDashboard: React.FC = () => {
                   <option value="marketing">营销推广</option>
                   <option value="writing">文案写作</option>
                   <option value="translation">翻译服务</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>城市</label>
+                <select
+                  value={taskExpertForm.location || 'Online'}
+                  onChange={(e) => setTaskExpertForm({...taskExpertForm, location: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                >
+                  {CITIES.map(city => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -21,7 +21,13 @@ interface TaskExpert {
   achievements: string[];
   response_time: string;
   success_rate: number;
+  location?: string; // 添加城市字段
 }
+
+// 城市列表 - 与其他页面保持一致
+const CITIES = [
+  "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
+];
 
 const TaskExperts: React.FC = () => {
   const { t } = useLanguage();
@@ -29,6 +35,7 @@ const TaskExperts: React.FC = () => {
   const [experts, setExperts] = useState<TaskExpert[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [isMobile, setIsMobile] = useState(false);
 
@@ -51,7 +58,8 @@ const TaskExperts: React.FC = () => {
       featured_skills: ['React', 'Node.js', 'Python', 'Vue.js'],
       achievements: ['技术认证', '优秀贡献者', '年度达人'],
       response_time: '2小时内',
-      success_rate: 98
+      success_rate: 98,
+      location: 'London'
     },
     {
       id: '2',
@@ -70,7 +78,8 @@ const TaskExperts: React.FC = () => {
       featured_skills: ['Figma', 'Photoshop', 'Illustrator', 'Sketch'],
       achievements: ['设计认证', '创意达人'],
       response_time: '4小时内',
-      success_rate: 96
+      success_rate: 96,
+      location: 'Manchester'
     },
     {
       id: '3',
@@ -89,7 +98,8 @@ const TaskExperts: React.FC = () => {
       featured_skills: ['SEO', 'SEM', '社交媒体', '内容营销'],
       achievements: ['营销认证', '增长专家'],
       response_time: '6小时内',
-      success_rate: 94
+      success_rate: 94,
+      location: 'Birmingham'
     },
     {
       id: '4',
@@ -108,7 +118,8 @@ const TaskExperts: React.FC = () => {
       featured_skills: ['文案写作', '内容策划', 'SEO写作', '翻译'],
       achievements: ['写作认证'],
       response_time: '8小时内',
-      success_rate: 92
+      success_rate: 92,
+      location: 'Online'
     },
     {
       id: '5',
@@ -127,7 +138,8 @@ const TaskExperts: React.FC = () => {
       featured_skills: ['英语', '日语', '韩语', '商务翻译'],
       achievements: ['翻译认证', '语言专家', '文化使者'],
       response_time: '3小时内',
-      success_rate: 97
+      success_rate: 97,
+      location: 'Edinburgh'
     }
   ];
 
@@ -164,10 +176,22 @@ const TaskExperts: React.FC = () => {
   }, []);
 
   const filteredExperts = experts.filter(expert => {
-    if (selectedCategory === 'all') return true;
-    return expert.expertise_areas.some(area => 
-      area.toLowerCase().includes(selectedCategory.toLowerCase())
-    );
+    // 按分类筛选
+    if (selectedCategory !== 'all') {
+      const categoryMatch = expert.expertise_areas.some(area => 
+        area.toLowerCase().includes(selectedCategory.toLowerCase())
+      );
+      if (!categoryMatch) return false;
+    }
+    
+    // 按城市筛选
+    if (selectedCity !== 'all') {
+      if (!expert.location || expert.location !== selectedCity) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   const sortedExperts = [...filteredExperts].sort((a, b) => {
@@ -317,6 +341,36 @@ const TaskExperts: React.FC = () => {
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ 
+                fontSize: '16px', 
+                fontWeight: '600', 
+                color: '#374151' 
+              }}>
+                {t('taskExperts.filterByCity')}:
+              </label>
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '12px',
+                  border: '2px solid #e5e7eb',
+                  fontSize: '14px',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  background: '#fff'
+                }}
+              >
+                <option value="all">{t('home.allCities')}</option>
+                {CITIES.map(city => (
+                  <option key={city} value={city}>
+                    {city}
                   </option>
                 ))}
               </select>

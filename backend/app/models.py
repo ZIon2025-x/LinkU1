@@ -576,6 +576,7 @@ class FeaturedTaskExpert(Base):
     is_featured = Column(Integer, default=1)  # 是否精选推荐
     display_order = Column(Integer, default=0)  # 显示顺序
     category = Column(String(50), nullable=True)  # 分类（programming, design, marketing, writing, translation）
+    location = Column(String(50), nullable=True)  # 城市位置（如：London, Manchester, Online等）
     
     created_at = Column(DateTime, default=get_uk_time_naive)
     updated_at = Column(DateTime, default=get_uk_time_naive, onupdate=get_uk_time_naive)

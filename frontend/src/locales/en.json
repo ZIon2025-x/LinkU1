@@ -624,6 +624,7 @@
     "writing": "Writing",
     "translation": "Translation",
     "filterBy": "Filter",
+    "filterByCity": "City",
     "sortBy": "Sort",
     "sortByRating": "Sort by Rating",
     "sortByTasks": "Sort by Tasks",
