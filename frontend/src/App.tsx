@@ -29,6 +29,7 @@ import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
 import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
+import QueryPreservingRedirect from './components/QueryPreservingRedirect';
 import ScrollToTop from './components/ScrollToTop';
 import FaviconManager from './components/FaviconManager';
 import LanguageMetaManager from './components/LanguageMetaManager';
@@ -163,7 +164,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/admin/login" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin/login`} replace />} />
       <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
-      <Route path="/verify-email" element={<Navigate to={`/${DEFAULT_LANGUAGE}/verify-email`} replace />} />
+      <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
     </Routes>
   );
 };
