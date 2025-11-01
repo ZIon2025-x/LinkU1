@@ -268,7 +268,7 @@ const MyTasks: React.FC = () => {
       const result = await cancelTask(taskId, reason || undefined);
       
       // 检查返回的消息，判断是直接取消还是提交审核
-      if (result && result.request_id) {
+      if (result && (result.request_id || result.message?.includes('review') || result.message?.includes('审核'))) {
         // 已提交审核请求，添加到待审核列表
         setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
         alert('已成功提交取消审核请求，等待客服审核');
@@ -279,13 +279,27 @@ const MyTasks: React.FC = () => {
       
       loadTasks();
     } catch (error: any) {
+      console.error('取消任务失败:', error);
+      
+      // 检查是否是 CSRF token 错误
+      if (error.response?.status === 401) {
+        if (error.response?.data?.detail?.includes('CSRF')) {
+          alert('验证失败，请刷新页面后重试');
+          // 清除 CSRF token 缓存，下次会重新获取
+          window.location.reload();
+          return;
+        }
+      }
+      
       // 检查是否是"已有待审核请求"的错误
-      if (error.response?.data?.detail?.includes('already pending')) {
+      const errorDetail = error.response?.data?.detail || '';
+      if (errorDetail.includes('already pending') || errorDetail.includes('正在审核') || errorDetail.includes('待审核')) {
         // 如果已经有待审核请求，也添加到列表中
         setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
         alert('您的取消请求正在审核中，请耐心等待');
+        loadTasks();
       } else {
-        alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+        alert(errorDetail || t('myTasks.alerts.operationFailed'));
       }
     } finally {
       setActionLoading(null);

@@ -131,31 +131,29 @@ async function executeRequest<T>(
 
 // 获取CSRF token的函数
 export async function getCSRFToken(): Promise<string> {
-  // 优先从 cookie 中读取 CSRF token（因为后端验证时使用的是 cookie 中的 token）
+  // 总是优先从 cookie 中读取 CSRF token（因为后端验证时使用的是 cookie 中的 token）
+  // 不使用内存缓存，确保每次都是最新的 token
   const cookieToken = document.cookie
     .split('; ')
     .find(row => row.startsWith('csrf_token='))
     ?.split('=')[1];
   
   if (cookieToken) {
-    // 如果 cookie 中有 token，使用它并更新内存中的缓存
+    // 更新内存中的缓存（用于调试）
     csrfToken = cookieToken;
-    return csrfToken;
+    return cookieToken;
   }
   
-  // 如果内存中有缓存的 token，使用它
-  if (csrfToken) {
-    return csrfToken;
-  }
-  
-  // 如果 cookie 和内存中都没有，从 API 获取新的 token
+  // 如果 cookie 中没有 token，从 API 获取新的 token
   try {
     const response = await api.get('/api/csrf/token');
-    csrfToken = response.data.csrf_token;
-    if (!csrfToken) {
+    const newToken = response.data.csrf_token;
+    if (!newToken) {
       throw new Error('CSRF token为空');
     }
-    return csrfToken;
+    // 更新内存缓存
+    csrfToken = newToken;
+    return newToken;
   } catch (error) {
     console.error('获取CSRF token失败:', error);
     throw error;
