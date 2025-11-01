@@ -109,15 +109,60 @@ const LoginModal: React.FC<LoginModalProps> = ({
   // 密码验证防抖定时器
   const passwordValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // 密码验证函数
+  const validatePassword = React.useCallback(async (password: string) => {
+    if (!password || password.length === 0) {
+      setPasswordValidation({
+        is_valid: false,
+        score: 0,
+        strength: 'weak',
+        errors: [],
+        suggestions: []
+      });
+      return;
+    }
+
+    try {
+      const response = await api.post('/api/users/password/validate', {
+        password: password,
+        username: formData.username || '',
+        email: formData.email || ''
+      });
+      
+      // 确保返回的数据格式正确
+      if (response.data) {
+        setPasswordValidation({
+          is_valid: response.data.is_valid || false,
+          score: response.data.score || 0,
+          strength: response.data.strength || 'weak',
+          errors: response.data.errors || [],
+          suggestions: response.data.suggestions || []
+        });
+      }
+    } catch (error: any) {
+      console.error('密码验证失败:', error);
+      // 验证失败时，至少显示错误信息
+      if (error?.response?.data?.errors) {
+        setPasswordValidation({
+          is_valid: false,
+          score: 0,
+          strength: 'weak',
+          errors: error.response.data.errors,
+          suggestions: error.response.data.suggestions || []
+        });
+      }
+    }
+  }, [formData.username, formData.email]);
+
   // 触发密码验证（带防抖）
-  const triggerPasswordValidation = (password: string) => {
+  const triggerPasswordValidation = React.useCallback((password: string) => {
     // 清除之前的定时器
     if (passwordValidationTimeoutRef.current) {
       clearTimeout(passwordValidationTimeoutRef.current);
     }
     
     // 立即清空密码为空时的验证结果
-    if (!password) {
+    if (!password || password.length === 0) {
       setPasswordValidation({
         is_valid: false,
         score: 0,
@@ -132,62 +177,41 @@ const LoginModal: React.FC<LoginModalProps> = ({
     passwordValidationTimeoutRef.current = setTimeout(() => {
       validatePassword(password);
     }, 300);
-  };
+  }, [validatePassword]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    const currentValue = e.target.value; // 确保获取最新值
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: currentValue
     }));
     setError('');
     
-    // 如果是密码字段且是注册模式，进行防抖密码验证
+    // 如果是密码字段且是注册模式，使用最新的值进行防抖密码验证
     if (name === 'password' && !isLogin) {
-      triggerPasswordValidation(value);
+      triggerPasswordValidation(currentValue);
     }
   };
 
   // 处理输入事件（移动端支持，用于处理输入法的实时输入）
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const name = target.name;
+    const actualValue = target.value; // 直接从input元素获取最新值
     
     // 对于密码字段，确保状态同步（移动端输入法可能需要）
     if (name === 'password') {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: actualValue
       }));
       
       // 如果是注册模式，进行防抖密码验证
-      if (!isLogin) {
-        triggerPasswordValidation(value);
+      if (!isLogin && actualValue) {
+        triggerPasswordValidation(actualValue);
       }
-    }
-  };
-
-  // 密码验证函数
-  const validatePassword = async (password: string) => {
-    if (!password) {
-      setPasswordValidation({
-        is_valid: false,
-        score: 0,
-        strength: 'weak',
-        errors: [],
-        suggestions: []
-      });
-      return;
-    }
-
-    try {
-      const response = await api.post('/api/users/password/validate', {
-        password: password,
-        username: formData.username,
-        email: formData.email
-      });
-      setPasswordValidation(response.data);
-    } catch (error) {
-      console.error('密码验证失败:', error);
     }
   };
 
@@ -614,6 +638,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
               value={formData.password}
               onChange={handleInputChange}
               onInput={handleInput}
+              onKeyUp={(e) => {
+                // 移动端某些情况下需要keyup事件触发
+                const target = e.currentTarget;
+                if (target.name === 'password' && !isLogin) {
+                  triggerPasswordValidation(target.value);
+                }
+              }}
               placeholder={isLogin ? t('common.password') : t('auth.passwordRequirements')}
               required
               autoComplete={isLogin ? 'current-password' : 'new-password'}
@@ -631,6 +662,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = '#ddd';
+                // 失焦时也触发一次验证，确保最后的值被验证
+                if (!isLogin) {
+                  const currentValue = e.target.value || formData.password;
+                  if (currentValue) {
+                    // 清除防抖定时器，立即验证
+                    if (passwordValidationTimeoutRef.current) {
+                      clearTimeout(passwordValidationTimeoutRef.current);
+                    }
+                    validatePassword(currentValue);
+                  }
+                }
               }}
             />
             
