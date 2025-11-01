@@ -275,7 +275,7 @@ const TaskExperts: React.FC = () => {
     return (
       <div style={{ 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        background: '#fff'
       }}>
         {/* 顶部导航栏 - 与首页一致 */}
         <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
@@ -376,7 +376,7 @@ const TaskExperts: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: '#fff'
     }}>
       {/* 顶部导航栏 - 与首页一致 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
@@ -442,7 +442,7 @@ const TaskExperts: React.FC = () => {
         <div style={{
           textAlign: 'center',
           marginBottom: '40px',
-          color: '#fff'
+          color: '#1f2937'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
           <h1 style={{
