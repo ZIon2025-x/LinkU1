@@ -1220,7 +1220,7 @@ def get_task_cancel_request_by_id(db: Session, request_id: int):
 
 
 def update_task_cancel_request(
-    db: Session, request_id: int, status: str, admin_id: int, admin_comment: str = None
+    db: Session, request_id: int, status: str, admin_id: str, admin_comment: str = None
 ):
     """更新任务取消请求状态"""
     request = (

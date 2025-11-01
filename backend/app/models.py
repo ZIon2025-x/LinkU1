@@ -271,9 +271,9 @@ class TaskCancelRequest(Base):
     reason = Column(Text, nullable=True)  # 取消原因
     status = Column(String(20), default="pending")  # pending, approved, rejected
     admin_id = Column(
-        String(8), ForeignKey("users.id"), nullable=True
-    )  # 审核的管理员ID
-    admin_comment = Column(Text, nullable=True)  # 管理员审核意见
+        String(8), nullable=True
+    )  # 审核者ID（可以是管理员ID或客服ID，移除外键约束以支持客服ID）
+    admin_comment = Column(Text, nullable=True)  # 审核意见
     created_at = Column(DateTime, default=get_uk_time)
     reviewed_at = Column(DateTime, nullable=True)  # 审核时间
 

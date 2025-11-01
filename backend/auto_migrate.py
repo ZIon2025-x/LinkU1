@@ -31,6 +31,27 @@ def auto_migrate():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建/更新完成")
         
+        # 移除 task_cancel_requests 表的 admin_id 外键约束（以支持客服ID）
+        try:
+            from sqlalchemy import text
+            # 使用 autocommit 模式执行 DDL 语句
+            with sync_engine.begin() as conn:
+                # 检查并删除外键约束
+                result = conn.execute(text("""
+                    SELECT constraint_name 
+                    FROM information_schema.table_constraints 
+                    WHERE constraint_name = 'task_cancel_requests_admin_id_fkey'
+                    AND table_name = 'task_cancel_requests'
+                """))
+                if result.fetchone():
+                    conn.execute(text("""
+                        ALTER TABLE task_cancel_requests 
+                        DROP CONSTRAINT IF EXISTS task_cancel_requests_admin_id_fkey
+                    """))
+                    logger.info("已移除 task_cancel_requests.admin_id 外键约束")
+        except Exception as e:
+            logger.warning(f"移除外键约束时出错（可继续运行）: {e}")
+        
         # 这里可以添加更多的迁移逻辑
         # 例如：添加新列、创建索引等
         
