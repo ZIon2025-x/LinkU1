@@ -72,6 +72,7 @@
     "resendVerification": "Resend Verification Email",
     "verificationSuccess": "Verification Successful!",
     "verificationFailed": "Verification Failed",
+    "welcomeYou": "Welcome, {name}",
     "verificationRequired": "Email Verification Required",
     "checkEmail": "Please check your email and click the verification link to complete registration",
     "emailSent": "Email Sent!",

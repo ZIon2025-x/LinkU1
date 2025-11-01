@@ -72,6 +72,7 @@
     "resendVerification": "重发验证邮件",
     "verificationSuccess": "验证成功！",
     "verificationFailed": "验证失败",
+    "welcomeYou": "欢迎你，{name}",
     "verificationRequired": "需要邮箱验证",
     "checkEmail": "请检查您的邮箱并点击验证链接完成注册",
     "emailSent": "邮件已发送！",

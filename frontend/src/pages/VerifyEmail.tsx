@@ -68,6 +68,12 @@ const VerifyEmail: React.FC = () => {
         console.log('邮箱验证成功，显示成功页面');
         setStatus('success');
         setMessage(t('auth.verificationSuccess') || '邮箱验证成功！您现在可以正常使用平台了。');
+        // 验证成功后，立即尝试加载用户数据（因为后端已自动登录）
+        fetchCurrentUser().then(userData => {
+          setUser(userData);
+        }).catch(() => {
+          // 如果获取失败，忽略错误，用户数据会在其他useEffect中加载
+        });
         setLoading(false);
         return;
       }
@@ -349,12 +355,14 @@ const VerifyEmail: React.FC = () => {
           <>
             <SuccessIcon>✅</SuccessIcon>
             <h2 style={{ color: '#52c41a', marginBottom: 16 }}>{t('auth.verificationSuccess')}</h2>
+            {user?.name && (
+              <h3 style={{ fontSize: 20, marginBottom: 16, color: '#666', fontWeight: 'normal' }}>
+                {t('auth.welcomeYou').replace('{name}', user.name)}
+              </h3>
+            )}
             <p style={{ fontSize: 16, marginBottom: 24, color: '#666' }}>
               {message}
             </p>
-            <Button type="primary" size="large" onClick={handleGoToLogin}>
-              {t('common.login')}
-            </Button>
           </>
         ) : (
           <>
