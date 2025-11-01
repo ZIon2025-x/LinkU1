@@ -50,7 +50,8 @@ const VerifyEmail: React.FC = () => {
       const error = searchParams.get('error');
       
       // 如果已经有success参数，说明后端已经验证成功并重定向回来
-      if (success === 'true') {
+      if (success === 'true' || success === '1') {
+        console.log('邮箱验证成功，显示成功页面');
         setStatus('success');
         setMessage(t('auth.verificationSuccess') || '邮箱验证成功！您现在可以正常使用平台了。');
         setLoading(false);
@@ -59,6 +60,7 @@ const VerifyEmail: React.FC = () => {
       
       // 如果有error参数，说明后端验证失败并重定向回来
       if (error) {
+        console.log('邮箱验证失败:', error);
         setStatus('error');
         setError(decodeURIComponent(error));
         setLoading(false);

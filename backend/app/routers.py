@@ -282,77 +282,98 @@ def verify_email(
             status_code=302
         )
     
+    # 验证用户 - 这是关键步骤，如果成功则必须重定向到成功页面
+    user = None
     try:
-        # 验证用户
         user = EmailVerificationManager.verify_user(db, token)
+    except Exception as verify_error:
+        logger.error(f"验证用户时发生异常: {verify_error}")
+        import traceback
+        logger.error(f"详细错误: {traceback.format_exc()}")
+        # 验证过程出错，重定向到错误页面
+        error_msg = str(verify_error) if len(str(verify_error)) < 100 else "验证失败"
+        return RedirectResponse(
+            url=f"{frontend_url}/verify-email?error={quote(error_msg)}",
+            status_code=302
+        )
+    
+    if not user:
+        # 验证失败，重定向到错误页面
+        logger.warning(f"验证失败，令牌无效或已过期: {token}")
+        return RedirectResponse(
+            url=f"{frontend_url}/verify-email?error={quote('验证失败，令牌无效或已过期')}",
+            status_code=302
+        )
+    
+    # 用户验证成功，记录日志
+    logger.info(f"用户验证成功: {user.email}, ID: {user.id}")
+    
+    # 验证成功，尝试自动登录用户（可选，失败不影响验证成功）
+    try:
+        from app.secure_auth import SecureAuthManager, get_client_ip, get_device_fingerprint
+        from app.cookie_manager import CookieManager
         
-        if not user:
-            # 验证失败，重定向到错误页面
-            return RedirectResponse(
-                url=f"{frontend_url}/verify-email?error={quote('验证失败，令牌无效或已过期')}",
-                status_code=302
-            )
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
         
-        # 验证成功，自动登录用户
-        try:
-            from app.secure_auth import SecureAuthManager, get_client_ip, get_device_fingerprint
-            from app.cookie_manager import CookieManager
-            
-            # 获取设备信息
-            device_fingerprint = get_device_fingerprint(request)
-            client_ip = get_client_ip(request)
-            user_agent = request.headers.get("user-agent", "")
-            
-            # 生成刷新令牌
-            from app.secure_auth import create_user_refresh_token
-            refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
-            
-            # 创建会话
-            session = SecureAuthManager.create_session(
-                user_id=user.id,
-                device_fingerprint=device_fingerprint,
-                ip_address=client_ip,
-                user_agent=user_agent,
-                refresh_token=refresh_token
-            )
-            
-            # 设置安全Cookie
-            CookieManager.set_session_cookies(
-                response=response,
-                session_id=session.session_id,
-                refresh_token=refresh_token,
-                user_id=user.id,
-                user_agent=user_agent
-            )
-            
-            # 生成并设置CSRF token
-            from app.csrf import CSRFProtection
-            csrf_token = CSRFProtection.generate_csrf_token()
-            CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
-            
-            # 检测是否为移动端
-            is_mobile = any(keyword in user_agent.lower() for keyword in [
-                'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
-                'windows phone', 'opera mini', 'iemobile'
-            ])
-            
-            # 为移动端添加特殊的响应头
-            if is_mobile:
-                response.headers["X-Session-ID"] = session.session_id
-                response.headers["X-User-ID"] = user.id
-                response.headers["X-Auth-Status"] = "authenticated"
-                response.headers["X-Mobile-Auth"] = "true"
-            
-            logger.info(f"邮箱验证成功后自动登录: {user.email}, ID: {user.id}")
-            
-        except Exception as auth_error:
-            logger.error(f"自动登录失败: {auth_error}")
-            # 即使自动登录失败，仍然重定向到成功页面，用户可以手动登录
+        # 生成刷新令牌
+        from app.secure_auth import create_user_refresh_token
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
         
-        # 验证成功，重定向到前端成功页面
-        # 注意：在重定向响应中，Cookie已经通过response.set_cookie设置，会在重定向时自动发送
+        # 创建会话
+        session = SecureAuthManager.create_session(
+            user_id=user.id,
+            device_fingerprint=device_fingerprint,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            refresh_token=refresh_token
+        )
+        
+        # 设置安全Cookie
+        CookieManager.set_session_cookies(
+            response=response,
+            session_id=session.session_id,
+            refresh_token=refresh_token,
+            user_id=user.id,
+            user_agent=user_agent
+        )
+        
+        # 生成并设置CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        # 检测是否为移动端
+        is_mobile = any(keyword in user_agent.lower() for keyword in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        # 为移动端添加特殊的响应头
+        if is_mobile:
+            response.headers["X-Session-ID"] = session.session_id
+            response.headers["X-User-ID"] = str(user.id)
+            response.headers["X-Auth-Status"] = "authenticated"
+            response.headers["X-Mobile-Auth"] = "true"
+        
+        logger.info(f"邮箱验证成功后自动登录成功: {user.email}, ID: {user.id}")
+        
+    except Exception as auth_error:
+        logger.warning(f"自动登录失败（不影响验证成功）: {auth_error}")
+        import traceback
+        logger.debug(f"自动登录详细错误: {traceback.format_exc()}")
+        # 即使自动登录失败，验证仍然成功，继续重定向到成功页面
+    
+    # 验证成功，必须重定向到前端成功页面
+    # 无论自动登录是否成功，只要用户验证成功，就显示成功页面
+    try:
+        success_url = f"{frontend_url}/verify-email?success=true"
+        logger.info(f"重定向到验证成功页面: {success_url}")
+        
         redirect_response = RedirectResponse(
-            url=f"{frontend_url}/verify-email?token={token}&success=true",
+            url=success_url,
             status_code=302
         )
         
@@ -370,14 +391,13 @@ def verify_email(
         
         return redirect_response
         
-    except Exception as e:
-        logger.error(f"邮箱验证异常: {e}")
+    except Exception as redirect_error:
+        logger.error(f"创建重定向响应时发生错误: {redirect_error}")
         import traceback
         logger.error(f"详细错误: {traceback.format_exc()}")
-        # 验证失败，重定向到错误页面
-        error_msg = str(e) if len(str(e)) < 100 else "验证失败"
+        # 即使重定向创建失败，也要尝试返回一个基本的重定向响应
         return RedirectResponse(
-            url=f"{frontend_url}/verify-email?error={quote(error_msg)}",
+            url=f"{frontend_url}/verify-email?success=true",
             status_code=302
         )
 
