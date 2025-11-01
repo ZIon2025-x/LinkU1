@@ -271,8 +271,11 @@ class TaskCancelRequest(Base):
     reason = Column(Text, nullable=True)  # 取消原因
     status = Column(String(20), default="pending")  # pending, approved, rejected
     admin_id = Column(
-        String(8), nullable=True
-    )  # 审核者ID（可以是管理员ID或客服ID，移除外键约束以支持客服ID）
+        String(5), ForeignKey("admin_users.id"), nullable=True
+    )  # 审核的管理员ID（格式：A0001，指向 admin_users 表）
+    service_id = Column(
+        String(6), ForeignKey("customer_service.id"), nullable=True
+    )  # 审核的客服ID（格式：CS8888，指向 customer_service 表）
     admin_comment = Column(Text, nullable=True)  # 审核意见
     created_at = Column(DateTime, default=get_uk_time)
     reviewed_at = Column(DateTime, nullable=True)  # 审核时间
@@ -305,8 +308,8 @@ class AdminRequest(Base):
     )  # 状态：pending, processing, completed, rejected
     admin_response = Column(Text, nullable=True)  # 管理员回复
     admin_id = Column(
-        String(8), ForeignKey("users.id"), nullable=True
-    )  # 处理的管理员ID
+        String(5), ForeignKey("admin_users.id"), nullable=True
+    )  # 处理的管理员ID（格式：A0001，指向 admin_users 表）
     created_at = Column(DateTime, default=get_uk_time)
     updated_at = Column(DateTime, nullable=True)  # 更新时间
 

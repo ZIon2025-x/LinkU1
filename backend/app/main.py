@@ -387,16 +387,16 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"创建索引时出错（可继续运行）: {e}")
         
-        # ⚠️ 生产环境禁用自动迁移
-        if environment == "production":
-            logger.info("ℹ️  生产环境跳过自动迁移，请使用: railway run alembic upgrade head")
-        else:
-            # 开发环境可以尝试自动迁移
-            try:
-                from auto_migrate import auto_migrate
-                auto_migrate()
-            except Exception as e:
-                logger.warning(f"自动迁移失败，但应用继续启动: {e}")
+        # 执行自动迁移（包括生产环境，因为迁移脚本是安全的）
+        try:
+            from auto_migrate import auto_migrate
+            auto_migrate()
+            logger.info("✅ 数据库迁移完成")
+        except Exception as e:
+            logger.error(f"❌ 自动迁移失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # 不抛出异常，让应用继续启动
         
         # 验证表是否创建成功
         from sqlalchemy import inspect

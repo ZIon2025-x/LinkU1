@@ -1220,9 +1220,15 @@ def get_task_cancel_request_by_id(db: Session, request_id: int):
 
 
 def update_task_cancel_request(
-    db: Session, request_id: int, status: str, admin_id: str, admin_comment: str = None
+    db: Session, request_id: int, status: str, reviewer_id: str, admin_comment: str = None, reviewer_type: str = None
 ):
-    """更新任务取消请求状态"""
+    """
+    更新任务取消请求状态
+    
+    Args:
+        reviewer_id: 审核者ID（管理员ID或客服ID）
+        reviewer_type: 审核者类型，'admin' 或 'service'。如果为None，根据ID格式自动判断
+    """
     request = (
         db.query(models.TaskCancelRequest)
         .filter(models.TaskCancelRequest.id == request_id)
@@ -1230,9 +1236,29 @@ def update_task_cancel_request(
     )
     if request:
         request.status = status
-        request.admin_id = admin_id
         request.admin_comment = admin_comment
         request.reviewed_at = get_uk_time()
+        
+        # 根据审核者类型设置相应字段
+        if reviewer_type is None:
+            # 自动判断：管理员ID以'A'开头（格式：A0001），客服ID以'CS'开头（格式：CS8888）
+            if reviewer_id.startswith('A'):
+                reviewer_type = 'admin'
+            elif reviewer_id.startswith('CS'):
+                reviewer_type = 'service'
+            else:
+                # 默认为管理员（向后兼容）
+                reviewer_type = 'admin'
+        
+        # 先清除两个字段，避免旧数据干扰
+        if reviewer_type == 'admin':
+            request.service_id = None  # 先清除客服ID
+            request.admin_id = reviewer_id  # 设置管理员ID
+        elif reviewer_type == 'service':
+            request.admin_id = None  # 先清除管理员ID
+            request.service_id = reviewer_id  # 设置客服ID
+        
+        db.flush()  # 先刷新到数据库，检查是否有错误
         db.commit()
         db.refresh(request)
     return request

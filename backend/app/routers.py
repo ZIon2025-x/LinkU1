@@ -2555,9 +2555,9 @@ def admin_review_cancel_request(
     if cancel_request.status != "pending":
         raise HTTPException(status_code=400, detail="Request has already been reviewed")
 
-    # 更新请求状态
+    # 更新请求状态（管理员审核）
     updated_request = crud.update_task_cancel_request(
-        db, request_id, review.status, current_user.id, review.admin_comment
+        db, request_id, review.status, current_user.id, review.admin_comment, reviewer_type='admin'
     )
 
     # 如果审核通过，实际取消任务
@@ -3220,9 +3220,9 @@ def cs_review_cancel_request(
     if cancel_request.status != "pending":
         raise HTTPException(status_code=400, detail="Request has already been reviewed")
 
-    # 更新请求状态
+    # 更新请求状态（客服审核）
     updated_request = crud.update_task_cancel_request(
-        db, request_id, review.status, current_user.id, review.admin_comment
+        db, request_id, review.status, current_user.id, review.admin_comment, reviewer_type='service'
     )
 
     if review.status == "approved":
