@@ -168,6 +168,7 @@ class UserValidator(BaseValidator):
     phone: Optional[str] = Field(None, max_length=20)
     agreed_to_terms: Optional[bool] = Field(False)
     terms_agreed_at: Optional[str] = Field(None)
+    inviter_id: Optional[str] = Field(None, max_length=8)  # 邀请者ID
     
     @validator('name')
     def validate_name(cls, v):
@@ -186,6 +187,18 @@ class UserValidator(BaseValidator):
         if v is None or v == "":
             return None
         return StringValidator.validate_phone(v)
+    
+    @validator('inviter_id')
+    def validate_inviter_id(cls, v):
+        if v is None or v == "":
+            return None
+        # 验证邀请者ID格式（8位字符串）
+        v = str(v).strip()
+        if len(v) == 0:
+            return None
+        if len(v) > 8:
+            raise ValueError("邀请者ID不能超过8个字符")
+        return v
 
 
 class MessageValidator(BaseValidator):

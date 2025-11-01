@@ -59,11 +59,15 @@ class EmailVerificationManager:
             existing_pending.expires_at = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
             existing_pending.agreed_to_terms = 1 if user_data.agreed_to_terms else 0
             existing_pending.terms_agreed_at = terms_agreed_at
+            existing_pending.inviter_id = user_data.inviter_id if user_data.inviter_id else None
             db.commit()
             db.refresh(existing_pending)
             return existing_pending
         
         # 创建新的待验证用户
+        inviter_id_value = user_data.inviter_id if user_data.inviter_id else None
+        logger.info(f"创建待验证用户: email={user_data.email}, inviter_id={inviter_id_value}")
+        
         pending_user = models.PendingUser(
             name=user_data.name,
             email=user_data.email,
@@ -74,14 +78,14 @@ class EmailVerificationManager:
             expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
             agreed_to_terms=1 if user_data.agreed_to_terms else 0,
             terms_agreed_at=terms_agreed_at,
-            inviter_id=user_data.inviter_id if hasattr(user_data, 'inviter_id') else None
+            inviter_id=inviter_id_value
         )
         
         db.add(pending_user)
         db.commit()
         db.refresh(pending_user)
         
-        logger.info(f"创建待验证用户: {user_data.email}")
+        logger.info(f"创建待验证用户成功: email={user_data.email}, inviter_id={pending_user.inviter_id}")
         return pending_user
     
     @staticmethod

@@ -146,7 +146,7 @@ async def register(
         raise e
     
     # 调试信息
-    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}")
+    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}, inviter_id={validated_data.get('inviter_id', 'None')}")
     
     # 检查邮箱是否已被注册（正式用户）
     db_user = await async_user_crud.get_user_by_email(db, validated_data['email'])
