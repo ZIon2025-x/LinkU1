@@ -111,14 +111,6 @@
       "destination": "/BingSiteAuth.xml"
     },
     {
-      "source": "/favicon.ico",
-      "destination": "/favicon.ico"
-    },
-    {
-      "source": "/favicon.png",
-      "destination": "/favicon.png"
-    },
-    {
       "source": "/logo192.png",
       "destination": "/logo192.png"
     },
