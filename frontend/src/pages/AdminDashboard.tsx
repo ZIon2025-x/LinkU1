@@ -1291,19 +1291,48 @@ const AdminDashboard: React.FC = () => {
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>头像</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                {taskExpertForm.avatar && (
-                  <img
-                    src={taskExpertForm.avatar}
-                    alt="头像预览"
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid #ddd'
-                    }}
-                  />
-                )}
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  border: '2px solid #ddd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  backgroundColor: '#f5f5f5',
+                  flexShrink: 0
+                }}>
+                  {taskExpertForm.avatar ? (
+                    <img
+                      key={taskExpertForm.avatar} // 添加key强制重新渲染
+                      src={taskExpertForm.avatar}
+                      alt="头像预览"
+                      onError={(e) => {
+                        console.error('头像加载失败:', taskExpertForm.avatar);
+                        // 如果加载失败，显示占位符
+                        const img = e.currentTarget;
+                        const parent = img.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<span style="font-size: 10px; color: #ff4d4f;">加载失败</span>';
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log('头像加载成功:', taskExpertForm.avatar);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                        cursor: 'pointer'
+                      }}
+                      title={taskExpertForm.avatar}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '12px', color: '#999' }}>头像预览</span>
+                  )}
+                </div>
                 <div style={{ flex: 1 }}>
                   <input
                     type="file"
