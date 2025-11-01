@@ -29,6 +29,7 @@ import CustomerServiceRoute from './components/CustomerServiceRoute';
 import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
 import ScrollToTop from './components/ScrollToTop';
+import FaviconManager from './components/FaviconManager';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -169,6 +170,7 @@ function App() {
       <CookieProvider>
         <AuthProvider>
           <Router>
+            <FaviconManager />
             <ScrollToTop />
             <LanguageRoutes />
             <CookieManager />

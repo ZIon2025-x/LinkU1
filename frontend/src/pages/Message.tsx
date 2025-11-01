@@ -1546,7 +1546,7 @@ const MessagePage: React.FC = () => {
                     if (document.hidden) {
                       const notification = new Notification('新消息', {
                         body: `${fromName}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`,
-                        icon: '/favicon.ico',
+                        icon: '/static/favicon.png',
                         tag: 'message-notification',
                         requireInteraction: false
                       });
