@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -12,6 +13,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // 配置dayjs插件
@@ -316,6 +318,7 @@ export const CITIES = [
 
 const Tasks: React.FC = () => {
   const { t } = useLanguage();
+  const location = useLocation();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState('all');
@@ -336,22 +339,11 @@ const Tasks: React.FC = () => {
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
-  // SEO优化：设置页面标题和Meta标签
-  useEffect(() => {
-    document.title = t('tasks.pageTitle');
-    
-    // 更新meta描述
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', t('tasks.seoDescription'));
-    }
-    
-    // 更新meta关键词
-    const metaKeywords = document.querySelector('meta[name="keywords"]');
-    if (metaKeywords) {
-      metaKeywords.setAttribute('content', t('tasks.seoKeywords'));
-    }
-  }, [t]);
+  // 生成canonical URL - 不带查询参数，统一URL格式
+  // 无论是否有查询参数（?type=xxx&location=xxx），canonical URL都不包含这些参数
+  const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
+    ? `https://www.link2ur.com${location.pathname}`
+    : 'https://www.link2ur.com/en/tasks';
 
   // 检测屏幕尺寸
   useEffect(() => {
@@ -732,6 +724,13 @@ const Tasks: React.FC = () => {
       minHeight: '100vh', 
       background: '#f5f5f5'
     }}>
+      {/* SEO优化 - 添加canonical URL防止重复索引 */}
+      <SEOHead 
+        title={t('tasks.pageTitle')}
+        description={t('tasks.seoDescription')}
+        canonicalUrl={canonicalUrl}
+      />
+
       {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header style={{
         position: 'fixed',

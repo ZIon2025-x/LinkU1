@@ -36,11 +36,19 @@ const CanonicalLink: React.FC<CanonicalLinkProps> = ({ url }) => {
         }
       }
       
-      // 确保路径以/开头
+      // 确保路径以/开头，并且移除查询参数（canonical URL不应该包含查询参数）
       const cleanPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
       
-      // 构建完整的canonical URL
-      canonicalLink.href = `${baseUrl}${cleanPath}`;
+      // 移除尾部斜杠（除了根路径）以统一URL格式
+      let normalizedPath = cleanPath;
+      if (normalizedPath !== '/en' && normalizedPath !== '/zh' && normalizedPath !== '/en/' && normalizedPath !== '/zh/') {
+        normalizedPath = normalizedPath.endsWith('/') ? normalizedPath.slice(0, -1) : normalizedPath;
+      } else if (normalizedPath === '/en/' || normalizedPath === '/zh/') {
+        normalizedPath = normalizedPath.slice(0, -1);
+      }
+      
+      // 构建完整的canonical URL（不包含查询参数）
+      canonicalLink.href = `${baseUrl}${normalizedPath}`;
     }
 
     // 添加到head
