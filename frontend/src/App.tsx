@@ -23,6 +23,7 @@ import FAQ from './pages/FAQ';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Partners from './pages/Partners';
 import MerchantCooperation from './pages/MerchantCooperation';
+import VerifyEmail from './pages/VerifyEmail';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
@@ -106,6 +107,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/customer-service/login`} element={<CustomerServiceLogin />} />
           <Route path={`/${lang}/admin/login`} element={<AdminLogin />} />
           <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
+          <Route path={`/${lang}/verify-email`} element={<VerifyEmail />} />
           <Route path={`/${lang}/admin/auth`} element={
             <AdminRoute>
               <AdminAuth />
@@ -161,6 +163,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/admin/login" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin/login`} replace />} />
       <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
+      <Route path="/verify-email" element={<Navigate to={`/${DEFAULT_LANGUAGE}/verify-email`} replace />} />
     </Routes>
   );
 };

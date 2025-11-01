@@ -46,28 +46,47 @@ const VerifyEmail: React.FC = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       const token = searchParams.get('token');
+      const success = searchParams.get('success');
+      const error = searchParams.get('error');
       
-      if (!token) {
-        setStatus('error');
-        setError(t('auth.verificationFailed'));
+      // 如果已经有success参数，说明后端已经验证成功并重定向回来
+      if (success === 'true') {
+        setStatus('success');
+        setMessage(t('auth.verificationSuccess') || '邮箱验证成功！您现在可以正常使用平台了。');
         setLoading(false);
         return;
       }
-
-      try {
-        const response = await api.get(`/api/users/verify-email?token=${token}`);
-        setStatus('success');
-        setMessage(response.data.message);
-      } catch (err: any) {
+      
+      // 如果有error参数，说明后端验证失败并重定向回来
+      if (error) {
         setStatus('error');
-        setError(err.response?.data?.detail || t('auth.verificationFailed'));
-      } finally {
+        setError(decodeURIComponent(error));
+        setLoading(false);
+        return;
+      }
+      
+      // 如果有token，调用API验证（兼容旧的方式）
+      if (token) {
+        try {
+          const response = await api.get(`/api/users/verify-email?token=${token}`);
+          setStatus('success');
+          setMessage(response.data.message);
+        } catch (err: any) {
+          setStatus('error');
+          setError(err.response?.data?.detail || t('auth.verificationFailed'));
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // 没有token也没有其他参数，显示错误
+        setStatus('error');
+        setError(t('auth.verificationFailed') || '缺少验证令牌');
         setLoading(false);
       }
     };
 
     verifyEmail();
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   const handleGoToLogin = () => {
     setShowLoginModal(true);

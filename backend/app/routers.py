@@ -3,6 +3,7 @@ import logging
 import os
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
@@ -255,38 +256,55 @@ async def register(
         }
 
 
+@router.get("/verify-email")
 @router.get("/verify-email/{token}")
 def verify_email(
-    token: str,
+    request: Request,
+    token: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """验证用户邮箱"""
+    """验证用户邮箱 - 支持路径参数和查询参数，验证成功后重定向到前端页面"""
+    from app.email_verification import EmailVerificationManager
+    from app.config import Config
+    from fastapi.responses import RedirectResponse
+    
+    # 从路径参数或查询参数获取token
+    if not token:
+        token = request.query_params.get('token')
+    
+    frontend_url = Config.FRONTEND_URL
+    
+    if not token:
+        # 如果没有token，重定向到错误页面
+        return RedirectResponse(
+            url=f"{frontend_url}/verify-email?error={quote('缺少验证令牌')}",
+            status_code=302
+        )
+    
     try:
-        from app.email_verification import EmailVerificationManager
-        
         # 验证用户
         user = EmailVerificationManager.verify_user(db, token)
         
         if not user:
-            raise HTTPException(
-                status_code=400, 
-                detail="验证失败。令牌无效或已过期，请重新注册。"
+            # 验证失败，重定向到错误页面
+            return RedirectResponse(
+                url=f"{frontend_url}/verify-email?error={quote('验证失败，令牌无效或已过期')}",
+                status_code=302
             )
         
-        return {
-            "message": "邮箱验证成功！您现在可以正常使用平台了。",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "is_verified": user.is_verified
-            }
-        }
+        # 验证成功，重定向到前端成功页面
+        return RedirectResponse(
+            url=f"{frontend_url}/verify-email?token={token}&success=true",
+            status_code=302
+        )
+        
     except Exception as e:
         logger.error(f"邮箱验证异常: {e}")
-        raise HTTPException(
-            status_code=400, 
-            detail=f"验证失败：{str(e)}"
+        # 验证失败，重定向到错误页面
+        error_msg = str(e) if len(str(e)) < 100 else "验证失败"
+        return RedirectResponse(
+            url=f"{frontend_url}/verify-email?error={quote(error_msg)}",
+            status_code=302
         )
 
 
@@ -621,75 +639,15 @@ def debug_test_confirm_simple():
 
 @router.get("/confirm/{token}")
 def confirm_email(token: str, db: Session = Depends(get_db)):
-    """邮箱验证端点（最简版本）"""
-    try:
-        from app.email_utils import confirm_token
-        from app.models import PendingUser
-        from datetime import datetime
-        import uuid
-        
-        # 解析token获取邮箱
-        email = confirm_token(token)
-        if not email:
-            return {"error": True, "message": "Invalid token"}
-        
-        # 在PendingUser表中查找
-        pending_user = db.query(PendingUser).filter(PendingUser.email == email).first()
-        
-        if not pending_user:
-            return {"error": True, "message": "User not found"}
-        
-        # 检查是否已过期
-        if pending_user.expires_at < datetime.utcnow():
-            db.delete(pending_user)
-            db.commit()
-            return {"error": True, "message": "验证链接已过期"}
-        
-        # 生成唯一的8位数字用户ID
-        import random
-        while True:
-            user_id = str(random.randint(10000000, 99999999))
-            # 检查ID是否已存在
-            existing_user = db.query(models.User).filter(models.User.id == user_id).first()
-            if not existing_user:
-                break
-        
-        # 创建正式用户
-        user = models.User(
-            id=user_id,
-            name=pending_user.name,
-            email=pending_user.email,
-            hashed_password=pending_user.hashed_password,
-            phone=pending_user.phone,
-            is_verified=1,
-            is_active=1,
-            user_level="normal",
-            avatar="",  # 默认空头像，前端会显示默认头像
-            created_at=datetime.utcnow(),
-            agreed_to_terms=pending_user.agreed_to_terms,
-            terms_agreed_at=pending_user.terms_agreed_at
-        )
-        
-        db.add(user)
-        db.delete(pending_user)
-        db.commit()
-        db.refresh(user)
-        
-        return {
-            "message": "Email confirmed successfully!",
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "is_verified": user.is_verified
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"confirm_email异常: {e}")
-        import traceback
-        logger.error(f"详细错误: {traceback.format_exc()}")
-        return {"error": True, "message": f"Internal server error: {str(e)}"}
+    """邮箱验证端点（兼容旧链接，重定向到新端点）"""
+    # 重定向到新的verify-email端点，会自动重定向到前端页面
+    from fastapi.responses import RedirectResponse
+    from app.config import Config
+    
+    return RedirectResponse(
+        url=f"{Config.BASE_URL}/api/users/verify-email/{token}",
+        status_code=302
+    )
 
 
 @router.post("/forgot_password")

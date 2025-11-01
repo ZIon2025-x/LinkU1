@@ -300,8 +300,8 @@ def send_verification_email_with_token(
     """发送包含验证链接的邮件"""
     from app.config import Config
     
-    # 构建验证链接 - 使用旧的confirm端点以确保兼容性
-    verification_url = f"{Config.BASE_URL}/api/users/confirm/{token}"
+    # 构建验证链接 - 使用verify-email端点，会自动重定向到前端页面
+    verification_url = f"{Config.BASE_URL}/api/users/verify-email/{token}"
     
     subject = "Link²Ur 邮箱验证"
     body = f"""
