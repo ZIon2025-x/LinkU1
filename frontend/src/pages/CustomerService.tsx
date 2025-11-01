@@ -707,6 +707,18 @@ const CustomerService: React.FC = () => {
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
       
+      // 准备请求体，确保数据格式正确
+      const requestBody: { status: string; admin_comment?: string | null } = {
+        status: status
+      };
+      
+      // 只有当 adminComment 不为空时才添加该字段，或者显式设置为 null
+      if (adminComment && adminComment.trim()) {
+        requestBody.admin_comment = adminComment.trim();
+      } else {
+        requestBody.admin_comment = null; // 空字符串时显式设置为 null
+      }
+      
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cancel-requests/${requestId}/review`, {
         method: 'POST',
         headers: {
@@ -714,10 +726,7 @@ const CustomerService: React.FC = () => {
           ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',  // 使用Cookie认证
-        body: JSON.stringify({
-          status: status,
-          admin_comment: adminComment
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
