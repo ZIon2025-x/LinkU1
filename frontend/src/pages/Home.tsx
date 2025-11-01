@@ -1088,15 +1088,23 @@ const Home: React.FC = () => {
           </div>
         )}
       </main>
-      {/* 平台公告区块 */}
-      <section style={{background: '#f8fbff', padding: '48px 0'}}>
+      {/* 平台公告区块 - 使用data属性标记防止搜索引擎抓取 */}
+      <section 
+        style={{background: '#f8fbff', padding: '48px 0'}}
+        data-noindex="true"
+      >
         <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>平台公告</h3>
+          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>
+            {t('home.announcementTitle')}
+          </h3>
           <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
-            <div style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}>
-              <div style={{fontWeight: 600, marginBottom: 8, color: '#A67C52'}}>【公告】目前平台属于测试阶段，如有问题欢迎发送邮件至 support@link2ur.com</div>
-              <div style={{color: '#888'}}>2025-10-09</div>
-            </div>
+            <div 
+              style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}
+              data-noindex="true"
+              dangerouslySetInnerHTML={{
+                __html: `<!--googleoff: index--><!--googleoff: snippet-->${t('home.announcementContent')}<br/><span style="color: #888; font-size: 14px;">${t('home.announcementDate')}</span><!--googleon: snippet--><!--googleon: index-->`
+              }}
+            />
           </div>
         </div>
       </section>
