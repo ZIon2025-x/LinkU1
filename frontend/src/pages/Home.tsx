@@ -560,28 +560,27 @@ const Home: React.FC = () => {
             <button 
               onClick={() => navigate('/tasks')}
               style={{
-                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                color: '#8B4513',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
                 padding: '16px 32px',
                 borderRadius: '50px',
                 fontSize: '18px',
                 fontWeight: '700',
-                border: 'none',
+                border: '2px solid rgba(255,255,255,0.3)',
                 cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(255, 215, 0, 0.4)',
-                transition: 'all 0.3s ease',
-                transform: 'translateY(0)'
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 12px 32px rgba(255, 215, 0, 0.6)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 215, 0, 0.4)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
               }}
             >
-              🚀 {t('navigation.tasks')}
+              ✨ {t('navigation.tasks')}
             </button>
             
             <button 
@@ -607,7 +606,33 @@ const Home: React.FC = () => {
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
               }}
             >
-              ✨ {t('navigation.publish')}
+              🚀 {t('navigation.publish')}
+            </button>
+            
+            <button 
+              onClick={() => navigate('/task-experts')}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                padding: '16px 32px',
+                borderRadius: '50px',
+                fontSize: '18px',
+                fontWeight: '700',
+                border: '2px solid rgba(255,255,255,0.3)',
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+              }}
+            >
+              👑 {t('footer.taskExperts')}
             </button>
         </div>
           

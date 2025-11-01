@@ -74,7 +74,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   className="menu-item"
                   onClick={() => handleNavigation('/tasks')}
                 >
-                  <span className="menu-icon">🏠</span>
+                  <span className="menu-icon">✨</span>
                   {t('hamburgerMenu.myTasks')}
                 </button>
 
@@ -82,8 +82,16 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   className="menu-item"
                   onClick={() => handleNavigation('/publish')}
                 >
-                  <span className="menu-icon">✨</span>
+                  <span className="menu-icon">🚀</span>
                   {t('hamburgerMenu.publish')}
+                </button>
+
+                <button
+                  className="menu-item"
+                  onClick={() => handleNavigation('/task-experts')}
+                >
+                  <span className="menu-icon">👑</span>
+                  {t('footer.taskExperts')}
                 </button>
 
                 <button
