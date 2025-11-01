@@ -291,14 +291,35 @@ const MyTasks: React.FC = () => {
         }
       }
       
-      // 检查是否是"已有待审核请求"的错误
+      // 获取详细的错误信息
       const errorDetail = error.response?.data?.detail || '';
-      if (errorDetail.includes('already pending') || errorDetail.includes('正在审核') || errorDetail.includes('待审核')) {
-        // 如果已经有待审核请求，也添加到列表中
-        setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
-        alert('您的取消请求正在审核中，请耐心等待');
-        loadTasks();
+      const errorStatus = error.response?.status;
+      
+      // 处理不同类型的错误
+      if (errorStatus === 400) {
+        if (errorDetail.includes('already pending') || errorDetail.includes('正在审核') || errorDetail.includes('待审核')) {
+          // 如果已经有待审核请求，也添加到列表中
+          setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
+          alert('您的取消请求正在审核中，请耐心等待');
+          loadTasks();
+        } else if (errorDetail.includes('cannot be cancelled') || errorDetail.includes('不能取消') || errorDetail.includes('状态')) {
+          // 任务状态不允许取消
+          let message = '该任务当前状态不允许取消';
+          if (errorDetail.includes('current status')) {
+            message += '。只有"待接取"状态的任务可以直接取消，已被接受或进行中的任务需要等待客服审核。';
+          }
+          alert(message);
+        } else if (errorDetail) {
+          alert(errorDetail);
+        } else {
+          alert('取消任务失败，请检查任务状态后重试');
+        }
+      } else if (errorStatus === 403) {
+        alert('您没有权限取消此任务。只有任务发布者或接受者可以取消任务。');
+      } else if (errorStatus === 404) {
+        alert('任务不存在或已被删除');
       } else {
+        // 其他错误
         alert(errorDetail || t('myTasks.alerts.operationFailed'));
       }
     } finally {
@@ -1298,7 +1319,9 @@ const MyTasks: React.FC = () => {
                         </button>
                       )}
 
-                      {(task.status === 'open' || task.status === 'taken' || task.status === 'pending_confirmation') && (
+                      {/* 取消按钮：只有 open、taken 或 in_progress 状态的任务可以取消 */}
+                      {/* pending_confirmation（待确认）和 completed（已完成）状态的任务不能取消 */}
+                      {(task.status === 'open' || task.status === 'taken' || task.status === 'in_progress') && (
                         <button
                           onClick={() => !pendingCancelTasks.has(task.id) && handleCancelTask(task.id)}
                           disabled={actionLoading === task.id || pendingCancelTasks.has(task.id)}
