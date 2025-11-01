@@ -4438,8 +4438,9 @@ async def upload_public_image(
             buffer.write(content)
         
         # 生成公开URL（通过静态文件服务访问）
+        # 注意：图片在后端服务器上，通过Vercel的rewrite规则代理到后端
         from app.config import Config
-        # 确保base_url不以斜杠结尾
+        # 使用前端域名，Vercel会将/uploads/请求代理到后端API服务器
         base_url = Config.FRONTEND_URL.rstrip('/')
         image_url = f"{base_url}/uploads/images/{unique_filename}"
         
