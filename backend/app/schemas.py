@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 
 class UserBase(BaseModel):
@@ -363,6 +363,12 @@ class TaskCancelRequestOut(TaskCancelRequestBase):
 class TaskCancelRequestReview(BaseModel):
     status: str  # approved, rejected
     admin_comment: Optional[str] = None
+    
+    @validator('status')
+    def validate_status(cls, v):
+        if v not in ['approved', 'rejected']:
+            raise ValueError('status must be either "approved" or "rejected"')
+        return v
 
 
 class TaskCancelRequest(BaseModel):

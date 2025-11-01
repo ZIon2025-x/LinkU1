@@ -105,7 +105,7 @@ async def custom_cors_middleware(request: Request, call_next):
     
     response = await call_next(request)
     
-    # 强制设置CORS头
+    # 强制设置CORS头（包括错误响应）
     origin = request.headers.get("origin")
     allowed_domains = [
         "https://link-u1", "http://localhost", "https://www.link2ur.com", "https://api.link2ur.com"
@@ -115,6 +115,10 @@ async def custom_cors_middleware(request: Request, call_next):
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+        # 确保即使错误响应也包含CORS头
+        if response.status_code >= 400:
+            # 对于错误响应，也要确保CORS头存在
+            pass  # CORS头已经在上面的条件中设置了
     
     add_security_headers(response)
     return response

@@ -735,13 +735,43 @@ const CustomerService: React.FC = () => {
         await loadCancelRequests(); // 重新加载取消请求列表
         alert(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
       } else {
-        const errorData = await response.json();
-        console.error('审核失败:', errorData);
-        alert('审核失败: ' + (errorData.detail || '未知错误'));
+        // 尝试解析错误响应
+        let errorMessage = '审核失败';
+        try {
+          const errorData = await response.json();
+          console.error('审核失败响应:', errorData);
+          
+          // 处理不同的错误格式
+          if (errorData.detail) {
+            if (Array.isArray(errorData.detail)) {
+              // Pydantic验证错误
+              errorMessage = errorData.detail.map((err: any) => {
+                if (typeof err === 'string') return err;
+                return `${err.loc?.join('.')}: ${err.msg}`;
+              }).join('; ');
+            } else if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail;
+            } else {
+              errorMessage = JSON.stringify(errorData.detail);
+            }
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (parseError) {
+          // 如果无法解析JSON，使用状态文本
+          errorMessage = `审核失败 (${response.status}): ${response.statusText}`;
+        }
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('审核取消请求失败:', error);
-      alert('审核失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      let errorMessage = '审核失败: ';
+      if (error instanceof Error) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += '未知错误';
+      }
+      alert(errorMessage);
     }
   };
 
