@@ -4368,14 +4368,40 @@ async def upload_image(
 
 @router.post("/upload/public-image")
 async def upload_public_image(
+    request: Request,
     image: UploadFile = File(...), 
-    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
 ):
     """
     上传公开图片文件（所有人可访问）
     用于头像等需要公开访问的图片
+    支持管理员和普通用户上传
     """
     try:
+        # 尝试获取管理员或用户ID
+        user_id = None
+        user_type = None
+        
+        # 首先尝试管理员认证
+        from app.admin_auth import validate_admin_session
+        admin_session = validate_admin_session(request)
+        if admin_session:
+            user_id = admin_session.admin_id
+            user_type = "管理员"
+            logger.info(f"管理员 {user_id} 上传公开图片")
+        else:
+            # 尝试普通用户认证
+            from app.secure_auth import validate_session
+            user_session = validate_session(request)
+            if user_session:
+                user_id = user_session.user_id
+                user_type = "用户"
+                logger.info(f"用户 {user_id} 上传公开图片")
+            else:
+                raise HTTPException(status_code=401, detail="认证失败，请先登录")
+        
+        if not user_id:
+            raise HTTPException(status_code=401, detail="认证失败，请先登录")
         # 读取文件内容
         content = await image.read()
         
@@ -4417,7 +4443,7 @@ async def upload_public_image(
         base_url = Config.FRONTEND_URL.rstrip('/')
         image_url = f"{base_url}/uploads/images/{unique_filename}"
         
-        logger.info(f"用户 {current_user.id} 上传公开图片: {unique_filename}")
+        logger.info(f"{user_type} {user_id} 上传公开图片: {unique_filename}")
         
         return JSONResponse(content={
             "success": True,
