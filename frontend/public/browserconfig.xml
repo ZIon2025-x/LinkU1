@@ -2,10 +2,10 @@
 <browserconfig>
     <msapplication>
         <tile>
-            <square70x70logo src="/static/favicon.png"/>
-            <square150x150logo src="/static/favicon.png"/>
-            <square310x310logo src="/static/favicon.png"/>
-            <wide310x150logo src="/static/favicon.png"/>
+            <square70x70logo src="https://www.link2ur.com/static/favicon.png"/>
+            <square150x150logo src="https://www.link2ur.com/static/favicon.png"/>
+            <square310x310logo src="https://www.link2ur.com/static/favicon.png"/>
+            <wide310x150logo src="https://www.link2ur.com/static/favicon.png"/>
             <TileColor>#1890ff</TileColor>
         </tile>
     </msapplication>

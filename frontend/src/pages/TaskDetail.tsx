@@ -10,7 +10,6 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import Footer from '../components/Footer';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 
@@ -2059,9 +2058,6 @@ const TaskDetail: React.FC = () => {
       />
         </div>
       </div>
-
-      {/* 页脚 */}
-      <Footer />
     </div>
   );
 };
