@@ -1203,29 +1203,74 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {showTaskExpertModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '30px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            maxWidth: '1200px',
-            width: '95%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0' }}>任务达人表单</h3>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={(e) => {
+            // 点击背景遮罩层关闭弹窗
+            if (e.target === e.currentTarget) {
+              setShowTaskExpertModal(false);
+            }
+          }}
+        >
+          <div 
+            style={{
+              background: 'white',
+              padding: '30px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              maxWidth: '1200px',
+              width: '95%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              position: 'relative'
+            }}
+            onClick={(e) => {
+              // 阻止点击内容区域关闭弹窗
+              e.stopPropagation();
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>任务达人表单</h3>
+              <button
+                onClick={() => setShowTaskExpertModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  color: '#666',
+                  cursor: 'pointer',
+                  padding: '5px 10px',
+                  lineHeight: '1',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f0f0f0';
+                  e.currentTarget.style.color = '#000';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#666';
+                }}
+                title="关闭"
+              >
+                ×
+              </button>
+            </div>
             
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>名称 *</label>
