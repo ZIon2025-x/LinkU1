@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
-import api from '../api';
+import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
+import LoginModal from '../components/LoginModal';
+import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 interface TaskExpert {
   id: string;
@@ -29,6 +34,15 @@ const CITIES = [
   "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
 ];
 
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  content: string;
+  is_read: number;
+  created_at: string;
+}
+
 const TaskExperts: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
@@ -38,6 +52,19 @@ const TaskExperts: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [isMobile, setIsMobile] = useState(false);
+  
+  // 用户和通知相关状态
+  const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>({
+    vip_button_visible: false
+  });
+  
+  // 登录弹窗状态
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   // 模拟数据 - 实际项目中应该从API获取
   const mockExperts: TaskExpert[] = [
@@ -149,7 +176,10 @@ const TaskExperts: React.FC = () => {
     { value: 'design', label: t('taskExperts.design') },
     { value: 'marketing', label: t('taskExperts.marketing') },
     { value: 'writing', label: t('taskExperts.writing') },
-    { value: 'translation', label: t('taskExperts.translation') }
+    { value: 'translation', label: t('taskExperts.translation') },
+    { value: 'food', label: t('taskExperts.food') },
+    { value: 'beverage', label: t('taskExperts.beverage') },
+    { value: 'cake', label: t('taskExperts.cake') }
   ];
 
   const sortOptions = [
@@ -235,21 +265,100 @@ const TaskExperts: React.FC = () => {
     return (
       <div style={{ 
         minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
       }}>
-        <div style={{ 
-          background: '#fff', 
-          padding: '40px', 
-          borderRadius: '20px',
-          textAlign: 'center',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+        {/* 顶部导航栏 - 与首页一致 */}
+        <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+            {/* Logo - 可点击跳转到首页 */}
+            <div 
+              onClick={() => navigate('/')}
+              style={{
+                fontWeight: 'bold', 
+                fontSize: 24, 
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+                WebkitBackgroundClip: 'text', 
+                WebkitTextFillColor: 'transparent',
+                cursor: 'pointer'
+              }}
+            >
+              Link²Ur
+            </div>
+            
+            {/* 语言切换器、通知按钮和汉堡菜单 */}
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <LanguageSwitcher />
+              <NotificationButton
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => setShowNotifications(prev => !prev)}
+              />
+              <HamburgerMenu
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+              />
+            </div>
+          </div>
+        </header>
+        
+        {/* 占位，防止内容被导航栏遮挡 */}
+        <div style={{height: 60}} />
+        
+        {/* 加载内容 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 'calc(100vh - 60px)'
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-          <div style={{ fontSize: '18px', color: '#64748b' }}>{t('taskExperts.loading')}</div>
+          <div style={{ 
+            background: '#fff', 
+            padding: '40px', 
+            borderRadius: '20px',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+            <div style={{ fontSize: '18px', color: '#64748b' }}>{t('taskExperts.loading')}</div>
+          </div>
         </div>
+        
+        {/* 通知弹窗 */}
+        <NotificationPanel
+          isOpen={showNotifications && !!user}
+          onClose={() => setShowNotifications(false)}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={handleMarkAsRead}
+          onMarkAllRead={handleMarkAllRead}
+        />
+        
+        {/* 登录弹窗 */}
+        <LoginModal 
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+          onReopen={() => {
+            setShowLoginModal(true);
+          }}
+          showForgotPassword={showForgotPasswordModal}
+          onShowForgotPassword={() => {
+            setShowForgotPasswordModal(true);
+          }}
+          onHideForgotPassword={() => {
+            setShowForgotPasswordModal(false);
+          }}
+        />
       </div>
     );
   }
@@ -257,13 +366,67 @@ const TaskExperts: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px 0'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }}>
+      {/* 顶部导航栏 - 与首页一致 */}
+      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo - 可点击跳转到首页 */}
+          <div 
+            onClick={() => navigate('/')}
+            style={{
+              fontWeight: 'bold', 
+              fontSize: 24, 
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', 
+              WebkitBackgroundClip: 'text', 
+              WebkitTextFillColor: 'transparent',
+              cursor: 'pointer'
+            }}
+          >
+            Link²Ur
+          </div>
+          
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
+        </div>
+      </header>
+      
+      {/* 占位，防止内容被导航栏遮挡 */}
+      <div style={{height: 60}} />
+      
+      {/* 通知弹窗 */}
+      <NotificationPanel
+        isOpen={showNotifications && !!user}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+      
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '0 20px'
+        padding: '0 20px 20px 20px'
       }}>
         {/* 页面头部 */}
         <div style={{
@@ -771,6 +934,25 @@ const TaskExperts: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
     </div>
   );
 };
