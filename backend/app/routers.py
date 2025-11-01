@@ -3166,7 +3166,12 @@ def cs_get_cancel_requests(
     db: Session = Depends(get_db),
     status: str = None,
 ):
-    """客服获取任务取消请求列表"""
+    """
+    客服获取任务取消请求列表
+    
+    权限说明：客服只能审核任务取消请求，这是客服的唯一管理权限。
+    其他管理操作需要通过 /customer-service/admin-requests 向管理员请求。
+    """
     from app.models import TaskCancelRequest, Task, User
     
     requests = crud.get_task_cancel_requests(db, status)
@@ -3188,7 +3193,8 @@ def cs_get_cancel_requests(
             "requester_name": requester.name if requester else "未知用户",
             "reason": req.reason,
             "status": req.status,
-            "admin_id": req.admin_id,
+            "admin_id": req.admin_id,  # 管理员ID（格式：A0001）
+            "service_id": req.service_id,  # 客服ID（格式：CS8888）
             "admin_comment": req.admin_comment,
             "created_at": req.created_at,
             "reviewed_at": req.reviewed_at,
@@ -3212,7 +3218,15 @@ def cs_review_cancel_request(
     current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
-    """客服审核任务取消请求"""
+    """
+    客服审核任务取消请求
+    
+    权限说明：
+    - 这是客服的唯一管理权限，可以审核通过或拒绝任务取消请求
+    - 客服不能直接操作任务（删除、修改等）
+    - 客服不能操作用户账户（封禁、暂停等）
+    - 其他管理操作需要通过 /customer-service/admin-requests 向管理员请求
+    """
     cancel_request = crud.get_task_cancel_request_by_id(db, request_id)
     if not cancel_request:
         raise HTTPException(status_code=404, detail="Cancel request not found")
@@ -3303,7 +3317,14 @@ def create_admin_request(
     current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
 ):
-    """客服提交管理请求"""
+    """
+    客服提交管理请求
+    
+    权限说明：
+    - 客服只有审核取消任务请求的权限
+    - 对于其他管理操作（如删除任务、封禁用户等），客服必须通过此接口向管理员请求
+    - 管理员会在后台处理这些请求
+    """
     from app.models import AdminRequest
 
     admin_request = AdminRequest(

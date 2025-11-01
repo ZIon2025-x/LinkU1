@@ -84,7 +84,8 @@ interface TaskCancelRequest {
   requester_name?: string;
   reason: string;
   status: string;
-  admin_id: string | null;  // 现在ID是字符串类型
+  admin_id: string | null;  // 管理员ID（格式：A0001）
+  service_id: string | null;  // 客服ID（格式：CS8888）
   admin_comment: string | null;
   created_at: string;
   reviewed_at: string | null;
@@ -2158,7 +2159,7 @@ const CustomerService: React.FC = () => {
                   )}
                   {request.status !== 'pending' && (
                     <div>
-                      <div>审核人: {request.admin_id}</div>
+                      <div>审核人: {request.admin_id || request.service_id || '未知'}</div>
                       <div>审核意见: {request.admin_comment || '无'}</div>
                       <div>审核时间: {request.reviewed_at ? TimeHandlerV2.formatDetailedTime(request.reviewed_at, userTimezone) : '无'}</div>
                     </div>
