@@ -1298,15 +1298,9 @@ def cancel_task(
             db, task_id, current_user.id, cancel_data.reason
         )
 
-        # 创建通知给客服
-        crud.create_notification(
-            db,
-            1,  # 假设管理员ID为1，实际应该通知所有管理员
-            "cancel_request",
-            "任务取消请求",
-            f'任务 "{task.title}" 的取消请求等待审核，请求原因：{cancel_data.reason or "无"}',
-            task_id,
-        )
+        # 注意：不发送通知到 notifications 表，因为客服不在 users 表中
+        # 客服可以通过客服面板的取消请求列表查看待审核的请求
+        # 如果需要通知功能，应该使用 staff_notifications 表通知所有在线客服
 
         return {
             "message": "Cancel request submitted for admin review",
