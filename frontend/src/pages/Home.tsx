@@ -457,8 +457,8 @@ const Home: React.FC = () => {
   return (
     <div>
       <SEOHead 
-        title="Link²Ur - 专业任务发布和技能匹配平台"
-        description="Link²Ur - Professional task publishing and assignment platform, linking skilled people with those in need, making value creation more efficient."
+        title={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
+        description={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
         canonicalUrl={canonicalUrl}
       />
       {/* 顶部导航栏 - 使用汉堡菜单 */}

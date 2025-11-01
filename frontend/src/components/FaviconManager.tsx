@@ -12,7 +12,7 @@ const FaviconManager: React.FC = () => {
   useEffect(() => {
     // 确保favicon始终指向 static/favicon
     const setFavicon = () => {
-      const version = 'v=4';
+      const version = '';
       const baseUrl = window.location.origin;
       
       // 1. 设置根目录favicon.ico（搜索引擎和浏览器默认查找的路径，必须优先设置）
@@ -29,7 +29,7 @@ const FaviconManager: React.FC = () => {
         // 插入到head的最前面
         document.head.insertBefore(rootFavicon, document.head.firstChild);
       }
-      const rootFaviconUrl = `${baseUrl}/static/favicon.ico?${version}`;
+      const rootFaviconUrl = `${baseUrl}/static/favicon.ico`;
       if (rootFavicon.href !== rootFaviconUrl) {
         rootFavicon.href = rootFaviconUrl;
       }
@@ -42,7 +42,7 @@ const FaviconManager: React.FC = () => {
         shortcutIcon.type = 'image/x-icon';
         document.head.insertBefore(shortcutIcon, rootFavicon.nextSibling);
       }
-      const shortcutUrl = `${baseUrl}/static/favicon.ico?${version}`;
+      const shortcutUrl = `${baseUrl}/static/favicon.ico`;
       if (shortcutIcon.href !== shortcutUrl) {
         shortcutIcon.href = shortcutUrl;
       }
@@ -58,20 +58,9 @@ const FaviconManager: React.FC = () => {
           sizeLink.type = 'image/png';
           document.head.appendChild(sizeLink);
         }
-        const sizeUrl = `${baseUrl}/static/favicon.png?${version}`;
+        const sizeUrl = `${baseUrl}/static/favicon.png`;
         if (sizeLink.href !== sizeUrl) {
           sizeLink.href = sizeUrl;
-        }
-      });
-
-      // 4. 强制更新（通过改变查询参数来触发浏览器重新加载）
-      const allFavicons = document.querySelectorAll("link[rel*='icon']");
-      allFavicons.forEach((link: Element) => {
-        const faviconLink = link as HTMLLinkElement;
-        if (faviconLink.href && !faviconLink.href.includes(version)) {
-          // 更新到新版本
-          const newUrl = faviconLink.href.split('?')[0] + `?${version}`;
-          faviconLink.href = newUrl;
         }
       });
     };
@@ -98,13 +87,12 @@ const FaviconManager: React.FC = () => {
   // 页面加载时也执行一次
   useEffect(() => {
     const setFaviconOnLoad = () => {
-      const version = 'v=4';
       const baseUrl = window.location.origin;
       
       // 确保根目录favicon.ico在最前面
       let rootFavicon = document.querySelector("link[rel='icon']:not([sizes])") as HTMLLinkElement;
       if (rootFavicon) {
-        const rootFaviconUrl = `${baseUrl}/static/favicon.ico?${version}`;
+        const rootFaviconUrl = `${baseUrl}/static/favicon.ico`;
         if (rootFavicon.href !== rootFaviconUrl) {
           rootFavicon.href = rootFaviconUrl;
         }

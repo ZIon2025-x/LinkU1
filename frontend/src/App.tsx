@@ -30,6 +30,7 @@ import UserProfileRedirect from './components/UserProfileRedirect';
 import ParamRedirect from './components/ParamRedirect';
 import ScrollToTop from './components/ScrollToTop';
 import FaviconManager from './components/FaviconManager';
+import LanguageMetaManager from './components/LanguageMetaManager';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -170,6 +171,7 @@ function App() {
       <CookieProvider>
         <AuthProvider>
           <Router>
+            <LanguageMetaManager />
             <FaviconManager />
             <ScrollToTop />
             <LanguageRoutes />
