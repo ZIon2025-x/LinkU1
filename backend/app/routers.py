@@ -260,10 +260,11 @@ async def register(
 @router.get("/verify-email/{token}")
 def verify_email(
     request: Request,
+    response: Response,
     token: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """验证用户邮箱 - 支持路径参数和查询参数，验证成功后重定向到前端页面"""
+    """验证用户邮箱 - 支持路径参数和查询参数，验证成功后自动登录并重定向到前端页面"""
     from app.email_verification import EmailVerificationManager
     from app.config import Config
     from fastapi.responses import RedirectResponse
@@ -292,14 +293,87 @@ def verify_email(
                 status_code=302
             )
         
+        # 验证成功，自动登录用户
+        try:
+            from app.secure_auth import SecureAuthManager, get_client_ip, get_device_fingerprint
+            from app.cookie_manager import CookieManager
+            
+            # 获取设备信息
+            device_fingerprint = get_device_fingerprint(request)
+            client_ip = get_client_ip(request)
+            user_agent = request.headers.get("user-agent", "")
+            
+            # 生成刷新令牌
+            from app.secure_auth import create_user_refresh_token
+            refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+            
+            # 创建会话
+            session = SecureAuthManager.create_session(
+                user_id=user.id,
+                device_fingerprint=device_fingerprint,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                refresh_token=refresh_token
+            )
+            
+            # 设置安全Cookie
+            CookieManager.set_session_cookies(
+                response=response,
+                session_id=session.session_id,
+                refresh_token=refresh_token,
+                user_id=user.id,
+                user_agent=user_agent
+            )
+            
+            # 生成并设置CSRF token
+            from app.csrf import CSRFProtection
+            csrf_token = CSRFProtection.generate_csrf_token()
+            CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+            
+            # 检测是否为移动端
+            is_mobile = any(keyword in user_agent.lower() for keyword in [
+                'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+                'windows phone', 'opera mini', 'iemobile'
+            ])
+            
+            # 为移动端添加特殊的响应头
+            if is_mobile:
+                response.headers["X-Session-ID"] = session.session_id
+                response.headers["X-User-ID"] = user.id
+                response.headers["X-Auth-Status"] = "authenticated"
+                response.headers["X-Mobile-Auth"] = "true"
+            
+            logger.info(f"邮箱验证成功后自动登录: {user.email}, ID: {user.id}")
+            
+        except Exception as auth_error:
+            logger.error(f"自动登录失败: {auth_error}")
+            # 即使自动登录失败，仍然重定向到成功页面，用户可以手动登录
+        
         # 验证成功，重定向到前端成功页面
-        return RedirectResponse(
+        # 注意：在重定向响应中，Cookie已经通过response.set_cookie设置，会在重定向时自动发送
+        redirect_response = RedirectResponse(
             url=f"{frontend_url}/verify-email?token={token}&success=true",
             status_code=302
         )
         
+        # 将已设置的Cookie复制到重定向响应（Set-Cookie头）
+        # FastAPI的response对象会自动处理Cookie，但需要手动复制
+        if 'set-cookie' in response.headers:
+            cookies = response.headers.getlist('set-cookie')
+            for cookie in cookies:
+                redirect_response.headers.append('set-cookie', cookie)
+        
+        # 复制其他自定义响应头
+        for header_name in ['x-session-id', 'x-user-id', 'x-auth-status', 'x-mobile-auth']:
+            if header_name in response.headers:
+                redirect_response.headers[header_name] = response.headers[header_name]
+        
+        return redirect_response
+        
     except Exception as e:
         logger.error(f"邮箱验证异常: {e}")
+        import traceback
+        logger.error(f"详细错误: {traceback.format_exc()}")
         # 验证失败，重定向到错误页面
         error_msg = str(e) if len(str(e)) < 100 else "验证失败"
         return RedirectResponse(
