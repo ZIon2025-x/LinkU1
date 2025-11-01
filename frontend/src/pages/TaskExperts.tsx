@@ -197,6 +197,60 @@ const TaskExperts: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // 加载用户数据
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+      } catch (error: any) {
+        setUser(null);
+      }
+    };
+    
+    const timer = setTimeout(loadUserData, 100);
+    
+    // Load system settings
+    getPublicSystemSettings().then(setSystemSettings).catch(() => {
+      setSystemSettings({ vip_button_visible: false });
+    });
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 获取通知数据
+  useEffect(() => {
+    if (user) {
+      getNotificationsWithRecentRead(10).then(notifications => {
+        setNotifications(notifications);
+      }).catch(error => {
+        console.error('Failed to get notifications:', error);
+      });
+      
+      getUnreadNotificationCount().then(count => {
+        setUnreadCount(count);
+      }).catch(error => {
+        console.error('Failed to get unread count:', error);
+      });
+    }
+  }, [user]);
+
+  // 定期更新未读通知数量
+  useEffect(() => {
+    if (user) {
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          getUnreadNotificationCount().then(count => {
+            setUnreadCount(count);
+          }).catch(error => {
+            console.error('定期更新未读数量失败:', error);
+          });
+        }
+      }, 30000); // 每30秒更新一次
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   useEffect(() => {
     // 模拟API调用
     setTimeout(() => {
@@ -204,6 +258,37 @@ const TaskExperts: React.FC = () => {
       setLoading(false);
     }, 1000);
   }, []);
+
+  // 处理单个通知标记为已读
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await markNotificationRead(id);
+      
+      // 更新本地状态，标记为已读
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, is_read: 1 } : n)
+      );
+      
+      // 更新未读数量
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('标记通知为已读失败:', error);
+      alert('标记通知为已读失败，请重试');
+    }
+  };
+
+  // 标记所有通知为已读
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadCount(0);
+      // 更新通知列表，标记所有为已读
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    } catch (error) {
+      console.error('标记所有通知为已读失败:', error);
+      alert('标记所有通知为已读失败，请重试');
+    }
+  };
 
   const filteredExperts = experts.filter(expert => {
     // 按分类筛选
