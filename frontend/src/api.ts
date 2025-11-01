@@ -131,10 +131,24 @@ async function executeRequest<T>(
 
 // 获取CSRF token的函数
 export async function getCSRFToken(): Promise<string> {
+  // 优先从 cookie 中读取 CSRF token（因为后端验证时使用的是 cookie 中的 token）
+  const cookieToken = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('csrf_token='))
+    ?.split('=')[1];
+  
+  if (cookieToken) {
+    // 如果 cookie 中有 token，使用它并更新内存中的缓存
+    csrfToken = cookieToken;
+    return csrfToken;
+  }
+  
+  // 如果内存中有缓存的 token，使用它
   if (csrfToken) {
     return csrfToken;
   }
   
+  // 如果 cookie 和内存中都没有，从 API 获取新的 token
   try {
     const response = await api.get('/api/csrf/token');
     csrfToken = response.data.csrf_token;
@@ -330,6 +344,10 @@ api.interceptors.response.use(
         try {
           const refreshResponse = await refreshPromise;
           
+          // 会话刷新成功后，清除缓存的 CSRF token
+          // 下次获取时会从 cookie 中读取最新的 token
+          clearCSRFToken();
+          
           // 增加全局重试计数
           GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
           
@@ -347,6 +365,10 @@ api.interceptors.response.use(
             try {
               refreshPromise = api.post('/api/secure-auth/refresh-token');
               const refreshTokenResponse = await refreshPromise;
+              
+              // 会话刷新成功后，清除缓存的 CSRF token
+              // 下次获取时会从 cookie 中读取最新的 token
+              clearCSRFToken();
               
               // 增加全局重试计数
               GLOBAL_RETRY_COUNTER.set(globalKey, globalRetryCount + 1);
