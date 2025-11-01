@@ -2,9 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Alert, Button } from 'antd';
 import styled from 'styled-components';
-import api from '../api';
+import api, { fetchCurrentUser, getUnreadNotificationCount, getNotificationsWithRecentRead, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings, getNotifications } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import LoginModal from '../components/LoginModal';
+import HamburgerMenu from '../components/HamburgerMenu';
+import NotificationButton from '../components/NotificationButton';
+import NotificationPanel from '../components/NotificationPanel';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -12,6 +16,7 @@ const Wrapper = styled.div`
   align-items: center;
   justify-content: center;
   background: #f9f9f9;
+  padding-top: 60px;
 `;
 
 const StyledCard = styled(Card)`
@@ -42,6 +47,15 @@ const VerifyEmail: React.FC = () => {
   const [error, setError] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 导航栏相关状态
+  const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>({
+    vip_button_visible: false
+  });
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -90,6 +104,104 @@ const VerifyEmail: React.FC = () => {
     verifyEmail();
   }, [searchParams, t]);
 
+  // 加载用户数据和通知
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+      } catch (err) {
+        // 用户未登录，忽略错误
+        setUser(null);
+      }
+    };
+
+    // 加载系统设置
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+      } catch (err) {
+        console.error('加载系统设置失败:', err);
+        setSystemSettings({ vip_button_visible: false });
+      }
+    };
+
+    loadUserData();
+    loadSystemSettings();
+  }, []);
+
+  // 加载通知数据
+  useEffect(() => {
+    if (user) {
+      // 获取通知列表 - 获取所有未读通知和最近10条已读通知
+      getNotificationsWithRecentRead(10).then(notifications => {
+        setNotifications(notifications);
+      }).catch(error => {
+        console.error('获取通知失败:', error);
+        // 如果获取失败，获取最近的通知
+        getNotifications(20).then(notifications => {
+          setNotifications(notifications);
+        }).catch(error => {
+          console.error('获取通知失败:', error);
+        });
+      });
+      
+      // 获取未读数量
+      getUnreadNotificationCount().then(count => {
+        setUnreadCount(count);
+      }).catch(error => {
+        console.error('获取未读数量失败:', error);
+      });
+    }
+  }, [user]);
+
+  // 定期更新未读通知数量
+  useEffect(() => {
+    if (user) {
+      const interval = setInterval(() => {
+        // 只在页面可见时才更新
+        if (!document.hidden) {
+          getUnreadNotificationCount().then(count => {
+            setUnreadCount(count);
+          }).catch(error => {
+            console.error('定期更新未读数量失败:', error);
+          });
+        }
+      }, 30000); // 每30秒更新一次
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // 处理通知标记为已读
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await markNotificationRead(id);
+      
+      // 更新本地状态，标记为已读
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, is_read: 1 } : n)
+      );
+      
+      // 更新未读数量
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('标记通知为已读失败:', error);
+    }
+  };
+
+  // 处理标记所有通知为已读
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadCount(0);
+      // 更新通知列表，标记所有为已读
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    } catch (error) {
+      console.error('标记所有通知为已读失败:', error);
+    }
+  };
+
   const handleGoToLogin = () => {
     setShowLoginModal(true);
   };
@@ -100,36 +212,119 @@ const VerifyEmail: React.FC = () => {
 
   if (loading) {
     return (
-      <Wrapper>
-        {/* SEO优化：可见的H1标签 */}
-        <h1 style={{ 
-          position: 'absolute',
-          top: '-100px',
-          left: '-100px',
-          width: '1px',
-          height: '1px',
-          padding: '0',
-          margin: '0',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          whiteSpace: 'nowrap',
-          border: '0',
-          fontSize: '1px',
-          color: 'transparent',
-          background: 'transparent'
-        }}>
-          邮箱验证 - Link²Ur
-        </h1>
-        <StyledCard>
-          <Spin size="large" />
-          <div style={{ marginTop: 16, fontSize: 16 }}>{t('common.loading')}</div>
-        </StyledCard>
-      </Wrapper>
+      <>
+        {/* 顶部导航栏 */}
+        <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+            {/* Logo */}
+            <div style={{fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Link²Ur</div>
+            
+            {/* 语言切换器、通知按钮和汉堡菜单 */}
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <LanguageSwitcher />
+              <NotificationButton
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => setShowNotifications(prev => !prev)}
+              />
+              <HamburgerMenu
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+              />
+            </div>
+          </div>
+        </header>
+        
+        {/* 通知弹窗 */}
+        <NotificationPanel
+          isOpen={showNotifications && !!user}
+          onClose={() => setShowNotifications(false)}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={handleMarkAsRead}
+          onMarkAllRead={handleMarkAllRead}
+        />
+        
+        <Wrapper>
+          {/* SEO优化：可见的H1标签 */}
+          <h1 style={{ 
+            position: 'absolute',
+            top: '-100px',
+            left: '-100px',
+            width: '1px',
+            height: '1px',
+            padding: '0',
+            margin: '0',
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: '0',
+            fontSize: '1px',
+            color: 'transparent',
+            background: 'transparent'
+          }}>
+            邮箱验证 - Link²Ur
+          </h1>
+          <StyledCard>
+            <Spin size="large" />
+            <div style={{ marginTop: 16, fontSize: 16 }}>{t('common.loading')}</div>
+          </StyledCard>
+        </Wrapper>
+      </>
     );
   }
 
   return (
-    <Wrapper>
+    <>
+      {/* 顶部导航栏 */}
+      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          {/* Logo */}
+          <div style={{fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Link²Ur</div>
+          
+          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+            <LanguageSwitcher />
+            <NotificationButton
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => setShowNotifications(prev => !prev)}
+            />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
+          </div>
+        </div>
+      </header>
+      
+      {/* 通知弹窗 */}
+      <NotificationPanel
+        isOpen={showNotifications && !!user}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllRead={handleMarkAllRead}
+      />
+      
+      <Wrapper>
       {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',
@@ -195,7 +390,8 @@ const VerifyEmail: React.FC = () => {
         onShowForgotPassword={() => setShowForgotPasswordModal(true)}
         onHideForgotPassword={() => setShowForgotPasswordModal(false)}
       />
-    </Wrapper>
+      </Wrapper>
+    </>
   );
 };
 
