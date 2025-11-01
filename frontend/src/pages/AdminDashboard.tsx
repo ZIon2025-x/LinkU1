@@ -127,6 +127,7 @@ const AdminDashboard: React.FC = () => {
   // 任务达人相关状态
   const [taskExperts, setTaskExperts] = useState<any[]>([]);
   const [showTaskExpertModal, setShowTaskExpertModal] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [taskExpertForm, setTaskExpertForm] = useState<any>({
     id: undefined,
     name: '',
@@ -1288,18 +1289,122 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>头像URL</label>
-              <input
-                type="text"
-                value={taskExpertForm.avatar}
-                onChange={(e) => setTaskExpertForm({...taskExpertForm, avatar: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              />
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>头像</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                {taskExpertForm.avatar && (
+                  <img
+                    src={taskExpertForm.avatar}
+                    alt="头像预览"
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid #ddd'
+                    }}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // 检查文件大小（限制5MB）
+                        if (file.size > 5 * 1024 * 1024) {
+                          alert('图片文件过大，请选择小于5MB的图片');
+                          e.target.value = '';
+                          return;
+                        }
+                        
+                        // 检查文件类型
+                        if (!file.type.startsWith('image/')) {
+                          alert('请选择图片文件');
+                          e.target.value = '';
+                          return;
+                        }
+                        
+                        setUploadingAvatar(true);
+                        try {
+                          // 上传图片到服务器
+                          const formData = new FormData();
+                          formData.append('image', file);
+                          
+                          const response = await api.post('/api/upload/public-image', formData, {
+                            headers: {
+                              'Content-Type': 'multipart/form-data',
+                            },
+                          });
+                          
+                          if (response.data.success && response.data.url) {
+                            // 使用服务器返回的URL
+                            setTaskExpertForm({...taskExpertForm, avatar: response.data.url});
+                          } else {
+                            alert('图片上传失败，请重试');
+                          }
+                        } catch (error: any) {
+                          console.error('图片上传失败:', error);
+                          alert(error.response?.data?.detail || '图片上传失败，请重试');
+                        } finally {
+                          setUploadingAvatar(false);
+                          // 重置文件输入框
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                    style={{ display: 'none' }}
+                    id="avatar-upload-input"
+                  />
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('avatar-upload-input')?.click()}
+                      disabled={uploadingAvatar}
+                      style={{
+                        padding: '8px 16px',
+                        background: uploadingAvatar ? '#9ca3af' : '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: uploadingAvatar ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {uploadingAvatar ? '上传中...' : (taskExpertForm.avatar ? '更换头像' : '上传头像')}
+                    </button>
+                    <input
+                      type="text"
+                      value={taskExpertForm.avatar}
+                      onChange={(e) => setTaskExpertForm({...taskExpertForm, avatar: e.target.value})}
+                      placeholder="或直接输入头像URL"
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}
+                    />
+                    {taskExpertForm.avatar && (
+                      <button
+                        type="button"
+                        onClick={() => setTaskExpertForm({...taskExpertForm, avatar: ''})}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        清除
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>

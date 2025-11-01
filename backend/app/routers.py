@@ -4366,6 +4366,74 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
+@router.post("/upload/public-image")
+async def upload_public_image(
+    image: UploadFile = File(...), 
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+):
+    """
+    上传公开图片文件（所有人可访问）
+    用于头像等需要公开访问的图片
+    """
+    try:
+        # 读取文件内容
+        content = await image.read()
+        
+        # 验证文件类型
+        file_extension = Path(image.filename).suffix.lower()
+        if file_extension not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型。允许的类型: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+        
+        # 验证文件大小
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
+        
+        # 检测部署环境
+        if RAILWAY_ENVIRONMENT:
+            public_image_dir = Path("/data/uploads/public/images")
+        else:
+            public_image_dir = Path("uploads/public/images")
+        
+        # 确保目录存在
+        public_image_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 生成唯一文件名（使用UUID避免文件名冲突）
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = public_image_dir / unique_filename
+        
+        # 保存文件
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+        
+        # 生成公开URL（通过静态文件服务访问）
+        from app.config import Config
+        # 确保base_url不以斜杠结尾
+        base_url = Config.FRONTEND_URL.rstrip('/')
+        image_url = f"{base_url}/uploads/images/{unique_filename}"
+        
+        logger.info(f"用户 {current_user.id} 上传公开图片: {unique_filename}")
+        
+        return JSONResponse(content={
+            "success": True,
+            "url": image_url,
+            "filename": unique_filename,
+            "size": len(content),
+            "message": "图片上传成功"
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"公开图片上传失败: {e}")
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
 @router.post("/refresh-image-url")
 async def refresh_image_url(
     request: dict, 
