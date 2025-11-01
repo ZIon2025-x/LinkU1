@@ -177,9 +177,13 @@ const TaskDetail: React.FC = () => {
       const seoTitle = `${task.title} - ${task.location} | Link²Ur任务平台`;
       document.title = seoTitle;
       
-      // 创建任务相关的描述（简化版本，只包含核心信息）
-      // 格式：任务标题 - 任务类型，赏金£XX，地点XX
-      const taskDescription = `${task.title} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`;
+      // 创建任务相关的描述（使用任务描述内容）
+      // 格式：任务描述内容 - 任务类型，赏金£XX，地点XX
+      // 取任务描述的前80字符，确保总长度不超过120字符
+      const descriptionPreview = task.description ? task.description.substring(0, 80).replace(/\n/g, ' ').trim() : '';
+      const taskDescription = descriptionPreview 
+        ? `${descriptionPreview} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`
+        : `${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`;
       const seoDescription = taskDescription.substring(0, 120); // 限制在120字符内，确保简洁
       
       // 强制更新meta描述（先移除旧标签再创建新标签，避免微信缓存问题）
