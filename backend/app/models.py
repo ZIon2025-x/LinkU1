@@ -164,6 +164,8 @@ class User(Base):
     suspend_until = Column(DateTime, nullable=True)
     is_banned = Column(Integer, default=0)  # 1=banned, 0=not
     timezone = Column(String(50), default="UTC")  # 用户时区，默认为UTC
+    residence_city = Column(String(50), nullable=True)  # 常住城市
+    language_preference = Column(String(10), default="zh")  # 语言偏好：zh（中文）或 en（英文）
     agreed_to_terms = Column(Integer, default=0)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
     inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请者ID

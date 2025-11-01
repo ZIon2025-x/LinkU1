@@ -31,7 +31,8 @@ const Settings: React.FC = () => {
     name: '',
     email: '',
     phone: '',
-    timezone: 'UTC',
+    residence_city: '',
+    language_preference: 'zh',
     notifications: {
       email: true,
       sms: false,
@@ -90,25 +91,40 @@ const Settings: React.FC = () => {
         console.error('加载用户偏好失败:', error);
       }
       
-      // 暂时显示空数据，等待后端API实现
-      setUser(null);
-      setFormData(prev => ({
-        ...prev,
-        name: '',
-        email: '',
-        phone: '',
-        timezone: 'UTC',
-        notifications: {
-          email: true,
-          sms: false,
-          push: true
-        },
-        privacy: {
-          profile_public: true,
-          show_contact: false,
-          show_tasks: true
+      // 加载用户资料
+      try {
+        const userResponse = await fetch('/api/users/profile/me', {
+          credentials: 'include'
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          setUser(userData);
+          setFormData(prev => ({
+            ...prev,
+            name: userData.name || '',
+            email: userData.email || '',
+            phone: userData.phone || '',
+            residence_city: userData.residence_city || '',
+            language_preference: userData.language_preference || 'zh',
+            notifications: {
+              email: true,
+              sms: false,
+              push: true
+            },
+            privacy: {
+              profile_public: true,
+              show_contact: false,
+              show_tasks: true
+            }
+          }));
+        } else {
+          setUser(null);
         }
-      }));
+      } catch (error) {
+        console.error('加载用户资料失败:', error);
+        setUser(null);
+      }
     } catch (error) {
       console.error('加载用户设置失败:', error);
       setUser(null);
@@ -140,6 +156,25 @@ const Settings: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      // 保存个人资料（常住城市、语言偏好）
+      const profileResponse = await fetch('/api/users/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          residence_city: formData.residence_city,
+          language_preference: formData.language_preference
+        })
+      });
+
+      if (!profileResponse.ok) {
+        const error = await profileResponse.json();
+        alert(`保存个人资料失败: ${error.detail || '未知错误'}`);
+        return;
+      }
+
       // 保存任务偏好设置
       const preferencesResponse = await fetch('/api/user-preferences', {
         method: 'PUT',
@@ -151,13 +186,19 @@ const Settings: React.FC = () => {
       });
 
       if (preferencesResponse.ok) {
-        alert('偏好设置已保存！');
+        alert('设置已保存！');
+        // 如果语言偏好改变，刷新页面以应用新语言
+        const currentLang = localStorage.getItem('language') || 'zh';
+        if (formData.language_preference !== currentLang) {
+          localStorage.setItem('language', formData.language_preference);
+          window.location.reload();
+        }
       } else {
         const error = await preferencesResponse.json();
         alert(`保存失败: ${error.detail || '未知错误'}`);
       }
     } catch (error) {
-      console.error('保存偏好设置失败:', error);
+      console.error('保存设置失败:', error);
       alert('保存失败，请稍后重试');
     }
   };
@@ -454,29 +495,49 @@ const Settings: React.FC = () => {
 
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
-                      时区
+                      常住城市
                     </label>
                     <select
-                      value={formData.timezone}
-                      disabled
+                      value={formData.residence_city}
+                      onChange={(e) => handleInputChange('residence_city', e.target.value)}
                       style={{
                         width: '100%',
                         padding: '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px',
-                        background: '#f8f9fa',
-                        color: '#666',
-                        cursor: 'not-allowed'
+                        fontSize: '16px'
                       }}
                     >
-                      <option value="UTC">UTC</option>
-                      <option value="Asia/Shanghai">北京时间</option>
-                      <option value="America/New_York">纽约时间</option>
-                      <option value="Europe/London">伦敦时间</option>
+                      <option value="">请选择常住城市</option>
+                      {LOCATION_OPTIONS.map(location => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
                     </select>
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
-                      暂不支持修改
+                      选择您常居住的城市
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                      语言偏好
+                    </label>
+                    <select
+                      value={formData.language_preference}
+                      onChange={(e) => handleInputChange('language_preference', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '16px'
+                      }}
+                    >
+                      <option value="zh">中文</option>
+                      <option value="en">English</option>
+                    </select>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                      选择您偏好的界面语言
                     </p>
                   </div>
                 </div>

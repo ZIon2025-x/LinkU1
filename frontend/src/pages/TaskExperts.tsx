@@ -123,6 +123,11 @@ const TaskExperts: React.FC = () => {
       try {
         const userData = await fetchCurrentUser();
         setUser(userData);
+        
+        // 如果用户有常住城市，设置为默认地点
+        if (userData && userData.residence_city && CITIES.includes(userData.residence_city)) {
+          setSelectedCity(userData.residence_city);
+        }
       } catch (error: any) {
         setUser(null);
       }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TASK_TYPES, CITIES } from './Tasks';
-import api, { getPublicSystemSettings } from '../api';
+import api, { getPublicSystemSettings, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // 移动端检测函数
@@ -48,7 +48,7 @@ const PublishTask: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 加载系统设置
+  // 加载系统设置和用户数据
   useEffect(() => {
     const loadSystemSettings = async () => {
       try {
@@ -59,7 +59,22 @@ const PublishTask: React.FC = () => {
       }
     };
 
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        
+        // 如果用户有常住城市，设置为默认地点
+        if (userData && userData.residence_city && CITIES.includes(userData.residence_city)) {
+          setForm(prev => ({ ...prev, location: userData.residence_city }));
+        }
+      } catch (error) {
+        // 用户未登录，忽略
+        console.debug('用户未登录或获取用户数据失败:', error);
+      }
+    };
+
     loadSystemSettings();
+    loadUserData();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

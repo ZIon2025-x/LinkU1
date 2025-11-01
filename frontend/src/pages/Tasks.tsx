@@ -444,9 +444,16 @@ const Tasks: React.FC = () => {
         const userData = await fetchCurrentUser();
         setUser(userData);
         
-        // 设置用户位置
-        if (userData && userData.location) {
-          setUserLocation(userData.location);
+        // 设置用户位置和默认地点
+        if (userData) {
+          // 如果用户有常住城市，设置为默认地点
+          if (userData.residence_city && CITIES.includes(userData.residence_city)) {
+            setCity(userData.residence_city);
+            setUserLocation(userData.residence_city);
+          } else if (userData.location) {
+            // 兼容旧的位置字段
+            setUserLocation(userData.location);
+          }
         }
         
         // 加载已申请的任务列表

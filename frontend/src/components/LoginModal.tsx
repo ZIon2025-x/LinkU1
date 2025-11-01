@@ -167,11 +167,24 @@ const LoginModal: React.FC<LoginModalProps> = ({
           console.warn('获取CSRF token失败:', error);
         }
         
+        // 登录成功后获取用户资料，更新语言偏好
+        try {
+          const userRes = await api.get('/api/users/profile/me');
+          const userData = userRes.data;
+          
+          // 如果用户有语言偏好设置，且与当前语言不同，则更新语言
+          if (userData.language_preference && userData.language_preference !== localStorage.getItem('language')) {
+            localStorage.setItem('language', userData.language_preference);
+          }
+        } catch (error) {
+          console.warn('获取用户资料失败:', error);
+        }
+        
         // 添加短暂延迟确保认证信息设置完成
         setTimeout(() => {
           onSuccess?.();
           onClose();
-          window.location.reload(); // 刷新页面以更新用户状态
+          window.location.reload(); // 刷新页面以更新用户状态和语言
         }, 100);
       } else {
         // 注册逻辑

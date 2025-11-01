@@ -1356,7 +1356,9 @@ def get_my_profile(
             "user_type": "normal_user",
             "task_count": getattr(current_user, 'task_count', 0),
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
-            "avg_rating": avg_rating
+            "avg_rating": avg_rating,
+            "residence_city": getattr(current_user, 'residence_city', None),
+            "language_preference": getattr(current_user, 'language_preference', 'zh')
         }
         
         print(f"[DEBUG] get_my_profile 返回数据: task_count={formatted_user['task_count']}, completed_task_count={formatted_user['completed_task_count']}")
@@ -1531,6 +1533,56 @@ def update_avatar(
         logger.error(f"[DEBUG] 头像更新失败: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail="头像更新失败")
+
+
+class ProfileUpdate(BaseModel):
+    residence_city: Optional[str] = None
+    language_preference: Optional[str] = None
+
+
+@router.patch("/profile")
+def update_profile(
+    data: ProfileUpdate,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """更新用户个人资料（常住城市、语言偏好等）"""
+    try:
+        update_data = {}
+        
+        if data.residence_city is not None:
+            # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）
+            update_data["residence_city"] = data.residence_city
+        
+        if data.language_preference is not None:
+            # 验证语言偏好只能是 'zh' 或 'en'
+            if data.language_preference not in ['zh', 'en']:
+                raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
+            update_data["language_preference"] = data.language_preference
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="没有提供要更新的字段")
+        
+        # 更新数据库
+        db.query(models.User).filter(models.User.id == current_user.id).update(update_data)
+        db.commit()
+        
+        # 清除用户缓存
+        try:
+            from app.redis_cache import clear_user_cache
+            clear_user_cache(current_user.id)
+            logger.info(f"[DEBUG] 已清除用户缓存")
+        except Exception as e:
+            logger.warning(f"[DEBUG] 清除缓存失败: {e}")
+        
+        return {"message": "个人资料更新成功", **update_data}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[DEBUG] 个人资料更新失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"个人资料更新失败: {str(e)}")
 
 
 @router.post("/admin/user/{user_id}/set_level")
