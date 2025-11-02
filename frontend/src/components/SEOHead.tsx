@@ -99,9 +99,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     if (ogDescription) {
       updateMetaTag('og:description', ogDescription, true);
     }
-    if (ogImage) {
-      updateMetaTag('og:image', ogImage, true);
-    }
+    // ogImage的处理移到后面，确保转换为完整URL并添加微信标签
     if (ogUrl) {
       updateMetaTag('og:url', ogUrl, true);
     }
@@ -115,6 +113,24 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     }
     if (twitterImage) {
       updateMetaTag('twitter:image', twitterImage);
+    }
+
+    // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
+    if (ogImage) {
+      // 确保og:image是完整URL（微信需要绝对URL）
+      const fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
+      updateMetaTag('og:image', fullOgImage, true);
+      updateMetaTag('og:image:width', '1200', true);
+      updateMetaTag('og:image:height', '630', true);
+      updateMetaTag('og:image:type', 'image/png', true);
+      // 微信分享图片（完整URL）
+      updateMetaTag('weixin:image', fullOgImage);
+    }
+    if (ogTitle) {
+      updateMetaTag('weixin:title', ogTitle);
+    }
+    if (ogDescription) {
+      updateMetaTag('weixin:description', ogDescription);
     }
 
     // 更新 hreflang 标签 - 基于当前路径生成不同语言版本的 URL

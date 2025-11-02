@@ -460,6 +460,10 @@ const Home: React.FC = () => {
         title={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
         description={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
         canonicalUrl={canonicalUrl}
+        ogTitle={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
+        ogDescription={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
+        ogImage="/static/logo.png"
+        ogUrl={canonicalUrl}
       />
       {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>

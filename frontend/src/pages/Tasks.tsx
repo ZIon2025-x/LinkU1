@@ -750,6 +750,10 @@ const Tasks: React.FC = () => {
         title={t('tasks.pageTitle')}
         description={t('tasks.seoDescription')}
         canonicalUrl={canonicalUrl}
+        ogTitle={t('tasks.pageTitle')}
+        ogDescription={t('tasks.seoDescription')}
+        ogImage="/static/logo.png"
+        ogUrl={canonicalUrl}
       />
 
       {/* 顶部导航栏 - 使用汉堡菜单 */}
