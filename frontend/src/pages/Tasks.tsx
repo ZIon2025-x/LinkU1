@@ -345,6 +345,83 @@ const Tasks: React.FC = () => {
     ? `https://www.link2ur.com${location.pathname}`
     : 'https://www.link2ur.com/en/tasks';
 
+  // 立即更新meta标签以确保微信分享能识别logo（必须在组件加载时立即执行）
+  useEffect(() => {
+    const updateMetaTag = (name: string, content: string, property?: boolean) => {
+      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      let metaTag = document.querySelector(selector) as HTMLMetaElement;
+      
+      if (!metaTag) {
+        metaTag = document.createElement('meta');
+        if (property) {
+          metaTag.setAttribute('property', name);
+        } else {
+          metaTag.setAttribute('name', name);
+        }
+        document.head.appendChild(metaTag);
+      }
+      
+      metaTag.content = content;
+    };
+
+    // 强制移除旧的og:image标签（包括index.html中的默认标签）
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
+
+    // 设置logo图片（完整URL，添加版本号避免缓存）
+    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    
+    // 创建新的og:image标签
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:image:width', '1200', true);
+    updateMetaTag('og:image:height', '630', true);
+    updateMetaTag('og:image:type', 'image/png', true);
+    
+    // 设置微信分享标签
+    const existingWeixinImage = document.querySelector('meta[name="weixin:image"]');
+    if (existingWeixinImage) {
+      existingWeixinImage.remove();
+    }
+    updateMetaTag('weixin:image', shareImageUrl);
+    
+    // 设置微信分享标题和描述
+    const ogTitle = t('tasks.pageTitle');
+    const ogDescription = t('tasks.seoDescription');
+    
+    if (ogTitle) {
+      updateMetaTag('weixin:title', ogTitle);
+      updateMetaTag('og:title', ogTitle, true);
+    }
+    if (ogDescription) {
+      updateMetaTag('weixin:description', ogDescription);
+      updateMetaTag('og:description', ogDescription, true);
+    }
+    
+    // 将关键标签移到head前面（确保微信爬虫能读取到）
+    const moveToTop = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (element && element.parentNode) {
+        const head = document.head;
+        const firstChild = head.firstChild;
+        if (firstChild && element !== firstChild) {
+          head.insertBefore(element, firstChild);
+        }
+      }
+    };
+    
+    // 延迟执行确保DOM已更新
+    setTimeout(() => {
+      moveToTop('meta[property="og:image"]');
+      moveToTop('meta[name="weixin:image"]');
+      moveToTop('meta[property="og:title"]');
+      moveToTop('meta[name="weixin:title"]');
+      moveToTop('meta[property="og:description"]');
+      moveToTop('meta[name="weixin:description"]');
+    }, 0);
+  }, [location.pathname, t]); // 依赖路径和翻译函数，当路径或语言变化时重新设置
+
   // 检测屏幕尺寸
   useEffect(() => {
     const checkScreenSize = () => {
