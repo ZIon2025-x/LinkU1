@@ -117,13 +117,26 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
     if (ogImage) {
-      // 确保og:image是完整URL（微信需要绝对URL）
-      const fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
+      // 确保og:image是完整URL（微信需要绝对URL），添加版本号避免缓存问题
+      const fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}${ogImage.includes('?') ? '' : '?v=2'}`;
+      
+      // 强制移除旧的og:image标签（确保更新）
+      const existingOgImage = document.querySelector('meta[property="og:image"]');
+      if (existingOgImage) {
+        existingOgImage.remove();
+      }
+      
+      // 重新创建og:image标签
       updateMetaTag('og:image', fullOgImage, true);
       updateMetaTag('og:image:width', '1200', true);
       updateMetaTag('og:image:height', '630', true);
       updateMetaTag('og:image:type', 'image/png', true);
+      
       // 微信分享图片（完整URL）
+      const existingWeixinImage = document.querySelector('meta[name="weixin:image"]');
+      if (existingWeixinImage) {
+        existingWeixinImage.remove();
+      }
       updateMetaTag('weixin:image', fullOgImage);
     }
     if (ogTitle) {
@@ -132,6 +145,10 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     if (ogDescription) {
       updateMetaTag('weixin:description', ogDescription);
     }
+    
+    // 添加微信友好的Open Graph标签
+    updateMetaTag('og:site_name', 'Link²Ur', true);
+    updateMetaTag('og:locale', 'zh_CN', true);
 
     // 更新 hreflang 标签 - 基于当前路径生成不同语言版本的 URL
     const currentPath = location.pathname;
@@ -144,6 +161,37 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     updateLinkTag('alternate', enUrl, 'en');
     updateLinkTag('alternate', zhUrl, 'zh');
     updateLinkTag('alternate', enUrl, 'x-default');
+
+    // 微信分享特殊处理：将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
+    // 微信爬虫可能只读取head的前几个标签
+    const moveToTop = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (element && element.parentNode) {
+        const head = document.head;
+        const firstChild = head.firstChild;
+        if (firstChild && element !== firstChild) {
+          head.insertBefore(element, firstChild);
+        }
+      }
+    };
+    
+    // 将关键标签移到前面（使用setTimeout确保DOM已更新）
+    setTimeout(() => {
+      if (ogImage) {
+        moveToTop('meta[property="og:image"]');
+      }
+      if (ogTitle) {
+        moveToTop('meta[property="og:title"]');
+        moveToTop('meta[name="weixin:title"]');
+      }
+      if (ogDescription) {
+        moveToTop('meta[property="og:description"]');
+        moveToTop('meta[name="weixin:description"]');
+      }
+      if (ogImage) {
+        moveToTop('meta[name="weixin:image"]');
+      }
+    }, 0);
 
   }, [title, description, keywords, ogTitle, ogDescription, ogImage, ogUrl, twitterTitle, twitterDescription, twitterImage, noindex, location.pathname]);
 
