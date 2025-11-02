@@ -1471,6 +1471,7 @@ const AdminDashboard: React.FC = () => {
                   <option value="marketing">营销推广</option>
                   <option value="writing">文案写作</option>
                   <option value="translation">翻译服务</option>
+                  <option value="tutoring">学业辅导</option>
                   <option value="food">美食料理</option>
                   <option value="beverage">饮品调制</option>
                   <option value="cake">蛋糕烘焙</option>
