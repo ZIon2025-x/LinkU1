@@ -21,8 +21,15 @@ from app.secure_auth import (
     validate_session
 )
 from app.cookie_manager import CookieManager
-from app.security import get_password_hash, verify_password, log_security_event
+from app.security import get_password_hash, verify_password, log_security_event, generate_strong_password
 from app.rate_limiting import rate_limit
+from app.verification_code_manager import (
+    generate_verification_code,
+    store_verification_code,
+    verify_and_delete_code
+)
+from app.email_utils import send_email
+from fastapi import BackgroundTasks
 
 logger = logging.getLogger(__name__)
 
@@ -787,3 +794,258 @@ def cleanup_old_refresh_tokens_endpoint(
             "success": False,
             "message": f"清理失败: {str(e)}"
         }
+
+@secure_auth_router.post("/send-verification-code", response_model=Dict[str, Any])
+@rate_limit("send_code")
+def send_email_verification_code(
+    request_data: schemas.EmailVerificationCodeRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+    """发送邮箱验证码"""
+    try:
+        email = request_data.email.strip().lower()
+        
+        # 验证邮箱格式
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="邮箱格式不正确"
+            )
+        
+        # 生成6位数字验证码
+        verification_code = generate_verification_code(6)
+        
+        # 存储验证码到Redis，有效期5分钟
+        if not store_verification_code(email, verification_code):
+            logger.error(f"存储验证码失败: email={email}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="发送验证码失败，请稍后重试"
+            )
+        
+        # 发送邮件
+        subject = "Link²Ur 登录验证码"
+        body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333; text-align: center;">登录验证码</h2>
+            <p>您好，</p>
+            <p>您正在尝试登录 Link²Ur 平台，请使用以下验证码完成登录：</p>
+            
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">{verification_code}</h1>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">
+                <strong>重要提示：</strong><br>
+                • 验证码有效期为 5 分钟<br>
+                • 验证码只能使用一次<br>
+                • 如果您没有尝试登录，请忽略此邮件<br>
+                • 请勿将验证码泄露给他人
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                此邮件由 Link²Ur 系统自动发送，请勿回复。
+            </p>
+        </div>
+        """
+        
+        # 异步发送邮件
+        background_tasks.add_task(send_email, email, subject, body)
+        
+        logger.info(f"验证码已发送: email={email}")
+        
+        return {
+            "message": "验证码已发送到您的邮箱",
+            "email": email,
+            "expires_in": 300  # 5分钟
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"发送验证码失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="发送验证码失败"
+        )
+
+@secure_auth_router.post("/login-with-code", response_model=Dict[str, Any])
+@rate_limit("login")
+def login_with_verification_code(
+    login_data: schemas.EmailVerificationCodeLogin,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db),
+):
+    """使用邮箱验证码登录，新用户自动创建"""
+    try:
+        email = login_data.email.strip().lower()
+        verification_code = login_data.verification_code.strip()
+        
+        # 验证验证码
+        if not verify_and_delete_code(email, verification_code):
+            logger.warning(f"验证码验证失败: email={email}")
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "LOGIN_FAILED", email, client_ip, "验证码错误或已过期"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="验证码错误或已过期"
+            )
+        
+        # 查找用户
+        user = crud.get_user_by_email(db, email)
+        
+        # 如果用户不存在，自动创建新用户
+        is_new_user = False
+        if not user:
+            is_new_user = True
+            import random
+            # 生成唯一的8位用户ID
+            while True:
+                user_id = str(random.randint(10000000, 99999999))
+                existing_user = crud.get_user_by_id(db, user_id)
+                if not existing_user:
+                    break
+            
+            # 生成强密码
+            strong_password = generate_strong_password(16)
+            hashed_password = get_password_hash(strong_password)
+            
+            # 生成用户名：user + 用户ID
+            username = f"user{user_id}"
+            
+            # 检查用户名是否已存在（虽然理论上不应该，但为了安全）
+            while True:
+                existing_name = crud.get_user_by_name(db, username)
+                if not existing_name:
+                    break
+                # 如果用户名已存在，重新生成用户ID
+                while True:
+                    user_id = str(random.randint(10000000, 99999999))
+                    existing_user = crud.get_user_by_id(db, user_id)
+                    if not existing_user:
+                        break
+                username = f"user{user_id}"
+            
+            # 创建新用户
+            db_user = models.User(
+                id=user_id,
+                name=username,
+                email=email,
+                hashed_password=hashed_password,
+                phone=None,
+                avatar="",
+                agreed_to_terms=1,
+                terms_agreed_at=datetime.utcnow(),
+                inviter_id=None,
+            )
+            db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+            
+            user = db_user
+            logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}")
+        
+        # 检查用户状态
+        if user.is_suspended:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "SUSPENDED_USER_LOGIN", user.id, client_ip, "被暂停用户尝试登录"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账户已被暂停"
+            )
+        
+        if user.is_banned:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "BANNED_USER_LOGIN", user.id, client_ip, "被封禁用户尝试登录"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账户已被封禁"
+            )
+        
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        
+        # 生成并存储刷新令牌到Redis
+        from app.secure_auth import create_user_refresh_token
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        
+        # 创建新会话
+        session = SecureAuthManager.create_session(
+            user_id=user.id,
+            device_fingerprint=device_fingerprint,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            refresh_token=refresh_token
+        )
+        
+        # 设置安全Cookie（传递User-Agent用于移动端检测）
+        CookieManager.set_session_cookies(
+            response=response,
+            session_id=session.session_id,
+            refresh_token=refresh_token,
+            user_id=user.id,
+            user_agent=user_agent
+        )
+        
+        # 生成并设置CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        # 记录成功登录
+        log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户验证码登录成功")
+        
+        # 检测是否为移动端
+        is_mobile = any(keyword in user_agent.lower() for keyword in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        # 为移动端添加特殊的响应头
+        if is_mobile:
+            response.headers["X-Session-ID"] = session.session_id
+            response.headers["X-User-ID"] = user.id
+            response.headers["X-Auth-Status"] = "authenticated"
+            response.headers["X-Mobile-Auth"] = "true"
+
+        return {
+            "message": "登录成功",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "user_level": user.user_level,
+                "is_verified": user.is_verified,
+            },
+            "session_id": session.session_id,
+            "expires_in": 300,
+            "mobile_auth": is_mobile,
+            "auth_headers": {
+                "X-Session-ID": session.session_id,
+                "X-User-ID": user.id,
+                "X-Auth-Status": "authenticated"
+            } if is_mobile else None,
+            "is_new_user": is_new_user
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"验证码登录失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"登录失败: {str(e)}"
+        )

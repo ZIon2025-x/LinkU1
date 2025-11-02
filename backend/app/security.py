@@ -112,6 +112,33 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def generate_strong_password(length: int = 16) -> str:
+    """生成强密码（包含大小写字母、数字、特殊字符）"""
+    import string
+    # 确保包含各种字符类型
+    uppercase = string.ascii_uppercase
+    lowercase = string.ascii_lowercase
+    digits = string.digits
+    special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    
+    # 至少每种类型包含一个字符
+    password = [
+        secrets.choice(uppercase),
+        secrets.choice(lowercase),
+        secrets.choice(digits),
+        secrets.choice(special_chars)
+    ]
+    
+    # 填充剩余长度
+    all_chars = uppercase + lowercase + digits + special_chars
+    password.extend(secrets.choice(all_chars) for _ in range(length - 4))
+    
+    # 打乱顺序
+    secrets.SystemRandom().shuffle(password)
+    
+    return ''.join(password)
+
+
 def create_access_token(
     data: Dict[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:

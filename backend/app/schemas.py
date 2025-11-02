@@ -32,6 +32,15 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class EmailVerificationCodeRequest(BaseModel):
+    """请求发送邮箱验证码"""
+    email: str
+
+class EmailVerificationCodeLogin(BaseModel):
+    """使用邮箱验证码登录"""
+    email: str
+    verification_code: str
+
 class PasswordValidationRequest(BaseModel):
     password: str
     username: Optional[str] = None
