@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
@@ -7,6 +8,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SEOHead from '../components/SEOHead';
 
 interface TaskExpert {
   id: string;
@@ -46,12 +48,18 @@ interface Notification {
 const TaskExperts: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const location = useLocation();
   const [experts, setExperts] = useState<TaskExpert[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [isMobile, setIsMobile] = useState(false);
+
+  // 生成canonical URL
+  const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
+    ? `https://www.link2ur.com${location.pathname}`
+    : 'https://www.link2ur.com/en/task-experts';
   
   // 用户和通知相关状态
   const [user, setUser] = useState<any>(null);
@@ -108,6 +116,83 @@ const TaskExperts: React.FC = () => {
     { value: 'tasks', label: t('taskExperts.sortByTasks') },
     { value: 'recent', label: t('taskExperts.sortByRecent') }
   ];
+
+  // 立即更新meta标签以确保微信分享能识别logo（必须在组件加载时立即执行）
+  useEffect(() => {
+    const updateMetaTag = (name: string, content: string, property?: boolean) => {
+      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      let metaTag = document.querySelector(selector) as HTMLMetaElement;
+      
+      if (!metaTag) {
+        metaTag = document.createElement('meta');
+        if (property) {
+          metaTag.setAttribute('property', name);
+        } else {
+          metaTag.setAttribute('name', name);
+        }
+        document.head.appendChild(metaTag);
+      }
+      
+      metaTag.content = content;
+    };
+
+    // 强制移除旧的og:image标签（包括index.html中的默认标签）
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
+
+    // 设置logo图片（完整URL，添加版本号避免缓存）
+    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    
+    // 创建新的og:image标签
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:image:width', '1200', true);
+    updateMetaTag('og:image:height', '630', true);
+    updateMetaTag('og:image:type', 'image/png', true);
+    
+    // 设置微信分享标签
+    const existingWeixinImage = document.querySelector('meta[name="weixin:image"]');
+    if (existingWeixinImage) {
+      existingWeixinImage.remove();
+    }
+    updateMetaTag('weixin:image', shareImageUrl);
+    
+    // 设置微信分享标题和描述
+    const ogTitle = t('taskExperts.title');
+    const ogDescription = t('taskExperts.subtitle');
+    
+    if (ogTitle) {
+      updateMetaTag('weixin:title', ogTitle);
+      updateMetaTag('og:title', ogTitle, true);
+    }
+    if (ogDescription) {
+      updateMetaTag('weixin:description', ogDescription);
+      updateMetaTag('og:description', ogDescription, true);
+    }
+    
+    // 将关键标签移到head前面（确保微信爬虫能读取到）
+    const moveToTop = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (element && element.parentNode) {
+        const head = document.head;
+        const firstChild = head.firstChild;
+        if (firstChild && element !== firstChild) {
+          head.insertBefore(element, firstChild);
+        }
+      }
+    };
+    
+    // 延迟执行确保DOM已更新
+    setTimeout(() => {
+      moveToTop('meta[property="og:image"]');
+      moveToTop('meta[name="weixin:image"]');
+      moveToTop('meta[property="og:title"]');
+      moveToTop('meta[name="weixin:title"]');
+      moveToTop('meta[property="og:description"]');
+      moveToTop('meta[name="weixin:description"]');
+    }, 0);
+  }, [location.pathname, t]); // 依赖路径和翻译函数，当路径或语言变化时重新设置
 
   useEffect(() => {
     const checkMobile = () => {
@@ -278,6 +363,15 @@ const TaskExperts: React.FC = () => {
         minHeight: '100vh', 
         background: '#fff'
       }}>
+        <SEOHead 
+          title={t('taskExperts.title')}
+          description={t('taskExperts.subtitle')}
+          canonicalUrl={canonicalUrl}
+          ogTitle={t('taskExperts.title')}
+          ogDescription={t('taskExperts.subtitle')}
+          ogImage="/static/logo.png"
+          ogUrl={canonicalUrl}
+        />
         {/* 顶部导航栏 - 与首页一致 */}
         <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
           <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
@@ -379,6 +473,15 @@ const TaskExperts: React.FC = () => {
       minHeight: '100vh', 
       background: '#fff'
     }}>
+      <SEOHead 
+        title={t('taskExperts.title')}
+        description={t('taskExperts.subtitle')}
+        canonicalUrl={canonicalUrl}
+        ogTitle={t('taskExperts.title')}
+        ogDescription={t('taskExperts.subtitle')}
+        ogImage="/static/logo.png"
+        ogUrl={canonicalUrl}
+      />
       {/* 顶部导航栏 - 与首页一致 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>

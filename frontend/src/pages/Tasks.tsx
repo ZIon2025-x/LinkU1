@@ -346,81 +346,142 @@ const Tasks: React.FC = () => {
     : 'https://www.link2ur.com/en/tasks';
 
   // 立即更新meta标签以确保微信分享能识别logo（必须在组件加载时立即执行）
-  useEffect(() => {
+  // 使用useLayoutEffect确保在DOM渲染前同步执行，优先级高于useEffect
+  React.useLayoutEffect(() => {
     const updateMetaTag = (name: string, content: string, property?: boolean) => {
       const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
-      let metaTag = document.querySelector(selector) as HTMLMetaElement;
+      // 先移除所有同名的标签，确保没有重复
+      const allTags = document.querySelectorAll(selector);
+      allTags.forEach(tag => tag.remove());
       
-      if (!metaTag) {
-        metaTag = document.createElement('meta');
-        if (property) {
-          metaTag.setAttribute('property', name);
-        } else {
-          metaTag.setAttribute('name', name);
-        }
-        document.head.appendChild(metaTag);
+      // 创建新标签
+      const metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
       }
-      
       metaTag.content = content;
+      document.head.appendChild(metaTag);
     };
 
-    // 强制移除旧的og:image标签（包括index.html中的默认标签）
-    const existingOgImage = document.querySelector('meta[property="og:image"]');
-    if (existingOgImage) {
-      existingOgImage.remove();
-    }
+    // 强制移除所有旧的og:image相关标签（包括index.html中的默认标签）
+    const allOgImages = document.querySelectorAll('meta[property="og:image"], meta[property="og:image:width"], meta[property="og:image:height"], meta[property="og:image:type"]');
+    allOgImages.forEach(tag => tag.remove());
 
     // 设置logo图片（完整URL，添加版本号避免缓存）
-    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    const shareImageUrl = `${window.location.origin}/static/logo.png?v=3`;
     
-    // 创建新的og:image标签
-    updateMetaTag('og:image', shareImageUrl, true);
-    updateMetaTag('og:image:width', '1200', true);
-    updateMetaTag('og:image:height', '630', true);
-    updateMetaTag('og:image:type', 'image/png', true);
+    // 创建新的og:image标签（直接插入到head最前面）
+    const ogImage = document.createElement('meta');
+    ogImage.setAttribute('property', 'og:image');
+    ogImage.content = shareImageUrl;
+    document.head.insertBefore(ogImage, document.head.firstChild);
+    
+    const ogImageWidth = document.createElement('meta');
+    ogImageWidth.setAttribute('property', 'og:image:width');
+    ogImageWidth.content = '1200';
+    document.head.insertBefore(ogImageWidth, document.head.firstChild);
+    
+    const ogImageHeight = document.createElement('meta');
+    ogImageHeight.setAttribute('property', 'og:image:height');
+    ogImageHeight.content = '630';
+    document.head.insertBefore(ogImageHeight, document.head.firstChild);
+    
+    const ogImageType = document.createElement('meta');
+    ogImageType.setAttribute('property', 'og:image:type');
+    ogImageType.content = 'image/png';
+    document.head.insertBefore(ogImageType, document.head.firstChild);
     
     // 设置微信分享标签
-    const existingWeixinImage = document.querySelector('meta[name="weixin:image"]');
-    if (existingWeixinImage) {
-      existingWeixinImage.remove();
-    }
-    updateMetaTag('weixin:image', shareImageUrl);
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    
+    const weixinImage = document.createElement('meta');
+    weixinImage.setAttribute('name', 'weixin:image');
+    weixinImage.content = shareImageUrl;
+    document.head.insertBefore(weixinImage, document.head.firstChild);
     
     // 设置微信分享标题和描述
     const ogTitle = t('tasks.pageTitle');
     const ogDescription = t('tasks.seoDescription');
     
     if (ogTitle) {
-      updateMetaTag('weixin:title', ogTitle);
-      updateMetaTag('og:title', ogTitle, true);
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => tag.remove());
+      const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+      allOgTitles.forEach(tag => tag.remove());
+      
+      const weixinTitle = document.createElement('meta');
+      weixinTitle.setAttribute('name', 'weixin:title');
+      weixinTitle.content = ogTitle;
+      document.head.insertBefore(weixinTitle, document.head.firstChild);
+      
+      const ogTitleTag = document.createElement('meta');
+      ogTitleTag.setAttribute('property', 'og:title');
+      ogTitleTag.content = ogTitle;
+      document.head.insertBefore(ogTitleTag, document.head.firstChild);
     }
+    
     if (ogDescription) {
-      updateMetaTag('weixin:description', ogDescription);
-      updateMetaTag('og:description', ogDescription, true);
+      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDescriptions.forEach(tag => tag.remove());
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      allOgDescriptions.forEach(tag => tag.remove());
+      
+      const weixinDescription = document.createElement('meta');
+      weixinDescription.setAttribute('name', 'weixin:description');
+      weixinDescription.content = ogDescription;
+      document.head.insertBefore(weixinDescription, document.head.firstChild);
+      
+      const ogDescriptionTag = document.createElement('meta');
+      ogDescriptionTag.setAttribute('property', 'og:description');
+      ogDescriptionTag.content = ogDescription;
+      document.head.insertBefore(ogDescriptionTag, document.head.firstChild);
     }
-    
-    // 将关键标签移到head前面（确保微信爬虫能读取到）
-    const moveToTop = (selector: string) => {
-      const element = document.querySelector(selector);
-      if (element && element.parentNode) {
-        const head = document.head;
-        const firstChild = head.firstChild;
-        if (firstChild && element !== firstChild) {
-          head.insertBefore(element, firstChild);
-        }
-      }
-    };
-    
-    // 延迟执行确保DOM已更新
-    setTimeout(() => {
-      moveToTop('meta[property="og:image"]');
-      moveToTop('meta[name="weixin:image"]');
-      moveToTop('meta[property="og:title"]');
-      moveToTop('meta[name="weixin:title"]');
-      moveToTop('meta[property="og:description"]');
-      moveToTop('meta[name="weixin:description"]');
-    }, 0);
   }, [location.pathname, t]); // 依赖路径和翻译函数，当路径或语言变化时重新设置
+
+  // 额外的useEffect，在SEOHead执行后再次强制更新（作为保险）
+  useEffect(() => {
+    const shareImageUrl = `${window.location.origin}/static/logo.png?v=3`;
+    
+    // 等待一小段时间确保SEOHead已经执行
+    const timer = setTimeout(() => {
+      // 强制检查并更新og:image
+      const existingOgImage = document.querySelector('meta[property="og:image"]') as HTMLMetaElement;
+      if (!existingOgImage || !existingOgImage.content.includes('/static/logo.png')) {
+        // 如果不存在或不正确，强制更新
+        if (existingOgImage) {
+          existingOgImage.remove();
+        }
+        const ogImage = document.createElement('meta');
+        ogImage.setAttribute('property', 'og:image');
+        ogImage.content = shareImageUrl;
+        document.head.insertBefore(ogImage, document.head.firstChild);
+      } else {
+        // 如果存在但内容不对，更新它
+        existingOgImage.content = shareImageUrl;
+        document.head.insertBefore(existingOgImage, document.head.firstChild);
+      }
+      
+      // 同样处理weixin:image
+      const existingWeixinImage = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
+      if (!existingWeixinImage || !existingWeixinImage.content.includes('/static/logo.png')) {
+        if (existingWeixinImage) {
+          existingWeixinImage.remove();
+        }
+        const weixinImage = document.createElement('meta');
+        weixinImage.setAttribute('name', 'weixin:image');
+        weixinImage.content = shareImageUrl;
+        document.head.insertBefore(weixinImage, document.head.firstChild);
+      } else {
+        existingWeixinImage.content = shareImageUrl;
+        document.head.insertBefore(existingWeixinImage, document.head.firstChild);
+      }
+    }, 100); // 延迟100ms，确保SEOHead已经执行
+    
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
 
   // 检测屏幕尺寸
   useEffect(() => {
