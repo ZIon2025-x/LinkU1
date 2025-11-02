@@ -97,6 +97,7 @@ const TaskExperts: React.FC = () => {
     { value: 'marketing', label: t('taskExperts.marketing') },
     { value: 'writing', label: t('taskExperts.writing') },
     { value: 'translation', label: t('taskExperts.translation') },
+    { value: 'tutoring', label: t('taskExperts.tutoring') },
     { value: 'food', label: t('taskExperts.food') },
     { value: 'beverage', label: t('taskExperts.beverage') },
     { value: 'cake', label: t('taskExperts.cake') }
