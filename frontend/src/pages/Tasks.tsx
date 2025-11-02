@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -12,7 +12,6 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -317,7 +316,7 @@ export const CITIES = [
 ];
 
 const Tasks: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -338,6 +337,7 @@ const Tasks: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   // 生成canonical URL - 不带查询参数，统一URL格式
   // 无论是否有查询参数（?type=xxx&location=xxx），canonical URL都不包含这些参数
@@ -436,6 +436,7 @@ const Tasks: React.FC = () => {
   const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
   
   const { navigate } = useLocalizedNavigation();
+  const navigateRaw = useRouterNavigate(); // 原始navigate用于语言切换
 
   // 加载用户信息和已申请任务
   useEffect(() => {
@@ -519,6 +520,16 @@ const Tasks: React.FC = () => {
     }
   }, [user]);
 
+  // 设置滑动提示文本的双语化CSS变量
+  useEffect(() => {
+    const swipeText = `← ${t('tasks.swipeToSeeMore')} →`;
+    document.documentElement.style.setProperty('--swipe-text', `'${swipeText}'`);
+    
+    return () => {
+      document.documentElement.style.removeProperty('--swipe-text');
+    };
+  }, [t]);
+
   // 加载任务列表
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -556,6 +567,9 @@ const Tasks: React.FC = () => {
       if (!target.closest('[data-location-dropdown]')) {
         setShowLocationDropdown(false);
       }
+      if (!target.closest('[data-language-dropdown]')) {
+        setShowLanguageDropdown(false);
+      }
       if (!target.closest('.reward-dropdown-container')) {
         setShowRewardDropdown(false);
       }
@@ -567,14 +581,14 @@ const Tasks: React.FC = () => {
       }
     };
 
-    if (showLocationDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
+    if (showLocationDropdown || showLanguageDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLocationDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
+  }, [showLocationDropdown, showLanguageDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
 
 
   // 处理通知标记为已读
@@ -908,9 +922,8 @@ const Tasks: React.FC = () => {
             </div>
           </div>
 
-          {/* 语言切换器、通知按钮和汉堡菜单 */}
+          {/* 通知按钮和汉堡菜单 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <LanguageSwitcher />
             <NotificationButton
               user={user}
               unreadCount={unreadCount}
@@ -937,6 +950,134 @@ const Tasks: React.FC = () => {
         marginTop: '80px',
         padding: '16px'
       }}>
+        {/* 浮空双语选择按钮 */}
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? '20px' : '30px',
+            right: isMobile ? '16px' : 'max(16px, calc((100vw - 1200px) / 2 + 16px))',
+            zIndex: 1000,
+            width: 'auto'
+          }}
+          data-language-dropdown
+        >
+          <div 
+            onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              background: showLanguageDropdown ? '#f3f4f6' : '#fff',
+              border: '1px solid #e5e7eb',
+              boxShadow: showLanguageDropdown 
+                ? '0 4px 16px rgba(0,0,0,0.15)' 
+                : '0 4px 12px rgba(0,0,0,0.12)',
+              transform: showLanguageDropdown ? 'translateY(-2px) scale(1.05)' : 'translateY(0) scale(1)'
+            }}
+            onMouseEnter={(e) => {
+              if (!showLanguageDropdown) {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.borderColor = '#d1d5db';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showLanguageDropdown) {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              }
+            }}
+            title={language === 'zh' ? 'English' : '中文'}
+          >
+            <span style={{ fontSize: '24px' }}>🌐</span>
+          </div>
+          
+          {/* 语言选择下拉菜单 */}
+          {showLanguageDropdown && (
+            <div 
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '0',
+                background: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)',
+                zIndex: 9999,
+                marginBottom: '6px',
+                minWidth: '120px',
+                transform: 'translateY(0)',
+                animation: 'fadeInUp 0.2s ease-out',
+                backdropFilter: 'blur(10px)'
+              }}>
+              <div
+                onClick={() => {
+                  setLanguage('zh', navigateRaw);
+                  setShowLanguageDropdown(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: language === 'zh' ? '#1890ff' : '#374151',
+                  borderBottom: '1px solid #f3f4f6',
+                  transition: 'background 0.2s ease',
+                  fontWeight: language === 'zh' ? '600' : '400',
+                  background: language === 'zh' ? '#f0f9ff' : 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  if (language !== 'zh') {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (language !== 'zh') {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                中文
+              </div>
+              <div
+                onClick={() => {
+                  setLanguage('en', navigateRaw);
+                  setShowLanguageDropdown(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: language === 'en' ? '#1890ff' : '#374151',
+                  transition: 'background 0.2s ease',
+                  fontWeight: language === 'en' ? '600' : '400',
+                  background: language === 'en' ? '#f0f9ff' : 'transparent',
+                  borderRadius: '0 0 12px 12px'
+                }}
+                onMouseEnter={(e) => {
+                  if (language !== 'en') {
+                    e.currentTarget.style.background = '#f9fafb';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (language !== 'en') {
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
+              >
+                English
+              </div>
+            </div>
+          )}
+        </div>
+        
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto'
@@ -1758,16 +1899,6 @@ const Tasks: React.FC = () => {
                   🔍
                 </div>
               </div>
-              
-              {/* 搜索统计信息 */}
-              <div style={{
-                color: '#6b7280',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-                minWidth: '80px'
-              }}>
-                {keyword ? `${tasks.length}${t('tasks.search.results')}` : `${tasks.length}${t('tasks.search.tasks')}`}
-              </div>
             </div>
           </div>
 
@@ -2248,6 +2379,29 @@ const Tasks: React.FC = () => {
       {/* 移动端响应式样式 */}
       <style>
         {`
+          /* 语言选择框浮空动画 */
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-8px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(8px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
           /* 移动端适配 */
           @media (max-width: 768px) {
             /* 顶部导航栏移动端优化 */
@@ -2343,7 +2497,7 @@ const Tasks: React.FC = () => {
             
             /* 分类区域滚动提示 */
             .category-section::after {
-              content: '← 滑动查看更多 →' !important;
+              content: var(--swipe-text, '← 滑动查看更多 →') !important;
               position: absolute !important;
               bottom: 4px !important;
               left: 50% !important;

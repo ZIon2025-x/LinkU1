@@ -1562,7 +1562,7 @@ const CustomerService: React.FC = () => {
         <div style={{ marginBottom: 20 }}>
           <input
             type="text"
-            placeholder="搜索任务ID、发布者ID或接受者ID..."
+            placeholder="搜索任务..."
             value={taskSearchTerm}
             onChange={(e) => setTaskSearchTerm(e.target.value)}
             style={{
