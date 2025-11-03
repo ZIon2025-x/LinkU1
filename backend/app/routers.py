@@ -1590,11 +1590,16 @@ class ProfileUpdate(BaseModel):
 
 @router.patch("/profile")
 def update_profile(
+    request: Request,
     data: ProfileUpdate,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
     """更新用户个人资料（名字、常住城市、语言偏好等）"""
+    logger.info(f"[DEBUG] update_profile - 收到请求: {data}")
+    logger.info(f"[DEBUG] update_profile - 当前用户: {current_user.id}")
+    logger.info(f"[DEBUG] update_profile - 请求头: {dict(request.headers)}")
+    logger.info(f"[DEBUG] update_profile - Cookies: {dict(request.cookies)}")
     try:
         from datetime import datetime, timedelta
         from app.validators import StringValidator
@@ -1664,14 +1669,19 @@ def update_profile(
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）
-            # 允许空字符串，表示清除城市
-            update_data["residence_city"] = data.residence_city if data.residence_city else None
+            # 允许空字符串或null，表示清除城市
+            if data.residence_city == "":
+                update_data["residence_city"] = None
+            else:
+                update_data["residence_city"] = data.residence_city
+            logger.info(f"[DEBUG] 更新常住城市: {data.residence_city} -> {update_data.get('residence_city')}")
         
         if data.language_preference is not None:
             # 验证语言偏好只能是 'zh' 或 'en'
             if data.language_preference not in ['zh', 'en']:
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
+            logger.info(f"[DEBUG] 更新语言偏好: {data.language_preference}")
         
         # 如果没有要更新的字段，返回错误（但名字不变时不更新名字字段是正常的）
         if not update_data:

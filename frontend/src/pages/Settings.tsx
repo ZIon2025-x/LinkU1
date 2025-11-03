@@ -165,6 +165,32 @@ const Settings: React.FC = () => {
       }
       
       // 保存个人资料（名字、常住城市、语言偏好）
+      // 构建请求体，只包含需要更新的字段
+      const updatePayload: any = {};
+      
+      // 名字：只在改变时更新
+      if (formData.name !== user?.name && formData.name) {
+        updatePayload.name = formData.name;
+      }
+      
+      // 常住城市：总是发送（允许更新为空）
+      if (formData.residence_city !== user?.residence_city) {
+        updatePayload.residence_city = formData.residence_city || null;
+      }
+      
+      // 语言偏好：总是发送（允许更新）
+      if (formData.language_preference !== user?.language_preference) {
+        updatePayload.language_preference = formData.language_preference || 'en';
+      }
+      
+      // 如果没有要更新的字段，提示用户
+      if (Object.keys(updatePayload).length === 0) {
+        alert('没有需要更新的信息');
+        return;
+      }
+      
+      console.log('[DEBUG] 发送更新请求:', updatePayload);
+      
       const profileResponse = await fetch('/api/users/profile', {
         method: 'PATCH',
         headers: {
@@ -172,11 +198,7 @@ const Settings: React.FC = () => {
           ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         credentials: 'include',
-        body: JSON.stringify({
-          ...(formData.name !== user?.name && formData.name ? { name: formData.name } : {}),
-          ...(formData.residence_city ? { residence_city: formData.residence_city } : {}),
-          ...(formData.language_preference ? { language_preference: formData.language_preference } : {})
-        })
+        body: JSON.stringify(updatePayload)
       });
 
       if (!profileResponse.ok) {
