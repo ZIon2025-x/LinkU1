@@ -169,6 +169,7 @@ class User(Base):
     agreed_to_terms = Column(Integer, default=0)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
     inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请者ID
+    name_updated_at = Column(DateTime, nullable=True)  # 上次修改名字的时间
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"

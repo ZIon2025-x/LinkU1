@@ -1404,7 +1404,8 @@ def get_my_profile(
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating,
             "residence_city": getattr(current_user, 'residence_city', None),
-            "language_preference": getattr(current_user, 'language_preference', 'en')
+            "language_preference": getattr(current_user, 'language_preference', 'en'),
+            "name_updated_at": getattr(current_user, 'name_updated_at', None)
         }
         
         print(f"[DEBUG] get_my_profile 返回数据: task_count={formatted_user['task_count']}, completed_task_count={formatted_user['completed_task_count']}")
@@ -1582,6 +1583,7 @@ def update_avatar(
 
 
 class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
     residence_city: Optional[str] = None
     language_preference: Optional[str] = None
 
@@ -1592,9 +1594,67 @@ def update_profile(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    """更新用户个人资料（常住城市、语言偏好等）"""
+    """更新用户个人资料（名字、常住城市、语言偏好等）"""
     try:
+        from datetime import datetime, timedelta
+        from app.validators import StringValidator
+        import re
+        
         update_data = {}
+        
+        # 处理名字更新
+        if data.name is not None:
+            new_name = data.name.strip()
+            
+            # 验证名字长度
+            if len(new_name) < 3:
+                raise HTTPException(status_code=400, detail="用户名至少需要3个字符")
+            if len(new_name) > 50:
+                raise HTTPException(status_code=400, detail="用户名不能超过50个字符")
+            
+            # 验证名字格式（只允许字母、数字、下划线和连字符）
+            if not re.match(r'^[a-zA-Z0-9_-]+$', new_name):
+                raise HTTPException(status_code=400, detail="用户名只能包含字母、数字、下划线和连字符")
+            
+            # 验证名字不能以数字开头
+            if new_name[0].isdigit():
+                raise HTTPException(status_code=400, detail="用户名不能以数字开头")
+            
+            # 检查是否与当前名字相同
+            if new_name == current_user.name:
+                # 如果名字没变，不需要更新
+                pass
+            else:
+                # 检查名字唯一性
+                existing_user = db.query(models.User).filter(
+                    models.User.name == new_name,
+                    models.User.id != current_user.id
+                ).first()
+                if existing_user:
+                    raise HTTPException(status_code=400, detail="该用户名已被使用，请选择其他用户名")
+                
+                # 检查是否在一个月内修改过名字
+                if current_user.name_updated_at:
+                    # 处理时区问题：如果name_updated_at有时区信息，需要转换为UTC
+                    last_update = current_user.name_updated_at
+                    if last_update.tzinfo is not None:
+                        # 如果有时区信息，转换为UTC时间（naive datetime）
+                        last_update_utc = last_update.replace(tzinfo=None) - (last_update.utcoffset() or timedelta(0))
+                    else:
+                        # 如果没有时区信息，假设是UTC时间
+                        last_update_utc = last_update
+                    
+                    time_since_last_update = datetime.utcnow() - last_update_utc
+                    if time_since_last_update < timedelta(days=30):
+                        days_left = 30 - time_since_last_update.days
+                        raise HTTPException(
+                            status_code=400, 
+                            detail=f"用户名一个月内只能修改一次，请在 {days_left} 天后再试"
+                        )
+                
+                # 更新名字和修改时间
+                update_data["name"] = new_name
+                update_data["name_updated_at"] = datetime.utcnow()
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）

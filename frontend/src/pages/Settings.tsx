@@ -162,7 +162,7 @@ const Settings: React.FC = () => {
         .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
       
-      // 保存个人资料（常住城市、语言偏好）
+      // 保存个人资料（名字、常住城市、语言偏好）
       const profileResponse = await fetch('/api/users/profile', {
         method: 'PATCH',
         headers: {
@@ -171,6 +171,7 @@ const Settings: React.FC = () => {
         },
         credentials: 'include',
         body: JSON.stringify({
+          name: formData.name !== user?.name ? formData.name : undefined,
           residence_city: formData.residence_city,
           language_preference: formData.language_preference
         })
@@ -180,6 +181,18 @@ const Settings: React.FC = () => {
         const error = await profileResponse.json();
         alert(`保存个人资料失败: ${error.detail || '未知错误'}`);
         return;
+      }
+
+      // 如果名字更新成功，重新加载用户数据以获取最新的name_updated_at
+      if (formData.name !== user?.name) {
+        const userResponse = await fetch('/api/users/profile/me', {
+          credentials: 'include'
+        });
+        if (userResponse.ok) {
+          const updatedUserData = await userResponse.json();
+          setUser(updatedUserData);
+          alert('用户名更新成功！');
+        }
       }
 
       // 保存任务偏好设置
@@ -436,25 +449,43 @@ const Settings: React.FC = () => {
                 <div style={{ display: 'grid', gap: '20px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
-                      姓名
+                      用户名
                     </label>
                     <input
                       type="text"
                       value={formData.name}
-                      disabled
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="请输入用户名（3-50个字符）"
                       style={{
                         width: '100%',
                         padding: '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px',
-                        background: '#f8f9fa',
-                        color: '#666',
-                        cursor: 'not-allowed'
+                        fontSize: '16px'
                       }}
                     />
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
-                      暂不支持修改
+                      {(() => {
+                        if (!user?.name_updated_at) {
+                          return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                        }
+                        try {
+                          const lastUpdate = new Date(user.name_updated_at);
+                          const now = new Date();
+                          const daysDiff = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
+                          const daysLeft = 30 - daysDiff;
+                          if (daysLeft > 0) {
+                            return `用户名一个月内只能修改一次，距离下次可修改还有 ${daysLeft} 天`;
+                          } else {
+                            return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                          }
+                        } catch (e) {
+                          return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                        }
+                      })()}
+                    </p>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#666' }}>
+                      用户名只能包含字母、数字、下划线和连字符，且不能以数字开头
                     </p>
                   </div>
 
