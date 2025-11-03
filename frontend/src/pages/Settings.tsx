@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { getCSRFToken } from '../api';
+import api from '../api';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -68,61 +68,54 @@ const Settings: React.FC = () => {
     try {
       setLoading(true);
       
-      // 加载用户偏好设置
+      // 加载用户偏好设置（使用 api.get 而不是 fetch）
       try {
-        const preferencesResponse = await fetch('/api/user-preferences', {
-          credentials: 'include'
-        });
-        
-        if (preferencesResponse.ok) {
-          const preferences = await preferencesResponse.json();
-          setFormData(prev => ({
-            ...prev,
-            preferences: {
-              task_types: preferences.task_types || [],
-              locations: preferences.locations || [],
-              task_levels: preferences.task_levels || [],
-              min_deadline_days: preferences.min_deadline_days || 1,
-              keywords: preferences.keywords || []
-            }
-          }));
-        }
+        const preferencesResponse = await api.get('/api/user-preferences');
+        const preferences = preferencesResponse.data;
+        setFormData(prev => ({
+          ...prev,
+          preferences: {
+            task_types: preferences.task_types || [],
+            locations: preferences.locations || [],
+            task_levels: preferences.task_levels || [],
+            min_deadline_days: preferences.min_deadline_days || 1,
+            keywords: preferences.keywords || []
+          }
+        }));
       } catch (error) {
         console.error('加载用户偏好失败:', error);
       }
       
-      // 加载用户资料
+      // 加载用户资料（使用 api.get 而不是 fetch，确保 Cookie 正确发送）
       try {
-        const userResponse = await fetch('/api/users/profile/me', {
-          credentials: 'include'
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUser(userData);
-          setFormData(prev => ({
-            ...prev,
-            name: userData.name || '',
-            email: userData.email || '',
-            phone: userData.phone || '',
-            residence_city: userData.residence_city || '',
-            language_preference: userData.language_preference || 'en',
-            notifications: {
-              email: true,
-              sms: false,
-              push: true
-            },
-            privacy: {
-              profile_public: true,
-              show_contact: false,
-              show_tasks: true
-            }
-          }));
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
+        const userResponse = await api.get('/api/users/profile/me');
+        const userData = userResponse.data;
+        setUser(userData);
+        setFormData(prev => ({
+          ...prev,
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          residence_city: userData.residence_city || '',
+          language_preference: userData.language_preference || 'en',
+          notifications: {
+            email: true,
+            sms: false,
+            push: true
+          },
+          privacy: {
+            profile_public: true,
+            show_contact: false,
+            show_tasks: true
+          }
+        }));
+      } catch (error: any) {
         console.error('加载用户资料失败:', error);
+        if (error.response?.status === 401) {
+          // 会话过期，重定向到登录页面
+          navigate('/login');
+          return;
+        }
         setUser(null);
       }
     } catch (error) {
@@ -156,14 +149,6 @@ const Settings: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      // 获取 CSRF token（使用 API 获取，因为跨域 Cookie 无法直接读取）
-      let csrfToken: string | null = null;
-      try {
-        csrfToken = await getCSRFToken();
-      } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
-      
       // 保存个人资料（名字、常住城市、语言偏好）
       // 构建请求体，只包含需要更新的字段
       const updatePayload: any = {};
@@ -191,56 +176,29 @@ const Settings: React.FC = () => {
       
       console.log('[DEBUG] 发送更新请求:', updatePayload);
       
-      const profileResponse = await fetch('/api/users/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',
-        body: JSON.stringify(updatePayload)
-      });
-
-      if (!profileResponse.ok) {
-        const error = await profileResponse.json();
-        alert(`保存个人资料失败: ${error.detail || '未知错误'}`);
-        return;
-      }
+      // 使用 api.patch 而不是 fetch，这样能自动处理 Cookie 和 CSRF token
+      await api.patch('/api/users/profile', updatePayload);
 
       // 如果名字更新成功，重新加载用户数据以获取最新的name_updated_at
       if (formData.name !== user?.name) {
-        const userResponse = await fetch('/api/users/profile/me', {
-          credentials: 'include'
-        });
-        if (userResponse.ok) {
-          const updatedUserData = await userResponse.json();
-          setUser(updatedUserData);
+        try {
+          const userResponse = await api.get('/api/users/profile/me');
+          setUser(userResponse.data);
           alert('用户名更新成功！');
+        } catch (error) {
+          console.error('重新加载用户数据失败:', error);
         }
       }
 
-      // 保存任务偏好设置（使用之前获取的 CSRF token）
-      const preferencesResponse = await fetch('/api/user-preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include',
-        body: JSON.stringify(formData.preferences)
-      });
-
-      if (preferencesResponse.ok) {
-        alert('设置已保存！');
-        // 如果语言偏好改变，刷新页面以应用新语言
-        const currentLang = localStorage.getItem('language') || 'zh';
-        if (formData.language_preference !== currentLang) {
-          localStorage.setItem('language', formData.language_preference);
-          window.location.reload();
-        }
-      } else {
-        const error = await preferencesResponse.json();
-        alert(`保存失败: ${error.detail || '未知错误'}`);
+      // 保存任务偏好设置（使用 api.put，自动处理 Cookie 和 CSRF token）
+      await api.put('/api/user-preferences', formData.preferences);
+      
+      alert('设置已保存！');
+      // 如果语言偏好改变，刷新页面以应用新语言
+      const currentLang = localStorage.getItem('language') || 'zh';
+      if (formData.language_preference !== currentLang) {
+        localStorage.setItem('language', formData.language_preference);
+        window.location.reload();
       }
     } catch (error) {
       console.error('保存设置失败:', error);
@@ -303,30 +261,13 @@ const Settings: React.FC = () => {
       setSessionsLoading(true);
       setSessionsError('');
       
-      // 获取 CSRF token（使用 API 获取，因为跨域 Cookie 无法直接读取）
-      let csrfToken: string | null = null;
-      try {
-        csrfToken = await getCSRFToken();
-      } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
-      
-      const res = await fetch('/api/secure-auth/logout-others', {
-        method: 'POST',
-        headers: {
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include'
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`登出其它设备失败: ${res.status} ${text}`);
-      }
+      // 使用 api.post，自动处理 Cookie 和 CSRF token
+      await api.post('/api/secure-auth/logout-others');
       await loadSessions();
       alert('已登出其它设备');
     } catch (e: any) {
       console.error(e);
-      setSessionsError(e?.message || '登出其它设备失败');
+      setSessionsError(e?.response?.data?.detail || e?.message || '登出其它设备失败');
     } finally {
       setSessionsLoading(false);
     }

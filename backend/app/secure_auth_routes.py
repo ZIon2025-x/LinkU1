@@ -617,6 +617,35 @@ def get_auth_status(
             "message": "获取状态失败"
         }
 
+@secure_auth_router.get("/session-id")
+def get_session_id(
+    request: Request,
+):
+    """获取当前会话的 session_id（用于跨域请求）"""
+    try:
+        # 获取当前会话
+        session = validate_session(request)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="会话无效或已过期"
+            )
+        
+        # 返回完整的 session_id（用于 X-Session-ID 头）
+        return {
+            "session_id": session.session_id,
+            "message": "会话ID获取成功"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取会话ID失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取会话ID失败"
+        )
+
 @secure_auth_router.get("/redis-status")
 def get_redis_status():
     """获取 Redis 连接状态"""
