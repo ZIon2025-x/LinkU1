@@ -592,10 +592,11 @@ const Tasks: React.FC = () => {
         // 设置用户位置和默认地点
         if (userData) {
           // 如果用户有常住城市，设置为默认地点
-          const residenceCity = userData.residence_city;
-          console.log('[DEBUG] Tasks - residence_city 值:', residenceCity, '类型:', typeof residenceCity);
-          console.log('[DEBUG] Tasks - CITIES 是否包含:', CITIES.includes(residenceCity));
-          console.log('[DEBUG] Tasks - CITIES 数组:', CITIES);
+          // 清理首尾空格（防止数据库中的空格问题）
+          const residenceCity = userData.residence_city ? String(userData.residence_city).trim() : null;
+          console.log('[DEBUG] Tasks - residence_city 原始值:', userData.residence_city);
+          console.log('[DEBUG] Tasks - residence_city 清理后值:', residenceCity);
+          console.log('[DEBUG] Tasks - CITIES 是否包含:', residenceCity ? CITIES.includes(residenceCity) : false);
           
           if (residenceCity && CITIES.includes(residenceCity)) {
             console.log('[DEBUG] Tasks - 设置默认城市为:', residenceCity);

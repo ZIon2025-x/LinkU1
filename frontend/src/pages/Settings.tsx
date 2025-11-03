@@ -117,14 +117,17 @@ const Settings: React.FC = () => {
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);
         }
+        // 清理首尾空格（防止数据库中的空格问题）
+        const residenceCity = userData.residence_city ? String(userData.residence_city).trim() : '';
+        const languagePreference = userData.language_preference ? String(userData.language_preference).trim() : 'en';
         setUser(userData);
         setFormData(prev => ({
           ...prev,
           name: userData.name || '',
           email: userData.email || '',
           phone: userData.phone || '',
-          residence_city: userData.residence_city || '',
-          language_preference: userData.language_preference || 'en',
+          residence_city: residenceCity,
+          language_preference: languagePreference,
           notifications: {
             email: true,
             sms: false,
@@ -137,8 +140,8 @@ const Settings: React.FC = () => {
           }
         }));
         console.log('[DEBUG] Settings - 更新后的 formData:', {
-          residence_city: userData.residence_city || '',
-          language_preference: userData.language_preference || 'en'
+          residence_city: residenceCity,
+          language_preference: languagePreference
         });
       } catch (error: any) {
         console.error('加载用户资料失败:', error);
@@ -225,17 +228,20 @@ const Settings: React.FC = () => {
           userData.avatar = formatAvatarUrl(userData.avatar);
         }
         setUser(userData);
+        // 清理首尾空格（防止数据库中的空格问题）
+        const residenceCity = userData.residence_city ? String(userData.residence_city).trim() : '';
+        const languagePreference = userData.language_preference ? String(userData.language_preference).trim() : 'en';
         setFormData(prev => ({
           ...prev,
           name: userData.name || '',
           email: userData.email || '',
           phone: userData.phone || '',
-          residence_city: userData.residence_city || '',
-          language_preference: userData.language_preference || 'en',
+          residence_city: residenceCity,
+          language_preference: languagePreference,
         }));
         console.log('[DEBUG] Settings - 保存后更新 formData:', {
-          residence_city: userData.residence_city || '',
-          language_preference: userData.language_preference || 'en'
+          residence_city: residenceCity,
+          language_preference: languagePreference
         });
       } catch (error) {
         console.error('保存后重新加载用户数据失败:', error);

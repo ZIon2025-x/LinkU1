@@ -1390,6 +1390,19 @@ def get_my_profile(
             total_rating = sum(r.rating for r in user_reviews)
             avg_rating = round(total_rating / len(user_reviews), 1)
         
+        # 获取并清理字符串字段（去除首尾空格）
+        residence_city = getattr(current_user, 'residence_city', None)
+        if residence_city and isinstance(residence_city, str):
+            residence_city = residence_city.strip()
+            if not residence_city:  # 如果清理后为空字符串，设为 None
+                residence_city = None
+        
+        language_preference = getattr(current_user, 'language_preference', 'en')
+        if language_preference and isinstance(language_preference, str):
+            language_preference = language_preference.strip()
+            if not language_preference:  # 如果清理后为空字符串，设为默认值
+                language_preference = 'en'
+        
         formatted_user = {
             "id": current_user.id,
             "name": getattr(current_user, 'name', ''),
@@ -1403,8 +1416,8 @@ def get_my_profile(
             "task_count": getattr(current_user, 'task_count', 0),
             "completed_task_count": getattr(current_user, 'completed_task_count', 0),
             "avg_rating": avg_rating,
-            "residence_city": getattr(current_user, 'residence_city', None),
-            "language_preference": getattr(current_user, 'language_preference', 'en'),
+            "residence_city": residence_city,
+            "language_preference": language_preference,
             "name_updated_at": getattr(current_user, 'name_updated_at', None)
         }
         
