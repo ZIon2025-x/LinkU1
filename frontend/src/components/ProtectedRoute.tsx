@@ -20,7 +20,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         const response = await api.get('/api/users/profile/me');
         setIsAuthenticated(true);
       } catch (error: any) {
-        // 认证失败，用户未登录
+        // 认证失败，用户未登录（401是预期的，不需要显示错误）
+        // 只在非401错误时才记录（比如网络错误）
+        if (error.response?.status !== 401) {
+          console.debug('ProtectedRoute 认证检查失败（非401）:', error);
+        }
         setIsAuthenticated(false);
       } finally {
         setLoading(false);

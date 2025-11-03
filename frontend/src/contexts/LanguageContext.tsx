@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import enTranslations from '../locales/en.json';
 import zhTranslations from '../locales/zh.json';
 import { getLanguageFromPath, detectBrowserLanguage, addLanguageToPath, DEFAULT_LANGUAGE } from '../utils/i18n';
+import api from '../api';
 
 export type Language = 'en' | 'zh';
 
@@ -47,36 +48,37 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   useEffect(() => {
     const loadUserLanguagePreference = async () => {
       try {
-        // 尝试获取用户资料（如果用户已登录）
-        const response = await fetch('/api/users/profile/me', {
-          credentials: 'include'
-        });
+        // 使用 api（axios）而不是 fetch，确保有 CSRF token 和统一的错误处理
+        // 延迟执行，避免与其他组件并发请求导致401
+        await new Promise(resolve => setTimeout(resolve, 200));
         
-        if (response.ok) {
-          const userData = await response.json();
+        const response = await api.get('/api/users/profile/me');
+        const userData = response.data;
+        
+        // 如果用户有语言偏好设置，且与当前语言不同，则更新语言
+        if (userData.language_preference && 
+            ['en', 'zh'].includes(userData.language_preference)) {
+          const currentLang = localStorage.getItem('language') || language;
           
-          // 如果用户有语言偏好设置，且与当前语言不同，则更新语言
-          if (userData.language_preference && 
-              ['en', 'zh'].includes(userData.language_preference)) {
-            const currentLang = localStorage.getItem('language') || language;
+          // 只有在用户偏好与当前语言不同时才更新
+          if (userData.language_preference !== currentLang) {
+            localStorage.setItem('language', userData.language_preference);
+            setLanguageState(userData.language_preference as Language);
             
-            // 只有在用户偏好与当前语言不同时才更新
-            if (userData.language_preference !== currentLang) {
-              localStorage.setItem('language', userData.language_preference);
-              setLanguageState(userData.language_preference as Language);
-              
-              // 更新URL以反映新的语言设置
-              const currentPath = window.location.pathname;
-              const newPath = addLanguageToPath(currentPath, userData.language_preference);
-              if (newPath !== currentPath) {
-                window.location.href = newPath;
-              }
+            // 更新URL以反映新的语言设置
+            const currentPath = window.location.pathname;
+            const newPath = addLanguageToPath(currentPath, userData.language_preference);
+            if (newPath !== currentPath) {
+              window.location.href = newPath;
             }
           }
         }
-      } catch (error) {
-        // 用户未登录或获取失败，忽略
-        console.debug('无法获取用户语言偏好:', error);
+      } catch (error: any) {
+        // 用户未登录或获取失败（401是预期的），静默处理
+        // 只在非401错误时记录（比如网络错误）
+        if (error.response?.status !== 401) {
+          console.debug('无法获取用户语言偏好:', error);
+        }
       }
     };
     
