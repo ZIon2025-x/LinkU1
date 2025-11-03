@@ -322,6 +322,7 @@ const Tasks: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState('all');
   const [city, setCity] = useState('all');
+  const [cityInitialized, setCityInitialized] = useState(false); // 标记城市是否已初始化
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
@@ -589,10 +590,18 @@ const Tasks: React.FC = () => {
           if (userData.residence_city && CITIES.includes(userData.residence_city)) {
             setCity(userData.residence_city);
             setUserLocation(userData.residence_city);
+            setCityInitialized(true); // 标记城市已初始化
           } else if (userData.location) {
             // 兼容旧的位置字段
             setUserLocation(userData.location);
+            setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
+          } else {
+            // 用户没有设置常住城市，保持'all'，但也标记为已初始化
+            setCityInitialized(true);
           }
+        } else {
+          // 用户未登录，标记为已初始化（保持默认'all'）
+          setCityInitialized(true);
         }
         
         // 加载已申请的任务列表
@@ -607,8 +616,9 @@ const Tasks: React.FC = () => {
         }
       } catch (error: any) {
         console.error('Tasks页面加载用户信息失败:', error);
-        // 如果获取用户信息失败，设置为未登录状态
+        // 如果获取用户信息失败，设置为未登录状态，但标记城市已初始化
         setUser(null);
+        setCityInitialized(true); // 即使加载失败，也标记为已初始化，避免无限等待
       }
     };
     
@@ -695,8 +705,11 @@ const Tasks: React.FC = () => {
   }, [page, pageSize, type, city, keyword, sortBy]);
 
   useEffect(() => {
-    loadTasks();
-  }, [page, type, city, keyword, sortBy, loadTasks]);
+    // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
+    if (cityInitialized) {
+      loadTasks();
+    }
+  }, [page, type, city, keyword, sortBy, loadTasks, cityInitialized]);
 
   // 点击外部关闭下拉菜单
   useEffect(() => {

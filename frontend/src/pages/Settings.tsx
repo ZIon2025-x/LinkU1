@@ -64,6 +64,23 @@ const Settings: React.FC = () => {
     }
   }, [activeTab]);
 
+  // 格式化头像 URL
+  const formatAvatarUrl = (avatar: string | null | undefined): string => {
+    if (!avatar) {
+      return '/static/avatar2.png';
+    }
+    // 如果已经是完整 URL，直接返回
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar;
+    }
+    // 如果是相对路径（以 / 开头），直接返回
+    if (avatar.startsWith('/')) {
+      return avatar;
+    }
+    // 否则，假设是相对路径，添加 /
+    return `/${avatar}`;
+  };
+
   const loadUserData = async () => {
     try {
       setLoading(true);
@@ -90,6 +107,10 @@ const Settings: React.FC = () => {
       try {
         const userResponse = await api.get('/api/users/profile/me');
         const userData = userResponse.data;
+        // 格式化头像 URL
+        if (userData.avatar) {
+          userData.avatar = formatAvatarUrl(userData.avatar);
+        }
         setUser(userData);
         setFormData(prev => ({
           ...prev,
@@ -388,14 +409,25 @@ const Settings: React.FC = () => {
                 
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px' }}>
                   <img
-                    src={user?.avatar || '/static/avatar2.png'}
+                    src={formatAvatarUrl(user?.avatar)}
                     alt="头像"
                     style={{
                       width: '80px',
                       height: '80px',
                       borderRadius: '50%',
                       border: '3px solid #3b82f6',
-                      marginRight: '20px'
+                      marginRight: '20px',
+                      objectFit: 'cover'
+                    }}
+                    onError={(e) => {
+                      console.error('头像加载失败:', user?.avatar);
+                      // 如果加载失败，使用默认头像
+                      if (e.currentTarget.src !== '/static/avatar2.png') {
+                        e.currentTarget.src = '/static/avatar2.png';
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('头像加载成功:', user?.avatar);
                     }}
                   />
                   <div>

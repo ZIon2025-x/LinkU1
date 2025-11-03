@@ -1568,9 +1568,9 @@ def update_avatar(
         
         # 清除用户缓存
         try:
-            from app.redis_cache import clear_user_cache
-            clear_user_cache(current_user.id)
-            logger.info(f"[DEBUG] 已清除用户缓存")
+            from app.redis_cache import invalidate_user_cache
+            invalidate_user_cache(current_user.id)
+            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
         except Exception as e:
             logger.warning(f"[DEBUG] 清除缓存失败: {e}")
         
@@ -1695,9 +1695,9 @@ def update_profile(
         
         # 清除用户缓存
         try:
-            from app.redis_cache import clear_user_cache
-            clear_user_cache(current_user.id)
-            logger.info(f"[DEBUG] 已清除用户缓存")
+            from app.redis_cache import invalidate_user_cache
+            invalidate_user_cache(current_user.id)
+            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
         except Exception as e:
             logger.warning(f"[DEBUG] 清除缓存失败: {e}")
         
