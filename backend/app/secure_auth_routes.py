@@ -921,11 +921,12 @@ def login_with_verification_code(
             username = f"user{user_id}"
             
             # 检查用户名是否已存在（虽然理论上不应该，但为了安全）
+            # 直接使用数据库查询
             while True:
-                existing_name = crud.get_user_by_name(db, username)
+                existing_name = db.query(models.User).filter(models.User.name == username).first()
                 if not existing_name:
                     break
-                # 如果用户名已存在，重新生成用户ID
+                # 如果用户名已存在，重新生成用户ID和用户名
                 while True:
                     user_id = str(random.randint(10000000, 99999999))
                     existing_user = crud.get_user_by_id(db, user_id)
@@ -934,23 +935,31 @@ def login_with_verification_code(
                 username = f"user{user_id}"
             
             # 创建新用户
-            db_user = models.User(
-                id=user_id,
-                name=username,
-                email=email,
-                hashed_password=hashed_password,
-                phone=None,
-                avatar="",
-                agreed_to_terms=1,
-                terms_agreed_at=datetime.utcnow(),
-                inviter_id=None,
-            )
-            db.add(db_user)
-            db.commit()
-            db.refresh(db_user)
-            
-            user = db_user
-            logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}")
+            try:
+                db_user = models.User(
+                    id=user_id,
+                    name=username,
+                    email=email,
+                    hashed_password=hashed_password,
+                    phone=None,
+                    avatar="",
+                    agreed_to_terms=1,
+                    terms_agreed_at=datetime.utcnow(),
+                    inviter_id=None,
+                )
+                db.add(db_user)
+                db.commit()
+                db.refresh(db_user)
+                
+                user = db_user
+                logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"创建新用户失败: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"创建用户失败: {str(e)}"
+                )
         
         # 检查用户状态
         if user.is_suspended:
