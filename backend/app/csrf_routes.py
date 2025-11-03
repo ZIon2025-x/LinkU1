@@ -16,10 +16,21 @@ async def get_csrf_token(
 ):
     """
     获取CSRF token
+    如果Cookie中已有token，直接返回；否则生成新的
     无需认证，用于登录前的CSRF保护
     """
     try:
-        # 生成新的CSRF token
+        # 先尝试从Cookie获取现有的token（跨域场景下，前端无法直接读取Cookie）
+        existing_token = CSRFProtection.get_csrf_token_from_cookie(request)
+        
+        if existing_token:
+            # 如果Cookie中已有token，直接返回（不生成新的，避免token不匹配）
+            return {
+                "csrf_token": existing_token,
+                "message": "使用现有的CSRF token"
+            }
+        
+        # Cookie中没有token，生成新的
         csrf_token = CSRFProtection.generate_csrf_token()
         
         # 设置到Cookie（传递User-Agent用于移动端检测）
@@ -34,7 +45,7 @@ async def get_csrf_token(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"生成CSRF token失败: {str(e)}"
+            detail=f"获取CSRF token失败: {str(e)}"
         )
 
 @router.post("/verify")

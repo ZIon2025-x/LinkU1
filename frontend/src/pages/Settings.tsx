@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { getCSRFToken } from '../api';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -156,11 +156,13 @@ const Settings: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
+      // 获取 CSRF token（使用 API 获取，因为跨域 Cookie 无法直接读取）
+      let csrfToken: string | null = null;
+      try {
+        csrfToken = await getCSRFToken();
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
       
       // 保存个人资料（名字、常住城市、语言偏好）
       const profileResponse = await fetch('/api/users/profile', {
@@ -195,7 +197,7 @@ const Settings: React.FC = () => {
         }
       }
 
-      // 保存任务偏好设置
+      // 保存任务偏好设置（使用之前获取的 CSRF token）
       const preferencesResponse = await fetch('/api/user-preferences', {
         method: 'PUT',
         headers: {
@@ -279,11 +281,13 @@ const Settings: React.FC = () => {
       setSessionsLoading(true);
       setSessionsError('');
       
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
+      // 获取 CSRF token（使用 API 获取，因为跨域 Cookie 无法直接读取）
+      let csrfToken: string | null = null;
+      try {
+        csrfToken = await getCSRFToken();
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
       
       const res = await fetch('/api/secure-auth/logout-others', {
         method: 'POST',
