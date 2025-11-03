@@ -585,8 +585,6 @@ const Tasks: React.FC = () => {
         const userData = await api.get('/api/users/profile/me', {
           params: { _t: Date.now() } // 添加时间戳避免缓存
         }).then(res => res.data);
-        console.log('[DEBUG] Tasks - 加载的用户数据:', userData);
-        console.log('[DEBUG] Tasks - residence_city:', userData?.residence_city);
         setUser(userData);
         
         // 设置用户位置和默认地点
@@ -594,33 +592,21 @@ const Tasks: React.FC = () => {
           // 如果用户有常住城市，设置为默认地点
           // 清理首尾空格（防止数据库中的空格问题）
           const residenceCity = userData.residence_city ? String(userData.residence_city).trim() : null;
-          console.log('[DEBUG] Tasks - residence_city 原始值:', userData.residence_city);
-          console.log('[DEBUG] Tasks - residence_city 清理后值:', residenceCity);
-          console.log('[DEBUG] Tasks - CITIES 是否包含:', residenceCity ? CITIES.includes(residenceCity) : false);
           
           if (residenceCity && CITIES.includes(residenceCity)) {
-            console.log('[DEBUG] Tasks - 设置默认城市为:', residenceCity);
             setCity(residenceCity);
             setUserLocation(residenceCity);
             setCityInitialized(true); // 标记城市已初始化
           } else if (userData.location) {
             // 兼容旧的位置字段
-            console.log('[DEBUG] Tasks - 使用旧的位置字段:', userData.location);
             setUserLocation(userData.location);
             setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
           } else {
             // 用户没有设置常住城市，保持'all'，但也标记为已初始化
-            console.log('[DEBUG] Tasks - 用户没有设置常住城市，使用默认值 all');
-            console.log('[DEBUG] Tasks - residence_city 检查失败原因:', {
-              hasResidenceCity: !!residenceCity,
-              inCITIES: residenceCity ? CITIES.includes(residenceCity) : false,
-              residenceCityValue: residenceCity
-            });
             setCityInitialized(true);
           }
         } else {
           // 用户未登录，标记为已初始化（保持默认'all'）
-          console.log('[DEBUG] Tasks - 用户未登录，使用默认值 all');
           setCityInitialized(true);
         }
         

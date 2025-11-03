@@ -110,9 +110,6 @@ const Settings: React.FC = () => {
           params: { _t: Date.now() } // 添加时间戳避免缓存
         });
         const userData = userResponse.data;
-        console.log('[DEBUG] Settings - 加载的用户数据:', userData);
-        console.log('[DEBUG] Settings - residence_city:', userData.residence_city);
-        console.log('[DEBUG] Settings - language_preference:', userData.language_preference);
         // 格式化头像 URL
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);
@@ -139,10 +136,6 @@ const Settings: React.FC = () => {
             show_tasks: true
           }
         }));
-        console.log('[DEBUG] Settings - 更新后的 formData:', {
-          residence_city: residenceCity,
-          language_preference: languagePreference
-        });
       } catch (error: any) {
         console.error('加载用户资料失败:', error);
         if (error.response?.status === 401) {
@@ -222,7 +215,6 @@ const Settings: React.FC = () => {
           params: { _t: Date.now() } // 添加时间戳避免缓存
         });
         const userData = userResponse.data;
-        console.log('[DEBUG] Settings - 保存后重新加载的用户数据:', userData);
         // 格式化头像 URL
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);
@@ -239,10 +231,6 @@ const Settings: React.FC = () => {
           residence_city: residenceCity,
           language_preference: languagePreference,
         }));
-        console.log('[DEBUG] Settings - 保存后更新 formData:', {
-          residence_city: residenceCity,
-          language_preference: languagePreference
-        });
       } catch (error) {
         console.error('保存后重新加载用户数据失败:', error);
       }
@@ -458,9 +446,6 @@ const Settings: React.FC = () => {
                       if (e.currentTarget.src !== '/static/avatar2.png') {
                         e.currentTarget.src = '/static/avatar2.png';
                       }
-                    }}
-                    onLoad={() => {
-                      console.log('头像加载成功:', user?.avatar);
                     }}
                   />
                   <div>
