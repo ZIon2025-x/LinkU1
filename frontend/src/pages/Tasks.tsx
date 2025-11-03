@@ -318,6 +318,11 @@ export const CITIES = [
 const Tasks: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
+  
+  // 获取翻译后的任务类型名称
+  const getTaskTypeLabel = (taskType: string): string => {
+    return t(`publishTask.taskTypes.${taskType}`) || taskType;
+  };
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState('all');
@@ -1324,7 +1329,7 @@ const Tasks: React.FC = () => {
                     textAlign: 'center',
                     fontWeight: '500'
                   }}>
-                    {taskType}
+                    {getTaskTypeLabel(taskType)}
                   </span>
                 </div>
               ))}
@@ -2270,7 +2275,7 @@ const Tasks: React.FC = () => {
                         {task.location === 'Online' ? '🌐' : '📍'} {task.location}
                       </span>
                       <span>•</span>
-                      <span>🏷️ {task.task_type}</span>
+                      <span>🏷️ {getTaskTypeLabel(task.task_type)}</span>
                     </div>
                     
                     <div className="task-description" style={{

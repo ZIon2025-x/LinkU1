@@ -18,11 +18,21 @@ const TASK_TYPE_OPTIONS = [
   'Skill Service', 'Social Help', 'Transportation', 'Pet Care', 'Life Convenience', 'Other'
 ];
 
+// 移动端检测函数
+const isMobileDevice = () => {
+  const isSmallScreen = window.innerWidth <= 768;
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  return isSmallScreen || (isMobileUA && isTouchDevice);
+};
+
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
+  const [isMobile, setIsMobile] = useState(false);
   const [sessions, setSessions] = useState<Array<any>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string>('');
@@ -51,6 +61,18 @@ const Settings: React.FC = () => {
       keywords: [] as string[]
     }
   });
+
+  // 移动端检测
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = isMobileDevice();
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // 加载用户数据
@@ -342,39 +364,43 @@ const Settings: React.FC = () => {
     <div style={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-      padding: '20px'
+      padding: isMobile ? '0' : '20px'
     }}>
       <div style={{ 
-        maxWidth: '900px', 
+        maxWidth: isMobile ? '100%' : '900px', 
         margin: '0 auto',
         background: '#fff',
-        borderRadius: '16px',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
+        borderRadius: isMobile ? '0' : '16px',
+        boxShadow: isMobile ? 'none' : '0 8px 32px rgba(0,0,0,0.1)',
+        overflow: 'hidden',
+        minHeight: isMobile ? '100vh' : 'auto'
       }}>
         {/* 头部 */}
         <div style={{
           background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
           color: '#fff',
-          padding: '30px',
-          textAlign: 'center'
+          padding: isMobile ? '16px' : '30px',
+          textAlign: 'center',
+          position: 'relative'
         }}>
           <button
             onClick={() => navigate('/')}
             style={{
-              position: 'absolute',
-              left: '20px',
-              top: '20px',
+              position: isMobile ? 'relative' : 'absolute',
+              left: isMobile ? 'auto' : '20px',
+              top: isMobile ? 'auto' : '20px',
               background: 'rgba(255,255,255,0.2)',
               border: 'none',
               color: '#fff',
-              padding: '8px 16px',
+              padding: isMobile ? '6px 12px' : '8px 16px',
               borderRadius: '20px',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: isMobile ? '12px' : '14px',
+              marginBottom: isMobile ? '8px' : '0',
+              display: 'inline-block'
             }}
           >
-            ← 返回首页
+            ← {isMobile ? '返回' : '返回首页'}
           </button>
           <h1 style={{ 
             position: 'absolute',
@@ -392,52 +418,104 @@ const Settings: React.FC = () => {
             color: 'transparent',
             background: 'transparent'
           }}>⚙️ 设置</h1>
-          <div style={{ fontSize: '16px', opacity: 0.9 }}>管理您的账户设置和偏好</div>
+          <div style={{ fontSize: isMobile ? '14px' : '16px', opacity: 0.9, marginTop: isMobile ? '8px' : '0' }}>
+            {isMobile ? '账户设置' : '管理您的账户设置和偏好'}
+          </div>
         </div>
 
-        <div style={{ display: 'flex' }}>
-          {/* 侧边栏 */}
+        {/* 移动端：顶部标签导航 */}
+        {isMobile && (
           <div style={{
-            width: '250px',
-            background: '#f8f9fa',
-            borderRight: '1px solid #e9ecef'
+            background: '#fff',
+            borderBottom: '1px solid #e9ecef',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch'
           }}>
-            {tabs.map(tab => (
-              <div
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  padding: '16px 20px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #e9ecef',
-                  background: activeTab === tab.id ? '#fff' : 'transparent',
-                  color: activeTab === tab.id ? '#3b82f6' : '#666',
-                  fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <span style={{ marginRight: '10px' }}>{tab.icon}</span>
-                {tab.label}
-              </div>
-            ))}
+            <div style={{
+              display: 'flex',
+              minWidth: 'max-content',
+              padding: '0'
+            }}>
+              {tabs.map(tab => (
+                <div
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    borderBottom: activeTab === tab.id ? '3px solid #3b82f6' : '3px solid transparent',
+                    background: activeTab === tab.id ? '#f0f7ff' : 'transparent',
+                    color: activeTab === tab.id ? '#3b82f6' : '#666',
+                    fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap',
+                    fontSize: '14px',
+                    flexShrink: 0
+                  }}
+                >
+                  <span style={{ marginRight: '6px' }}>{tab.icon}</span>
+                  {tab.label}
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+
+        <div style={{ display: isMobile ? 'block' : 'flex' }}>
+          {/* 桌面端：侧边栏 */}
+          {!isMobile && (
+            <div style={{
+              width: '250px',
+              background: '#f8f9fa',
+              borderRight: '1px solid #e9ecef'
+            }}>
+              {tabs.map(tab => (
+                <div
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '16px 20px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #e9ecef',
+                    background: activeTab === tab.id ? '#fff' : 'transparent',
+                    color: activeTab === tab.id ? '#3b82f6' : '#666',
+                    fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <span style={{ marginRight: '10px' }}>{tab.icon}</span>
+                  {tab.label}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 内容区域 */}
-          <div style={{ flex: 1, padding: '30px' }}>
+          <div style={{ flex: 1, padding: isMobile ? '16px' : '30px' }}>
             {activeTab === 'profile' && (
               <div>
-                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>👤 个人资料</h2>
+                <h2 style={{ color: '#333', marginBottom: isMobile ? '16px' : '20px', fontSize: isMobile ? '18px' : '20px' }}>
+                  👤 个人资料
+                </h2>
                 
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'center' : 'flex-start',
+                  marginBottom: isMobile ? '20px' : '30px',
+                  gap: isMobile ? '16px' : '0'
+                }}>
                   <img
                     src={formatAvatarUrl(user?.avatar)}
                     alt="头像"
                     style={{
-                      width: '80px',
-                      height: '80px',
+                      width: isMobile ? '100px' : '80px',
+                      height: isMobile ? '100px' : '80px',
                       borderRadius: '50%',
                       border: '3px solid #3b82f6',
-                      marginRight: '20px',
+                      marginRight: isMobile ? '0' : '20px',
                       objectFit: 'cover'
                     }}
                     onError={(e) => {
@@ -448,24 +526,31 @@ const Settings: React.FC = () => {
                       }
                     }}
                   />
-                  <div>
+                  <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
                     <button style={{
                       background: '#3b82f6',
                       color: '#fff',
                       border: 'none',
-                      padding: '8px 16px',
+                      padding: isMobile ? '10px 20px' : '8px 16px',
                       borderRadius: '20px',
                       cursor: 'pointer',
-                      fontSize: '14px'
+                      fontSize: isMobile ? '15px' : '14px',
+                      width: isMobile ? 'auto' : 'auto'
                     }}>
                       更换头像
                     </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gap: '20px' }}>
+                <div style={{ display: 'grid', gap: isMobile ? '16px' : '20px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: isMobile ? '6px' : '8px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: isMobile ? '14px' : '16px'
+                    }}>
                       用户名
                     </label>
                     <input
@@ -475,10 +560,11 @@ const Settings: React.FC = () => {
                       placeholder="请输入用户名（3-50个字符）"
                       style={{
                         width: '100%',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: isMobile ? '16px' : '16px', // 移动端16px避免自动缩放
+                        boxSizing: 'border-box'
                       }}
                     />
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
@@ -507,7 +593,13 @@ const Settings: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: isMobile ? '6px' : '8px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: isMobile ? '14px' : '16px'
+                    }}>
                       邮箱
                     </label>
                     <input
@@ -516,22 +608,29 @@ const Settings: React.FC = () => {
                       disabled
                       style={{
                         width: '100%',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
                         fontSize: '16px',
                         background: '#f8f9fa',
                         color: '#666',
-                        cursor: 'not-allowed'
+                        cursor: 'not-allowed',
+                        boxSizing: 'border-box'
                       }}
                     />
-                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
                       暂不支持修改
                     </p>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: isMobile ? '6px' : '8px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: isMobile ? '14px' : '16px'
+                    }}>
                       手机号
                     </label>
                     <input
@@ -541,16 +640,23 @@ const Settings: React.FC = () => {
                       placeholder="请输入手机号"
                       style={{
                         width: '100%',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: isMobile ? '6px' : '8px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: isMobile ? '14px' : '16px'
+                    }}>
                       常住城市
                     </label>
                     <select
@@ -558,10 +664,17 @@ const Settings: React.FC = () => {
                       onChange={(e) => handleInputChange('residence_city', e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        boxSizing: 'border-box',
+                        appearance: 'none',
+                        backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center',
+                        backgroundSize: '16px',
+                        paddingRight: isMobile ? '40px' : '36px'
                       }}
                     >
                       <option value="">请选择常住城市</option>
@@ -569,13 +682,19 @@ const Settings: React.FC = () => {
                         <option key={location} value={location}>{location}</option>
                       ))}
                     </select>
-                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
                       选择您常居住的城市
                     </p>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: isMobile ? '6px' : '8px', 
+                      fontWeight: 'bold', 
+                      color: '#333',
+                      fontSize: isMobile ? '14px' : '16px'
+                    }}>
                       语言偏好
                     </label>
                     <select
@@ -583,16 +702,23 @@ const Settings: React.FC = () => {
                       onChange={(e) => handleInputChange('language_preference', e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '12px',
+                        padding: isMobile ? '14px' : '12px',
                         border: '1px solid #ddd',
                         borderRadius: '8px',
-                        fontSize: '16px'
+                        fontSize: '16px',
+                        boxSizing: 'border-box',
+                        appearance: 'none',
+                        backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center',
+                        backgroundSize: '16px',
+                        paddingRight: isMobile ? '40px' : '36px'
                       }}
                     >
                       <option value="zh">中文</option>
                       <option value="en">English</option>
                     </select>
-                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
                       选择您偏好的界面语言
                     </p>
                   </div>
@@ -602,33 +728,43 @@ const Settings: React.FC = () => {
 
             {activeTab === 'preferences' && (
               <div>
-                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🎯 任务偏好</h2>
+                <h2 style={{ 
+                  color: '#333', 
+                  marginBottom: isMobile ? '16px' : '20px', 
+                  fontSize: isMobile ? '18px' : '20px' 
+                }}>
+                  🎯 任务偏好
+                </h2>
                 
-                <div style={{ display: 'grid', gap: '30px' }}>
+                <div style={{ display: 'grid', gap: isMobile ? '20px' : '30px' }}>
                   {/* 偏好的任务类型 */}
                   <div>
                     <label style={{ 
                       display: 'block', 
-                      marginBottom: '12px', 
+                      marginBottom: isMobile ? '8px' : '12px', 
                       fontWeight: 'bold', 
                       color: '#333',
-                      fontSize: '16px'
+                      fontSize: isMobile ? '15px' : '16px'
                     }}>
                       📋 偏好的任务类型
                     </label>
-                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                    <p style={{ 
+                      fontSize: isMobile ? '13px' : '14px', 
+                      color: '#666', 
+                      marginBottom: isMobile ? '10px' : '12px' 
+                    }}>
                       选择您感兴趣的任务类型，系统会优先为您推荐这些类型的任务
                     </p>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                      gap: '12px'
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(150px, 1fr))',
+                      gap: isMobile ? '8px' : '12px'
                     }}>
                       {TASK_TYPE_OPTIONS.map(type => (
                         <label key={type} style={{ 
                           display: 'flex', 
                           alignItems: 'center',
-                          padding: '12px',
+                          padding: isMobile ? '14px' : '12px',
                           border: formData.preferences.task_types.includes(type) ? '2px solid #3b82f6' : '1px solid #ddd',
                           borderRadius: '8px',
                           cursor: 'pointer',
@@ -644,9 +780,14 @@ const Settings: React.FC = () => {
                                 : formData.preferences.task_types.filter(t => t !== type);
                               handleInputChange('preferences.task_types', newTypes);
                             }}
-                            style={{ marginRight: '8px', width: '16px', height: '16px', cursor: 'pointer' }}
+                            style={{ 
+                              marginRight: isMobile ? '10px' : '8px', 
+                              width: isMobile ? '18px' : '16px', 
+                              height: isMobile ? '18px' : '16px', 
+                              cursor: 'pointer' 
+                            }}
                           />
-                          <span style={{ fontSize: '14px' }}>{type}</span>
+                          <span style={{ fontSize: isMobile ? '15px' : '14px' }}>{type}</span>
                         </label>
                       ))}
                     </div>
@@ -703,26 +844,30 @@ const Settings: React.FC = () => {
                   <div>
                     <label style={{ 
                       display: 'block', 
-                      marginBottom: '12px', 
+                      marginBottom: isMobile ? '8px' : '12px', 
                       fontWeight: 'bold', 
                       color: '#333',
-                      fontSize: '16px'
+                      fontSize: isMobile ? '15px' : '16px'
                     }}>
                       🌟 偏好的任务等级
                     </label>
-                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
-                      选择您感兴趣的任務等級
+                    <p style={{ 
+                      fontSize: isMobile ? '13px' : '14px', 
+                      color: '#666', 
+                      marginBottom: isMobile ? '10px' : '12px' 
+                    }}>
+                      选择您感兴趣的任务等級
                     </p>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                      gap: '12px'
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: isMobile ? '8px' : '12px'
                     }}>
                       {['Normal', 'VIP', 'Super'].map(level => (
                         <label key={level} style={{ 
                           display: 'flex', 
                           alignItems: 'center',
-                          padding: '12px',
+                          padding: isMobile ? '14px' : '12px',
                           border: formData.preferences.task_levels.includes(level) ? '2px solid #3b82f6' : '1px solid #ddd',
                           borderRadius: '8px',
                           cursor: 'pointer',
@@ -738,9 +883,14 @@ const Settings: React.FC = () => {
                                 : formData.preferences.task_levels.filter(l => l !== level);
                               handleInputChange('preferences.task_levels', newLevels);
                             }}
-                            style={{ marginRight: '8px', width: '16px', height: '16px', cursor: 'pointer' }}
+                            style={{ 
+                              marginRight: isMobile ? '10px' : '8px', 
+                              width: isMobile ? '18px' : '16px', 
+                              height: isMobile ? '18px' : '16px', 
+                              cursor: 'pointer' 
+                            }}
                           />
-                          <span style={{ fontSize: '14px' }}>{level}</span>
+                          <span style={{ fontSize: isMobile ? '15px' : '14px' }}>{level}</span>
                         </label>
                       ))}
                     </div>
@@ -750,20 +900,25 @@ const Settings: React.FC = () => {
                   <div>
                     <label style={{ 
                       display: 'block', 
-                      marginBottom: '12px', 
+                      marginBottom: isMobile ? '8px' : '12px', 
                       fontWeight: 'bold', 
                       color: '#333',
-                      fontSize: '16px'
+                      fontSize: isMobile ? '15px' : '16px'
                     }}>
                       ⏰ 最少截止时间
                     </label>
-                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+                    <p style={{ 
+                      fontSize: isMobile ? '13px' : '14px', 
+                      color: '#666', 
+                      marginBottom: isMobile ? '10px' : '12px' 
+                    }}>
                       设置任务截止时间至少需要多少天，系统将只推荐符合此条件的任务
                     </p>
                     <div style={{ 
                       display: 'flex', 
-                      alignItems: 'center',
-                      gap: '12px'
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'flex-start' : 'center',
+                      gap: isMobile ? '8px' : '12px'
                     }}>
                       <input
                         type="number"
@@ -772,15 +927,16 @@ const Settings: React.FC = () => {
                         min="1"
                         max="30"
                         style={{
-                          width: '120px',
-                          padding: '12px',
+                          width: isMobile ? '100%' : '120px',
+                          padding: isMobile ? '14px' : '12px',
                           border: '1px solid #ddd',
                           borderRadius: '8px',
-                          fontSize: '16px'
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
                         }}
                       />
-                      <span style={{ color: '#666' }}>天</span>
-                      <span style={{ fontSize: '14px', color: '#999' }}>
+                      <span style={{ color: '#666', fontSize: isMobile ? '15px' : '16px' }}>天</span>
+                      <span style={{ fontSize: isMobile ? '12px' : '14px', color: '#999' }}>
                         （至少 1 天，最多 30 天）
                       </span>
                     </div>
@@ -917,7 +1073,13 @@ const Settings: React.FC = () => {
 
             {activeTab === 'notifications' && (
               <div>
-                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🔔 通知设置</h2>
+                <h2 style={{ 
+                  color: '#333', 
+                  marginBottom: isMobile ? '16px' : '20px', 
+                  fontSize: isMobile ? '18px' : '20px' 
+                }}>
+                  🔔 通知设置
+                </h2>
                 
                 <div style={{ display: 'grid', gap: '20px' }}>
                   <div style={{
@@ -1072,7 +1234,13 @@ const Settings: React.FC = () => {
 
             {activeTab === 'privacy' && (
               <div>
-                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🔒 隐私设置</h2>
+                <h2 style={{ 
+                  color: '#333', 
+                  marginBottom: isMobile ? '16px' : '20px', 
+                  fontSize: isMobile ? '18px' : '20px' 
+                }}>
+                  🔒 隐私设置
+                </h2>
                 
                 <div style={{ display: 'grid', gap: '20px' }}>
                   <div style={{
@@ -1227,7 +1395,13 @@ const Settings: React.FC = () => {
 
             {activeTab === 'security' && (
               <div>
-                <h2 style={{ color: '#333', marginBottom: '20px', fontSize: '20px' }}>🛡️ 安全设置</h2>
+                <h2 style={{ 
+                  color: '#333', 
+                  marginBottom: isMobile ? '16px' : '20px', 
+                  fontSize: isMobile ? '18px' : '20px' 
+                }}>
+                  🛡️ 安全设置
+                </h2>
                 
                 <div style={{ display: 'grid', gap: '20px' }}>
                   {/* 会话管理 */}
@@ -1393,10 +1567,10 @@ const Settings: React.FC = () => {
 
             {/* 保存按钮 */}
             <div style={{ 
-              marginTop: '30px', 
-              paddingTop: '20px', 
+              marginTop: isMobile ? '20px' : '30px', 
+              paddingTop: isMobile ? '16px' : '20px', 
               borderTop: '1px solid #e9ecef',
-              textAlign: 'right'
+              textAlign: isMobile ? 'center' : 'right'
             }}>
               <button
                 onClick={handleSave}
@@ -1404,13 +1578,15 @@ const Settings: React.FC = () => {
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                   color: '#fff',
                   border: 'none',
-                  padding: '12px 30px',
+                  padding: isMobile ? '14px 40px' : '12px 30px',
                   borderRadius: '25px',
                   cursor: 'pointer',
-                  fontSize: '16px',
+                  fontSize: isMobile ? '16px' : '16px',
                   fontWeight: 'bold',
                   boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  width: isMobile ? '100%' : 'auto',
+                  maxWidth: isMobile ? 'none' : 'none'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
