@@ -592,18 +592,29 @@ const Tasks: React.FC = () => {
         // 设置用户位置和默认地点
         if (userData) {
           // 如果用户有常住城市，设置为默认地点
-          if (userData.residence_city && CITIES.includes(userData.residence_city)) {
-            console.log('[DEBUG] Tasks - 设置默认城市为:', userData.residence_city);
-            setCity(userData.residence_city);
-            setUserLocation(userData.residence_city);
+          const residenceCity = userData.residence_city;
+          console.log('[DEBUG] Tasks - residence_city 值:', residenceCity, '类型:', typeof residenceCity);
+          console.log('[DEBUG] Tasks - CITIES 是否包含:', CITIES.includes(residenceCity));
+          console.log('[DEBUG] Tasks - CITIES 数组:', CITIES);
+          
+          if (residenceCity && CITIES.includes(residenceCity)) {
+            console.log('[DEBUG] Tasks - 设置默认城市为:', residenceCity);
+            setCity(residenceCity);
+            setUserLocation(residenceCity);
             setCityInitialized(true); // 标记城市已初始化
           } else if (userData.location) {
             // 兼容旧的位置字段
+            console.log('[DEBUG] Tasks - 使用旧的位置字段:', userData.location);
             setUserLocation(userData.location);
             setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
           } else {
             // 用户没有设置常住城市，保持'all'，但也标记为已初始化
             console.log('[DEBUG] Tasks - 用户没有设置常住城市，使用默认值 all');
+            console.log('[DEBUG] Tasks - residence_city 检查失败原因:', {
+              hasResidenceCity: !!residenceCity,
+              inCITIES: residenceCity ? CITIES.includes(residenceCity) : false,
+              residenceCityValue: residenceCity
+            });
             setCityInitialized(true);
           }
         } else {
