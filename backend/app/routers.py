@@ -1635,26 +1635,32 @@ def update_profile(
                 
                 # 检查是否在一个月内修改过名字
                 if current_user.name_updated_at:
-                    # 处理时区问题：如果name_updated_at有时区信息，需要转换为UTC
+                    # 处理日期比较（兼容 date 和 datetime 类型）
                     last_update = current_user.name_updated_at
-                    if last_update.tzinfo is not None:
-                        # 如果有时区信息，转换为UTC时间（naive datetime）
-                        last_update_utc = last_update.replace(tzinfo=None) - (last_update.utcoffset() or timedelta(0))
+                    if isinstance(last_update, datetime):
+                        # 如果是 datetime 类型，只取日期部分
+                        last_update_date = last_update.date()
                     else:
-                        # 如果没有时区信息，假设是UTC时间
-                        last_update_utc = last_update
+                        # 如果是 date 类型，直接使用
+                        last_update_date = last_update
                     
-                    time_since_last_update = datetime.utcnow() - last_update_utc
-                    if time_since_last_update < timedelta(days=30):
-                        days_left = 30 - time_since_last_update.days
+                    # 获取当前日期（UTC）
+                    current_date = datetime.utcnow().date()
+                    
+                    # 计算日期差
+                    days_diff = (current_date - last_update_date).days
+                    
+                    if days_diff < 30:
+                        days_left = 30 - days_diff
                         raise HTTPException(
                             status_code=400, 
                             detail=f"用户名一个月内只能修改一次，请在 {days_left} 天后再试"
                         )
                 
-                # 更新名字和修改时间
+                # 更新名字和修改时间（只保存日期部分，兼容 date 类型）
                 update_data["name"] = new_name
-                update_data["name_updated_at"] = datetime.utcnow()
+                # 使用当前日期（不包含时间），兼容 date 类型数据库字段
+                update_data["name_updated_at"] = datetime.utcnow().date()
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）
