@@ -187,6 +187,9 @@ class UserOut(UserBase):
     avg_rating: Optional[float] = 0.0
     timezone: Optional[str] = "UTC"
     user_type: Optional[str] = "normal_user"  # 添加用户类型字段
+    residence_city: Optional[str] = None  # 常住城市
+    language_preference: Optional[str] = "en"  # 语言偏好
+    name_updated_at: Optional[datetime.date] = None  # 上次修改名字的时间
 
     class Config:
         from_attributes = True
