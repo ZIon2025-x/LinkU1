@@ -581,13 +581,19 @@ const Tasks: React.FC = () => {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const userData = await fetchCurrentUser();
+        // 直接调用 API，添加时间戳避免缓存
+        const userData = await api.get('/api/users/profile/me', {
+          params: { _t: Date.now() } // 添加时间戳避免缓存
+        }).then(res => res.data);
+        console.log('[DEBUG] Tasks - 加载的用户数据:', userData);
+        console.log('[DEBUG] Tasks - residence_city:', userData?.residence_city);
         setUser(userData);
         
         // 设置用户位置和默认地点
         if (userData) {
           // 如果用户有常住城市，设置为默认地点
           if (userData.residence_city && CITIES.includes(userData.residence_city)) {
+            console.log('[DEBUG] Tasks - 设置默认城市为:', userData.residence_city);
             setCity(userData.residence_city);
             setUserLocation(userData.residence_city);
             setCityInitialized(true); // 标记城市已初始化
@@ -597,10 +603,12 @@ const Tasks: React.FC = () => {
             setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
           } else {
             // 用户没有设置常住城市，保持'all'，但也标记为已初始化
+            console.log('[DEBUG] Tasks - 用户没有设置常住城市，使用默认值 all');
             setCityInitialized(true);
           }
         } else {
           // 用户未登录，标记为已初始化（保持默认'all'）
+          console.log('[DEBUG] Tasks - 用户未登录，使用默认值 all');
           setCityInitialized(true);
         }
         

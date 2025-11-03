@@ -104,9 +104,15 @@ const Settings: React.FC = () => {
       }
       
       // 加载用户资料（使用 api.get 而不是 fetch，确保 Cookie 正确发送）
+      // 添加时间戳参数避免缓存问题
       try {
-        const userResponse = await api.get('/api/users/profile/me');
+        const userResponse = await api.get('/api/users/profile/me', {
+          params: { _t: Date.now() } // 添加时间戳避免缓存
+        });
         const userData = userResponse.data;
+        console.log('[DEBUG] Settings - 加载的用户数据:', userData);
+        console.log('[DEBUG] Settings - residence_city:', userData.residence_city);
+        console.log('[DEBUG] Settings - language_preference:', userData.language_preference);
         // 格式化头像 URL
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);
@@ -130,6 +136,10 @@ const Settings: React.FC = () => {
             show_tasks: true
           }
         }));
+        console.log('[DEBUG] Settings - 更新后的 formData:', {
+          residence_city: userData.residence_city || '',
+          language_preference: userData.language_preference || 'en'
+        });
       } catch (error: any) {
         console.error('加载用户资料失败:', error);
         if (error.response?.status === 401) {
@@ -200,19 +210,36 @@ const Settings: React.FC = () => {
       // 使用 api.patch 而不是 fetch，这样能自动处理 Cookie 和 CSRF token
       await api.patch('/api/users/profile', updatePayload);
 
-      // 如果名字更新成功，重新加载用户数据以获取最新的name_updated_at
-      if (formData.name !== user?.name) {
-        try {
-          const userResponse = await api.get('/api/users/profile/me');
-          setUser(userResponse.data);
-          alert('用户名更新成功！');
-        } catch (error) {
-          console.error('重新加载用户数据失败:', error);
-        }
-      }
-
       // 保存任务偏好设置（使用 api.put，自动处理 Cookie 和 CSRF token）
       await api.put('/api/user-preferences', formData.preferences);
+      
+      // 重新加载用户数据以获取最新的数据（包括 residence_city 和 language_preference）
+      try {
+        const userResponse = await api.get('/api/users/profile/me', {
+          params: { _t: Date.now() } // 添加时间戳避免缓存
+        });
+        const userData = userResponse.data;
+        console.log('[DEBUG] Settings - 保存后重新加载的用户数据:', userData);
+        // 格式化头像 URL
+        if (userData.avatar) {
+          userData.avatar = formatAvatarUrl(userData.avatar);
+        }
+        setUser(userData);
+        setFormData(prev => ({
+          ...prev,
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          residence_city: userData.residence_city || '',
+          language_preference: userData.language_preference || 'en',
+        }));
+        console.log('[DEBUG] Settings - 保存后更新 formData:', {
+          residence_city: userData.residence_city || '',
+          language_preference: userData.language_preference || 'en'
+        });
+      } catch (error) {
+        console.error('保存后重新加载用户数据失败:', error);
+      }
       
       alert('设置已保存！');
       // 如果语言偏好改变，刷新页面以应用新语言
