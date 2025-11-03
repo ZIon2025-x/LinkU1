@@ -173,9 +173,9 @@ const Settings: React.FC = () => {
         },
         credentials: 'include',
         body: JSON.stringify({
-          name: formData.name !== user?.name ? formData.name : undefined,
-          residence_city: formData.residence_city,
-          language_preference: formData.language_preference
+          ...(formData.name !== user?.name && formData.name ? { name: formData.name } : {}),
+          ...(formData.residence_city ? { residence_city: formData.residence_city } : {}),
+          ...(formData.language_preference ? { language_preference: formData.language_preference } : {})
         })
       });
 

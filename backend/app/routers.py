@@ -1664,7 +1664,8 @@ def update_profile(
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）
-            update_data["residence_city"] = data.residence_city
+            # 允许空字符串，表示清除城市
+            update_data["residence_city"] = data.residence_city if data.residence_city else None
         
         if data.language_preference is not None:
             # 验证语言偏好只能是 'zh' 或 'en'
@@ -1672,8 +1673,11 @@ def update_profile(
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
         
+        # 如果没有要更新的字段，返回错误（但名字不变时不更新名字字段是正常的）
         if not update_data:
             raise HTTPException(status_code=400, detail="没有提供要更新的字段")
+        
+        logger.info(f"[DEBUG] 更新个人资料 - 用户: {current_user.id}, 更新字段: {list(update_data.keys())}")
         
         # 更新数据库
         db.query(models.User).filter(models.User.id == current_user.id).update(update_data)
