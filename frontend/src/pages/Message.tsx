@@ -2663,7 +2663,7 @@ const MessagePage: React.FC = () => {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>
-                  🎧 客服中心
+                  🎧 {t('messages.customerServiceCenter')}
                 </div>
                 <div style={{ 
                   fontSize: '12px', 
@@ -2672,7 +2672,7 @@ const MessagePage: React.FC = () => {
                   alignItems: 'center',
                   gap: '4px'
                 }}>
-                  <span>在线服务</span>
+                  <span>{t('messages.onlineService')}</span>
                   <div style={{
                     width: '6px',
                     height: '6px',
@@ -2974,7 +2974,7 @@ const MessagePage: React.FC = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    客服中心
+                    {t('messages.customerServiceCenter')}
                   </div>
                   <div style={{ 
                     fontSize: '14px', 
@@ -2989,7 +2989,7 @@ const MessagePage: React.FC = () => {
                       background: '#10b981',
                       borderRadius: '50%'
                     }}></div>
-                    <span>服务时间：8:00-18:00</span>
+                    <span>{t('messages.serviceTime')}</span>
                   </div>
                 </div>
               </>
@@ -3106,7 +3106,7 @@ const MessagePage: React.FC = () => {
                   fontWeight: '600',
                   lineHeight: '1.4'
                 }}>
-                  请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。
+                  {t('messages.tradeWarning')}
                 </div>
                 <button
                   onClick={() => {
@@ -3178,7 +3178,7 @@ const MessagePage: React.FC = () => {
                   color: '#374151',
                   marginBottom: '8px'
                 }}>
-                  客服中心
+                  {t('messages.customerServiceCenter')}
                   </div>
                 <div style={{
                   fontSize: '16px',
@@ -3188,8 +3188,8 @@ const MessagePage: React.FC = () => {
                   maxWidth: '300px',
                   marginBottom: '20px'
                 }}>
-                  我们的客服团队随时为您提供帮助<br/>
-                  服务时间：每日 8:00-18:00
+                  {t('messages.ourTeamReadyToHelp')}<br/>
+                  {t('messages.serviceTimeDaily')}
                   </div>
                 <div style={{
                   background: '#fef3c7',
@@ -3205,17 +3205,17 @@ const MessagePage: React.FC = () => {
                     fontWeight: '600',
                     marginBottom: '8px'
                   }}>
-                    📋 服务说明
+                    📋 {t('messages.serviceDescription')}
                   </div>
                   <div style={{
                     fontSize: '13px',
                     color: '#b45309',
                     lineHeight: '1.4'
                   }}>
-                    • 工作时间：周一至周日 8:00-18:00<br/>
-                    • 响应时间：通常5分钟内回复<br/>
-                    • 支持语言：中文、英文<br/>
-                    • 紧急情况请发送邮件至客服邮箱
+                    • {t('messages.workingHours')}<br/>
+                    • {t('messages.responseTime')}<br/>
+                    • {t('messages.supportedLanguages')}<br/>
+                    • {t('messages.emergencyContact')}
                   </div>
                 </div>
               </div>
@@ -3254,7 +3254,7 @@ const MessagePage: React.FC = () => {
                     maxWidth: '400px',
                     marginBottom: '20px'
                   }}>
-                    我们的客服团队随时为您提供帮助，请点击下方按钮开始对话
+                    {t('messages.ourTeamReadyToHelpWithButton')}
                   </div>
                   <button
                   onClick={async () => {
@@ -3380,7 +3380,7 @@ const MessagePage: React.FC = () => {
                     lineHeight: '1.5',
                     maxWidth: isMobile ? '280px' : '300px'
                   }}>
-                    从左侧选择联系人或客服中心开始对话
+                    {t('messages.selectContactOrService')}
                     </div>
                   <div style={{
                     display: 'flex',
@@ -3407,7 +3407,7 @@ const MessagePage: React.FC = () => {
                       color: '#92400e',
                       border: '1px solid #f59e0b'
                     }}>
-                      🎧 客服
+                      🎧 {t('messages.customerService')}
                     </div>
                   </div>
                 </div>
@@ -4127,10 +4127,10 @@ const MessagePage: React.FC = () => {
             onChange={e => setInput(e.target.value)}
                 placeholder={
                   isServiceMode 
-                    ? '输入您的问题，我们的客服团队会尽快回复...' 
+                    ? t('messages.inputYourQuestion')
                     : activeContact 
-                      ? '输入消息...' 
-                      : '请先选择联系人'
+                      ? t('messages.inputMessage') || '输入消息...'
+                      : t('messages.selectContactFirst') || '请先选择联系人'
                 }
                 style={{ 
                   flex: 1, 

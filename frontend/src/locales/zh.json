@@ -2128,7 +2128,22 @@
     "sendImageFailedShort": "发送图片失败",
     "sendMessageFailed": "发送消息失败，请重试",
     "connectServiceFailed": "连接客服失败: {error}",
-    "imageUploadFailed": "图片上传失败"
+    "imageUploadFailed": "图片上传失败",
+    "customerServiceCenter": "客服中心",
+    "serviceTime": "服务时间：8:00-18:00",
+    "serviceTimeDaily": "服务时间：每日 8:00-18:00",
+    "ourTeamReadyToHelp": "我们的客服团队随时为您提供帮助",
+    "serviceDescription": "服务说明",
+    "workingHours": "工作时间：周一至周日 8:00-18:00",
+    "responseTime": "响应时间：通常5分钟内回复",
+    "supportedLanguages": "支持语言：中文、英文",
+    "emergencyContact": "紧急情况请发送邮件至客服邮箱",
+    "ourTeamReadyToHelpWithButton": "我们的客服团队随时为您提供帮助，请点击下方按钮开始对话",
+    "selectContactOrService": "从左侧选择联系人或客服中心开始对话",
+    "inputYourQuestion": "输入您的问题，我们的客服团队会尽快回复...",
+    "inputMessage": "输入消息...",
+    "selectContactFirst": "请先选择联系人",
+    "tradeWarning": "请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。"
   },
   "time": {
     "gmt": "GMT",
