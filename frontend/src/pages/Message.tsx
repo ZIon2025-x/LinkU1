@@ -8,6 +8,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 // 私密图片显示组件
 const PrivateImageDisplay: React.FC<{
@@ -246,6 +247,75 @@ const MessagePage: React.FC = () => {
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(false);
   const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // 翻译相关状态
+  const { translate } = useTranslation();
+  const { language } = useLanguage();
+  // 使用消息ID或内容+时间戳作为key
+  const [messageTranslations, setMessageTranslations] = useState<Map<string, string>>(new Map());
+  const [translatingMessages, setTranslatingMessages] = useState<Set<string>>(new Set());
+  
+  // 简单的语言检测：检查是否包含中文字符
+  const detectTextLanguage = (text: string): 'zh' | 'en' => {
+    if (!text || !text.trim()) return 'en';
+    const hasChinese = /[\u4e00-\u9fff]/.test(text);
+    return hasChinese ? 'zh' : 'en';
+  };
+  
+  // 获取消息的唯一标识
+  const getMessageKey = (msg: Message): string => {
+    if (msg.id) {
+      return `msg_${msg.id}`;
+    }
+    // 如果没有ID，使用内容和时间戳
+    return `msg_${msg.content}_${msg.created_at}`;
+  };
+  
+  // 翻译消息
+  const handleTranslateMessage = async (msg: Message, content: string) => {
+    // 如果是系统消息、图片消息或文件消息，不翻译
+    if (content.startsWith('[图片]') || content.startsWith('[文件]')) {
+      return;
+    }
+    
+    const messageKey = getMessageKey(msg);
+    
+    // 如果已经有翻译，切换显示
+    if (messageTranslations.has(messageKey)) {
+      const newTranslations = new Map(messageTranslations);
+      newTranslations.delete(messageKey);
+      setMessageTranslations(newTranslations);
+      return;
+    }
+    
+    // 检测文本语言
+    const textLang = detectTextLanguage(content);
+    
+    // 如果文本语言和界面语言相同，不需要翻译
+    if (textLang === language) {
+      return;
+    }
+    
+    // 开始翻译
+    setTranslatingMessages(prev => new Set(prev).add(messageKey));
+    try {
+      const targetLang = language;
+      const translated = await translate(content, targetLang, textLang);
+      setMessageTranslations(prev => {
+        const newMap = new Map(prev);
+        newMap.set(messageKey, translated);
+        return newMap;
+      });
+    } catch (error) {
+      console.error('翻译消息失败:', error);
+    } finally {
+      setTranslatingMessages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(messageKey);
+        return newSet;
+      });
+    }
+  };
   const [showContactsList, setShowContactsList] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -3427,7 +3497,17 @@ const MessagePage: React.FC = () => {
               </div>
             )}
             
-            {((activeContact && !isServiceMode) || (isServiceMode && messages.length > 0)) && messages.map((msg, idx) => (
+            {((activeContact && !isServiceMode) || (isServiceMode && messages.length > 0)) && messages.map((msg, idx) => {
+              const isSystemMessage = msg.from === '系统';
+              const isImageMessage = msg.content.startsWith('[图片]');
+              const isFileMessage = msg.content.startsWith('[文件]');
+              const canTranslate = !isSystemMessage && !isImageMessage && !isFileMessage;
+              const messageKey = getMessageKey(msg);
+              const hasTranslation = messageTranslations.has(messageKey);
+              const isTranslating = translatingMessages.has(messageKey);
+              const translatedText = messageTranslations.get(messageKey);
+              
+              return (
               <div key={idx} style={{ 
                 marginBottom: 16, 
                 display: 'flex',
@@ -3457,12 +3537,31 @@ const MessagePage: React.FC = () => {
                     : msg.from === '我' 
                       ? 'none' 
                       : '1px solid #e2e8f0',
-                  textAlign: msg.from === '系统' ? 'center' : 'left'
+                  textAlign: msg.from === '系统' ? 'center' : 'left',
+                  position: 'relative'
                 }}>
                   {msg.from !== '系统' && (
                     <div style={{ fontSize: 14, marginBottom: 4, fontWeight: '600' }}>{msg.from}</div>
                   )}
                   {renderMessageContent(msg.content, msg)}
+                  
+                  {/* 翻译内容显示在原文下面 */}
+                  {hasTranslation && translatedText && (
+                    <div style={{
+                      marginTop: '8px',
+                      paddingTop: '8px',
+                      borderTop: `1px solid ${msg.from === '我' ? 'rgba(255,255,255,0.2)' : '#e2e8f0'}`,
+                      fontSize: '14px',
+                      color: msg.from === '我' 
+                        ? 'rgba(255,255,255,0.9)' 
+                        : '#666',
+                      fontStyle: 'italic',
+                      opacity: 0.9
+                    }}>
+                      {translatedText}
+                    </div>
+                  )}
+                  
                   <div style={{ 
                     fontSize: 12, 
                     color: msg.from === '系统' 
@@ -3470,13 +3569,66 @@ const MessagePage: React.FC = () => {
                       : msg.from === '我' 
                         ? 'rgba(255,255,255,0.7)' 
                         : '#888', 
-                    marginTop: 4 
+                    marginTop: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px'
                   }}>
-                    {formatTime(msg.created_at)}
+                    <span>{formatTime(msg.created_at)}</span>
+                    
+                    {/* 翻译按钮 - 右下角 */}
+                    {canTranslate && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleTranslateMessage(msg, msg.content);
+                        }}
+                        disabled={isTranslating}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: msg.from === '我' 
+                            ? 'rgba(255,255,255,0.7)' 
+                            : '#888',
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          cursor: isTranslating ? 'not-allowed' : 'pointer',
+                          opacity: isTranslating ? 0.5 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          borderRadius: '4px',
+                          transition: 'all 0.2s',
+                          marginLeft: 'auto'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isTranslating) {
+                            e.currentTarget.style.background = msg.from === '我' 
+                              ? 'rgba(255,255,255,0.1)' 
+                              : '#f3f4f6';
+                            e.currentTarget.style.color = msg.from === '我' 
+                              ? '#fff' 
+                              : '#3b82f6';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = msg.from === '我' 
+                            ? 'rgba(255,255,255,0.7)' 
+                            : '#888';
+                        }}
+                        title={hasTranslation ? '隐藏翻译' : '翻译'}
+                      >
+                        {isTranslating ? '⏳' : hasTranslation ? '🌐' : '🌐'}
+                        <span>{isTranslating ? '翻译中...' : hasTranslation ? '隐藏' : '翻译'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
             <div ref={messagesEndRef} />
                   </div>
 

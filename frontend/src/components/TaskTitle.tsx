@@ -19,7 +19,7 @@ const TaskTitle: React.FC<TaskTitleProps> = ({
   language,
   className,
   style,
-  showOriginalButton = true,
+  showOriginalButton = false,  // 默认不显示按钮，任务卡片上不需要
   autoTranslate = true  // 自动翻译，但会检测文本语言，只在需要时翻译
 }) => {
   const { translatedText, isTranslating, showOriginal, toggleOriginal } = useAutoTranslate(
