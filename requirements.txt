@@ -29,3 +29,6 @@ pytz>=2023.3
 
 # 其他工具
 python-dotenv>=1.0.0
+
+# 翻译服务
+googletrans==4.0.0rc1

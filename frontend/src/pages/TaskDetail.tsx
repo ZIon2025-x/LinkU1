@@ -12,6 +12,7 @@ import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useTranslation } from '../hooks/useTranslation';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -27,8 +28,9 @@ interface Notification {
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { translate } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,11 @@ const TaskDetail: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [systemSettings, setSystemSettings] = useState<any>({});
+  // 翻译相关状态
+  const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
+  const [translatedDescription, setTranslatedDescription] = useState<string | null>(null);
+  const [isTranslatingTitle, setIsTranslatingTitle] = useState(false);
+  const [isTranslatingDescription, setIsTranslatingDescription] = useState(false);
 
   // 加载用户数据、通知和系统设置
   useEffect(() => {
@@ -939,6 +946,55 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  // 翻译标题
+  const handleTranslateTitle = async () => {
+    if (!task || !task.title) return;
+    
+    setIsTranslatingTitle(true);
+    try {
+      // 如果当前语言是中文,翻译成英文;反之翻译成中文
+      const targetLang = language === 'zh' ? 'en' : 'zh';
+      const translated = await translate(task.title, targetLang);
+      setTranslatedTitle(translated);
+    } catch (error) {
+      console.error('翻译标题失败:', error);
+    } finally {
+      setIsTranslatingTitle(false);
+    }
+  };
+
+  // 翻译描述
+  const handleTranslateDescription = async () => {
+    if (!task || !task.description) return;
+    
+    setIsTranslatingDescription(true);
+    try {
+      // 如果当前语言是中文,翻译成英文;反之翻译成中文
+      const targetLang = language === 'zh' ? 'en' : 'zh';
+      const translated = await translate(task.description, targetLang);
+      setTranslatedDescription(translated);
+    } catch (error) {
+      console.error('翻译描述失败:', error);
+    } finally {
+      setIsTranslatingDescription(false);
+    }
+  };
+
+  // 重置翻译(显示原文)
+  const handleResetTranslation = (type: 'title' | 'description') => {
+    if (type === 'title') {
+      setTranslatedTitle(null);
+    } else {
+      setTranslatedDescription(null);
+    }
+  };
+
+  // 当任务加载或语言改变时,重置翻译
+  useEffect(() => {
+    setTranslatedTitle(null);
+    setTranslatedDescription(null);
+  }, [task, language]);
+
   // 如果用户等级不满足任务等级要求，显示权限不足页面
   if (task && !canViewTask(user, task)) {
     return (
@@ -1137,15 +1193,68 @@ const TaskDetail: React.FC = () => {
           zIndex: 1
         }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{
-              fontSize: '32px',
-              fontWeight: '800',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              margin: '0 0 8px 0',
-              lineHeight: 1.2
-            }}>{task.title}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <h2 style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                margin: 0,
+                lineHeight: 1.2,
+                flex: 1,
+                minWidth: '200px'
+              }}>
+                {translatedTitle || task.title}
+              </h2>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {translatedTitle ? (
+                  <button
+                    onClick={() => handleResetTranslation('title')}
+                    disabled={isTranslatingTitle}
+                    style={{
+                      background: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: isTranslatingTitle ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: isTranslatingTitle ? 0.6 : 1
+                    }}
+                    title={t('taskDetail.showOriginal')}
+                  >
+                    🔄 {t('taskDetail.showOriginal')}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleTranslateTitle}
+                    disabled={isTranslatingTitle}
+                    style={{
+                      background: '#3b82f6',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: isTranslatingTitle ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: isTranslatingTitle ? 0.6 : 1
+                    }}
+                    title={t('taskDetail.translateTitle')}
+                  >
+                    {isTranslatingTitle ? '⏳' : '🌐'} {t('taskDetail.translateTitle')}
+                  </button>
+                )}
+              </div>
+            </div>
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1268,23 +1377,73 @@ const TaskDetail: React.FC = () => {
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <div style={{ fontSize: '20px' }}>📝</div>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1e293b',
-              margin: 0
-            }}>任务描述</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '20px' }}>📝</div>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#1e293b',
+                margin: 0
+              }}>任务描述</h3>
+            </div>
+            <div>
+              {translatedDescription ? (
+                <button
+                  onClick={() => handleResetTranslation('description')}
+                  disabled={isTranslatingDescription}
+                  style={{
+                    background: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: isTranslatingDescription ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: isTranslatingDescription ? 0.6 : 1
+                  }}
+                  title={t('taskDetail.showOriginal')}
+                >
+                  🔄 {t('taskDetail.showOriginal')}
+                </button>
+              ) : (
+                <button
+                  onClick={handleTranslateDescription}
+                  disabled={isTranslatingDescription}
+                  style={{
+                    background: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: isTranslatingDescription ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: isTranslatingDescription ? 0.6 : 1
+                  }}
+                  title={t('taskDetail.translateDescription')}
+                >
+                  {isTranslatingDescription ? '⏳' : '🌐'} {t('taskDetail.translateDescription')}
+                </button>
+              )}
+            </div>
           </div>
           <div style={{
             fontSize: '16px',
             lineHeight: 1.6,
             color: '#374151',
             whiteSpace: 'pre-wrap'
-          }}>{task.description}</div>
+          }}>{translatedDescription || task.description}</div>
         </div>
         
         {/* 价格编辑区域 */}

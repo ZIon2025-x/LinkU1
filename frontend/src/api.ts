@@ -1231,4 +1231,32 @@ export const getPublicTaskExperts = async (category?: string) => {
   return res.data;
 };
 
+// 翻译API - 翻译单个文本
+export const translateText = async (
+  text: string,
+  targetLanguage: string,
+  sourceLanguage?: string
+) => {
+  const res = await api.post('/api/translate', {
+    text,
+    target_language: targetLanguage,
+    ...(sourceLanguage && { source_language: sourceLanguage })
+  });
+  return res.data;
+};
+
+// 翻译API - 批量翻译
+export const translateBatch = async (
+  texts: string[],
+  targetLanguage: string,
+  sourceLanguage?: string
+) => {
+  const res = await api.post('/api/translate/batch', {
+    texts,
+    target_language: targetLanguage,
+    ...(sourceLanguage && { source_language: sourceLanguage })
+  });
+  return res.data;
+};
+
 export default api; 

@@ -5457,3 +5457,97 @@ def get_public_task_experts(
     except Exception as e:
         logger.error(f"获取任务达人列表失败: {e}")
         raise HTTPException(status_code=500, detail="获取任务达人列表失败")
+
+
+# 翻译API
+@router.post("/translate")
+async def translate_text(
+    text: str = Body(..., embed=True),
+    target_language: str = Body(..., embed=True),
+    source_language: Optional[str] = Body(None, embed=True),
+):
+    """
+    翻译文本
+    
+    参数:
+    - text: 要翻译的文本
+    - target_language: 目标语言代码 (如 'en', 'zh', 'zh-cn')
+    - source_language: 源语言代码 (可选, 如果不提供则自动检测)
+    
+    返回:
+    - translated_text: 翻译后的文本
+    - source_language: 检测到的源语言
+    """
+    try:
+        from googletrans import Translator
+        
+        translator = Translator()
+        
+        # 如果未提供源语言,则自动检测
+        if source_language:
+            result = translator.translate(text, src=source_language, dest=target_language)
+        else:
+            result = translator.translate(text, dest=target_language)
+        
+        return {
+            "translated_text": result.text,
+            "source_language": result.src,
+            "target_language": result.dest,
+            "original_text": text
+        }
+    except Exception as e:
+        logger.error(f"翻译失败: {e}")
+        raise HTTPException(status_code=500, detail=f"翻译失败: {str(e)}")
+
+
+@router.post("/translate/batch")
+async def translate_batch(
+    texts: list[str] = Body(..., embed=True),
+    target_language: str = Body(..., embed=True),
+    source_language: Optional[str] = Body(None, embed=True),
+):
+    """
+    批量翻译文本
+    
+    参数:
+    - texts: 要翻译的文本列表
+    - target_language: 目标语言代码
+    - source_language: 源语言代码 (可选)
+    
+    返回:
+    - translations: 翻译结果列表
+    """
+    try:
+        from googletrans import Translator
+        
+        translator = Translator()
+        translations = []
+        
+        for text in texts:
+            try:
+                if source_language:
+                    result = translator.translate(text, src=source_language, dest=target_language)
+                else:
+                    result = translator.translate(text, dest=target_language)
+                
+                translations.append({
+                    "original_text": text,
+                    "translated_text": result.text,
+                    "source_language": result.src,
+                })
+            except Exception as e:
+                logger.error(f"翻译文本失败: {text[:50]}... - {e}")
+                translations.append({
+                    "original_text": text,
+                    "translated_text": text,  # 翻译失败时返回原文
+                    "source_language": "unknown",
+                    "error": str(e)
+                })
+        
+        return {
+            "translations": translations,
+            "target_language": target_language
+        }
+    except Exception as e:
+        logger.error(f"批量翻译失败: {e}")
+        raise HTTPException(status_code=500, detail=f"批量翻译失败: {str(e)}")

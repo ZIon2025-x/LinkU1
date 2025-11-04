@@ -8,6 +8,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
+import TaskTitle from '../components/TaskTitle';
 import Footer from '../components/Footer';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
@@ -213,7 +214,7 @@ interface Notification {
 
 const Home: React.FC = () => {
   const location = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   
   // 生成canonical URL - 确保包含语言前缀
@@ -962,7 +963,16 @@ const Home: React.FC = () => {
                       color: '#2d3748',
                       lineHeight: '1.4'
                     }}>
-                      {task.title}
+                      <TaskTitle
+                        title={task.title}
+                        language={language}
+                        style={{
+                          fontSize: 'inherit',
+                          fontWeight: 'inherit',
+                          color: 'inherit',
+                          lineHeight: 'inherit'
+                        }}
+                      />
                     </div>
                     
                     <div style={{

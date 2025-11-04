@@ -10,6 +10,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
+import TaskTitle from '../components/TaskTitle';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
@@ -2505,7 +2506,21 @@ const Tasks: React.FC = () => {
                     WebkitLineClamp: isMobile ? 1 : 2,
                     WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
                   }}>
-                    {task.title}
+                    <TaskTitle
+                      title={task.title}
+                      language={language}
+                      style={{
+                        fontSize: 'inherit',
+                        fontWeight: 'inherit',
+                        color: 'inherit',
+                        whiteSpace: isMobile ? 'nowrap' : 'normal',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: isMobile ? 'block' : '-webkit-box',
+                        WebkitLineClamp: isMobile ? 1 : 2,
+                        WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
+                      }}
+                    />
                   </div>
                 </div>
               ))
