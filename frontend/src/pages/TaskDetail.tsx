@@ -998,6 +998,19 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  // 简单的语言检测：检查是否包含中文字符
+  const detectTextLanguage = (text: string): 'zh' | 'en' => {
+    if (!text || !text.trim()) return 'en';
+    const hasChinese = /[\u4e00-\u9fff]/.test(text);
+    return hasChinese ? 'zh' : 'en';
+  };
+
+  // 检查是否需要翻译（文本语言和界面语言不同时需要翻译）
+  const needsTranslation = (text: string): boolean => {
+    const detectedLang = detectTextLanguage(text);
+    return detectedLang !== language;
+  };
+
   // 重置翻译(显示原文)
   const handleResetTranslation = (type: 'title' | 'description') => {
     if (type === 'title') {
@@ -1242,7 +1255,7 @@ const TaskDetail: React.FC = () => {
                   >
                     🔄 {t('taskDetail.showOriginal')}
                   </button>
-                ) : (
+                ) : needsTranslation(task.title) ? (
                   <button
                     onClick={handleTranslateTitle}
                     disabled={isTranslatingTitle}
@@ -1264,7 +1277,7 @@ const TaskDetail: React.FC = () => {
                   >
                     {isTranslatingTitle ? '⏳' : '🌐'} {t('taskDetail.translateTitle')}
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
             <div style={{
@@ -1425,7 +1438,7 @@ const TaskDetail: React.FC = () => {
                 >
                   🔄 {t('taskDetail.showOriginal')}
                 </button>
-              ) : (
+              ) : needsTranslation(task.description) ? (
                 <button
                   onClick={handleTranslateDescription}
                   disabled={isTranslatingDescription}
@@ -1447,7 +1460,7 @@ const TaskDetail: React.FC = () => {
                 >
                   {isTranslatingDescription ? '⏳' : '🌐'} {t('taskDetail.translateDescription')}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
           <div style={{

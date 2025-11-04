@@ -10,6 +10,14 @@ const getCacheKey = (text: string, targetLang: string): string => {
   return `${text}::${targetLang}`;
 };
 
+// 简单的语言检测：检查是否包含中文字符
+const detectLanguage = (text: string): 'zh' | 'en' => {
+  if (!text || !text.trim()) return 'en';
+  // 检查是否包含中文字符（Unicode范围：\u4e00-\u9fff）
+  const hasChinese = /[\u4e00-\u9fff]/.test(text);
+  return hasChinese ? 'zh' : 'en';
+};
+
 interface UseAutoTranslateReturn {
   translatedText: string | null;
   isTranslating: boolean;
@@ -20,6 +28,7 @@ interface UseAutoTranslateReturn {
 
 /**
  * 自动翻译hook - 根据语言环境自动翻译文本
+ * 只在文本语言和当前界面语言不同时才翻译
  * @param text 原始文本
  * @param language 当前语言环境
  * @param autoTranslate 是否自动翻译（默认true）
@@ -46,6 +55,15 @@ export const useAutoTranslate = (
       return;
     }
 
+    // 检测文本语言
+    const detectedLang = detectLanguage(text);
+    
+    // 如果文本语言和当前界面语言相同，不需要翻译
+    if (detectedLang === language) {
+      setTranslatedText(null);
+      return;
+    }
+
     const targetLang = getTargetLanguage();
     const cacheKey = getCacheKey(text, targetLang);
 
@@ -67,15 +85,20 @@ export const useAutoTranslate = (
     } finally {
       setIsTranslating(false);
     }
-  }, [text, getTargetLanguage, translate]);
+  }, [text, language, getTargetLanguage, translate]);
 
   // 当文本或语言改变时自动翻译
-  // 注意：由于无法准确检测文本语言，暂时禁用自动翻译
-  // 用户可以通过点击按钮手动翻译
   useEffect(() => {
-    // 暂时禁用自动翻译，避免翻译错误
-    setTranslatedText(null);
-  }, [text, language, autoTranslate, showOriginal]);
+    if (autoTranslate && !showOriginal) {
+      // 延迟执行翻译，避免在快速切换时频繁请求
+      const timer = setTimeout(() => {
+        performTranslation();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setTranslatedText(null);
+    }
+  }, [text, language, autoTranslate, showOriginal, performTranslation]);
 
   // 切换显示原文
   const toggleOriginal = useCallback(() => {
@@ -96,4 +119,3 @@ export const useAutoTranslate = (
     clearTranslation
   };
 };
-

@@ -20,7 +20,7 @@ const TaskTitle: React.FC<TaskTitleProps> = ({
   className,
   style,
   showOriginalButton = true,
-  autoTranslate = false  // 默认不自动翻译，避免翻译错误
+  autoTranslate = true  // 自动翻译，但会检测文本语言，只在需要时翻译
 }) => {
   const { translatedText, isTranslating, showOriginal, toggleOriginal } = useAutoTranslate(
     title,
