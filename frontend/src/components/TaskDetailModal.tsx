@@ -42,6 +42,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [userApplication, setUserApplication] = useState<any>(null);
   const [hasApplied, setHasApplied] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
   // 当弹窗打开且taskId存在时加载任务数据
   useEffect(() => {
@@ -49,6 +51,30 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       loadTaskData();
     }
   }, [isOpen, taskId]);
+
+  // 键盘事件处理（用于图片放大弹窗）
+  useEffect(() => {
+    if (!enlargedImage || !task || !task.images) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEnlargedImage(null);
+      } else if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
+        const prevIndex = currentImageIndex - 1;
+        setCurrentImageIndex(prevIndex);
+        setEnlargedImage(task.images[prevIndex]);
+      } else if (e.key === 'ArrowRight' && currentImageIndex < task.images.length - 1) {
+        const nextIndex = currentImageIndex + 1;
+        setCurrentImageIndex(nextIndex);
+        setEnlargedImage(task.images[nextIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [enlargedImage, task, currentImageIndex]);
 
   const loadTaskData = async () => {
     if (!taskId) return;
@@ -949,8 +975,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     transition: 'transform 0.2s ease'
                   }}
                   onClick={() => {
-                    // 点击图片可以放大查看（可以后续实现图片预览功能）
-                    window.open(imageUrl, '_blank');
+                    // 点击图片放大查看
+                    setEnlargedImage(imageUrl);
+                    setCurrentImageIndex(index);
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'scale(1.02)';
@@ -1721,6 +1748,183 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             setShowForgotPasswordModal(false);
           }}
         />
+
+        {/* 图片放大弹窗 */}
+        {enlargedImage && task && task.images && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              zIndex: 2000,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}
+            onClick={() => setEnlargedImage(null)}
+          >
+            {/* 关闭按钮 */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEnlargedImage(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                color: '#000',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 2001,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              ×
+            </button>
+
+            {/* 上一张按钮 */}
+            {task.images.length > 1 && currentImageIndex > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prevIndex = currentImageIndex - 1;
+                  setCurrentImageIndex(prevIndex);
+                  setEnlargedImage(task.images[prevIndex]);
+                }}
+                style={{
+                  position: 'absolute',
+                  left: '20px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  color: '#000',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 2001,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                ‹
+              </button>
+            )}
+
+            {/* 下一张按钮 */}
+            {task.images.length > 1 && currentImageIndex < task.images.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextIndex = currentImageIndex + 1;
+                  setCurrentImageIndex(nextIndex);
+                  setEnlargedImage(task.images[nextIndex]);
+                }}
+                style={{
+                  position: 'absolute',
+                  right: '20px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  color: '#000',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 2001,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                  e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                }}
+              >
+                ›
+              </button>
+            )}
+
+            {/* 图片索引指示器 */}
+            {task.images.length > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  color: '#fff',
+                  fontSize: '16px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  zIndex: 2001
+                }}
+              >
+                {currentImageIndex + 1} / {task.images.length}
+              </div>
+            )}
+
+            {/* 放大的图片 */}
+            <img
+              src={enlargedImage}
+              alt="放大图片"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '90%',
+                maxHeight: '90%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                userSelect: 'none'
+              }}
+              onError={(e) => {
+                // 图片加载失败时显示占位符
+                e.currentTarget.src = '/static/default-image.png';
+                e.currentTarget.onerror = null;
+              }}
+            />
+          </div>
+        )}
         </div>
       </div>
     </div>
