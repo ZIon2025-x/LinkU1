@@ -432,7 +432,7 @@ const MessagePage: React.FC = () => {
       // 检查图片大小，如果超过5MB则拒绝上传
       const maxFileSize = 5 * 1024 * 1024; // 5MB
       if (selectedImage.size > maxFileSize) {
-        alert(`图片过大，无法上传。\n\n当前大小: ${(selectedImage.size / 1024 / 1024).toFixed(2)}MB\n最大允许: 5MB\n\n请压缩图片后重试。`);
+        alert(t('messages.imageTooLargeAlert', { size: (selectedImage.size / 1024 / 1024).toFixed(2) }));
         setUploadingImage(false);
         return;
       }
@@ -472,7 +472,7 @@ const MessagePage: React.FC = () => {
       
     } catch (error) {
       console.error('发送图片失败:', error);
-      alert(`发送图片失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 图片文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的图片。`);
+      alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingImage(false);
     }
@@ -500,7 +500,7 @@ const MessagePage: React.FC = () => {
       // 立即添加消息到本地状态
       const newMessage = {
         id: Date.now(),
-        from: '我',
+        from: t('messages.me'),
         content: messageContent,
         created_at: new Date().toISOString()
       };
@@ -535,7 +535,7 @@ const MessagePage: React.FC = () => {
         
         const newMessage = {
           id: Date.now(),
-          from: '我',
+          from: t('messages.me'),
           content: messageContent,
           created_at: new Date().toISOString()
         };
@@ -548,7 +548,7 @@ const MessagePage: React.FC = () => {
         
         const newMessage = {
           id: response.id,
-          from: '我',
+          from: t('messages.me'),
           content: messageContent,
           created_at: response.created_at
         };
@@ -638,7 +638,7 @@ const MessagePage: React.FC = () => {
       
     } catch (error) {
       console.error('发送文件失败:', error);
-      alert(`发送文件失败: ${error instanceof Error ? error.message : String(error)}\n\n可能的原因:\n1. 网络连接问题\n2. 文件过大\n3. 服务器上传功能未启用\n\n请检查网络连接或尝试发送较小的文件。`);
+      alert(t('messages.sendFileFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingFile(false);
     }
@@ -677,11 +677,11 @@ const MessagePage: React.FC = () => {
         setPreviewImageUrl('');
         setInput('');
       } else {
-        alert('图片上传失败');
+        alert(t('messages.imageUploadFailed'));
       }
     } catch (error) {
       console.error('发送图片失败:', error);
-      alert('发送图片失败');
+      alert(t('messages.sendImageFailedShort'));
     } finally {
       setUploadingImage(false);
     }
@@ -835,7 +835,7 @@ const MessagePage: React.FC = () => {
       setIsSending(false);
       const errorMessage: Message = {
         id: Date.now(),
-        from: '系统',
+        from: t('messages.system'),
         content: t('messages.chatEndedMessage'),
         created_at: new Date().toISOString()
       };
@@ -960,7 +960,7 @@ const MessagePage: React.FC = () => {
       
     } catch (error) {
       console.error('发送消息失败:', error);
-      alert('发送消息失败，请重试');
+      alert(t('messages.sendMessageFailed'));
       setInput(messageContent); // 恢复输入内容
       // 移除失败的消息
       setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
@@ -1332,7 +1332,7 @@ const MessagePage: React.FC = () => {
       
       // 只对发送的消息或接收的消息自动滚动到底部，不包括系统消息
       // 包括：我、对方、客服、管理员
-      if (lastMessage && (lastMessage.from === '我' || lastMessage.from === '对方' || lastMessage.from === '客服' || lastMessage.from === '管理员')) {
+      if (lastMessage && (lastMessage.from === t('messages.me') || lastMessage.from === t('messages.other') || lastMessage.from === t('messages.customerService') || lastMessage.from === t('messages.admin'))) {
           setTimeout(() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -1526,7 +1526,7 @@ const MessagePage: React.FC = () => {
               // 显示系统消息，根据事件类型使用不同的内容
               const endMessage: Message = {
                 id: Date.now(),
-                from: '系统',
+                from: t('messages.system'),
                 content: msg.type === 'chat_timeout' && msg.content ? msg.content : t('messages.chatEnded'),
                 created_at: new Date().toISOString(),
               };
@@ -1542,17 +1542,17 @@ const MessagePage: React.FC = () => {
             
             if (msg.from) {
               // 确定消息发送者显示名称
-              let fromName = '对方';
+              let fromName = t('messages.other');
               if (msg.from === user.id) {
-                fromName = '我';
+                fromName = t('messages.me');
               } else if (msg.sender_type === 'system') {
-                fromName = '系统';
+                fromName = t('messages.system');
               } else if (msg.sender_type === 'customer_service') {
-                fromName = '客服';
+                fromName = t('messages.customerService');
               } else if (msg.sender_type === 'admin') {
-                fromName = '管理员';
+                fromName = t('messages.admin');
               } else if (msg.from === 'system') {
-                fromName = '系统';
+                fromName = t('messages.system');
               }
               
               // 只处理有内容的消息
@@ -1694,7 +1694,7 @@ const MessagePage: React.FC = () => {
               // 显示系统消息
               const endMessage: Message = {
                 id: Date.now(),
-                from: '系统',
+                from: t('messages.system'),
                 content: t('messages.chatEnded'),
                 created_at: new Date().toISOString(),
               };
@@ -1731,7 +1731,7 @@ const MessagePage: React.FC = () => {
           const formattedMessages = chatData.map((msg: any) => {
             return {
               id: msg.id,
-              from: msg.sender_type === 'user' ? '我' : (msg.sender_type === 'system' ? '系统' : '客服'),
+              from: msg.sender_type === 'user' ? t('messages.me') : (msg.sender_type === 'system' ? t('messages.system') : t('messages.customerService')),
               content: msg.content,
               created_at: msg.created_at,
               is_admin_msg: msg.sender_type === 'system' ? 1 : 0
@@ -1775,8 +1775,8 @@ const MessagePage: React.FC = () => {
           setMessages(prev => {
             const loadingMessage = {
               id: -1, // 使用负数ID表示加载状态
-              from: '系统',
-              content: '正在加载历史消息...',
+              from: t('messages.system'),
+              content: t('messages.loadingHistory'),
               created_at: new Date().toISOString()
             };
             
@@ -1795,7 +1795,7 @@ const MessagePage: React.FC = () => {
         const chatData = await getChatHistory(contactId, limit, undefined, offset); // 支持分页加载
         const formattedMessages = chatData.map((msg: any) => ({
           id: msg.id,
-          from: String(msg.sender_id) === String(user.id) ? '我' : (msg.is_admin_msg === 1 ? '系统' : '对方'),
+          from: String(msg.sender_id) === String(user.id) ? t('messages.me') : (msg.is_admin_msg === 1 ? t('messages.system') : t('messages.other')),
           content: msg.content, 
           created_at: msg.created_at 
         }));
@@ -1942,8 +1942,8 @@ const MessagePage: React.FC = () => {
       // API调用失败时不清空现有消息，只显示错误提示
       const errorMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '加载聊天历史失败，请刷新页面重试',
+        from: t('messages.system'),
+        content: t('messages.loadHistoryFailed'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -2015,8 +2015,8 @@ const MessagePage: React.FC = () => {
     if (!serviceAvailable) {
       const noServiceMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '当前无可用客服，请您稍后尝试。客服时间为每日8:00-18:00，如有紧急情况请发送邮件至客服邮箱。',
+        from: t('messages.system'),
+        content: t('messages.noServiceAvailable'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, noServiceMessage]);
@@ -2102,8 +2102,8 @@ const MessagePage: React.FC = () => {
           console.error('客服连接失败:', response.error);
           const errorMessage: Message = {
             id: Date.now(),
-            from: '系统',
-            content: `连接客服失败: ${response.error}`,
+            from: t('messages.system'),
+            content: t('messages.connectServiceFailed', { error: response.error }),
             created_at: new Date().toISOString()
           };
           setMessages(prev => [...prev, errorMessage]);
@@ -2133,7 +2133,7 @@ const MessagePage: React.FC = () => {
         
         const successMessage: Message = {
           id: Date.now(),
-          from: '系统',
+          from: t('messages.system'),
           content: t('messages.connectedToService', { name: response.service.name }),
           created_at: new Date().toISOString()
         };
@@ -2142,7 +2142,7 @@ const MessagePage: React.FC = () => {
         // 客服不在线，显示系统提示
         const noServiceMessage: Message = {
           id: Date.now(),
-          from: '系统',
+          from: t('messages.system'),
           content: '当前无可用客服，请您稍后尝试',
           created_at: new Date().toISOString()
         };
@@ -2152,8 +2152,8 @@ const MessagePage: React.FC = () => {
       console.error('连接客服失败:', error);
       const errorMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '连接客服时出现错误，请稍后重试',
+        from: t('messages.system'),
+        content: t('messages.connectServiceError'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -2194,8 +2194,8 @@ const MessagePage: React.FC = () => {
       console.error('没有活跃的客服对话');
       const errorMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '没有活跃的客服对话，无法结束对话',
+        from: t('messages.system'),
+        content: t('messages.noActiveChat'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -2208,8 +2208,8 @@ const MessagePage: React.FC = () => {
       // 显示系统消息
       const endMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '对话已结束，感谢您的使用！',
+        from: t('messages.system'),
+        content: t('messages.chatEndedThankYou'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, endMessage]);
@@ -2245,8 +2245,8 @@ const MessagePage: React.FC = () => {
         
         const cleanupMessage: Message = {
           id: Date.now(),
-          from: '系统',
-          content: '对话已结束，状态已重置',
+          from: t('messages.system'),
+          content: t('messages.chatEndedReset'),
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, cleanupMessage]);
@@ -2255,8 +2255,8 @@ const MessagePage: React.FC = () => {
       
       const errorMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '结束对话失败，请稍后重试',
+        from: t('messages.system'),
+        content: t('messages.endChatFailed'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -2286,15 +2286,15 @@ const MessagePage: React.FC = () => {
       // 显示感谢消息
       const thankMessage: Message = {
         id: Date.now(),
-        from: '系统',
-        content: '感谢您的评价！',
+        from: t('messages.system'),
+        content: t('messages.thankYouForRating'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, thankMessage]);
       
     } catch (error) {
       console.error('提交评价失败:', error);
-      alert('提交评价失败，请稍后重试');
+      alert(t('messages.submitRatingFailed'));
     }
   };
 
@@ -2466,7 +2466,7 @@ const MessagePage: React.FC = () => {
               e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
             }}
           >
-            {isMobile ? '← 返回首页' : '← 返回'}
+            {isMobile ? t('messages.backToHome') : t('messages.back')}
         </div>
             💬 {t('messages.messageCenter')}
             {totalUnreadCount > 0 && (
@@ -2500,7 +2500,7 @@ const MessagePage: React.FC = () => {
             }}>
               <input
                 type="text"
-                placeholder="搜索联系人..."
+                placeholder={t('messages.searchContacts')}
                 style={{
                   width: '100%',
                   padding: '12px 20px 12px 45px',
@@ -2643,7 +2643,7 @@ const MessagePage: React.FC = () => {
                 width: '50px',
                 height: '50px'
               }}>
-                <img src={'/static/service.png'} alt="客服" style={{ 
+                <img src={'/static/service.png'} alt={t('messages.service')} style={{ 
                   width: '50px', 
                   height: '50px', 
                   borderRadius: '50%', 
@@ -2799,7 +2799,7 @@ const MessagePage: React.FC = () => {
                     }}>
                       <img 
                         src={c.avatar || '/static/avatar1.png'} 
-                        alt="头像" 
+                        alt={t('messages.avatar')} 
                         style={{ 
                           width: '50px', 
                           height: '50px', 
@@ -3271,8 +3271,8 @@ const MessagePage: React.FC = () => {
                             console.error('客服连接失败:', response.error);
                             const errorMessage: Message = {
                               id: Date.now(),
-                              from: '系统',
-                              content: `连接客服失败: ${response.error}`,
+                              from: t('messages.system'),
+                              content: t('messages.connectServiceFailed', { error: response.error }),
                               created_at: new Date().toISOString()
                             };
                             setMessages(prev => [...prev, errorMessage]);
@@ -3302,7 +3302,7 @@ const MessagePage: React.FC = () => {
                           
                           const successMessage: Message = {
                             id: Date.now(),
-                            from: '系统',
+                            from: t('messages.system'),
                             content: t('messages.connectedToService', { name: response.service.name }),
                             created_at: new Date().toISOString()
                           };
@@ -3311,8 +3311,8 @@ const MessagePage: React.FC = () => {
                           // 客服不在线，显示系统提示
                           const noServiceMessage: Message = {
                             id: Date.now(),
-                            from: '系统',
-                            content: '当前无可用客服，请您稍后尝试',
+                            from: t('messages.system'),
+                            content: t('messages.noServiceAvailableShort'),
                             created_at: new Date().toISOString()
                           };
                           setMessages(prev => [...prev, noServiceMessage]);
@@ -3321,8 +3321,8 @@ const MessagePage: React.FC = () => {
                         console.error('连接客服失败:', error);
                         const errorMessage: Message = {
                           id: Date.now(),
-                          from: '系统',
-                          content: '连接客服时出现错误，请稍后重试',
+                          from: t('messages.system'),
+                          content: t('messages.connectServiceError'),
                           created_at: new Date().toISOString()
                         };
                         setMessages(prev => [...prev, errorMessage]);
@@ -3481,7 +3481,9 @@ const MessagePage: React.FC = () => {
             )}
             
             {((activeContact && !isServiceMode) || (isServiceMode && messages.length > 0)) && messages.map((msg, idx) => {
-              const isSystemMessage = msg.from === '系统';
+              const systemText = t('messages.system');
+              const meText = t('messages.me');
+              const isSystemMessage = msg.from === systemText;
               const isImageMessage = msg.content.startsWith('[图片]');
               const isFileMessage = msg.content.startsWith('[文件]');
               const canTranslate = !isSystemMessage && !isImageMessage && !isFileMessage;
@@ -3494,36 +3496,36 @@ const MessagePage: React.FC = () => {
               <div key={idx} style={{ 
                 marginBottom: 16, 
                 display: 'flex',
-                justifyContent: msg.from === '系统' ? 'center' : (msg.from === '我' ? 'flex-end' : 'flex-start'),
+                justifyContent: msg.from === systemText ? 'center' : (msg.from === meText ? 'flex-end' : 'flex-start'),
                 width: '100%'
               }}>
                 <div style={{ 
-                  background: msg.from === '系统' 
+                  background: msg.from === systemText 
                     ? 'linear-gradient(135deg, #f3f4f6, #e5e7eb)' 
-                    : msg.from === '我' 
+                    : msg.from === meText 
                       ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
                       : '#fff', 
-                  color: msg.from === '系统' 
+                  color: msg.from === systemText 
                     ? '#374151' 
-                    : msg.from === '我' 
+                    : msg.from === meText 
                       ? '#fff' 
                       : '#333', 
                   borderRadius: 16, 
                   padding: '12px 20px', 
-                  maxWidth: msg.from === '系统' ? '80%' : '70%', 
+                  maxWidth: msg.from === systemText ? '80%' : '70%', 
                   wordBreak: 'break-word',
                   display: 'flex',
                   flexDirection: 'column',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  border: msg.from === '系统' 
+                  border: msg.from === systemText 
                     ? '1px solid #d1d5db' 
-                    : msg.from === '我' 
+                    : msg.from === meText 
                       ? 'none' 
                       : '1px solid #e2e8f0',
-                  textAlign: msg.from === '系统' ? 'center' : 'left',
+                  textAlign: msg.from === systemText ? 'center' : 'left',
                   position: 'relative'
                 }}>
-                  {msg.from !== '系统' && (
+                  {msg.from !== systemText && (
                     <div style={{ fontSize: 14, marginBottom: 4, fontWeight: '600' }}>{msg.from}</div>
                   )}
                   {renderMessageContent(msg.content, msg)}
@@ -3533,9 +3535,9 @@ const MessagePage: React.FC = () => {
                     <div style={{
                       marginTop: '8px',
                       paddingTop: '8px',
-                      borderTop: `1px solid ${msg.from === '我' ? 'rgba(255,255,255,0.2)' : '#e2e8f0'}`,
+                      borderTop: `1px solid ${msg.from === meText ? 'rgba(255,255,255,0.2)' : '#e2e8f0'}`,
                       fontSize: '14px',
-                      color: msg.from === '我' 
+                      color: msg.from === meText 
                         ? 'rgba(255,255,255,0.9)' 
                         : '#666',
                       fontStyle: 'italic',
@@ -3547,9 +3549,9 @@ const MessagePage: React.FC = () => {
                   
                   <div style={{ 
                     fontSize: 12, 
-                    color: msg.from === '系统' 
+                    color: msg.from === systemText 
                       ? '#6b7280' 
-                      : msg.from === '我' 
+                      : msg.from === meText 
                         ? 'rgba(255,255,255,0.7)' 
                         : '#888', 
                     marginTop: 4,
@@ -3572,7 +3574,7 @@ const MessagePage: React.FC = () => {
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: msg.from === '我' 
+                          color: msg.from === meText 
                             ? 'rgba(255,255,255,0.7)' 
                             : '#888',
                           fontSize: '11px',
@@ -3588,17 +3590,17 @@ const MessagePage: React.FC = () => {
                         }}
                         onMouseEnter={(e) => {
                           if (!isTranslating) {
-                            e.currentTarget.style.background = msg.from === '我' 
+                            e.currentTarget.style.background = msg.from === meText 
                               ? 'rgba(255,255,255,0.1)' 
                               : '#f3f4f6';
-                            e.currentTarget.style.color = msg.from === '我' 
+                            e.currentTarget.style.color = msg.from === meText 
                               ? '#fff' 
                               : '#3b82f6';
                           }
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = msg.from === '我' 
+                          e.currentTarget.style.color = msg.from === meText 
                             ? 'rgba(255,255,255,0.7)' 
                             : '#888';
                         }}
@@ -3833,7 +3835,7 @@ const MessagePage: React.FC = () => {
                         e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.2)';
                       }}
                     >
-                      🚪 结束对话
+                      🚪 {t('messages.endChat') || '结束对话'}
                     </button>
                   )}
                   
@@ -3934,7 +3936,7 @@ const MessagePage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {uploadingImage ? '发送中...' : '发送图片'}
+                    {uploadingImage ? t('messages.sending') : t('messages.sendImage')}
                   </button>
                 </div>
               </div>
@@ -4173,7 +4175,7 @@ const MessagePage: React.FC = () => {
                   return isDisabled;
                 })()}
               >
-                {isSending ? '发送中...' : '发送'}
+                {isSending ? t('messages.sending') : t('messages.send')}
               </button>
         </div>
       </div>
@@ -4211,7 +4213,7 @@ const MessagePage: React.FC = () => {
               color: '#1e293b',
               textAlign: 'center'
             }}>
-              💬 评价客服服务
+              💬 {t('messages.rateService')}
             </h3>
             
             <div style={{ marginBottom: '20px' }}>
@@ -4223,7 +4225,7 @@ const MessagePage: React.FC = () => {
                 color: '#374151',
                 textAlign: 'center'
               }}>
-                请为本次客服服务评分：
+                {t('messages.rateServicePrompt')}
               </label>
               
               {/* 交互式星星评分 */}
@@ -4302,11 +4304,11 @@ const MessagePage: React.FC = () => {
                 margin: '0 auto',
                 minWidth: '120px'
               }}>
-                {rating === 1 && '😞 很不满意'}
-                {rating === 2 && '😕 不满意'}
-                {rating === 3 && '😐 一般'}
-                {rating === 4 && '😊 满意'}
-                {rating === 5 && '😍 非常满意'}
+                {rating === 1 && t('messages.ratingVeryDissatisfied')}
+                {rating === 2 && t('messages.ratingDissatisfied')}
+                {rating === 3 && t('messages.ratingNeutral')}
+                {rating === 4 && t('messages.ratingSatisfied')}
+                {rating === 5 && t('messages.ratingVerySatisfied')}
               </div>
               
               {/* 评分数字显示 */}
@@ -4316,7 +4318,7 @@ const MessagePage: React.FC = () => {
                 fontSize: '14px',
                 color: '#6b7280'
               }}>
-                当前评分: {rating} 星
+                {t('messages.currentRating', { rating })}
               </div>
             </div>
 
@@ -4328,12 +4330,12 @@ const MessagePage: React.FC = () => {
                 fontWeight: '600',
                 color: '#374151'
               }}>
-                评价内容（可选）：
+                {t('messages.ratingComment')}：
               </label>
               <textarea
                 value={ratingComment}
                 onChange={(e) => setRatingComment(e.target.value)}
-                placeholder="请分享您对本次客服服务的感受..."
+                placeholder={t('messages.ratingCommentPlaceholder')}
                 style={{
                   width: '100%',
                   minHeight: '80px',
@@ -4387,7 +4389,7 @@ const MessagePage: React.FC = () => {
                   e.currentTarget.style.background = '#f3f4f6';
                 }}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSubmitRating}
@@ -4412,7 +4414,7 @@ const MessagePage: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                提交评价
+                {t('messages.submitRating')}
               </button>
             </div>
           </div>
@@ -4476,7 +4478,7 @@ const MessagePage: React.FC = () => {
               fontWeight: '600',
               color: '#1f2937'
             }}>
-              📷 发送图片
+              📷 {t('messages.sendImage')}
             </div>
             
             {/* 图片预览 */}
