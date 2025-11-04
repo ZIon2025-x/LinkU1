@@ -22,7 +22,7 @@ from app.config import get_settings
 settings = get_settings()
 
 ADMIN_SESSION_EXPIRE_HOURS = int(os.getenv("ADMIN_SESSION_EXPIRE_HOURS", "2"))  # 管理员会话2小时
-ADMIN_MAX_ACTIVE_SESSIONS = int(os.getenv("ADMIN_MAX_ACTIVE_SESSIONS", "3"))  # 管理员最多3个活跃会话
+ADMIN_MAX_ACTIVE_SESSIONS = int(os.getenv("ADMIN_MAX_ACTIVE_SESSIONS", "1"))  # 管理员最多1个活跃会话（安全要求）
 
 # 会话存储
 try:
@@ -116,7 +116,7 @@ class AdminAuthManager:
     
     @staticmethod
     def create_session(admin_id: str, request: Request) -> AdminSessionInfo:
-        """创建管理员会话"""
+        """创建管理员会话（带会话数量限制）"""
         session_id = AdminAuthManager.generate_session_id()
         current_time = datetime.utcnow()
         
@@ -125,6 +125,17 @@ class AdminAuthManager:
         client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
         device_fingerprint = AdminAuthManager.get_device_fingerprint(request)
+        
+        # 清理过期会话（先清理，再检查数量）
+        AdminAuthManager._cleanup_expired_sessions(admin_id)
+        
+        # 安全检查：每个管理员最多只能有1个活跃会话
+        # 创建新会话前，删除该管理员的所有旧会话（包括活跃和未过期的）
+        active_sessions = AdminAuthManager._get_active_sessions(admin_id)
+        if len(active_sessions) > 0:
+            # 删除该管理员的所有现有会话（安全策略：单会话登录）
+            deleted_count = AdminAuthManager.delete_all_sessions(admin_id)
+            logger.warning(f"[ADMIN_AUTH] 安全策略：管理员 {admin_id} 已有 {len(active_sessions)} 个活跃会话，创建新会话前已删除所有旧会话（共 {deleted_count} 个）")
         
         # 创建会话信息
         session_info = AdminSessionInfo(
@@ -140,10 +151,7 @@ class AdminAuthManager:
         # 存储会话
         AdminAuthManager._store_session(session_info)
         
-        # 清理过期会话
-        AdminAuthManager._cleanup_expired_sessions(admin_id)
-        
-        logger.info(f"[ADMIN_AUTH] 创建管理员会话: {admin_id}, session_id: {session_id[:8]}...")
+        logger.info(f"[ADMIN_AUTH] 创建管理员会话: {admin_id}, session_id: {session_id[:8]}..., 当前活跃会话数: {len(AdminAuthManager._get_active_sessions(admin_id))}")
         return session_info
     
     @staticmethod
@@ -324,8 +332,33 @@ class AdminAuthManager:
     def _cleanup_expired_sessions(admin_id: str):
         """清理特定管理员的过期会话（私有方法）"""
         if USE_REDIS:
-            # Redis会自动过期，无需手动清理
-            pass
+            # Redis会自动过期，但我们可以手动清理标记为不活跃的会话
+            pattern = f"admin_session:{admin_id}:*"
+            keys = redis_client.keys(pattern)
+            cleaned_count = 0
+            
+            for key in keys:
+                key_str = key.decode() if isinstance(key, bytes) else key
+                data = safe_redis_get(key_str)
+                if data:
+                    # 检查是否被标记为不活跃
+                    if not data.get('is_active', True):
+                        redis_client.delete(key_str)
+                        cleaned_count += 1
+                    else:
+                        # 检查时间过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            try:
+                                last_activity = datetime.fromisoformat(last_activity_str)
+                                if datetime.utcnow() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                    redis_client.delete(key_str)
+                                    cleaned_count += 1
+                            except (ValueError, TypeError):
+                                pass
+            
+            if cleaned_count > 0:
+                logger.info(f"[ADMIN_AUTH] 清理了 {cleaned_count} 个过期会话（管理员: {admin_id}）")
         else:
             # 清理内存中的过期会话
             current_time = datetime.utcnow()
@@ -339,6 +372,47 @@ class AdminAuthManager:
             
             for session_id in expired_sessions:
                 del admin_active_sessions[session_id]
+    
+    @staticmethod
+    def _get_active_sessions(admin_id: str) -> list:
+        """获取管理员的活跃会话列表"""
+        active_sessions = []
+        
+        if USE_REDIS:
+            pattern = f"admin_session:{admin_id}:*"
+            keys = redis_client.keys(pattern)
+            
+            for key in keys:
+                key_str = key.decode() if isinstance(key, bytes) else key
+                data = safe_redis_get(key_str)
+                if data:
+                    # 检查会话是否有效
+                    is_active = data.get('is_active', True)
+                    if is_active:
+                        # 检查是否过期
+                        last_activity_str = data.get('last_activity', data.get('created_at'))
+                        if last_activity_str:
+                            try:
+                                last_activity = datetime.fromisoformat(last_activity_str)
+                                if datetime.utcnow() - last_activity <= timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                    active_sessions.append(data)
+                            except (ValueError, TypeError):
+                                pass
+        else:
+            # 从内存获取
+            current_time = datetime.utcnow()
+            for session_id, session in admin_active_sessions.items():
+                if session.admin_id == admin_id and session.is_active:
+                    expire_time = session.last_activity + timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS)
+                    if current_time <= expire_time:
+                        active_sessions.append({
+                            'session_id': session.session_id,
+                            'admin_id': session.admin_id,
+                            'created_at': session.created_at.isoformat() if session.created_at else None,
+                            'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                        })
+        
+        return active_sessions
 
 def create_admin_session(admin_id: str, request: Request) -> str:
     """创建管理员会话并返回会话ID"""
