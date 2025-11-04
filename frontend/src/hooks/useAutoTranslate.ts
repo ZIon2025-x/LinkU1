@@ -43,11 +43,6 @@ export const useAutoTranslate = (
   const [isTranslating, setIsTranslating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
 
-  // 获取目标语言
-  const getTargetLanguage = useCallback(() => {
-    return language === 'zh' ? 'en' : 'zh';
-  }, [language]);
-
   // 执行翻译
   const performTranslation = useCallback(async () => {
     if (!text || !text.trim()) {
@@ -64,7 +59,8 @@ export const useAutoTranslate = (
       return;
     }
 
-    const targetLang = getTargetLanguage();
+    // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+    const targetLang = language;
     const cacheKey = getCacheKey(text, targetLang);
 
     // 检查缓存
@@ -75,7 +71,8 @@ export const useAutoTranslate = (
 
     setIsTranslating(true);
     try {
-      const translated = await translate(text, targetLang);
+      // 传递源语言，帮助后端更准确翻译
+      const translated = await translate(text, targetLang, detectedLang);
       setTranslatedText(translated);
       // 缓存翻译结果
       translationCache.set(cacheKey, translated);
@@ -85,7 +82,7 @@ export const useAutoTranslate = (
     } finally {
       setIsTranslating(false);
     }
-  }, [text, language, getTargetLanguage, translate]);
+  }, [text, language, translate]);
 
   // 当文本或语言改变时自动翻译
   useEffect(() => {
