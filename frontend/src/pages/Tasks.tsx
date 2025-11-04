@@ -723,7 +723,25 @@ const Tasks: React.FC = () => {
       const response = await api.get('/api/tasks', { params });
       const data = response.data;
       
-      const tasksList = data.tasks || [];
+      const tasksList = (data.tasks || []).map((task: any) => {
+        // 确保 images 是数组格式
+        if (task.images) {
+          if (typeof task.images === 'string') {
+            try {
+              task.images = JSON.parse(task.images);
+            } catch (e) {
+              console.error('解析任务图片失败:', e, task.images);
+              task.images = [];
+            }
+          }
+          if (!Array.isArray(task.images)) {
+            task.images = [];
+          }
+        } else {
+          task.images = [];
+        }
+        return task;
+      });
       
       setTasks(tasksList);
       setTotal(data.total || 0);
@@ -2249,7 +2267,7 @@ const Tasks: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    {/* 任务类型图标占位符 - 始终显示在背景层，当没有图片或图片加载失败时可见 */}
+                    {/* 任务类型图标占位符 - 仅在没有图片时显示 */}
                     {(!task.images || !Array.isArray(task.images) || task.images.length === 0 || !task.images[0]) && (
                       <div 
                         className={`task-icon-placeholder-${task.id}`}
@@ -2262,7 +2280,7 @@ const Tasks: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          zIndex: 1,
+                          zIndex: 0,
                           pointerEvents: 'none'
                         }}>
                         <div style={{
@@ -2278,56 +2296,70 @@ const Tasks: React.FC = () => {
                     )}
                     
                     {/* 如果有任务图片，显示图片 */}
-                    {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
-                      <img
-                        key={`task-img-${task.id}-${task.images[0]}`}
-                        src={task.images[0]}
-                        alt={task.title}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          zIndex: 1,
-                          backgroundColor: 'transparent'
-                        }}
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error('任务图片加载失败:', e.currentTarget.src, '任务ID:', task.id);
-                          // 图片加载失败，隐藏图片并显示占位符图标
-                          e.currentTarget.style.display = 'none';
-                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                          if (!placeholder) {
-                            // 如果占位符不存在，创建一个
-                            const placeholderDiv = document.createElement('div');
-                            placeholderDiv.className = `task-icon-placeholder-${task.id}`;
-                            placeholderDiv.style.cssText = `
-                              position: absolute;
-                              top: 0;
-                              left: 0;
-                              width: 100%;
-                              height: 100%;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              z-index: 1;
-                              pointer-events: none;
-                            `;
-                            placeholderDiv.innerHTML = `
-                              <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
-                                ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
-                              </div>
-                            `;
-                            e.currentTarget.parentElement?.appendChild(placeholderDiv);
-                          } else {
-                            placeholder.style.opacity = '1';
-                            placeholder.style.display = 'flex';
-                          }
-                        }}
-                      />
-                    )}
+                    {(() => {
+                      const hasImages = task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0];
+                      if (hasImages) {
+                        console.log('任务有图片，准备显示:', task.id, task.images[0]);
+                      }
+                      return hasImages ? (
+                        <img
+                          key={`task-img-${task.id}-${String(task.images[0])}`}
+                          src={String(task.images[0])}
+                          alt={task.title}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            zIndex: 1,
+                            backgroundColor: 'transparent',
+                            display: 'block'
+                          }}
+                          loading="lazy"
+                          onLoad={(e) => {
+                            console.log('任务图片加载成功:', e.currentTarget.src, '任务ID:', task.id);
+                            // 图片加载成功，确保占位符图标隐藏
+                            const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                            if (placeholder) {
+                              placeholder.style.display = 'none';
+                            }
+                          }}
+                          onError={(e) => {
+                            console.error('任务图片加载失败:', e.currentTarget.src, '任务ID:', task.id, '任务图片数据:', task.images);
+                            // 图片加载失败，隐藏图片并显示占位符图标
+                            e.currentTarget.style.display = 'none';
+                            const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                            if (!placeholder) {
+                              // 如果占位符不存在，创建一个
+                              const placeholderDiv = document.createElement('div');
+                              placeholderDiv.className = `task-icon-placeholder-${task.id}`;
+                              placeholderDiv.style.cssText = `
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                z-index: 0;
+                                pointer-events: none;
+                              `;
+                              placeholderDiv.innerHTML = `
+                                <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
+                                  ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                                </div>
+                              `;
+                              e.currentTarget.parentElement?.appendChild(placeholderDiv);
+                            } else {
+                              placeholder.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null;
+                    })()}
                     
                     {/* 图片遮罩层，确保文字清晰可读 - 放在图片之上 */}
                     <div style={{
