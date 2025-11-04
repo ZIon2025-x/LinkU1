@@ -2256,44 +2256,74 @@ const Tasks: React.FC = () => {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)',
-                      zIndex: 1
+                      background: task.images && Array.isArray(task.images) && task.images.length > 0
+                        ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)'
+                        : 'transparent',
+                      zIndex: 2
                     }} />
                     
-                    {/* 显示任务图片或默认图片 */}
-                    <img
-                      src={task.images && Array.isArray(task.images) && task.images.length > 0 
-                        ? task.images[0] 
-                        : getTaskTypeDefaultImage(task.task_type)}
-                      alt={task.title}
+                    {/* 任务类型图标占位符 - 始终显示在背景层，当没有图片或图片加载失败时可见 */}
+                    <div 
+                      className={`task-icon-placeholder-${task.id}`}
                       style={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
-                        zIndex: 0
-                      }}
-                      loading="lazy"
-                      onError={(e) => {
-                        // 如果图片加载失败，尝试使用默认图片或显示渐变背景
-                        const currentSrc = e.currentTarget.src;
-                        const defaultImage = getTaskTypeDefaultImage(task.task_type);
-                        
-                        // 如果当前不是默认图片，尝试加载默认图片
-                        if (!currentSrc.includes(defaultImage) && task.images && Array.isArray(task.images) && task.images.length > 0) {
-                          e.currentTarget.src = defaultImage;
-                        } else {
-                          // 如果默认图片也失败，显示渐变背景
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 0,
+                        opacity: (!task.images || !Array.isArray(task.images) || task.images.length === 0) ? 1 : 0,
+                        pointerEvents: 'none'
+                      }}>
+                      <div style={{
+                        fontSize: isMobile ? '48px' : '64px',
+                        opacity: 0.6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                      </div>
+                    </div>
+                    
+                    {/* 如果有任务图片，显示图片 */}
+                    {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
+                      <img
+                        key={`task-img-${task.id}-${task.images[0]}`}
+                        src={task.images[0]}
+                        alt={task.title}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          zIndex: 1,
+                          backgroundColor: 'transparent'
+                        }}
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('任务图片加载失败:', e.currentTarget.src, '任务ID:', task.id);
+                          // 图片加载失败，隐藏图片并显示占位符图标
                           e.currentTarget.style.display = 'none';
-                          const parent = e.currentTarget.parentElement;
-                          if (parent) {
-                            parent.style.background = `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`;
+                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                          if (placeholder) {
+                            placeholder.style.opacity = '1';
                           }
-                        }
-                      }}
-                    />
+                        }}
+                        onLoad={(e) => {
+                          // 图片加载成功，确保占位符图标隐藏
+                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                          if (placeholder) {
+                            placeholder.style.opacity = '0';
+                          }
+                        }}
+                      />
+                    )}
 
                     {/* 地点 - 左上角 */}
                     <div style={{
