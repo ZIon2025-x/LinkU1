@@ -975,6 +975,7 @@
     "translateTitle": "翻译标题",
     "translateDescription": "翻译描述",
     "showOriginal": "显示原文",
+    "showTranslation": "查看翻译",
     "taskConfirmedComplete": "任务已确认完成！",
     "priceUpdateSuccess": "价格更新成功！",
     "priceUpdateFailed": "更新价格失败",

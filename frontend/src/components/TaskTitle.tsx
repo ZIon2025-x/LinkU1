@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAutoTranslate } from '../hooks/useAutoTranslate';
-import { Language } from '../contexts/LanguageContext';
+import { Language, useLanguage } from '../contexts/LanguageContext';
 
 interface TaskTitleProps {
   title: string;
@@ -22,6 +22,7 @@ const TaskTitle: React.FC<TaskTitleProps> = ({
   showOriginalButton = false,  // 默认不显示按钮，任务卡片上不需要
   autoTranslate = true  // 自动翻译，但会检测文本语言，只在需要时翻译
 }) => {
+  const { t } = useLanguage();
   const { translatedText, isTranslating, showOriginal, toggleOriginal } = useAutoTranslate(
     title,
     language,
@@ -82,7 +83,7 @@ const TaskTitle: React.FC<TaskTitleProps> = ({
             e.currentTarget.style.opacity = '0.6';
             e.currentTarget.style.background = 'transparent';
           }}
-          title={showOriginal ? '查看翻译' : '查看原文'}
+          title={showOriginal ? t('taskDetail.showTranslation') : t('taskDetail.showOriginal')}
         >
           {showOriginal ? '🌐' : '📄'}
         </button>

@@ -9,7 +9,7 @@ export type Language = 'en' | 'zh';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language, navigate?: (path: string) => void) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, any>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -128,7 +128,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   }, []);
 
   // 翻译函数
-  const t = (key: string): string => {
+  const t = (key: string, params?: Record<string, any>): string => {
     const keys = key.split('.');
     let value: any = translations[language];
     
@@ -149,7 +149,16 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       }
     }
     
-    return typeof value === 'string' ? value : key;
+    let result = typeof value === 'string' ? value : key;
+    
+    // 如果有参数，进行插值替换
+    if (params && typeof result === 'string') {
+      Object.keys(params).forEach(paramKey => {
+        result = result.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(params[paramKey]));
+      });
+    }
+    
+    return result;
   };
 
   const value = React.useMemo(() => ({

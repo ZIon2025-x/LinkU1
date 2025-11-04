@@ -1000,6 +1000,7 @@
     "translateTitle": "Translate Title",
     "translateDescription": "Translate Description",
     "showOriginal": "Show Original",
+    "showTranslation": "Show Translation",
     "taskConfirmedComplete": "Task confirmed as complete!",
     "priceUpdateSuccess": "Price updated successfully!",
     "priceUpdateFailed": "Failed to update price",
