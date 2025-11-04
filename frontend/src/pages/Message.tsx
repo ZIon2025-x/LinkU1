@@ -352,7 +352,7 @@ const MessagePage: React.FC = () => {
   // 格式化时间为用户时区 - 使用新的统一时间处理系统
   const formatTime = (timeString: string) => {
     try {
-      return TimeHandlerV2.formatDetailedTime(timeString, userTimezone);
+      return TimeHandlerV2.formatDetailedTime(timeString, userTimezone, t);
     } catch (error) {
       console.error('时间格式化错误:', error);
       return timeString;
@@ -371,13 +371,13 @@ const MessagePage: React.FC = () => {
     if (file) {
       // 检查文件大小（限制为5MB）
       if (file.size > 5 * 1024 * 1024) {
-        alert('图片大小不能超过5MB');
+        alert(t('messages.imageTooLarge'));
         return;
       }
       
       // 检查文件类型
       if (!file.type.startsWith('image/')) {
-        alert('请选择图片文件');
+        alert(t('messages.pleaseSelectImage'));
         return;
       }
       
@@ -405,7 +405,7 @@ const MessagePage: React.FC = () => {
     if (file) {
       // 检查文件大小（限制为10MB）
       if (file.size > 10 * 1024 * 1024) {
-        alert('文件大小不能超过10MB');
+        alert(t('messages.fileTooLarge'));
         return;
       }
       
@@ -710,7 +710,7 @@ const MessagePage: React.FC = () => {
             alignItems: 'center',
             gap: '4px'
           }}>
-            📷 私密图片
+            📷 {t('messages.privateImage')}
             <span style={{ 
               fontSize: '10px', 
               background: '#fef3c7', 
@@ -719,7 +719,7 @@ const MessagePage: React.FC = () => {
               color: '#92400e',
               fontWeight: '600'
             }}>
-              仅聊天可见
+              {t('messages.chatOnly')}
             </span>
           </div>
           <div style={{ 
@@ -738,7 +738,7 @@ const MessagePage: React.FC = () => {
                 objectFit: 'cover',
                 display: 'block'
               }}
-              alt="私密图片"
+              alt={t('messages.privateImage')}
             />
           </div>
         </div>
@@ -755,7 +755,7 @@ const MessagePage: React.FC = () => {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '14px', opacity: 0.8 }}>
-            📎 文件
+            📎 {t('messages.file')}
           </div>
           <div style={{
             padding: '12px',
@@ -796,7 +796,7 @@ const MessagePage: React.FC = () => {
                 fontSize: '12px', 
                 color: '#6b7280' 
               }}>
-                点击下载文件
+                {t('messages.clickToDownload')}
               </div>
             </div>
             <div style={{ 
@@ -836,13 +836,13 @@ const MessagePage: React.FC = () => {
       const errorMessage: Message = {
         id: Date.now(),
         from: '系统',
-        content: '对话已结束，无法发送消息',
+        content: t('messages.chatEndedMessage'),
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
       
       // 显示提示并引导用户重新联系
-      alert('对话已结束。如需继续咨询，请重新联系客服。');
+      alert(t('messages.chatEndedAlert'));
       return;
     }
     
@@ -1099,7 +1099,7 @@ const MessagePage: React.FC = () => {
               // 如果获取失败，使用默认值
               const tempContact: Contact = {
                 id: targetUserId!,
-                name: `用户${targetUserId}`,
+                name: `${t('messages.user')}${targetUserId}`,
                 avatar: "/static/avatar1.png",
                 email: "",
                 user_level: 1,
@@ -1527,7 +1527,7 @@ const MessagePage: React.FC = () => {
               const endMessage: Message = {
                 id: Date.now(),
                 from: '系统',
-                content: msg.type === 'chat_timeout' && msg.content ? msg.content : '对话已结束',
+                content: msg.type === 'chat_timeout' && msg.content ? msg.content : t('messages.chatEnded'),
                 created_at: new Date().toISOString(),
               };
               setMessages(prev => [...prev, endMessage]);
@@ -1695,7 +1695,7 @@ const MessagePage: React.FC = () => {
               const endMessage: Message = {
                 id: Date.now(),
                 from: '系统',
-                content: '对话已结束',
+                content: t('messages.chatEnded'),
                 created_at: new Date().toISOString(),
               };
               setMessages(prev => [...prev, endMessage]);
@@ -2134,7 +2134,7 @@ const MessagePage: React.FC = () => {
         const successMessage: Message = {
           id: Date.now(),
           from: '系统',
-          content: `已为您连接到在线客服 ${response.service.name}，请稍候...`,
+          content: t('messages.connectedToService', { name: response.service.name }),
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, successMessage]);
@@ -2323,7 +2323,7 @@ const MessagePage: React.FC = () => {
             fontSize: '18px',
             color: '#3b82f6',
             fontWeight: '600'
-          }}>加载消息中心...</div>
+          }}>{t('messages.loadingMessageCenter')}</div>
         </div>
       </div>
     );
@@ -2401,7 +2401,7 @@ const MessagePage: React.FC = () => {
         color: 'transparent',
         background: 'transparent'
       }}>
-        消息中心
+        {t('messages.messageCenter')}
       </h1>
       <div style={{ 
         width: '100%',
@@ -2468,7 +2468,7 @@ const MessagePage: React.FC = () => {
           >
             {isMobile ? '← 返回首页' : '← 返回'}
         </div>
-            💬 消息中心
+            💬 {t('messages.messageCenter')}
             {totalUnreadCount > 0 && (
               <span style={{
                 background: '#ef4444',
@@ -2746,25 +2746,8 @@ const MessagePage: React.FC = () => {
               contacts.map(c => {
                 // 格式化最新消息时间
                 const formatLastMessageTime = (timeString: string | null) => {
-                  if (!timeString) return '暂无消息';
-                  
-                  const now = new Date();
-                  const messageTime = new Date(timeString);
-                  const diffInMinutes = Math.floor((now.getTime() - messageTime.getTime()) / (1000 * 60));
-                  
-                  if (diffInMinutes < 1) return '刚刚';
-                  if (diffInMinutes < 60) return `${diffInMinutes}分钟前`;
-                  
-                  const diffInHours = Math.floor(diffInMinutes / 60);
-                  if (diffInHours < 24) return `${diffInHours}小时前`;
-                  
-                  const diffInDays = Math.floor(diffInHours / 24);
-                  if (diffInDays < 7) return `${diffInDays}天前`;
-                  
-                  return messageTime.toLocaleDateString('zh-CN', {
-                    month: 'short',
-                    day: 'numeric'
-                  });
+                  if (!timeString) return t('messages.noMessage') || '暂无消息';
+                  return TimeHandlerV2.formatLastMessageTime(timeString, userTimezone, t);
                 };
 
                 return (
@@ -2866,7 +2849,7 @@ const MessagePage: React.FC = () => {
                         alignItems: 'center',
                         gap: '8px'
                       }}>
-                        {c.name || `用户${c.id}`}
+                        {c.name || `${t('messages.user')}${c.id}`}
                       </div>
                       <div style={{ 
                         fontSize: '12px', 
@@ -3042,7 +3025,7 @@ const MessagePage: React.FC = () => {
                     alignItems: 'center',
                     gap: '8px'
                   }}>
-                    {activeContact.name || `用户${activeContact.id}`}
+                    {activeContact.name || `${t('messages.user')}${activeContact.id}`}
         </div>
                   <div style={{ 
                     fontSize: '14px', 
@@ -3057,7 +3040,7 @@ const MessagePage: React.FC = () => {
                       background: '#10b981',
                       borderRadius: '50%'
                     }}></div>
-                    <span>在线</span>
+                    <span>{t('messages.online')}</span>
                   </div>
                 </div>
               </>
@@ -3072,13 +3055,13 @@ const MessagePage: React.FC = () => {
                   fontWeight: '600',
                   marginBottom: '4px'
                 }}>
-                  消息中心
+                  {t('messages.messageCenter')}
                 </div>
                 <div style={{ 
                   fontSize: '14px',
                   opacity: 0.7
                 }}>
-                  选择左侧联系人开始聊天
+                  {t('messages.selectContact')}
                 </div>
               </div>
             )}
@@ -3261,7 +3244,7 @@ const MessagePage: React.FC = () => {
                     color: '#374151',
                     marginBottom: '8px'
                   }}>
-                    联系在线客服
+                    {t('messages.contactCustomerService')}
                   </div>
                   <div style={{
                     fontSize: '16px',
@@ -3320,7 +3303,7 @@ const MessagePage: React.FC = () => {
                           const successMessage: Message = {
                             id: Date.now(),
                             from: '系统',
-                            content: `已为您连接到在线客服 ${response.service.name}，请稍候...`,
+                            content: t('messages.connectedToService', { name: response.service.name }),
                             created_at: new Date().toISOString()
                           };
                           setMessages(prev => [...prev, successMessage]);
@@ -3388,7 +3371,7 @@ const MessagePage: React.FC = () => {
                     color: '#374151',
                     marginBottom: isMobile ? '6px' : '8px'
                   }}>
-                    欢迎使用消息中心
+                    {t('messages.welcomeMessageCenter')}
                   </div>
                   <div style={{
                     fontSize: isMobile ? '14px' : '16px',
@@ -3619,10 +3602,10 @@ const MessagePage: React.FC = () => {
                             ? 'rgba(255,255,255,0.7)' 
                             : '#888';
                         }}
-                        title={hasTranslation ? '隐藏翻译' : '翻译'}
+                        title={hasTranslation ? t('messages.hideTranslation') : t('messages.translate')}
                       >
                         {isTranslating ? '⏳' : hasTranslation ? '🌐' : '🌐'}
-                        <span>{isTranslating ? '翻译中...' : hasTranslation ? '隐藏' : '翻译'}</span>
+                        <span>{isTranslating ? t('messages.translating') : hasTranslation ? t('messages.hide') : t('messages.translate')}</span>
                       </button>
                     )}
                   </div>
@@ -3777,7 +3760,7 @@ const MessagePage: React.FC = () => {
                           backgroundColor: serviceStatusLoading ? '#6b7280' : (serviceAvailable ? '#10b981' : '#ef4444'),
                           animation: serviceStatusLoading ? 'pulse 1.5s ease-in-out infinite' : 'none'
                         }}></div>
-                        {serviceStatusLoading ? '检查客服状态中...' : (serviceAvailable ? '客服在线' : '客服离线')}
+                        {serviceStatusLoading ? t('messages.checkingCustomerService') : (serviceAvailable ? t('messages.customerServiceOnline') : t('messages.customerServiceOffline'))}
                       </div>
                       
                       <button
@@ -3818,8 +3801,8 @@ const MessagePage: React.FC = () => {
                         }}
                       >
                         {isConnectingToService ? '⏳ 连接中...' : 
-                         !serviceAvailable ? '🚫 客服离线' : 
-                         '🎧 联系在线客服'}
+                         !serviceAvailable ? `🚫 ${t('messages.customerServiceOffline')}` : 
+                         `🎧 ${t('messages.contactCustomerService')}`}
                       </button>
                     </div>
                   ) : (
@@ -3977,7 +3960,7 @@ const MessagePage: React.FC = () => {
                     fontWeight: '600',
                     color: '#166534'
                   }}>
-                    📎 文件预览
+                    📎 {t('messages.filePreview')}
                   </span>
                   <button
                     onClick={cancelFileSelection}
@@ -4029,7 +4012,7 @@ const MessagePage: React.FC = () => {
                       transition: 'all 0.3s ease'
                     }}
                   >
-                    {uploadingFile ? '发送中...' : '发送文件'}
+                    {uploadingFile ? t('messages.sending') : t('messages.sendFile')}
                   </button>
                 </div>
               </div>

@@ -119,10 +119,12 @@ export class TimeHandlerV2 {
    * 格式化最后消息时间（智能格式）
    * @param utcTimeString UTC时间字符串
    * @param userTimezone 用户时区
+   * @param t 翻译函数（可选）
    */
   static formatLastMessageTime(
     utcTimeString: string | null, 
-    userTimezone?: string
+    userTimezone?: string,
+    t?: (key: string, params?: any) => string
   ): string {
     if (!utcTimeString) return '';
     
@@ -154,16 +156,32 @@ export class TimeHandlerV2 {
       const diffInDays = nowUK.diff(messageTimeUK, 'day');
       
       // 根据时间差显示不同格式
-      if (diffInMinutes < 1) {
-        return '刚刚';
-      } else if (diffInMinutes < 60) {
-        return `${diffInMinutes}分钟前`;
-      } else if (diffInHours < 24) {
-        return `${diffInHours}小时前`;
-      } else if (diffInDays < 7) {
-        return `${diffInDays}天前`;
+      if (t) {
+        // 使用翻译函数
+        if (diffInMinutes < 1) {
+          return t('time.justNow');
+        } else if (diffInMinutes < 60) {
+          return t('time.minutesAgo', { count: diffInMinutes });
+        } else if (diffInHours < 24) {
+          return t('time.hoursAgo', { count: diffInHours });
+        } else if (diffInDays < 7) {
+          return t('time.daysAgo', { count: diffInDays });
+        } else {
+          return messageTimeUK.format('MM/DD');
+        }
       } else {
-        return messageTimeUK.format('MM/DD');
+        // 如果没有翻译函数，使用英文
+        if (diffInMinutes < 1) {
+          return 'Just now';
+        } else if (diffInMinutes < 60) {
+          return `${diffInMinutes} minutes ago`;
+        } else if (diffInHours < 24) {
+          return `${diffInHours} hours ago`;
+        } else if (diffInDays < 7) {
+          return `${diffInDays} days ago`;
+        } else {
+          return messageTimeUK.format('MM/DD');
+        }
       }
     } catch (error) {
       console.error('最后消息时间格式化错误:', error);
@@ -175,10 +193,12 @@ export class TimeHandlerV2 {
    * 格式化详细时间（带时区信息）
    * @param utcTimeString UTC时间字符串
    * @param userTimezone 用户时区
+   * @param t 翻译函数（可选）
    */
   static formatDetailedTime(
     utcTimeString: string, 
-    userTimezone?: string
+    userTimezone?: string,
+    t?: (key: string) => string
   ): string {
     try {
       const tz = userTimezone || this.getUserTimezone();
@@ -206,7 +226,13 @@ export class TimeHandlerV2 {
       let tzDisplay;
       
       if (tz === 'Europe/London') {
-        tzDisplay = isDST ? 'BST (英国夏令时)' : 'GMT (英国冬令时)';
+        if (t) {
+          // 使用翻译函数
+          tzDisplay = isDST ? t('time.bst') : t('time.gmt');
+        } else {
+          // 如果没有翻译函数，使用英文缩写
+          tzDisplay = isDST ? 'BST' : 'GMT';
+        }
       } else {
         tzDisplay = tz;
       }

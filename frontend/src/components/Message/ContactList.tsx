@@ -1,5 +1,6 @@
 import React from 'react';
 import { TimeHandlerV2 } from '../../utils/timeUtils';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Contact {
   id: string;
@@ -29,6 +30,8 @@ const ContactList: React.FC<ContactListProps> = ({
   unreadCounts,
   loading
 }) => {
+  const { t } = useLanguage();
+  
   const getLevelBadge = (level: number) => {
     switch (level) {
       case 2:
@@ -59,7 +62,7 @@ const ContactList: React.FC<ContactListProps> = ({
     if (!timestamp) return '';
     
     try {
-      return TimeHandlerV2.formatLastMessageTime(timestamp);
+      return TimeHandlerV2.formatLastMessageTime(timestamp, undefined, t);
     } catch (error) {
       console.error('最后消息时间格式化错误:', error);
       return '';
