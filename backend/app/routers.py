@@ -5462,9 +5462,7 @@ def get_public_task_experts(
 # 翻译API
 @router.post("/translate")
 async def translate_text(
-    text: str = Body(..., embed=True),
-    target_language: str = Body(..., embed=True),
-    source_language: Optional[str] = Body(None, embed=True),
+    request: Request,
 ):
     """
     翻译文本
@@ -5479,6 +5477,18 @@ async def translate_text(
     - source_language: 检测到的源语言
     """
     try:
+        # 获取请求体
+        body = await request.json()
+        logger.info(f"翻译请求收到: {body}")
+        
+        text = body.get('text', '')
+        target_language = body.get('target_language', 'en')
+        source_language = body.get('source_language')
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="缺少text参数")
+        if not target_language:
+            raise HTTPException(status_code=400, detail="缺少target_language参数")
         try:
             from deep_translator import GoogleTranslator
         except ImportError:
@@ -5498,6 +5508,8 @@ async def translate_text(
         target_lang = lang_map.get(target_language.lower(), target_language)
         source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
         
+        logger.info(f"开始翻译: text={text[:50]}..., target={target_lang}, source={source_lang}")
+        
         # 使用GoogleTranslator进行翻译
         if source_language and source_lang != 'auto':
             translator = GoogleTranslator(source=source_lang, target=target_lang)
@@ -5505,6 +5517,7 @@ async def translate_text(
             translator = GoogleTranslator(target=target_lang)
         
         translated_text = translator.translate(text)
+        logger.info(f"翻译完成: {translated_text[:50]}...")
         
         # 检测源语言（如果未提供）
         detected_source = source_lang if source_lang != 'auto' else 'auto'
@@ -5524,9 +5537,7 @@ async def translate_text(
 
 @router.post("/translate/batch")
 async def translate_batch(
-    texts: list[str] = Body(..., embed=True),
-    target_language: str = Body(..., embed=True),
-    source_language: Optional[str] = Body(None, embed=True),
+    request: Request,
 ):
     """
     批量翻译文本
@@ -5540,6 +5551,19 @@ async def translate_batch(
     - translations: 翻译结果列表
     """
     try:
+        # 获取请求体
+        body = await request.json()
+        logger.info(f"批量翻译请求收到: texts数量={len(body.get('texts', []))}")
+        
+        texts = body.get('texts', [])
+        target_language = body.get('target_language', 'en')
+        source_language = body.get('source_language')
+        
+        if not texts:
+            raise HTTPException(status_code=400, detail="缺少texts参数")
+        if not target_language:
+            raise HTTPException(status_code=400, detail="缺少target_language参数")
+        
         try:
             from deep_translator import GoogleTranslator
         except ImportError:

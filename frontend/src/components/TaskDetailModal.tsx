@@ -555,22 +555,31 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   // 翻译标题
   const handleTranslateTitle = async () => {
-    if (!task || !task.title) return;
+    if (!task || !task.title) {
+      console.log('翻译标题: 任务或标题不存在');
+      return;
+    }
     
     // 如果已有翻译，重置为原文
     if (translatedTitle) {
+      console.log('翻译标题: 重置为原文');
       setTranslatedTitle(null);
       return;
     }
     
+    console.log('翻译标题: 开始翻译', { title: task.title, language, task });
     setIsTranslatingTitle(true);
     try {
       // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
       const targetLang = language === 'zh' ? 'en' : 'zh';
+      console.log('翻译标题: 调用translate函数', { title: task.title, targetLang });
       const translated = await translate(task.title, targetLang);
+      console.log('翻译标题: 翻译成功', { original: task.title, translated });
       setTranslatedTitle(translated);
-    } catch (error) {
+    } catch (error: any) {
       console.error('翻译标题失败:', error);
+      console.error('错误详情:', error.response?.data);
+      alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
     } finally {
       setIsTranslatingTitle(false);
     }
@@ -578,22 +587,31 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   // 翻译描述
   const handleTranslateDescription = async () => {
-    if (!task || !task.description) return;
+    if (!task || !task.description) {
+      console.log('翻译描述: 任务或描述不存在');
+      return;
+    }
     
     // 如果已有翻译，重置为原文
     if (translatedDescription) {
+      console.log('翻译描述: 重置为原文');
       setTranslatedDescription(null);
       return;
     }
     
+    console.log('翻译描述: 开始翻译', { description: task.description.substring(0, 50), language });
     setIsTranslatingDescription(true);
     try {
       // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
       const targetLang = language === 'zh' ? 'en' : 'zh';
+      console.log('翻译描述: 调用translate函数', { targetLang });
       const translated = await translate(task.description, targetLang);
+      console.log('翻译描述: 翻译成功', { translated: translated.substring(0, 50) });
       setTranslatedDescription(translated);
-    } catch (error) {
+    } catch (error: any) {
       console.error('翻译描述失败:', error);
+      console.error('错误详情:', error.response?.data);
+      alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
     } finally {
       setIsTranslatingDescription(false);
     }

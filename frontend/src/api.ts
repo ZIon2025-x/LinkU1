@@ -1237,12 +1237,20 @@ export const translateText = async (
   targetLanguage: string,
   sourceLanguage?: string
 ) => {
-  const res = await api.post('/api/translate', {
-    text,
-    target_language: targetLanguage,
-    ...(sourceLanguage && { source_language: sourceLanguage })
-  });
-  return res.data;
+  console.log('翻译API调用:', { text: text.substring(0, 50), targetLanguage, sourceLanguage });
+  try {
+    const res = await api.post('/api/translate', {
+      text,
+      target_language: targetLanguage,
+      ...(sourceLanguage && { source_language: sourceLanguage })
+    });
+    console.log('翻译API响应:', res.data);
+    return res.data;
+  } catch (error: any) {
+    console.error('翻译API错误:', error);
+    console.error('错误详情:', error.response?.data);
+    throw error;
+  }
 };
 
 // 翻译API - 批量翻译
