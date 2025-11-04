@@ -730,7 +730,6 @@ const Tasks: React.FC = () => {
             try {
               task.images = JSON.parse(task.images);
             } catch (e) {
-              console.error('解析任务图片失败:', e, task.images);
               task.images = [];
             }
           }
@@ -746,7 +745,6 @@ const Tasks: React.FC = () => {
       setTasks(tasksList);
       setTotal(data.total || 0);
     } catch (error) {
-      console.error('加载任务失败:', error);
       setTasks([]);
       setTotal(0);
     } finally {
@@ -2296,70 +2294,62 @@ const Tasks: React.FC = () => {
                     )}
                     
                     {/* 如果有任务图片，显示图片 */}
-                    {(() => {
-                      const hasImages = task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0];
-                      if (hasImages) {
-                        console.log('任务有图片，准备显示:', task.id, task.images[0]);
-                      }
-                      return hasImages ? (
-                        <img
-                          key={`task-img-${task.id}-${String(task.images[0])}`}
-                          src={String(task.images[0])}
-                          alt={task.title}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            zIndex: 1,
-                            backgroundColor: 'transparent',
-                            display: 'block'
-                          }}
-                          loading="lazy"
-                          onLoad={(e) => {
-                            console.log('任务图片加载成功:', e.currentTarget.src, '任务ID:', task.id);
-                            // 图片加载成功，确保占位符图标隐藏
-                            const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                            if (placeholder) {
-                              placeholder.style.display = 'none';
-                            }
-                          }}
-                          onError={(e) => {
-                            console.error('任务图片加载失败:', e.currentTarget.src, '任务ID:', task.id, '任务图片数据:', task.images);
-                            // 图片加载失败，隐藏图片并显示占位符图标
-                            e.currentTarget.style.display = 'none';
-                            const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                            if (!placeholder) {
-                              // 如果占位符不存在，创建一个
-                              const placeholderDiv = document.createElement('div');
-                              placeholderDiv.className = `task-icon-placeholder-${task.id}`;
-                              placeholderDiv.style.cssText = `
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                z-index: 0;
-                                pointer-events: none;
-                              `;
-                              placeholderDiv.innerHTML = `
-                                <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
-                                  ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
-                                </div>
-                              `;
-                              e.currentTarget.parentElement?.appendChild(placeholderDiv);
-                            } else {
-                              placeholder.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null;
-                    })()}
+                    {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
+                      <img
+                        key={`task-img-${task.id}-${String(task.images[0])}`}
+                        src={String(task.images[0])}
+                        alt={task.title}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          zIndex: 1,
+                          backgroundColor: 'transparent',
+                          display: 'block'
+                        }}
+                        loading="lazy"
+                        onLoad={(e) => {
+                          // 图片加载成功，确保占位符图标隐藏
+                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                          if (placeholder) {
+                            placeholder.style.display = 'none';
+                          }
+                        }}
+                        onError={(e) => {
+                          // 图片加载失败，隐藏图片并显示占位符图标
+                          e.currentTarget.style.display = 'none';
+                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
+                          if (!placeholder) {
+                            // 如果占位符不存在，创建一个
+                            const placeholderDiv = document.createElement('div');
+                            placeholderDiv.className = `task-icon-placeholder-${task.id}`;
+                            placeholderDiv.style.cssText = `
+                              position: absolute;
+                              top: 0;
+                              left: 0;
+                              width: 100%;
+                              height: 100%;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              z-index: 0;
+                              pointer-events: none;
+                            `;
+                            placeholderDiv.innerHTML = `
+                              <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
+                                ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                              </div>
+                            `;
+                            e.currentTarget.parentElement?.appendChild(placeholderDiv);
+                          } else {
+                            placeholder.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    )}
                     
                     {/* 图片遮罩层，确保文字清晰可读 - 放在图片之上 */}
                     <div style={{
