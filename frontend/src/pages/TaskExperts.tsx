@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
@@ -284,7 +285,7 @@ const TaskExperts: React.FC = () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('标记通知为已读失败:', error);
-      alert('标记通知为已读失败，请重试');
+      message.error('标记通知为已读失败，请重试');
     }
   };
 
@@ -297,7 +298,7 @@ const TaskExperts: React.FC = () => {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
       console.error('标记所有通知为已读失败:', error);
-      alert('标记所有通知为已读失败，请重试');
+      message.error('标记所有通知为已读失败，请重试');
     }
   };
 

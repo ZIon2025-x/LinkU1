@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message, Modal } from 'antd';
 import api, { 
   getDashboardStats, 
   getUsersForAdmin, 
@@ -223,62 +224,70 @@ const AdminDashboard: React.FC = () => {
 
   const handleCreateCustomerService = async () => {
     if (!newCustomerService.name || !newCustomerService.email || !newCustomerService.password) {
-      alert('请填写完整信息');
+      message.warning('请填写完整信息');
       return;
     }
 
     try {
       await createCustomerService(newCustomerService);
-      alert('客服账号创建成功！');
+      message.success('客服账号创建成功！');
       setNewCustomerService({ name: '', email: '', password: '' });
       loadDashboardData();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '创建失败');
+      message.error(error.response?.data?.detail || '创建失败');
     }
   };
 
   const handleCreateAdminUser = async () => {
     if (!newAdminUser.name || !newAdminUser.username || !newAdminUser.email || !newAdminUser.password) {
-      alert('请填写完整信息');
+      message.warning('请填写完整信息');
       return;
     }
 
     try {
       await createAdminUser(newAdminUser);
-      alert('管理员账号创建成功！');
+      message.success('管理员账号创建成功！');
       setNewAdminUser({ name: '', username: '', email: '', password: '', is_super_admin: 0 });
       loadDashboardData();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '创建失败');
+      message.error(error.response?.data?.detail || '创建失败');
     }
   };
 
   const handleDeleteCustomerService = async (csId: number) => {
-    if (!window.confirm('确定要删除这个客服账号吗？')) {
-      return;
-    }
-
-    try {
-      await deleteCustomerService(csId);
-      alert('客服账号删除成功！');
-      loadDashboardData();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '删除失败');
-    }
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个客服账号吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteCustomerService(csId);
+          message.success('客服账号删除成功！');
+          loadDashboardData();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || '删除失败');
+        }
+      }
+    });
   };
 
   const handleDeleteAdminUser = async (adminId: string) => {
-    if (!window.confirm('确定要删除这个管理员账号吗？')) {
-      return;
-    }
-
-    try {
-      await deleteAdminUser(adminId);
-      alert('管理员账号删除成功！');
-      loadDashboardData();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '删除失败');
-    }
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个管理员账号吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteAdminUser(adminId);
+          message.success('管理员账号删除成功！');
+          loadDashboardData();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || '删除失败');
+        }
+      }
+    });
   };
 
   const handleSendStaffNotification = async (recipientId: string, recipientType: string, title: string, content: string) => {
@@ -290,11 +299,11 @@ const AdminDashboard: React.FC = () => {
         content: content,
         notification_type: 'info'
       });
-      alert('提醒发送成功！');
+      message.success('提醒发送成功！');
       setShowSendNotificationModal(false);
       setStaffNotificationForm({ recipientId: '', recipientType: '', title: '', content: '' });
     } catch (error: any) {
-      alert(error.response?.data?.detail || '发送失败');
+      message.error(error.response?.data?.detail || '发送失败');
     }
   };
 
@@ -312,10 +321,10 @@ const AdminDashboard: React.FC = () => {
     setUserActionLoading(userId);
     try {
       await updateUserByAdmin(userId, { user_level: newLevel });
-      alert('用户等级更新成功！');
+      message.success('用户等级更新成功！');
       loadDashboardData();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '更新失败');
+      message.error(error.response?.data?.detail || '更新失败');
     } finally {
       setUserActionLoading(null);
     }
@@ -325,10 +334,10 @@ const AdminDashboard: React.FC = () => {
     setUserActionLoading(userId);
     try {
       await updateUserByAdmin(userId, { is_banned: isBanned });
-      alert(isBanned ? '用户已封禁' : '用户已解封');
+      message.success(isBanned ? '用户已封禁' : '用户已解封');
       loadDashboardData();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      message.error(error.response?.data?.detail || '操作失败');
     } finally {
       setUserActionLoading(null);
     }
@@ -342,10 +351,10 @@ const AdminDashboard: React.FC = () => {
         updateData.suspend_until = suspendUntil;
       }
       await updateUserByAdmin(userId, updateData);
-      alert(isSuspended ? `用户已暂停${suspendDuration}天` : '用户已恢复');
+      message.success(isSuspended ? `用户已暂停${suspendDuration}天` : '用户已恢复');
       loadDashboardData();
     } catch (error: any) {
-      alert(error.response?.data?.detail || '操作失败');
+      message.error(error.response?.data?.detail || '操作失败');
     } finally {
       setUserActionLoading(null);
     }
@@ -370,7 +379,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleSendNotification = async () => {
     if (!notificationForm.title || !notificationForm.content) {
-      alert('请填写通知标题和内容');
+      message.warning('请填写通知标题和内容');
       return;
     }
 
@@ -379,10 +388,10 @@ const AdminDashboard: React.FC = () => {
         ...notificationForm,
         user_ids: notificationForm.user_ids.length > 0 ? notificationForm.user_ids : []
       });
-      alert('通知发送成功！');
+      message.success('通知发送成功！');
       setNotificationForm({ title: '', content: '', user_ids: [] });
     } catch (error: any) {
-      alert(error.response?.data?.detail || '发送失败');
+      message.error(error.response?.data?.detail || '发送失败');
     }
   };
 
@@ -1174,14 +1183,22 @@ const AdminDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={async () => {
-                        if (window.confirm('确定要删除这个任务达人吗？')) {
-                          try {
-                            await deleteTaskExpert(expert.id);
-                            await loadDashboardData();
-                          } catch (error) {
-                            console.error('删除失败:', error);
+                        Modal.confirm({
+                          title: '确认删除',
+                          content: '确定要删除这个任务达人吗？',
+                          okText: '确定',
+                          cancelText: '取消',
+                          onOk: async () => {
+                            try {
+                              await deleteTaskExpert(expert.id);
+                              await loadDashboardData();
+                              message.success('任务达人删除成功！');
+                            } catch (error: any) {
+                              console.error('删除失败:', error);
+                              message.error(error.response?.data?.detail || '删除失败');
+                            }
                           }
-                        }
+                        });
                       }}
                       style={{
                         padding: '4px 8px',
@@ -1342,14 +1359,14 @@ const AdminDashboard: React.FC = () => {
                       if (file) {
                         // 检查文件大小（限制5MB）
                         if (file.size > 5 * 1024 * 1024) {
-                          alert('图片文件过大，请选择小于5MB的图片');
+                          message.warning('图片文件过大，请选择小于5MB的图片');
                           e.target.value = '';
                           return;
                         }
                         
                         // 检查文件类型
                         if (!file.type.startsWith('image/')) {
-                          alert('请选择图片文件');
+                          message.warning('请选择图片文件');
                           e.target.value = '';
                           return;
                         }
@@ -1370,11 +1387,11 @@ const AdminDashboard: React.FC = () => {
                             // 使用服务器返回的URL
                             setTaskExpertForm({...taskExpertForm, avatar: response.data.url});
                           } else {
-                            alert('图片上传失败，请重试');
+                            message.error('图片上传失败，请重试');
                           }
                         } catch (error: any) {
                           console.error('图片上传失败:', error);
-                          alert(error.response?.data?.detail || '图片上传失败，请重试');
+                          message.error(error.response?.data?.detail || '图片上传失败，请重试');
                         } finally {
                           setUploadingAvatar(false);
                           // 重置文件输入框
@@ -2436,7 +2453,7 @@ const AdminDashboard: React.FC = () => {
                       staffNotificationForm.content
                     );
                   } else {
-                    alert('请填写标题和内容');
+                    message.warning('请填写标题和内容');
                   }
                 }}
                 disabled={loading}

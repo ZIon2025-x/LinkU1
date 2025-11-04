@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message, Modal } from 'antd';
 import api from '../api';
 
 // 地点列表常量
@@ -219,7 +220,7 @@ const Settings: React.FC = () => {
       
       // 如果没有要更新的字段，提示用户
       if (Object.keys(updatePayload).length === 0) {
-        alert('没有需要更新的信息');
+        message.info('没有需要更新的信息');
         return;
       }
       
@@ -257,7 +258,7 @@ const Settings: React.FC = () => {
         console.error('保存后重新加载用户数据失败:', error);
       }
       
-      alert('设置已保存！');
+      message.success('设置已保存！');
       // 如果语言偏好改变，刷新页面以应用新语言
       const currentLang = localStorage.getItem('language') || 'zh';
       if (formData.language_preference !== currentLang) {
@@ -266,7 +267,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error('保存设置失败:', error);
-      alert('保存失败，请稍后重试');
+      message.error('保存失败，请稍后重试');
     }
   };
 
@@ -293,13 +294,19 @@ const Settings: React.FC = () => {
   };
 
   const handleChangePassword = () => {
-    alert('修改密码功能开发中...');
+    message.info('修改密码功能开发中...');
   };
 
   const handleDeleteAccount = () => {
-    if (window.confirm('确定要删除账户吗？此操作不可恢复！')) {
-      alert('删除账户功能开发中...');
-    }
+    Modal.confirm({
+      title: '确认删除账户',
+      content: '确定要删除账户吗？此操作不可恢复！',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: () => {
+        message.info('删除账户功能开发中...');
+      }
+    });
   };
 
   const loadSessions = async () => {
@@ -318,23 +325,29 @@ const Settings: React.FC = () => {
   };
 
   const logoutOthers = async () => {
-    if (!window.confirm('确定要登出其它设备吗？这会使其它设备立即失效。')) {
-      return;
-    }
-    try {
-      setSessionsLoading(true);
-      setSessionsError('');
-      
-      // 使用 api.post，自动处理 Cookie 和 CSRF token
-      await api.post('/api/secure-auth/logout-others');
-      await loadSessions();
-      alert('已登出其它设备');
-    } catch (e: any) {
-      console.error(e);
-      setSessionsError(e?.response?.data?.detail || e?.message || '登出其它设备失败');
-    } finally {
-      setSessionsLoading(false);
-    }
+    Modal.confirm({
+      title: '确认登出其它设备',
+      content: '确定要登出其它设备吗？这会使其它设备立即失效。',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          setSessionsLoading(true);
+          setSessionsError('');
+          
+          // 使用 api.post，自动处理 Cookie 和 CSRF token
+          await api.post('/api/secure-auth/logout-others');
+          await loadSessions();
+          message.success('已登出其它设备');
+        } catch (e: any) {
+          console.error(e);
+          setSessionsError(e?.response?.data?.detail || e?.message || '登出其它设备失败');
+          message.error(e?.response?.data?.detail || e?.message || '登出其它设备失败');
+        } finally {
+          setSessionsLoading(false);
+        }
+      }
+    });
   };
 
   if (loading) {

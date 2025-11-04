@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { message } from 'antd';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -420,7 +421,7 @@ const Home: React.FC = () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('标记通知为已读失败:', error);
-      alert('标记通知为已读失败，请重试');
+      message.error('标记通知为已读失败，请重试');
     }
   };
 
@@ -433,7 +434,7 @@ const Home: React.FC = () => {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
       console.error('标记所有通知为已读失败:', error);
-      alert('标记所有通知为已读失败，请重试');
+      message.error('标记所有通知为已读失败，请重试');
     }
   };
 

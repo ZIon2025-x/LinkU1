@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message, Modal } from 'antd';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
 import api, { updateCustomerServiceName, getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
@@ -171,12 +172,12 @@ const CustomerService: React.FC = () => {
     const testSocket = new WebSocket(testUrl);
     
     testSocket.onopen = () => {
-      alert('WebSocket连接测试成功！');
+      message.success('WebSocket连接测试成功！');
       testSocket.close();
     };
     
     testSocket.onerror = (error) => {
-      alert('WebSocket连接测试失败，请检查网络设置');
+      message.error('WebSocket连接测试失败，请检查网络设置');
     };
     
     testSocket.onclose = (event) => {
@@ -313,7 +314,7 @@ const CustomerService: React.FC = () => {
 
   const sendAnnouncement = async () => {
     if (!announcement.trim()) {
-      window.alert('请输入公告内容');
+      message.warning('请输入公告内容');
       return;
     }
 
@@ -341,14 +342,14 @@ const CustomerService: React.FC = () => {
       });
 
       if (response.ok) {
-        window.alert('公告发送成功');
+        message.success('公告发送成功');
         setAnnouncement('');
       } else {
-        window.alert('公告发送失败');
+        message.error('公告发送失败');
       }
     } catch (error) {
       console.error('发送公告失败:', error);
-      window.alert('发送公告失败');
+      message.error('发送公告失败');
     }
   };
 
@@ -393,11 +394,11 @@ const CustomerService: React.FC = () => {
         navigate('/service/login');
       } else {
         console.error('客服登出失败');
-        window.alert('登出失败，请重试');
+        message.error('登出失败，请重试');
       }
     } catch (error) {
       console.error('客服登出时发生错误:', error);
-      window.alert('登出时发生错误，请重试');
+      message.error('登出时发生错误，请重试');
     }
   };
 
@@ -439,14 +440,14 @@ const CustomerService: React.FC = () => {
       });
 
       if (response.ok) {
-        window.alert('操作成功');
+        message.success('操作成功');
         loadData(); // 重新加载数据
       } else {
-        window.alert('操作失败');
+        message.error('操作失败');
       }
     } catch (error) {
       console.error('操作失败:', error);
-      window.alert('操作失败');
+      message.error('操作失败');
     }
   };
 
@@ -468,35 +469,39 @@ const CustomerService: React.FC = () => {
 
   // 删除任务功能
   const deleteTask = async (taskId: number) => {
-    if (!window.confirm('确定要删除这个任务吗？此操作不可撤销。')) {
-      return;
-    }
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个任务吗？此操作不可撤销。',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          // 获取 CSRF token
+          const csrfToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrf_token='))
+            ?.split('=')[1];
+          
+          const response = await fetch(`/api/admin/tasks/${taskId}/delete`, {
+            method: 'DELETE',
+            headers: {
+              ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+            },
+            credentials: 'include'  // 使用Cookie认证
+          });
 
-    try {
-      // 获取 CSRF token
-      const csrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      const response = await fetch(`/api/admin/tasks/${taskId}/delete`, {
-        method: 'DELETE',
-        headers: {
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        },
-        credentials: 'include'  // 使用Cookie认证
-      });
-
-      if (response.ok) {
-        window.alert('任务删除成功');
-        loadData(); // 重新加载数据
-      } else {
-        window.alert('任务删除失败');
+          if (response.ok) {
+            message.success('任务删除成功');
+            loadData(); // 重新加载数据
+          } else {
+            message.error('任务删除失败');
+          }
+        } catch (error) {
+          console.error('删除任务失败:', error);
+          message.error('删除任务失败');
+        }
       }
-    } catch (error) {
-      console.error('删除任务失败:', error);
-      window.alert('删除任务失败');
-    }
+    });
   };
 
 
@@ -719,7 +724,7 @@ const CustomerService: React.FC = () => {
       setSelectedCancelRequest(null);
       setAdminComment('');
       await loadCancelRequests(); // 重新加载取消请求列表
-      alert(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
+      message.success(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
       
     } catch (error: any) {
       console.error('审核取消请求失败:', error);
@@ -755,7 +760,7 @@ const CustomerService: React.FC = () => {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      message.error(errorMessage);
     }
   };
 
@@ -1032,7 +1037,7 @@ const CustomerService: React.FC = () => {
       
     } catch (error) {
       console.error('发送消息失败:', error);
-      window.alert('发送消息失败');
+      message.error('发送消息失败');
     }
   };
 
@@ -1293,7 +1298,7 @@ const CustomerService: React.FC = () => {
       }
       setIsOnline(newStatus);
       setJustToggledStatus(true); // 标记刚刚进行了手动切换
-      window.alert(newStatus ? '已设置为在线状态' : '已设置为离线状态');
+      message.success(newStatus ? '已设置为在线状态' : '已设置为离线状态');
       
       // 5秒后清除手动切换标记，允许自动刷新
       setTimeout(() => {
@@ -1301,14 +1306,14 @@ const CustomerService: React.FC = () => {
       }, 5000);
     } catch (error) {
       console.error('切换状态失败:', error);
-      window.alert('状态切换失败');
+      message.error('状态切换失败');
     }
   };
 
   // 客服改名功能
   const handleUpdateServiceName = async () => {
     if (!newServiceName.trim()) {
-      window.alert('请输入新的客服名字');
+      message.warning('请输入新的客服名字');
       return;
     }
     
@@ -1317,10 +1322,10 @@ const CustomerService: React.FC = () => {
       setCurrentServiceName(newServiceName);
       setShowNameEditModal(false);
       setNewServiceName('');
-      window.alert('客服名字更新成功！');
+      message.success('客服名字更新成功！');
     } catch (error) {
       console.error('更新客服名字失败:', error);
-      window.alert('更新客服名字失败，请重试');
+      message.error('更新客服名字失败，请重试');
     }
   };
 
@@ -1690,29 +1695,35 @@ const CustomerService: React.FC = () => {
             {sessions.filter(session => session.is_ended === 1).length > 50 && (
               <button
                 onClick={async () => {
-                  if (window.confirm('确定要清理超过50个的旧已结束对话吗？此操作不可撤销。')) {
-                    try {
-                      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cleanup-old-chats/${currentUser.id}`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json'
-                        },
-                        credentials: 'include'  // 使用Cookie认证
-                      });
-                      
-                      if (response.ok) {
-                        const result = await response.json();
-                        alert(result.message);
-                        loadSessions(); // 重新加载会话列表
-                      } else {
-                        alert('清理失败');
+                  Modal.confirm({
+                    title: '确认清理',
+                    content: '确定要清理超过50个的旧已结束对话吗？此操作不可撤销。',
+                    okText: '确定',
+                    cancelText: '取消',
+                    onOk: async () => {
+                      try {
+                        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/cleanup-old-chats/${currentUser.id}`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json'
+                          },
+                          credentials: 'include'  // 使用Cookie认证
+                        });
+                        
+                        if (response.ok) {
+                          const result = await response.json();
+                          message.success(result.message || '清理成功');
+                          loadSessions(); // 重新加载会话列表
+                        } else {
+                          message.error('清理失败');
+                        }
+                      } catch (error) {
+                        console.error('清理旧对话失败:', error);
+                        message.error('清理失败，请重试');
                       }
-                    } catch (error) {
-                      console.error('清理旧对话失败:', error);
-                      alert('清理失败');
                     }
-                  }
-                }}
+                  });
+              }}
                 style={{
                   padding: '6px 12px',
                   fontSize: 12,
@@ -1983,9 +1994,15 @@ const CustomerService: React.FC = () => {
                 {selectedSession.is_ended === 0 && chatTimeoutStatus?.timeout_available && (
                   <button
                     onClick={() => {
-                      if (window.confirm('确定要超时结束此对话吗？用户将收到超时通知。')) {
-                        timeoutEndChat(selectedSession.chat_id);
-                      }
+                      Modal.confirm({
+                        title: '确认超时结束',
+                        content: '确定要超时结束此对话吗？用户将收到超时通知。',
+                        okText: '确定',
+                        cancelText: '取消',
+                        onOk: () => {
+                          timeoutEndChat(selectedSession.chat_id);
+                        }
+                      });
                     }}
                     style={{
                       padding: '8px 16px',

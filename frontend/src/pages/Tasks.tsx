@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -792,13 +793,13 @@ const Tasks: React.FC = () => {
       // 使用 apply 端点，创建申请记录等待发布者同意
       const data = await api.post(`/api/tasks/${taskId}/apply`, { message: "" });
       
-      alert(t('tasks.acceptSuccess'));
+      message.success(t('tasks.acceptSuccess'));
       // 将任务添加到已申请列表，隐藏申请按钮
       setAppliedTasks(prev => new Set([...Array.from(prev), taskId]));
       loadTasks(); // 重新加载任务列表
     } catch (error: any) {
       console.error('申请任务失败:', error);
-      alert(error.response?.data?.detail || t('tasks.acceptFailed'));
+      message.error(error.response?.data?.detail || t('tasks.acceptFailed'));
     }
   };
 
@@ -2346,7 +2347,11 @@ const Tasks: React.FC = () => {
                         查看详情
                       </button>
                       
-                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && canViewTask(user, task) && !appliedTasks.has(task.id) && (
+                      {/* 申请按钮 - 未登录用户也可以看到普通任务的申请按钮 */}
+                      {(task.status === 'open' || task.status === 'taken') && 
+                       (!user || user.id !== task.poster_id) && 
+                       canViewTask(user, task) && 
+                       !appliedTasks.has(task.id) && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

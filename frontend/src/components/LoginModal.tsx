@@ -504,7 +504,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleGoogleLogin = () => {
     // Google登录逻辑（暂时显示提示）
-    alert(t('auth.googleLoginNotImplemented'));
+    message.info(t('auth.googleLoginNotImplemented'));
   };
 
   if (!isOpen) return null;

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
@@ -205,7 +206,7 @@ const MyTasks: React.FC = () => {
     } catch (error) {
       console.error('标记通知为已读失败:', error);
       // 可以添加用户提示，比如toast通知
-      alert(t('myTasks.alerts.markReadFailed'));
+      message.error(t('myTasks.alerts.markReadFailed'));
     }
   };
 
@@ -220,7 +221,7 @@ const MyTasks: React.FC = () => {
     } catch (error) {
       console.error('标记所有通知已读失败:', error);
       // 可以添加用户提示，比如toast通知
-      alert(t('myTasks.alerts.markAllReadFailed'));
+      message.error(t('myTasks.alerts.markAllReadFailed'));
     }
   };
 
@@ -228,12 +229,12 @@ const MyTasks: React.FC = () => {
     setActionLoading(taskId);
     try {
       await completeTask(taskId);
-      alert(t('myTasks.alerts.taskMarkedComplete'));
+      message.success(t('myTasks.alerts.taskMarkedComplete'));
       // 将任务添加到已标记完成列表，隐藏按钮
       setCompletedTasks(prev => new Set([...Array.from(prev), taskId]));
       loadTasks();
     } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      message.error(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -243,7 +244,7 @@ const MyTasks: React.FC = () => {
     setActionLoading(taskId);
     try {
       await confirmTaskCompletion(taskId);
-      alert(t('myTasks.alerts.taskConfirmedComplete'));
+      message.success(t('myTasks.alerts.taskConfirmedComplete'));
       
       // 强制刷新任务列表，避免缓存
       await loadTasks(true);
@@ -253,7 +254,7 @@ const MyTasks: React.FC = () => {
         await loadTasks(true);
       }, 1000);
     } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+      message.error(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -271,10 +272,10 @@ const MyTasks: React.FC = () => {
       if (result && (result.request_id || result.message?.includes('review') || result.message?.includes('审核'))) {
         // 已提交审核请求，添加到待审核列表
         setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
-        alert('已成功提交取消审核请求，等待客服审核');
+        message.success('已成功提交取消审核请求，等待客服审核');
       } else {
         // 直接取消成功
-        alert(t('myTasks.alerts.taskCancelled'));
+        message.success(t('myTasks.alerts.taskCancelled'));
       }
       
       loadTasks();
@@ -284,7 +285,7 @@ const MyTasks: React.FC = () => {
       // 检查是否是 CSRF token 错误
       if (error.response?.status === 401) {
         if (error.response?.data?.detail?.includes('CSRF')) {
-          alert('验证失败，请刷新页面后重试');
+          message.error('验证失败，请刷新页面后重试');
           // 清除 CSRF token 缓存，下次会重新获取
           window.location.reload();
           return;
@@ -300,27 +301,27 @@ const MyTasks: React.FC = () => {
         if (errorDetail.includes('already pending') || errorDetail.includes('正在审核') || errorDetail.includes('待审核')) {
           // 如果已经有待审核请求，也添加到列表中
           setPendingCancelTasks(prev => new Set(Array.from(prev).concat(taskId)));
-          alert('您的取消请求正在审核中，请耐心等待');
+          message.info('您的取消请求正在审核中，请耐心等待');
           loadTasks();
         } else if (errorDetail.includes('cannot be cancelled') || errorDetail.includes('不能取消') || errorDetail.includes('状态')) {
           // 任务状态不允许取消
-          let message = '该任务当前状态不允许取消';
+          let errorMsg = '该任务当前状态不允许取消';
           if (errorDetail.includes('current status')) {
-            message += '。只有"待接取"状态的任务可以直接取消，已被接受或进行中的任务需要等待客服审核。';
+            errorMsg += '。只有"待接取"状态的任务可以直接取消，已被接受或进行中的任务需要等待客服审核。';
           }
-          alert(message);
+          message.error(errorMsg);
         } else if (errorDetail) {
-          alert(errorDetail);
+          message.error(errorDetail);
         } else {
-          alert('取消任务失败，请检查任务状态后重试');
+          message.error('取消任务失败，请检查任务状态后重试');
         }
       } else if (errorStatus === 403) {
-        alert('您没有权限取消此任务。只有任务发布者或接受者可以取消任务。');
+        message.error('您没有权限取消此任务。只有任务发布者或接受者可以取消任务。');
       } else if (errorStatus === 404) {
-        alert('任务不存在或已被删除');
+        message.error('任务不存在或已被删除');
       } else {
         // 其他错误
-        alert(errorDetail || t('myTasks.alerts.operationFailed'));
+        message.error(errorDetail || t('myTasks.alerts.operationFailed'));
       }
     } finally {
       setActionLoading(null);
@@ -331,30 +332,33 @@ const MyTasks: React.FC = () => {
     setActionLoading(taskId);
     try {
       await updateTaskVisibility(taskId, isPublic);
-      alert(t('myTasks.alerts.visibilityUpdated'));
+      message.success(t('myTasks.alerts.visibilityUpdated'));
       loadTasks();
     } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.updateVisibilityFailed'));
+      message.error(error.response?.data?.detail || t('myTasks.alerts.updateVisibilityFailed'));
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDeleteTask = async (taskId: number) => {
-    if (!window.confirm(t('myTasks.confirmDelete'))) {
-      return;
-    }
-    
-    setActionLoading(taskId);
-    try {
-      await deleteTask(taskId);
-      alert(t('myTasks.alerts.taskDeleted'));
-      loadTasks();
-    } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.deleteFailed'));
-    } finally {
-      setActionLoading(null);
-    }
+    Modal.confirm({
+      title: t('myTasks.confirmDelete'),
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        setActionLoading(taskId);
+        try {
+          await deleteTask(taskId);
+          message.success(t('myTasks.alerts.taskDeleted'));
+          loadTasks();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || t('myTasks.alerts.deleteFailed'));
+        } finally {
+          setActionLoading(null);
+        }
+      }
+    });
   };
 
   const handleViewTask = (taskId: number) => {
@@ -378,7 +382,7 @@ const MyTasks: React.FC = () => {
     setActionLoading(taskId);
     try {
       await createReview(taskId, reviewRating, reviewComment, isAnonymous);
-      alert(t('myTasks.alerts.reviewSubmitted'));
+      message.success(t('myTasks.alerts.reviewSubmitted'));
       // 评价提交成功，任务数据会重新加载
       setShowReviewModal(false);
       setReviewRating(5);
@@ -392,7 +396,7 @@ const MyTasks: React.FC = () => {
       // 强制重新加载该任务的评价数据
       await loadTaskReviews(taskId);
     } catch (error: any) {
-      alert(error.response?.data?.detail || t('myTasks.alerts.reviewSubmitFailed'));
+      message.error(error.response?.data?.detail || t('myTasks.alerts.reviewSubmitFailed'));
     } finally {
       setActionLoading(null);
     }
