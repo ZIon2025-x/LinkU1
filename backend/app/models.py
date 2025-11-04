@@ -202,6 +202,7 @@ class Task(Base):
     paid_to_user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
     visibility = Column(String(20), default="public")  # public, private
+    images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
     # 关系
     poster = relationship(
         "User", back_populates="tasks_posted", foreign_keys=[poster_id]

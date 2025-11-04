@@ -201,6 +201,12 @@ class AsyncTaskCRUD:
             else:
                 deadline = task.deadline
             
+            # 处理图片字段：将列表转为JSON字符串
+            import json
+            images_json = None
+            if task.images and len(task.images) > 0:
+                images_json = json.dumps(task.images)
+            
             db_task = models.Task(
                 title=task.title,
                 description=task.description,
@@ -212,6 +218,7 @@ class AsyncTaskCRUD:
                 status="open",
                 task_level=task_level,
                 is_public=getattr(task, "is_public", 1),  # 默认为公开
+                images=images_json,  # 存储为JSON字符串
             )
             
             db.add(db_task)

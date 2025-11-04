@@ -246,6 +246,12 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         task_level = "vip"
     else:
         task_level = "normal"
+    # 处理图片字段：将列表转为JSON字符串
+    import json
+    images_json = None
+    if task.images and len(task.images) > 0:
+        images_json = json.dumps(task.images)
+    
     db_task = Task(
         title=task.title,
         description=task.description,
@@ -257,6 +263,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
         status="open",
         task_level=task_level,
         is_public=getattr(task, "is_public", 1),  # 默认为公开
+        images=images_json,  # 存储为JSON字符串
     )
     db.add(db_task)
     db.commit()

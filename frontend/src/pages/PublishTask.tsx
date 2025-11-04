@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api, { getPublicSystemSettings, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -24,6 +25,8 @@ const PublishTask: React.FC = () => {
     task_type: TASK_TYPES[0],
     is_public: 1, // 1=公开, 0=仅自己可见
   });
+  const [images, setImages] = useState<string[]>([]); // 图片URL列表
+  const [uploadingImages, setUploadingImages] = useState<boolean[]>([]); // 每张图片的上传状态
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -81,6 +84,80 @@ const PublishTask: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // 处理图片上传
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // 限制最多上传5张图片
+    const remainingSlots = 5 - images.length;
+    if (remainingSlots <= 0) {
+      message.warning('最多只能上传5张图片');
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      
+      // 检查文件类型
+      if (!file.type.startsWith('image/')) {
+        message.error(`文件 ${file.name} 不是图片格式`);
+        continue;
+      }
+      
+      // 检查文件大小（限制5MB）
+      if (file.size > 5 * 1024 * 1024) {
+        message.error(`图片 ${file.name} 大小超过5MB`);
+        continue;
+      }
+
+      const fileIndex = images.length + i;
+      setUploadingImages(prev => {
+        const newArr = [...prev];
+        newArr[fileIndex] = true;
+        return newArr;
+      });
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await api.post('/api/upload/public-image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (response.data.success && response.data.url) {
+          setImages(prev => [...prev, response.data.url]);
+          message.success(`图片 ${file.name} 上传成功`);
+        } else {
+          message.error(`图片 ${file.name} 上传失败`);
+        }
+      } catch (error: any) {
+        console.error('图片上传失败:', error);
+        message.error(`图片 ${file.name} 上传失败: ${error.response?.data?.detail || error.message}`);
+      } finally {
+        setUploadingImages(prev => {
+          const newArr = [...prev];
+          newArr[fileIndex] = false;
+          return newArr;
+        });
+      }
+    }
+
+    // 重置文件输入
+    e.target.value = '';
+  };
+
+  // 删除图片
+  const handleRemoveImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setUploadingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   // 获取任务等级提示
   const getTaskLevelHint = (reward: number) => {
     if (!reward || reward <= 0) return '';
@@ -114,8 +191,9 @@ const PublishTask: React.FC = () => {
         reward: parseFloat(form.reward),
         deadline: new Date(form.deadline).toISOString(),
         is_public: form.is_public,
+        images: images.length > 0 ? images : undefined, // 如果有图片，发送图片URL列表
       });
-      setSuccess(t('publishTask.publishSuccess'));
+      message.success(t('publishTask.publishSuccess'));
       setTimeout(() => navigate('/my-tasks'), 1500);
     } catch (err: any) {
       let errorMsg = t('publishTask.publishError');

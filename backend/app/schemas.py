@@ -256,6 +256,7 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
+    images: Optional[List[str]] = None  # 图片URL列表
 
 
 class TaskOut(TaskBase):
@@ -266,6 +267,22 @@ class TaskOut(TaskBase):
     task_level: str = "normal"  # normal, vip, super
     created_at: datetime.datetime
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
+    images: Optional[List[str]] = None  # 图片URL列表
+
+    @validator('images', pre=True)
+    def parse_images(cls, v):
+        """将JSON字符串解析为列表"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        if isinstance(v, list):
+            return v
+        return None
 
     class Config:
         from_attributes = True

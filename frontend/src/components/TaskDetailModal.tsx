@@ -916,6 +916,70 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             whiteSpace: 'pre-wrap'
           }}>{task.description}</div>
         </div>
+        {/* 任务图片 */}
+        {task.images && Array.isArray(task.images) && task.images.length > 0 && (
+          <div style={{
+            marginTop: '24px',
+            padding: '20px',
+            background: '#f8f9fa',
+            borderRadius: '12px'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              marginBottom: '16px',
+              color: '#1f2937'
+            }}>📷 {t('taskDetail.imagesLabel') || '任务图片'}</h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '12px'
+            }}>
+              {task.images.map((imageUrl: string, index: number) => (
+                <div
+                  key={index}
+                  style={{
+                    position: 'relative',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    aspectRatio: '1',
+                    background: '#e5e7eb',
+                    border: '1px solid #d1d5db',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease'
+                  }}
+                  onClick={() => {
+                    // 点击图片可以放大查看（可以后续实现图片预览功能）
+                    window.open(imageUrl, '_blank');
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <img
+                    src={imageUrl}
+                    alt={`任务图片 ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                    loading="lazy"
+                    onError={(e) => {
+                      // 图片加载失败时显示占位符
+                      e.currentTarget.src = '/static/default-image.png';
+                      e.currentTarget.onerror = null; // 防止无限循环
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 价格编辑区域 */}
         {showPriceEdit && (

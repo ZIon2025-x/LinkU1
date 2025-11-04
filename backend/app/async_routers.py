@@ -199,6 +199,15 @@ async def create_task_async(
         except Exception as e:
             print(f"DEBUG: 额外清除缓存失败: {e}")
         
+        # 处理图片字段：将JSON字符串解析为列表
+        import json
+        images_list = None
+        if db_task.images:
+            try:
+                images_list = json.loads(db_task.images)
+            except (json.JSONDecodeError, TypeError):
+                images_list = []
+        
         # 返回简单的成功响应，避免序列化问题
         result = {
             "id": db_task.id,
@@ -213,7 +222,8 @@ async def create_task_async(
             "status": db_task.status,
             "task_level": db_task.task_level,
             "created_at": db_task.created_at.isoformat() if db_task.created_at else None,
-            "is_public": int(db_task.is_public) if db_task.is_public is not None else 1
+            "is_public": int(db_task.is_public) if db_task.is_public is not None else 1,
+            "images": images_list  # 返回图片列表
         }
         
         print(f"DEBUG: 准备返回结果: {result}")
