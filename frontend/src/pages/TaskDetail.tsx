@@ -964,12 +964,21 @@ const TaskDetail: React.FC = () => {
     
     setIsTranslatingTitle(true);
     try {
-      // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
-      const targetLang = language === 'zh' ? 'en' : 'zh';
-      const translated = await translate(task.title, targetLang);
+      // 检测文本语言，然后翻译成当前界面语言
+      const textLang = detectTextLanguage(task.title);
+      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      if (textLang === language) {
+        console.log('翻译标题: 文本语言和界面语言相同，无需翻译');
+        setTranslatedTitle(null);
+        return;
+      }
+      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      const targetLang = language;
+      const translated = await translate(task.title, targetLang, textLang);
       setTranslatedTitle(translated);
     } catch (error) {
       console.error('翻译标题失败:', error);
+      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingTitle(false);
     }
@@ -987,12 +996,21 @@ const TaskDetail: React.FC = () => {
     
     setIsTranslatingDescription(true);
     try {
-      // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
-      const targetLang = language === 'zh' ? 'en' : 'zh';
-      const translated = await translate(task.description, targetLang);
+      // 检测文本语言，然后翻译成当前界面语言
+      const textLang = detectTextLanguage(task.description);
+      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      if (textLang === language) {
+        console.log('翻译描述: 文本语言和界面语言相同，无需翻译');
+        setTranslatedDescription(null);
+        return;
+      }
+      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      const targetLang = language;
+      const translated = await translate(task.description, targetLang, textLang);
       setTranslatedDescription(translated);
     } catch (error) {
       console.error('翻译描述失败:', error);
+      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingDescription(false);
     }
