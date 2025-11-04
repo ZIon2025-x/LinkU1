@@ -5480,26 +5480,39 @@ async def translate_text(
     """
     try:
         try:
-            from googletrans import Translator
+            from deep_translator import GoogleTranslator
         except ImportError:
-            logger.error("googletrans模块未安装，请运行: pip install googletrans==3.1.0a0")
+            logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
             raise HTTPException(
                 status_code=503, 
-                detail="翻译服务暂时不可用，请稍后重试。管理员请检查googletrans模块是否已安装。"
+                detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
             )
         
-        translator = Translator()
+        # 转换语言代码格式 (zh -> zh-CN, en -> en)
+        lang_map = {
+            'zh': 'zh-CN',
+            'zh-cn': 'zh-CN',
+            'zh-tw': 'zh-TW',
+            'en': 'en'
+        }
+        target_lang = lang_map.get(target_language.lower(), target_language)
+        source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
         
-        # 如果未提供源语言,则自动检测
-        if source_language:
-            result = translator.translate(text, src=source_language, dest=target_language)
+        # 使用GoogleTranslator进行翻译
+        if source_language and source_lang != 'auto':
+            translator = GoogleTranslator(source=source_lang, target=target_lang)
         else:
-            result = translator.translate(text, dest=target_language)
+            translator = GoogleTranslator(target=target_lang)
+        
+        translated_text = translator.translate(text)
+        
+        # 检测源语言（如果未提供）
+        detected_source = source_lang if source_lang != 'auto' else 'auto'
         
         return {
-            "translated_text": result.text,
-            "source_language": result.src,
-            "target_language": result.dest,
+            "translated_text": translated_text,
+            "source_language": detected_source,
+            "target_language": target_lang,
             "original_text": text
         }
     except HTTPException:
@@ -5528,28 +5541,39 @@ async def translate_batch(
     """
     try:
         try:
-            from googletrans import Translator
+            from deep_translator import GoogleTranslator
         except ImportError:
-            logger.error("googletrans模块未安装，请运行: pip install googletrans==3.1.0a0")
+            logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
             raise HTTPException(
                 status_code=503, 
-                detail="翻译服务暂时不可用，请稍后重试。管理员请检查googletrans模块是否已安装。"
+                detail="翻译服务暂时不可用，请稍后重试。管理员请检查deep-translator模块是否已安装。"
             )
         
-        translator = Translator()
+        # 转换语言代码格式
+        lang_map = {
+            'zh': 'zh-CN',
+            'zh-cn': 'zh-CN',
+            'zh-tw': 'zh-TW',
+            'en': 'en'
+        }
+        target_lang = lang_map.get(target_language.lower(), target_language)
+        source_lang = lang_map.get(source_language.lower(), source_language) if source_language else 'auto'
+        
         translations = []
         
         for text in texts:
             try:
-                if source_language:
-                    result = translator.translate(text, src=source_language, dest=target_language)
+                if source_language and source_lang != 'auto':
+                    translator = GoogleTranslator(source=source_lang, target=target_lang)
                 else:
-                    result = translator.translate(text, dest=target_language)
+                    translator = GoogleTranslator(target=target_lang)
+                
+                translated_text = translator.translate(text)
                 
                 translations.append({
                     "original_text": text,
-                    "translated_text": result.text,
-                    "source_language": result.src,
+                    "translated_text": translated_text,
+                    "source_language": source_lang if source_lang != 'auto' else 'auto',
                 })
             except Exception as e:
                 logger.error(f"翻译文本失败: {text[:50]}... - {e}")
@@ -5562,7 +5586,7 @@ async def translate_batch(
         
         return {
             "translations": translations,
-            "target_language": target_language
+            "target_language": target_lang
         }
     except HTTPException:
         raise
