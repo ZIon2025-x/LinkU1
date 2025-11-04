@@ -316,6 +316,23 @@ export const CITIES = [
   "Online", "London", "Edinburgh", "Manchester", "Birmingham", "Glasgow", "Bristol", "Sheffield", "Leeds", "Nottingham", "Newcastle", "Southampton", "Liverpool", "Cardiff", "Coventry", "Exeter", "Leicester", "York", "Aberdeen", "Bath", "Dundee", "Reading", "St Andrews", "Belfast", "Brighton", "Durham", "Norwich", "Swansea", "Loughborough", "Lancaster", "Warwick", "Cambridge", "Oxford", "Other"
 ];
 
+// 获取任务类型的默认图片路径
+const getTaskTypeDefaultImage = (taskType: string): string => {
+  const taskTypeMap: Record<string, string> = {
+    "Housekeeping": "/static/task-types/housekeeping.jpg",
+    "Campus Life": "/static/task-types/campus-life.jpg",
+    "Second-hand & Rental": "/static/task-types/secondhand.jpg",
+    "Errand Running": "/static/task-types/errand.jpg",
+    "Skill Service": "/static/task-types/skill.jpg",
+    "Social Help": "/static/task-types/social.jpg",
+    "Transportation": "/static/task-types/transportation.jpg",
+    "Pet Care": "/static/task-types/pet.jpg",
+    "Life Convenience": "/static/task-types/convenience.jpg",
+    "Other": "/static/task-types/other.jpg"
+  };
+  return taskTypeMap[taskType] || "/static/task-types/default.jpg";
+};
+
 const Tasks: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
@@ -703,14 +720,17 @@ const Tasks: React.FC = () => {
         sort_by: sortBy,
       };
       
-      
       const response = await api.get('/api/tasks', { params });
       const data = response.data;
       
-      setTasks(data.tasks || []);
+      const tasksList = data.tasks || [];
+      
+      setTasks(tasksList);
       setTotal(data.total || 0);
     } catch (error) {
       console.error('加载任务失败:', error);
+      setTasks([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -896,7 +916,7 @@ const Tasks: React.FC = () => {
 
     // 注意：排序应该在服务端进行，这里只进行筛选
     // 客户端排序会破坏服务端的分页排序逻辑
-
+    
     return filtered;
   };
 
@@ -2146,7 +2166,7 @@ const Tasks: React.FC = () => {
           {/* 任务列表 */}
           <div className="tasks-grid" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '170px' : '300px'}, 1fr))`,
             gap: '16px'
           }}>
             {loading ? (
@@ -2216,205 +2236,189 @@ const Tasks: React.FC = () => {
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
                     }
                   }}
+                  onClick={() => handleViewTask(task.id)}
                 >
                   {/* 任务图片区域 */}
                   <div style={{
-                    height: '120px',
+                    aspectRatio: isMobile ? '9 / 16' : '16 / 9',
+                    width: '100%',
+                    position: 'relative',
+                    overflow: 'hidden',
                     background: `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    overflow: 'hidden'
+                    justifyContent: 'center'
                   }}>
+                    {/* 图片遮罩层，确保文字清晰可读 */}
                     <div style={{
-                      fontSize: '48px',
-                      opacity: 0.7
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)',
+                      zIndex: 1
+                    }} />
+                    
+                    {/* 显示任务图片或默认图片 */}
+                    <img
+                      src={task.images && Array.isArray(task.images) && task.images.length > 0 
+                        ? task.images[0] 
+                        : getTaskTypeDefaultImage(task.task_type)}
+                      alt={task.title}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 0
+                      }}
+                      loading="lazy"
+                      onError={(e) => {
+                        // 如果图片加载失败，尝试使用默认图片或显示渐变背景
+                        const currentSrc = e.currentTarget.src;
+                        const defaultImage = getTaskTypeDefaultImage(task.task_type);
+                        
+                        // 如果当前不是默认图片，尝试加载默认图片
+                        if (!currentSrc.includes(defaultImage) && task.images && Array.isArray(task.images) && task.images.length > 0) {
+                          e.currentTarget.src = defaultImage;
+                        } else {
+                          // 如果默认图片也失败，显示渐变背景
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.style.background = `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`;
+                          }
+                        }
+                      }}
+                    />
+
+                    {/* 地点 - 左上角 */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      backdropFilter: 'blur(4px)',
+                      color: '#fff',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      zIndex: 2,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                     }}>
-                      {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                      <span>{task.location === 'Online' ? '🌐' : '📍'}</span>
+                      <span>{task.location}</span>
                     </div>
+
+                    {/* 任务类型 - 右上角 */}
                     <div style={{
                       position: 'absolute',
                       top: '12px',
                       right: '12px',
-                      background: getTaskLevelColor(task.task_level),
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      backdropFilter: 'blur(4px)',
                       color: '#fff',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
                       fontSize: '12px',
                       fontWeight: '600',
-                      boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 
-                                task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.4)' : 'none'
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      zIndex: 2,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}>
+                      <span>🏷️</span>
+                      <span>{getTaskTypeLabel(task.task_type)}</span>
+                    </div>
+
+                    {/* 金额 - 右下角 */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      right: '12px',
+                      background: 'rgba(5, 150, 105, 0.9)',
+                      backdropFilter: 'blur(4px)',
+                      color: '#fff',
+                      padding: '8px 14px',
+                      borderRadius: '20px',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      zIndex: 2,
+                      boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)'
+                    }}>
+                      £{task.reward.toFixed(2)}
+                    </div>
+
+                    {/* 截止时间 - 左下角 */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      left: '12px',
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      backdropFilter: 'blur(4px)',
+                      color: isExpired(task.deadline) ? '#fca5a5' : 
+                             isExpiringSoon(task.deadline) ? '#fde68a' : '#fff',
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      zIndex: 2,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                    }}>
+                      <span>⏰</span>
+                      <span>
+                        {isExpired(task.deadline) ? t('home.taskExpired') : 
+                         isExpiringSoon(task.deadline) ? t('home.taskExpiringSoon') : getRemainTime(task.deadline, t)}
+                      </span>
+                    </div>
+
+                    {/* 任务等级标签 - 右上角，在任务类型下方 */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '48px',
+                      right: '12px',
+                      background: getTaskLevelColor(task.task_level),
+                      color: '#fff',
+                      padding: '4px 10px',
+                      borderRadius: '16px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      zIndex: 2,
+                      boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 
+                                task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 
+                                '0 2px 6px rgba(0,0,0,0.2)'
                     }}>
                       {getTaskLevelLabel(task.task_level)}
                     </div>
                   </div>
-
-                  {/* 任务信息 */}
+                  
+                  {/* 任务标题 - 放在图片下面 */}
                   <div style={{
-                    padding: '16px'
+                    padding: '12px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: '#1f2937',
+                    whiteSpace: isMobile ? 'nowrap' : 'normal',
+                    overflow: 'hidden',
+                    textOverflow: isMobile ? 'ellipsis' : 'ellipsis',
+                    lineHeight: '1.4',
+                    background: 'transparent',
+                    display: isMobile ? 'block' : '-webkit-box',
+                    WebkitLineClamp: isMobile ? 1 : 2,
+                    WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
                   }}>
-                    <h3 style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      lineHeight: '1.4'
-                    }}>
-                      {task.title}
-                    </h3>
-                    
-                    <div className="task-info" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '8px',
-                      fontSize: '12px',
-                      color: '#6b7280'
-                    }}>
-                      <span>
-                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
-                      </span>
-                      <span>•</span>
-                      <span>🏷️ {getTaskTypeLabel(task.task_type)}</span>
-                    </div>
-                    
-                    <div className="task-description" style={{
-                      fontSize: '14px',
-                      color: '#4b5563',
-                      lineHeight: '1.4',
-                      marginBottom: '12px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {task.description}
-                    </div>
-
-                    {/* 底部信息 */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '12px'
-                    }}>
-                      <div className="task-reward" style={{
-                        fontSize: '18px',
-                        fontWeight: '700',
-                        color: '#059669'
-                      }}>
-                        £{task.reward.toFixed(2)}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: isExpired(task.deadline) ? '#ef4444' : 
-                               isExpiringSoon(task.deadline) ? '#f59e0b' : '#6b7280'
-                      }}>
-                        {isExpired(task.deadline) ? t('home.taskExpired') : 
-                         isExpiringSoon(task.deadline) ? t('home.taskExpiringSoon') : getRemainTime(task.deadline, t)}
-                      </div>
-                    </div>
-                    
-                    {/* 操作按钮 */}
-                    <div className="task-actions" style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewTask(task.id);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          border: '1px solid #3b82f6',
-                          borderRadius: '6px',
-                          background: 'transparent',
-                          color: '#3b82f6',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#3b82f6';
-                          e.currentTarget.style.color = '#fff';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = '#3b82f6';
-                        }}
-                      >
-                        查看详情
-                      </button>
-                      
-                      {/* 申请按钮 - 未登录用户也可以看到普通任务的申请按钮 */}
-                      {(task.status === 'open' || task.status === 'taken') && 
-                       (!user || user.id !== task.poster_id) && 
-                       canViewTask(user, task) && 
-                       !appliedTasks.has(task.id) && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAcceptTask(task.id);
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '8px 12px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#10b981',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#059669';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#10b981';
-                          }}
-                        >
-                          申请任务
-                        </button>
-                      )}
-                      
-                      {/* 已申请状态 */}
-                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && appliedTasks.has(task.id) && (
-                        <div style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          background: '#e5e7eb',
-                          color: '#6b7280',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          textAlign: 'center',
-                          cursor: 'not-allowed',
-                          opacity: 0.6
-                        }}>
-                          ✓ {t('tasks.applied')}
-                        </div>
-                      )}
-                      
-                      {/* 等级不足提示 */}
-                      {(task.status === 'open' || task.status === 'taken') && user && user.id !== task.poster_id && !canViewTask(user, task) && (
-                        <div style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          background: '#f3f4f6',
-                          color: '#6b7280',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          textAlign: 'center',
-                          border: '1px solid #d1d5db'
-                        }}>
-                          🔒 需要{task.task_level === 'vip' ? 'VIP' : '超级VIP'}用户
-                        </div>
-                      )}
-                    </div>
+                    {task.title}
                   </div>
                 </div>
               ))
