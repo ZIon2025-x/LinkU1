@@ -5479,7 +5479,14 @@ async def translate_text(
     - source_language: 检测到的源语言
     """
     try:
-        from googletrans import Translator
+        try:
+            from googletrans import Translator
+        except ImportError:
+            logger.error("googletrans模块未安装，请运行: pip install googletrans==3.1.0a0")
+            raise HTTPException(
+                status_code=503, 
+                detail="翻译服务暂时不可用，请稍后重试。管理员请检查googletrans模块是否已安装。"
+            )
         
         translator = Translator()
         
@@ -5495,6 +5502,8 @@ async def translate_text(
             "target_language": result.dest,
             "original_text": text
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"翻译失败: {e}")
         raise HTTPException(status_code=500, detail=f"翻译失败: {str(e)}")
@@ -5518,7 +5527,14 @@ async def translate_batch(
     - translations: 翻译结果列表
     """
     try:
-        from googletrans import Translator
+        try:
+            from googletrans import Translator
+        except ImportError:
+            logger.error("googletrans模块未安装，请运行: pip install googletrans==3.1.0a0")
+            raise HTTPException(
+                status_code=503, 
+                detail="翻译服务暂时不可用，请稍后重试。管理员请检查googletrans模块是否已安装。"
+            )
         
         translator = Translator()
         translations = []
@@ -5548,6 +5564,8 @@ async def translate_batch(
             "translations": translations,
             "target_language": target_language
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"批量翻译失败: {e}")
         raise HTTPException(status_code=500, detail=f"批量翻译失败: {str(e)}")
