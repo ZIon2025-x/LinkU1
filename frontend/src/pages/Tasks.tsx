@@ -2250,31 +2250,32 @@ const Tasks: React.FC = () => {
                     justifyContent: 'center'
                   }}>
                     {/* 任务类型图标占位符 - 始终显示在背景层，当没有图片或图片加载失败时可见 */}
-                    <div 
-                      className={`task-icon-placeholder-${task.id}`}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 0,
-                        opacity: (!task.images || !Array.isArray(task.images) || task.images.length === 0) ? 1 : 0,
-                        pointerEvents: 'none'
-                      }}>
-                      <div style={{
-                        fontSize: isMobile ? '48px' : '64px',
-                        opacity: 0.6,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                    {(!task.images || !Array.isArray(task.images) || task.images.length === 0 || !task.images[0]) && (
+                      <div 
+                        className={`task-icon-placeholder-${task.id}`}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 1,
+                          pointerEvents: 'none'
+                        }}>
+                        <div style={{
+                          fontSize: isMobile ? '48px' : '64px',
+                          opacity: 0.6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     
                     {/* 如果有任务图片，显示图片 */}
                     {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
@@ -2298,15 +2299,31 @@ const Tasks: React.FC = () => {
                           // 图片加载失败，隐藏图片并显示占位符图标
                           e.currentTarget.style.display = 'none';
                           const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                          if (placeholder) {
+                          if (!placeholder) {
+                            // 如果占位符不存在，创建一个
+                            const placeholderDiv = document.createElement('div');
+                            placeholderDiv.className = `task-icon-placeholder-${task.id}`;
+                            placeholderDiv.style.cssText = `
+                              position: absolute;
+                              top: 0;
+                              left: 0;
+                              width: 100%;
+                              height: 100%;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              z-index: 1;
+                              pointer-events: none;
+                            `;
+                            placeholderDiv.innerHTML = `
+                              <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
+                                ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
+                              </div>
+                            `;
+                            e.currentTarget.parentElement?.appendChild(placeholderDiv);
+                          } else {
                             placeholder.style.opacity = '1';
-                          }
-                        }}
-                        onLoad={(e) => {
-                          // 图片加载成功，确保占位符图标隐藏
-                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                          if (placeholder) {
-                            placeholder.style.opacity = '0';
+                            placeholder.style.display = 'flex';
                           }
                         }}
                       />
@@ -2329,60 +2346,70 @@ const Tasks: React.FC = () => {
                     {/* 地点 - 左上角 */}
                     <div style={{
                       position: 'absolute',
-                      top: '12px',
-                      left: '12px',
+                      top: isMobile ? '8px' : '12px',
+                      left: isMobile ? '8px' : '12px',
                       background: 'rgba(0, 0, 0, 0.6)',
                       backdropFilter: 'blur(4px)',
                       color: '#fff',
-                      padding: '6px 12px',
+                      padding: isMobile ? '4px 8px' : '6px 12px',
                       borderRadius: '20px',
-                      fontSize: '12px',
+                      fontSize: isMobile ? '10px' : '12px',
                       fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      zIndex: 2,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      zIndex: 3,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
                     }}>
                       <span>{task.location === 'Online' ? '🌐' : '📍'}</span>
-                      <span>{task.location}</span>
+                      <span style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>{task.location}</span>
                     </div>
 
                     {/* 任务类型 - 右上角 */}
                     <div style={{
                       position: 'absolute',
-                      top: '12px',
-                      right: '12px',
+                      top: isMobile ? '8px' : '12px',
+                      right: isMobile ? '8px' : '12px',
                       background: 'rgba(0, 0, 0, 0.6)',
                       backdropFilter: 'blur(4px)',
                       color: '#fff',
-                      padding: '6px 12px',
+                      padding: isMobile ? '4px 8px' : '6px 12px',
                       borderRadius: '20px',
-                      fontSize: '12px',
+                      fontSize: isMobile ? '10px' : '12px',
                       fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      zIndex: 2,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      zIndex: 3,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
                     }}>
                       <span>🏷️</span>
-                      <span>{getTaskTypeLabel(task.task_type)}</span>
+                      <span style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>{getTaskTypeLabel(task.task_type)}</span>
                     </div>
 
                     {/* 金额 - 右下角 */}
                     <div style={{
                       position: 'absolute',
-                      bottom: '12px',
-                      right: '12px',
+                      bottom: isMobile ? '8px' : '12px',
+                      right: isMobile ? '8px' : '12px',
                       background: 'rgba(5, 150, 105, 0.9)',
                       backdropFilter: 'blur(4px)',
                       color: '#fff',
-                      padding: '8px 14px',
+                      padding: isMobile ? '6px 10px' : '8px 14px',
                       borderRadius: '20px',
-                      fontSize: '18px',
+                      fontSize: isMobile ? '14px' : '18px',
                       fontWeight: '700',
-                      zIndex: 2,
+                      zIndex: 3,
                       boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)'
                     }}>
                       £{task.reward.toFixed(2)}
@@ -2391,47 +2418,54 @@ const Tasks: React.FC = () => {
                     {/* 截止时间 - 左下角 */}
                     <div style={{
                       position: 'absolute',
-                      bottom: '12px',
-                      left: '12px',
+                      bottom: isMobile ? '8px' : '12px',
+                      left: isMobile ? '8px' : '12px',
                       background: 'rgba(0, 0, 0, 0.6)',
                       backdropFilter: 'blur(4px)',
                       color: isExpired(task.deadline) ? '#fca5a5' : 
                              isExpiringSoon(task.deadline) ? '#fde68a' : '#fff',
-                      padding: '6px 12px',
+                      padding: isMobile ? '4px 8px' : '6px 12px',
                       borderRadius: '20px',
-                      fontSize: '11px',
+                      fontSize: isMobile ? '9px' : '11px',
                       fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      zIndex: 2,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                      zIndex: 3,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
                     }}>
                       <span>⏰</span>
-                      <span>
+                      <span style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
                         {isExpired(task.deadline) ? t('home.taskExpired') : 
                          isExpiringSoon(task.deadline) ? t('home.taskExpiringSoon') : getRemainTime(task.deadline, t)}
                       </span>
                     </div>
 
                     {/* 任务等级标签 - 右上角，在任务类型下方 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '48px',
-                      right: '12px',
-                      background: getTaskLevelColor(task.task_level),
-                      color: '#fff',
-                      padding: '4px 10px',
-                      borderRadius: '16px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      zIndex: 2,
-                      boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 
-                                task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 
-                                '0 2px 6px rgba(0,0,0,0.2)'
-                    }}>
-                      {getTaskLevelLabel(task.task_level)}
-                    </div>
+                    {task.task_level && task.task_level !== 'normal' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: isMobile ? '42px' : '48px',
+                        right: isMobile ? '8px' : '12px',
+                        background: getTaskLevelColor(task.task_level),
+                        color: '#fff',
+                        padding: isMobile ? '3px 8px' : '4px 10px',
+                        borderRadius: '16px',
+                        fontSize: isMobile ? '9px' : '11px',
+                        fontWeight: '700',
+                        zIndex: 3,
+                        boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 
+                                  task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 
+                                  '0 2px 6px rgba(0,0,0,0.2)'
+                      }}>
+                        {getTaskLevelLabel(task.task_level)}
+                      </div>
+                    )}
                   </div>
                   
                   {/* 任务标题 - 放在图片下面 */}
