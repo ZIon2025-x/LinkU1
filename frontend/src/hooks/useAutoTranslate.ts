@@ -70,13 +70,12 @@ export const useAutoTranslate = (
   }, [text, getTargetLanguage, translate]);
 
   // 当文本或语言改变时自动翻译
+  // 注意：由于无法准确检测文本语言，暂时禁用自动翻译
+  // 用户可以通过点击按钮手动翻译
   useEffect(() => {
-    if (autoTranslate && !showOriginal) {
-      performTranslation();
-    } else {
-      setTranslatedText(null);
-    }
-  }, [text, language, autoTranslate, showOriginal, performTranslation]);
+    // 暂时禁用自动翻译，避免翻译错误
+    setTranslatedText(null);
+  }, [text, language, autoTranslate, showOriginal]);
 
   // 切换显示原文
   const toggleOriginal = useCallback(() => {

@@ -956,9 +956,15 @@ const TaskDetail: React.FC = () => {
   const handleTranslateTitle = async () => {
     if (!task || !task.title) return;
     
+    // 如果已有翻译，重置为原文
+    if (translatedTitle) {
+      setTranslatedTitle(null);
+      return;
+    }
+    
     setIsTranslatingTitle(true);
     try {
-      // 如果当前语言是中文,翻译成英文;反之翻译成中文
+      // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
       const targetLang = language === 'zh' ? 'en' : 'zh';
       const translated = await translate(task.title, targetLang);
       setTranslatedTitle(translated);
@@ -973,9 +979,15 @@ const TaskDetail: React.FC = () => {
   const handleTranslateDescription = async () => {
     if (!task || !task.description) return;
     
+    // 如果已有翻译，重置为原文
+    if (translatedDescription) {
+      setTranslatedDescription(null);
+      return;
+    }
+    
     setIsTranslatingDescription(true);
     try {
-      // 如果当前语言是中文,翻译成英文;反之翻译成中文
+      // 如果当前语言是中文，翻译成英文；如果当前语言是英文，翻译成中文
       const targetLang = language === 'zh' ? 'en' : 'zh';
       const translated = await translate(task.description, targetLang);
       setTranslatedDescription(translated);
