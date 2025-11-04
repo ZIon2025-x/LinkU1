@@ -615,6 +615,127 @@ const PublishTask: React.FC = () => {
               {form.description.length}/500
             </div>
           </div>
+          {/* 图片上传 */}
+          <div style={{
+            background: '#f8fafc',
+            padding: isMobile ? '24px 20px' : '28px 24px',
+            borderRadius: '16px',
+            border: '2px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <label style={{
+              fontWeight: '700', 
+              marginBottom: '12px', 
+              display: 'block',
+              color: '#1f2937',
+              fontSize: isMobile ? '15px' : '16px'
+            }}>
+              📷 {t('publishTask.imagesLabel') || '任务图片'} (可选，最多5张)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              disabled={images.length >= 5 || loading}
+              style={{
+                display: 'none'
+              }}
+              id="image-upload-input"
+            />
+            <label
+              htmlFor="image-upload-input"
+              style={{
+                display: 'inline-block',
+                padding: isMobile ? '14px 20px' : '12px 24px',
+                background: images.length >= 5 ? '#e5e7eb' : 'linear-gradient(135deg, #667eea, #764ba2)',
+                color: '#fff',
+                borderRadius: '12px',
+                cursor: images.length >= 5 ? 'not-allowed' : 'pointer',
+                fontSize: isMobile ? '15px' : '16px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease',
+                opacity: images.length >= 5 ? 0.6 : 1,
+                textAlign: 'center',
+                width: isMobile ? '100%' : 'auto',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+              }}
+            >
+              {images.length >= 5 ? '已达到最大上传数量' : '+ 上传图片'}
+            </label>
+            {images.length > 0 && (
+              <div style={{
+                marginTop: '20px',
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                gap: '12px'
+              }}>
+                {images.map((url, index) => (
+                  <div key={index} style={{
+                    position: 'relative',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    aspectRatio: '1',
+                    background: '#f3f4f6',
+                    border: '2px solid #e5e7eb'
+                  }}>
+                    <img
+                      src={url}
+                      alt={`任务图片 ${index + 1}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                      }}
+                      loading="lazy"
+                    />
+                    <button
+                      onClick={() => handleRemoveImage(index)}
+                      disabled={uploadingImages[index]}
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '28px',
+                        height: '28px',
+                        cursor: uploadingImages[index] ? 'not-allowed' : 'pointer',
+                        fontSize: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="删除图片"
+                    >
+                      ×
+                    </button>
+                    {uploadingImages[index] && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '14px'
+                      }}>
+                        上传中...
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           {/* 截止日期和金额 */}
           <div style={{
             display: 'flex', 
