@@ -2249,19 +2249,6 @@ const Tasks: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    {/* 图片遮罩层，确保文字清晰可读 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: task.images && Array.isArray(task.images) && task.images.length > 0
-                        ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)'
-                        : 'transparent',
-                      zIndex: 2
-                    }} />
-                    
                     {/* 任务类型图标占位符 - 始终显示在背景层，当没有图片或图片加载失败时可见 */}
                     <div 
                       className={`task-icon-placeholder-${task.id}`}
@@ -2324,6 +2311,20 @@ const Tasks: React.FC = () => {
                         }}
                       />
                     )}
+                    
+                    {/* 图片遮罩层，确保文字清晰可读 - 放在图片之上 */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]
+                        ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)'
+                        : 'transparent',
+                      zIndex: 2,
+                      pointerEvents: 'none'
+                    }} />
 
                     {/* 地点 - 左上角 */}
                     <div style={{
