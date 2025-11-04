@@ -202,6 +202,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     return user && task && task.taker_id === user.id;
   };
 
+  // 当任务加载或语言改变时,重置翻译
+  useEffect(() => {
+    setTranslatedTitle(null);
+    setTranslatedDescription(null);
+  }, [task, language]);
+
   const handleApproveApplication = async (applicantId: string) => {
     if (!window.confirm(t('taskDetail.confirmApprove'))) {
       return;
@@ -589,12 +595,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setTranslatedDescription(null);
     }
   };
-
-  // 当任务加载或语言改变时,重置翻译
-  useEffect(() => {
-    setTranslatedTitle(null);
-    setTranslatedDescription(null);
-  }, [task, language]);
 
   const getTaskLevelStyle = (level: string) => {
     switch (level) {

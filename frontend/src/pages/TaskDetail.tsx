@@ -763,6 +763,12 @@ const TaskDetail: React.FC = () => {
     return reviews.some(review => review.user_id === user.id);
   };
 
+  // 当任务加载或语言改变时,重置翻译
+  useEffect(() => {
+    setTranslatedTitle(null);
+    setTranslatedDescription(null);
+  }, [task, language]);
+
   if (loading) {
     return (
       <div>
@@ -988,12 +994,6 @@ const TaskDetail: React.FC = () => {
       setTranslatedDescription(null);
     }
   };
-
-  // 当任务加载或语言改变时,重置翻译
-  useEffect(() => {
-    setTranslatedTitle(null);
-    setTranslatedDescription(null);
-  }, [task, language]);
 
   // 如果用户等级不满足任务等级要求，显示权限不足页面
   if (task && !canViewTask(user, task)) {
