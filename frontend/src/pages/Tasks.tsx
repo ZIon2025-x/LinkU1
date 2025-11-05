@@ -1809,19 +1809,21 @@ const Tasks: React.FC = () => {
                   }}>
                     💰
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
                        rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
                     </div>
-                  </div>
-                  <div style={{
-                    color: rewardSort ? '#ffffff' : '#9ca3af',
-                    fontSize: '12px',
-                    transition: 'color 0.3s ease',
-                    transform: showRewardDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
-                  }}>
-                    ▼
+                    <div style={{
+                      color: rewardSort ? '#ffffff' : '#9ca3af',
+                      fontSize: '12px',
+                      transition: 'color 0.3s ease',
+                      transform: showRewardDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      ▼
+                    </div>
                   </div>
                 </div>
                 
@@ -1961,19 +1963,21 @@ const Tasks: React.FC = () => {
                   }}>
                     ⏰
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
                        deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
                     </div>
-                  </div>
-                  <div style={{
-                    color: deadlineSort ? '#ffffff' : '#9ca3af',
-                    fontSize: '12px',
-                    transition: 'color 0.3s ease',
-                    transform: showDeadlineDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
-                  }}>
-                    ▼
+                    <div style={{
+                      color: deadlineSort ? '#ffffff' : '#9ca3af',
+                      fontSize: '12px',
+                      transition: 'color 0.3s ease',
+                      transform: showDeadlineDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      ▼
+                    </div>
                   </div>
                 </div>
                 
@@ -2910,13 +2914,20 @@ const Tasks: React.FC = () => {
             }
             
             /* 文字在移动端显示 */
-            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child,
-            .reward-dropdown-container > div:first-child > div:nth-child(2),
-            .deadline-dropdown-container > div:first-child > div:nth-child(2) {
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child {
               display: flex !important;
               flex-direction: column !important;
               align-items: center !important;
               gap: 2px !important;
+            }
+            
+            /* 金额排序和截止时间排序：文本和箭头在同一行 */
+            .reward-dropdown-container > div:first-child > div:nth-child(2),
+            .deadline-dropdown-container > div:first-child > div:nth-child(2) {
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              gap: 6px !important;
             }
             
             .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child > div:first-child,
@@ -2935,10 +2946,12 @@ const Tasks: React.FC = () => {
               white-space: nowrap !important;
             }
             
-            /* 下拉箭头在移动端隐藏 */
+            /* 下拉箭头在移动端显示 */
             .reward-dropdown-container > div:first-child > div:last-child,
             .deadline-dropdown-container > div:first-child > div:last-child {
-              display: none !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
             }
             
             /* 任务等级下拉菜单在移动端保持原样或调整 */
