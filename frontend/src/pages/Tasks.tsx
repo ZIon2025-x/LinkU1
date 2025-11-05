@@ -1549,9 +1549,6 @@ const Tasks: React.FC = () => {
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {taskLevel}
                     </div>
-                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                      {taskLevel !== t('tasks.levels.all') ? t('tasks.levels.taskLevel') : t('tasks.levels.selectLevel')}
-                    </div>
                   </div>
                   <div style={{
                     color: taskLevel !== t('tasks.levels.all') ? '#ffffff' : '#9ca3af',
@@ -1758,7 +1755,6 @@ const Tasks: React.FC = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: '600' }}>{t('tasks.sorting.latest')}</div>
-                  <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('tasks.sorting.byTime')}</div>
                 </div>
               </div>
 
@@ -1817,9 +1813,6 @@ const Tasks: React.FC = () => {
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
                        rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
-                    </div>
-                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                      {rewardSort ? t('tasks.sorting.byReward') : t('tasks.sorting.selectSort')}
                     </div>
                   </div>
                   <div style={{
@@ -1972,9 +1965,6 @@ const Tasks: React.FC = () => {
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
                        deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
-                    </div>
-                    <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                      {deadlineSort ? t('tasks.sorting.byDeadline') : t('tasks.sorting.selectSort')}
                     </div>
                   </div>
                   <div style={{
@@ -2821,27 +2811,56 @@ const Tasks: React.FC = () => {
             }
             
             .category-icons > div > div {
-              width: 60px !important;
-              height: 60px !important;
-              font-size: 28px !important;
+              width: 50px !important;
+              height: 50px !important;
+              font-size: 24px !important;
             }
             
             .category-icons span {
-              font-size: 14px !important;
+              font-size: 12px !important;
               font-weight: 600 !important;
               line-height: 1.3 !important;
             }
             
-            /* 排序按钮移动端优化 - 变成方块并横向排列 */
-            .sort-controls {
-              flex-direction: row !important;
-              gap: 8px !important;
-              flex-wrap: nowrap !important;
-              overflow-x: visible !important;
+            /* 调整类别图标容器大小 */
+            .category-icons > div {
+              min-width: 70px !important;
+              max-width: 85px !important;
+              padding: 6px 4px !important;
             }
             
-            /* Latest、Reward Sort、Deadline Sort 按钮在移动端变成方块 */
-            .sort-controls > div:not(.level-dropdown-container) {
+            /* 排序按钮移动端优化 - 两行两列布局 */
+            .sort-controls {
+              display: grid !important;
+              grid-template-columns: 1fr 1fr !important;
+              grid-template-rows: auto auto !important;
+              gap: 8px !important;
+            }
+            
+            /* 第一行：等级选择和最新发布 */
+            .level-dropdown-container {
+              grid-column: 1 !important;
+              grid-row: 1 !important;
+            }
+            
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) {
+              grid-column: 2 !important;
+              grid-row: 1 !important;
+            }
+            
+            /* 第二行：金额排序和截止时间排序 */
+            .reward-dropdown-container {
+              grid-column: 1 !important;
+              grid-row: 2 !important;
+            }
+            
+            .deadline-dropdown-container {
+              grid-column: 2 !important;
+              grid-row: 2 !important;
+            }
+            
+            /* 所有按钮在移动端自适应宽度 */
+            .sort-controls > div {
               flex: 1 !important;
               min-width: 0 !important;
               max-width: none !important;
@@ -2874,13 +2893,20 @@ const Tasks: React.FC = () => {
               height: auto !important;
             }
             
-            /* 图标在移动端变小一些 */
+            /* 图标在移动端放大显示 */
             .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:first-child,
             .reward-dropdown-container > div:first-child > div:first-child,
             .deadline-dropdown-container > div:first-child > div:first-child {
-              width: 36px !important;
-              height: 36px !important;
-              font-size: 18px !important;
+              width: 40px !important;
+              height: 40px !important;
+              font-size: 24px !important;
+            }
+            
+            /* 等级选择图标也放大 */
+            .level-dropdown-container > div:first-child > div:first-child {
+              width: 40px !important;
+              height: 40px !important;
+              font-size: 24px !important;
             }
             
             /* 文字在移动端显示 */
@@ -3016,18 +3042,20 @@ const Tasks: React.FC = () => {
             }
             
             .category-icons > div {
-              min-width: 50px !important;
-              max-width: 70px !important;
+              min-width: 70px !important;
+              max-width: 85px !important;
+              padding: 6px 4px !important;
             }
             
             .category-icons > div > div {
-              width: 32px !important;
-              height: 32px !important;
-              font-size: 14px !important;
+              width: 50px !important;
+              height: 50px !important;
+              font-size: 24px !important;
             }
             
             .category-icons span {
-              font-size: 9px !important;
+              font-size: 12px !important;
+              font-weight: 600 !important;
             }
           }
           
@@ -3057,18 +3085,20 @@ const Tasks: React.FC = () => {
             }
             
             .category-icons > div {
-              min-width: 45px !important;
-              max-width: 60px !important;
+              min-width: 70px !important;
+              max-width: 85px !important;
+              padding: 6px 4px !important;
             }
             
             .category-icons > div > div {
-              width: 28px !important;
-              height: 28px !important;
-              font-size: 12px !important;
+              width: 50px !important;
+              height: 50px !important;
+              font-size: 24px !important;
             }
             
             .category-icons span {
-              font-size: 8px !important;
+              font-size: 12px !important;
+              font-weight: 600 !important;
             }
           }
         `}
