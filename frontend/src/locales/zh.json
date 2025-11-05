@@ -163,9 +163,13 @@
     "noTasks": "暂无任务",
     "taskExpired": "已过期",
     "taskExpiringSoon": "即将过期",
+    "days": "天",
     "hours": "小时",
     "minutes": "分钟",
+    "months": "个月",
     "remaining": "剩余",
+    "timeSeparator": " · ",
+    "timeCalculationError": "剩余时间计算错误",
     "diverseTaskTypes": "多样任务类型",
     "diverseTaskTypesDesc": "学业、生活、技能、跑腿等多种任务，满足不同需求",
     "securePayment": "安全结算保障",
@@ -276,14 +280,16 @@
       "placeholder": "搜索任务...",
       "results": "个结果",
       "tasks": "个任务",
+      "found": "找到",
+      "total": "共",
       "filter": "筛选:",
       "tryAdjustFilter": "尝试调整筛选条件",
       "noTasks": "暂无任务",
       "noMatchingTasks": "没有找到符合条件的任务"
     },
-          "systemNotice": "系统会自动取消超过截止日期的任务，确保任务时效性",
-          "swipeToSeeMore": "滑动查看更多"
-        },
+    "systemNotice": "系统会自动取消超过截止日期的任务，确保任务时效性",
+    "swipeToSeeMore": "滑动查看更多"
+  },
   "profile": {
     "title": "个人资料",
     "editProfile": "编辑资料",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
@@ -235,30 +235,31 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
     const days = Math.floor(diff / (24 * 60));
     const hours = Math.floor((diff % (24 * 60)) / 60);
     const minutes = diff % 60;
+    const separator = t('home.timeSeparator');
     
-    // 优化时间显示格式
+    // 优化时间显示格式（使用翻译）
     if (days >= 30) {
       const months = Math.floor(days / 30);
       const remainingDays = days % 30;
       if (remainingDays > 0) {
-        return `${months}个月 · ${remainingDays}天`;
+        return `${months}${t('home.months')}${separator}${remainingDays}${t('home.days')}`;
       }
-      return `${months}个月`;
+      return `${months}${t('home.months')}`;
     } else if (days > 0) {
       if (hours > 0) {
-        return `${days}天 · ${hours}小时`;
+        return `${days}${t('home.days')}${separator}${hours}${t('home.hours')}`;
       }
-      return `${days}天`;
+      return `${days}${t('home.days')}`;
     } else if (hours > 0) {
       if (minutes > 0) {
-        return `${hours}小时 · ${minutes}分钟`;
+        return `${hours}${t('home.hours')}${separator}${minutes}${t('home.minutes')}`;
       }
-      return `${hours}小时`;
+      return `${hours}${t('home.hours')}`;
     } else {
-      return `${minutes}分钟`;
+      return `${minutes}${t('home.minutes')}`;
     }
   } catch (error) {
-    console.error('剩余时间计算错误:', error);
+    console.error(t('home.timeCalculationError'), error);
     return t('home.taskExpired');
   }
 }
@@ -347,7 +348,9 @@ const Tasks: React.FC = () => {
   const [type, setType] = useState('all');
   const [city, setCity] = useState('all');
   const [cityInitialized, setCityInitialized] = useState(false); // 标记城市是否已初始化
-  const [keyword, setKeyword] = useState('');
+  const [keyword, setKeyword] = useState(''); // 实时输入值（用于显示）
+  const [debouncedKeyword, setDebouncedKeyword] = useState(''); // 防抖后的搜索关键词（用于筛选）
+  const keywordDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
   const [total, setTotal] = useState(0);
@@ -893,8 +896,28 @@ const Tasks: React.FC = () => {
     }
   };
 
-  // 任务等级筛选逻辑
-  const getFilteredTasks = () => {
+  // 防抖处理搜索关键词，减少输入延迟
+  useEffect(() => {
+    // 清除之前的定时器
+    if (keywordDebounceRef.current) {
+      clearTimeout(keywordDebounceRef.current);
+    }
+    
+    // 设置新的防抖定时器，300ms后更新防抖关键词
+    keywordDebounceRef.current = setTimeout(() => {
+      setDebouncedKeyword(keyword);
+    }, 300);
+    
+    // 清理函数
+    return () => {
+      if (keywordDebounceRef.current) {
+        clearTimeout(keywordDebounceRef.current);
+      }
+    };
+  }, [keyword]);
+
+  // 使用 useMemo 优化任务筛选逻辑，避免不必要的重新计算
+  const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
 
     // 按任务等级筛选
@@ -921,9 +944,9 @@ const Tasks: React.FC = () => {
       filtered = filtered.filter(task => task.task_type === type);
     }
 
-    // 按搜索关键词筛选
-    if (keyword.trim()) {
-      const query = keyword.toLowerCase();
+    // 按搜索关键词筛选（使用防抖后的关键词）
+    if (debouncedKeyword.trim()) {
+      const query = debouncedKeyword.toLowerCase();
       filtered = filtered.filter(task => 
         task.title.toLowerCase().includes(query) ||
         task.description.toLowerCase().includes(query) ||
@@ -935,10 +958,7 @@ const Tasks: React.FC = () => {
     // 客户端排序会破坏服务端的分页排序逻辑
     
     return filtered;
-  };
-
-  // 获取筛选后的任务列表
-  const filteredTasks = getFilteredTasks();
+  }, [tasks, taskLevel, city, type, debouncedKeyword, t]);
 
   return (
     <div style={{ 
@@ -2138,45 +2158,13 @@ const Tasks: React.FC = () => {
               color: '#6b7280',
               fontWeight: '500'
             }}>
-              找到 <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> 个任务
+              {t('tasks.search.found')} <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> {t('tasks.search.tasks')}
               {tasks.length !== filteredTasks.length && (
                 <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
-                  (共 {tasks.length} 个)
+                  ({t('tasks.search.total')} {tasks.length} {t('tasks.search.tasks')})
                 </span>
               )}
             </div>
-            {taskLevel !== t('tasks.levels.all') && (
-              <div style={{
-                fontSize: '12px',
-                color: '#6b7280',
-                background: '#f3f4f6',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}>
-                <span>{t('tasks.search.filter')}</span>
-                <span style={{ fontWeight: '500' }}>{taskLevel}</span>
-                <button
-                  onClick={() => setTaskLevel(t('tasks.levels.all'))}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#9ca3af',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    padding: '2px',
-                    borderRadius: '2px',
-                    transition: 'color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#6b7280'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
           </div>
 
 
