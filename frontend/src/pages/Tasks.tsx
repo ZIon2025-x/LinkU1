@@ -2818,7 +2818,7 @@ const Tasks: React.FC = () => {
             .category-section::after {
               content: var(--swipe-text, '← 滑动查看更多 →') !important;
               position: absolute !important;
-              bottom: 4px !important;
+              bottom: 2px !important;
               left: 50% !important;
               transform: translateX(-50%) !important;
               font-size: 10px !important;
@@ -2835,22 +2835,33 @@ const Tasks: React.FC = () => {
               50% { opacity: 1; }
             }
             
+            .category-section {
+              padding: 4px 4px !important;
+              margin-bottom: 12px !important;
+            }
+            
+            .category-icons {
+              padding-bottom: 4px !important;
+            }
+            
             .category-icons > div {
-              min-width: 70px !important;
-              max-width: 90px !important;
+              min-width: 80px !important;
+              max-width: 100px !important;
               flex-shrink: 0 !important;
-              padding: 10px 8px !important;
+              padding: 8px 6px !important;
+              gap: 8px !important;
             }
             
             .category-icons > div > div {
-              width: 50px !important;
-              height: 50px !important;
-              font-size: 22px !important;
+              width: 60px !important;
+              height: 60px !important;
+              font-size: 28px !important;
             }
             
             .category-icons span {
-              font-size: 12px !important;
+              font-size: 14px !important;
               font-weight: 600 !important;
+              line-height: 1.3 !important;
             }
             
             /* 排序按钮移动端优化 */
