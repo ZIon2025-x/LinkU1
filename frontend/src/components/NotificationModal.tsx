@@ -43,7 +43,15 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
 
   useEffect(() => {
     if (isOpen) {
+      // 打开时立即加载
       loadNotifications();
+      
+      // 打开后定期刷新通知列表（每10秒刷新一次，比红点的30秒更频繁）
+      const interval = setInterval(() => {
+        loadNotifications();
+      }, 10000);
+      
+      return () => clearInterval(interval);
     }
   }, [isOpen]);
 

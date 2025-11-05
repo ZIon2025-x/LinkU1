@@ -711,6 +711,31 @@ const Tasks: React.FC = () => {
     }
   }, [user]);
 
+  // 当通知面板打开时，定期刷新通知列表
+  useEffect(() => {
+    if (showNotifications && user) {
+      // 打开时立即刷新一次
+      const loadNotificationsList = async () => {
+        try {
+          const notificationsData = await getNotificationsWithRecentRead(10);
+          setNotifications(notificationsData);
+        } catch (error) {
+          console.error('刷新通知列表失败:', error);
+        }
+      };
+      loadNotificationsList();
+      
+      // 每10秒刷新一次通知列表（比未读数量刷新更频繁）
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadNotificationsList();
+        }
+      }, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [showNotifications, user]);
+
   // 设置滑动提示文本的双语化CSS变量
   useEffect(() => {
     const swipeText = `← ${t('tasks.swipeToSeeMore')} →`;
