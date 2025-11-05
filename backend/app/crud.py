@@ -678,8 +678,11 @@ def get_user_received_reviews(db: Session, user_id: str):
 
 
 def add_task_history(
-    db: Session, task_id: int, user_id: str, action: str, remark: str = None
+    db: Session, task_id: int, user_id: str | None, action: str, remark: str = None
 ):
+    """添加任务历史记录
+    user_id可以是None，用于管理员操作（管理员不在users表中）
+    """
     from app.models import TaskHistory
 
     history = TaskHistory(

@@ -229,7 +229,7 @@ class TaskHistory(Base):
     __tablename__ = "task_history"
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"))
-    user_id = Column(String(8), ForeignKey("users.id"))
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 可空，用于管理员操作
     action = Column(String(20), nullable=False)  # accepted, completed, cancelled
     timestamp = Column(DateTime, default=get_uk_time)
     remark = Column(Text, nullable=True)

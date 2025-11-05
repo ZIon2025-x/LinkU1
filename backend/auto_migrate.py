@@ -5,6 +5,7 @@
 
 import logging
 import os
+import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -18,11 +19,31 @@ def auto_migrate():
         # 始终执行迁移（不再检查环境变量）
         logger.info("开始自动数据库迁移...")
         
+        # 首先运行 Alembic 迁移（使用迁移脚本）
+        try:
+            logger.info("正在运行 Alembic 数据库迁移...")
+            from alembic.config import Config
+            from alembic import command
+            
+            # 获取项目根目录（backend目录）
+            alembic_ini_path = Path(__file__).parent / "alembic.ini"
+            if not alembic_ini_path.exists():
+                logger.warning(f"未找到 alembic.ini 文件: {alembic_ini_path}")
+            else:
+                alembic_cfg = Config(str(alembic_ini_path))
+                # 运行迁移到最新版本
+                command.upgrade(alembic_cfg, "head")
+                logger.info("✅ Alembic 数据库迁移完成")
+        except Exception as e:
+            logger.warning(f"Alembic 迁移失败（将使用 SQLAlchemy 创建表）: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+        
         # 导入数据库相关模块
         from app.database import sync_engine
         from app.models import Base
         
-        # 创建所有表（如果不存在）
+        # 创建所有表（如果不存在）- 作为备用方案
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建/更新完成")
         

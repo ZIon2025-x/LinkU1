@@ -2190,9 +2190,9 @@ def admin_update_task(
         db, task_id, task_update.dict(exclude_unset=True)
     )
 
-    # 记录操作历史
+    # 记录操作历史（管理员操作时user_id设为None，因为管理员不在users表中）
     crud.add_task_history(
-        db, task_id, current_user.id, "admin_update", f"管理员更新了任务信息"
+        db, task_id, None, "admin_update", f"管理员 {current_user.id} ({current_user.name}) 更新了任务信息"
     )
 
     return {"message": "任务更新成功", "task": updated_task}
@@ -2207,9 +2207,9 @@ def admin_delete_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # 记录删除历史
+    # 记录删除历史（管理员操作时user_id设为None）
     crud.add_task_history(
-        db, task_id, current_user.id, "admin_delete", f"管理员删除了任务"
+        db, task_id, None, "admin_delete", f"管理员 {current_user.id} ({current_user.name}) 删除了任务"
     )
 
     # 删除任务
@@ -2242,9 +2242,9 @@ def admin_batch_update_tasks(
                 crud.add_task_history(
                     db,
                     task_id,
-                    current_user.id,
+                    None,
                     "admin_batch_update",
-                    f"管理员批量更新了任务信息",
+                    f"管理员 {current_user.id} ({current_user.name}) 批量更新了任务信息",
                 )
                 updated_tasks.append(updated_task)
             else:
@@ -2276,9 +2276,9 @@ def admin_batch_delete_tasks(
                 crud.add_task_history(
                     db,
                     task_id,
-                    current_user.id,
+                    None,
                     "admin_batch_delete",
-                    f"管理员批量删除了任务",
+                    f"管理员 {current_user.id} ({current_user.name}) 批量删除了任务",
                 )
                 success = crud.delete_task_by_admin(db, task_id)
                 if success:
