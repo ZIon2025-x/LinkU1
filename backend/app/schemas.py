@@ -441,6 +441,12 @@ class AdminTaskUpdate(BaseModel):
     task_level: Optional[str] = None
     status: Optional[str] = None
     is_public: Optional[int] = None
+    task_type: Optional[str] = None  # 任务类型
+    location: Optional[str] = None  # 工作地点
+    title: Optional[str] = None  # 任务标题
+    description: Optional[str] = None  # 任务描述
+    reward: Optional[float] = None  # 赏金
+    deadline: Optional[datetime.datetime] = None  # 截止时间
 
 
 class AdminDashboardStats(BaseModel):

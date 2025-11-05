@@ -2176,7 +2176,7 @@ def admin_get_task_detail(
 @router.put("/admin/tasks/{task_id}")
 def admin_update_task(
     task_id: int,
-    task_update: schemas.TaskUpdate,
+    task_update: schemas.AdminTaskUpdate,
     current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -2224,7 +2224,7 @@ def admin_delete_task(
 @router.post("/admin/tasks/batch-update")
 def admin_batch_update_tasks(
     task_ids: list[int],
-    task_update: schemas.TaskUpdate,
+    task_update: schemas.AdminTaskUpdate,
     current_user=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
