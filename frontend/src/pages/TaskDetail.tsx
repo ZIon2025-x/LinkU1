@@ -897,6 +897,14 @@ const TaskDetail: React.FC = () => {
 
   const isTaskPoster = user && user.id === task.poster_id;
   const isTaskTaker = user && user.id === task.taker_id;
+  // 是否可以显示申请按钮（包括未登录用户）
+  const canShowApplyButton = (task.status === 'open' || task.status === 'taken') && 
+    canViewTask(user, task) &&
+    (!user || user.id !== task.poster_id) && // 未登录或不是发布者
+    !userApplication && // 如果已经申请过，不能再次申请
+    !hasApplied; // 如果已经申请过，隐藏按钮
+
+  // 是否可以申请任务（需要登录）
   const canAcceptTask = user && 
     user.id !== task.poster_id && 
     (task.status === 'open' || task.status === 'taken') && 
@@ -1718,10 +1726,16 @@ const TaskDetail: React.FC = () => {
           position: 'relative',
           zIndex: 1
         }}>
-          {canAcceptTask && (
+          {canShowApplyButton && (
             <button
-              onClick={handleAcceptTask}
-              disabled={actionLoading}
+              onClick={() => {
+                if (!user) {
+                  setShowLoginModal(true);
+                } else {
+                  handleAcceptTask();
+                }
+              }}
+              disabled={actionLoading && user}
               style={{
                 background: actionLoading 
                   ? 'linear-gradient(135deg, #cbd5e1, #94a3b8)' 
