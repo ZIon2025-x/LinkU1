@@ -1304,6 +1304,9 @@ const MessagePage: React.FC = () => {
           setCurrentChat(null);
         }
         
+        // 先清空消息列表，避免旧联系人的消息显示在新联系人上
+        setMessages([]);
+        
         // 加载聊天记录
         // 使用setTimeout让UI先更新，然后异步加载聊天记录
         setTimeout(() => {
@@ -1857,33 +1860,9 @@ const MessagePage: React.FC = () => {
             
             return uniqueMessages;
           } else {
-            // 初始加载：替换消息列表
-            // 如果当前有消息且新加载的消息为空，保留现有消息
-            if (filteredPrev.length > 0 && formattedMessages.length === 0) {
-              return filteredPrev;
-            }
-            
-            // 合并现有消息和新加载的消息，去重
-            const allMessages = [...filteredPrev, ...formattedMessages];
-            
-            // 去重：优先使用服务器ID，然后基于内容和时间
-            const uniqueMessages = allMessages.filter((msg, index, self) => {
-              // 如果有服务器ID，优先使用ID去重
-              if (msg.id && msg.id > 0) {
-                return index === self.findIndex(m => m.id === msg.id);
-              }
-              // 否则基于内容和时间去重
-              return index === self.findIndex(m => 
-                m.content === msg.content && 
-                m.from === msg.from && 
-                Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
-              );
-            });
-            
-            // 按时间排序
-            uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            
-            return uniqueMessages;
+            // 初始加载：直接替换消息列表，避免旧联系人的消息显示在新联系人上
+            // 直接返回新加载的消息，不合并现有消息
+            return formattedMessages;
           }
         });
         
