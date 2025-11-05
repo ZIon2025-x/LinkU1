@@ -1412,7 +1412,7 @@ const Tasks: React.FC = () => {
                     style={{
                       width: '64px',
                       height: '64px',
-                      background: `linear-gradient(135deg, ${['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#64748b', '#78716c'][index]}, ${['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#475569', '#57534e'][index]})`,
+                      background: `linear-gradient(135deg, ${['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#94a3b8', '#78716c'][index]}, ${['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#cbd5e1', '#57534e'][index]})`,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -1543,7 +1543,7 @@ const Tasks: React.FC = () => {
                     justifyContent: 'center',
                     fontSize: '16px'
                   }}>
-                    {taskLevel === t('tasks.levels.vip') ? '👑' : taskLevel === t('tasks.levels.super') ? '⭐' : '📋'}
+                    {taskLevel === t('tasks.levels.vip') ? '👑' : taskLevel === t('tasks.levels.super') ? '⭐' : '🎯'}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
@@ -1603,7 +1603,7 @@ const Tasks: React.FC = () => {
                         justifyContent: 'center',
                         fontSize: '16px'
                       }}>
-                        📋
+                        🎯
                       </div>
                       <span>{t('tasks.levels.all')}</span>
                     </div>
@@ -2814,10 +2814,18 @@ const Tasks: React.FC = () => {
               gap: 8px !important;
             }
             
-            .category-icons > div > div {
+            .category-icons > div > div,
+            .category-icon-circle {
               width: 50px !important;
               height: 50px !important;
-              font-size: 24px !important;
+            }
+            
+            .category-icon-circle {
+              font-size: 45px !important;
+            }
+            
+            .category-icons > div > div {
+              font-size: 45px !important;
             }
             
             .category-icons span {
@@ -3060,10 +3068,18 @@ const Tasks: React.FC = () => {
               padding: 6px 4px !important;
             }
             
-            .category-icons > div > div {
+            .category-icons > div > div,
+            .category-icon-circle {
               width: 50px !important;
               height: 50px !important;
-              font-size: 24px !important;
+            }
+            
+            .category-icon-circle {
+              font-size: 45px !important;
+            }
+            
+            .category-icons > div > div {
+              font-size: 45px !important;
             }
             
             .category-icons span {
@@ -3103,10 +3119,18 @@ const Tasks: React.FC = () => {
               padding: 6px 4px !important;
             }
             
-            .category-icons > div > div {
+            .category-icons > div > div,
+            .category-icon-circle {
               width: 50px !important;
               height: 50px !important;
-              font-size: 24px !important;
+            }
+            
+            .category-icon-circle {
+              font-size: 45px !important;
+            }
+            
+            .category-icons > div > div {
+              font-size: 45px !important;
             }
             
             .category-icons span {
