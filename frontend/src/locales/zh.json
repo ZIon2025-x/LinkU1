@@ -666,6 +666,75 @@
     "noExpertsFound": "未找到任务达人",
     "tryDifferentFilter": "尝试使用不同的筛选条件"
   },
+  "taskExpertsIntro": {
+    "title": "任务达人介绍",
+    "description": "了解什么是任务达人，如何成为任务达人，以及成为任务达人的优势",
+    "subtitle": "成为Link²Ur平台认证的专业任务执行者，享受更多特权和服务机会",
+    "whatIs": {
+      "title": "什么是任务达人？",
+      "description": "任务达人是Link²Ur平台认证的优秀用户，他们在特定领域拥有专业技能和丰富经验，能够为任务发布者提供高质量、可靠的服务。",
+      "feature1": {
+        "title": "专业认证",
+        "description": "通过平台严格审核，证明在特定领域具备专业能力"
+      },
+      "feature2": {
+        "title": "优质服务",
+        "description": "完成任务质量高，用户满意度高，获得大量好评"
+      },
+      "feature3": {
+        "title": "丰富经验",
+        "description": "在平台上完成过大量任务，拥有丰富的实战经验"
+      }
+    },
+    "howToBecome": {
+      "title": "如何成为任务达人？",
+      "step1": {
+        "title": "注册账户",
+        "description": "首先在Link²Ur平台注册账户，完善个人资料，上传真实头像和简介"
+      },
+      "step2": {
+        "title": "完成任务",
+        "description": "积极参与任务，高质量完成多个任务，获得良好的用户评价和评分"
+      },
+      "step3": {
+        "title": "申请认证",
+        "description": "在个人资料页面申请成为任务达人，提交相关证明材料（如技能证书、作品集等）"
+      },
+      "step4": {
+        "title": "通过审核",
+        "description": "平台审核您的申请，通过后即可获得任务达人认证徽章，享受达人专属特权"
+      }
+    },
+    "advantages": {
+      "title": "成为任务达人的优势",
+      "advantage1": {
+        "title": "优先推荐",
+        "description": "在任务搜索结果和推荐列表中优先展示，获得更多任务机会"
+      },
+      "advantage2": {
+        "title": "专属徽章",
+        "description": "获得任务达人专属认证徽章，提升个人形象和可信度"
+      },
+      "advantage3": {
+        "title": "更高收入",
+        "description": "可以接取高价值任务，获得更高的任务报酬"
+      },
+      "advantage4": {
+        "title": "平台支持",
+        "description": "获得平台官方支持和推广，增加曝光度和知名度"
+      },
+      "advantage5": {
+        "title": "优先保障",
+        "description": "享受平台优先客服支持和纠纷处理服务"
+      },
+      "advantage6": {
+        "title": "成长机会",
+        "description": "参与平台举办的培训和活动，持续提升专业技能"
+      }
+    },
+    "viewExperts": "查看任务达人",
+    "becomeExpert": "立即申请成为达人"
+  },
   "notifications": {
     "title": "通知",
     "pageTitle": "通知 - Link²Ur",

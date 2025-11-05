@@ -666,6 +666,75 @@
     "noExpertsFound": "No experts found",
     "tryDifferentFilter": "Try different filter options"
   },
+  "taskExpertsIntro": {
+    "title": "Task Experts Introduction",
+    "description": "Learn what Task Experts are, how to become one, and the benefits of becoming a Task Expert",
+    "subtitle": "Become a certified professional task performer on the Link²Ur platform and enjoy exclusive privileges and service opportunities",
+    "whatIs": {
+      "title": "What are Task Experts?",
+      "description": "Task Experts are verified outstanding users on the Link²Ur platform who have professional skills and rich experience in specific fields, capable of providing high-quality and reliable services to task publishers.",
+      "feature1": {
+        "title": "Professional Certification",
+        "description": "Verified through strict platform review, proving professional competence in specific fields"
+      },
+      "feature2": {
+        "title": "Quality Service",
+        "description": "High task completion quality, high user satisfaction, receiving numerous positive reviews"
+      },
+      "feature3": {
+        "title": "Rich Experience",
+        "description": "Completed numerous tasks on the platform with extensive practical experience"
+      }
+    },
+    "howToBecome": {
+      "title": "How to Become a Task Expert?",
+      "step1": {
+        "title": "Register Account",
+        "description": "First, register an account on the Link²Ur platform, complete your profile, upload a real avatar and introduction"
+      },
+      "step2": {
+        "title": "Complete Tasks",
+        "description": "Actively participate in tasks, complete multiple tasks with high quality, and receive good user reviews and ratings"
+      },
+      "step3": {
+        "title": "Apply for Certification",
+        "description": "Apply to become a Task Expert on your profile page, submit relevant supporting materials (such as skill certificates, portfolios, etc.)"
+      },
+      "step4": {
+        "title": "Pass Review",
+        "description": "The platform reviews your application, and upon approval, you will receive the Task Expert certification badge and enjoy exclusive privileges"
+      }
+    },
+    "advantages": {
+      "title": "Benefits of Becoming a Task Expert",
+      "advantage1": {
+        "title": "Priority Recommendation",
+        "description": "Prioritized display in task search results and recommendation lists, gaining more task opportunities"
+      },
+      "advantage2": {
+        "title": "Exclusive Badge",
+        "description": "Receive exclusive Task Expert certification badge, enhancing personal image and credibility"
+      },
+      "advantage3": {
+        "title": "Higher Income",
+        "description": "Can take on high-value tasks and receive higher task rewards"
+      },
+      "advantage4": {
+        "title": "Platform Support",
+        "description": "Receive official platform support and promotion, increasing exposure and visibility"
+      },
+      "advantage5": {
+        "title": "Priority Protection",
+        "description": "Enjoy priority customer service support and dispute resolution services"
+      },
+      "advantage6": {
+        "title": "Growth Opportunities",
+        "description": "Participate in platform training and events to continuously improve professional skills"
+      }
+    },
+    "viewExperts": "View Task Experts",
+    "becomeExpert": "Apply Now"
+  },
   "notifications": {
     "title": "Notifications",
     "pageTitle": "Notifications - Link²Ur",

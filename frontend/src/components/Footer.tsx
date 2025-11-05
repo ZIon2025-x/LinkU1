@@ -114,7 +114,7 @@ const Footer: React.FC = () => {
                 >
                   {t('footer.partners')}
                 </LocalizedLink>
-                <LocalizedLink to="/task-experts" style={{
+                <LocalizedLink to="/task-experts/intro" style={{
                   color: 'rgba(255,255,255,0.8)',
                   textDecoration: 'none',
                   fontSize: '14px',

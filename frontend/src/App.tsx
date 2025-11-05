@@ -28,6 +28,7 @@ const MyTasks = lazy(() => import('./pages/MyTasks'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const TaskExperts = lazy(() => import('./pages/TaskExperts'));
+const TaskExpertsIntro = lazy(() => import('./pages/TaskExpertsIntro'));
 const CustomerService = lazy(() => import('./pages/CustomerService'));
 const CustomerServiceLogin = lazy(() => import('./pages/CustomerServiceLogin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -147,6 +148,7 @@ const LanguageRoutes: React.FC = () => {
           } />
           <Route path={`/${lang}/user/:userId`} element={<UserProfile />} />
           <Route path={`/${lang}/task-experts`} element={<TaskExperts />} />
+          <Route path={`/${lang}/task-experts/intro`} element={<TaskExpertsIntro />} />
           <Route path={`/${lang}/vip`} element={<VIP />} />
           <Route path={`/${lang}/wallet`} element={
             <ProtectedRoute>
@@ -210,6 +212,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/my-tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/my-tasks`} replace />} />
       <Route path="/user/:userId" element={<UserProfileRedirect />} />
       <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />
+      <Route path="/task-experts/intro" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts/intro`} replace />} />
       <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
       <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
       <Route path="/settings" element={<Navigate to={`/${DEFAULT_LANGUAGE}/settings`} replace />} />
