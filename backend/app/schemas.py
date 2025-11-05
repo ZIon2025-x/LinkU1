@@ -447,6 +447,7 @@ class AdminTaskUpdate(BaseModel):
     description: Optional[str] = None  # 任务描述
     reward: Optional[float] = None  # 赏金
     deadline: Optional[datetime.datetime] = None  # 截止时间
+    images: Optional[List[str]] = None  # 图片URL列表（会被序列化为JSON字符串存储）
 
 
 class AdminDashboardStats(BaseModel):

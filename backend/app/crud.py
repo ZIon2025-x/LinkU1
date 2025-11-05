@@ -1600,11 +1600,16 @@ def get_dashboard_stats(db: Session):
 
 def update_task_by_admin(db: Session, task_id: int, task_update: dict):
     """管理员更新任务信息"""
+    import json
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if task:
         for field, value in task_update.items():
             if value is not None and hasattr(task, field):
-                setattr(task, field, value)
+                # 特殊处理 images 字段：如果是列表，需要序列化为 JSON 字符串
+                if field == 'images' and isinstance(value, list):
+                    setattr(task, field, json.dumps(value) if value else None)
+                else:
+                    setattr(task, field, value)
         db.commit()
         db.refresh(task)
     return task
