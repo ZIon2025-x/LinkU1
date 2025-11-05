@@ -440,20 +440,14 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('image', selectedImage);
       
-      // 上传图片到服务器
-      const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/image`, {
-        method: 'POST',
-        credentials: 'include',  // 使用Cookie认证
-        body: formData
+      // 上传图片到服务器（使用api.post自动处理CSRF token）
+      const uploadResponse = await api.post('/api/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('上传失败响应:', errorText);
-        throw new Error(`图片上传失败: ${uploadResponse.status} - ${errorText}`);
-      }
-      
-      const uploadResult = await uploadResponse.json();
+      const uploadResult = uploadResponse.data;
       
       if (!uploadResult.image_id) {
         throw new Error('服务器未返回图片ID');
@@ -653,15 +647,17 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('image', selectedImage);
       
-      const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
+      // 上传图片到服务器（使用api.post自动处理CSRF token）
+      const response = await api.post('/api/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        const message = `[图片] ${data.url}`;
+      const data = response.data;
+      
+      if (data.image_id) {
+        const message = `[图片] ${data.image_id}`;
         
         // 发送消息
         ws.send(JSON.stringify({
