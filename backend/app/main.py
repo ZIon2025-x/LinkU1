@@ -12,6 +12,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     FastAPI,
+    HTTPException,
     Request,
     Response,
     WebSocket,
@@ -219,11 +220,42 @@ else:
     (UPLOAD_DIR / "private" / "files").mkdir(exist_ok=True)
 
 # 添加静态文件服务 - 只允许访问公开目录
+# 注意：在生产环境中，StaticFiles可能无法正常工作，因此我们使用路由来处理
 if RAILWAY_ENVIRONMENT:
-    # Railway环境：只允许访问公开目录
-    app.mount("/uploads", StaticFiles(directory="/data/uploads/public"), name="uploads")
+    # Railway环境：使用路由方式提供静态文件访问
+    @app.get("/uploads/{file_path:path}")
+    async def serve_public_uploads(file_path: str):
+        """提供公开上传文件的访问"""
+        from fastapi.responses import FileResponse
+        import mimetypes
+        
+        # 构建文件路径
+        file_full_path = Path("/data/uploads/public") / file_path
+        
+        # 安全检查：确保文件在公开目录内
+        try:
+            file_full_path.resolve().relative_to(Path("/data/uploads/public").resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="访问被拒绝")
+        
+        if not file_full_path.exists():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        # 获取MIME类型
+        media_type, _ = mimetypes.guess_type(str(file_full_path))
+        if not media_type:
+            media_type = "application/octet-stream"
+        
+        return FileResponse(
+            path=str(file_full_path),
+            media_type=media_type,
+            headers={
+                "Cache-Control": "public, max-age=31536000",  # 缓存1年
+                "Access-Control-Allow-Origin": "*"  # 允许跨域访问
+            }
+        )
 else:
-    # 本地开发环境：只允许访问公开目录
+    # 本地开发环境：使用静态文件服务
     app.mount("/uploads", StaticFiles(directory="uploads/public"), name="uploads")
 
 active_connections = {}
