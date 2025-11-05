@@ -404,6 +404,9 @@ api.interceptors.response.use(
   }
 );
 
+// 防抖计时器映射
+const fetchTasksDebounceTimers = new Map<string, NodeJS.Timeout>();
+
 export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10 }: {
   type?: string;
   city?: string;
@@ -418,10 +421,43 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10 
   params.page = page;
   params.page_size = pageSize;
   
+  // 生成缓存键
+  const cacheKey = JSON.stringify(params);
   
+  // 对于搜索关键词，使用防抖（300ms）
+  if (keyword) {
+    return new Promise((resolve, reject) => {
+      // 清除之前的计时器
+      if (fetchTasksDebounceTimers.has(cacheKey)) {
+        clearTimeout(fetchTasksDebounceTimers.get(cacheKey)!);
+      }
+      
+      // 设置新的防抖计时器
+      const timer = setTimeout(async () => {
+        try {
+          const res = await api.get('/api/tasks', { params });
+          fetchTasksDebounceTimers.delete(cacheKey);
+          resolve(res.data);
+        } catch (error) {
+          fetchTasksDebounceTimers.delete(cacheKey);
+          console.error('fetchTasks 请求失败:', error);
+          reject(error);
+        }
+      }, 300); // 300ms防抖
+      
+      fetchTasksDebounceTimers.set(cacheKey, timer);
+    });
+  }
+  
+  // 非搜索请求，直接执行（使用缓存）
   try {
-    const res = await api.get('/api/tasks', { params });
-    return res.data;
+    const res = await cachedRequest(
+      '/api/tasks',
+      () => api.get('/api/tasks', { params }).then(r => r.data),
+      CACHE_TTL.TASKS,
+      params
+    );
+    return res;
   } catch (error) {
     console.error('fetchTasks 请求失败:', error);
     throw error;

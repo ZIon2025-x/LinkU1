@@ -746,21 +746,18 @@ const Tasks: React.FC = () => {
     };
   }, [t]);
 
-  // 加载任务列表
+  // 加载任务列表 - 使用缓存和防抖优化
   const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {
+      // 使用优化后的 fetchTasks，它已经包含了缓存和防抖
+      const data = await fetchTasks({
+        type: type !== 'all' ? type : undefined,
+        city: city !== 'all' ? city : undefined,
+        keyword: keyword || undefined,
         page: page,
-        page_size: pageSize,
-        ...(type !== 'all' && { task_type: type }),
-        ...(city !== 'all' && { location: city }),
-        ...(keyword && { keyword }),
-        sort_by: sortBy,
-      };
-      
-      const response = await api.get('/api/tasks', { params });
-      const data = response.data;
+        pageSize: pageSize
+      });
       
       const tasksList = (data.tasks || []).map((task: any) => {
         // 确保 images 是数组格式

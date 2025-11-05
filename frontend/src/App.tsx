@@ -1,29 +1,5 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
-import PublishTask from './pages/PublishTask';
-import Profile from './pages/Profile';
-import MessagePage from './pages/Message';
-import TaskDetail from './pages/TaskDetail';
-import MyTasks from './pages/MyTasks';
-import Tasks from './pages/Tasks';
-import UserProfile from './pages/UserProfile';
-import TaskExperts from './pages/TaskExperts';
-import CustomerService from './pages/CustomerService';
-import CustomerServiceLogin from './pages/CustomerServiceLogin';
-import AdminLogin from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
-import VIP from './pages/VIP';
-import Wallet from './pages/Wallet';
-import Settings from './pages/Settings';
-import About from './pages/About';
-import JoinUs from './pages/JoinUs';
-import TermsOfService from './pages/TermsOfService';
-import FAQ from './pages/FAQ';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import Partners from './pages/Partners';
-import MerchantCooperation from './pages/MerchantCooperation';
-import VerifyEmail from './pages/VerifyEmail';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
@@ -42,6 +18,32 @@ import ServiceAuth from './components/ServiceAuth';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
 
+// 懒加载组件 - 减少初始包大小，提升首屏加载速度
+const Home = lazy(() => import('./pages/Home'));
+const PublishTask = lazy(() => import('./pages/PublishTask'));
+const Profile = lazy(() => import('./pages/Profile'));
+const MessagePage = lazy(() => import('./pages/Message'));
+const TaskDetail = lazy(() => import('./pages/TaskDetail'));
+const MyTasks = lazy(() => import('./pages/MyTasks'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const TaskExperts = lazy(() => import('./pages/TaskExperts'));
+const CustomerService = lazy(() => import('./pages/CustomerService'));
+const CustomerServiceLogin = lazy(() => import('./pages/CustomerServiceLogin'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const VIP = lazy(() => import('./pages/VIP'));
+const Wallet = lazy(() => import('./pages/Wallet'));
+const Settings = lazy(() => import('./pages/Settings'));
+const About = lazy(() => import('./pages/About'));
+const JoinUs = lazy(() => import('./pages/JoinUs'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const Partners = lazy(() => import('./pages/Partners'));
+const MerchantCooperation = lazy(() => import('./pages/MerchantCooperation'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
   const detectedLanguage = detectBrowserLanguage();
@@ -52,10 +54,61 @@ const LanguageRedirect: React.FC = () => {
   return <Navigate to={redirectPath} replace />;
 };
 
+// 加载中占位组件
+const LoadingFallback: React.FC = () => {
+  React.useEffect(() => {
+    // 添加旋转动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .loading-spinner {
+        animation: spin 1s linear infinite;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)'
+    }}>
+      <div style={{
+        background: '#fff',
+        padding: '40px',
+        borderRadius: '20px',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+        textAlign: 'center'
+      }}>
+        <div className="loading-spinner" style={{
+          fontSize: '48px',
+          marginBottom: '20px',
+          display: 'inline-block'
+        }}>⏳</div>
+        <div style={{
+          fontSize: '18px',
+          color: '#3b82f6',
+          fontWeight: '600'
+        }}>加载中...</div>
+      </div>
+    </div>
+  );
+};
+
 // 语言路由组件
 const LanguageRoutes: React.FC = () => {
   return (
-    <Routes>
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
       {/* 根路径重定向到用户语言偏好或默认语言 */}
       <Route path="/" element={<LanguageRedirect />} />
       
@@ -165,7 +218,8 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 };
 
