@@ -1,16 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import api, { fetchCurrentUser, logout, getPublicSystemSettings } from '../api';
 import SEOHead from '../components/SEOHead';
 import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HamburgerMenu from '../components/HamburgerMenu';
+import LoginModal from '../components/LoginModal';
 
 const TaskExpertsIntro: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const location = useLocation();
+  
+  // 用户和系统设置状态
+  const [user, setUser] = useState<any>(null);
+  const [systemSettings, setSystemSettings] = useState<any>({
+    vip_button_visible: false
+  });
+  
+  // 登录弹窗状态
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 加载用户信息和系统设置
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        setUser(null);
+      }
+    };
+    
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getPublicSystemSettings();
+        setSystemSettings(settings);
+      } catch (error) {
+        console.error('Failed to load system settings:', error);
+      }
+    };
+    
+    loadUserData();
+    loadSystemSettings();
+  }, []);
   
   // 生成canonical URL
   const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
@@ -66,7 +102,19 @@ const TaskExpertsIntro: React.FC = () => {
           {/* 语言切换器和汉堡菜单 */}
           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
             <LanguageSwitcher />
-            <HamburgerMenu />
+            <HamburgerMenu
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                  console.error('Logout failed:', error);
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+            />
           </div>
         </div>
       </header>
@@ -383,6 +431,27 @@ const TaskExpertsIntro: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          // 登录成功后刷新用户状态
+          window.location.reload();
+        }}
+        onReopen={() => {
+          // 重新打开登录弹窗
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
 
       <Footer />
     </div>
