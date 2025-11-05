@@ -351,6 +351,8 @@ const Tasks: React.FC = () => {
   const [keyword, setKeyword] = useState(''); // 实时输入值（用于显示）
   const [debouncedKeyword, setDebouncedKeyword] = useState(''); // 防抖后的搜索关键词（用于筛选）
   const keywordDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const locationDropdownRef = useRef<HTMLDivElement | null>(null);
+  const locationButtonRef = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
   const [total, setTotal] = useState(0);
@@ -534,12 +536,20 @@ const Tasks: React.FC = () => {
 
     if (showLocationDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
+      
+      // 移动端计算下拉菜单位置
+      if (isMobile && locationDropdownRef.current && locationButtonRef.current) {
+        const buttonRect = locationButtonRef.current.getBoundingClientRect();
+        const dropdown = locationDropdownRef.current;
+        dropdown.style.top = `${buttonRect.bottom + 4}px`;
+        dropdown.style.left = `${buttonRect.left}px`;
+      }
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLocationDropdown]);
+  }, [showLocationDropdown, isMobile]);
 
   // 处理金额排序变化
   const handleRewardSortChange = (value: string) => {
@@ -1085,24 +1095,30 @@ const Tasks: React.FC = () => {
                 className="location-dropdown"
                 style={{
                   position: isMobile ? 'fixed' : 'absolute',
-                  top: isMobile ? '70px' : '100%',
-                  left: isMobile ? '10px' : '0',
-                  right: isMobile ? '10px' : '0',
+                  top: isMobile ? undefined : '100%',
+                  bottom: isMobile ? 'auto' : undefined,
+                  left: isMobile ? undefined : '0',
+                  right: isMobile ? undefined : 'auto',
                   background: '#fff',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  zIndex: 9999,
-                  marginTop: isMobile ? '8px' : '4px',
+                  zIndex: 99999,
+                  marginTop: isMobile ? '0' : '4px',
                   maxHeight: '200px',
                   overflowY: 'auto',
+                  overflowX: 'hidden',
                   minWidth: '150px',
-                  maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none'
-                }}>
+                  width: 'auto',
+                  maxWidth: '200px',
+                  boxSizing: 'border-box'
+                }}
+                ref={locationDropdownRef}>
                 <div
                   onClick={() => handleLocationChange('all')}
                   style={{
                     padding: '12px 16px',
+                    paddingRight: '20px',
                     cursor: 'pointer',
                     fontSize: '14px',
                     color: '#374151',
@@ -1125,6 +1141,7 @@ const Tasks: React.FC = () => {
                     onClick={() => handleLocationChange(cityName)}
                     style={{
                       padding: '12px 16px',
+                      paddingRight: '20px',
                       cursor: 'pointer',
                       fontSize: '14px',
                       color: '#374151',
@@ -1560,7 +1577,9 @@ const Tasks: React.FC = () => {
                     zIndex: 1000,
                     marginTop: '4px',
                     overflow: 'hidden',
-                    minWidth: '200px'
+                    width: 'auto',
+                    minWidth: '120px',
+                    maxWidth: '160px'
                   }}>
                     <div 
                       className={`custom-dropdown-item ${taskLevel === t('tasks.levels.all') ? 'selected' : ''}`}
@@ -1682,18 +1701,6 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 排序标签 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#6b7280',
-                fontSize: '14px',
-                fontWeight: '500',
-                flexShrink: 0
-              }}>
-                <span>排序:</span>
-              </div>
-
               {/* 最新发布卡片 */}
               <div
                 onClick={() => {
@@ -1839,40 +1846,10 @@ const Tasks: React.FC = () => {
                     zIndex: 1000,
                     marginTop: '4px',
                     overflow: 'hidden',
-                    minWidth: '200px'
+                    width: 'auto',
+                    minWidth: '120px',
+                    maxWidth: '160px'
                   }}>
-                    <div 
-                      className={`custom-dropdown-item ${rewardSort === '' ? 'selected' : ''}`}
-                      onClick={() => {
-                        handleRewardSortChange('');
-                        setShowRewardDropdown(false);
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                        color: rewardSort === '' ? '#ffffff' : '#374151',
-                        background: rewardSort === '' ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        💰
-                      </div>
-                      <span>{t('tasks.sorting.rewardSort')}</span>
-                    </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
                       onClick={() => {
@@ -2024,40 +2001,10 @@ const Tasks: React.FC = () => {
                     zIndex: 1000,
                     marginTop: '4px',
                     overflow: 'hidden',
-                    minWidth: '200px'
+                    width: 'auto',
+                    minWidth: '120px',
+                    maxWidth: '160px'
                   }}>
-                    <div 
-                      className={`custom-dropdown-item ${deadlineSort === '' ? 'selected' : ''}`}
-                      onClick={() => {
-                        handleDeadlineSortChange('');
-                        setShowDeadlineDropdown(false);
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: deadlineSort === '' ? '#ffffff' : '#374151',
-                        background: deadlineSort === '' ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        ⏰
-                      </div>
-                      <span>{t('tasks.sorting.deadlineSort')}</span>
-                    </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
                       onClick={() => {
@@ -2736,14 +2683,14 @@ const Tasks: React.FC = () => {
             
             /* 排序和搜索区域移动端优化 */
             .sort-controls {
-              flex-direction: column !important;
-              gap: 16px !important;
+              flex-direction: row !important;
+              gap: 8px !important;
               width: 100% !important;
             }
             
             .sort-controls > div {
-              width: 100% !important;
-              min-width: 100% !important;
+              flex: 1 !important;
+              min-width: 0 !important;
             }
             
             .search-section {
@@ -2780,17 +2727,38 @@ const Tasks: React.FC = () => {
             
             .location-dropdown {
               position: fixed !important;
-              top: 70px !important;
-              left: 10px !important;
-              right: 10px !important;
+              top: auto !important;
+              left: auto !important;
+              right: auto !important;
               width: auto !important;
-              max-width: calc(100vw - 20px) !important;
+              max-width: 200px !important;
               z-index: 99999 !important;
-              margin-top: 8px !important;
+              margin-top: 0 !important;
               box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
               border-radius: 12px !important;
               max-height: 60vh !important;
               overflow-y: auto !important;
+              overflow-x: hidden !important;
+              box-sizing: border-box !important;
+            }
+            
+            /* 确保滚动条在容器内部 */
+            .location-dropdown::-webkit-scrollbar {
+              width: 8px !important;
+            }
+            
+            .location-dropdown::-webkit-scrollbar-track {
+              background: transparent !important;
+              border-radius: 0 8px 8px 0 !important;
+            }
+            
+            .location-dropdown::-webkit-scrollbar-thumb {
+              background: #d1d5db !important;
+              border-radius: 4px !important;
+            }
+            
+            .location-dropdown::-webkit-scrollbar-thumb:hover {
+              background: #9ca3af !important;
             }
             
             /* 任务网格移动端优化 - 两个一行显示 */
@@ -2864,17 +2832,93 @@ const Tasks: React.FC = () => {
               line-height: 1.3 !important;
             }
             
-            /* 排序按钮移动端优化 */
-            .sort-buttons {
+            /* 排序按钮移动端优化 - 变成方块并横向排列 */
+            .sort-controls {
+              flex-direction: row !important;
               gap: 8px !important;
-              padding: 12px !important;
-              overflow-x: auto !important;
+              flex-wrap: nowrap !important;
+              overflow-x: visible !important;
             }
             
-            .sort-buttons button {
-              padding: 6px 12px !important;
+            /* Latest、Reward Sort、Deadline Sort 按钮在移动端变成方块 */
+            .sort-controls > div:not(.level-dropdown-container) {
+              flex: 1 !important;
+              min-width: 0 !important;
+              max-width: none !important;
+            }
+            
+            /* 下拉容器内部的按钮变成方块 */
+            .reward-dropdown-container > div:first-child,
+            .deadline-dropdown-container > div:first-child {
+              padding: 10px 8px !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              justify-content: center !important;
+              text-align: center !important;
+              gap: 6px !important;
+              min-height: 80px !important;
+              height: auto !important;
+              width: 100% !important;
+              min-width: 0 !important;
+            }
+            
+            /* Latest 按钮（非下拉容器）也变成方块 */
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) {
+              padding: 10px 8px !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              justify-content: center !important;
+              text-align: center !important;
+              gap: 6px !important;
+              min-height: 80px !important;
+              height: auto !important;
+            }
+            
+            /* 图标在移动端变小一些 */
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:first-child,
+            .reward-dropdown-container > div:first-child > div:first-child,
+            .deadline-dropdown-container > div:first-child > div:first-child {
+              width: 36px !important;
+              height: 36px !important;
+              font-size: 18px !important;
+            }
+            
+            /* 文字在移动端显示 */
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child,
+            .reward-dropdown-container > div:first-child > div:nth-child(2),
+            .deadline-dropdown-container > div:first-child > div:nth-child(2) {
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
+              gap: 2px !important;
+            }
+            
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child > div:first-child,
+            .reward-dropdown-container > div:first-child > div:nth-child(2) > div:first-child,
+            .deadline-dropdown-container > div:first-child > div:nth-child(2) > div:first-child {
               font-size: 12px !important;
+              font-weight: 600 !important;
               white-space: nowrap !important;
+            }
+            
+            .sort-controls > div:not(.level-dropdown-container):not(.reward-dropdown-container):not(.deadline-dropdown-container) > div:last-child > div:last-child,
+            .reward-dropdown-container > div:first-child > div:nth-child(2) > div:last-child,
+            .deadline-dropdown-container > div:first-child > div:nth-child(2) > div:last-child {
+              font-size: 9px !important;
+              opacity: 0.8 !important;
+              white-space: nowrap !important;
+            }
+            
+            /* 下拉箭头在移动端隐藏 */
+            .reward-dropdown-container > div:first-child > div:last-child,
+            .deadline-dropdown-container > div:first-child > div:last-child {
+              display: none !important;
+            }
+            
+            /* 任务等级下拉菜单在移动端保持原样或调整 */
+            .level-dropdown-container {
+              flex: 1 !important;
+              min-width: 0 !important;
             }
             
             /* 任务卡片移动端优化 */
