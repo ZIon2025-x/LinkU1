@@ -1327,16 +1327,15 @@ const Tasks: React.FC = () => {
           </h1>
           {/* 分类图标行 */}
           <div className="category-section" style={{
-            background: '#fff',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            background: 'transparent',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '20px',
             position: 'relative'
           }}>
             <div className="category-icons" style={{
               display: 'flex',
-              gap: '12px',
+              gap: '16px',
               justifyContent: 'space-between',
               paddingBottom: '8px',
               flexWrap: 'wrap',
@@ -1351,42 +1350,97 @@ const Tasks: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '10px',
                     flex: '1',
-                    minWidth: '80px',
-                    maxWidth: '120px',
+                    minWidth: '90px',
+                    maxWidth: '140px',
                     cursor: 'pointer',
-                    padding: '8px',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s ease'
+                    padding: '12px',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                    const iconCircle = e.currentTarget.querySelector('.category-icon-circle') as HTMLElement;
+                    if (iconCircle) {
+                      iconCircle.style.transform = 'scale(1.1) rotate(5deg)';
+                      iconCircle.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.15)';
+                    }
+                    const glowEffect = e.currentTarget.querySelector('.icon-glow') as HTMLElement;
+                    if (glowEffect) {
+                      glowEffect.style.opacity = '1';
+                    }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                    const iconCircle = e.currentTarget.querySelector('.category-icon-circle') as HTMLElement;
+                    if (iconCircle) {
+                      iconCircle.style.transform = 'scale(1) rotate(0deg)';
+                      iconCircle.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)';
+                    }
+                    const glowEffect = e.currentTarget.querySelector('.icon-glow') as HTMLElement;
+                    if (glowEffect) {
+                      glowEffect.style.opacity = '0';
+                    }
                   }}
                   onClick={() => setType(taskType)}
                 >
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    background: `linear-gradient(135deg, ${['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'][index]}, ${['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d'][index]})`,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px',
-                    color: '#fff'
-                  }}>
-                    {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][index]}
+                  <div 
+                    className="category-icon-circle"
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      background: `linear-gradient(135deg, ${['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#64748b', '#78716c'][index]}, ${['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#475569', '#57534e'][index]})`,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '28px',
+                      color: '#fff',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div 
+                      className="icon-glow"
+                      style={{
+                        position: 'absolute',
+                        top: '-50%',
+                        left: '-50%',
+                        width: '200%',
+                        height: '200%',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    <span style={{ position: 'relative', zIndex: 1 }}>
+                      {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][index]}
+                    </span>
                   </div>
                   <span style={{
-                    fontSize: '12px',
+                    fontSize: '14px',
                     color: '#374151',
                     textAlign: 'center',
-                    fontWeight: '500'
-                  }}>
+                    fontWeight: '600',
+                    lineHeight: '1.4',
+                    transition: 'color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#1f2937';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#374151';
+                  }}
+                  >
                     {getTaskTypeLabel(taskType)}
                   </span>
                 </div>
@@ -2782,19 +2836,21 @@ const Tasks: React.FC = () => {
             }
             
             .category-icons > div {
-              min-width: 60px !important;
-              max-width: 80px !important;
+              min-width: 70px !important;
+              max-width: 90px !important;
               flex-shrink: 0 !important;
+              padding: 10px 8px !important;
             }
             
             .category-icons > div > div {
-              width: 36px !important;
-              height: 36px !important;
-              font-size: 16px !important;
+              width: 50px !important;
+              height: 50px !important;
+              font-size: 22px !important;
             }
             
             .category-icons span {
-              font-size: 10px !important;
+              font-size: 12px !important;
+              font-weight: 600 !important;
             }
             
             /* 排序按钮移动端优化 */
