@@ -34,7 +34,10 @@ class NetworkDiagnostics {
       this.errors.shift();
     }
 
-    console.warn('网络错误已记录:', networkError);
+    // 只在开发环境或严重错误时输出日志
+    if (process.env.NODE_ENV === 'development' || networkError.type === 'HTTP2_PROTOCOL_ERROR') {
+      console.warn('网络错误已记录:', networkError);
+    }
   }
 
   // 分类错误类型

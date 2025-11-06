@@ -26,7 +26,10 @@ export const fetchHttp1 = async (url: string, options: RequestInit = {}) => {
   try {
     return await fetch(url, config);
   } catch (error) {
-    console.warn('HTTP/1.1 fetch失败，尝试XMLHttpRequest:', error);
+    // 只在开发环境输出详细日志
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('HTTP/1.1 fetch失败，尝试XMLHttpRequest:', error);
+    }
     throw error;
   }
 };
@@ -92,7 +95,10 @@ export const loadWithHttp1Fallback = async (url: string, options: RequestInit = 
     const response = await fetchHttp1(url, options);
     return response;
   } catch (error) {
-    console.warn('Fetch失败，尝试XMLHttpRequest:', error);
+    // 只在开发环境输出详细日志
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Fetch失败，尝试XMLHttpRequest:', error);
+    }
     
     // 如果fetch失败，使用XMLHttpRequest
     try {

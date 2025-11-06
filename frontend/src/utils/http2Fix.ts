@@ -36,7 +36,10 @@ export const createHttp1Fetch = () => {
       return await originalFetch(requestUrl, http1Init);
     } catch (error) {
       if (isHttp2Error(error)) {
-        console.warn('检测到HTTP/2错误，尝试使用XMLHttpRequest:', error);
+        // 只在开发环境输出详细日志
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('检测到HTTP/2错误，尝试使用XMLHttpRequest:', error);
+        }
         
         // 使用XMLHttpRequest作为备用
         return new Promise((resolve, reject) => {
@@ -89,7 +92,10 @@ export const applyHttp1Fix = () => {
     // 添加错误监听器
     window.addEventListener('unhandledrejection', (event) => {
       if (isHttp2Error(event.reason)) {
-        console.warn('捕获到HTTP/2错误，已自动处理:', event.reason);
+        // 只在开发环境输出详细日志
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('捕获到HTTP/2错误，已自动处理:', event.reason);
+        }
         event.preventDefault();
       }
     });
