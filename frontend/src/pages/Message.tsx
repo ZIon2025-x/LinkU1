@@ -660,12 +660,21 @@ const MessagePage: React.FC = () => {
       if (data.image_id) {
         const message = `[图片] ${data.image_id}`;
         
-        // 发送消息
-        ws.send(JSON.stringify({
-          type: 'message',
-          content: message,
-          to: currentChat?.chat_id || activeContact?.id
-        }));
+        // 发送消息（使用新格式）
+        if (isServiceMode && currentChat) {
+          const messageData = {
+            receiver_id: currentChat.service_id,
+            content: message,
+            chat_id: currentChat.chat_id
+          };
+          ws.send(JSON.stringify(messageData));
+        } else if (activeContact) {
+          const messageData = {
+            receiver_id: activeContact.id,
+            content: message
+          };
+          ws.send(JSON.stringify(messageData));
+        }
         
         // 清空图片选择并关闭弹窗
         setSelectedImage(null);
