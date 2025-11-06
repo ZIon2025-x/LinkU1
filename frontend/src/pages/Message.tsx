@@ -639,55 +639,51 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 发送图片（从弹窗）
+  // 发送图片（从弹窗）- 移动端专用
   const sendImageFromModal = async () => {
-    if (!selectedImage || !ws) return;
+    if (!selectedImage) return;
     
     setUploadingImage(true);
     try {
+      // 检查图片大小，如果超过5MB则拒绝上传
+      const maxFileSize = 5 * 1024 * 1024; // 5MB
+      if (selectedImage.size > maxFileSize) {
+        alert(t('messages.imageTooLargeAlert', { size: (selectedImage.size / 1024 / 1024).toFixed(2) }));
+        setUploadingImage(false);
+        return;
+      }
+      
       const formData = new FormData();
       formData.append('image', selectedImage);
       
       // 上传图片到服务器（使用api.post自动处理CSRF token）
-      const response = await api.post('/api/upload/image', formData, {
+      const uploadResponse = await api.post('/api/upload/image', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      const data = response.data;
+      const uploadResult = uploadResponse.data;
       
-      if (data.image_id) {
-        const message = `[图片] ${data.image_id}`;
-        
-        // 发送消息（使用新格式）
-        if (isServiceMode && currentChat) {
-          const messageData = {
-            receiver_id: currentChat.service_id,
-            content: message,
-            chat_id: currentChat.chat_id
-          };
-          ws.send(JSON.stringify(messageData));
-        } else if (activeContact) {
-          const messageData = {
-            receiver_id: activeContact.id,
-            content: message
-          };
-          ws.send(JSON.stringify(messageData));
-        }
-        
-        // 清空图片选择并关闭弹窗
-        setSelectedImage(null);
-        setImagePreview(null);
-        setShowMobileImageSendModal(false);
-        setPreviewImageUrl('');
-        setInput('');
-      } else {
-        alert(t('messages.imageUploadFailed'));
+      if (!uploadResult.image_id) {
+        throw new Error('服务器未返回图片ID');
       }
+      
+      const imageId = uploadResult.image_id;
+      
+      // 发送包含图片ID的消息（使用通用方法）
+      const messageContent = `[图片] ${imageId}`;
+      await sendImageMessage(messageContent);
+      
+      // 清空图片选择并关闭弹窗（移动端特有）
+      setSelectedImage(null);
+      setImagePreview(null);
+      setShowMobileImageSendModal(false);
+      setPreviewImageUrl('');
+      setInput('');
     } catch (error) {
       console.error('发送图片失败:', error);
-      alert(t('messages.sendImageFailedShort'));
+      alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingImage(false);
     }
