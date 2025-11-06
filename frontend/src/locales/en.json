@@ -733,7 +733,8 @@
       }
     },
     "viewExperts": "View Task Experts",
-    "becomeExpert": "Apply Now"
+    "becomeExpert": "Apply Now",
+    "notQualified": "You do not meet the requirements to become a Task Expert"
   },
   "notifications": {
     "title": "Notifications",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import api, { fetchCurrentUser, logout, getPublicSystemSettings } from '../api';
@@ -405,7 +406,9 @@ const TaskExpertsIntro: React.FC = () => {
               {t('taskExpertsIntro.viewExperts')}
             </button>
             <button
-              onClick={() => navigate('/publish')}
+              onClick={() => {
+                message.warning(t('taskExpertsIntro.notQualified'));
+              }}
               style={{
                 background: '#fff',
                 color: '#3b82f6',

@@ -733,7 +733,8 @@
       }
     },
     "viewExperts": "查看任务达人",
-    "becomeExpert": "立即申请成为达人"
+    "becomeExpert": "立即申请成为达人",
+    "notQualified": "未达到达人条件"
   },
   "notifications": {
     "title": "通知",
