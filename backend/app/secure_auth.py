@@ -587,7 +587,7 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     
     logger.info(f"[DEBUG] 找到session_id: {session_id[:8]}...")
     
-    session = SecureAuthManager.get_session(session_id, update_activity=False)  # 不更新活动时间
+    session = SecureAuthManager.get_session(session_id, update_activity=True)  # 更新活动时间（内部有5分钟防抖机制）
     if not session:
         logger.info(f"[DEBUG] 会话验证失败: {session_id[:8]}...")
         return None

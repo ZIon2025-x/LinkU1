@@ -597,17 +597,18 @@ const MessagePage: React.FC = () => {
       
       if (ws && ws.readyState === WebSocket.OPEN) {
         if (isServiceMode && currentChat) {
-          ws.send(JSON.stringify({
-            type: 'message',
-            chat_id: currentChat.chat_id,
-            content: messageContent
-          }));
+          const messageData = {
+            receiver_id: currentChat.service_id,
+            content: messageContent,
+            chat_id: currentChat.chat_id
+          };
+          ws.send(JSON.stringify(messageData));
         } else if (activeContact) {
-          ws.send(JSON.stringify({
-            type: 'message',
-            to: activeContact.id,
+          const messageData = {
+            receiver_id: activeContact.id,
             content: messageContent
-          }));
+          };
+          ws.send(JSON.stringify(messageData));
         }
         
         // 添加消息到本地状态
