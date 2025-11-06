@@ -137,7 +137,7 @@ def admin_logout(
     response: Response,
     current_admin: models.AdminUser = Depends(get_current_admin)
 ):
-    """管理员登出（独立认证系统）"""
+    """管理员登出（独立认证系统）- 清除所有Cookie和Redis会话"""
     logger.info(f"[ADMIN_AUTH] 管理员登出: {current_admin.id}")
     
     # 获取会话ID
@@ -153,7 +153,11 @@ def admin_logout(
     from app.admin_auth import revoke_all_admin_refresh_tokens
     deleted_tokens = revoke_all_admin_refresh_tokens(str(current_admin.id))
     
-    # 清除Cookie
+    # 清除所有Cookie（包括管理员和其他所有cookie）
+    from app.cookie_manager import CookieManager
+    CookieManager.clear_all_cookies(response)
+    
+    # 额外清除管理员特定的cookie（确保完全清除）
     response = clear_admin_session_cookie(response)
     
     logger.info(f"[ADMIN_AUTH] 管理员登出完成: {current_admin.id}, 删除会话: {deleted_sessions}, 删除refresh token: {deleted_tokens}")

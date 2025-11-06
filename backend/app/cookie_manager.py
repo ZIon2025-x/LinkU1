@@ -417,8 +417,37 @@ class CookieManager:
     
     @staticmethod
     def clear_all_cookies(response: Response) -> None:
-        """清除所有Cookie（用于登出）"""
+        """清除所有Cookie（用于登出）- 包括用户、管理员、客服等所有cookie"""
         CookieManager.clear_auth_cookies(response)
         CookieManager.clear_session_cookies(response)
         CookieManager.clear_csrf_cookie(response)
-        logger.info("清除所有Cookie")
+        
+        # 清除管理员相关cookie
+        samesite_value = CookieManager._get_samesite_value()
+        cookie_domain = None
+        response.delete_cookie(
+            key="admin_session_id",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        response.delete_cookie(
+            key="admin_authenticated",
+            httponly=False,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        response.delete_cookie(
+            key="admin_refresh_token",
+            httponly=Config.COOKIE_HTTPONLY,
+            secure=Config.COOKIE_SECURE,
+            samesite=samesite_value,
+            path="/",
+            domain=cookie_domain
+        )
+        
+        logger.info("清除所有Cookie（包括管理员、用户、客服等）")

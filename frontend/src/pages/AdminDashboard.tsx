@@ -17,7 +17,8 @@ import api, {
   getTaskExperts,
   createTaskExpert,
   updateTaskExpert,
-  deleteTaskExpert
+  deleteTaskExpert,
+  adminLogout
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -2031,6 +2032,37 @@ const AdminDashboard: React.FC = () => {
             }}
           >
             返回首页
+          </button>
+          <button 
+            onClick={async () => {
+              try {
+                await adminLogout();
+                message.success('退出登录成功');
+                // 跳转到登录页
+                navigate('/admin/login');
+              } catch (error: any) {
+                console.error('退出登录失败:', error);
+                // 即使API失败，也清除cookie并跳转
+                document.cookie.split(";").forEach((c) => {
+                  const eqPos = c.indexOf("=");
+                  const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+                  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                });
+                navigate('/admin/login');
+              }
+            }}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              background: '#dc3545',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            退出登录
           </button>
         </div>
       </div>

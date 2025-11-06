@@ -937,6 +937,33 @@ export const adminRefreshToken = async () => {
   return res.data;
 };
 
+// 管理员退出登录
+export const adminLogout = async () => {
+  try {
+    const res = await api.post('/api/auth/admin/logout');
+    // 清除所有cookie（前端也清除一次，确保完全清除）
+    document.cookie.split(";").forEach((c) => {
+      const eqPos = c.indexOf("=");
+      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+      // 清除所有可能的cookie
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+    });
+    return res.data;
+  } catch (error) {
+    // 即使API调用失败，也清除前端cookie
+    document.cookie.split(";").forEach((c) => {
+      const eqPos = c.indexOf("=");
+      const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+    });
+    throw error;
+  }
+};
+
 export const getUsersForAdmin = async (page: number = 1, size: number = 20, search?: string) => {
   const params = new URLSearchParams();
   params.append('page', page.toString());
