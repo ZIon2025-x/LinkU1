@@ -419,14 +419,54 @@ async def startup_event():
         except Exception as e:
             logger.warning(f"创建索引时出错（可继续运行）: {e}")
         
-        # 数据库迁移已禁用，请手动运行 Alembic 迁移
-        # 使用命令: alembic upgrade head
-        
         # 验证表是否创建成功
-        from sqlalchemy import inspect
+        from sqlalchemy import inspect, text
         inspector = inspect(sync_engine)
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
+        
+        # 自动运行数据库迁移 - 检查并更新 verification_token 字段长度
+        try:
+            logger.info("正在检查 verification_token 字段长度...")
+            if 'pending_users' in tables:
+                columns = inspector.get_columns('pending_users')
+                verification_token_col = next((col for col in columns if col['name'] == 'verification_token'), None)
+                
+                if verification_token_col:
+                    # 获取当前字段长度
+                    col_type = verification_token_col.get('type')
+                    if col_type:
+                        # PostgreSQL 返回的是 VARCHAR 类型，需要检查长度
+                        current_length = getattr(col_type, 'length', None)
+                        if current_length is None:
+                            # 尝试从字符串表示中提取
+                            type_str = str(col_type)
+                            import re
+                            match = re.search(r'VARCHAR\((\d+)\)', type_str)
+                            if match:
+                                current_length = int(match.group(1))
+                        
+                        # 如果字段长度是64，需要更新到255
+                        if current_length == 64:
+                            logger.info("检测到 verification_token 字段长度为64，正在更新到255...")
+                            with sync_engine.begin() as conn:
+                                # 使用 ALTER TABLE 直接修改字段长度
+                                conn.execute(text("ALTER TABLE pending_users ALTER COLUMN verification_token TYPE VARCHAR(255)"))
+                            logger.info("✅ verification_token 字段长度已更新到255")
+                        elif current_length == 255:
+                            logger.info("✅ verification_token 字段长度已经是255，无需更新")
+                        else:
+                            logger.info(f"verification_token 字段当前长度: {current_length}")
+                    else:
+                        logger.warning("无法获取 verification_token 字段类型信息")
+                else:
+                    logger.warning("未找到 verification_token 字段")
+            else:
+                logger.info("pending_users 表不存在，将在创建表时使用新定义")
+        except Exception as e:
+            logger.warning(f"自动迁移检查失败（可继续运行）: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
         
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")

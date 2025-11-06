@@ -475,7 +475,7 @@ class PendingUser(Base):
     email = Column(String(120), unique=True, nullable=False)
     hashed_password = Column(String(128), nullable=False)
     phone = Column(String(20), nullable=True)
-    verification_token = Column(String(64), unique=True, nullable=False)
+    verification_token = Column(String(255), unique=True, nullable=False)  # 增加到255以支持JWT token
     created_at = Column(DateTime, default=get_uk_time)
     expires_at = Column(DateTime, nullable=False)
     agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
