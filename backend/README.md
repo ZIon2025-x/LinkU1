@@ -19,7 +19,7 @@
 - SQLite/PostgreSQL
 - JWT认证
 - WebSocket
-- Alembic数据库迁移
+- 自动数据库迁移
 
 ## 快速开始
 

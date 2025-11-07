@@ -410,24 +410,6 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 自动运行数据库迁移（简化方式，不使用 Alembic）
-        auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
-        
-        if auto_migrate:
-            try:
-                logger.info("正在运行数据库迁移...")
-                from app.simple_migration import run_simple_migration
-                run_simple_migration()
-            except Exception as e:
-                # 迁移失败时，根据环境决定是否阻止启动
-                if environment == "production":
-                    logger.error(f"❌ 生产环境迁移失败，应用将不会启动: {e}")
-                    raise RuntimeError(f"数据库迁移失败: {e}")
-                else:
-                    logger.warning(f"⚠️ 数据库迁移失败（非生产环境，继续运行）: {e}")
-        else:
-            logger.info("自动迁移已禁用（AUTO_MIGRATE=false）")
-        
         # 创建优化索引（使用 pg_trgm）
         try:
             database_url = os.getenv("DATABASE_URL")

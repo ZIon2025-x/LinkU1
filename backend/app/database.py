@@ -81,7 +81,7 @@ if ASYNC_AVAILABLE:
 else:
     AsyncSessionLocal = None
 
-# 为了向后兼容，保留同步引擎（用于Alembic等工具）
+# 为了向后兼容，保留同步引擎（用于数据库迁移等工具）
 # 优化同步引擎连接池配置
 sync_engine = create_engine(
     DATABASE_URL,
