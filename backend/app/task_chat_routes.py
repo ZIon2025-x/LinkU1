@@ -1773,6 +1773,7 @@ async def respond_negotiation(
                     created_at=current_time
                 )
                 db.add(new_notification)
+                # 注意：通知会在下面的 await db.commit() 中一起提交
             except Exception as e:
                 logger.error(f"发送接受议价通知失败: {e}")
                 # 通知失败不影响主流程
@@ -1813,6 +1814,7 @@ async def respond_negotiation(
                     created_at=current_time
                 )
                 db.add(new_notification)
+                # 注意：通知会在下面的 await db.commit() 中一起提交
             except Exception as e:
                 logger.error(f"发送拒绝议价通知失败: {e}")
                 # 通知失败不影响主流程

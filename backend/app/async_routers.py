@@ -3,6 +3,7 @@
 展示如何使用异步数据库操作
 """
 
+import json
 import logging
 from typing import List, Optional
 
@@ -374,10 +375,42 @@ async def apply_for_task(
         await db.commit()
         await db.refresh(new_application)
         
-        # TODO: 可选：创建系统消息通知申请创建
-        # TODO: 发送通知给发布者（后台任务）
-        
-        # TODO: 申请成功后发送通知和邮件给发布者（后台任务）
+        # 发送通知给发布者（在申请记录提交后单独处理，避免影响申请流程）
+        try:
+            from app.models import get_uk_time_naive
+            notification_time = get_uk_time_naive()
+            
+            # 构建通知内容
+            notification_content = {
+                "type": "task_application",
+                "task_id": task_id,
+                "task_title": task.title,
+                "application_id": new_application.id,
+                "applicant_name": current_user.name or f"用户{current_user.id}",
+                "message": message,
+                "negotiated_price": float(negotiated_price) if negotiated_price else None,
+                "currency": currency or task.currency or "GBP"
+            }
+            
+            new_notification = models.Notification(
+                user_id=task.poster_id,
+                type="task_application",
+                title="新任务申请",
+                content=json.dumps(notification_content, ensure_ascii=False),
+                related_id=str(new_application.id),
+                created_at=notification_time
+            )
+            db.add(new_notification)
+            await db.commit()
+            logger.info(f"已创建申请通知，任务ID: {task_id}, 申请ID: {new_application.id}")
+        except Exception as e:
+            logger.error(f"创建申请通知失败: {e}")
+            # 通知失败不影响申请流程，申请记录已经成功提交
+            # 如果通知创建失败，只回滚通知相关的操作，不影响已提交的申请记录
+            try:
+                await db.rollback()
+            except:
+                pass
         
         return {
             "message": "申请成功，请等待发布者审核",

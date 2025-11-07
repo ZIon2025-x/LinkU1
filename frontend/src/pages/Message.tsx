@@ -963,31 +963,6 @@ const MessagePage: React.FC = () => {
     loadUser();
   }, [navigate]);
 
-  // 初始化任务聊天相关数据
-  useEffect(() => {
-    if (user) {
-      console.log('初始化任务聊天相关数据，用户ID:', user.id);
-      restoreCustomerServiceChat();
-      initializeTimezone();
-      checkServiceAvailability(); // 检查客服在线状态
-      // 确保在用户登录后加载任务列表
-      if (chatMode === 'tasks') {
-        loadTasks();
-      }
-    }
-  }, [user, chatMode, loadTasks]);
-
-  // 定期检查客服在线状态（每30秒检查一次）
-  useEffect(() => {
-    if (!user) return;
-
-    const interval = setInterval(() => {
-      checkServiceAvailability();
-    }, 30000); // 30秒检查一次
-
-    return () => clearInterval(interval);
-  }, [user]);
-
   // 初始化时区信息
   const initializeTimezone = useCallback(async () => {
     try {
@@ -1002,6 +977,28 @@ const MessagePage: React.FC = () => {
       console.error('初始化时区信息失败:', error);
     }
   }, []);
+
+  // 加载任务列表
+  const loadTasks = useCallback(async () => {
+    if (!user) {
+      console.log('loadTasks: 用户未登录，跳过加载');
+      return;
+    }
+    
+    console.log('loadTasks: 开始加载任务列表，用户ID:', user.id);
+    setTasksLoading(true);
+    try {
+      const data = await getTaskChatList(50, 0);
+      console.log('loadTasks: 获取到任务列表数据:', data);
+      setTasks(data.tasks || []);
+      console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks?.length || 0);
+    } catch (error) {
+      console.error('加载任务列表失败:', error);
+      setTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [user]);
 
   // 恢复客服聊天状态
   const restoreCustomerServiceChat = useCallback(async () => {
@@ -1063,29 +1060,6 @@ const MessagePage: React.FC = () => {
       // setService(null); // 已移除service状态
     }
   }, []);
-
-
-  // 加载任务列表
-  const loadTasks = useCallback(async () => {
-    if (!user) {
-      console.log('loadTasks: 用户未登录，跳过加载');
-      return;
-    }
-    
-    console.log('loadTasks: 开始加载任务列表，用户ID:', user.id);
-    setTasksLoading(true);
-    try {
-      const data = await getTaskChatList(50, 0);
-      console.log('loadTasks: 获取到任务列表数据:', data);
-      setTasks(data.tasks || []);
-      console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks?.length || 0);
-    } catch (error) {
-      console.error('加载任务列表失败:', error);
-      setTasks([]);
-    } finally {
-      setTasksLoading(false);
-    }
-  }, [user]);
 
   // 加载任务消息
   const loadTaskMessages = useCallback(async (taskId: number, cursor?: string | null) => {
