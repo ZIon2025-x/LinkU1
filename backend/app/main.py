@@ -391,29 +391,12 @@ def run_auto_migration():
             context = MigrationContext.configure(connection)
             current_rev = context.get_current_revision()
         
-        # 获取最新版本（heads）
+        # 获取最新版本（head）
         script = ScriptDirectory.from_config(alembic_cfg)
-        try:
-            head_rev = script.get_current_head()
-            heads = [head_rev]
-        except Exception as e:
-            # 如果有多个 heads，获取所有 heads
-            if "multiple heads" in str(e).lower():
-                heads = script.get_heads()
-                logger.warning(f"⚠️ 发现多个迁移分支: {heads}")
-                # 检查是否有合并迁移（task_chat_features_001 应该合并所有分支）
-                if 'task_chat_features_001' in heads:
-                    head_rev = 'task_chat_features_001'
-                    logger.info("找到任务聊天功能迁移，将升级到此版本（合并所有分支）")
-                else:
-                    # 如果没有合并迁移，使用第一个 head
-                    head_rev = heads[0]
-                    logger.warning(f"使用第一个分支: {head_rev}")
-            else:
-                raise
+        head_rev = script.get_current_head()
         
         # 检查当前版本是否已经是最新版本
-        if current_rev == head_rev or current_rev in heads:
+        if current_rev == head_rev:
             logger.info(f"✅ 数据库已是最新版本 (revision: {current_rev or 'None'})")
             return
         
@@ -422,27 +405,7 @@ def run_auto_migration():
         logger.info("正在运行数据库迁移...")
         
         # 运行迁移
-        try:
-            command.upgrade(alembic_cfg, head_rev)
-        except Exception as upgrade_error:
-            # 如果升级失败，尝试先升级所有分支
-            if "multiple heads" in str(upgrade_error).lower():
-                logger.info("检测到多个分支，尝试分别升级所有分支...")
-                all_heads = script.get_heads()
-                # 先升级所有分支（除了合并迁移）
-                for h in all_heads:
-                    if h != head_rev:  # 跳过目标迁移
-                        try:
-                            logger.info(f"正在升级分支: {h}")
-                            command.upgrade(alembic_cfg, h)
-                        except Exception as branch_error:
-                            # 可能已经升级过了
-                            logger.debug(f"分支 {h} 可能已升级: {branch_error}")
-                # 然后升级到目标迁移
-                logger.info(f"正在升级到目标迁移: {head_rev}")
-                command.upgrade(alembic_cfg, head_rev)
-            else:
-                raise
+        command.upgrade(alembic_cfg, "head")
         
         logger.info("✅ 数据库迁移完成！")
         
