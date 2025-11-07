@@ -38,7 +38,17 @@ def upgrade() -> None:
     except Exception:
         pass  # 表可能不存在，跳过
     
-    op.create_index(op.f('ix_customer_service_chats_id'), 'customer_service_chats', ['id'], unique=False)
+    # 安全创建索引（如果不存在）
+    try:
+        indexes = [idx['name'] for idx in inspector.get_indexes('customer_service_chats')]
+        if 'ix_customer_service_chats_id' not in indexes:
+            op.create_index(op.f('ix_customer_service_chats_id'), 'customer_service_chats', ['id'], unique=False)
+    except Exception:
+        # 如果表不存在或检查失败，尝试创建（可能会失败，但至少尝试了）
+        try:
+            op.create_index(op.f('ix_customer_service_chats_id'), 'customer_service_chats', ['id'], unique=False)
+        except Exception:
+            pass  # 索引可能已存在，跳过
     
     # 检查并删除 customer_service_messages 表的索引
     try:
@@ -50,7 +60,17 @@ def upgrade() -> None:
     except Exception:
         pass  # 表可能不存在，跳过
     
-    op.create_index(op.f('ix_customer_service_messages_id'), 'customer_service_messages', ['id'], unique=False)
+    # 安全创建索引（如果不存在）
+    try:
+        indexes = [idx['name'] for idx in inspector.get_indexes('customer_service_messages')]
+        if 'ix_customer_service_messages_id' not in indexes:
+            op.create_index(op.f('ix_customer_service_messages_id'), 'customer_service_messages', ['id'], unique=False)
+    except Exception:
+        # 如果表不存在或检查失败，尝试创建（可能会失败，但至少尝试了）
+        try:
+            op.create_index(op.f('ix_customer_service_messages_id'), 'customer_service_messages', ['id'], unique=False)
+        except Exception:
+            pass  # 索引可能已存在，跳过
     
     # 创建外键（如果不存在）
     try:
