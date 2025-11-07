@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import { respondNegotiation } from '../api';
 
 interface Notification {
   id: number;
@@ -7,6 +8,18 @@ interface Notification {
   is_read: number;
   created_at: string;
   type?: string;
+  related_id?: number;
+}
+
+interface NegotiationContent {
+  type: string;
+  task_title: string;
+  task_id?: number;  // 任务ID（如果后端存储了）
+  negotiated_price: number;
+  currency: string;
+  message?: string;
+  token_accept: string;
+  token_reject: string;
 }
 
 interface NotificationPanelProps {
@@ -210,33 +223,183 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     )}
                   </div>
                   
-                  <p style={{
-                    margin: '0 0 8px 0',
-                    fontSize: '13px',
-                    color: '#333',
-                    lineHeight: '1.4'
-                  }}>
-                    {notification.content}
-                  </p>
+                  {/* 议价通知特殊处理 */}
+                  {notification.type === 'negotiation_offer' ? (() => {
+                    try {
+                      const negotiationData: NegotiationContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            <strong>{negotiationData.task_title}</strong>
+                            <br />
+                            {negotiationData.message && (
+                              <>
+                                {negotiationData.message}
+                                <br />
+                              </>
+                            )}
+                            议价金额: <strong style={{ color: '#059669' }}>
+                              {negotiationData.negotiated_price.toFixed(2)} {negotiationData.currency}
+                            </strong>
+                          </p>
+                          
+                          {notification.is_read === 0 && (
+                            <div style={{
+                              display: 'flex',
+                              gap: '8px',
+                              marginTop: '8px'
+                            }}>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    if (!notification.related_id) {
+                                      alert('通知数据不完整');
+                                      return;
+                                    }
+                                    // related_id是application_id，需要从content中获取task_id
+                                    const taskId = negotiationData.task_id || (notification as any).task_id;
+                                    if (!taskId) {
+                                      // 如果content中没有task_id，尝试从API获取
+                                      alert('通知数据不完整，缺少任务ID。请从任务详情页进行操作。');
+                                      return;
+                                    }
+                                    await respondNegotiation(
+                                      taskId,
+                                      notification.related_id!,
+                                      'accept',
+                                      negotiationData.token_accept
+                                    );
+                                    alert('已同意议价');
+                                    onMarkAsRead(notification.id);
+                                  } catch (error: any) {
+                                    console.error('同意议价失败:', error);
+                                    alert(error.response?.data?.detail || '操作失败，请重试');
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 12px',
+                                  border: 'none',
+                                  background: '#10b981',
+                                  color: 'white',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#059669';
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = '#10b981';
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                              >
+                                同意
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    if (!notification.related_id) {
+                                      alert('通知数据不完整');
+                                      return;
+                                    }
+                                    const taskId = negotiationData.task_id || (notification as any).task_id;
+                                    if (!taskId) {
+                                      alert('通知数据不完整，缺少任务ID。请从任务详情页进行操作。');
+                                      return;
+                                    }
+                                    await respondNegotiation(
+                                      taskId,
+                                      notification.related_id!,
+                                      'reject',
+                                      negotiationData.token_reject
+                                    );
+                                    alert('已拒绝议价');
+                                    onMarkAsRead(notification.id);
+                                  } catch (error: any) {
+                                    console.error('拒绝议价失败:', error);
+                                    alert(error.response?.data?.detail || '操作失败，请重试');
+                                  }
+                                }}
+                                style={{
+                                  flex: 1,
+                                  padding: '8px 12px',
+                                  border: 'none',
+                                  background: '#ef4444',
+                                  color: 'white',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#dc2626';
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = '#ef4444';
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                              >
+                                拒绝
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // 如果解析失败，显示原始内容
+                      return (
+                        <p style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '13px',
+                          color: '#333',
+                          lineHeight: '1.4'
+                        }}>
+                          {notification.content}
+                        </p>
+                      );
+                    }
+                  })() : (
+                    <>
+                      <p style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '13px',
+                        color: '#333',
+                        lineHeight: '1.4'
+                      }}>
+                        {notification.content}
+                      </p>
 
-                  {notification.is_read === 0 && (
-                    <button
-                      onClick={() => onMarkAsRead(notification.id)}
-                      style={{
-                        padding: '4px 8px',
-                        border: 'none',
-                        background: '#2196F3',
-                        color: 'white',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
-                    >
-                      标记已读
-                    </button>
+                      {notification.is_read === 0 && (
+                        <button
+                          onClick={() => onMarkAsRead(notification.id)}
+                          style={{
+                            padding: '4px 8px',
+                            border: 'none',
+                            background: '#2196F3',
+                            color: 'white',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                        >
+                          标记已读
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

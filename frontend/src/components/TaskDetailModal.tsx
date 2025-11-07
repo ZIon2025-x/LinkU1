@@ -806,7 +806,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 const basePath = `/${language}/tasks/${taskId}`;
                 const shareUrl = `${window.location.origin}${basePath}`;
                 const shareTitle = `${task.title} - Link²Ur任务平台`;
-                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+                const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
+                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: ${displayReward.toFixed(2)} ${task.currency || 'CNY'}\n\n立即查看: ${shareUrl}`;
                 
                 // 先尝试使用Web Share API（需要在用户交互上下文中）
                 if (navigator.share) {
@@ -1069,7 +1070,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.rewardLabel')}</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{task.reward.toFixed(2)}</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
+              {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+            </div>
+            {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                原价: {task.base_reward?.toFixed(2) || '0.00'} {task.currency || 'CNY'}
+              </div>
+            )}
           </div>
           
           <div style={{
@@ -1340,7 +1348,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               fontSize: '24px',
               fontWeight: '700',
               color: '#059669'
-            }}>£{task.reward.toFixed(2)}</span>
+            }}>
+              {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+            </span>
+            {task.agreed_reward && task.agreed_reward !== task.base_reward && (
+              <span style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                marginLeft: '8px',
+                textDecoration: 'line-through'
+              }}>
+                原价: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+              </span>
+            )}
             {isTaskPoster && (task.status === 'open' || task.status === 'taken') && (
               <button
                 onClick={() => setShowPriceEdit(true)}

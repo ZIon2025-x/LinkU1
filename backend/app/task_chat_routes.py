@@ -17,7 +17,7 @@ from fastapi import (
     Request,
     status,
 )
-from sqlalchemy import and_, func, or_, select, text, exists
+from sqlalchemy import and_, func, or_, select, text, exists, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -98,20 +98,74 @@ async def get_task_chat_list(
         total_result = await db.execute(count_query)
         total = total_result.scalar()
         
+        # 批量获取任务ID列表
+        task_ids = [task.id for task in tasks]
+        
+        # 批量查询所有游标（优化性能）
+        cursors_query = select(models.MessageReadCursor).where(
+            and_(
+                models.MessageReadCursor.task_id.in_(task_ids),
+                models.MessageReadCursor.user_id == current_user.id
+            )
+        )
+        cursors_result = await db.execute(cursors_query)
+        cursors_dict = {c.task_id: c for c in cursors_result.scalars().all()}
+        
+        # 批量查询所有最后消息（优化性能）
+        last_messages_subquery = (
+            select(
+                models.Message.task_id,
+                models.Message.id,
+                models.Message.content,
+                models.Message.sender_id,
+                models.Message.created_at,
+                func.row_number().over(
+                    partition_by=models.Message.task_id,
+                    order_by=[desc(models.Message.created_at), desc(models.Message.id)]
+                ).label('rn')
+            )
+            .where(
+                and_(
+                    models.Message.task_id.in_(task_ids),
+                    models.Message.conversation_type == 'task'
+                )
+            )
+            .subquery()
+        )
+        
+        last_messages_query = select(last_messages_subquery).where(
+            last_messages_subquery.c.rn == 1
+        )
+        last_messages_result = await db.execute(last_messages_query)
+        last_messages_dict = {}
+        sender_ids_for_last_messages = set()
+        
+        for row in last_messages_result.all():
+            task_id = row.task_id
+            last_messages_dict[task_id] = {
+                "id": row.id,
+                "content": row.content,
+                "sender_id": row.sender_id,
+                "created_at": row.created_at
+            }
+            if row.sender_id:
+                sender_ids_for_last_messages.add(row.sender_id)
+        
+        # 批量查询发送者信息
+        if sender_ids_for_last_messages:
+            senders_query = select(models.User).where(
+                models.User.id.in_(list(sender_ids_for_last_messages))
+            )
+            senders_result = await db.execute(senders_query)
+            senders_dict = {s.id: s for s in senders_result.scalars().all()}
+        else:
+            senders_dict = {}
+        
         # 为每个任务计算未读数和最后消息
         task_list = []
         for task in tasks:
             # 计算未读数（排除自己发送的消息）
-            # 方案1：使用游标模式（更快）
-            unread_count = 0
-            cursor_query = select(models.MessageReadCursor).where(
-                and_(
-                    models.MessageReadCursor.task_id == task.id,
-                    models.MessageReadCursor.user_id == current_user.id
-                )
-            )
-            cursor_result = await db.execute(cursor_query)
-            cursor = cursor_result.scalar_one_or_none()
+            cursor = cursors_dict.get(task.id)
             
             if cursor:
                 # 使用游标计算未读数
@@ -144,30 +198,18 @@ async def get_task_chat_list(
             unread_result = await db.execute(unread_query)
             unread_count = unread_result.scalar() or 0
             
-            # 获取最后一条消息
-            last_message_query = select(models.Message).where(
-                and_(
-                    models.Message.task_id == task.id,
-                    models.Message.conversation_type == 'task'
-                )
-            ).order_by(models.Message.created_at.desc(), models.Message.id.desc()).limit(1)
-            
-            last_message_result = await db.execute(last_message_query)
-            last_message = last_message_result.scalar_one_or_none()
-            
+            # 获取最后一条消息（从批量查询结果中获取）
             last_message_data = None
-            if last_message:
-                # 获取发送者信息
-                sender_query = select(models.User).where(models.User.id == last_message.sender_id)
-                sender_result = await db.execute(sender_query)
-                sender = sender_result.scalar_one_or_none()
+            if task.id in last_messages_dict:
+                last_msg = last_messages_dict[task.id]
+                sender = senders_dict.get(last_msg["sender_id"])
                 
                 last_message_data = {
-                    "id": last_message.id,
-                    "content": last_message.content,
-                    "sender_id": last_message.sender_id,
+                    "id": last_msg["id"],
+                    "content": last_msg["content"],
+                    "sender_id": last_msg["sender_id"],
                     "sender_name": sender.name if sender else None,
-                    "created_at": last_message.created_at.isoformat() if last_message.created_at else None
+                    "created_at": last_msg["created_at"].isoformat() if last_msg["created_at"] else None
                 }
             
             task_data = {
@@ -803,26 +845,32 @@ async def mark_messages_read(
             messages_to_mark_result = await db.execute(messages_to_mark_query)
             messages_to_mark = messages_to_mark_result.scalars().all()
             
-            # 批量标记为已读
-            for msg in messages_to_mark:
-                # 检查是否已存在
-                existing_read_query = select(models.MessageRead).where(
-                    and_(
-                        models.MessageRead.message_id == msg.id,
-                        models.MessageRead.user_id == current_user.id
-                    )
+            # 批量查询已存在的已读记录（优化性能）
+            message_ids_to_mark = [msg.id for msg in messages_to_mark]
+            existing_reads_query = select(models.MessageRead).where(
+                and_(
+                    models.MessageRead.message_id.in_(message_ids_to_mark),
+                    models.MessageRead.user_id == current_user.id
                 )
-                existing_read_result = await db.execute(existing_read_query)
-                existing_read = existing_read_result.scalar_one_or_none()
-                
-                if not existing_read:
+            )
+            existing_reads_result = await db.execute(existing_reads_query)
+            existing_read_message_ids = {read.message_id for read in existing_reads_result.scalars().all()}
+            
+            # 批量标记为已读（只插入不存在的记录）
+            new_reads = []
+            for msg in messages_to_mark:
+                if msg.id not in existing_read_message_ids:
                     new_read = models.MessageRead(
                         message_id=msg.id,
                         user_id=current_user.id,
                         read_at=current_time
                     )
-                    db.add(new_read)
+                    new_reads.append(new_read)
                     marked_count += 1
+            
+            # 批量插入
+            if new_reads:
+                db.add_all(new_reads)
             
             # 更新或创建游标
             cursor_query = select(models.MessageReadCursor).where(
@@ -859,26 +907,32 @@ async def mark_messages_read(
             messages_to_mark_result = await db.execute(messages_to_mark_query)
             messages_to_mark = messages_to_mark_result.scalars().all()
             
-            # 批量标记为已读
-            for msg in messages_to_mark:
-                # 检查是否已存在
-                existing_read_query = select(models.MessageRead).where(
-                    and_(
-                        models.MessageRead.message_id == msg.id,
-                        models.MessageRead.user_id == current_user.id
-                    )
+            # 批量查询已存在的已读记录（优化性能）
+            message_ids_to_mark = [msg.id for msg in messages_to_mark]
+            existing_reads_query = select(models.MessageRead).where(
+                and_(
+                    models.MessageRead.message_id.in_(message_ids_to_mark),
+                    models.MessageRead.user_id == current_user.id
                 )
-                existing_read_result = await db.execute(existing_read_query)
-                existing_read = existing_read_result.scalar_one_or_none()
-                
-                if not existing_read:
+            )
+            existing_reads_result = await db.execute(existing_reads_query)
+            existing_read_message_ids = {read.message_id for read in existing_reads_result.scalars().all()}
+            
+            # 批量标记为已读（只插入不存在的记录）
+            new_reads = []
+            for msg in messages_to_mark:
+                if msg.id not in existing_read_message_ids:
                     new_read = models.MessageRead(
                         message_id=msg.id,
                         user_id=current_user.id,
                         read_at=current_time
                     )
-                    db.add(new_read)
+                    new_reads.append(new_read)
                     marked_count += 1
+            
+            # 批量插入
+            if new_reads:
+                db.add_all(new_reads)
             
             # 更新游标（使用最大的消息ID）
             if messages_to_mark:
@@ -1055,7 +1109,31 @@ async def accept_application(
         
         await db.commit()
         
-        # TODO: 发送通知给申请者（后台任务）
+        # 发送通知给申请者
+        try:
+            from app.models import get_uk_time_naive
+            notification_time = get_uk_time_naive()
+            
+            notification_content = {
+                "type": "application_accepted",
+                "task_id": task_id,
+                "task_title": task.title,
+                "application_id": application_id
+            }
+            
+            new_notification = models.Notification(
+                user_id=application.applicant_id,
+                type="application_accepted",
+                title="您的申请已被接受",
+                content=json.dumps(notification_content),
+                related_id=application_id,
+                created_at=notification_time
+            )
+            db.add(new_notification)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"发送接受申请通知失败: {e}")
+            # 通知失败不影响主流程
         
         return {
             "message": "申请已接受",
@@ -1139,7 +1217,31 @@ async def reject_application(
         
         await db.commit()
         
-        # TODO: 发送通知给申请者（后台任务）
+        # 发送通知给申请者
+        try:
+            from app.models import get_uk_time_naive
+            notification_time = get_uk_time_naive()
+            
+            notification_content = {
+                "type": "application_rejected",
+                "task_id": task_id,
+                "task_title": task.title,
+                "application_id": application_id
+            }
+            
+            new_notification = models.Notification(
+                user_id=application.applicant_id,
+                type="application_rejected",
+                title="您的申请已被拒绝",
+                content=json.dumps(notification_content),
+                related_id=application_id,
+                created_at=notification_time
+            )
+            db.add(new_notification)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"发送拒绝申请通知失败: {e}")
+            # 通知失败不影响主流程
         
         return {
             "message": "申请已拒绝",
@@ -1231,7 +1333,28 @@ async def withdraw_application(
         
         await db.commit()
         
-        # TODO: 发送通知给发布者（可选）
+        # 发送通知给发布者（可选，但建议发送）
+        try:
+            notification_content = {
+                "type": "application_withdrawn",
+                "task_id": task_id,
+                "task_title": task.title,
+                "application_id": application_id
+            }
+            
+            new_notification = models.Notification(
+                user_id=task.poster_id,
+                type="application_withdrawn",
+                title="有申请者撤回了申请",
+                content=json.dumps(notification_content),
+                related_id=application_id,
+                created_at=current_time
+            )
+            db.add(new_notification)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"发送撤回申请通知失败: {e}")
+            # 通知失败不影响主流程
         
         return {
             "application_id": application_id,
@@ -1377,6 +1500,7 @@ async def negotiate_application(
         
         notification_content = {
             "type": "negotiation_offer",
+            "task_id": task_id,  # 添加task_id以便前端使用
             "task_title": task.title,
             "negotiated_price": float(request.negotiated_price),
             "currency": task.currency or "GBP",

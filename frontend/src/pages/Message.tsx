@@ -1,6 +1,24 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import api, { fetchCurrentUser, getContacts, getChatHistory, assignCustomerService, sendMessage, checkCustomerServiceAvailability, markChatMessagesAsRead, getContactUnreadCounts, getUserProfile } from '../api';
+import api, { 
+  fetchCurrentUser, 
+  assignCustomerService, 
+  sendMessage, 
+  checkCustomerServiceAvailability, 
+  markChatMessagesAsRead, 
+  // 任务聊天相关API
+  getTaskChatList,
+  getTaskMessages,
+  sendTaskMessage,
+  markTaskMessagesRead,
+  getTaskApplicationsWithFilter,
+  acceptApplication,
+  rejectApplication,
+  withdrawApplication,
+  negotiateApplication,
+  respondNegotiation,
+  applyForTask
+} from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -167,21 +185,6 @@ interface Message {
   created_at: string;
 }
 
-interface Contact {
-  id: string;
-  name: string;
-  avatar: string;
-  unreadCount?: number;
-  is_verified?: boolean;
-  last_message_time?: string | null;
-  email?: string;
-  user_level?: number;
-  task_count?: number;
-  completed_task_count?: number;
-  avg_rating?: number;
-}
-
-
 interface CustomerServiceChat {
   chat_id: string;
   user_id: string;
@@ -220,9 +223,6 @@ const MessagePage: React.FC = () => {
     };
   }, []);
   const [user, setUser] = useState<any>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [contactsLoading, setContactsLoading] = useState<boolean>(false);
-  const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -247,6 +247,23 @@ const MessagePage: React.FC = () => {
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(false);
   const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // 任务聊天相关状态
+  const [chatMode, setChatMode] = useState<'tasks'>('tasks'); // 聊天模式：任务（联系人功能已移除）
+  const [tasks, setTasks] = useState<any[]>([]); // 任务列表
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
+  const [activeTask, setActiveTask] = useState<any>(null);
+  const [taskMessages, setTaskMessages] = useState<any[]>([]); // 任务消息
+  const [taskMessagesLoading, setTaskMessagesLoading] = useState(false);
+  const [taskNextCursor, setTaskNextCursor] = useState<string | null>(null);
+  const [taskHasMore, setTaskHasMore] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]); // 申请列表
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [showApplicationListModal, setShowApplicationListModal] = useState(false);
+  const [applicationMessage, setApplicationMessage] = useState('');
+  const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -316,7 +333,6 @@ const MessagePage: React.FC = () => {
       });
     }
   };
-  const [showContactsList, setShowContactsList] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -327,17 +343,12 @@ const MessagePage: React.FC = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [contactUnreadCounts, setContactUnreadCounts] = useState<{[contactId: string]: number}>({});
   
   // 无限滚动相关状态
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  
-  // 缓存相关状态
-  const [contactsLoaded, setContactsLoaded] = useState(false);
-  const [lastLoadTime, setLastLoadTime] = useState(0);
   
   // 滚动控制状态
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
@@ -473,7 +484,7 @@ const MessagePage: React.FC = () => {
   };
 
 
-  // 发送图片消息的通用方法
+  // 发送图片消息的通用方法（仅用于客服模式）
   const sendImageMessage = async (messageContent: string) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       if (isServiceMode && currentChat) {
@@ -483,26 +494,15 @@ const MessagePage: React.FC = () => {
           chat_id: currentChat.chat_id
         };
         ws.send(JSON.stringify(messageData));
-      } else if (activeContact) {
-        const messageData = {
-          receiver_id: activeContact.id,
-          content: messageContent
+        
+        // 立即添加消息到本地状态
+        const newMessage = {
+          id: Date.now(),
+          from: t('messages.me'),
+          content: messageContent,
+          created_at: new Date().toISOString()
         };
-        ws.send(JSON.stringify(messageData));
-      }
-      
-      // 立即添加消息到本地状态
-      const newMessage = {
-        id: Date.now(),
-        from: t('messages.me'),
-        content: messageContent,
-        created_at: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, newMessage]);
-      
-      // 更新联系人排序
-      if (activeContact && !isServiceMode) {
-        updateContactOrder(activeContact.id, new Date().toISOString());
+        setMessages(prev => [...prev, newMessage]);
       }
     } else {
       // WebSocket未连接，使用HTTP API
@@ -534,23 +534,6 @@ const MessagePage: React.FC = () => {
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, newMessage]);
-      } else if (activeContact) {
-        const response = await sendMessage({
-          receiver_id: activeContact.id,
-          content: messageContent
-        });
-        
-        const newMessage = {
-          id: response.id,
-          from: t('messages.me'),
-          content: messageContent,
-          created_at: response.created_at
-        };
-        setMessages(prev => [...prev, newMessage]);
-        
-        if (activeContact) {
-          updateContactOrder(activeContact.id, new Date().toISOString());
-        }
       }
     }
   };
@@ -603,25 +586,14 @@ const MessagePage: React.FC = () => {
             chat_id: currentChat.chat_id
           };
           ws.send(JSON.stringify(messageData));
-        } else if (activeContact) {
-          const messageData = {
-            receiver_id: activeContact.id,
-            content: messageContent
+          
+          // 添加消息到本地状态
+          const newMessage: Message = {
+            from: user?.id || 'me',
+            content: messageContent,
+            created_at: new Date().toISOString()
           };
-          ws.send(JSON.stringify(messageData));
-        }
-        
-        // 添加消息到本地状态
-        const newMessage: Message = {
-          from: user?.id || 'me',
-          content: messageContent,
-          created_at: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, newMessage]);
-        
-        // 更新联系人排序
-        if (activeContact && !isServiceMode) {
-          updateContactOrder(activeContact.id, new Date().toISOString());
+          setMessages(prev => [...prev, newMessage]);
         }
         
         // 清除文件选择
@@ -882,41 +854,8 @@ const MessagePage: React.FC = () => {
             local_time: new Date().toLocaleString('en-GB', { timeZone: userTimezone }) // 添加本地时间
           };
           ws.send(JSON.stringify(messageData));
-        } else if (activeContact) {
-          // 普通聊天模式发送消息
-          const messageData = {
-            receiver_id: activeContact.id,
-            content: messageContent,
-            message_id: messageId, // 添加消息ID防止重复
-            timezone: userTimezone, // 添加时区信息
-            local_time: new Date().toLocaleString('en-GB', { timeZone: userTimezone }) // 添加本地时间
-          };
-          ws.send(JSON.stringify(messageData));
         }
         
-        // 更新联系人排序（如果是普通聊天模式）
-        if (activeContact && !isServiceMode) {
-          updateContactOrder(activeContact.id, newMessage.created_at);
-        }
-        
-        // 发送成功后，使用HTTP API作为备用确认
-        try {
-          if (activeContact && !isServiceMode) {
-            const response = await sendMessage({
-              receiver_id: activeContact.id,
-              content: messageContent
-            });
-            
-            // 更新本地消息的ID为服务器返回的ID
-            if (response) {
-              setMessages(prev => prev.map(msg => 
-                msg.id === newMessage.id ? { ...msg, id: response.id } : msg
-              ));
-            }
-          }
-        } catch (error) {
-          // HTTP备用发送失败，但WebSocket已发送
-        }
       } else {
         // WebSocket未连接，使用HTTP API作为备用
         if (isServiceMode && currentChat) {
@@ -939,24 +878,6 @@ const MessagePage: React.FC = () => {
           if (!response.ok) {
             throw new Error('发送消息失败');
           }
-        } else if (activeContact) {
-          const response = await sendMessage({
-            receiver_id: activeContact.id,
-            content: messageContent
-          });
-          
-          // 使用服务器返回的消息数据，避免重复
-          if (response) {
-            // 更新本地消息的ID为服务器返回的ID
-            setMessages(prev => prev.map(msg => 
-              msg.id === newMessage.id ? { ...msg, id: response.id } : msg
-            ));
-            
-            // 更新联系人排序（如果是普通聊天模式）
-            if (activeContact && !isServiceMode) {
-              updateContactOrder(activeContact.id, new Date().toISOString());
-            }
-          }
         }
       }
       
@@ -966,6 +887,48 @@ const MessagePage: React.FC = () => {
       setInput(messageContent); // 恢复输入内容
       // 移除失败的消息
       setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // 发送任务消息
+  const handleSendTaskMessage = async () => {
+    if (!activeTaskId || !input.trim() || isSending) return;
+    
+    const messageContent = input.trim();
+    setInput('');
+    setIsSending(true);
+    
+    try {
+      const response = await sendTaskMessage(
+        activeTaskId,
+        messageContent,
+        undefined, // meta
+        [] // attachments - 暂时不支持附件，后续可以扩展
+      );
+      
+      // 重新加载消息列表
+      await loadTaskMessages(activeTaskId);
+      
+      // 标记消息为已读
+      if (response.id) {
+        await markTaskMessagesRead(activeTaskId, response.id);
+      }
+      
+      // 重新加载任务列表以更新未读计数
+      await loadTasks();
+      
+      // 滚动到底部
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } catch (error: any) {
+      console.error('发送任务消息失败:', error);
+      alert(error.response?.data?.detail || '发送消息失败，请重试');
+      setInput(messageContent); // 恢复输入内容
     } finally {
       setIsSending(false);
     }
@@ -982,20 +945,6 @@ const MessagePage: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-
-  // 移动端初始化时显示联系人列表
-  useEffect(() => {
-    if (isMobile && !activeContact) {
-      // 检查URL参数，如果有uid参数，说明用户想要直接进入聊天
-      const urlParams = new URLSearchParams(location.search);
-      const targetUserId = urlParams.get('uid');
-      
-      if (!targetUserId) {
-        // 只有在没有URL参数时才显示联系人列表
-        setShowContactsList(true);
-      }
-    }
-  }, [isMobile, activeContact, location.search]);
 
   // 获取当前用户信息
   useEffect(() => {
@@ -1014,119 +963,14 @@ const MessagePage: React.FC = () => {
     loadUser();
   }, [navigate]);
 
-  // 加载联系人列表
+  // 初始化任务聊天相关数据
   useEffect(() => {
     if (user) {
-      loadContacts();
       restoreCustomerServiceChat();
       initializeTimezone();
       checkServiceAvailability(); // 检查客服在线状态
     }
   }, [user]);
-
-  // 当URL参数变化时，只在必要时重新加载联系人列表
-  useEffect(() => {
-    if (user && location.search.includes('uid=')) {
-      // 如果联系人列表为空，才重新加载
-      if (contacts.length === 0) {
-        loadContacts();
-      }
-    }
-  }, [location.search, user, contacts.length]);
-
-  // 处理URL参数，自动选择指定的联系人
-  useEffect(() => {
-    if (user && !contactsLoading) { // 等待联系人列表加载完成
-      // 尝试从hash中解析参数
-      let targetUserId: string | null = null;
-      if (location.hash && location.hash.includes('?')) {
-        const hashQuery = location.hash.split('?')[1];
-        const urlParams = new URLSearchParams(hashQuery);
-        targetUserId = urlParams.get('uid');
-      }
-      // 如果hash中没有，尝试从location.search中获取
-      if (!targetUserId && location.search) {
-        const urlParams = new URLSearchParams(location.search);
-        targetUserId = urlParams.get('uid');
-      }
-      
-      if (targetUserId) {
-        
-        // 检查当前activeContact是否已经是目标用户
-        if (activeContact?.id === targetUserId) {
-          return;
-        }
-        
-        // 首先尝试在现有联系人中查找
-        const targetContact = contacts.find(contact => contact.id === targetUserId);
-        if (targetContact) {
-          setActiveContact(targetContact);
-          setIsServiceMode(false);
-          // 清空消息列表，准备加载新的聊天记录
-          setMessages([]);
-          
-          // 移动端从URL参数进入聊天时，确保不显示联系人列表
-          if (isMobile) {
-            setShowContactsList(false);
-          }
-        } else {
-          // 如果不在现有联系人中，从后端获取用户的完整信息
-          const fetchUserInfo = async () => {
-            try {
-              const userData = await getUserProfile(targetUserId!);
-              const tempContact: Contact = {
-                id: targetUserId!,
-                name: userData.user?.name || `用户${targetUserId}`,
-                avatar: userData.user?.avatar || "/static/avatar1.png",
-                email: userData.user?.email || "",
-                user_level: userData.user?.user_level || 1,
-                task_count: userData.user?.task_count || 0,
-                avg_rating: userData.user?.avg_rating || 0.0,
-                last_message_time: null,
-                is_verified: userData.user?.is_verified || false,
-                completed_task_count: userData.user?.completed_task_count || 0
-              };
-              
-              setActiveContact(tempContact);
-              setIsServiceMode(false);
-              // 清空消息列表，准备加载新的聊天记录
-              setMessages([]);
-              
-              // 移动端从URL参数进入聊天时，确保不显示联系人列表
-              if (isMobile) {
-                setShowContactsList(false);
-              }
-            } catch (error) {
-              console.error('获取用户信息失败:', error);
-              // 如果获取失败，使用默认值
-              const tempContact: Contact = {
-                id: targetUserId!,
-                name: `${t('messages.user')}${targetUserId}`,
-                avatar: "/static/avatar1.png",
-                email: "",
-                user_level: 1,
-                task_count: 0,
-                completed_task_count: 0,
-                avg_rating: 0.0,
-                last_message_time: null,
-                is_verified: false
-              };
-              
-              setActiveContact(tempContact);
-              setIsServiceMode(false);
-              setMessages([]);
-              
-              if (isMobile) {
-                setShowContactsList(false);
-              }
-            }
-          };
-          
-          fetchUserInfo();
-        }
-      }
-    }
-  }, [user, location.hash, location.search, contacts, contactsLoading, activeContact?.id, isMobile]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
@@ -1215,56 +1059,114 @@ const MessagePage: React.FC = () => {
     }
   }, []);
 
-  const loadContacts = async (forceReload: boolean = false) => {
-    // 如果已经加载过且不是强制重新加载，且距离上次加载不到30秒，则跳过
-    const now = Date.now();
-    if (contactsLoaded && !forceReload && (now - lastLoadTime) < 30000) {
-      return;
-    }
-    
-    try {
-      setContactsLoading(true);
-      
-      // 并行加载联系人列表和未读消息数量
-      const [contactsData] = await Promise.allSettled([
-        getContacts(),
-        loadUnreadCount(),
-        loadContactUnreadCounts()
-      ]);
-      
-      if (contactsData.status === 'fulfilled') {
-        setContacts(contactsData.value || []);
-        setContactsLoaded(true);
-        setLastLoadTime(now);
-      } else {
-        console.error('加载联系人失败:', contactsData.reason);
-        setContacts([]);
-      }
-    } catch (error: any) {
-      console.error('加载联系人失败:', error);
-      console.error('错误详情:', error.response?.data || error.message);
-      setContacts([]);
-    } finally {
-      setContactsLoading(false);
-    }
-  };
 
-  // 更新联系人排序（当有新消息时）
-  const updateContactOrder = (contactId: string, messageTime?: string) => {
-    setContacts(prevContacts => {
-      const contactIndex = prevContacts.findIndex(c => c.id === contactId);
-      if (contactIndex === -1) return prevContacts;
+  // 加载任务列表
+  const loadTasks = useCallback(async () => {
+    if (!user) return;
+    
+    setTasksLoading(true);
+    try {
+      const data = await getTaskChatList(50, 0);
+      setTasks(data.tasks || []);
+    } catch (error) {
+      console.error('加载任务列表失败:', error);
+      setTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [user]);
+
+  // 加载任务消息
+  const loadTaskMessages = useCallback(async (taskId: number, cursor?: string | null) => {
+    setTaskMessagesLoading(true);
+    try {
+      const data = await getTaskMessages(taskId, 20, cursor || undefined);
       
-      // 将联系人移到列表顶部
-      const updatedContacts = [...prevContacts];
-      const [contact] = updatedContacts.splice(contactIndex, 1);
-      // 使用消息的实际时间，如果没有则使用当前时间
-      contact.last_message_time = messageTime || new Date().toISOString();
-      updatedContacts.unshift(contact);
+      // 后端返回的消息是按 created_at DESC 排序的（最新的在前）
+      // 前端需要反转，让最新的消息在底部显示
+      const reversedMessages = [...(data.messages || [])].reverse();
       
-      return updatedContacts;
-    });
-  };
+      if (cursor) {
+        // 加载更多消息（更旧的消息），追加到前面
+        setTaskMessages(prev => [...reversedMessages, ...prev]);
+      } else {
+        // 首次加载或刷新，替换消息（已反转，最新的在底部）
+        setTaskMessages(reversedMessages);
+      }
+      
+      setActiveTask(data.task);
+      setTaskNextCursor(data.next_cursor || null);
+      setTaskHasMore(data.has_more || false);
+      
+      // 标记消息为已读（后端返回的最新消息在数组第一个位置）
+      if (data.messages && data.messages.length > 0) {
+        const lastMessage = data.messages[0]; // 后端返回的最新消息在数组第一个位置
+        markTaskMessagesRead(taskId, lastMessage.id);
+      }
+      
+      // 首次加载时滚动到底部
+      if (!cursor) {
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    } catch (error) {
+      console.error('加载任务消息失败:', error);
+    } finally {
+      setTaskMessagesLoading(false);
+    }
+  }, []);
+
+  // 加载申请列表
+  const loadApplications = useCallback(async (taskId: number) => {
+    if (!user) return;
+    
+    setApplicationsLoading(true);
+    try {
+      const data = await getTaskApplicationsWithFilter(taskId, 'pending', 50, 0);
+      setApplications(data.applications || []);
+    } catch (error) {
+      console.error('加载申请列表失败:', error);
+    } finally {
+      setApplicationsLoading(false);
+    }
+  }, [user]);
+
+  // 当选择任务时加载消息和申请
+  useEffect(() => {
+    if (chatMode === 'tasks' && activeTaskId && user) {
+      setTaskMessages([]);
+      setTaskNextCursor(null);
+      loadTaskMessages(activeTaskId);
+      loadApplications(activeTaskId);
+    }
+  }, [activeTaskId, chatMode, user, loadTaskMessages, loadApplications]);
+
+  // 当切换到任务模式时加载任务列表
+  useEffect(() => {
+    if (chatMode === 'tasks' && user) {
+      loadTasks();
+    }
+  }, [chatMode, user, loadTasks]);
+
+  // 定期刷新任务消息和申请列表（每30秒）
+  useEffect(() => {
+    if (chatMode === 'tasks' && activeTaskId && user && !isServiceMode) {
+      const interval = setInterval(() => {
+        // 只在页面可见时刷新
+        if (!document.hidden) {
+          loadTaskMessages(activeTaskId);
+          loadApplications(activeTaskId);
+          loadTasks(); // 更新未读计数
+        }
+      }, 30000); // 30秒刷新一次
+      
+      return () => clearInterval(interval);
+    }
+  }, [activeTaskId, chatMode, user, isServiceMode, loadTaskMessages, loadApplications, loadTasks]);
+
 
   // 页面加载时检查localStorage但不自动恢复客服会话
   useEffect(() => {
@@ -1295,40 +1197,6 @@ const MessagePage: React.FC = () => {
     }
   }, [user]);
 
-  // 选择联系人时加载聊天历史
-  useEffect(() => {
-    const handleContactSelection = async () => {
-      if (activeContact && user && !isServiceMode) {
-        // 切换普通聊天模式时的清理
-        if (serviceConnected) {
-          setServiceConnected(false);
-          setCurrentChatId(null);
-          setCurrentChat(null);
-        }
-        
-        // 先清空消息列表，避免旧联系人的消息显示在新联系人上
-        setMessages([]);
-        
-        // 加载聊天记录
-        // 使用setTimeout让UI先更新，然后异步加载聊天记录
-        setTimeout(() => {
-          loadChatHistory(activeContact.id);
-        }, 0);
-        
-        // 立即清除该联系人的未读标识
-        setContactUnreadCounts(prev => {
-          const newCounts = { ...prev };
-          delete newCounts[activeContact.id];
-          return newCounts;
-        });
-        // 切换到新联系人时重新显示系统提示
-        setShowSystemWarning(true);
-      }
-    };
-    
-    handleContactSelection();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeContact, user, isServiceMode, serviceConnected]);
 
   // 自动滚动到底部 - 仅针对真正的新消息（发送和接收），不包括系统消息和历史消息
   useEffect(() => {
@@ -1444,29 +1312,16 @@ const MessagePage: React.FC = () => {
     }
   }, [user, t]);
 
-  // 加载每个联系人的未读消息数量
-  const loadContactUnreadCounts = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      const data = await getContactUnreadCounts();
-      setContactUnreadCounts(data.contact_unread_counts || {});
-    } catch (error) {
-      console.error('加载联系人未读消息数量失败:', error);
-    }
-  }, [user]);
-
   // 定期更新未读消息数量（每30秒检查一次）
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
       loadUnreadCount();
-      loadContactUnreadCounts();
     }, 30000); // 30秒检查一次
 
     return () => clearInterval(interval);
-  }, [user, loadUnreadCount, loadContactUnreadCounts]);
+  }, [user, loadUnreadCount]);
 
   // 页面可见性变化时更新未读消息数量
   useEffect(() => {
@@ -1474,7 +1329,6 @@ const MessagePage: React.FC = () => {
       if (!document.hidden && user) {
         // 页面变为可见时，重新加载未读消息数量
         loadUnreadCount();
-        loadContactUnreadCounts();
       }
     };
 
@@ -1482,7 +1336,7 @@ const MessagePage: React.FC = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, loadUnreadCount, loadContactUnreadCounts]);
+  }, [user, loadUnreadCount]);
 
   // WebSocket连接 - 实时接收消息
   useEffect(() => {
@@ -1590,11 +1444,8 @@ const MessagePage: React.FC = () => {
                   setIsNewMessage(true);
                 }
                 
-                // 如果是接收到的消息（不是自己发送的），更新联系人排序
+                // 如果是接收到的消息（不是自己发送的），播放提示音
                 if (msg.from !== user.id && msg.from !== 'system' && msg.from !== 'customer_service' && msg.from !== 'admin') {
-                  updateContactOrder(msg.from, msg.created_at);
-                  
-                  // 播放提示音
                   playMessageSound();
                   
                   // 更新未读消息数量（避免重复更新）
@@ -1609,11 +1460,6 @@ const MessagePage: React.FC = () => {
                     return newCount;
                   });
                   
-                  // 更新该联系人的未读消息数量
-                  setContactUnreadCounts(prev => ({
-                    ...prev,
-                    [msg.from]: (prev[msg.from] || 0) + 1
-                  }));
                   
                   // 显示桌面通知
                   if ('Notification' in window && Notification.permission === 'granted') {
@@ -1718,12 +1564,8 @@ const MessagePage: React.FC = () => {
     }
   }, [isServiceMode, currentChatId, currentChat?.is_ended]);
 
-  const loadChatHistory = useCallback(async (contactId: string, chatId?: string, page: number = 1, isLoadMore: boolean = false) => {
+  const loadChatHistory = useCallback(async (serviceId: string, chatId: string) => {
     try {
-      // 如果是加载更多，设置加载状态
-      if (isLoadMore) {
-        setLoadingMoreMessages(true);
-      }
       
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
       if (chatId) {
@@ -1755,7 +1597,7 @@ const MessagePage: React.FC = () => {
         setMessages(formattedMessages);
         
         // 首次加载时直接设置到底部，不使用动画
-        if (!isLoadMore && formattedMessages.length > 0) {
+        if (formattedMessages.length > 0) {
           setTimeout(() => {
             const messagesContainer = messagesContainerRef.current;
             if (messagesContainer) {
@@ -1772,169 +1614,10 @@ const MessagePage: React.FC = () => {
       }
     }
       
-      // 只有在没有chatId且非客服模式下才加载普通用户之间的聊天记录
-      if (!chatId && !isServiceMode && !serviceConnected) {
-        
-        // 如果不是加载更多，显示加载状态
-        if (!isLoadMore) {
-          setMessages(prev => {
-            const loadingMessage = {
-              id: -1, // 使用负数ID表示加载状态
-              from: t('messages.system'),
-              content: t('messages.loadingHistory'),
-              created_at: new Date().toISOString()
-            };
-            
-            // 如果已经有消息，在末尾添加加载状态
-            if (prev.length > 0) {
-              return [...prev, loadingMessage];
-            } else {
-              // 如果没有消息，只显示加载状态
-              return [loadingMessage];
-            }
-          });
-        }
-        
-        const offset = (page - 1) * 20; // 计算偏移量，初始加载20条
-        const limit = page === 1 ? 20 : 50; // 首次加载20条，后续加载50条
-        const chatData = await getChatHistory(contactId, limit, undefined, offset); // 支持分页加载
-        const formattedMessages = chatData.map((msg: any) => ({
-          id: msg.id,
-          from: String(msg.sender_id) === String(user.id) ? t('messages.me') : (msg.is_admin_msg === 1 ? t('messages.system') : t('messages.other')),
-          content: msg.content, 
-          created_at: msg.created_at 
-        }));
-        
-        // 确保消息按时间排序（最新的在最后）
-        formattedMessages.sort((a: any, b: any) => {
-          const timeA = new Date(a.created_at).getTime();
-          const timeB = new Date(b.created_at).getTime();
-          return timeA - timeB; // 升序排序，最早的在前
-        });
-        
-        // 对于普通聊天，始终确保最新的消息在最后（不需要反转，因为我们已经按时间升序排序）
-        
-        // 处理消息列表
-        setMessages(prev => {
-          // 移除加载状态消息
-          const filteredPrev = prev.filter(msg => msg.id !== -1);
-          
-          if (isLoadMore) {
-            // 加载更多：将新消息添加到现有消息前面
-            const allMessages = [...formattedMessages, ...filteredPrev];
-            
-            // 去重：优先使用服务器ID，然后基于内容和时间
-            const uniqueMessages = allMessages.filter((msg, index, self) => {
-              // 如果有服务器ID，优先使用ID去重
-              if (msg.id && msg.id > 0) {
-                return index === self.findIndex(m => m.id === msg.id);
-              }
-              // 否则基于内容和时间去重
-              return index === self.findIndex(m => 
-                m.content === msg.content && 
-                m.from === msg.from && 
-                Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000 // 1秒内认为是重复的
-              );
-            });
-            
-            // 按时间排序
-            uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            
-            // 保持滚动位置：计算新增消息的高度
-            setTimeout(() => {
-              const messagesContainer = messagesContainerRef.current;
-              if (messagesContainer) {
-                const newMessageCount = uniqueMessages.length - filteredPrev.length;
-                if (newMessageCount > 0) {
-                  // 记录当前滚动位置
-                  const currentScrollTop = messagesContainer.scrollTop;
-                  const currentScrollHeight = messagesContainer.scrollHeight;
-                  
-                  // 估算每条消息的平均高度（可以根据实际情况调整）
-                  const estimatedMessageHeight = 60; // 像素
-                  const scrollAdjustment = newMessageCount * estimatedMessageHeight;
-                  
-                  // 调整滚动位置，保持用户当前查看的内容不变
-                  messagesContainer.scrollTop = currentScrollTop + scrollAdjustment;
-                }
-              }
-            }, 50);
-            
-            return uniqueMessages;
-          } else {
-            // 初始加载：直接替换消息列表，避免旧联系人的消息显示在新联系人上
-            // 直接返回新加载的消息，不合并现有消息
-            return formattedMessages;
-          }
-        });
-        
-        // 首次加载时直接设置到底部，不使用动画
-        if (!isLoadMore && formattedMessages.length > 0) {
-          setTimeout(() => {
-            const messagesContainer = messagesContainerRef.current;
-            if (messagesContainer) {
-              // 直接设置到底部，不使用smooth滚动
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-          }, 50);
-        }
-        
-        // 检查是否还有更多消息
-        if (formattedMessages.length < limit) {
-          setHasMoreMessages(false);
-        } else {
-          setHasMoreMessages(true);
-        }
-        
-        // 标记普通聊天的未读消息为已读
-        try {
-          const result = await markChatMessagesAsRead(contactId);
-          
-          // 立即更新未读消息数量（减少已标记的数量）
-          if (result && result.marked_count) {
-            setTotalUnreadCount(prev => {
-              const newCount = Math.max(0, prev - result.marked_count);
-              // 更新页面标题
-              if (newCount > 0) {
-                document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
-              } else {
-                document.title = t('notifications.pageTitle');
-              }
-              return newCount;
-            });
-            
-            // 更新该联系人的未读消息数量为0（从状态中删除该联系人）
-            setContactUnreadCounts(prev => {
-              const newCounts = { ...prev };
-              delete newCounts[contactId];
-              return newCounts;
-            });
-          } else {
-            // 如果无法获取具体数量，重新加载
-            await loadUnreadCount();
-            await loadContactUnreadCounts();
-          }
-        } catch (error) {
-          console.error('标记普通聊天消息为已读失败:', error);
-        }
-      }
     } catch (error) {
       console.error('加载聊天历史失败:', error);
-      // API调用失败时不清空现有消息，只显示错误提示
-      const errorMessage: Message = {
-        id: Date.now(),
-        from: t('messages.system'),
-        content: t('messages.loadHistoryFailed'),
-        created_at: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      // 完成加载更多
-      if (isLoadMore) {
-        setLoadingMoreMessages(false);
-      }
     }
-  }, [isServiceMode, serviceConnected, user]);
+  }, [t]);
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -1944,30 +1627,15 @@ const MessagePage: React.FC = () => {
     }
   }, []);
 
-  // 加载更多历史消息
-  const loadMoreMessages = useCallback(async () => {
-    if (!activeContact || loadingMoreMessages || !hasMoreMessages) {
-      return;
-    }
-    
-    setCurrentPage(prev => prev + 1);
-    await loadChatHistory(activeContact.id, undefined, currentPage + 1, true);
-  }, [activeContact, loadingMoreMessages, hasMoreMessages, currentPage, loadChatHistory]);
-
-  // 滚动监听器 - 检测是否滚动到顶部
+  // 滚动监听器 - 检测是否滚动到顶部（仅用于客服模式）
   useEffect(() => {
     const messagesContainer = messagesContainerRef.current;
-    if (!messagesContainer || !activeContact) {
+    if (!messagesContainer || !isServiceMode) {
       return;
     }
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
-      
-      // 当滚动到顶部附近时（距离顶部50px内），加载更多消息
-      if (scrollTop <= 50 && hasMoreMessages && !loadingMoreMessages) {
-        loadMoreMessages();
-      }
       
       // 控制"滚动到底部"按钮的显示
       // 当用户向上滚动超过200px时显示按钮，接近底部时隐藏
@@ -1979,16 +1647,7 @@ const MessagePage: React.FC = () => {
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
     };
-  }, [activeContact, hasMoreMessages, loadingMoreMessages, loadMoreMessages]);
-
-  // 重置分页状态当切换联系人时
-  useEffect(() => {
-    if (activeContact) {
-      setCurrentPage(1);
-      setHasMoreMessages(true);
-      setLoadingMoreMessages(false);
-    }
-  }, [activeContact]);
+  }, [isServiceMode]);
 
   // 联系在线客服
   const handleContactCustomerService = async () => {
@@ -2023,7 +1682,6 @@ const MessagePage: React.FC = () => {
               // 对话仍然有效，恢复现有对话
               setIsConnectingToService(true);
               setIsServiceMode(true);
-              setActiveContact(null);
               setServiceConnected(true);
               setCurrentChatId(chatData.chat.chat_id);
               setCurrentChat(chatData.chat);
@@ -2393,9 +2051,9 @@ const MessagePage: React.FC = () => {
         boxSizing: 'border-box'
       }}>
         
-        {/* 左侧联系人列表 */}
+        {/* 左侧任务列表 */}
         <div style={{ 
-          width: isMobile ? (showContactsList ? '100%' : '0') : '350px', 
+          width: isMobile ? '100%' : '350px', 
           borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           display: 'flex',
@@ -2404,7 +2062,7 @@ const MessagePage: React.FC = () => {
           zIndex: isMobile ? 1000 : 'auto',
           transition: isMobile ? 'transform 0.3s ease-in-out' : 'all 0.3s ease',
           overflow: isMobile ? 'hidden' : 'visible',
-          transform: isMobile ? (showContactsList ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          transform: 'none',
           left: isMobile ? '0' : 'auto',
           top: isMobile ? '0' : 'auto',
           height: isMobile ? '100vh' : 'auto'
@@ -2481,7 +2139,7 @@ const MessagePage: React.FC = () => {
             }}>
               <input
                 type="text"
-                placeholder={t('messages.searchContacts')}
+                placeholder={t('messages.searchTasks') || '搜索任务...'}
                 style={{
                   width: '100%',
                   padding: '12px 20px 12px 45px',
@@ -2504,47 +2162,8 @@ const MessagePage: React.FC = () => {
             </div>
           </div>
 
-          {/* 联系人列表 */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {/* 加载骨架屏 */}
-            {contactsLoading && contacts.length === 0 && (
-              <div style={{ padding: '20px' }}>
-                {[...Array(5)].map((_, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '20px 24px',
-                    marginBottom: '8px',
-                    background: 'rgba(255,255,255,0.5)',
-                    borderRadius: '12px',
-                    animation: 'pulse 1.5s ease-in-out infinite'
-                  }}>
-                    <div style={{
-                      width: '50px',
-                      height: '50px',
-                      borderRadius: '50%',
-                      background: '#e2e8f0'
-                    }}></div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        height: '16px',
-                        background: '#e2e8f0',
-                        borderRadius: '4px',
-                        marginBottom: '8px',
-                        width: '60%'
-                      }}></div>
-                      <div style={{
-                        height: '12px',
-                        background: '#e2e8f0',
-                        borderRadius: '4px',
-                        width: '40%'
-                      }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* 任务列表 */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {/* 客服中心 - 固定在顶部 */}
             <div
               onClick={async () => {
@@ -2560,20 +2179,17 @@ const MessagePage: React.FC = () => {
                       // 对话未结束，恢复现有对话
                       setIsConnectingToService(true);
                       setIsServiceMode(true);
-                      setActiveContact(null);
+                      setActiveTaskId(null);
+                      setActiveTask(null);
+                      setTaskMessages([]);
                       setServiceConnected(true);
                       setCurrentChatId(chatData.chat.chat_id);
                       setCurrentChat(chatData.chat);
-                      // setService(chatData.service); // 已移除service状态
                       
                       // 加载该对话的聊天历史记录
                       await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
                       setIsConnectingToService(false);
                       
-                      // 移动端自动关闭联系人列表
-                      if (isMobile) {
-                        setShowContactsList(false);
-                      }
                       return; // 直接返回，不创建新对话
                     } else {
                       // 对话已结束，清除localStorage并重置状态
@@ -2581,7 +2197,6 @@ const MessagePage: React.FC = () => {
                       setServiceConnected(false);
                       setCurrentChatId(null);
                       setCurrentChat(null);
-                      // setService(null); // 已移除service状态
                     }
                   } catch (error) {
                     console.error('解析保存的对话失败:', error);
@@ -2589,34 +2204,41 @@ const MessagePage: React.FC = () => {
                     setServiceConnected(false);
                     setCurrentChatId(null);
                     setCurrentChat(null);
-                    // setService(null); // 已移除service状态
                   }
                 }
                 
                 // 如果没有未结束的对话，只显示客服聊天框
                 setIsServiceMode(true);
-                setActiveContact(null);
+                setActiveTaskId(null);
+                setActiveTask(null);
+                setTaskMessages([]);
                 setMessages([]);
                 setShowSystemWarning(true);
                 
-                // 移动端自动关闭联系人列表
-                if (isMobile) {
-                  setShowContactsList(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '20px 24px',
+                cursor: 'pointer',
+                background: isServiceMode ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'transparent',
+                color: isServiceMode ? '#fff' : '#475569',
+                fontWeight: isServiceMode ? 700 : 600,
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                borderBottom: '1px solid #e2e8f0',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                if (!isServiceMode) {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
                 }
               }}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '16px', 
-                padding: '20px 24px', 
-                cursor: 'pointer', 
-                background: isServiceMode ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'linear-gradient(135deg, #fef3c7, #fde68a)', 
-                color: isServiceMode ? '#fff' : '#92400e',
-                fontWeight: isServiceMode ? 700 : 600,
-                transition: 'all 0.3s ease',
-                borderBottom: '3px solid #f59e0b',
-                position: 'relative',
-                boxShadow: isServiceMode ? '0 4px 12px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(245, 158, 11, 0.2)'
+              onMouseLeave={(e) => {
+                if (!isServiceMode) {
+                  e.currentTarget.style.background = 'transparent';
+                }
               }}
             >
               <div style={{ 
@@ -2632,13 +2254,11 @@ const MessagePage: React.FC = () => {
                   background: '#fffbe6', 
                   objectFit: 'cover',
                   boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
-                  transition: 'none' // 禁用过渡效果，防止形变
+                  transition: 'none'
                 }} 
-                onLoad={(e) => {
-                }}
                 onError={(e) => {
                   console.error('客服头像加载失败:', e.currentTarget.src);
-                  e.currentTarget.src = '/static/avatar1.png'; // 备用头像
+                  e.currentTarget.src = '/static/avatar1.png';
                 }}
                 />
               </div>
@@ -2664,479 +2284,268 @@ const MessagePage: React.FC = () => {
               </div>
             </div>
 
-            {/* 分割线 */}
-            <div style={{
-              height: '2px',
-              background: 'linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b)',
-              margin: '0 24px',
-              borderRadius: '1px',
-              boxShadow: '0 1px 3px rgba(245, 158, 11, 0.3)'
-            }}></div>
-
-            {/* 分割线标题 */}
-            <div style={{
-              padding: '12px 24px 8px 24px',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#6b7280',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-              borderBottom: '1px solid #e2e8f0'
-            }}>
-              💬 联系人
-            </div>
-
-            {/* 联系人列表 */}
-            {contactsLoading ? (
-              <div style={{ 
-                color: '#64748b', 
-                textAlign: 'center', 
-                padding: '60px 24px',
-                fontSize: '16px'
-              }}>
-                <div style={{ 
-                  fontSize: '48px', 
-                  marginBottom: '16px',
-                  opacity: 0.5,
-                  animation: 'pulse 1.5s ease-in-out infinite'
-                }}>⏳</div>
-                <div style={{ fontWeight: '600', marginBottom: '8px' }}>正在加载联系人...</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>
-                  请稍候
+            {/* 任务列表内容 */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {tasksLoading && tasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
+              ) : tasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                  暂无任务
                 </div>
-              </div>
-            ) : contacts.length === 0 ? (
-              <div style={{ 
-                color: '#64748b', 
-                textAlign: 'center', 
-                padding: '60px 24px',
-                fontSize: '16px'
-              }}>
-                <div style={{ 
-                  fontSize: '48px', 
-                  marginBottom: '16px',
-                  opacity: 0.5
-                }}>👥</div>
-                <div style={{ fontWeight: '600', marginBottom: '8px' }}>暂无联系人</div>
-                <div style={{ fontSize: '14px', opacity: 0.7 }}>
-                  开始与其他人聊天吧
-                </div>
-              </div>
-            ) : (
-              contacts.map(c => {
-                // 格式化最新消息时间
-                const formatLastMessageTime = (timeString: string | null) => {
-                  if (!timeString) return t('messages.noMessage') || '暂无消息';
-                  return TimeHandlerV2.formatLastMessageTime(timeString, userTimezone, t);
-                };
-
-                return (
+              ) : (
+                tasks.map(task => (
                   <div
-                    key={c.id}
-                    onClick={() => { 
-                      // 如果点击的是同一个联系人，不执行任何操作
-                      if (activeContact?.id === c.id && !isServiceMode) {
-                        return;
-                      }
-                      
-                      setActiveContact(c); 
-                      setIsServiceMode(false); 
-                      // 不清空消息列表，让loadChatHistory处理消息加载
-                      
-                      // 移动端点击联系人后自动关闭联系人列表
-                      if (isMobile) {
-                        setShowContactsList(false);
-                      }
+                    key={task.id}
+                    onClick={() => {
+                      setActiveTaskId(task.id);
                     }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '16px', 
-                      padding: '20px 24px', 
-                      cursor: 'pointer', 
-                      background: activeContact?.id === c.id && !isServiceMode ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'transparent', 
-                      color: activeContact?.id === c.id && !isServiceMode ? '#fff' : '#475569',
-                      fontWeight: activeContact?.id === c.id && !isServiceMode ? 700 : 600, 
-                      position: 'relative',
-                      transition: 'all 0.3s ease',
-                      borderBottom: '1px solid #e2e8f0'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (activeContact?.id !== c.id || isServiceMode) {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeContact?.id !== c.id || isServiceMode) {
-                        e.currentTarget.style.background = 'transparent';
-                      }
+                    style={{
+                      padding: '12px 16px',
+                      borderBottom: '1px solid #e5e7eb',
+                      cursor: 'pointer',
+                      backgroundColor: activeTaskId === task.id ? '#eff6ff' : 'white',
+                      transition: 'background-color 0.2s'
                     }}
                   >
-                    <div style={{ 
-                      position: 'relative',
-                      width: '50px',
-                      height: '50px'
-                    }}>
-                      <img 
-                        src={c.avatar || '/static/avatar1.png'} 
-                        alt={t('messages.avatar')} 
-                        style={{ 
-                          width: '50px', 
-                          height: '50px', 
-                          borderRadius: '50%', 
-                          border: '3px solid #3b82f6', 
-                          background: '#f8fbff', 
-                          objectFit: 'cover',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/user/${c.id}`);
-                        }}
-                      />
-                      {/* 未读消息红点 */}
-                      {contactUnreadCounts[c.id] && contactUnreadCounts[c.id] > 0 && (
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                      {/* 任务图片 */}
+                      {task.images && task.images.length > 0 ? (
+                        <img
+                          src={task.images[0]}
+                          alt={task.title}
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : (
                         <div style={{
-                          position: 'absolute',
-                          top: '-2px',
-                          right: '-2px',
-                          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                          borderRadius: '50%',
-                          minWidth: '20px',
-                          height: '20px',
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '8px',
+                          background: '#e5e7eb',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '11px',
-                          color: '#fff',
-                          fontWeight: 'bold',
-                          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
-                          animation: 'pulse 2s infinite',
-                          border: '2px solid #fff',
-                          zIndex: 10
+                          fontSize: '24px',
+                          flexShrink: 0
                         }}>
-                          {contactUnreadCounts[c.id] > 99 ? '99+' : contactUnreadCounts[c.id]}
+                          📋
                         </div>
                       )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
+                        {task.last_message && (
+                          <div style={{ fontSize: '14px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {task.last_message.sender_name}: {task.last_message.content}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        {task.unread_count > 0 && (
+                          <div style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            borderRadius: '10px',
+                            padding: '2px 8px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            minWidth: '20px',
+                            textAlign: 'center'
+                          }}>
+                            {task.unread_count}
+                          </div>
+                        )}
+                        {task.last_message && (
+                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+                            {dayjs(task.last_message.created_at).format('HH:mm')}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '700', 
-                        marginBottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        {c.name || `${t('messages.user')}${c.id}`}
-                      </div>
-                      <div style={{ 
-                        fontSize: '12px', 
-                        opacity: 0.7,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <span>{formatLastMessageTime(c.last_message_time || null)}</span>
-                        <div style={{
-                          width: '6px',
-                          height: '6px',
-                          background: '#10b981',
-                          borderRadius: '50%'
-                        }}></div>
-                      </div>
-                    </div>
-                    {contactUnreadCounts[c.id] && contactUnreadCounts[c.id] > 0 && (
-                      <div style={{ 
-                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                        borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
-                        animation: 'pulse 2s infinite'
-                      }}>
-                        {contactUnreadCounts[c.id] > 99 ? '99+' : contactUnreadCounts[c.id]}
-                      </div>
-                    )}
                   </div>
-                );
-              })
-            )}
+                ))
+              )}
+            </div>
           </div>
-      </div>
+        </div>
         
         {/* 右侧聊天区域 */}
         <div style={{ 
           flex: 1, 
           display: 'flex', 
           flexDirection: 'column',
-          background: isMobile ? '#fff' : 'transparent',
-          width: isMobile ? '100%' : 'auto',
-          position: isMobile ? 'relative' : 'static',
-          height: isMobile ? '100vh' : 'auto',
-          overflow: 'hidden'
+          background: '#fff',
+          position: 'relative'
         }}>
           {/* 聊天头部 */}
-        <div style={{ 
-            padding: isMobile ? '16px' : '24px 30px', 
-            borderBottom: '1px solid #e2e8f0', 
-            background: isMobile ? 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' : 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-            gap: '16px',
-            minHeight: isMobile ? '60px' : '80px',
-            flexShrink: 0,
-            position: isMobile ? 'sticky' : 'static',
-            top: isMobile ? '0' : 'auto',
-            zIndex: isMobile ? 20 : 'auto'
-          }}>
-            {/* 移动端菜单按钮 */}
-            {isMobile && (
-              <button
-                onClick={() => setShowContactsList(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  border: 'none',
-                  color: '#fff',
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '600',
+          {isServiceMode ? (
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px'
+            }}>
+              <img src={'/static/service.png'} alt={t('messages.service')} style={{ 
+                width: '50px', 
+                height: '50px', 
+                borderRadius: '50%', 
+                border: '3px solid #f59e0b', 
+                background: '#fffbe6', 
+                objectFit: 'cover',
+                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+              }} 
+              onError={(e) => {
+                console.error('客服头像加载失败:', e.currentTarget.src);
+                e.currentTarget.src = '/static/avatar1.png';
+              }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>
+                  {t('messages.customerServiceCenter')}
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  opacity: 0.9,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                ☰ 联系人
-              </button>
-            )}
-            {isServiceMode ? (
-              <>
-                <div style={{ 
-                  position: 'relative',
-                  width: '60px',
-                  height: '60px'
+                  gap: '8px'
                 }}>
-                  <img 
-                    src="/static/service.png" 
-                    alt="客服头像" 
-                    style={{ 
-                      width: '60px', 
-                      height: '60px', 
-                      borderRadius: '50%', 
-                      border: '3px solid #f59e0b', 
-                      cursor: 'pointer',
-                      objectFit: 'cover',
-                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
-                      transition: 'none' // 禁用过渡效果，防止形变
-                    }}
-                    onError={(e) => {
-                      console.error('客服头像加载失败:', e.currentTarget.src);
-                      e.currentTarget.src = '/static/avatar1.png'; // 备用头像
-                    }}
-                  />
+                  <span>{t('messages.onlineService')}</span>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    background: '#10b981',
+                    borderRadius: '50%'
+                  }}></div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontSize: '20px', 
-                    fontWeight: '700', 
-                    color: '#1e293b',
-                    marginBottom: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    {t('messages.customerServiceCenter')}
-                  </div>
-                  <div style={{ 
-                    fontSize: '14px', 
-                    color: '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <div style={{
-                      width: '8px',
-                      height: '8px',
-                      background: '#10b981',
-                      borderRadius: '50%'
-                    }}></div>
-                    <span>{t('messages.serviceTime')}</span>
-                  </div>
-                </div>
-              </>
-            ) : activeContact ? (
-              <>
-                <div style={{ 
-                  position: 'relative',
-                  width: '60px',
-                  height: '60px'
-                }}>
-            <img 
-              src={activeContact.avatar || '/static/avatar1.png'} 
-              alt="头像" 
-              style={{ 
-                      width: '60px', 
-                      height: '60px', 
-                borderRadius: '50%', 
-                      border: '3px solid #3b82f6', 
-                cursor: 'pointer',
-                      objectFit: 'cover',
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-              }}
-              onClick={() => navigate(`/user/${activeContact.id}`)}
-            />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontSize: '20px', 
-                    fontWeight: '700', 
-                    color: '#1e293b',
-                    marginBottom: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    {activeContact.name || `${t('messages.user')}${activeContact.id}`}
-        </div>
-                  <div style={{ 
-                    fontSize: '14px', 
-                    color: '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
-                    <div style={{
-                      width: '8px',
-                      height: '8px',
-                      background: '#10b981',
-                      borderRadius: '50%'
-                    }}></div>
-                    <span>{t('messages.online')}</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div style={{ 
-                flex: 1, 
-                textAlign: 'center',
-                color: '#64748b'
-              }}>
-                <div style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600',
-                  marginBottom: '4px'
-                }}>
-                  {t('messages.messageCenter')}
-                </div>
-                <div style={{ 
-                  fontSize: '14px',
-                  opacity: 0.7
-                }}>
-                  {t('messages.selectContact')}
-                </div>
-              </div>
-            )}
-          </div>
-
-
-          {/* 用户聊天模式下的系统提示 */}
-          {activeContact && !isServiceMode && showSystemWarning && (
-            <div style={{
-              background: 'rgba(254, 243, 199, 0.95)',
-              border: '2px solid #f59e0b',
-              borderRadius: '12px',
-              padding: '16px 20px',
-              margin: '0',
-              boxShadow: '0 8px 32px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
-              position: 'fixed',
-              top: isMobile ? '80px' : '120px',
-              left: isMobile ? '16px' : 'calc(50% + 175px)',
-              right: isMobile ? '16px' : 'auto',
-              transform: isMobile ? 'none' : 'translateX(-50%)',
-              width: isMobile ? 'auto' : '90%',
-              maxWidth: isMobile ? 'none' : '600px',
-              zIndex: 1000,
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  color: '#92400e'
-                }}>
-                  ⚠️
-                </div>
-                <div style={{
-                  flex: 1,
-                  color: '#92400e',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  lineHeight: '1.4'
-                }}>
-                  {t('messages.tradeWarning')}
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSystemWarning(false);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#92400e',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    borderRadius: '4px',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
-                >
-                  ✕
-                </button>
               </div>
             </div>
-          )}
-
-          {/* 消息显示区域 */}
-          <div 
-            ref={messagesContainerRef}
-            style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              padding: isMobile ? '16px' : '30px', 
-              background: 'linear-gradient(135deg, #f8fbff 0%, #f1f5f9 100%)',
-              display: 'flex', 
-              flexDirection: 'column',
-              minHeight: 0, // 允许flex收缩
-              position: 'relative',
-              paddingTop: isMobile ? '20px' : '20px',
-              marginTop: isMobile ? '0' : '0',
-              // 移动端确保不超出视口
-              ...(isMobile && {
-                maxHeight: 'calc(100vh - 140px)', // 为头部和输入区域预留空间
-                WebkitOverflowScrolling: 'touch' // iOS平滑滚动
-              })
+          ) : activeTaskId && activeTask ? (
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'white',
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center'
             }}>
-          {isServiceMode ? (
+              {/* 任务图片 */}
+              {activeTask.images && activeTask.images.length > 0 ? (
+                <img
+                  src={activeTask.images[0]}
+                  alt={activeTask.title}
+                  style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '8px',
+                    objectFit: 'cover',
+                    flexShrink: 0
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '8px',
+                  background: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  flexShrink: 0
+                }}>
+                  📋
+                </div>
+              )}
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{activeTask.title}</h3>
+                <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {activeTask.status === 'open' && !activeTask.taker_id && (
+                    <span style={{
+                      padding: '2px 8px',
+                      background: '#fef3c7',
+                      color: '#92400e',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>等待接受</span>
+                  )}
+                  {activeTask.status === 'in_progress' && (
+                    <span style={{
+                      padding: '2px 8px',
+                      background: '#dbeafe',
+                      color: '#1e40af',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>进行中</span>
+                  )}
+                  {activeTask.status === 'completed' && (
+                    <span style={{
+                      padding: '2px 8px',
+                      background: '#d1fae5',
+                      color: '#065f46',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>已完成</span>
+                  )}
+                  {activeTask.status === 'cancelled' && (
+                    <span style={{
+                      padding: '2px 8px',
+                      background: '#fee2e2',
+                      color: '#991b1b',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>已取消</span>
+                  )}
+                </div>
+              </div>
+              {activeTask.poster_id === user?.id && activeTask.status === 'open' && !activeTask.taker_id && (
+                <button
+                  onClick={() => setShowApplicationListModal(true)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  查看申请
+                </button>
+              )}
+            </div>
+          ) : null}
+          
+          {/* 消息区域 */}
+          <div style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            padding: '20px',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+          }}>
+            {isServiceMode && !serviceConnected ? (
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -3159,177 +2568,104 @@ const MessagePage: React.FC = () => {
                   color: '#374151',
                   marginBottom: '8px'
                 }}>
-                  {t('messages.customerServiceCenter')}
-                  </div>
+                  {t('messages.contactCustomerService')}
+                </div>
                 <div style={{
                   fontSize: '16px',
                   color: '#6b7280',
                   textAlign: 'center',
                   lineHeight: '1.5',
-                  maxWidth: '300px',
+                  maxWidth: '400px',
                   marginBottom: '20px'
                 }}>
-                  {t('messages.ourTeamReadyToHelp')}<br/>
-                  {t('messages.serviceTimeDaily')}
-                  </div>
-                <div style={{
-                  background: '#fef3c7',
-                  border: '1px solid #f59e0b',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  maxWidth: '400px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{
-                    fontSize: '14px',
-                    color: '#92400e',
-                    fontWeight: '600',
-                    marginBottom: '8px'
-                  }}>
-                    📋 {t('messages.serviceDescription')}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: '#b45309',
-                    lineHeight: '1.4'
-                  }}>
-                    • {t('messages.workingHours')}<br/>
-                    • {t('messages.responseTime')}<br/>
-                    • {t('messages.supportedLanguages')}<br/>
-                    • {t('messages.emergencyContact')}
-                  </div>
+                  {t('messages.ourTeamReadyToHelpWithButton')}
                 </div>
-              </div>
-            ) : !activeContact ? (
-              isServiceMode ? (
-                // 客服模式下的连接界面
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  height: '100%',
-                  color: '#64748b',
-                  fontSize: '18px',
-                  flexDirection: 'column',
-                  gap: '20px',
-                  padding: '40px'
-                }}>
-                  <div style={{ 
-                    fontSize: '80px', 
-                    opacity: 0.3,
-                    marginBottom: '10px'
-                  }}>🎧</div>
-                  <div style={{
-                    fontSize: '20px',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    {t('messages.contactCustomerService')}
-                  </div>
-                  <div style={{
-                    fontSize: '16px',
-                    color: '#6b7280',
-                    textAlign: 'center',
-                    lineHeight: '1.5',
-                    maxWidth: '400px',
-                    marginBottom: '20px'
-                  }}>
-                    {t('messages.ourTeamReadyToHelpWithButton')}
-                  </div>
-                  <button
+                <button
                   onClick={async () => {
                     setIsConnectingToService(true);
                     try {
-                      // 检查客服在线状态
                       const isServiceAvailable = await checkCustomerServiceAvailabilityLocal();
                         
-                        if (isServiceAvailable) {
-                          // 客服在线，尝试分配客服
-                          const response = await assignCustomerService();
+                      if (isServiceAvailable) {
+                        const response = await assignCustomerService();
                           
-                          if (response.error) {
-                            console.error('客服连接失败:', response.error);
-                            const errorMessage: Message = {
-                              id: Date.now(),
-                              from: t('messages.system'),
-                              content: t('messages.connectServiceFailed', { error: response.error }),
-                              created_at: new Date().toISOString()
-                            };
-                            setMessages(prev => [...prev, errorMessage]);
-                            return;
-                          }
-                          
-                          // 连接成功
-                          setServiceConnected(true);
-                          setCurrentChatId(response.chat.chat_id);
-                          setCurrentChat(response.chat);
-                          // setService(response.service); // 已移除service状态
-                          
-                          // 保存对话信息到localStorage（不包含敏感信息）
-                          const chatToSave = {
-                            chat: response.chat,
-                            service: {
-                              id: response.service.id,
-                              name: response.service.name,
-                              is_online: response.service.is_online
-                            },
-                            chatId: response.chat.chat_id
-                          };
-                          localStorage.setItem('currentCustomerServiceChat', JSON.stringify(chatToSave));
-                          
-                          // 加载该对话的聊天历史记录
-                          await loadChatHistory(response.service.id, response.chat.chat_id);
-                          
-                          const successMessage: Message = {
+                        if (response.error) {
+                          console.error('客服连接失败:', response.error);
+                          const errorMessage: Message = {
                             id: Date.now(),
                             from: t('messages.system'),
-                            content: t('messages.connectedToService', { name: response.service.name }),
+                            content: t('messages.connectServiceFailed', { error: response.error }),
                             created_at: new Date().toISOString()
                           };
-                          setMessages(prev => [...prev, successMessage]);
-                        } else {
-                          // 客服不在线，显示系统提示
-                          const noServiceMessage: Message = {
-                            id: Date.now(),
-                            from: t('messages.system'),
-                            content: t('messages.noServiceAvailableShort'),
-                            created_at: new Date().toISOString()
-                          };
-                          setMessages(prev => [...prev, noServiceMessage]);
+                          setMessages(prev => [...prev, errorMessage]);
+                          return;
                         }
-                      } catch (error) {
-                        console.error('连接客服失败:', error);
-                        const errorMessage: Message = {
+                          
+                        setServiceConnected(true);
+                        setCurrentChatId(response.chat.chat_id);
+                        setCurrentChat(response.chat);
+                          
+                        const chatToSave = {
+                          chat: response.chat,
+                          service: {
+                            id: response.service.id,
+                            name: response.service.name,
+                            is_online: response.service.is_online
+                          },
+                          chatId: response.chat.chat_id
+                        };
+                        localStorage.setItem('currentCustomerServiceChat', JSON.stringify(chatToSave));
+                          
+                        await loadChatHistory(response.service.id, response.chat.chat_id);
+                          
+                        const successMessage: Message = {
                           id: Date.now(),
                           from: t('messages.system'),
-                          content: t('messages.connectServiceError'),
+                          content: t('messages.connectedToService', { name: response.service.name }),
                           created_at: new Date().toISOString()
                         };
-                        setMessages(prev => [...prev, errorMessage]);
-                      } finally {
-                        setIsConnectingToService(false);
+                        setMessages(prev => [...prev, successMessage]);
+                      } else {
+                        const noServiceMessage: Message = {
+                          id: Date.now(),
+                          from: t('messages.system'),
+                          content: t('messages.noServiceAvailableShort'),
+                          created_at: new Date().toISOString()
+                        };
+                        setMessages(prev => [...prev, noServiceMessage]);
                       }
-                    }}
-                    disabled={isConnectingToService}
-                    style={{
-                      background: isConnectingToService ? '#9ca3af' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '25px',
-                      padding: '16px 32px',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      cursor: isConnectingToService ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                    }}
-                  >
-                    {isConnectingToService ? '连接中...' : '开始对话'}
-                  </button>
-                </div>
-              ) : (
-                // 普通模式下的默认界面
+                    } catch (error) {
+                      console.error('连接客服失败:', error);
+                      const errorMessage: Message = {
+                        id: Date.now(),
+                        from: t('messages.system'),
+                        content: t('messages.connectServiceError'),
+                        created_at: new Date().toISOString()
+                      };
+                      setMessages(prev => [...prev, errorMessage]);
+                    } finally {
+                      setIsConnectingToService(false);
+                    }
+                  }}
+                  disabled={isConnectingToService}
+                  style={{
+                    background: isConnectingToService ? '#9ca3af' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '25px',
+                    padding: '16px 32px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: isConnectingToService ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  }}
+                >
+                  {isConnectingToService ? '连接中...' : '开始对话'}
+                </button>
+              </div>
+            ) : !activeTaskId && !isServiceMode ? (
+              (
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -3345,14 +2681,14 @@ const MessagePage: React.FC = () => {
                     fontSize: isMobile ? '60px' : '80px', 
                     opacity: 0.3,
                     marginBottom: isMobile ? '8px' : '10px'
-                  }}>💬</div>
+                  }}>📋</div>
                   <div style={{
                     fontSize: isMobile ? '18px' : '20px',
                     fontWeight: '600',
                     color: '#374151',
                     marginBottom: isMobile ? '6px' : '8px'
                   }}>
-                    {t('messages.welcomeMessageCenter')}
+                    选择任务开始聊天
                   </div>
                   <div style={{
                     fontSize: isMobile ? '14px' : '16px',
@@ -3361,809 +2697,686 @@ const MessagePage: React.FC = () => {
                     lineHeight: '1.5',
                     maxWidth: isMobile ? '280px' : '300px'
                   }}>
-                    {t('messages.selectContactOrService')}
-                    </div>
-                  <div style={{
-                    display: 'flex',
-                    gap: isMobile ? '8px' : '12px',
-                    marginTop: isMobile ? '16px' : '20px',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    alignItems: 'center'
-                  }}>
-                    <div style={{
-                          padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#6b7280',
-                      border: '1px solid #d1d5db'
-                    }}>
-                      💬 私聊
-                    </div>
-                    <div style={{
-                              padding: '8px 16px',
-                      background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      color: '#92400e',
-                      border: '1px solid #f59e0b'
-                    }}>
-                      🎧 {t('messages.customerService')}
-                    </div>
+                    从左侧列表中选择一个任务查看聊天记录
                   </div>
                 </div>
               )
-                    ) : null}
+            ) : null}
             
-            {/* 消息加载骨架屏 */}
-            {activeContact && !isServiceMode && messages.length === 0 && (
-              <div style={{ padding: '20px' }}>
-                {[...Array(3)].map((_, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: index % 2 === 0 ? 'flex-end' : 'flex-start',
-                    marginBottom: '16px'
+            {/* 任务聊天消息显示 */}
+            {chatMode === 'tasks' && activeTaskId && activeTask && (
+              <>
+                {/* 申请卡片区 - 独立于消息流 */}
+                {activeTask.status === 'open' && !activeTask.taker_id && (
+                  <div style={{
+                    padding: '16px',
+                    marginBottom: '16px',
+                    background: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                   }}>
-                    <div style={{
-                      maxWidth: '70%',
-                      padding: '12px 16px',
-                      borderRadius: '18px',
-                      background: index % 2 === 0 ? '#3b82f6' : '#f1f5f9',
-                      animation: 'pulse 1.5s ease-in-out infinite'
-                    }}>
-                      <div style={{
-                        height: '16px',
-                        background: index % 2 === 0 ? 'rgba(255,255,255,0.3)' : '#e2e8f0',
-                        borderRadius: '4px',
-                        width: index % 2 === 0 ? '120px' : '80px'
-                      }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* 加载更多消息的UI */}
-            {activeContact && !isServiceMode && hasMoreMessages && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: '16px',
-                color: '#64748b',
-                fontSize: '14px'
-              }}>
-                {loadingMoreMessages ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      border: '2px solid #e2e8f0',
-                      borderTop: '2px solid #3b82f6',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }}></div>
-                    加载历史消息中...
-                  </div>
-                ) : (
-                  <div style={{ 
-                    padding: '8px 16px',
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                    cursor: 'pointer'
-                  }}
-                  onClick={loadMoreMessages}
-                  >
-                    向上滚动加载更多消息
+                    {activeTask.poster_id === user?.id ? (
+                      <div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{ fontWeight: 600, fontSize: '16px' }}>待处理申请</div>
+                          {applications.length > 0 && (
+                            <button
+                              onClick={() => setShowApplicationListModal(true)}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#3b82f6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 600
+                              }}
+                            >
+                              查看全部 ({applications.length})
+                            </button>
+                          )}
+                        </div>
+                        {applications.length === 0 ? (
+                          <div style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', padding: '20px' }}>
+                            暂无申请
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {applications.slice(0, 3).map((app: any) => (
+                              <div
+                                key={app.id}
+                                style={{
+                                  padding: '12px',
+                                  background: '#f9fafb',
+                                  borderRadius: '8px',
+                                  border: '1px solid #e5e7eb'
+                                }}
+                              >
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  marginBottom: '8px'
+                                }}>
+                                  <img
+                                    src={app.applicant_avatar || '/static/avatar1.png'}
+                                    alt={app.applicant_name || '用户'}
+                                    style={{
+                                      width: '32px',
+                                      height: '32px',
+                                      borderRadius: '50%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                                      {app.applicant_name || '用户'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                      {dayjs(app.created_at).format('MM-DD HH:mm')}
+                                    </div>
+                                  </div>
+                                </div>
+                                {app.message && (
+                                  <div style={{
+                                    fontSize: '13px',
+                                    color: '#374151',
+                                    marginBottom: '8px',
+                                    lineHeight: '1.5'
+                                  }}>
+                                    {app.message}
+                                  </div>
+                                )}
+                                {app.negotiated_price && (
+                                  <div style={{
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    color: '#92400e',
+                                    padding: '4px 8px',
+                                    background: '#fef3c7',
+                                    borderRadius: '4px',
+                                    display: 'inline-block',
+                                    marginBottom: '8px'
+                                  }}>
+                                    议价: {app.negotiated_price} {app.currency || 'CNY'}
+                                  </div>
+                                )}
+                                {activeTask?.poster_id === user?.id && (
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '8px',
+                                    marginTop: '8px'
+                                  }}>
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          await acceptApplication(activeTaskId, app.id);
+                                          alert('已接受申请');
+                                          await loadTaskMessages(activeTaskId);
+                                          await loadApplications(activeTaskId);
+                                          await loadTasks();
+                                        } catch (error: any) {
+                                          console.error('接受申请失败:', error);
+                                          alert(error.response?.data?.detail || '接受申请失败，请重试');
+                                        }
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '6px 12px',
+                                        background: '#10b981',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 600
+                                      }}
+                                    >
+                                      接受
+                                    </button>
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          await rejectApplication(activeTaskId, app.id);
+                                          alert('已拒绝申请');
+                                          await loadApplications(activeTaskId);
+                                        } catch (error: any) {
+                                          console.error('拒绝申请失败:', error);
+                                          alert(error.response?.data?.detail || '拒绝申请失败，请重试');
+                                        }
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '6px 12px',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 600
+                                      }}
+                                    >
+                                      拒绝
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {applications.length > 3 && (
+                              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                                <button
+                                  onClick={() => setShowApplicationListModal(true)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    background: 'transparent',
+                                    color: '#3b82f6',
+                                    border: '1px solid #3b82f6',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '13px'
+                                  }}
+                                >
+                                  查看更多 ({applications.length - 3} 个)
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        {applications.some((app: any) => app.applicant_id === user?.id) ? (
+                          <div style={{
+                            padding: '12px',
+                            background: '#ecfdf5',
+                            borderRadius: '8px',
+                            border: '1px solid #10b981',
+                            textAlign: 'center',
+                            color: '#059669',
+                            fontWeight: 600
+                          }}>
+                            ✓ 您已申请此任务
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowApplicationModal(true)}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '16px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#2563eb';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#3b82f6';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                          >
+                            申请任务
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+
+                {/* 加载更多消息按钮 */}
+                {taskHasMore && (
+                  <div style={{ textAlign: 'center', marginBottom: '16px', padding: '16px' }}>
+                    <button
+                      onClick={() => loadTaskMessages(activeTaskId, taskNextCursor)}
+                      disabled={taskMessagesLoading}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        cursor: taskMessagesLoading ? 'not-allowed' : 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {taskMessagesLoading ? '加载中...' : '加载更多'}
+                    </button>
+                  </div>
+                )}
+
+                {/* 任务消息加载状态 */}
+                {taskMessagesLoading && taskMessages.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                    <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+                    加载消息中...
+                  </div>
+                )}
+
+                {/* 任务消息列表 */}
+                {taskMessages.length === 0 && !taskMessagesLoading && (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>💬</div>
+                    暂无消息，开始对话吧
+                  </div>
+                )}
+
+                {taskMessages.map((msg, idx) => {
+                  const isOwn = msg.sender_id === user?.id;
+                  // 显示头像的条件：第一条消息，或者上一条消息的发送者不同
+                  const showAvatar = idx === 0 || (taskMessages[idx - 1] && taskMessages[idx - 1].sender_id !== msg.sender_id);
+                  
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        marginBottom: '12px',
+                        padding: '0 16px',
+                        justifyContent: isOwn ? 'flex-end' : 'flex-start'
+                      }}
+                    >
+                      {!isOwn && showAvatar && (
+                        <img
+                          src={msg.sender_avatar || '/default-avatar.png'}
+                          alt={msg.sender_name || '用户'}
+                          onClick={() => {
+                            if (msg.sender_id) {
+                              navigate(`/user/${msg.sender_id}`);
+                            }
+                          }}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            objectFit: 'cover',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        />
+                      )}
+                      {!isOwn && !showAvatar && <div style={{ width: '40px' }} />}
+                      
+                      <div style={{
+                        maxWidth: '70%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isOwn ? 'flex-end' : 'flex-start'
+                      }}>
+                        {showAvatar && (
+                          <div 
+                            onClick={() => {
+                              if (msg.sender_id) {
+                                navigate(`/user/${msg.sender_id}`);
+                              }
+                            }}
+                            style={{ 
+                              fontSize: '12px', 
+                              color: '#6b7280', 
+                              marginBottom: '4px',
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                          >
+                            {msg.sender_name}
+                          </div>
+                        )}
+                        <div style={{
+                          padding: '8px 12px',
+                          borderRadius: '12px',
+                          backgroundColor: isOwn ? '#3b82f6' : 'white',
+                          color: isOwn ? 'white' : '#1f2937',
+                          fontSize: '14px',
+                          wordBreak: 'break-word',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}>
+                          {msg.content}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div style={{ marginTop: '8px' }}>
+                              {msg.attachments.map((att: any) => (
+                                <div key={att.id} style={{ marginTop: '4px' }}>
+                                  {att.attachment_type === 'image' && (att.url || att.blob_id) && (
+                                    <img
+                                      src={att.url || `/api/blobs/${att.blob_id}`}
+                                      alt="图片附件"
+                                      style={{ maxWidth: '200px', borderRadius: '6px', cursor: 'pointer' }}
+                                      onClick={() => {
+                                        setPreviewImageUrl(att.url || `/api/blobs/${att.blob_id}`);
+                                        setShowImagePreview(true);
+                                      }}
+                                    />
+                                  )}
+                                  {att.attachment_type === 'file' && (att.url || att.blob_id) && (
+                                    <div style={{
+                                      padding: '8px 12px',
+                                      background: '#f3f4f6',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}>
+                                      <span style={{ fontSize: '20px' }}>📎</span>
+                                      <a
+                                        href={att.url || `/api/blobs/${att.blob_id}`}
+                                        download
+                                        style={{
+                                          color: '#3b82f6',
+                                          textDecoration: 'none',
+                                          fontSize: '13px'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.textDecoration = 'underline';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.textDecoration = 'none';
+                                        }}
+                                      >
+                                        {att.meta?.filename || '下载文件'}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: '#9ca3af',
+                          marginTop: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {dayjs(msg.created_at).format('HH:mm')}
+                          {!isOwn && msg.is_read !== undefined && !msg.is_read && (
+                            <span style={{
+                              padding: '2px 6px',
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 600
+                            }}>未读</span>
+                          )}
+                          {!isOwn && msg.is_read && (
+                            <span style={{
+                              color: '#10b981',
+                              fontSize: '10px'
+                            }}>✓ 已读</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </>
             )}
-            
-            {((activeContact && !isServiceMode) || (isServiceMode && messages.length > 0)) && messages.map((msg, idx) => {
+
+            {/* 客服消息显示 */}
+            {isServiceMode && messages.length > 0 && messages.map((msg, idx) => {
               const systemText = t('messages.system');
               const meText = t('messages.me');
               const isSystemMessage = msg.from === systemText;
               const isImageMessage = msg.content.startsWith('[图片]');
               const isFileMessage = msg.content.startsWith('[文件]');
-              const canTranslate = !isSystemMessage && !isImageMessage && !isFileMessage;
-              const messageKey = getMessageKey(msg);
-              const hasTranslation = messageTranslations.has(messageKey);
-              const isTranslating = translatingMessages.has(messageKey);
-              const translatedText = messageTranslations.get(messageKey);
               
               return (
-              <div key={idx} style={{ 
-                marginBottom: 16, 
-                display: 'flex',
-                justifyContent: msg.from === systemText ? 'center' : (msg.from === meText ? 'flex-end' : 'flex-start'),
-                width: '100%'
-              }}>
-                <div style={{ 
-                  background: msg.from === systemText 
-                    ? 'linear-gradient(135deg, #f3f4f6, #e5e7eb)' 
-                    : msg.from === meText 
-                      ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
-                      : '#fff', 
-                  color: msg.from === systemText 
-                    ? '#374151' 
-                    : msg.from === meText 
-                      ? '#fff' 
-                      : '#333', 
-                  borderRadius: 16, 
-                  padding: '12px 20px', 
-                  maxWidth: msg.from === systemText ? '80%' : '70%', 
-                  wordBreak: 'break-word',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  border: msg.from === systemText 
-                    ? '1px solid #d1d5db' 
-                    : msg.from === meText 
-                      ? 'none' 
-                      : '1px solid #e2e8f0',
-                  textAlign: msg.from === systemText ? 'center' : 'left',
-                  position: 'relative'
-                }}>
-                  {msg.from !== systemText && (
-                    <div style={{ fontSize: 14, marginBottom: 4, fontWeight: '600' }}>{msg.from}</div>
-                  )}
-                  {renderMessageContent(msg.content, msg)}
-                  
-                  {/* 翻译内容显示在原文下面 */}
-                  {hasTranslation && translatedText && (
-                    <div style={{
-                      marginTop: '8px',
-                      paddingTop: '8px',
-                      borderTop: `1px solid ${msg.from === meText ? 'rgba(255,255,255,0.2)' : '#e2e8f0'}`,
-                      fontSize: '14px',
-                      color: msg.from === meText 
-                        ? 'rgba(255,255,255,0.9)' 
-                        : '#666',
-                      fontStyle: 'italic',
-                      opacity: 0.9
-                    }}>
-                      {translatedText}
-                    </div>
-                  )}
-                  
-                  <div style={{ 
-                    fontSize: 12, 
-                    color: msg.from === systemText 
-                      ? '#6b7280' 
-                      : msg.from === meText 
-                        ? 'rgba(255,255,255,0.7)' 
-                        : '#888', 
-                    marginTop: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '8px'
-                  }}>
-                    <span>{formatTime(msg.created_at)}</span>
-                    
-                    {/* 翻译按钮 - 右下角 */}
-                    {canTranslate && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleTranslateMessage(msg, msg.content);
-                        }}
-                        disabled={isTranslating}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: msg.from === meText 
-                            ? 'rgba(255,255,255,0.7)' 
-                            : '#888',
-                          fontSize: '11px',
-                          padding: '2px 6px',
-                          cursor: isTranslating ? 'not-allowed' : 'pointer',
-                          opacity: isTranslating ? 0.5 : 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          borderRadius: '4px',
-                          transition: 'all 0.2s',
-                          marginLeft: 'auto'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isTranslating) {
-                            e.currentTarget.style.background = msg.from === meText 
-                              ? 'rgba(255,255,255,0.1)' 
-                              : '#f3f4f6';
-                            e.currentTarget.style.color = msg.from === meText 
-                              ? '#fff' 
-                              : '#3b82f6';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = msg.from === meText 
-                            ? 'rgba(255,255,255,0.7)' 
-                            : '#888';
-                        }}
-                        title={hasTranslation ? t('messages.hideTranslation') : t('messages.translate')}
-                      >
-                        {isTranslating ? '⏳' : hasTranslation ? '🌐' : '🌐'}
-                        <span>{isTranslating ? t('messages.translating') : hasTranslation ? t('messages.hide') : t('messages.translate')}</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )})}
-            <div ref={messagesEndRef} />
-                  </div>
-
-
-          {/* 输入区域 */}
-          <div style={{ 
-            padding: isMobile ? '12px 16px' : '24px 30px', 
-            borderTop: '1px solid #e2e8f0', 
-            background: '#fff',
-            position: 'relative',
-            flexShrink: 0,
-            minHeight: isMobile ? '70px' : 'auto',
-            // 移动端确保输入区域始终可见
-            ...(isMobile && {
-              position: 'sticky',
-              bottom: 0,
-              zIndex: 10
-            })
-          }}>
-            {/* 功能按钮行 */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '16px', 
-              marginBottom: '16px',
-              flexWrap: 'wrap'
-            }}>
-              {/* 表情按钮 */}
-                    <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                data-emoji-button
-                      style={{
-                  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-                  border: '2px solid #e2e8f0',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                        padding: '12px',
-                  borderRadius: '12px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                }}
-              >
-                😊
-                    </button>
-
-              {/* 图片按钮 */}
-                    <button
-                onClick={() => {
-                  const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-                  if (fileInput) {
-                    fileInput.click();
-                  }
-                }}
-                      style={{
-                  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-                  border: '2px solid #e2e8f0',
-                  fontSize: '18px',
-                        cursor: 'pointer',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                }}
-              >
-                📷
-                    </button>
-
-              {/* 文件按钮 */}
-                    <button
-                onClick={() => {
-                  const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-                  if (fileInput) {
-                    fileInput.click();
-                  }
-                }}
-                      style={{
-                  background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-                  border: '2px solid #e2e8f0',
-                  fontSize: '18px',
-                        cursor: 'pointer',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                  e.currentTarget.style.borderColor = '#10b981';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc, #f1f5f9)';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                }}
-              >
-                📎
-                    </button>
-
-              {/* 客服模式专用按钮 */}
-              {isServiceMode && (
-                <>
-
-                  {/* 联系在线客服按钮 / 结束对话按钮 */}
-                  {!serviceConnected ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      {/* 客服在线状态指示器 */}
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        fontSize: '12px',
-                        color: serviceStatusLoading ? '#6b7280' : (serviceAvailable ? '#10b981' : '#ef4444'),
-                        fontWeight: '500'
-                      }}>
-                        <div style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: serviceStatusLoading ? '#6b7280' : (serviceAvailable ? '#10b981' : '#ef4444'),
-                          animation: serviceStatusLoading ? 'pulse 1.5s ease-in-out infinite' : 'none'
-                        }}></div>
-                        {serviceStatusLoading ? t('messages.checkingCustomerService') : (serviceAvailable ? t('messages.customerServiceOnline') : t('messages.customerServiceOffline'))}
-                      </div>
-                      
-                      <button
-                        onClick={handleContactCustomerService}
-                        disabled={isConnectingToService || !serviceAvailable}
-                        style={{
-                          background: isConnectingToService || !serviceAvailable
-                            ? 'linear-gradient(135deg, #9ca3af, #6b7280)' 
-                            : 'linear-gradient(135deg, #10b981, #059669)',
-                          border: `2px solid ${isConnectingToService || !serviceAvailable ? '#9ca3af' : '#10b981'}`,
-                          fontSize: '14px',
-                          cursor: isConnectingToService || !serviceAvailable ? 'not-allowed' : 'pointer',
-                          padding: '12px 16px',
-                          borderRadius: '12px',
-                          transition: 'all 0.3s ease',
-                          boxShadow: isConnectingToService || !serviceAvailable
-                            ? '0 2px 8px rgba(156, 163, 175, 0.2)' 
-                            : '0 2px 8px rgba(16, 185, 129, 0.2)',
-                          color: '#fff',
-                          fontWeight: '600',
-                          opacity: isConnectingToService || !serviceAvailable ? 0.7 : 1
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isConnectingToService && serviceAvailable) {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, #059669, #047857)';
-                            e.currentTarget.style.borderColor = '#059669';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isConnectingToService && serviceAvailable) {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-                            e.currentTarget.style.borderColor = '#10b981';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.2)';
-                          }
-                        }}
-                      >
-                        {isConnectingToService ? '⏳ 连接中...' : 
-                         !serviceAvailable ? `🚫 ${t('messages.customerServiceOffline')}` : 
-                         `🎧 ${t('messages.contactCustomerService')}`}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleEndConversation}
-                      style={{
-                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                        border: '2px solid #ef4444',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)',
-                        color: '#fff',
-                        fontWeight: '600'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
-                        e.currentTarget.style.borderColor = '#dc2626';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-                        e.currentTarget.style.borderColor = '#ef4444';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.2)';
-                      }}
-                    >
-                      🚪 {t('messages.endChat') || '结束对话'}
-                    </button>
-                  )}
-                  
-                </>
-              )}
-            </div>
-
-            {/* 隐藏的文件输入 */}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              style={{ display: 'none' }}
-              id="image-upload"
-            />
-
-            {/* 隐藏的文件输入 */}
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.txt,.zip,.rar,.7z,.xlsx,.xls,.ppt,.pptx"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              id="file-upload"
-            />
-
-            {/* 图片预览区域 - 仅桌面端显示，移动端使用弹窗 */}
-            {imagePreview && !isMobile && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '12px',
-                background: '#f8fafc',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '8px'
-                }}>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#374151'
-                  }}>
-                    📷 图片预览
-                  </span>
-                  <button
-                    onClick={cancelImageSelection}
-                    style={{
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#dc2626';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#ef4444';
-                    }}
-                  >
-                    取消
-                  </button>
-                </div>
-                <img
-                  src={imagePreview}
-                  alt="预览"
+                <div
+                  key={msg.id || idx}
                   style={{
-                    maxWidth: isMobile ? '100%' : '200px',
-                    maxHeight: isMobile ? '300px' : '200px',
-                    width: isMobile ? '100%' : 'auto',
-                    borderRadius: '8px',
-                    objectFit: 'cover'
+                    display: 'flex',
+                    justifyContent: msg.from === meText ? 'flex-end' : 'flex-start',
+                    marginBottom: '16px',
+                    padding: '0 16px'
+                  }}
+                >
+                  <div style={{
+                    maxWidth: '70%',
+                    background: msg.from === meText ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : '#fff',
+                    color: msg.from === meText ? '#fff' : '#1f2937',
+                    padding: '12px 16px',
+                    borderRadius: '18px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    wordBreak: 'break-word'
+                  }}>
+                    {isSystemMessage ? (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        color: '#6b7280', 
+                        fontSize: '12px',
+                        fontStyle: 'italic'
+                      }}>
+                        {msg.content}
+                      </div>
+                    ) : isImageMessage ? (
+                      <img 
+                        src={msg.content.replace('[图片]', '')} 
+                        alt="图片" 
+                        style={{ maxWidth: '200px', borderRadius: '8px' }}
+                      />
+                    ) : isFileMessage ? (
+                      <div>
+                        <div style={{ marginBottom: '8px' }}>{msg.content}</div>
+                        <a 
+                          href={msg.content.replace('[文件]', '')} 
+                          download
+                          style={{ 
+                            color: msg.from === meText ? '#fff' : '#3b82f6',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          下载文件
+                        </a>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                        {msg.content}
+                      </div>
+                    )}
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: msg.from === meText ? 'rgba(255,255,255,0.7)' : '#9ca3af',
+                      marginTop: '4px',
+                      textAlign: 'right'
+                    }}>
+                      {TimeHandlerV2.formatLastMessageTime(msg.created_at, userTimezone, t)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* 消息区域结束 */}
+          </div>
+          
+          {/* 输入框区域 */}
+          {isServiceMode ? (
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #e2e8f0',
+              background: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder={serviceConnected ? t('messages.typeMessage') : t('messages.connectToChat')}
+                disabled={!serviceConnected || isSending}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '24px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!serviceConnected || !input.trim() || isSending}
+                style={{
+                  padding: '12px 24px',
+                  background: serviceConnected && input.trim() && !isSending
+                    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                    : '#cbd5e1',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: serviceConnected && input.trim() && !isSending ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isSending ? '发送中...' : '发送'}
+              </button>
+            </div>
+          ) : chatMode === 'tasks' && activeTaskId && activeTask ? (
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #e2e8f0',
+              background: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              {/* 权限提示 */}
+              {activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id && (
+                <div style={{
+                  padding: '12px',
+                  background: '#fef3c7',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  color: '#92400e',
+                  textAlign: 'center'
+                }}>
+                  任务开始后才能发送消息
+                </div>
+              )}
+              
+              {/* 输入框和按钮 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!isSending && input.trim()) {
+                        handleSendTaskMessage();
+                      }
+                    }
+                  }}
+                  placeholder={
+                    activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id
+                      ? '任务开始后才能发送消息'
+                      : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id === user?.id
+                      ? '可以发送说明类消息（用于需求澄清）'
+                      : '输入消息...'
+                  }
+                  disabled={
+                    (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                    isSending
+                  }
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '24px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease',
+                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1
+                  }}
+                  onFocus={(e) => {
+                    if (!e.target.disabled) {
+                      e.target.style.borderColor = '#3b82f6';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
                   }}
                 />
-                <div style={{
-                  marginTop: '8px',
-                  display: 'flex',
-                  gap: '8px'
-                }}>
-                  <button
-                    onClick={sendImage}
-                    disabled={uploadingImage}
-                    style={{
-                      background: uploadingImage ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 16px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: uploadingImage ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {uploadingImage ? t('messages.sending') : t('messages.sendImage')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* 文件预览区域 */}
-            {filePreview && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '12px',
-                background: '#f0fdf4',
-                borderRadius: '12px',
-                border: '2px solid #bbf7d0'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '8px'
-                }}>
-                  <span style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#166534'
-                  }}>
-                    📎 {t('messages.filePreview')}
-                  </span>
-                  <button
-                    onClick={cancelFileSelection}
-                    style={{
-                      background: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✕ 取消
-                  </button>
-                </div>
-                <div style={{
-                  fontSize: '14px',
-                  color: '#374151',
-                  marginBottom: '8px'
-                }}>
-                  {(() => {
-                    try {
-                      const fileInfo = JSON.parse(filePreview);
-                      const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(2);
-                      return `${fileInfo.name} (${sizeInMB} MB)`;
-                    } catch {
-                      return '文件信息解析失败';
-                    }
-                  })()}
-                </div>
-                <div style={{
-                  marginTop: '8px',
-                  display: 'flex',
-                  gap: '8px'
-                }}>
-                  <button
-                    onClick={sendFile}
-                    disabled={uploadingFile}
-                    style={{
-                      background: uploadingFile ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 16px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: uploadingFile ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {uploadingFile ? t('messages.sending') : t('messages.sendFile')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-
-            {/* 输入框和发送按钮 */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '12px', 
-              alignItems: 'flex-end',
-              position: 'relative'
-            }}>
-              {/* 表情选择器 */}
-              {showEmojiPicker && (
-                <div 
-                  data-emoji-picker
+                <button
+                  onClick={handleSendTaskMessage}
+                  disabled={
+                    (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                    !input.trim() ||
+                    isSending
+                  }
                   style={{
-                    position: 'absolute',
-                    bottom: '100%',
-                    left: 0,
-                    right: 0,
-                    background: '#fff',
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '16px',
-                    padding: '20px',
-                    maxHeight: '250px',
-                    overflowY: 'auto',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                    zIndex: 1000,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(8, 1fr)',
-                    gap: '8px',
-                    marginBottom: '12px',
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box'
-                  }}>
-                  {/* 关闭按钮 */}
-                  <div style={{
-                    gridColumn: '1 / -1',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                    paddingBottom: '8px',
-                    borderBottom: '1px solid #e2e8f0'
-                  }}>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#374151'
-                    }}>选择表情</span>
-                    <button
-                      onClick={() => setShowEmojiPicker(false)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '18px',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        borderRadius: '4px',
-                        color: '#6b7280',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f3f4f6';
-                        e.currentTarget.style.color = '#374151';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'none';
-                        e.currentTarget.style.color = '#6b7280';
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  {EMOJI_LIST.map((emoji, index) => (
-                  <button
-                      key={index}
-                      onClick={() => addEmoji(emoji)}
-                    style={{
-                        background: 'none',
-                      border: 'none',
-                        fontSize: '20px',
-                        cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f3f4f6';
-                        e.currentTarget.style.transform = 'scale(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'none';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    >
-                      {emoji}
-                  </button>
-                  ))}
-        </div>
-              )}
-              
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-                placeholder={
-                  isServiceMode 
-                    ? t('messages.inputYourQuestion')
-                    : activeContact 
-                      ? t('messages.inputMessage') || '输入消息...'
-                      : t('messages.selectContactFirst') || '请先选择联系人'
-                }
-                style={{ 
-                  flex: 1, 
-                  padding: isMobile ? '12px 16px' : '16px 20px', 
-                  borderRadius: '25px', 
-                  border: '2px solid #e2e8f0',
-                  background: '#fff',
-                  color: '#1e293b',
-                  fontSize: isMobile ? '16px' : '16px', // 移动端使用16px防止缩放
-                  fontFamily: 'inherit',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                  WebkitAppearance: 'none', // 移除iOS默认样式
-                  appearance: 'none'
-                }}
-                disabled={!activeContact && !(isServiceMode && serviceConnected)}
-              />
-              
-          <button
-            onClick={handleSend}
-                style={{ 
-                  background: isSending 
-                    ? 'linear-gradient(135deg, #6b7280, #4b5563)' 
-                    : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
-                  color: '#fff', 
-                  border: 'none', 
-                  borderRadius: '25px', 
-                  padding: '16px 24px', 
-                  fontWeight: '700',
-                  fontSize: '16px',
-                  cursor: isSending ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: isSending 
-                    ? '0 2px 6px rgba(107, 114, 128, 0.3)' 
-                    : '0 4px 12px rgba(59, 130, 246, 0.3)',
-                  opacity: isSending ? 0.7 : 1
-                }}
-                disabled={(() => {
-                  const condition1 = !activeContact && !(isServiceMode && serviceConnected);
-                  const condition2 = !input.trim();
-                  const isDisabled = condition1 || condition2;
-                  return isDisabled;
-                })()}
-              >
-                {isSending ? t('messages.sending') : t('messages.send')}
-              </button>
-        </div>
-      </div>
+                    padding: '12px 24px',
+                    background: (
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      !input.trim() ||
+                      isSending
+                    ) ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '24px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: (
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      !input.trim() ||
+                      isSending
+                    ) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {isSending ? '发送中...' : '发送'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {/* 评价弹窗 */}
+      {/* 评价弹窗和其他弹窗 */}
       {showRatingModal && (
         <div style={{
           position: 'fixed',
@@ -4420,6 +3633,447 @@ const MessagePage: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+
+      {/* 申请任务弹窗 */}
+      {showApplicationModal && activeTaskId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+        onClick={() => setShowApplicationModal(false)}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>申请任务</h3>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151'
+              }}>
+                申请留言（可选）
+              </label>
+              <textarea
+                value={applicationMessage}
+                onChange={(e) => setApplicationMessage(e.target.value)}
+                placeholder="请输入申请留言..."
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={negotiatedPrice !== undefined}
+                  onChange={(e) => {
+                    if (!e.target.checked) {
+                      setNegotiatedPrice(undefined);
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>我想议价</span>
+              </label>
+              
+              {negotiatedPrice !== undefined && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151'
+                  }}>
+                    议价金额
+                  </label>
+                  <input
+                    type="number"
+                    value={negotiatedPrice || ''}
+                    onChange={(e) => {
+                      const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                      setNegotiatedPrice(value);
+                    }}
+                    placeholder="请输入议价金额"
+                    min="0"
+                    step="0.01"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowApplicationModal(false);
+                  setApplicationMessage('');
+                  setNegotiatedPrice(undefined);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e5e7eb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await applyForTask(
+                      activeTaskId,
+                      applicationMessage || undefined,
+                      negotiatedPrice,
+                      activeTask?.currency || 'CNY'
+                    );
+                    setShowApplicationModal(false);
+                    setApplicationMessage('');
+                    setNegotiatedPrice(undefined);
+                    // 重新加载申请列表
+                    if (activeTaskId) {
+                      await loadApplications(activeTaskId);
+                    }
+                    alert('申请提交成功！');
+                  } catch (error: any) {
+                    console.error('申请失败:', error);
+                    alert(error.response?.data?.detail || '申请失败，请重试');
+                  }
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                提交申请
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 申请列表弹窗 */}
+      {showApplicationListModal && activeTaskId && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+        onClick={() => setShowApplicationListModal(false)}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>申请列表</h3>
+              <button
+                onClick={() => setShowApplicationListModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = '#6b7280';
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {applicationsLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+            ) : applications.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                暂无申请
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {applications.map((app: any) => (
+                  <div
+                    key={app.id}
+                    style={{
+                      padding: '16px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      background: '#f9fafb'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <img
+                        src={app.applicant_avatar || '/static/avatar1.png'}
+                        alt={app.applicant_name || '用户'}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '16px' }}>
+                          {app.applicant_name || '用户'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {dayjs(app.created_at).format('YYYY-MM-DD HH:mm')}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {app.message && (
+                      <div style={{
+                        marginBottom: '12px',
+                        padding: '12px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        color: '#374151',
+                        lineHeight: '1.6'
+                      }}>
+                        {app.message}
+                      </div>
+                    )}
+
+                    {app.negotiated_price && (
+                      <div style={{
+                        marginBottom: '12px',
+                        padding: '8px 12px',
+                        background: '#fef3c7',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#92400e'
+                      }}>
+                        议价金额: {app.negotiated_price} {app.currency || 'CNY'}
+                      </div>
+                    )}
+
+                    {activeTask?.poster_id === user?.id && (
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        marginTop: '12px'
+                      }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await acceptApplication(activeTaskId, app.id);
+                              alert('已接受申请');
+                              setShowApplicationListModal(false);
+                              // 重新加载任务和申请列表
+                              if (activeTaskId) {
+                                await loadTaskMessages(activeTaskId);
+                                await loadApplications(activeTaskId);
+                                await loadTasks();
+                              }
+                            } catch (error: any) {
+                              console.error('接受申请失败:', error);
+                              alert(error.response?.data?.detail || '接受申请失败，请重试');
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '8px 16px',
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#059669';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#10b981';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          接受
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await rejectApplication(activeTaskId, app.id);
+                              alert('已拒绝申请');
+                              // 重新加载申请列表
+                              if (activeTaskId) {
+                                await loadApplications(activeTaskId);
+                              }
+                            } catch (error: any) {
+                              console.error('拒绝申请失败:', error);
+                              alert(error.response?.data?.detail || '拒绝申请失败，请重试');
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '8px 16px',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#dc2626';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ef4444';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          拒绝
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 移动端图片发送弹窗 */}
       {showMobileImageSendModal && (

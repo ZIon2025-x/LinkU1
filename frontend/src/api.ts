@@ -571,15 +571,123 @@ export async function markAllNotificationsRead() {
   return res.data;
 }
 
-// 申请任务
-export async function applyForTask(taskId: number, message?: string) {
-  const res = await api.post(`/api/tasks/${taskId}/apply`, { message });
+// 申请任务（支持议价价格）
+export async function applyForTask(taskId: number, message?: string, negotiatedPrice?: number, currency?: string) {
+  const res = await api.post(`/api/tasks/${taskId}/apply`, { 
+    message,
+    negotiated_price: negotiatedPrice,
+    currency
+  });
   return res.data;
 }
 
-// 获取任务申请者列表
-export async function getTaskApplications(taskId: number) {
-  const res = await api.get(`/api/tasks/${taskId}/applications`);
+// ========== 任务聊天相关API ==========
+
+// 获取任务聊天列表
+export async function getTaskChatList(limit: number = 20, offset: number = 0) {
+  const res = await api.get('/api/messages/tasks', {
+    params: { limit, offset }
+  });
+  return res.data;
+}
+
+// 获取任务聊天消息（游标分页）
+export async function getTaskMessages(taskId: number, limit: number = 20, cursor?: string) {
+  const res = await api.get(`/api/messages/task/${taskId}`, {
+    params: { limit, cursor }
+  });
+  return res.data;
+}
+
+// 发送任务消息
+export async function sendTaskMessage(
+  taskId: number,
+  content: string,
+  meta?: any,
+  attachments?: Array<{
+    attachment_type: string;
+    url?: string;
+    blob_id?: string;
+    meta?: any;
+  }>
+) {
+  const res = await api.post(`/api/messages/task/${taskId}/send`, {
+    content,
+    meta,
+    attachments
+  });
+  return res.data;
+}
+
+// 标记消息已读
+export async function markTaskMessagesRead(
+  taskId: number,
+  uptoMessageId?: number,
+  messageIds?: number[]
+) {
+  const res = await api.post(`/api/messages/task/${taskId}/read`, {
+    upto_message_id: uptoMessageId,
+    message_ids: messageIds
+  });
+  return res.data;
+}
+
+// 获取任务申请列表（独立接口，支持状态过滤和分页）
+export async function getTaskApplicationsWithFilter(
+  taskId: number, 
+  status?: string, 
+  limit: number = 20, 
+  offset: number = 0
+) {
+  const res = await api.get(`/api/tasks/${taskId}/applications`, {
+    params: { status, limit, offset }
+  });
+  return res.data;
+}
+
+// 接受申请
+export async function acceptApplication(taskId: number, applicationId: number) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/accept`);
+  return res.data;
+}
+
+// 拒绝申请
+export async function rejectApplication(taskId: number, applicationId: number) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/reject`);
+  return res.data;
+}
+
+// 撤回申请
+export async function withdrawApplication(taskId: number, applicationId: number) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/withdraw`);
+  return res.data;
+}
+
+// 再次议价
+export async function negotiateApplication(
+  taskId: number,
+  applicationId: number,
+  negotiatedPrice: number,
+  message?: string
+) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/negotiate`, {
+    negotiated_price: negotiatedPrice,
+    message
+  });
+  return res.data;
+}
+
+// 处理再次议价（同意/拒绝）
+export async function respondNegotiation(
+  taskId: number,
+  applicationId: number,
+  action: 'accept' | 'reject',
+  token: string
+) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/respond-negotiation`, {
+    action,
+    token
+  });
   return res.data;
 }
 
