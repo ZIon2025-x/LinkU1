@@ -458,10 +458,19 @@ async def startup_event():
         
         # 自动运行数据库迁移（如果启用）
         auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
+        use_simple_migration = os.getenv("USE_SIMPLE_MIGRATION", "false").lower() == "true"
+        
         if auto_migrate:
             try:
-                logger.info("正在检查并运行数据库迁移...")
-                run_auto_migration()
+                if use_simple_migration:
+                    # 使用简化的迁移方式（直接在 main 中执行 SQL）
+                    logger.info("正在运行简化数据库迁移...")
+                    from app.simple_migration import run_simple_migration
+                    run_simple_migration()
+                else:
+                    # 使用 Alembic 迁移（推荐，有版本管理）
+                    logger.info("正在检查并运行数据库迁移（Alembic）...")
+                    run_auto_migration()
             except Exception as e:
                 # 迁移失败时，根据环境决定是否阻止启动
                 if environment == "production":
@@ -469,9 +478,12 @@ async def startup_event():
                     raise RuntimeError(f"数据库迁移失败: {e}")
                 else:
                     logger.warning(f"⚠️ 数据库迁移失败（非生产环境，继续运行）: {e}")
-                    logger.warning("提示：可以手动运行 'alembic upgrade head' 来应用迁移")
+                    if not use_simple_migration:
+                        logger.warning("提示：可以手动运行 'alembic upgrade head' 来应用迁移")
+                    else:
+                        logger.warning("提示：可以设置 USE_SIMPLE_MIGRATION=false 使用 Alembic 迁移")
         else:
-            logger.info("自动迁移已禁用（AUTO_MIGRATE=false），请手动运行 'alembic upgrade head'")
+            logger.info("自动迁移已禁用（AUTO_MIGRATE=false）")
         
         # 创建优化索引（使用 pg_trgm）
         try:
