@@ -395,6 +395,7 @@ def run_auto_migration():
         script = ScriptDirectory.from_config(alembic_cfg)
         head_rev = script.get_current_head()
         
+        # 检查当前版本是否已经是最新版本
         if current_rev == head_rev:
             logger.info(f"✅ 数据库已是最新版本 (revision: {current_rev or 'None'})")
             return
