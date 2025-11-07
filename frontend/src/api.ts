@@ -633,10 +633,16 @@ export async function markTaskMessagesRead(
   uptoMessageId?: number,
   messageIds?: number[]
 ) {
-  const res = await api.post(`/api/messages/task/${taskId}/read`, {
-    upto_message_id: uptoMessageId,
-    message_ids: messageIds
-  });
+  // 构建请求体，只包含有值的字段
+  const requestBody: any = {};
+  if (uptoMessageId !== undefined && uptoMessageId !== null) {
+    requestBody.upto_message_id = uptoMessageId;
+  }
+  if (messageIds !== undefined && messageIds !== null && messageIds.length > 0) {
+    requestBody.message_ids = messageIds;
+  }
+  
+  const res = await api.post(`/api/messages/task/${taskId}/read`, requestBody);
   return res.data;
 }
 

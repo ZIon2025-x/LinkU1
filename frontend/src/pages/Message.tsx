@@ -1130,14 +1130,23 @@ const MessagePage: React.FC = () => {
 
   // 加载申请列表
   const loadApplications = useCallback(async (taskId: number) => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadApplications: 用户未登录，跳过加载');
+      return;
+    }
     
+    console.log('loadApplications: 开始加载申请列表，任务ID:', taskId, '用户ID:', user.id);
     setApplicationsLoading(true);
     try {
       const data = await getTaskApplicationsWithFilter(taskId, 'pending', 50, 0);
-      setApplications(data.applications || []);
-    } catch (error) {
+      console.log('loadApplications: 获取到申请列表数据:', data);
+      const apps = data.applications || data || [];
+      console.log('loadApplications: 申请列表已更新，申请数量:', apps.length);
+      setApplications(apps);
+    } catch (error: any) {
       console.error('加载申请列表失败:', error);
+      console.error('错误详情:', error.response?.data || error.message);
+      setApplications([]);
     } finally {
       setApplicationsLoading(false);
     }
