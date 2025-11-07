@@ -58,9 +58,12 @@ export interface TaskApplication {
   task_id: number;
   applicant_id: string;
   applicant_name?: string;
+  applicant_avatar?: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   message?: string;
+  negotiated_price?: number;
+  currency?: string;
 }
 
 export type TaskStatus = Task['status'];

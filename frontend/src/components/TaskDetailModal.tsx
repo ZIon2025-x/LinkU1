@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications } from '../api';
-import { API_BASE_URL } from '../config';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, approveApplication, getUserApplications } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -23,13 +22,11 @@ interface TaskDetailModalProps {
 const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, taskId }) => {
   const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
-  const { translate, isTranslating: isTranslatingHook } = useTranslation();
+  const { translate } = useTranslation();
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
-  const [showPriceEdit, setShowPriceEdit] = useState(false);
-  const [newPrice, setNewPrice] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -96,7 +93,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     try {
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
-      setNewPrice(res.data.reward.toString());
       
       // 如果任务已完成，加载评价
       if (res.data.status === 'completed') {
@@ -234,13 +230,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   };
 
-  const handleChat = () => {
-    // 跳转到任务聊天页面，使用任务ID
-    if (taskId) {
-      navigate(`/message?taskId=${taskId}`);
-    }
-  };
-
   const handleAcceptTask = () => {
     if (!user) {
       setShowLoginModal(true);
@@ -248,9 +237,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     
     // 显示申请弹窗
+    // 设置议价金额默认值为任务金额
+    const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
+    setNegotiatedPrice(defaultPrice);
     setShowApplyModal(true);
     setApplyMessage('');
-    setNegotiatedPrice(undefined);
   };
   
   // 提交申请
@@ -336,30 +327,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   };
 
-  const handleUpdatePrice = async () => {
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-    const price = parseFloat(newPrice);
-    if (isNaN(price) || price <= 0) {
-      alert(t('taskDetail.enterValidPrice'));
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await updateTaskReward(taskId!, price);
-      alert(t('taskDetail.priceUpdateSuccess'));
-      setShowPriceEdit(false);
-      const res = await api.get(`/api/tasks/${taskId}`);
-      setTask(res.data);
-      setNewPrice(res.data.reward.toString());
-    } catch (error: any) {
-      alert(error.response?.data?.detail || t('taskDetail.priceUpdateFailed'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const handleApproveTaker = async () => {
     if (!user) {
@@ -835,7 +802,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 const shareUrl = `${window.location.origin}${basePath}`;
                 const shareTitle = `${task.title} - Link²Ur任务平台`;
                 const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
-                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: ${displayReward.toFixed(2)} ${task.currency || 'CNY'}\n\n立即查看: ${shareUrl}`;
+                const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: ${displayReward.toFixed(2)} ${task.currency || 'CNY'}\n\n立即查看: ${shareUrl}`;
                 
                 // 先尝试使用Web Share API（需要在用户交互上下文中）
                 if (navigator.share) {
@@ -1270,102 +1237,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           </div>
         )}
 
-        {/* 价格编辑区域 */}
-        {showPriceEdit && (
-          <div style={{
-            background: '#fef3c7',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #f59e0b',
-            marginBottom: '24px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '16px'
-            }}>
-              <div style={{ fontSize: '20px' }}>💰</div>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#92400e',
-                margin: 0
-              }}>{t('taskDetail.modifyReward')}</h3>
-            </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
-              <input
-                type="number"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                style={{
-                  border: '2px solid #f59e0b',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  fontSize: '16px',
-                  outline: 'none',
-                  background: '#fff',
-                  minWidth: '120px'
-                }}
-                placeholder={t('taskDetail.newPrice')}
-              />
-              <button
-                onClick={handleUpdatePrice}
-                disabled={actionLoading}
-                style={{
-                  background: actionLoading ? '#cbd5e1' : '#f59e0b',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmModify')}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPriceEdit(false);
-                  setNewPrice(task.reward.toString());
-                }}
-                style={{
-                  background: '#6b7280',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {t('taskDetail.cancel')}
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* 赏金显示区域 */}
-        {!showPriceEdit && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '24px',
-            position: 'relative',
-            zIndex: 1
-          }}>
+        {/* 金额显示区域 */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '24px',
+          position: 'relative',
+          zIndex: 1
+        }}>
             <div style={{ fontSize: '20px' }}>💰</div>
             <span style={{
               fontSize: '18px',
@@ -1389,27 +1269,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 原价: {(task.base_reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
               </span>
             )}
-            {isTaskPoster && (task.status === 'open' || task.status === 'taken') && (
-              <button
-                onClick={() => setShowPriceEdit(true)}
-                style={{
-                  background: '#f59e0b',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '8px',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {t('taskDetail.modify')}
-              </button>
-            )}
           </div>
-        )}
 
         {/* 其他任务信息 */}
         <div style={{
@@ -1711,6 +1571,21 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                         {app.message && (
                           <div style={{ color: '#666', fontSize: '14px', marginBottom: '4px' }}>
                             "{app.message}"
+                          </div>
+                        )}
+                        {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
+                          <div style={{
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: '#92400e',
+                            padding: '4px 8px',
+                            background: '#fef3c7',
+                            borderRadius: '4px',
+                            display: 'inline-block',
+                            marginBottom: '4px',
+                            marginTop: '4px'
+                          }}>
+                            议价: {app.negotiated_price} {app.currency || 'GBP'}
                           </div>
                         )}
                         <div style={{ color: '#999', fontSize: '12px' }}>
@@ -2108,7 +1983,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     checked={negotiatedPrice !== undefined && negotiatedPrice !== null}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setNegotiatedPrice(0);
+                        // 如果勾选，设置默认值为任务金额
+                        const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
+                        setNegotiatedPrice(defaultPrice);
                       } else {
                         setNegotiatedPrice(undefined);
                       }

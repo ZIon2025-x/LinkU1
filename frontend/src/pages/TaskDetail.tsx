@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import api, { fetchCurrentUser, applyForTask, updateTaskReward, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -36,8 +36,6 @@ const TaskDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [user, setUser] = useState<any>(null);
-  const [showPriceEdit, setShowPriceEdit] = useState(false);
-  const [newPrice, setNewPrice] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -159,7 +157,6 @@ const TaskDetail: React.FC = () => {
     api.get(`/api/tasks/${id}`)
       .then(res => {
         setTask(res.data);
-        setNewPrice(res.data.reward.toString());
         // 如果任务已完成，加载评价
         if (res.data.status === 'completed') {
           loadTaskReviews();
@@ -381,7 +378,7 @@ const TaskDetail: React.FC = () => {
           // 构建分享内容
           const shareUrl = window.location.origin + window.location.pathname;
           const shareTitle = `${task.title} - Link²Ur任务平台`;
-          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n赏金: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
           
           console.log('触发原生分享:', { title: shareTitle, text: shareText, url: shareUrl });
           
@@ -645,31 +642,6 @@ const TaskDetail: React.FC = () => {
     }
   };
 
-  const handleUpdatePrice = async () => {
-    if (!user) {
-      alert('请先登录');
-      return;
-    }
-    const price = parseFloat(newPrice);
-    if (isNaN(price) || price <= 0) {
-      alert('请输入有效的价格');
-      return;
-    }
-    setActionLoading(true);
-    try {
-      await updateTaskReward(Number(id), price);
-      alert('价格更新成功！');
-      setShowPriceEdit(false);
-      // 重新获取任务信息
-      const res = await api.get(`/api/tasks/${id}`);
-      setTask(res.data);
-      setNewPrice(res.data.reward.toString());
-    } catch (error: any) {
-      alert(error.response?.data?.detail || '更新价格失败');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const handleApproveTaker = async () => {
     if (!user) {
@@ -1383,7 +1355,7 @@ const TaskDetail: React.FC = () => {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务赏金</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
             <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{task.reward.toFixed(2)}</div>
           </div>
           
@@ -1484,95 +1456,8 @@ const TaskDetail: React.FC = () => {
           }}>{translatedDescription || task.description}</div>
         </div>
         
-        {/* 价格编辑区域 */}
-        {showPriceEdit && (
-          <div style={{
-            background: '#fef3c7',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #f59e0b',
-            marginBottom: '24px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '16px'
-            }}>
-              <div style={{ fontSize: '20px' }}>💰</div>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#92400e',
-                margin: 0
-              }}>修改赏金</h3>
-            </div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
-              <input
-                type="number"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                style={{
-                  border: '2px solid #f59e0b',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  fontSize: '16px',
-                  outline: 'none',
-                  background: '#fff',
-                  minWidth: '120px'
-                }}
-                placeholder="新价格"
-              />
-              <button
-                onClick={handleUpdatePrice}
-                disabled={actionLoading}
-                style={{
-                  background: actionLoading ? '#cbd5e1' : '#f59e0b',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {actionLoading ? '更新中...' : '确认修改'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPriceEdit(false);
-                  setNewPrice(task.reward.toString());
-                }}
-                style={{
-                  background: '#6b7280',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {/* 赏金显示区域 */}
-        {!showPriceEdit && (
-          <div style={{
+        {/* 金额显示区域 */}
+        <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
@@ -1585,33 +1470,13 @@ const TaskDetail: React.FC = () => {
               fontSize: '18px',
               fontWeight: '600',
               color: '#1e293b'
-            }}>赏金：</span>
+            }}>金额：</span>
             <span style={{
               fontSize: '24px',
               fontWeight: '700',
               color: '#059669'
             }}>£{task.reward.toFixed(2)}</span>
-            {isTaskPoster && (task.status === 'open' || task.status === 'taken') && (
-              <button
-                onClick={() => setShowPriceEdit(true)}
-                style={{
-                  background: '#f59e0b',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '8px',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                修改
-              </button>
-            )}
           </div>
-        )}
         
         {/* 其他任务信息 */}
         <div style={{

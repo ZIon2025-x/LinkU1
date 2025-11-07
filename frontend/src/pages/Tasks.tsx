@@ -869,9 +869,12 @@ const Tasks: React.FC = () => {
     
     // 显示申请弹窗
     setSelectedTaskForApply(taskId);
+    // 设置议价金额默认值为任务金额
+    const task = tasks.find(t => t.id === taskId);
+    const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
+    setNegotiatedPrice(defaultPrice);
     setShowApplyModal(true);
     setApplyMessage('');
-    setNegotiatedPrice(undefined);
   };
   
   // 提交申请
@@ -2754,7 +2757,10 @@ const Tasks: React.FC = () => {
                   checked={negotiatedPrice !== undefined}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setNegotiatedPrice(0); // 选中时初始化为0
+                      // 如果勾选，设置默认值为任务金额
+                      const task = tasks.find(t => t.id === selectedTaskForApply);
+                      const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
+                      setNegotiatedPrice(defaultPrice);
                     } else {
                       setNegotiatedPrice(undefined);
                     }

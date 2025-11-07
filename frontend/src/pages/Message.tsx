@@ -247,6 +247,7 @@ const MessagePage: React.FC = () => {
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(false);
   const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false); // 移动端是否显示聊天框
   
   // 任务聊天相关状态
   const [chatMode, setChatMode] = useState<'tasks'>('tasks'); // 聊天模式：任务（联系人功能已移除）
@@ -2098,7 +2099,7 @@ const MessagePage: React.FC = () => {
           width: isMobile ? '100%' : '350px', 
           borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          display: 'flex',
+          display: isMobile && showMobileChat ? 'none' : 'flex',
           flexDirection: 'column',
           position: isMobile ? 'absolute' : 'relative',
           zIndex: isMobile ? 1000 : 'auto',
@@ -2232,6 +2233,10 @@ const MessagePage: React.FC = () => {
                       await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
                       setIsConnectingToService(false);
                       
+                      if (isMobile) {
+                        setShowMobileChat(true); // 移动端显示聊天框
+                      }
+                      
                       return; // 直接返回，不创建新对话
                     } else {
                       // 对话已结束，清除localStorage并重置状态
@@ -2256,6 +2261,10 @@ const MessagePage: React.FC = () => {
                 setTaskMessages([]);
                 setMessages([]);
                 setShowSystemWarning(true);
+                
+                if (isMobile) {
+                  setShowMobileChat(true); // 移动端显示聊天框
+                }
                 
               }}
               style={{
@@ -2340,6 +2349,9 @@ const MessagePage: React.FC = () => {
                     key={task.id}
                     onClick={() => {
                       setActiveTaskId(task.id);
+                      if (isMobile) {
+                        setShowMobileChat(true); // 移动端显示聊天框
+                      }
                     }}
                     style={{
                       padding: '12px 16px',
@@ -2418,10 +2430,15 @@ const MessagePage: React.FC = () => {
         {/* 右侧聊天区域 */}
         <div style={{ 
           flex: 1, 
-          display: 'flex', 
+          display: isMobile && !showMobileChat ? 'none' : 'flex', 
           flexDirection: 'column',
           background: '#fff',
-          position: 'relative'
+          position: isMobile ? 'absolute' : 'relative',
+          width: isMobile ? '100%' : 'auto',
+          height: isMobile ? '100vh' : 'auto',
+          zIndex: isMobile ? 1001 : 'auto',
+          left: isMobile ? '0' : 'auto',
+          top: isMobile ? '0' : 'auto'
         }}>
           {/* 聊天头部 */}
           {isServiceMode ? (
@@ -2434,6 +2451,24 @@ const MessagePage: React.FC = () => {
               alignItems: 'center',
               gap: '16px'
             }}>
+              {isMobile && (
+                <button
+                  onClick={() => setShowMobileChat(false)}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    border: 'none',
+                    color: '#fff',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    marginRight: '8px'
+                  }}
+                >
+                  ←
+                </button>
+              )}
               <img src={'/static/service.png'} alt={t('messages.service')} style={{ 
                 width: '50px', 
                 height: '50px', 
@@ -2478,6 +2513,24 @@ const MessagePage: React.FC = () => {
               gap: '16px',
               alignItems: 'center'
             }}>
+              {isMobile && (
+                <button
+                  onClick={() => setShowMobileChat(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#374151',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    marginRight: '8px'
+                  }}
+                >
+                  ←
+                </button>
+              )}
               {/* 任务图片 */}
               {activeTask.images && activeTask.images.length > 0 ? (
                 <img
@@ -2836,7 +2889,7 @@ const MessagePage: React.FC = () => {
                                     {app.message}
                                   </div>
                                 )}
-                                {app.negotiated_price && (
+                                {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
                                   <div style={{
                                     fontSize: '13px',
                                     fontWeight: 600,
@@ -2847,7 +2900,7 @@ const MessagePage: React.FC = () => {
                                     display: 'inline-block',
                                     marginBottom: '8px'
                                   }}>
-                                    议价: {app.negotiated_price} {app.currency || 'CNY'}
+                                    议价: {app.negotiated_price} {app.currency || 'GBP'}
                                   </div>
                                 )}
                                 {activeTask?.poster_id === user?.id && (
@@ -2951,7 +3004,12 @@ const MessagePage: React.FC = () => {
                           </div>
                         ) : (
                           <button
-                            onClick={() => setShowApplicationModal(true)}
+                            onClick={() => {
+                              // 设置议价金额默认值为任务金额
+                              const defaultPrice = activeTask?.agreed_reward ?? activeTask?.base_reward ?? activeTask?.reward;
+                              setNegotiatedPrice(defaultPrice);
+                              setShowApplicationModal(true);
+                            }}
                             style={{
                               width: '100%',
                               padding: '12px',
@@ -3756,7 +3814,11 @@ const MessagePage: React.FC = () => {
                   type="checkbox"
                   checked={negotiatedPrice !== undefined}
                   onChange={(e) => {
-                    if (!e.target.checked) {
+                    if (e.target.checked) {
+                      // 如果勾选，设置默认值为任务金额
+                      const defaultPrice = activeTask?.agreed_reward ?? activeTask?.base_reward ?? activeTask?.reward;
+                      setNegotiatedPrice(defaultPrice);
+                    } else {
                       setNegotiatedPrice(undefined);
                     }
                   }}
@@ -4010,7 +4072,7 @@ const MessagePage: React.FC = () => {
                       </div>
                     )}
 
-                    {app.negotiated_price && (
+                    {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
                       <div style={{
                         marginBottom: '12px',
                         padding: '8px 12px',
@@ -4020,7 +4082,7 @@ const MessagePage: React.FC = () => {
                         fontWeight: 600,
                         color: '#92400e'
                       }}>
-                        议价金额: {app.negotiated_price} {app.currency || 'CNY'}
+                        议价金额: {app.negotiated_price} {app.currency || 'GBP'}
                       </div>
                     )}
 

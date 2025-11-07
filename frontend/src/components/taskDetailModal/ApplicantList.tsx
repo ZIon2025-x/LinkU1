@@ -70,6 +70,21 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
                     "{app.message}"
                   </div>
                 )}
+                {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#92400e',
+                    padding: '4px 8px',
+                    background: '#fef3c7',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    marginBottom: '4px',
+                    marginTop: '4px'
+                  }}>
+                    议价: {app.negotiated_price} {app.currency || 'GBP'}
+                  </div>
+                )}
                 <div style={{ color: '#999', fontSize: '12px' }}>
                   {t('taskDetail.applicationTime')}: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
                 </div>
