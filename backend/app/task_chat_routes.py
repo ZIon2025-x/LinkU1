@@ -434,7 +434,7 @@ async def get_task_messages(
 
 
 # Pydantic 模型定义
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, validator, model_validator
 from typing import Dict, Any
 
 
@@ -459,14 +459,14 @@ class MarkReadRequest(BaseModel):
     upto_message_id: Optional[int] = None
     message_ids: Optional[List[int]] = None
     
-    @root_validator
-    def validate_at_least_one(cls, values):
+    @model_validator(mode='after')
+    def validate_at_least_one(self):
         """验证至少提供一个字段"""
-        upto_id = values.get('upto_message_id')
-        msg_ids = values.get('message_ids')
+        upto_id = self.upto_message_id
+        msg_ids = self.message_ids
         if not upto_id and not msg_ids:
             raise ValueError("必须提供 upto_message_id 或 message_ids 之一")
-        return values
+        return self
 
 
 @task_chat_router.get("/tasks/{task_id}/applications")
