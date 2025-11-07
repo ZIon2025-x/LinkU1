@@ -23,7 +23,7 @@ from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
 revision: str = 'task_chat_features_001'
-# 基于已迁移的 add_pending_user_table（之前的迁移都已应用）
+# 基于已迁移的 add_pending_user_table
 down_revision: Union[str, Sequence[str], None] = 'add_pending_user_table'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
