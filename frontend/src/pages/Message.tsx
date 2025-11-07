@@ -360,6 +360,20 @@ const MessagePage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // 从URL参数中获取任务ID（如果存在）
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const taskIdParam = searchParams.get('taskId') || searchParams.get('task_id');
+    if (taskIdParam) {
+      const taskId = parseInt(taskIdParam, 10);
+      if (!isNaN(taskId) && taskId !== activeTaskId) {
+        console.log('从URL参数加载任务:', taskId);
+        setActiveTaskId(taskId);
+      }
+    }
+    // 注意：不再处理 uid 参数，因为联系人聊天功能已移除
+  }, [location.search, activeTaskId]);
+
   // 格式化时间为用户时区 - 使用新的统一时间处理系统
   const formatTime = (timeString: string) => {
     try {
@@ -990,10 +1004,20 @@ const MessagePage: React.FC = () => {
     try {
       const data = await getTaskChatList(50, 0);
       console.log('loadTasks: 获取到任务列表数据:', data);
-      setTasks(data.tasks || []);
-      console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks?.length || 0);
-    } catch (error) {
+      if (data && data.tasks) {
+        setTasks(data.tasks);
+        console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks.length);
+      } else {
+        console.warn('loadTasks: 返回数据格式异常:', data);
+        setTasks([]);
+      }
+    } catch (error: any) {
       console.error('加载任务列表失败:', error);
+      console.error('错误详情:', error.response?.data || error.message);
+      // 如果是认证错误，不显示错误，让用户重新登录
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.warn('loadTasks: 认证失败，可能需要重新登录');
+      }
       setTasks([]);
     } finally {
       setTasksLoading(false);
@@ -1138,6 +1162,20 @@ const MessagePage: React.FC = () => {
       console.log('useEffect: 跳过任务列表加载，chatMode:', chatMode, 'user:', user?.id);
     }
   }, [chatMode, user, loadTasks]);
+
+  // 用户登录后立即加载任务列表（备用机制，确保加载）
+  useEffect(() => {
+    if (user && chatMode === 'tasks') {
+      // 如果任务列表为空且不在加载中，则加载
+      if (tasks.length === 0 && !tasksLoading) {
+        console.log('useEffect: 用户登录后备用加载任务列表，用户ID:', user.id, '当前任务数:', tasks.length);
+        const timer = setTimeout(() => {
+          loadTasks();
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.id, chatMode, tasks.length, tasksLoading, loadTasks]);
 
   // 定期刷新任务消息和申请列表（每30秒）
   useEffect(() => {

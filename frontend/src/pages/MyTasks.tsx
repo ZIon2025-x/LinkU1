@@ -366,8 +366,9 @@ const MyTasks: React.FC = () => {
     setShowTaskDetailModal(true);
   };
 
-  const handleChat = (userId: string) => {
-    navigate(`/message?uid=${userId}`);
+  const handleChat = (taskId: number) => {
+    // 跳转到任务聊天页面，使用任务ID
+    navigate(`/message?taskId=${taskId}`);
   };
 
   const handleReviewTask = (task: Task) => {
@@ -1350,7 +1351,7 @@ const MyTasks: React.FC = () => {
                       {/* 聊天按钮 - 只有在任务进行中且有接收者时才显示 */}
                       {(task.status === 'in_progress' && task.taker_id) && (
                         <button
-                          onClick={() => handleChat(isPoster ? task.taker_id! : task.poster_id)}
+                          onClick={() => handleChat(task.id)}
                           style={{
                             padding: '10px 18px',
                             border: 'none',

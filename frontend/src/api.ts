@@ -573,11 +573,19 @@ export async function markAllNotificationsRead() {
 
 // 申请任务（支持议价价格）
 export async function applyForTask(taskId: number, message?: string, negotiatedPrice?: number, currency?: string) {
-  const res = await api.post(`/api/tasks/${taskId}/apply`, { 
-    message,
-    negotiated_price: negotiatedPrice,
-    currency
-  });
+  // 构建请求体，只包含有值的字段
+  const requestBody: any = {};
+  if (message !== undefined && message !== null && message !== '') {
+    requestBody.message = message;
+  }
+  if (negotiatedPrice !== undefined && negotiatedPrice !== null) {
+    requestBody.negotiated_price = negotiatedPrice;
+  }
+  if (currency !== undefined && currency !== null) {
+    requestBody.currency = currency;
+  }
+  
+  const res = await api.post(`/api/tasks/${taskId}/apply`, requestBody);
   return res.data;
 }
 

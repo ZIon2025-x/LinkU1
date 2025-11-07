@@ -298,6 +298,7 @@ async def apply_for_task(
         negotiated_price = request_data.get('negotiated_price', None)
         currency = request_data.get('currency', None)
         
+        logger.info(f"开始申请任务 - 任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}, negotiated_price: {negotiated_price}, currency: {currency}")
         print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}, negotiated_price: {negotiated_price}")
         
         # 检查任务是否存在
@@ -306,13 +307,19 @@ async def apply_for_task(
         task = task_result.scalar_one_or_none()
         
         if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+            error_msg = "任务不存在"
+            logger.warning(f"申请任务失败: {error_msg}")
+            raise HTTPException(status_code=404, detail=error_msg)
+        
+        logger.info(f"任务检查 - 任务ID: {task_id}, 状态: {task.status}, 货币: {task.currency}")
         
         # 检查任务状态：必须是 open
         if task.status != "open":
+            error_msg = f"任务状态为 {task.status}，不允许申请"
+            logger.warning(f"申请任务失败: {error_msg}")
             raise HTTPException(
                 status_code=400,
-                detail=f"任务状态为 {task.status}，不允许申请"
+                detail=error_msg
             )
         
         # 检查是否已经申请过（无论状态）

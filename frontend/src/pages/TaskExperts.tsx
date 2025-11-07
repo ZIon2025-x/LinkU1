@@ -339,7 +339,11 @@ const TaskExperts: React.FC = () => {
   };
 
   const handleRequestService = (expertId: string) => {
-    navigate(`/message?uid=${expertId}`);
+    // 注意：TaskExperts 页面是查看专家列表，不是任务聊天
+    // 如果需要联系专家，应该通过任务申请流程，而不是直接聊天
+    // 暂时保留此功能，但可能需要重新设计
+    alert('请通过任务申请流程联系专家');
+    // navigate(`/message?uid=${expertId}`); // 已废弃
   };
 
   const getLevelColor = (level: string) => {

@@ -545,27 +545,14 @@ const TaskDetail: React.FC = () => {
   };
 
   const handleChat = async () => {
-    // 跳转到消息页并带上发布者id
-    if (!task.poster_id) {
-      alert('无法获取发布者信息，请联系客服');
+    // 跳转到任务聊天页面，使用任务ID
+    if (!id) {
+      alert('无法获取任务信息，请联系客服');
       return;
     }
 
-    // 如果用户还没有接受任务，自动发送一条消息
-    if (!hasAcceptedTask(user, task)) {
-      try {
-        const messageContent = `你好，我们可以聊聊"${task.title}"吗？`;
-        await sendMessage({
-          receiver_id: task.poster_id,
-          content: messageContent
-        });
-      } catch (error) {
-        console.error('自动发送消息失败:', error);
-        // 即使发送失败，也继续跳转到聊天页面
-      }
-    }
-
-    navigate(`/message?uid=${task.poster_id}`);
+    // 跳转到任务聊天页面
+    navigate(`/message?taskId=${id}`);
   };
 
   const handleAcceptTask = async () => {
@@ -1936,7 +1923,7 @@ const TaskDetail: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
-                        onClick={() => navigate(`/message?uid=${app.applicant_id}`)}
+                        onClick={() => navigate(`/message?taskId=${id}`)}
                         style={{
                           background: '#007bff',
                           color: '#fff',
@@ -1999,7 +1986,7 @@ const TaskDetail: React.FC = () => {
         {/* 任务进行中时，发布者可以联系接收者 */}
         {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
           <button
-            onClick={() => navigate(`/message?uid=${task.taker_id}`)}
+            onClick={() => navigate(`/message?taskId=${id}`)}
             style={{
               background: '#007bff',
               color: '#fff',

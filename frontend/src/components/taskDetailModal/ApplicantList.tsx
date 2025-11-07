@@ -8,6 +8,7 @@ interface ApplicantListProps {
   loadingApplications: boolean;
   actionLoading: boolean;
   onApproveApplication: (applicantId: string) => Promise<void>;
+  taskId?: number; // 添加任务ID，用于跳转到任务聊天
   t: (key: string) => string;
 }
 
@@ -16,6 +17,7 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
   loadingApplications,
   actionLoading,
   onApproveApplication,
+  taskId,
   t
 }) => {
   const { navigate } = useLocalizedNavigation();
@@ -74,7 +76,7 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => navigate(`/message?uid=${app.applicant_id}`)}
+                  onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
                   style={{
                     background: '#007bff',
                     color: '#fff',

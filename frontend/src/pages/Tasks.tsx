@@ -912,9 +912,9 @@ const Tasks: React.FC = () => {
     setShowTaskDetailModal(true);
   };
 
-  // 处理联系发布者
-  const handleContactPoster = (posterId: string) => {
-    navigate(`/message?uid=${posterId}`);
+  // 处理联系发布者（跳转到任务聊天页面）
+  const handleContactPoster = (taskId: number) => {
+    navigate(`/message?taskId=${taskId}`);
   };
 
   // 检查用户是否可以查看/申请任务（等级匹配）

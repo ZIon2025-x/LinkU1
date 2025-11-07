@@ -234,8 +234,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   };
 
-  const handleChat = (userId: string) => {
-    navigate(`/message?uid=${userId}`);
+  const handleChat = () => {
+    // 跳转到任务聊天页面，使用任务ID
+    if (taskId) {
+      navigate(`/message?taskId=${taskId}`);
+    }
   };
 
   const handleAcceptTask = () => {
@@ -1716,7 +1719,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => navigate(`/message?uid=${app.applicant_id}`)}
+                          onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
                           style={{
                             background: '#007bff',
                             color: '#fff',
@@ -1779,7 +1782,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           {/* 任务进行中时，发布者可以联系接收者 */}
           {task.status === 'in_progress' && isTaskPoster && task.taker_id && (
             <button
-              onClick={() => navigate(`/message?uid=${task.taker_id}`)}
+              onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
               style={{
                 background: '#007bff',
                 color: '#fff',
@@ -1818,7 +1821,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           
           {user && user.id !== task.poster_id && canViewTask(user, task) && (
             <button
-              onClick={() => navigate(`/message?uid=${task.poster_id}`)}
+              onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
               style={{
                 background: '#A67C52',
                 color: '#fff',
