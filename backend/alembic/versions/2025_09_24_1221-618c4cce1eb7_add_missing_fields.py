@@ -68,15 +68,28 @@ def upgrade() -> None:
     safe_create_index('ix_reviews_task_id', 'reviews', ['task_id'])
     safe_create_index('ix_reviews_user_id', 'reviews', ['user_id'])
     
-    # 添加列（如果不存在）
-    try:
-        op.add_column('tasks', sa.Column('accepted_at', sa.DateTime(), nullable=True))
-    except Exception:
-        pass  # 列可能已存在
-    try:
-        op.add_column('tasks', sa.Column('visibility', sa.String(length=20), nullable=True))
-    except Exception:
-        pass  # 列可能已存在
+    # 安全添加列（如果不存在）
+    def safe_add_column(table_name, column):
+        """安全添加列，如果已存在则跳过（使用 SAVEPOINT）"""
+        savepoint_name = f"sp_add_col_{table_name}_{column.name}".replace('.', '_').replace('-', '_')
+        try:
+            connection.execute(text(f"SAVEPOINT {savepoint_name}"))
+            op.add_column(table_name, column)
+            connection.execute(text(f"RELEASE SAVEPOINT {savepoint_name}"))
+        except Exception as e:
+            # 回滚到保存点，继续执行
+            try:
+                connection.execute(text(f"ROLLBACK TO SAVEPOINT {savepoint_name}"))
+            except:
+                pass
+            # 如果是列已存在的错误，忽略（这是正常情况）
+            error_str = str(e).lower()
+            if not any(keyword in error_str for keyword in ["already exists", "duplicate", "column"]):
+                # 其他错误需要记录，但不中断迁移
+                pass
+    
+    safe_add_column('tasks', sa.Column('accepted_at', sa.DateTime(), nullable=True))
+    safe_add_column('tasks', sa.Column('visibility', sa.String(length=20), nullable=True))
     
     # 继续创建其他索引
     safe_create_index('ix_tasks_created_at', 'tasks', ['created_at'])

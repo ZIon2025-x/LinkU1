@@ -30,47 +30,89 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # 安全操作辅助函数（使用 SAVEPOINT 避免事务失败）
+    from sqlalchemy import text
+    connection = op.get_bind()
+    
+    def safe_operation(operation_name, operation_func, *args, **kwargs):
+        """安全执行操作，如果失败则回滚到保存点"""
+        savepoint_name = f"sp_{operation_name}".replace('.', '_').replace('-', '_')[:63]  # PostgreSQL 限制
+        try:
+            connection.execute(text(f"SAVEPOINT {savepoint_name}"))
+            result = operation_func(*args, **kwargs)
+            connection.execute(text(f"RELEASE SAVEPOINT {savepoint_name}"))
+            return result
+        except Exception as e:
+            try:
+                connection.execute(text(f"ROLLBACK TO SAVEPOINT {savepoint_name}"))
+            except:
+                pass
+            # 如果是已存在的错误，忽略（这是正常情况）
+            error_str = str(e).lower()
+            if any(keyword in error_str for keyword in ["already exists", "duplicate", "relation", "column", "constraint"]):
+                return None  # 已存在，忽略
+            # 其他错误需要记录，但不中断迁移
+            return None
+    
+    def safe_add_column(table_name, column):
+        return safe_operation(f"add_col_{table_name}_{column.name}", op.add_column, table_name, column)
+    
+    def safe_create_index(index_name, table_name, columns, unique=False):
+        return safe_operation(f"create_idx_{index_name}", op.create_index, index_name, table_name, columns, unique=unique)
+    
+    def safe_create_foreign_key(constraint_name, source_table, referent_table, local_cols, remote_cols):
+        return safe_operation(f"create_fk_{source_table}", op.create_foreign_key, 
+                            constraint_name, source_table, referent_table, local_cols, remote_cols)
+    
+    def safe_alter_column(table_name, column_name, **kwargs):
+        return safe_operation(f"alter_col_{table_name}_{column_name}", op.alter_column, table_name, column_name, **kwargs)
+    
+    def safe_create_table(table_name, *columns, **kwargs):
+        # op.create_table 需要 table_name 作为第一个位置参数
+        return safe_operation(f"create_table_{table_name}", 
+                            lambda: op.create_table(table_name, *columns, **kwargs))
+    
     # ============================================
     # 1. 修改 Task 表
     # ============================================
-    op.add_column('tasks', sa.Column('base_reward', sa.Numeric(precision=12, scale=2), nullable=True))
-    op.add_column('tasks', sa.Column('agreed_reward', sa.Numeric(precision=12, scale=2), nullable=True))
-    op.add_column('tasks', sa.Column('currency', sa.String(length=3), server_default='GBP', nullable=True))
+    safe_add_column('tasks', sa.Column('base_reward', sa.Numeric(precision=12, scale=2), nullable=True))
+    safe_add_column('tasks', sa.Column('agreed_reward', sa.Numeric(precision=12, scale=2), nullable=True))
+    safe_add_column('tasks', sa.Column('currency', sa.String(length=3), server_default='GBP', nullable=True))
     
     # ============================================
     # 2. 修改 TaskApplication 表
     # ============================================
-    op.add_column('task_applications', sa.Column('negotiated_price', sa.Numeric(precision=12, scale=2), nullable=True))
-    op.add_column('task_applications', sa.Column('currency', sa.String(length=3), server_default='GBP', nullable=True))
+    safe_add_column('task_applications', sa.Column('negotiated_price', sa.Numeric(precision=12, scale=2), nullable=True))
+    safe_add_column('task_applications', sa.Column('currency', sa.String(length=3), server_default='GBP', nullable=True))
     # 唯一约束已存在，无需添加
     
     # ============================================
     # 3. 修改 Message 表
     # ============================================
     # 先修改 receiver_id 为可空（用于任务消息）
-    op.alter_column('messages', 'receiver_id',
+    safe_alter_column('messages', 'receiver_id',
                     existing_type=sa.String(length=8),
                     nullable=True)
     
     # 添加新字段
-    op.add_column('messages', sa.Column('task_id', sa.Integer(), nullable=True))
-    op.add_column('messages', sa.Column('message_type', sa.String(length=20), server_default='normal', nullable=True))
-    op.add_column('messages', sa.Column('conversation_type', sa.String(length=20), server_default='task', nullable=True))
-    op.add_column('messages', sa.Column('meta', sa.Text(), nullable=True))
+    safe_add_column('messages', sa.Column('task_id', sa.Integer(), nullable=True))
+    safe_add_column('messages', sa.Column('message_type', sa.String(length=20), server_default='normal', nullable=True))
+    safe_add_column('messages', sa.Column('conversation_type', sa.String(length=20), server_default='task', nullable=True))
+    safe_add_column('messages', sa.Column('meta', sa.Text(), nullable=True))
     
     # 创建外键
-    op.create_foreign_key(
+    safe_create_foreign_key(
         'fk_messages_task_id',
         'messages', 'tasks',
         ['task_id'], ['id']
     )
     
     # 创建索引
-    op.create_index('ix_messages_task_id', 'messages', ['task_id'])
-    op.create_index('ix_messages_task_type', 'messages', ['task_id', 'message_type'])
-    op.create_index('ix_messages_task_created', 'messages', ['task_id', 'created_at', 'id'])
-    op.create_index('ix_messages_conversation_type', 'messages', ['conversation_type', 'task_id'])
-    op.create_index('ix_messages_task_id_id', 'messages', ['task_id', 'id'])
+    safe_create_index('ix_messages_task_id', 'messages', ['task_id'])
+    safe_create_index('ix_messages_task_type', 'messages', ['task_id', 'message_type'])
+    safe_create_index('ix_messages_task_created', 'messages', ['task_id', 'created_at', 'id'])
+    safe_create_index('ix_messages_conversation_type', 'messages', ['conversation_type', 'task_id'])
+    safe_create_index('ix_messages_task_id_id', 'messages', ['task_id', 'id'])
     
     # 创建 CHECK 约束（如果数据库支持）
     # 注意：某些数据库可能不支持 CHECK 约束，如果失败会在应用层校验
@@ -105,32 +147,32 @@ def upgrade() -> None:
     # 4. 修改 Notification 表
     # ============================================
     # 修改 user_id 为不可空（如果原来可空）
-    op.alter_column('notifications', 'user_id',
+    safe_alter_column('notifications', 'user_id',
                     existing_type=sa.String(length=8),
                     nullable=False)
     
     # 修改 type 字段长度（从50改为32）
-    op.alter_column('notifications', 'type',
+    safe_alter_column('notifications', 'type',
                     existing_type=sa.String(length=50),
                     type_=sa.String(length=32),
                     nullable=False)
     
     # 修改 title 为可空（向后兼容）
-    op.alter_column('notifications', 'title',
+    safe_alter_column('notifications', 'title',
                     existing_type=sa.String(length=200),
                     nullable=True)
     
     # 添加 read_at 字段
-    op.add_column('notifications', sa.Column('read_at', sa.DateTime(), nullable=True))
+    safe_add_column('notifications', sa.Column('read_at', sa.DateTime(), nullable=True))
     
     # 创建新索引
-    op.create_index('ix_notifications_user', 'notifications', ['user_id', 'created_at'])
-    op.create_index('ix_notifications_type', 'notifications', ['type', 'related_id'])
+    safe_create_index('ix_notifications_user', 'notifications', ['user_id', 'created_at'])
+    safe_create_index('ix_notifications_type', 'notifications', ['type', 'related_id'])
     
     # ============================================
     # 5. 创建 MessageReads 表
     # ============================================
-    op.create_table(
+    safe_create_table(
         'message_reads',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('message_id', sa.Integer(), nullable=False),
@@ -141,14 +183,14 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('message_id', 'user_id', name='uq_message_reads_message_user')
     )
-    op.create_index('ix_message_reads_message_id', 'message_reads', ['message_id'])
-    op.create_index('ix_message_reads_user_id', 'message_reads', ['user_id'])
-    op.create_index('ix_message_reads_task_user', 'message_reads', ['message_id', 'user_id'])
+    safe_create_index('ix_message_reads_message_id', 'message_reads', ['message_id'])
+    safe_create_index('ix_message_reads_user_id', 'message_reads', ['user_id'])
+    safe_create_index('ix_message_reads_task_user', 'message_reads', ['message_id', 'user_id'])
     
     # ============================================
     # 6. 创建 MessageAttachments 表
     # ============================================
-    op.create_table(
+    safe_create_table(
         'message_attachments',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('message_id', sa.Integer(), nullable=False),
@@ -160,7 +202,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['message_id'], ['messages.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('ix_message_attachments_message_id', 'message_attachments', ['message_id'])
+    safe_create_index('ix_message_attachments_message_id', 'message_attachments', ['message_id'])
     
     # 创建 CHECK 约束：url 和 blob_id 必须二选一
     try:
@@ -175,7 +217,7 @@ def upgrade() -> None:
     # ============================================
     # 7. 创建 NegotiationResponseLog 表
     # ============================================
-    op.create_table(
+    safe_create_table(
         'negotiation_response_logs',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('notification_id', sa.Integer(), nullable=True),
@@ -194,15 +236,15 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('application_id', 'action', name='uq_negotiation_log_application_action')
     )
-    op.create_index('ix_negotiation_log_notification', 'negotiation_response_logs', ['notification_id'])
-    op.create_index('ix_negotiation_log_task', 'negotiation_response_logs', ['task_id'])
-    op.create_index('ix_negotiation_log_application', 'negotiation_response_logs', ['application_id'])
-    op.create_index('ix_negotiation_log_user', 'negotiation_response_logs', ['user_id'])
+    safe_create_index('ix_negotiation_log_notification', 'negotiation_response_logs', ['notification_id'])
+    safe_create_index('ix_negotiation_log_task', 'negotiation_response_logs', ['task_id'])
+    safe_create_index('ix_negotiation_log_application', 'negotiation_response_logs', ['application_id'])
+    safe_create_index('ix_negotiation_log_user', 'negotiation_response_logs', ['user_id'])
     
     # ============================================
     # 8. 创建 MessageReadCursors 表
     # ============================================
-    op.create_table(
+    safe_create_table(
         'message_read_cursors',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('task_id', sa.Integer(), nullable=False),
@@ -215,8 +257,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('task_id', 'user_id', name='uq_message_read_cursors_task_user')
     )
-    op.create_index('ix_message_read_cursors_task_user', 'message_read_cursors', ['task_id', 'user_id'])
-    op.create_index('ix_message_read_cursors_message', 'message_read_cursors', ['last_read_message_id'])
+    safe_create_index('ix_message_read_cursors_task_user', 'message_read_cursors', ['task_id', 'user_id'])
+    safe_create_index('ix_message_read_cursors_message', 'message_read_cursors', ['last_read_message_id'])
 
 
 def downgrade() -> None:

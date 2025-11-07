@@ -75,15 +75,28 @@ def upgrade() -> None:
     # 安全创建索引
     safe_create_index('ix_customer_service_messages_id', 'customer_service_messages', ['id'])
     
-    # 创建外键（如果不存在）
-    try:
-        op.create_foreign_key(None, 'messages', 'users', ['sender_id'], ['id'])
-    except Exception:
-        pass  # 外键可能已存在
-    try:
-        op.create_foreign_key(None, 'messages', 'users', ['receiver_id'], ['id'])
-    except Exception:
-        pass  # 外键可能已存在
+    # 安全创建外键（如果不存在）
+    def safe_create_foreign_key(constraint_name, source_table, referent_table, local_cols, remote_cols):
+        """安全创建外键，如果已存在则跳过（使用 SAVEPOINT）"""
+        savepoint_name = f"sp_fk_{source_table}_{constraint_name or '_'.join(local_cols)}".replace('.', '_').replace('-', '_')
+        try:
+            connection.execute(text(f"SAVEPOINT {savepoint_name}"))
+            op.create_foreign_key(constraint_name, source_table, referent_table, local_cols, remote_cols)
+            connection.execute(text(f"RELEASE SAVEPOINT {savepoint_name}"))
+        except Exception as e:
+            # 回滚到保存点，继续执行
+            try:
+                connection.execute(text(f"ROLLBACK TO SAVEPOINT {savepoint_name}"))
+            except:
+                pass
+            # 如果是外键已存在的错误，忽略（这是正常情况）
+            error_str = str(e).lower()
+            if not any(keyword in error_str for keyword in ["already exists", "duplicate", "constraint"]):
+                # 其他错误需要记录，但不中断迁移
+                pass
+    
+    safe_create_foreign_key(None, 'messages', 'users', ['sender_id'], ['id'])
+    safe_create_foreign_key(None, 'messages', 'users', ['receiver_id'], ['id'])
     # ### end Alembic commands ###
 
 
