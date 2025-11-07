@@ -1164,16 +1164,23 @@ const MessagePage: React.FC = () => {
   }, [chatMode, user, loadTasks]);
 
   // 用户登录后立即加载任务列表（备用机制，确保加载）
+  // 使用 ref 防止重复加载
+  const hasAttemptedLoadRef = useRef(false);
   useEffect(() => {
-    if (user && chatMode === 'tasks') {
-      // 如果任务列表为空且不在加载中，则加载
+    if (user && chatMode === 'tasks' && !hasAttemptedLoadRef.current) {
+      // 如果任务列表为空且不在加载中，则加载（只尝试一次）
       if (tasks.length === 0 && !tasksLoading) {
         console.log('useEffect: 用户登录后备用加载任务列表，用户ID:', user.id, '当前任务数:', tasks.length);
+        hasAttemptedLoadRef.current = true;
         const timer = setTimeout(() => {
           loadTasks();
         }, 300);
         return () => clearTimeout(timer);
       }
+    }
+    // 当用户变化时重置标志
+    if (!user) {
+      hasAttemptedLoadRef.current = false;
     }
   }, [user?.id, chatMode, tasks.length, tasksLoading, loadTasks]);
 

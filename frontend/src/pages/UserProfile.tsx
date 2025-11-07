@@ -152,13 +152,6 @@ const UserProfile: React.FC = () => {
     return stars;
   };
 
-  const handleChat = () => {
-    // 注意：UserProfile 页面是查看用户资料，不是任务聊天
-    // 如果需要联系用户，应该通过任务申请流程，而不是直接聊天
-    // 暂时保留此功能，但可能需要重新设计
-    alert('请通过任务申请流程联系用户');
-    // navigate(`/message?uid=${userId}`); // 已废弃
-  };
 
   const handleViewTask = (taskId: string) => {
     navigate(`/tasks/${taskId}`);
@@ -322,37 +315,7 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
 
-            {!isOwnProfile && (
-              <button
-                onClick={handleChat}
-                style={{
-                  background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 25,
-                  padding: '16px 32px',
-                  fontSize: 16,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-                onMouseOver={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.transform = 'translateY(-2px)';
-                  target.style.boxShadow = '0 12px 35px rgba(102, 126, 234, 0.6)';
-                }}
-                onMouseOut={(e) => {
-                  const target = e.target as HTMLButtonElement;
-                  target.style.transform = 'translateY(0)';
-                  target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
-                }}
-              >
-                {t('userProfile.chatWithUser')}
-              </button>
-            )}
+            {/* 聊天功能已移除 - 用户应通过任务申请流程联系 */}
           </div>
         </div>
 

@@ -1781,6 +1781,10 @@ def admin_set_task_level(
 @router.post("/messages/send", response_model=schemas.MessageOut)
 @rate_limit("send_message")
 def send_message_api(
+    # ⚠️ DEPRECATED: 此接口已废弃，不再使用
+    # 联系人聊天功能已移除，请使用任务聊天接口：
+    # POST /api/messages/task/{task_id}/send
+    # 此接口保留仅用于向后兼容，可能会在未来的版本中移除
     msg: schemas.MessageCreate,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -1843,6 +1847,10 @@ def send_message_api(
 
 @router.get("/messages/history/{user_id}", response_model=list[schemas.MessageOut])
 def get_chat_history_api(
+    # ⚠️ DEPRECATED: 此接口已废弃，不再使用
+    # 联系人聊天功能已移除，请使用任务聊天接口：
+    # GET /api/messages/task/{task_id}
+    # 此接口保留仅用于向后兼容，可能会在未来的版本中移除
     user_id: str,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
@@ -1878,7 +1886,14 @@ def get_unread_count_api(
 def get_unread_count_by_contact_api(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
-    """获取每个联系人的未读消息数量"""
+    """
+    ⚠️ DEPRECATED: 此接口已废弃，不再使用
+    联系人聊天功能已移除，请使用任务聊天接口：
+    GET /api/messages/tasks (获取任务列表，包含未读消息数)
+    此接口保留仅用于向后兼容，可能会在未来的版本中移除
+    
+    获取每个联系人的未读消息数量（已废弃）
+    """
     from app.models import Message
     
     # 查询所有未读消息，按发送者分组
@@ -1909,7 +1924,14 @@ def mark_message_read_api(
 def mark_chat_messages_read_api(
     contact_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
-    """标记与指定联系人的所有消息为已读"""
+    """
+    ⚠️ DEPRECATED: 此接口已废弃，不再使用
+    联系人聊天功能已移除，请使用任务聊天接口：
+    POST /api/messages/task/{task_id}/read
+    此接口保留仅用于向后兼容，可能会在未来的版本中移除
+    
+    标记与指定联系人的所有消息为已读（已废弃）
+    """
     try:
         from app.models import Message
         

@@ -338,13 +338,6 @@ const TaskExperts: React.FC = () => {
     navigate(`/user/${expertId}`);
   };
 
-  const handleRequestService = (expertId: string) => {
-    // 注意：TaskExperts 页面是查看专家列表，不是任务聊天
-    // 如果需要联系专家，应该通过任务申请流程，而不是直接聊天
-    // 暂时保留此功能，但可能需要重新设计
-    alert('请通过任务申请流程联系专家');
-    // navigate(`/message?uid=${expertId}`); // 已废弃
-  };
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -1002,31 +995,7 @@ const TaskExperts: React.FC = () => {
                   >
                     {t('taskExperts.viewProfile')}
                   </button>
-                  <button
-                    onClick={() => handleRequestService(expert.id)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                      border: 'none',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    {t('taskExperts.requestService')}
-                  </button>
+                  {/* 联系功能已移除 - 应通过任务申请流程联系专家 */}
                 </div>
               </div>
             </div>

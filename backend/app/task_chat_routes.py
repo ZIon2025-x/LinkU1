@@ -23,9 +23,6 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
-from app.security import cookie_bearer
-from fastapi.security import HTTPAuthorizationCredentials
-from typing import Optional as Opt
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +34,11 @@ task_chat_router = APIRouter()
 async def get_current_user_secure_async_csrf(
     request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
-    credentials: Opt[HTTPAuthorizationCredentials] = Depends(cookie_bearer),
 ) -> models.User:
-    """CSRF保护的安全用户认证（异步版本）"""
+    """
+    CSRF保护的安全用户认证（异步版本）
+    直接使用 validate_session 进行认证，避免 cookie_bearer 对 GET 请求的影响
+    """
     from app.secure_auth import validate_session
     
     session = validate_session(request)
