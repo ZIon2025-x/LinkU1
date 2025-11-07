@@ -645,6 +645,13 @@ export async function getTaskApplicationsWithFilter(
   return res.data;
 }
 
+// 获取任务申请列表（兼容旧接口，默认获取所有状态）
+export async function getTaskApplications(taskId: number) {
+  const data = await getTaskApplicationsWithFilter(taskId, undefined, 50, 0);
+  // 返回格式兼容：如果返回的是 {applications: [...]}，则返回 applications 数组
+  return data.applications || data;
+}
+
 // 接受申请
 export async function acceptApplication(taskId: number, applicationId: number) {
   const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/accept`);
