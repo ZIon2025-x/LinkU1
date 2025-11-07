@@ -371,6 +371,53 @@ def run_session_cleanup_task():
             time.sleep(300)  # 出错时等待5分钟后重试
 
 
+def run_auto_migration():
+    """
+    自动运行数据库迁移
+    检查是否有待执行的迁移，如果有则自动运行
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+        from alembic.script import ScriptDirectory
+        from alembic.runtime.migration import MigrationContext
+        
+        # 获取 Alembic 配置
+        alembic_cfg = Config("alembic.ini")
+        
+        # 获取当前数据库版本
+        from app.database import sync_engine
+        with sync_engine.connect() as connection:
+            context = MigrationContext.configure(connection)
+            current_rev = context.get_current_revision()
+        
+        # 获取最新版本（head）
+        script = ScriptDirectory.from_config(alembic_cfg)
+        head_rev = script.get_current_head()
+        
+        if current_rev == head_rev:
+            logger.info(f"✅ 数据库已是最新版本 (revision: {current_rev or 'None'})")
+            return
+        
+        # 有待执行的迁移
+        logger.info(f"📦 发现待执行的迁移: {current_rev or 'None'} -> {head_rev}")
+        logger.info("正在运行数据库迁移...")
+        
+        # 运行迁移
+        command.upgrade(alembic_cfg, "head")
+        
+        logger.info("✅ 数据库迁移完成！")
+        
+    except ImportError as e:
+        logger.warning(f"⚠️ Alembic 未安装或配置错误: {e}")
+        logger.warning("提示：请确保已安装 alembic 并配置了 alembic.ini")
+    except Exception as e:
+        logger.error(f"❌ 数据库迁移失败: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+
 # 启动后台任务
 @app.on_event("startup")
 async def startup_event():
@@ -407,6 +454,23 @@ async def startup_event():
         logger.info("正在创建数据库表...")
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
+        
+        # 自动运行数据库迁移（如果启用）
+        auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
+        if auto_migrate:
+            try:
+                logger.info("正在检查并运行数据库迁移...")
+                run_auto_migration()
+            except Exception as e:
+                # 迁移失败时，根据环境决定是否阻止启动
+                if environment == "production":
+                    logger.error(f"❌ 生产环境迁移失败，应用将不会启动: {e}")
+                    raise RuntimeError(f"数据库迁移失败: {e}")
+                else:
+                    logger.warning(f"⚠️ 数据库迁移失败（非生产环境，继续运行）: {e}")
+                    logger.warning("提示：可以手动运行 'alembic upgrade head' 来应用迁移")
+        else:
+            logger.info("自动迁移已禁用（AUTO_MIGRATE=false），请手动运行 'alembic upgrade head'")
         
         # 创建优化索引（使用 pg_trgm）
         try:
