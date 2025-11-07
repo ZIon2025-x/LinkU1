@@ -408,6 +408,41 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
+        # 清空指定表（部署时自动执行，完成后会移除此代码）
+        logger.info("开始清空指定表...")
+        try:
+            from sqlalchemy import text
+            
+            # 需要清空的表列表（按依赖顺序）
+            tables_to_clear = [
+                "task_applications",
+                "reviews",
+                "task_history",
+                "task_cancel_requests",
+                "messages",
+                "notifications",
+                "tasks"
+            ]
+            
+            with sync_engine.connect() as conn:
+                success_count = 0
+                for table in tables_to_clear:
+                    try:
+                        conn.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
+                        conn.commit()
+                        logger.info(f"✅ 已清空表: {table}")
+                        success_count += 1
+                    except Exception as e:
+                        logger.warning(f"⚠️ 清空表 {table} 失败（可能表不存在）: {e}")
+                        conn.rollback()
+                
+                logger.info(f"清空完成！成功清空 {success_count}/{len(tables_to_clear)} 个表")
+                logger.info("注意：以下表已保留：users, admin_users, system_settings, pending_users, customer_service*, admin_*, user_preferences")
+        except Exception as e:
+            logger.error(f"清空表时出错: {e}")
+            import traceback
+            traceback.print_exc()
+        
         # 创建优化索引（使用 pg_trgm）
         try:
             database_url = os.getenv("DATABASE_URL")
