@@ -966,11 +966,16 @@ const MessagePage: React.FC = () => {
   // 初始化任务聊天相关数据
   useEffect(() => {
     if (user) {
+      console.log('初始化任务聊天相关数据，用户ID:', user.id);
       restoreCustomerServiceChat();
       initializeTimezone();
       checkServiceAvailability(); // 检查客服在线状态
+      // 确保在用户登录后加载任务列表
+      if (chatMode === 'tasks') {
+        loadTasks();
+      }
     }
-  }, [user]);
+  }, [user, chatMode, loadTasks]);
 
   // 定期检查客服在线状态（每30秒检查一次）
   useEffect(() => {
@@ -1062,12 +1067,18 @@ const MessagePage: React.FC = () => {
 
   // 加载任务列表
   const loadTasks = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadTasks: 用户未登录，跳过加载');
+      return;
+    }
     
+    console.log('loadTasks: 开始加载任务列表，用户ID:', user.id);
     setTasksLoading(true);
     try {
       const data = await getTaskChatList(50, 0);
+      console.log('loadTasks: 获取到任务列表数据:', data);
       setTasks(data.tasks || []);
+      console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks?.length || 0);
     } catch (error) {
       console.error('加载任务列表失败:', error);
       setTasks([]);
@@ -1147,7 +1158,10 @@ const MessagePage: React.FC = () => {
   // 当切换到任务模式时加载任务列表
   useEffect(() => {
     if (chatMode === 'tasks' && user) {
+      console.log('useEffect: 触发任务列表加载，chatMode:', chatMode, 'user:', user?.id);
       loadTasks();
+    } else {
+      console.log('useEffect: 跳过任务列表加载，chatMode:', chatMode, 'user:', user?.id);
     }
   }, [chatMode, user, loadTasks]);
 

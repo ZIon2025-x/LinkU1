@@ -1520,13 +1520,34 @@ async def negotiate_application(
         db.add(new_notification)
         await db.flush()
         
+        # 获取通知ID后，更新token payload添加notification_id
+        notification_id = new_notification.id
+        
+        # 更新Redis中的token，添加notification_id
+        if redis_client:
+            token_data_accept["notification_id"] = notification_id
+            token_data_reject["notification_id"] = notification_id
+            
+            # 重新存储到Redis（覆盖之前的token）
+            redis_client.setex(
+                f"negotiation_token:{token_accept}",
+                300,  # 5分钟
+                json.dumps(token_data_accept)
+            )
+            
+            redis_client.setex(
+                f"negotiation_token:{token_reject}",
+                300,  # 5分钟
+                json.dumps(token_data_reject)
+            )
+        
         await db.commit()
         
         return {
             "message": "议价提议已发送",
             "application_id": application_id,
             "task_id": task_id,
-            "notification_id": new_notification.id
+            "notification_id": notification_id
         }
     
     except HTTPException:
@@ -1671,29 +1692,60 @@ async def respond_negotiation(
         current_time = get_uk_time_naive()
         
         if request.action == "accept":
-            # 接受议价：更新申请状态为approved（如果任务还未被接受）
-            # 注意：这里只是接受议价，不是接受申请，所以不更新taker_id
+            # 接受议价：等同于接受申请，需要更新任务状态
+            # 使用 SELECT FOR UPDATE 锁定任务行（防止并发）
+            locked_task_query = select(models.Task).where(
+                models.Task.id == task_id
+            ).with_for_update()
+            locked_task_result = await db.execute(locked_task_query)
+            locked_task = locked_task_result.scalar_one_or_none()
             
-            # 幂等性检查：如果已经处理过，直接返回
-            log_check_query = select(models.NegotiationResponseLog).where(
-                and_(
-                    models.NegotiationResponseLog.application_id == application_id,
-                    models.NegotiationResponseLog.action == "accept",
-                    models.NegotiationResponseLog.user_id == current_user.id
-                )
-            )
-            log_check_result = await db.execute(log_check_query)
-            existing_log = log_check_result.scalar_one_or_none()
-            
-            if existing_log:
+            # 幂等性检查：如果申请已经是 approved，直接返回成功
+            if application.status == "approved":
                 return {
-                    "message": "议价已被接受",
+                    "message": "议价已被接受，任务已在进行中",
                     "application_id": application_id,
                     "task_id": task_id
                 }
             
+            # 检查任务是否还有名额
+            if locked_task.taker_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="任务已被接受"
+                )
+            
+            # 更新任务
+            locked_task.taker_id = application.applicant_id
+            locked_task.status = "in_progress"
+            
+            # 如果申请包含议价，更新 agreed_reward
+            if application.negotiated_price is not None:
+                locked_task.agreed_reward = application.negotiated_price
+            
+            # 更新申请状态
+            application.status = "approved"
+            
+            # 自动拒绝所有其他待处理的申请
+            other_applications_query = select(models.TaskApplication).where(
+                and_(
+                    models.TaskApplication.task_id == task_id,
+                    models.TaskApplication.id != application_id,
+                    models.TaskApplication.status == "pending"
+                )
+            )
+            other_apps_result = await db.execute(other_applications_query)
+            other_applications = other_apps_result.scalars().all()
+            
+            for other_app in other_applications:
+                other_app.status = "rejected"
+            
+            # 获取notification_id（从token中）
+            notification_id = token_data.get("notification_id")
+            
             # 写入操作日志
             log_entry = models.NegotiationResponseLog(
+                notification_id=notification_id,
                 task_id=task_id,
                 application_id=application_id,
                 user_id=current_user.id,
@@ -1703,11 +1755,38 @@ async def respond_negotiation(
             )
             db.add(log_entry)
             
-            # TODO: 可以在这里更新申请状态或发送通知
+            # 发送通知给发布者
+            try:
+                notification_content = {
+                    "type": "application_accepted",
+                    "task_id": task_id,
+                    "task_title": task.title,
+                    "application_id": application_id
+                }
+                
+                new_notification = models.Notification(
+                    user_id=task.poster_id,
+                    type="application_accepted",
+                    title="申请者已接受您的议价",
+                    content=json.dumps(notification_content),
+                    related_id=application_id,
+                    created_at=current_time
+                )
+                db.add(new_notification)
+            except Exception as e:
+                logger.error(f"发送接受议价通知失败: {e}")
+                # 通知失败不影响主流程
             
         else:  # reject
-            # 拒绝议价：写入操作日志
+            # 拒绝议价：更新申请状态为rejected
+            application.status = "rejected"
+            
+            # 获取notification_id（从token中）
+            notification_id = token_data.get("notification_id")
+            
+            # 写入操作日志
             log_entry = models.NegotiationResponseLog(
+                notification_id=notification_id,
                 task_id=task_id,
                 application_id=application_id,
                 user_id=current_user.id,
@@ -1715,6 +1794,28 @@ async def respond_negotiation(
                 responded_at=current_time
             )
             db.add(log_entry)
+            
+            # 发送通知给发布者
+            try:
+                notification_content = {
+                    "type": "negotiation_rejected",
+                    "task_id": task_id,
+                    "task_title": task.title,
+                    "application_id": application_id
+                }
+                
+                new_notification = models.Notification(
+                    user_id=task.poster_id,
+                    type="negotiation_rejected",
+                    title="申请者已拒绝您的议价",
+                    content=json.dumps(notification_content),
+                    related_id=application_id,
+                    created_at=current_time
+                )
+                db.add(new_notification)
+            except Exception as e:
+                logger.error(f"发送拒绝议价通知失败: {e}")
+                # 通知失败不影响主流程
         
         await db.commit()
         
