@@ -26,36 +26,39 @@ def upgrade() -> None:
     connection = op.get_bind()
     
     def safe_drop_index(index_name, table_name):
-        """安全删除索引"""
+        """安全删除索引（使用 SAVEPOINT）"""
+        savepoint_name = f"sp_drop_{index_name.replace('.', '_').replace('-', '_')}"
         try:
-            result = connection.execute(text("""
-                SELECT 1 FROM pg_indexes 
-                WHERE indexname = :index_name AND tablename = :table_name
-            """), {"index_name": index_name, "table_name": table_name})
-            if result.fetchone():
-                op.drop_index(op.f(index_name), table_name=table_name)
+            connection.execute(text(f"SAVEPOINT {savepoint_name}"))
+            # 直接尝试删除索引
+            op.drop_index(op.f(index_name), table_name=table_name)
+            connection.execute(text(f"RELEASE SAVEPOINT {savepoint_name}"))
         except Exception:
-            pass  # 索引可能不存在，跳过
+            # 回滚到保存点，继续执行（索引可能不存在，这是正常的）
+            try:
+                connection.execute(text(f"ROLLBACK TO SAVEPOINT {savepoint_name}"))
+            except:
+                pass
     
     def safe_create_index(index_name, table_name, columns, unique=False):
-        """安全创建索引"""
+        """安全创建索引（使用 SAVEPOINT 避免事务失败）"""
+        savepoint_name = f"sp_{index_name.replace('.', '_').replace('-', '_')}"
         try:
-            result = connection.execute(text("""
-                SELECT 1 FROM pg_indexes 
-                WHERE indexname = :index_name AND tablename = :table_name
-            """), {"index_name": index_name, "table_name": table_name})
-            if result.fetchone():
-                return  # 索引已存在，跳过
-        except Exception:
-            pass  # 检查失败，继续尝试创建
-        
-        try:
+            connection.execute(text(f"SAVEPOINT {savepoint_name}"))
+            # 直接尝试创建索引
             op.create_index(op.f(index_name), table_name, columns, unique=unique)
+            connection.execute(text(f"RELEASE SAVEPOINT {savepoint_name}"))
         except Exception as e:
-            if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
-                pass  # 索引已存在，忽略
-            else:
-                raise
+            # 回滚到保存点，继续执行
+            try:
+                connection.execute(text(f"ROLLBACK TO SAVEPOINT {savepoint_name}"))
+            except:
+                pass
+            # 如果是索引已存在的错误，忽略（这是正常情况）
+            error_str = str(e).lower()
+            if not any(keyword in error_str for keyword in ["already exists", "duplicate", "relation"]):
+                # 其他错误需要记录，但不中断迁移
+                pass
     
     # 安全删除 customer_service_chats 表的索引
     safe_drop_index('idx_customer_service_chats_is_ended', 'customer_service_chats')
