@@ -265,6 +265,7 @@ const MessagePage: React.FC = () => {
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
+  const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -3005,9 +3006,9 @@ const MessagePage: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => {
-                              // 设置议价金额默认值为任务金额
-                              const defaultPrice = activeTask?.agreed_reward ?? activeTask?.base_reward ?? activeTask?.reward;
-                              setNegotiatedPrice(defaultPrice);
+                              // 重置议价相关状态
+                              setNegotiatedPrice(undefined);
+                              setIsNegotiateChecked(false);
                               setShowApplicationModal(true);
                             }}
                             style={{
@@ -3812,8 +3813,9 @@ const MessagePage: React.FC = () => {
               }}>
                 <input
                   type="checkbox"
-                  checked={negotiatedPrice !== undefined}
+                  checked={isNegotiateChecked}
                   onChange={(e) => {
+                    setIsNegotiateChecked(e.target.checked);
                     if (e.target.checked) {
                       // 如果勾选，设置默认值为任务金额
                       const defaultPrice = activeTask?.agreed_reward ?? activeTask?.base_reward ?? activeTask?.reward;
@@ -3827,7 +3829,7 @@ const MessagePage: React.FC = () => {
                 <span>我想议价</span>
               </label>
               
-              {negotiatedPrice !== undefined && (
+              {isNegotiateChecked && (
                 <div style={{ marginTop: '12px' }}>
                   <label style={{
                     display: 'block',
@@ -3840,13 +3842,13 @@ const MessagePage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={negotiatedPrice || ''}
+                    value={negotiatedPrice !== undefined ? negotiatedPrice : ''}
                     onChange={(e) => {
                       const value = e.target.value ? parseFloat(e.target.value) : undefined;
                       setNegotiatedPrice(value);
                     }}
-                    placeholder="请输入议价金额"
-                    min="0"
+                    placeholder="请输入议价金额（必须大于0）"
+                    min="0.01"
                     step="0.01"
                     style={{
                       width: '100%',
@@ -3878,6 +3880,7 @@ const MessagePage: React.FC = () => {
                   setShowApplicationModal(false);
                   setApplicationMessage('');
                   setNegotiatedPrice(undefined);
+                  setIsNegotiateChecked(false);
                 }}
                 style={{
                   padding: '12px 24px',
@@ -3901,16 +3904,44 @@ const MessagePage: React.FC = () => {
               </button>
               <button
                 onClick={async () => {
+                  // 验证议价金额：如果勾选了议价，金额必须大于0
+                  if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
+                    alert('如果选择议价，请输入大于0的议价金额');
+                    return;
+                  }
+                  
+                  if (!activeTask) return;
+                  
+                  const baseReward = activeTask?.base_reward ?? activeTask?.reward ?? 0;
+                  
+                  // 如果没有勾选议价或输入框为空，则不发送议价金额（保持原本金额）
+                  const finalNegotiatedPrice = (isNegotiateChecked && negotiatedPrice !== undefined && negotiatedPrice !== null && negotiatedPrice > 0) 
+                    ? negotiatedPrice 
+                    : undefined;
+                  
+                  // 如果议价金额小于原本金额，提示用户确认
+                  if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+                    const confirmed = window.confirm(
+                      `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
+                      `这将降低您获得的金额。是否确定要继续？`
+                    );
+                    if (!confirmed) {
+                      return;
+                    }
+                  }
+                  
                   try {
+                    
                     await applyForTask(
                       activeTaskId,
                       applicationMessage || undefined,
-                      negotiatedPrice,
+                      finalNegotiatedPrice,
                       activeTask?.currency || 'CNY'
                     );
                     setShowApplicationModal(false);
                     setApplicationMessage('');
                     setNegotiatedPrice(undefined);
+                    setIsNegotiateChecked(false);
                     // 重新加载申请列表
                     if (activeTaskId) {
                       await loadApplications(activeTaskId);

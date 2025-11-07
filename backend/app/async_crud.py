@@ -182,13 +182,15 @@ class AsyncTaskCRUD:
             vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
             super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
             
-            # 任务等级分配逻辑
+            # 任务等级分配逻辑（使用base_reward判断）
             user_level = str(user.user_level) if user.user_level is not None else "normal"
+            # 获取价格用于等级判断（优先使用base_reward）
+            task_price = float(task.base_reward) if task.base_reward is not None else float(task.reward) if task.reward is not None else 0.0
             if user_level == "super":
                 task_level = "vip"
-            elif task.reward >= super_vip_price_threshold:
+            elif task_price >= super_vip_price_threshold:
                 task_level = "super"
-            elif task.reward >= vip_price_threshold:
+            elif task_price >= vip_price_threshold:
                 task_level = "vip"
             else:
                 task_level = "normal"
@@ -207,12 +209,19 @@ class AsyncTaskCRUD:
             if task.images and len(task.images) > 0:
                 images_json = json.dumps(task.images)
             
+            # 处理价格字段：base_reward 是发布时的价格
+            from decimal import Decimal
+            base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
+            
             db_task = models.Task(
                 title=task.title,
                 description=task.description,
                 task_type=task.task_type,
                 location=task.location,
-                reward=task.reward,
+                reward=task.reward,  # 与base_reward同步
+                base_reward=base_reward_value,  # 原始标价（发布时的价格）
+                agreed_reward=None,  # 初始为空，如果有议价才会设置
+                currency=getattr(task, "currency", "GBP") or "GBP",  # 货币类型
                 deadline=deadline,
                 poster_id=poster_id,
                 status="open",
@@ -294,9 +303,15 @@ class AsyncTaskCRUD:
             elif sort_by == "oldest":
                 query = query.order_by(models.Task.created_at.asc())
             elif sort_by == "reward_high" or sort_by == "reward_desc":
-                query = query.order_by(models.Task.reward.desc())
+                # 使用base_reward排序（如果没有则使用reward作为后备）
+                query = query.order_by(
+                    func.coalesce(models.Task.base_reward, models.Task.reward).desc()
+                )
             elif sort_by == "reward_low" or sort_by == "reward_asc":
-                query = query.order_by(models.Task.reward.asc())
+                # 使用base_reward排序（如果没有则使用reward作为后备）
+                query = query.order_by(
+                    func.coalesce(models.Task.base_reward, models.Task.reward).asc()
+                )
             elif sort_by == "deadline_asc":
                 query = query.order_by(models.Task.deadline.asc())
             elif sort_by == "deadline_desc":
@@ -384,9 +399,15 @@ class AsyncTaskCRUD:
             elif sort_by == "oldest":
                 query = query.order_by(models.Task.created_at.asc())
             elif sort_by == "reward_high" or sort_by == "reward_desc":
-                query = query.order_by(models.Task.reward.desc())
+                # 使用base_reward排序（如果没有则使用reward作为后备）
+                query = query.order_by(
+                    func.coalesce(models.Task.base_reward, models.Task.reward).desc()
+                )
             elif sort_by == "reward_low" or sort_by == "reward_asc":
-                query = query.order_by(models.Task.reward.asc())
+                # 使用base_reward排序（如果没有则使用reward作为后备）
+                query = query.order_by(
+                    func.coalesce(models.Task.base_reward, models.Task.reward).asc()
+                )
             elif sort_by == "deadline_asc":
                 query = query.order_by(models.Task.deadline.asc())
             elif sort_by == "deadline_desc":

@@ -47,6 +47,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyMessage, setApplyMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
+  const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
   // 翻译相关状态
   const [translatedTitle, setTranslatedTitle] = useState<string | null>(null);
   const [translatedDescription, setTranslatedDescription] = useState<string | null>(null);
@@ -237,9 +238,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     
     // 显示申请弹窗
-    // 设置议价金额默认值为任务金额
-    const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
-    setNegotiatedPrice(defaultPrice);
+    // 重置议价相关状态
+    setNegotiatedPrice(undefined);
+    setIsNegotiateChecked(false);
     setShowApplyModal(true);
     setApplyMessage('');
   };
@@ -248,14 +249,40 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const handleSubmitApplication = async () => {
     if (!taskId) return;
     
+    // 验证议价金额：如果勾选了议价，金额必须大于0
+    if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
+      alert('如果选择议价，请输入大于0的议价金额');
+      return;
+    }
+    
+    if (!task) return;
+    
+    const currency = task?.currency || 'GBP';
+    const baseReward = task?.base_reward ?? task?.reward ?? 0;
+    
+    // 如果没有勾选议价或输入框为空，则不发送议价金额（保持原本金额）
+    const finalNegotiatedPrice = (isNegotiateChecked && negotiatedPrice !== undefined && negotiatedPrice !== null && negotiatedPrice > 0) 
+      ? negotiatedPrice 
+      : undefined;
+    
+    // 如果议价金额小于原本金额，提示用户确认
+    if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+      const confirmed = window.confirm(
+        `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
+        `这将降低您获得的金额。是否确定要继续？`
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    
     setActionLoading(true);
     try {
-      const currency = task?.currency || 'GBP';
       
       await applyForTask(
         taskId,
         applyMessage || undefined,
-        negotiatedPrice,
+        finalNegotiatedPrice,
         currency
       );
       
@@ -268,6 +295,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setShowApplyModal(false);
       setApplyMessage('');
       setNegotiatedPrice(undefined);
+      setIsNegotiateChecked(false);
       
       // 重新获取任务信息
       const res = await api.get(`/api/tasks/${taskId}`);
@@ -1917,6 +1945,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             setShowApplyModal(false);
             setApplyMessage('');
             setNegotiatedPrice(undefined);
+            setIsNegotiateChecked(false);
           }}
           >
             <div style={{
@@ -1980,8 +2009,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 }}>
                   <input
                     type="checkbox"
-                    checked={negotiatedPrice !== undefined && negotiatedPrice !== null}
+                    checked={isNegotiateChecked}
                     onChange={(e) => {
+                      setIsNegotiateChecked(e.target.checked);
                       if (e.target.checked) {
                         // 如果勾选，设置默认值为任务金额
                         const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
@@ -1995,7 +2025,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   <span>我想议价</span>
                 </label>
                 
-                {(negotiatedPrice !== undefined && negotiatedPrice !== null) && (
+                {isNegotiateChecked && (
                 <div style={{ marginTop: '12px' }}>
                   <label style={{
                     display: 'block',
@@ -2013,8 +2043,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       const value = e.target.value ? parseFloat(e.target.value) : undefined;
                       setNegotiatedPrice(value);
                     }}
-                    placeholder="请输入议价金额（可选）"
-                    min="0"
+                    placeholder="请输入议价金额（必须大于0）"
+                    min="0.01"
                     step="0.01"
                     style={{
                       width: '100%',
@@ -2046,6 +2076,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     setShowApplyModal(false);
                     setApplyMessage('');
                     setNegotiatedPrice(undefined);
+                    setIsNegotiateChecked(false);
                   }}
                   style={{
                     padding: '12px 24px',

@@ -186,8 +186,8 @@ const TaskDetail: React.FC = () => {
       // 取任务描述的前80字符，确保总长度不超过120字符
       const descriptionPreview = task.description ? task.description.substring(0, 80).replace(/\n/g, ' ').trim() : '';
       const taskDescription = descriptionPreview 
-        ? `${descriptionPreview} - ${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`
-        : `${task.task_type}任务，赏金£${task.reward.toFixed(2)}，地点${task.location}`;
+        ? `${descriptionPreview} - ${task.task_type}任务，金额£${((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}，地点${task.location}`
+        : `${task.task_type}任务，金额£${((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}，地点${task.location}`;
       const seoDescription = taskDescription.substring(0, 120); // 限制在120字符内，确保简洁
       
       // 强制更新meta描述（先移除旧标签再创建新标签，避免微信缓存问题）
@@ -378,7 +378,8 @@ const TaskDetail: React.FC = () => {
           // 构建分享内容
           const shareUrl = window.location.origin + window.location.pathname;
           const shareTitle = `${task.title} - Link²Ur任务平台`;
-          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${task.reward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
+          const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
+          const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${displayReward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
           
           console.log('触发原生分享:', { title: shareTitle, text: shareText, url: shareUrl });
           
@@ -1356,7 +1357,7 @@ const TaskDetail: React.FC = () => {
           }}>
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{task.reward.toFixed(2)}</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</div>
           </div>
           
           <div style={{
@@ -1475,7 +1476,7 @@ const TaskDetail: React.FC = () => {
               fontSize: '24px',
               fontWeight: '700',
               color: '#059669'
-            }}>£{task.reward.toFixed(2)}</span>
+            }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
           </div>
         
         {/* 其他任务信息 */}

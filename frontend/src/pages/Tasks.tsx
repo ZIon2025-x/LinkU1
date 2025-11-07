@@ -616,6 +616,7 @@ const Tasks: React.FC = () => {
   const [selectedTaskForApply, setSelectedTaskForApply] = useState<number | null>(null);
   const [applyMessage, setApplyMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
+  const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
   
   const { navigate } = useLocalizedNavigation();
   const navigateRaw = useRouterNavigate(); // 原始navigate用于语言切换
@@ -869,10 +870,9 @@ const Tasks: React.FC = () => {
     
     // 显示申请弹窗
     setSelectedTaskForApply(taskId);
-    // 设置议价金额默认值为任务金额
-    const task = tasks.find(t => t.id === taskId);
-    const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
-    setNegotiatedPrice(defaultPrice);
+    // 重置议价相关状态
+    setNegotiatedPrice(undefined);
+    setIsNegotiateChecked(false);
     setShowApplyModal(true);
     setApplyMessage('');
   };
@@ -881,15 +881,41 @@ const Tasks: React.FC = () => {
   const handleSubmitApplication = async () => {
     if (!selectedTaskForApply) return;
     
+    // 验证议价金额：如果勾选了议价，金额必须大于0
+    if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
+      message.error('如果选择议价，请输入大于0的议价金额');
+      return;
+    }
+    
+    // 获取任务信息以获取货币类型和原本金额
+    const task = tasks.find(t => t.id === selectedTaskForApply);
+    if (!task) return;
+    
+    const currency = task?.currency || 'GBP';
+    const baseReward = task?.base_reward ?? task?.reward ?? 0;
+    
+    // 如果没有勾选议价或输入框为空，则不发送议价金额（保持原本金额）
+    const finalNegotiatedPrice = (isNegotiateChecked && negotiatedPrice !== undefined && negotiatedPrice !== null && negotiatedPrice > 0) 
+      ? negotiatedPrice 
+      : undefined;
+    
+    // 如果议价金额小于原本金额，提示用户确认
+    if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+      const confirmed = window.confirm(
+        `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
+        `这将降低您获得的金额。是否确定要继续？`
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    
     try {
-      // 获取任务信息以获取货币类型
-      const task = tasks.find(t => t.id === selectedTaskForApply);
-      const currency = task?.currency || 'GBP';
       
       await applyForTask(
         selectedTaskForApply,
         applyMessage || undefined,
-        negotiatedPrice,
+        finalNegotiatedPrice,
         currency
       );
       
@@ -2474,7 +2500,7 @@ const Tasks: React.FC = () => {
                       zIndex: 3,
                       boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)'
                     }}>
-                      £{task.reward.toFixed(2)}
+                      £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
                     </div>
 
                     {/* 截止时间 - 左下角 */}
@@ -2754,8 +2780,9 @@ const Tasks: React.FC = () => {
               }}>
                 <input
                   type="checkbox"
-                  checked={negotiatedPrice !== undefined}
+                  checked={isNegotiateChecked}
                   onChange={(e) => {
+                    setIsNegotiateChecked(e.target.checked);
                     if (e.target.checked) {
                       // 如果勾选，设置默认值为任务金额
                       const task = tasks.find(t => t.id === selectedTaskForApply);
@@ -2770,7 +2797,7 @@ const Tasks: React.FC = () => {
                 <span>我想议价</span>
               </label>
               
-              {negotiatedPrice !== undefined && (
+              {isNegotiateChecked && (
               <div style={{ marginTop: '12px' }}>
                 <label style={{
                   display: 'block',
@@ -2788,8 +2815,8 @@ const Tasks: React.FC = () => {
                     const value = e.target.value ? parseFloat(e.target.value) : undefined;
                     setNegotiatedPrice(value);
                   }}
-                  placeholder="请输入议价金额"
-                  min="0"
+                  placeholder="请输入议价金额（必须大于0）"
+                  min="0.01"
                   step="0.01"
                   style={{
                     width: '100%',

@@ -1146,7 +1146,7 @@ const MyTasks: React.FC = () => {
                             }}>
                         <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '14px', color: '#64748b' }}>💰</span>
-                          <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>£{task.reward}</span>
+                          <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>£{((task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
                         </div>
                         <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '14px', color: '#64748b' }}>

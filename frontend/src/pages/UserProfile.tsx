@@ -537,9 +537,6 @@ const UserProfile: React.FC = () => {
                       }}>
                         {task.task_type}
                       </span>
-                      <span style={{ fontWeight: 600, color: '#4CAF50' }}>
-                        £{task.reward}
-                      </span>
                     </div>
                   </div>
                   

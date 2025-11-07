@@ -2071,7 +2071,7 @@ def create_payment(
                 "price_data": {
                     "currency": "gbp",
                     "product_data": {"name": task.title},
-                    "unit_amount": int(task.reward * 100),
+                    "unit_amount": int((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward)) * 100),
                 },
                 "quantity": 1,
             }
@@ -2099,7 +2099,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         task = crud.get_task(db, task_id)
         if task:
             task.is_paid = 1
-            task.escrow_amount = task.reward
+            # 使用最终成交价（如果有议价）或原始标价
+            task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward)
             db.commit()
     return {"status": "success"}
 
@@ -2636,7 +2637,7 @@ def get_shared_tasks(
             "title": task.title,
             "status": task.status,
             "created_at": task.created_at,
-            "reward": task.reward,
+            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward),
             "task_type": task.task_type,
             "is_poster": task.poster_id == current_user.id,
         }

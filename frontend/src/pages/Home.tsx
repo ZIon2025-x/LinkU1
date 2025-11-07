@@ -1107,7 +1107,7 @@ const Home: React.FC = () => {
                         fontWeight: '800', 
                         fontSize: '24px'
                       }}>
-                        £{task.reward.toFixed(2)}
+                        £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
                       </span>
                       <span style={{
                         color: '#718096',

@@ -235,7 +235,8 @@ class NegotiationPriceLogic:
         """
         if negotiated_price is not None:
             task.agreed_reward = negotiated_price
-            # 注意：不更新 reward 字段，保持历史兼容性
+            # 同时更新 reward 字段以保持同步
+            task.reward = float(negotiated_price)
     
     @staticmethod
     def get_display_reward(task: models.Task) -> Optional[float]:

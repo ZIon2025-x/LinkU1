@@ -252,11 +252,18 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     if task.images and len(task.images) > 0:
         images_json = json.dumps(task.images)
     
+    # 处理价格字段：base_reward 是发布时的价格
+    from decimal import Decimal
+    base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
+    
     db_task = Task(
         title=task.title,
         description=task.description,
         deadline=task.deadline,
-        reward=task.reward,
+        reward=task.reward,  # 与base_reward同步
+        base_reward=base_reward_value,  # 原始标价（发布时的价格）
+        agreed_reward=None,  # 初始为空，如果有议价才会设置
+        currency=getattr(task, "currency", "GBP") or "GBP",  # 货币类型
         location=task.location,
         task_type=task.task_type,
         poster_id=user_id,
@@ -513,6 +520,7 @@ def accept_task(db: Session, task_id: int, taker_id: str):
 
 def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: float):
     from app.models import Task
+    from decimal import Decimal
 
     task = (
         db.query(Task).filter(Task.id == task_id, Task.poster_id == poster_id).first()
@@ -522,7 +530,9 @@ def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: fl
     # 只有任务状态为open时才能修改价格
     if task.status != "open":
         return None
+    # 同时更新 reward 和 base_reward
     task.reward = new_reward
+    task.base_reward = Decimal(str(new_reward))
     db.commit()
     db.refresh(task)
     return task

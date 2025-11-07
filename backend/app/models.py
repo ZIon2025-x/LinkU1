@@ -188,8 +188,8 @@ class Task(Base):
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     deadline = Column(DateTime, nullable=False)
-    reward = Column(Float, nullable=False)  # 保留原有字段，向后兼容
-    base_reward = Column(DECIMAL(12, 2), nullable=True)  # 原始标价
+    reward = Column(Float, nullable=False)  # 价格字段（与base_reward同步）
+    base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
     currency = Column(String(3), default="GBP")  # 货币类型
     location = Column(String(100), nullable=False)
