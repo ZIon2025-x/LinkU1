@@ -1256,20 +1256,31 @@ GET /api/tasks/{task_id}
 ## 六、开发步骤
 
 ### 阶段一：数据库改动
-1. 修改 `Task` 表（添加 `base_reward`、`agreed_reward`、`currency`）
-2. 修改 `TaskApplication` 表（添加 `negotiated_price`、`currency`，添加唯一约束）
-3. 修改 `Message` 表（添加 `task_id`、`message_type`、`conversation_type`、`meta`）
-4. 创建 `Notifications` 表（系统通知，支持审计）
-5. 创建 `MessageReads` 表（消息已读状态，外键使用 ON DELETE CASCADE）
-6. 创建 `MessageAttachments` 表（消息附件，外键使用 ON DELETE CASCADE）
-7. 创建 `NegotiationResponseLog` 表（议价响应操作日志，用于审计）
-8. 创建 `MessageReadCursors` 表（可选增强：按任务维度的已读游标，降低写放大）
-9. 创建必要的索引（包括游标分页索引）
-10. 添加外键删除策略（ON DELETE CASCADE）
-11. 数据迁移：
-   - 需要将历史消息关联到对应的任务ID（如果可能的话）
-   - 如果无法确定历史消息对应的任务，可以保持 `task_id` 为空（但新消息必须关联）
-   - 为现有任务设置 `base_reward = reward`（如果 `reward` 字段存在）
+
+**注意：由于数据库可以清除重建，可以直接使用新的表结构，无需考虑数据迁移。**
+
+1. **清空相关表（如需要）：**
+   - 在部署前，已通过应用启动时的自动清空功能清空了以下表：
+     - `task_applications`
+     - `reviews`
+     - `task_history`
+     - `task_cancel_requests`
+     - `messages`
+     - `notifications`
+     - `tasks`
+   - **保留的表：** `users`, `admin_users`, `system_settings`, `pending_users`, `customer_service*`, `admin_*`, `user_preferences`
+
+2. 修改 `Task` 表（添加 `base_reward`、`agreed_reward`、`currency`）
+3. 修改 `TaskApplication` 表（添加 `negotiated_price`、`currency`，添加唯一约束）
+4. 修改 `Message` 表（添加 `task_id`、`message_type`、`conversation_type`、`meta`）
+5. 创建 `Notifications` 表（系统通知，支持审计）
+6. 创建 `MessageReads` 表（消息已读状态，外键使用 ON DELETE CASCADE）
+7. 创建 `MessageAttachments` 表（消息附件，外键使用 ON DELETE CASCADE）
+8. 创建 `NegotiationResponseLog` 表（议价响应操作日志，用于审计）
+9. 创建 `MessageReadCursors` 表（默认必开：按任务维度的已读游标，降低写放大）
+10. 创建必要的索引（包括游标分页索引）
+11. 添加外键删除策略（ON DELETE CASCADE）
+12. 添加 CHECK 约束（枚举值限制、任务消息必须关联 task_id 等）
 
 ### 阶段二：后端API开发
 1. 实现任务聊天列表接口（包含未读计数和最后消息聚合）
@@ -1490,27 +1501,31 @@ GET /api/tasks/{task_id}
 
 ## 八、注意事项
 
-1. **向后兼容：**
+1. **数据库重建说明：**
+   - **由于数据库可以清除重建，无需考虑数据迁移和向后兼容**
+   - 可以直接使用新的表结构，所有字段都可以设置为 NOT NULL（如适用）
    - `Task.taker_id` 字段继续使用，存储唯一的接受者
-   - 历史消息需要关联到任务ID（需要数据迁移）
    - 客服消息的 `task_id` 可以为空（`conversation_type = "customer_service"`）
-   - 保留原有的 `reward` 字段，新增 `base_reward` 和 `agreed_reward`
-   - **ID 类型一致性：** 所有用户ID相关字段（如 `taker_id`, `poster_id`, `applicant_id`, `sender_id`, `user_id`）必须与现网 `users.id` 的类型完全一致。文档示例使用 `VARCHAR(8)`，实际开发时应跟随现网类型，避免未来改为 UUID 后多表迁移困难
+   - 全局消息的 `task_id` 可以为空（`conversation_type = "global"`）
+   - **ID 类型一致性：** 所有用户ID相关字段（如 `taker_id`, `poster_id`, `applicant_id`, `sender_id`, `user_id`）必须与 `users.id` 的类型完全一致。文档示例使用 `VARCHAR(8)`，实际开发时应确认类型
 
-2. **数据迁移（分步迁移策略）：**
-   - **步骤1：** 先加可空列（`base_reward`, `agreed_reward`, `currency` 等）
-   - **步骤2：** 灰度回填 `base_reward = reward & currency='GBP'`（批量更新，避免锁表）
-   - **步骤3：** 读路径双写/双读（短期兼容，同时支持新旧字段）
-   - **步骤4：** 切主（所有写操作使用新字段）
-   - **步骤5：** 最后加非空/默认与约束（确保数据完整性）
-   - **注意事项：**
-     - 避免写放大和锁表风险
-     - 历史消息需要关联到任务ID（需要数据迁移）
-     - 迁移脚本中明确非空/默认生效顺序
-   - 需要将历史消息关联到对应的任务ID（如果可能的话）
-   - 如果无法确定历史消息对应的任务，可以保持 `task_id` 为空（但新消息必须关联）
-   - 为现有任务设置 `base_reward = reward`（如果 `reward` 字段存在）
-   - 为现有消息设置 `conversation_type`（根据消息类型判断）
+2. **数据清空说明：**
+   - 在部署前，已通过应用启动时的自动清空功能清空了以下表：
+     - `task_applications`（任务申请）
+     - `reviews`（评价）
+     - `task_history`（任务历史）
+     - `task_cancel_requests`（任务取消请求）
+     - `messages`（消息）
+     - `notifications`（通知）
+     - `tasks`（任务）
+   - **保留的表：** 以下表的数据已保留，未清空：
+     - `users`（用户基础信息）
+     - `admin_users`（管理员账户）
+     - `system_settings`（系统设置）
+     - `pending_users`（待验证用户）
+     - `customer_service*`（客服相关表）
+     - `admin_*`（管理员相关表）
+     - `user_preferences`（用户偏好）
 
 3. **权限控制：**
    - 严格检查用户是否有权限查看/操作任务

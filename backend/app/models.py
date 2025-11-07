@@ -11,6 +11,8 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    DECIMAL,
+    CheckConstraint,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, relationship
@@ -186,7 +188,10 @@ class Task(Base):
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     deadline = Column(DateTime, nullable=False)
-    reward = Column(Float, nullable=False)
+    reward = Column(Float, nullable=False)  # 保留原有字段，向后兼容
+    base_reward = Column(DECIMAL(12, 2), nullable=True)  # 原始标价
+    agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
+    currency = Column(String(3), default="GBP")  # 货币类型
     location = Column(String(100), nullable=False)
     task_type = Column(String(50), nullable=False)
     poster_id = Column(String(8), ForeignKey("users.id"))
@@ -241,27 +246,61 @@ class Message(Base):
     sender_id = Column(
         String(8), ForeignKey("users.id"), nullable=True
     )  # 允许为NULL，用于系统消息
-    receiver_id = Column(String(8), ForeignKey("users.id"))
+    receiver_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 允许为NULL，用于任务消息
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now())  # 统一存储UTC时间
-    is_read = Column(Integer, default=0)  # 0=unread, 1=read
+    is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 message_reads 表)
     image_id = Column(String(100), nullable=True)  # 私密图片ID
+    # 任务聊天相关字段
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)  # 关联的任务ID
+    message_type = Column(String(20), default="normal")  # normal, system
+    conversation_type = Column(String(20), default="task")  # task, customer_service, global
+    meta = Column(Text, nullable=True)  # JSON格式存储元数据
+    
+    __table_args__ = (
+        # 确保任务消息必须关联 task_id
+        CheckConstraint(
+            "(conversation_type <> 'task' OR task_id IS NOT NULL)",
+            name="ck_messages_task_bind"
+        ),
+        # 枚举约束：限定 message_type 的合法值
+        CheckConstraint(
+            "message_type IN ('normal', 'system')",
+            name="ck_messages_type"
+        ),
+        # 枚举约束：限定 conversation_type 的合法值
+        CheckConstraint(
+            "conversation_type IN ('task', 'customer_service', 'global')",
+            name="ck_messages_conversation_type"
+        ),
+        # 索引
+        # 注意：降序索引在某些数据库可能不支持，使用普通索引，查询时 ORDER BY created_at DESC, id DESC 也能走覆盖索引
+        Index("ix_messages_task_id", task_id),
+        Index("ix_messages_task_type", task_id, message_type),
+        Index("ix_messages_task_created", task_id, created_at, id),  # 用于游标分页（查询时使用 ORDER BY created_at DESC, id DESC）
+        Index("ix_messages_conversation_type", conversation_type, task_id),
+        Index("ix_messages_task_id_id", task_id, id),  # 用于未读数聚合（配合 message_read_cursors）
+    )
 
 
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id"))
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     type = Column(
-        String(50), nullable=False
-    )  # 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement'
-    title = Column(String(200), nullable=False)
-    content = Column(Text, nullable=False)
-    related_id = Column(Integer, nullable=True)  # 相关ID（用户ID、任务ID、公告ID等）
-    is_read = Column(Integer, default=0)  # 0=unread, 1=read
+        String(32), nullable=False
+    )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement'
+    related_id = Column(Integer, nullable=True)  # application_id 或 task_id（根据 type 而定）
+    content = Column(Text, nullable=False)  # JSON 格式存储通知数据
     created_at = Column(DateTime, default=get_uk_time_naive)
+    read_at = Column(DateTime, nullable=True)  # 已读时间（可为空）
+    # 保留向后兼容字段
+    title = Column(String(200), nullable=True)  # 可选，用于旧通知
+    is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 read_at)
     __table_args__ = (
         UniqueConstraint("user_id", "type", "related_id", name="uix_user_type_related"),
+        Index("ix_notifications_user", user_id, created_at),  # 查询时使用 ORDER BY created_at DESC
+        Index("ix_notifications_type", type, related_id),
     )
 
 
@@ -500,6 +539,8 @@ class TaskApplication(Base):
     status = Column(String(20), default="pending")  # pending, approved, rejected
     created_at = Column(DateTime, default=get_uk_time_naive)
     message = Column(Text, nullable=True)  # 申请时的留言
+    negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
+    currency = Column(String(3), default="GBP")  # 货币类型
     
     # 确保同一用户不能重复申请同一任务
     __table_args__ = (
@@ -621,4 +662,85 @@ class UserPreferences(Base):
     __table_args__ = (
         Index("ix_user_preferences_user_id", user_id),
         Index("ix_user_preferences_updated_at", updated_at),
+    )
+
+
+class MessageRead(Base):
+    """消息已读状态表"""
+    __tablename__ = "message_reads"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    read_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    
+    __table_args__ = (
+        UniqueConstraint("message_id", "user_id", name="uq_message_reads_message_user"),
+        Index("ix_message_reads_message_id", message_id),
+        Index("ix_message_reads_user_id", user_id),
+        Index("ix_message_reads_task_user", message_id, user_id),
+    )
+
+
+class MessageAttachment(Base):
+    """消息附件表"""
+    __tablename__ = "message_attachments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
+    attachment_type = Column(String(20), nullable=False)  # image/file/video等
+    url = Column(String(500), nullable=True)  # 附件URL（公开附件）
+    blob_id = Column(String(100), nullable=True)  # 私密文件ID（私密附件）
+    meta = Column(Text, nullable=True)  # JSON格式存储元数据
+    created_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    
+    __table_args__ = (
+        # 存在性约束：url 和 blob_id 必须二选一
+        CheckConstraint(
+            "(url IS NOT NULL AND blob_id IS NULL) OR (url IS NULL AND blob_id IS NOT NULL)",
+            name="ck_message_attachments_url_blob"
+        ),
+        Index("ix_message_attachments_message_id", message_id),
+    )
+
+
+class NegotiationResponseLog(Base):
+    """议价响应操作日志表"""
+    __tablename__ = "negotiation_response_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    notification_id = Column(Integer, ForeignKey("notifications.id"), nullable=True)  # 可为空（如果通知被删除）
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    application_id = Column(Integer, ForeignKey("task_applications.id"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    action = Column(String(20), nullable=False)  # 'accept' 或 'reject' 或 'withdraw'
+    negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格（如果接受）
+    responded_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    ip_address = Column(String(45), nullable=True)  # 操作IP（可选，用于审计）
+    user_agent = Column(Text, nullable=True)  # 用户代理（可选，用于审计）
+    
+    __table_args__ = (
+        # 业务级唯一约束：防止重复落库（包括重放/抖动）
+        UniqueConstraint("application_id", "action", name="uq_negotiation_log_application_action"),
+        Index("ix_negotiation_log_notification", notification_id),
+        Index("ix_negotiation_log_task", task_id),
+        Index("ix_negotiation_log_application", application_id),
+        Index("ix_negotiation_log_user", user_id),
+    )
+
+
+class MessageReadCursor(Base):
+    """消息已读游标表（按任务维度记录已读游标，降低写放大）"""
+    __tablename__ = "message_read_cursors"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    last_read_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    updated_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    
+    __table_args__ = (
+        UniqueConstraint("task_id", "user_id", name="uq_message_read_cursors_task_user"),
+        Index("ix_message_read_cursors_task_user", task_id, user_id),
+        Index("ix_message_read_cursors_message", last_read_message_id),
     )
