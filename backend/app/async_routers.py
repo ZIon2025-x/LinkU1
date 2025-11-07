@@ -215,6 +215,9 @@ async def create_task_async(
             "description": db_task.description,
             "deadline": db_task.deadline.isoformat() if db_task.deadline else None,
             "reward": float(db_task.reward),
+            "base_reward": float(db_task.base_reward) if db_task.base_reward else None,
+            "agreed_reward": float(db_task.agreed_reward) if db_task.agreed_reward else None,
+            "currency": db_task.currency or "GBP",
             "location": db_task.location,
             "task_type": db_task.task_type,
             "poster_id": db_task.poster_id,
@@ -288,157 +291,108 @@ async def apply_for_task(
     db: AsyncSession = Depends(get_async_db_dependency),
     background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
-    """申请任务（异步版本）"""
+    """申请任务（异步版本，支持议价价格）"""
     try:
         message = request_data.get('message', None)
-        print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}")
+        negotiated_price = request_data.get('negotiated_price', None)
+        currency = request_data.get('currency', None)
         
-        # 将 current_user.id 转换为字符串
+        print(f"DEBUG: 开始申请任务，任务ID: {task_id}, 用户ID: {current_user.id}, message: {message}, negotiated_price: {negotiated_price}")
+        
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="任务不存在")
+        
+        # 检查任务状态：必须是 open
+        if task.status != "open":
+            raise HTTPException(
+                status_code=400,
+                detail=f"任务状态为 {task.status}，不允许申请"
+            )
+        
+        # 检查是否已经申请过（无论状态）
         applicant_id = str(current_user.id) if current_user.id else None
         if not applicant_id:
             raise HTTPException(status_code=400, detail="Invalid user ID")
-            
-        application = await async_crud.async_task_crud.apply_for_task(
-            db, task_id, applicant_id, message
+        
+        existing_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.task_id == task_id,
+                models.TaskApplication.applicant_id == applicant_id
+            )
         )
-        print(f"DEBUG: 申请结果: {application}")
+        existing_result = await db.execute(existing_query)
+        existing = existing_result.scalar_one_or_none()
         
-        # 如果申请返回 None，尝试提供更详细的错误信息
-        if not application:
-            print(f"DEBUG: 申请返回 None，尝试获取详细信息")
-            # 检查任务是否存在
-            task_query = select(models.Task).where(models.Task.id == task_id)
-            task_result = await db.execute(task_query)
-            task = task_result.scalar_one_or_none()
-            
-            if not task:
-                raise HTTPException(status_code=404, detail="任务不存在")
-            
-            # 检查任务状态
-            task_status = str(task.status) if task.status else "unknown"
-            print(f"DEBUG: 任务状态: {task_status}")
-            
-            if task_status not in ["open", "taken"]:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"任务状态为 {task_status}，不允许申请"
-                )
-            
-            # 检查是否已经申请过
-            existing_query = select(models.TaskApplication).where(
-                and_(
-                    models.TaskApplication.task_id == task_id,
-                    models.TaskApplication.applicant_id == applicant_id
-                )
-            )
-            existing_result = await db.execute(existing_query)
-            existing = existing_result.scalar_one_or_none()
-            
-            if existing:
-                print(f"DEBUG: 已经申请过，返回已申请的信息")
-                return {
-                    "message": "您已经申请过此任务",
-                    "application_id": existing.id,
-                    "status": existing.status
-                }
-            
-            # 检查等级匹配
-            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
-            user_level_value = level_hierarchy.get(str(current_user.user_level or 'normal'), 1)
-            task_level_value = level_hierarchy.get(str(task.task_level or 'normal'), 1)
-            
-            if user_level_value < task_level_value:
-                task_level_name = task.task_level.upper() if task.task_level else "VIP"
-                raise HTTPException(
-                    status_code=403, 
-                    detail=f"您的用户等级不足以申请此任务。此任务需要{task_level_name}用户才能申请。"
-                )
-            
-            # 如果都不匹配，返回通用错误
+        if existing:
             raise HTTPException(
-                status_code=400, 
-                detail="无法申请此任务"
+                status_code=400,
+                detail="您已经申请过此任务"
             )
         
-        # 先返回成功响应，避免等待通知发送
-        # 从 application 对象获取属性前先确保其有效
-        if hasattr(application, 'id') and application.id:
-            application_id = application.id
-            application_status = application.status if hasattr(application, 'status') else "pending"
-        else:
-            # 如果无法获取属性，从数据库重新查询
-            app_query = select(models.TaskApplication).where(
-                and_(
-                    models.TaskApplication.task_id == task_id,
-                    models.TaskApplication.applicant_id == applicant_id
+        # 校验货币一致性
+        if currency and task.currency:
+            if currency != task.currency:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"货币不一致：任务使用 {task.currency}，申请使用 {currency}"
                 )
-            ).order_by(models.TaskApplication.id.desc())
-            app_result = await db.execute(app_query)
-            app = app_result.scalar_one_or_none()
-            if app:
-                application_id = app.id
-                application_status = app.status
-            else:
-                application_id = 0
-                application_status = "pending"
         
-        response_data = {
+        # 检查等级匹配
+        level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+        user_level_value = level_hierarchy.get(str(current_user.user_level or 'normal'), 1)
+        task_level_value = level_hierarchy.get(str(task.task_level or 'normal'), 1)
+        
+        if user_level_value < task_level_value:
+            task_level_name = task.task_level.upper() if task.task_level else "VIP"
+            raise HTTPException(
+                status_code=403,
+                detail=f"您的用户等级不足以申请此任务。此任务需要{task_level_name}用户才能申请。"
+            )
+        
+        # 创建申请记录
+        from app.models import get_uk_time_naive
+        from decimal import Decimal
+        
+        current_time = get_uk_time_naive()
+        new_application = models.TaskApplication(
+            task_id=task_id,
+            applicant_id=applicant_id,
+            message=message,
+            negotiated_price=Decimal(str(negotiated_price)) if negotiated_price is not None else None,
+            currency=currency or task.currency or "GBP",
+            status="pending",
+            created_at=current_time
+        )
+        
+        db.add(new_application)
+        await db.flush()
+        await db.commit()
+        await db.refresh(new_application)
+        
+        # TODO: 可选：创建系统消息通知申请创建
+        # TODO: 发送通知给发布者（后台任务）
+        
+        # TODO: 申请成功后发送通知和邮件给发布者（后台任务）
+        
+        return {
             "message": "申请成功，请等待发布者审核",
-            "application_id": application_id,
-            "status": application_status
+            "application_id": new_application.id,
+            "status": new_application.status
         }
-        
-        # 申请成功后发送通知和邮件给发布者（异步）
-        try:
-            print(f"DEBUG: 开始发送任务申请通知，任务ID: {task_id}")
-            # 获取任务和发布者信息
-            task_query = select(models.Task).where(models.Task.id == task_id)
-            task_result = await db.execute(task_query)
-            task = task_result.scalar_one_or_none()
-            
-            if task:
-                print(f"DEBUG: 找到任务: {task.title}")
-                # 获取发布者信息
-                poster_query = select(models.User).where(models.User.id == task.poster_id)
-                poster_result = await db.execute(poster_query)
-                poster = poster_result.scalar_one_or_none()
-                
-                if poster:
-                    print(f"DEBUG: 找到发布者: {poster.name}")
-                    # 发送通知和邮件
-                    from app.task_notifications import send_task_application_notification
-                    from app.database import get_db
-                    
-                    # 创建同步数据库会话用于通知
-                    sync_db = next(get_db())
-                    try:
-                        print(f"DEBUG: 调用通知函数")
-                        send_task_application_notification(
-                            db=sync_db,
-                            background_tasks=background_tasks,
-                            task=task,
-                            applicant=current_user,
-                            application_message=message or ""
-                        )
-                        print(f"DEBUG: 通知函数调用完成")
-                    finally:
-                        sync_db.close()
-                else:
-                    print(f"DEBUG: 未找到发布者")
-                        
-        except Exception as e:
-            # 通知发送失败不影响申请流程
-            logger.error(f"Failed to send task application notification: {e}")
-        
-        return response_data
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in apply_for_task: {e}")
+        await db.rollback()
+        logger.error(f"申请任务失败: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"申请任务失败: {str(e)}")
 
 
 

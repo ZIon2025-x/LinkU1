@@ -191,6 +191,10 @@ from app.async_routers import async_router
 # 先注册异步路由，确保优先级
 app.include_router(async_router, prefix="/api", tags=["async"])
 
+# 添加任务聊天功能路由
+from app.task_chat_routes import task_chat_router
+app.include_router(task_chat_router, prefix="/api", tags=["任务聊天"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

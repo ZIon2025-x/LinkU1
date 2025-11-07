@@ -250,6 +250,9 @@ class TaskBase(BaseModel):
     description: str
     deadline: datetime.datetime
     reward: float
+    base_reward: Optional[float] = None  # 原始标价
+    agreed_reward: Optional[float] = None  # 最终成交价
+    currency: Optional[str] = "GBP"  # 货币类型
     location: str  # Frontend should use QS_TOP100_CITIES options
     task_type: str  # Frontend should use TASK_TYPES options
 
