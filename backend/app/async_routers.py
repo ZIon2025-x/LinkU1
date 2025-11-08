@@ -517,12 +517,31 @@ async def get_task_applications(
             
             if user:
                 print(f"[DEBUG] 找到申请者用户: {user.name}")
+                
+                # 处理议价金额：从 task_applications 表中读取 negotiated_price 字段
+                negotiated_price_value = None
+                if app.negotiated_price is not None:
+                    try:
+                        from decimal import Decimal
+                        if isinstance(app.negotiated_price, Decimal):
+                            negotiated_price_value = float(app.negotiated_price)
+                        elif isinstance(app.negotiated_price, (int, float)):
+                            negotiated_price_value = float(app.negotiated_price)
+                        else:
+                            negotiated_price_value = float(str(app.negotiated_price))
+                    except (ValueError, TypeError, AttributeError) as e:
+                        print(f"[WARNING] 转换议价金额失败: app_id={app.id}, error={e}")
+                        negotiated_price_value = None
+                
                 result.append({
                     "id": app.id,
                     "applicant_id": app.applicant_id,
                     "applicant_name": user.name,
+                    "applicant_avatar": user.avatar if hasattr(user, 'avatar') else None,
                     "message": app.message,
-                    "created_at": app.created_at,
+                    "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
+                    "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取
+                    "created_at": app.created_at.isoformat() if app.created_at else None,
                     "status": app.status
                 })
             else:

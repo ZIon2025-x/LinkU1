@@ -1182,9 +1182,13 @@ const MessagePage: React.FC = () => {
     setApplicationsLoading(true);
     try {
       const data = await getTaskApplicationsWithFilter(taskId, 'pending', 50, 0);
-      console.log('loadApplications: 获取到申请列表数据:', data);
+      console.log('loadApplications: 获取到申请列表数据（完整）:', JSON.stringify(data, null, 2));
       const apps = data.applications || data || [];
       console.log('loadApplications: 申请列表已更新，申请数量:', apps.length);
+      // 打印第一个申请的完整数据
+      if (apps.length > 0) {
+        console.log('loadApplications: 第一个申请的完整数据:', JSON.stringify(apps[0], null, 2));
+      }
       // 调试：打印每个申请的议价金额（详细类型和值）
       apps.forEach((app: any, index: number) => {
         console.log(`loadApplications: 申请 ${index + 1} - ID: ${app.id}, negotiated_price: ${app.negotiated_price} (type: ${typeof app.negotiated_price}), currency: ${app.currency}`);
