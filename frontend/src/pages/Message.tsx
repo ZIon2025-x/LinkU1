@@ -1331,25 +1331,52 @@ const MessagePage: React.FC = () => {
     }
   }, [user]);
 
+  // 跟踪最后加载的任务ID，避免重复加载
+  const lastLoadedTaskIdRef = useRef<number | null>(null);
+
   // 当选择任务时加载消息和申请
   useEffect(() => {
     if (chatMode === 'tasks' && activeTaskId && user) {
+      // 检查是否是新的任务ID，避免重复加载
+      if (lastLoadedTaskIdRef.current === activeTaskId) {
+        return; // 已经加载过这个任务，跳过
+      }
+      
+      lastLoadedTaskIdRef.current = activeTaskId;
       setTaskMessages([]);
       setTaskNextCursor(null);
       loadTaskMessages(activeTaskId);
       loadApplications(activeTaskId);
+    } else if (!activeTaskId) {
+      // 如果没有选中任务，重置ref
+      lastLoadedTaskIdRef.current = null;
     }
   }, [activeTaskId, chatMode, user, loadTaskMessages, loadApplications]);
+
+  // 跟踪最后加载任务列表的用户ID和模式，避免重复加载
+  const lastLoadedTasksRef = useRef<{ userId: number | undefined; chatMode: string } | null>(null);
 
   // 当切换到任务模式时加载任务列表
   useEffect(() => {
     if (chatMode === 'tasks' && user) {
+      // 检查是否已经为这个用户和模式加载过任务列表
+      const currentKey = { userId: user.id, chatMode };
+      const lastKey = lastLoadedTasksRef.current;
+      
+      if (lastKey && lastKey.userId === currentKey.userId && lastKey.chatMode === currentKey.chatMode) {
+        // 已经加载过，跳过
+        return;
+      }
+      
+      lastLoadedTasksRef.current = currentKey;
       console.log('useEffect: 触发任务列表加载，chatMode:', chatMode, 'user:', user?.id);
       loadTasks();
     } else {
+      // 不在任务模式，重置ref
+      lastLoadedTasksRef.current = null;
       console.log('useEffect: 跳过任务列表加载，chatMode:', chatMode, 'user:', user?.id);
     }
-  }, [chatMode, user, loadTasks]);
+  }, [chatMode, user?.id, loadTasks]);
 
   // 用户登录后立即加载任务列表（备用机制，确保加载）
   // 使用 ref 防止重复加载
@@ -1877,38 +1904,54 @@ const MessagePage: React.FC = () => {
     };
   }, [isServiceMode, chatMode, activeTaskId, hasNewTaskMessages]);
 
-  // 客服模式下，当消息更新时自动滚动到底部
+  // 跟踪最后处理的消息ID，避免重复滚动
+  const lastProcessedMessageIdRef = useRef<number | null>(null);
+
+  // 客服模式下，当消息更新时自动滚动到底部（仅在真正的新消息时触发）
   useEffect(() => {
-    if (isServiceMode && messages.length > 0) {
+    // 只在客服模式下处理，且排除任务聊天模式
+    if (!isServiceMode || chatMode === 'tasks') {
+      return;
+    }
+
+    if (messages.length > 0) {
       // 获取最后一条消息
       const lastMessage = messages[messages.length - 1];
-      // 如果是系统消息，强制滚动到底部
-      if (lastMessage && lastMessage.from === t('messages.system')) {
-        setTimeout(() => {
-          scrollToBottomImmediate(0, true);
-        }, 100);
-        setTimeout(() => {
-          scrollToBottomImmediate(0, true);
-        }, 300);
-        setTimeout(() => {
-          scrollToBottomImmediate(0, true);
-        }, 500);
-      } else {
-        // 其他消息，智能滚动（如果用户接近底部）
-        smartScrollToBottom(false);
-      }
       
-      // 更新滚动按钮状态（延迟执行，确保DOM已更新）
-      setTimeout(() => {
-        const messagesContainer = messagesContainerRef.current;
-        if (messagesContainer) {
-          const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
-          const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-          setShowScrollToBottomButton(distanceFromBottom > 200);
+      // 检查是否是真正的新消息（通过ID判断，避免图片加载等导致的重复触发）
+      const messageId = lastMessage.id;
+      if (!messageId) return; // 如果没有ID，跳过
+      
+      const isNewMessage = messageId !== lastProcessedMessageIdRef.current;
+      
+      if (isNewMessage) {
+        lastProcessedMessageIdRef.current = messageId;
+        
+        // 如果是系统消息，强制滚动到底部
+        if (lastMessage.from === t('messages.system')) {
+          setTimeout(() => {
+            scrollToBottomImmediate(0, true);
+          }, 100);
+          setTimeout(() => {
+            scrollToBottomImmediate(0, true);
+          }, 300);
+        } else {
+          // 其他消息，智能滚动（如果用户接近底部）
+          smartScrollToBottom(false);
         }
-      }, 100);
+        
+        // 更新滚动按钮状态（延迟执行，确保DOM已更新）
+        setTimeout(() => {
+          const messagesContainer = messagesContainerRef.current;
+          if (messagesContainer) {
+            const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            setShowScrollToBottomButton(distanceFromBottom > 200);
+          }
+        }, 100);
+      }
     }
-  }, [messages, isServiceMode, t, scrollToBottomImmediate, smartScrollToBottom]);
+  }, [messages, isServiceMode, chatMode, t, scrollToBottomImmediate, smartScrollToBottom]);
 
   // 联系在线客服
   const handleContactCustomerService = async () => {
