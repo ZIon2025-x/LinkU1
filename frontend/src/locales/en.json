@@ -2249,7 +2249,10 @@
     "inputYourQuestion": "Enter your question, our customer service team will reply as soon as possible...",
     "inputMessage": "Type a message...",
     "selectContactFirst": "Please select a contact first",
-    "tradeWarning": "Please trade with caution, protect your personal property and privacy, and avoid private transaction risks."
+    "tradeWarning": "Please trade with caution, protect your personal property and privacy, and avoid private transaction risks.",
+    "searchTasks": "Search tasks...",
+    "connectToChat": "Connect to start chatting",
+    "typeMessage": "Type a message..."
   },
   "time": {
     "gmt": "GMT",

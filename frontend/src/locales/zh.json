@@ -2219,7 +2219,10 @@
     "inputYourQuestion": "输入您的问题，我们的客服团队会尽快回复...",
     "inputMessage": "输入消息...",
     "selectContactFirst": "请先选择联系人",
-    "tradeWarning": "请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。"
+    "tradeWarning": "请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。",
+    "searchTasks": "搜索任务...",
+    "connectToChat": "连接以开始聊天",
+    "typeMessage": "输入消息..."
   },
   "time": {
     "gmt": "GMT",

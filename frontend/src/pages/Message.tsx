@@ -2775,7 +2775,7 @@ const MessagePage: React.FC = () => {
                   backdropFilter: 'blur(10px)'
                 }}>
                   <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
-                  <span style={{ lineHeight: '1.4', flex: 1 }}>{t('seo.tradeWarning')}</span>
+                  <span style={{ lineHeight: '1.4', flex: 1 }}>{t('messages.tradeWarning')}</span>
                   <button
                     onClick={() => setShowSystemWarning(false)}
                     style={{
