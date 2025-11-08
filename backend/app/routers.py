@@ -4760,12 +4760,33 @@ def generate_image_url(
             logger.error(f"未找到包含image_id {image_id}的消息")
             raise HTTPException(status_code=404, detail="图片不存在")
         
-        # 检查用户是否有权限访问此图片
-        if current_user.id not in [message.sender_id, message.receiver_id]:
-            raise HTTPException(status_code=403, detail="无权访问此图片")
-        
         # 获取聊天参与者
-        participants = [message.sender_id, message.receiver_id]
+        participants = []
+        
+        # 如果是任务聊天，从任务中获取参与者
+        if hasattr(message, 'conversation_type') and message.conversation_type == 'task' and message.task_id:
+            from app import crud
+            task = crud.get_task(db, message.task_id)
+            if not task:
+                raise HTTPException(status_code=404, detail="任务不存在")
+            
+            # 任务参与者：发布者和接受者
+            participants = [task.poster_id]
+            if task.taker_id:
+                participants.append(task.taker_id)
+            
+            # 检查用户是否有权限访问此图片（必须是任务的参与者）
+            if current_user.id not in participants:
+                raise HTTPException(status_code=403, detail="无权访问此图片")
+        else:
+            # 普通聊天：使用发送者和接收者
+            participants = [message.sender_id]
+            if message.receiver_id:
+                participants.append(message.receiver_id)
+            
+            # 检查用户是否有权限访问此图片
+            if current_user.id not in participants:
+                raise HTTPException(status_code=403, detail="无权访问此图片")
         
         # 生成访问URL
         image_url = private_image_system.generate_image_url(

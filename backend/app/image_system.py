@@ -201,11 +201,25 @@ class PrivateImageSystem:
     
     def get_chat_participants(self, db: Session, message_id: int) -> List[str]:
         """获取消息的聊天参与者"""
+        from app.models import Task
         message = db.query(Message).filter(Message.id == message_id).first()
         if not message:
             return []
         
-        return [message.sender_id, message.receiver_id]
+        # 如果是任务聊天，从任务中获取参与者
+        if hasattr(message, 'conversation_type') and message.conversation_type == 'task' and message.task_id:
+            task = db.query(Task).filter(Task.id == message.task_id).first()
+            if task:
+                participants = [task.poster_id]
+                if task.taker_id:
+                    participants.append(task.taker_id)
+                return participants
+        
+        # 普通聊天：使用发送者和接收者
+        participants = [message.sender_id]
+        if message.receiver_id:
+            participants.append(message.receiver_id)
+        return participants
     
     def upload_image(self, content: bytes, filename: str, user_id: str, db: Session) -> Dict[str, Any]:
         """上传图片"""

@@ -35,7 +35,8 @@ const PrivateImageDisplay: React.FC<{
   currentUserId: string;
   style: React.CSSProperties;
   alt?: string;
-}> = ({ imageId, currentUserId, style, alt = "Private Image" }) => {
+  onClick?: () => void;
+}> = ({ imageId, currentUserId, style, alt = "Private Image", onClick }) => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -148,6 +149,7 @@ const PrivateImageDisplay: React.FC<{
         maxHeight: '100%',
         objectFit: 'cover'
       }}
+      onClick={onClick}
       onError={() => {
         console.error('图片显示失败:', imageId);
         setError(true);
@@ -302,6 +304,8 @@ const MessagePage: React.FC = () => {
   // UX优化相关状态
   const [isNearBottom, setIsNearBottom] = useState(true); // 用户是否接近底部
   const [showScrollToBottom, setShowScrollToBottom] = useState(false); // 显示"滚动到底部"按钮
+  const [hasNewTaskMessages, setHasNewTaskMessages] = useState(false); // 是否有新任务消息（当用户不在底部时）
+  const lastTaskMessageIdRef = useRef<number | null>(null); // 最后一条任务消息的ID（使用ref避免依赖循环）
   const [toastMessage, setToastMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null); // Toast通知
   const messagesContainerRef = useRef<HTMLDivElement>(null); // 消息容器引用
   
@@ -984,7 +988,7 @@ const MessagePage: React.FC = () => {
   }, [isNearBottom]);
 
   // 统一的滚动到底部函数（立即滚动，无动画）
-  const scrollToBottomImmediate = useCallback((delay: number = 100) => {
+  const scrollToBottomImmediate = useCallback((delay: number = 100, hideButton: boolean = true) => {
     setTimeout(() => {
       const messagesContainer = messagesContainerRef.current;
       if (messagesContainer) {
@@ -992,6 +996,20 @@ const MessagePage: React.FC = () => {
       }
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+      }
+      // 滚动后更新按钮状态
+      if (hideButton) {
+        setTimeout(() => {
+          const container = messagesContainerRef.current;
+          if (container) {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+            // 如果已经滚动到底部，隐藏按钮
+            if (distanceFromBottom < 200) {
+              setShowScrollToBottomButton(false);
+            }
+          }
+        }, 50);
       }
     }, delay);
   }, []);
@@ -1042,6 +1060,10 @@ const MessagePage: React.FC = () => {
     // 如果用户接近底部，立即滚动
     if (isNearBottom) {
       smartScrollToBottom(true);
+      setHasNewTaskMessages(false); // 清除新消息提示
+    } else {
+      // 如果用户不在底部，显示新消息提示（但这是自己发送的消息，不需要提示）
+      // 新消息提示只在接收消息时显示
     }
     
     try {
@@ -1063,8 +1085,9 @@ const MessagePage: React.FC = () => {
         } : msg
       ));
       
-      // 标记消息为已读
+      // 更新最后一条消息ID
       if (response.id) {
+        lastTaskMessageIdRef.current = response.id;
         await markTaskMessagesRead(activeTaskId, response.id);
       }
       
@@ -1236,12 +1259,28 @@ const MessagePage: React.FC = () => {
       // 前端需要反转，让最新的消息在底部显示
       const reversedMessages = [...(data.messages || [])].reverse();
       
+      // 检测是否有新消息（非首次加载且非加载历史消息时）
+      if (!cursor && lastTaskMessageIdRef.current !== null && data.messages && data.messages.length > 0) {
+        const latestMessage = data.messages[0]; // 后端返回的最新消息
+        
+        // 如果有新消息且用户不在底部，显示提示
+        if (latestMessage.id !== lastTaskMessageIdRef.current && !isNearBottom) {
+          setHasNewTaskMessages(true);
+        }
+      }
+      
       if (cursor) {
         // 加载更多消息（更旧的消息），追加到前面
         setTaskMessages(prev => [...reversedMessages, ...prev]);
       } else {
         // 首次加载或刷新，替换消息（已反转，最新的在底部）
         setTaskMessages(reversedMessages);
+        
+        // 更新最后一条消息ID
+        if (reversedMessages.length > 0) {
+          const lastMsg = reversedMessages[reversedMessages.length - 1];
+          lastTaskMessageIdRef.current = lastMsg.id;
+        }
       }
       
       setActiveTask(data.task);
@@ -1259,6 +1298,7 @@ const MessagePage: React.FC = () => {
         setTimeout(() => {
           smartScrollToBottom(true);
           checkIfNearBottom();
+          setHasNewTaskMessages(false); // 清除新消息提示
         }, 100);
       } else {
         // 加载历史消息后检查位置
@@ -1269,7 +1309,7 @@ const MessagePage: React.FC = () => {
     } finally {
       setTaskMessagesLoading(false);
     }
-  }, []);
+  }, [isNearBottom, checkIfNearBottom, smartScrollToBottom]);
 
   // 加载申请列表
   const loadApplications = useCallback(async (taskId: number) => {
@@ -1804,27 +1844,71 @@ const MessagePage: React.FC = () => {
     }
   }, []);
 
-  // 滚动监听器 - 检测是否滚动到顶部（仅用于客服模式）
+  // 滚动监听器 - 检测是否滚动到顶部（仅用于客服模式）和任务聊天的滚动位置
   useEffect(() => {
     const messagesContainer = messagesContainerRef.current;
-    if (!messagesContainer || !isServiceMode) {
-      return;
-    }
+    if (!messagesContainer) return;
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
-      
-      // 控制"滚动到底部"按钮的显示
-      // 当用户向上滚动超过200px时显示按钮，接近底部时隐藏
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      setShowScrollToBottomButton(distanceFromBottom > 200);
+      
+      // 客服模式：控制"滚动到底部"按钮的显示
+      if (isServiceMode) {
+        setShowScrollToBottomButton(distanceFromBottom > 200);
+      }
+      
+      // 任务聊天模式：检查是否接近底部，如果接近底部则清除新消息提示
+      if (chatMode === 'tasks' && activeTaskId) {
+        const nearBottom = distanceFromBottom < 150;
+        setIsNearBottom(nearBottom);
+        setShowScrollToBottom(distanceFromBottom > 200);
+        
+        // 如果用户滚动到底部，清除新消息提示
+        if (nearBottom && hasNewTaskMessages) {
+          setHasNewTaskMessages(false);
+        }
+      }
     };
 
     messagesContainer.addEventListener('scroll', handleScroll);
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
     };
-  }, [isServiceMode]);
+  }, [isServiceMode, chatMode, activeTaskId, hasNewTaskMessages]);
+
+  // 客服模式下，当消息更新时自动滚动到底部
+  useEffect(() => {
+    if (isServiceMode && messages.length > 0) {
+      // 获取最后一条消息
+      const lastMessage = messages[messages.length - 1];
+      // 如果是系统消息，强制滚动到底部
+      if (lastMessage && lastMessage.from === t('messages.system')) {
+        setTimeout(() => {
+          scrollToBottomImmediate(0, true);
+        }, 100);
+        setTimeout(() => {
+          scrollToBottomImmediate(0, true);
+        }, 300);
+        setTimeout(() => {
+          scrollToBottomImmediate(0, true);
+        }, 500);
+      } else {
+        // 其他消息，智能滚动（如果用户接近底部）
+        smartScrollToBottom(false);
+      }
+      
+      // 更新滚动按钮状态（延迟执行，确保DOM已更新）
+      setTimeout(() => {
+        const messagesContainer = messagesContainerRef.current;
+        if (messagesContainer) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+          const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+          setShowScrollToBottomButton(distanceFromBottom > 200);
+        }
+      }, 100);
+    }
+  }, [messages, isServiceMode, t, scrollToBottomImmediate, smartScrollToBottom]);
 
   // 联系在线客服
   const handleContactCustomerService = async () => {
@@ -1837,11 +1921,16 @@ const MessagePage: React.FC = () => {
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, noServiceMessage]);
-      // 确保滚动到底部显示系统消息
+      // 确保滚动到底部显示系统消息 - 使用多次延迟确保消息渲染完成
       setTimeout(() => {
-        scrollToBottomImmediate(100);
-        scrollToBottomImmediate(300);
-      }, 100);
+        scrollToBottomImmediate(0, true);
+      }, 50);
+      setTimeout(() => {
+        scrollToBottomImmediate(0, true);
+      }, 200);
+      setTimeout(() => {
+        scrollToBottomImmediate(0, true);
+      }, 400);
       return;
     }
 
@@ -1975,11 +2064,16 @@ const MessagePage: React.FC = () => {
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, noServiceMessage]);
-        // 确保滚动到底部显示系统消息
+        // 确保滚动到底部显示系统消息 - 使用多次延迟确保消息渲染完成
         setTimeout(() => {
-          scrollToBottomImmediate(100);
-          scrollToBottomImmediate(300);
-        }, 100);
+          scrollToBottomImmediate(0, true);
+        }, 50);
+        setTimeout(() => {
+          scrollToBottomImmediate(0, true);
+        }, 200);
+        setTimeout(() => {
+          scrollToBottomImmediate(0, true);
+        }, 400);
       }
     } catch (error) {
       console.error('连接客服失败:', error);
@@ -1990,11 +2084,16 @@ const MessagePage: React.FC = () => {
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
-      // 确保滚动到底部显示错误消息
+      // 确保滚动到底部显示错误消息 - 使用多次延迟确保消息渲染完成
       setTimeout(() => {
-        scrollToBottomImmediate(100);
-        scrollToBottomImmediate(300);
-      }, 100);
+        scrollToBottomImmediate(0, true);
+      }, 50);
+      setTimeout(() => {
+        scrollToBottomImmediate(0, true);
+      }, 200);
+      setTimeout(() => {
+        scrollToBottomImmediate(0, true);
+      }, 400);
     } finally {
       setIsConnectingToService(false);
     }
@@ -2446,7 +2545,7 @@ const MessagePage: React.FC = () => {
                 fontWeight: isServiceMode ? 700 : 600,
                 position: 'relative',
                 transition: 'all 0.3s ease',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: '2px solid #cbd5e1',
                 flexShrink: 0
               }}
               onMouseEnter={(e) => {
@@ -2504,7 +2603,11 @@ const MessagePage: React.FC = () => {
             </div>
 
             {/* 任务列表内容 */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto',
+              borderTop: '1px solid #e2e8f0'
+            }}>
               {tasksLoading && tasks.length === 0 ? (
                 <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
               ) : tasks.length === 0 ? (
@@ -2872,13 +2975,15 @@ const MessagePage: React.FC = () => {
           ) : null}
           
           {/* 消息区域 */}
-          <div style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
-            padding: '20px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-            position: 'relative'
-          }}>
+          <div 
+            ref={messagesContainerRef}
+            style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: '20px',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              position: 'relative'
+            }}>
             {/* 系统警告（任务聊天，浮空在消息区域顶部） */}
             {chatMode === 'tasks' && activeTaskId && activeTask && showSystemWarning && (
               <div style={{
@@ -3494,9 +3599,9 @@ const MessagePage: React.FC = () => {
                           }}
                         >
                           {msg.content.startsWith('[图片]') ? (
-                            <img
-                              src={`/api/blobs/${msg.content.replace('[图片]', '').trim()}`}
-                              alt="图片"
+                            <PrivateImageDisplay
+                              imageId={msg.content.replace('[图片]', '').trim()}
+                              currentUserId={user?.id || ''}
                               style={{
                                 maxWidth: '200px',
                                 maxHeight: '200px',
@@ -3504,9 +3609,20 @@ const MessagePage: React.FC = () => {
                                 cursor: 'pointer',
                                 objectFit: 'contain'
                               }}
-                              onClick={() => {
-                                setPreviewImageUrl(`/api/blobs/${msg.content.replace('[图片]', '').trim()}`);
-                                setShowImagePreview(true);
+                              alt="图片"
+                              onClick={async () => {
+                                // 生成图片URL用于预览
+                                try {
+                                  const response = await api.post('/api/messages/generate-image-url', {
+                                    image_id: msg.content.replace('[图片]', '').trim()
+                                  });
+                                  if (response.data.success) {
+                                    setPreviewImageUrl(response.data.image_url);
+                                    setShowImagePreview(true);
+                                  }
+                                } catch (error) {
+                                  console.error('生成预览URL失败:', error);
+                                }
                               }}
                             />
                           ) : (() => {
@@ -3640,41 +3756,53 @@ const MessagePage: React.FC = () => {
                 })}
                 <div ref={messagesEndRef} />
                 
-                {/* 滚动到底部按钮（任务聊天） */}
+                {/* 浮空圆形滚动到底部按钮（任务聊天） */}
                 {showScrollToBottom && chatMode === 'tasks' && activeTaskId && (
                   <button
-                    onClick={() => smartScrollToBottom(true)}
+                    onClick={() => {
+                      smartScrollToBottom(true);
+                      setHasNewTaskMessages(false); // 清除新消息提示
+                    }}
                     style={{
-                      position: 'sticky',
+                      position: 'absolute',
                       bottom: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      padding: '12px 20px',
-                      backgroundColor: '#3b82f6',
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      backgroundColor: hasNewTaskMessages ? '#10b981' : '#3b82f6',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '24px',
                       cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-                      transition: 'all 0.3s ease',
-                      zIndex: 100,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      justifyContent: 'center',
+                      boxShadow: hasNewTaskMessages 
+                        ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
+                        : '0 4px 12px rgba(59, 130, 246, 0.4)',
+                      transition: 'all 0.3s ease',
+                      zIndex: 100,
+                      fontSize: '20px',
+                      animation: hasNewTaskMessages ? 'pulse 2s infinite' : 'none'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#2563eb';
-                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+                      e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#059669' : '#2563eb';
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+                      e.currentTarget.style.boxShadow = hasNewTaskMessages 
+                        ? '0 6px 16px rgba(16, 185, 129, 0.5)' 
+                        : '0 6px 16px rgba(59, 130, 246, 0.5)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                      e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#10b981' : '#3b82f6';
                       e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                      e.currentTarget.style.boxShadow = hasNewTaskMessages 
+                        ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
+                        : '0 4px 12px rgba(59, 130, 246, 0.4)';
                     }}
+                    title={hasNewTaskMessages ? '有新消息，点击滚动到底部' : '滚动到底部'}
                   >
-                    <span>↓</span>
-                    <span>滚动到底部</span>
+                    {hasNewTaskMessages ? '🔔' : '↓'}
                   </button>
                 )}
               </>
