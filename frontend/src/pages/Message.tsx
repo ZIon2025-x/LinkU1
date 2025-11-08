@@ -101,12 +101,14 @@ const PrivateImageDisplay: React.FC<{
     return (
       <div style={{
         ...style,
+        width: style.width || style.maxWidth || '150px',
+        height: style.height || style.maxHeight || '150px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         background: '#f3f4f6',
         color: '#6b7280',
-        minHeight: '100px'
+        flexShrink: 0
       }}>
         <div style={{ fontSize: '14px' }}>Loading...</div>
       </div>
@@ -117,6 +119,8 @@ const PrivateImageDisplay: React.FC<{
     return (
       <div style={{
         ...style,
+        width: style.width || style.maxWidth || '150px',
+        height: style.height || style.maxHeight || '150px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -124,16 +128,17 @@ const PrivateImageDisplay: React.FC<{
         background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
         color: '#6b7280',
         border: '2px dashed #d1d5db',
-        padding: '16px',
-        minHeight: '100px',
-        textAlign: 'center'
+        padding: '8px',
+        textAlign: 'center',
+        flexShrink: 0,
+        boxSizing: 'border-box'
       }}>
-        <div style={{ fontSize: '20px', marginBottom: '6px' }}>🔒</div>
-        <div style={{ fontWeight: '600', marginBottom: '4px', fontSize: '12px' }}>
-          Private image loading failed
+        <div style={{ fontSize: '16px', marginBottom: '4px' }}>🔒</div>
+        <div style={{ fontWeight: '600', marginBottom: '2px', fontSize: '10px' }}>
+          Failed
         </div>
-        <div style={{ fontSize: '10px', opacity: 0.7 }}>
-          Insufficient permissions or network error
+        <div style={{ fontSize: '9px', opacity: 0.7 }}>
+          Error
         </div>
       </div>
     );
@@ -145,9 +150,11 @@ const PrivateImageDisplay: React.FC<{
       alt={alt} 
       style={{
         ...style,
-        maxWidth: '100%',
-        maxHeight: '100%',
-        objectFit: 'cover'
+        width: style.width || style.maxWidth || '150px',
+        height: style.height || style.maxHeight || '150px',
+        objectFit: style.objectFit || 'contain',
+        display: 'block',
+        flexShrink: 0
       }}
       onClick={onClick}
       onError={() => {
@@ -3642,32 +3649,43 @@ const MessagePage: React.FC = () => {
                           }}
                         >
                           {msg.content.startsWith('[图片]') ? (
-                            <PrivateImageDisplay
-                              imageId={msg.content.replace('[图片]', '').trim()}
-                              currentUserId={user?.id || ''}
+                            <div
                               style={{
-                                maxWidth: '200px',
-                                maxHeight: '200px',
+                                width: '150px',
+                                height: '150px',
                                 borderRadius: '8px',
-                                cursor: 'pointer',
-                                objectFit: 'contain'
+                                overflow: 'hidden',
+                                flexShrink: 0
                               }}
-                              alt="图片"
-                              onClick={async () => {
-                                // 生成图片URL用于预览
-                                try {
-                                  const response = await api.post('/api/messages/generate-image-url', {
-                                    image_id: msg.content.replace('[图片]', '').trim()
-                                  });
-                                  if (response.data.success) {
-                                    setPreviewImageUrl(response.data.image_url);
-                                    setShowImagePreview(true);
+                            >
+                              <PrivateImageDisplay
+                                imageId={msg.content.replace('[图片]', '').trim()}
+                                currentUserId={user?.id || ''}
+                                style={{
+                                  width: '150px',
+                                  height: '150px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  objectFit: 'contain',
+                                  display: 'block'
+                                }}
+                                alt="图片"
+                                onClick={async () => {
+                                  // 生成图片URL用于预览
+                                  try {
+                                    const response = await api.post('/api/messages/generate-image-url', {
+                                      image_id: msg.content.replace('[图片]', '').trim()
+                                    });
+                                    if (response.data.success) {
+                                      setPreviewImageUrl(response.data.image_url);
+                                      setShowImagePreview(true);
+                                    }
+                                  } catch (error) {
+                                    console.error('生成预览URL失败:', error);
                                   }
-                                } catch (error) {
-                                  console.error('生成预览URL失败:', error);
-                                }
-                              }}
-                            />
+                                }}
+                              />
+                            </div>
                           ) : (() => {
                             const messageKey = getMessageKey(msg);
                             const hasTranslation = messageTranslations.has(messageKey);
@@ -3969,6 +3987,46 @@ const MessagePage: React.FC = () => {
                 </div>
               );
             })}
+            
+            {/* 客服模式滚动到底部按钮 - 固定在聊天框底部 */}
+            {showScrollToBottomButton && isServiceMode && (
+              <div
+                onClick={scrollToBottom}
+                style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  right: '20px',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
+                  transition: 'all 0.3s ease',
+                  zIndex: 100,
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  border: '2px solid white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.backgroundColor = '#0056b3';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.backgroundColor = '#007bff';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
+                }}
+                title="滚动到底部"
+              >
+                ↓
+              </div>
+            )}
             
             {/* 消息区域结束 */}
           </div>
@@ -5692,46 +5750,6 @@ const MessagePage: React.FC = () => {
         </div>
       )}
       
-      {/* 固定定位的滚动到底部按钮 - 相对于聊天区域居中 */}
-      {showScrollToBottomButton && (
-        <div
-          onClick={scrollToBottom}
-          style={{
-            position: 'fixed',
-            bottom: '160px', // 在输入框上方更高的位置
-            left: isMobile ? '50%' : 'calc(50% + 175px)', // 相对于聊天区域居中（联系人列表宽度350px的一半）
-            transform: 'translateX(-50%)',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            backgroundColor: '#007bff',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 6px 20px rgba(0, 123, 255, 0.4)',
-            transition: 'all 0.3s ease',
-            zIndex: 10000, // 确保在所有内容之上
-            fontSize: '24px',
-            fontWeight: 'bold',
-            border: '3px solid white' // 添加白色边框增强视觉效果
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
-            e.currentTarget.style.backgroundColor = '#0056b3';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 123, 255, 0.5)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
-            e.currentTarget.style.backgroundColor = '#007bff';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 123, 255, 0.4)';
-          }}
-          title="滚动到底部"
-        >
-          ↓
-        </div>
-      )}
       
       {/* 移动端样式 */}
       <style>
