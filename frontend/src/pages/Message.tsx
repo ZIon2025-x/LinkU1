@@ -449,7 +449,7 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 发送图片
+  // 发送图片（支持任务聊天和客服聊天）
   const sendImage = async () => {
     if (!selectedImage) return;
     
@@ -485,11 +485,20 @@ const MessagePage: React.FC = () => {
       // 发送包含图片ID的消息
       const messageContent = `[图片] ${imageId}`;
       
-      await sendImageMessage(messageContent);
+      // 如果是客服模式，使用客服的发送方法
+      if (isServiceMode && currentChat) {
+        await sendImageMessage(messageContent);
+      } else if (activeTaskId) {
+        // 如果是任务聊天模式，使用任务消息发送
+        await sendTaskMessage(activeTaskId, messageContent);
+        // 重新加载任务消息
+        await loadTaskMessages(activeTaskId);
+      }
       
       // 清除图片选择
       setSelectedImage(null);
       setImagePreview(null);
+      setInput('');
       
     } catch (error) {
       console.error('发送图片失败:', error);
@@ -659,9 +668,18 @@ const MessagePage: React.FC = () => {
       
       const imageId = uploadResult.image_id;
       
-      // 发送包含图片ID的消息（使用通用方法）
+      // 发送包含图片ID的消息
       const messageContent = `[图片] ${imageId}`;
-      await sendImageMessage(messageContent);
+      
+      // 如果是客服模式，使用客服的发送方法
+      if (isServiceMode && currentChat) {
+        await sendImageMessage(messageContent);
+      } else if (activeTaskId) {
+        // 如果是任务聊天模式，使用任务消息发送
+        await sendTaskMessage(activeTaskId, messageContent);
+        // 重新加载任务消息
+        await loadTaskMessages(activeTaskId);
+      }
       
       // 清空图片选择并关闭弹窗（移动端特有）
       setSelectedImage(null);
@@ -2349,6 +2367,18 @@ const MessagePage: React.FC = () => {
                   <div
                     key={task.id}
                     onClick={() => {
+                      // 切换到任务聊天时，清理客服模式的状态
+                      setIsServiceMode(false);
+                      setServiceConnected(false);
+                      setCurrentChat(null);
+                      setCurrentChatId(null);
+                      setMessages([]);
+                      // 清理输入框和图片预览
+                      setInput('');
+                      setImagePreview(null);
+                      setSelectedImage(null);
+                      setShowEmojiPicker(false);
+                      
                       setActiveTaskId(task.id);
                       if (isMobile) {
                         setShowMobileChat(true); // 移动端显示聊天框
@@ -3152,7 +3182,25 @@ const MessagePage: React.FC = () => {
                           wordBreak: 'break-word',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}>
-                          {msg.content}
+                          {msg.content.startsWith('[图片]') ? (
+                            <img
+                              src={`/api/blobs/${msg.content.replace('[图片]', '').trim()}`}
+                              alt="图片"
+                              style={{
+                                maxWidth: '200px',
+                                maxHeight: '200px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                objectFit: 'contain'
+                              }}
+                              onClick={() => {
+                                setPreviewImageUrl(`/api/blobs/${msg.content.replace('[图片]', '').trim()}`);
+                                setShowImagePreview(true);
+                              }}
+                            />
+                          ) : (
+                            msg.content
+                          )}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div style={{ marginTop: '8px' }}>
                               {msg.attachments.map((att: any) => (
@@ -3320,56 +3368,365 @@ const MessagePage: React.FC = () => {
               borderTop: '1px solid #e2e8f0',
               background: 'white',
               display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
+              flexDirection: 'column',
+              gap: '12px',
+              position: 'relative'
             }}>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder={serviceConnected ? t('messages.typeMessage') : t('messages.connectToChat')}
-                disabled={!serviceConnected || isSending}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '24px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e5e7eb';
-                }}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!serviceConnected || !input.trim() || isSending}
-                style={{
-                  padding: '12px 24px',
-                  background: serviceConnected && input.trim() && !isSending
-                    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                    : '#cbd5e1',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '24px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: serviceConnected && input.trim() && !isSending ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {isSending ? '发送中...' : '发送'}
-              </button>
+              {/* 图片预览（桌面端） */}
+              {imagePreview && !isMobile && (
+                <div style={{
+                  padding: '12px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  position: 'relative'
+                }}>
+                  <button
+                    onClick={() => {
+                      setImagePreview(null);
+                      setSelectedImage(null);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                  <img
+                    src={imagePreview}
+                    alt="预览"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '200px',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <div style={{
+                    marginTop: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                  }}>
+                    📷 {t('messages.privateImage')}
+                    <span style={{ 
+                      fontSize: '10px', 
+                      background: '#fef3c7', 
+                      padding: '2px 6px', 
+                      borderRadius: '4px',
+                      color: '#92400e',
+                      fontWeight: '600'
+                    }}>
+                      {t('messages.chatOnly')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* 文件预览 */}
+              {filePreview && !isMobile && (
+                <div style={{
+                  padding: '12px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  position: 'relative'
+                }}>
+                  <button
+                    onClick={() => {
+                      setFilePreview(null);
+                      setSelectedFile(null);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '14px',
+                    color: '#374151'
+                  }}>
+                    📎 {selectedFile?.name || '文件'}
+                  </div>
+                </div>
+              )}
+              
+              {/* 输入框和按钮 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }} className="message-input-container">
+                {/* 表情按钮 */}
+                <button
+                  data-emoji-button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={!serviceConnected || isSending}
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: (!serviceConnected || isSending) ? 'not-allowed' : 'pointer',
+                    fontSize: '20px',
+                    opacity: (!serviceConnected || isSending) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (serviceConnected && !isSending) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  😊
+                </button>
+                
+                {/* 图片上传按钮 */}
+                <label
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: (!serviceConnected || isSending || uploadingImage) ? 'not-allowed' : 'pointer',
+                    fontSize: '20px',
+                    opacity: (!serviceConnected || isSending || uploadingImage) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (serviceConnected && !isSending && !uploadingImage) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={!serviceConnected || isSending || uploadingImage}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadingImage ? '⏳' : '📷'}
+                </label>
+                
+                {/* 文件上传按钮（连接按钮） */}
+                <label
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: (!serviceConnected || isSending || uploadingFile) ? 'not-allowed' : 'pointer',
+                    fontSize: '20px',
+                    opacity: (!serviceConnected || isSending || uploadingFile) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (serviceConnected && !isSending && !uploadingFile) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <input
+                    type="file"
+                    onChange={handleFileSelect}
+                    disabled={!serviceConnected || isSending || uploadingFile}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadingFile ? '⏳' : '📎'}
+                </label>
+                
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={serviceConnected ? t('messages.typeMessage') : t('messages.connectToChat')}
+                  disabled={!serviceConnected || isSending}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '24px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e5e7eb';
+                  }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!serviceConnected || !input.trim() || isSending}
+                  style={{
+                    padding: '12px 24px',
+                    background: serviceConnected && input.trim() && !isSending
+                      ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+                      : '#cbd5e1',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '24px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: serviceConnected && input.trim() && !isSending ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {isSending ? '发送中...' : '发送'}
+                </button>
+              </div>
+              
+              {/* 表情选择器 */}
+              {showEmojiPicker && (
+                <div
+                  data-emoji-picker
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(8, 1fr)',
+                    gap: '8px',
+                    padding: '16px',
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    position: 'absolute',
+                    bottom: '80px',
+                    left: '24px',
+                    right: '24px',
+                    zIndex: 1000
+                  }}
+                >
+                  {EMOJI_LIST.map((emoji, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => addEmoji(emoji)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '20px',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f3f4f6';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* 桌面端发送图片按钮 */}
+              {imagePreview && !isMobile && (
+                <button
+                  onClick={sendImage}
+                  disabled={uploadingImage || isSending || !serviceConnected}
+                  style={{
+                    padding: '10px 20px',
+                    background: (uploadingImage || isSending || !serviceConnected) ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: (uploadingImage || isSending || !serviceConnected) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  {uploadingImage ? '上传中...' : '发送图片'}
+                </button>
+              )}
+              
+              {/* 桌面端发送文件按钮 */}
+              {filePreview && !isMobile && selectedFile && (
+                <button
+                  onClick={sendFile}
+                  disabled={uploadingFile || isSending || !serviceConnected}
+                  style={{
+                    padding: '10px 20px',
+                    background: (uploadingFile || isSending || !serviceConnected) ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: (uploadingFile || isSending || !serviceConnected) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  {uploadingFile ? '上传中...' : '发送文件'}
+                </button>
+              )}
             </div>
           ) : chatMode === 'tasks' && activeTaskId && activeTask ? (
             <div style={{
@@ -3380,6 +3737,40 @@ const MessagePage: React.FC = () => {
               flexDirection: 'column',
               gap: '12px'
             }}>
+              {/* 系统警告（仅任务聊天） */}
+              {showSystemWarning && (
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#fef3c7',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  color: '#92400e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: '1px solid #fde68a'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚠️</span>
+                    <span>请注意：任务聊天中的消息仅对任务相关方可见</span>
+                  </div>
+                  <button
+                    onClick={() => setShowSystemWarning(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#92400e',
+                      cursor: 'pointer',
+                      fontSize: '18px',
+                      padding: '0 4px',
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              
               {/* 权限提示 */}
               {activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id && (
                 <div style={{
@@ -3394,12 +3785,136 @@ const MessagePage: React.FC = () => {
                 </div>
               )}
               
+              {/* 图片预览（桌面端） */}
+              {imagePreview && !isMobile && (
+                <div style={{
+                  padding: '12px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  position: 'relative'
+                }}>
+                  <button
+                    onClick={() => {
+                      setImagePreview(null);
+                      setSelectedImage(null);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                  <img
+                    src={imagePreview}
+                    alt="预览"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '200px',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <div style={{
+                    marginTop: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                  }}>
+                    📷 {t('messages.privateImage')}
+                    <span style={{ 
+                      fontSize: '10px', 
+                      background: '#fef3c7', 
+                      padding: '2px 6px', 
+                      borderRadius: '4px',
+                      color: '#92400e',
+                      fontWeight: '600'
+                    }}>
+                      {t('messages.chatOnly')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               {/* 输入框和按钮 */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px'
-              }}>
+              }} className="message-input-container">
+                {/* 表情按钮 */}
+                <button
+                  data-emoji-button
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  disabled={
+                    (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                    isSending
+                  }
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: (
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending
+                    ) ? 'not-allowed' : 'pointer',
+                    fontSize: '20px',
+                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  😀
+                </button>
+                
+                {/* 图片上传按钮 */}
+                <label
+                  style={{
+                    padding: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: (
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingImage
+                    ) ? 'not-allowed' : 'pointer',
+                    fontSize: '20px',
+                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingImage
+                    }
+                    style={{ display: 'none' }}
+                  />
+                  📷
+                </label>
+                
                 <input
                   type="text"
                   value={input}
@@ -3472,6 +3987,76 @@ const MessagePage: React.FC = () => {
                   {isSending ? '发送中...' : '发送'}
                 </button>
               </div>
+              
+              {/* 表情选择器 */}
+              {showEmojiPicker && (
+                <div
+                  data-emoji-picker
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(8, 1fr)',
+                    gap: '8px',
+                    padding: '16px',
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    position: 'absolute',
+                    bottom: '80px',
+                    left: '24px',
+                    right: '24px',
+                    zIndex: 1000
+                  }}
+                >
+                  {EMOJI_LIST.map((emoji, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => addEmoji(emoji)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '20px',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f3f4f6';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* 桌面端发送图片按钮 */}
+              {imagePreview && !isMobile && (
+                <button
+                  onClick={sendImage}
+                  disabled={uploadingImage || isSending}
+                  style={{
+                    padding: '10px 20px',
+                    background: uploadingImage || isSending ? '#cbd5e1' : 'linear-gradient(135deg, #10b981, #059669)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: uploadingImage || isSending ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    alignSelf: 'flex-start'
+                  }}
+                >
+                  {uploadingImage ? '上传中...' : '发送图片'}
+                </button>
+              )}
             </div>
           ) : null}
         </div>
