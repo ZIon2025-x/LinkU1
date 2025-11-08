@@ -199,21 +199,25 @@ interface CustomerServiceChat {
   rated_at?: string;
 }
 
-// 获取任务类型的默认图片路径
-const getTaskTypeDefaultImage = (taskType: string): string => {
-  const taskTypeMap: Record<string, string> = {
-    "Housekeeping": "/static/task-types/housekeeping.jpg",
-    "Campus Life": "/static/task-types/campus-life.jpg",
-    "Second-hand & Rental": "/static/task-types/secondhand.jpg",
-    "Errand Running": "/static/task-types/errand.jpg",
-    "Skill Service": "/static/task-types/skill.jpg",
-    "Social Help": "/static/task-types/social.jpg",
-    "Transportation": "/static/task-types/transportation.jpg",
-    "Pet Care": "/static/task-types/pet.jpg",
-    "Life Convenience": "/static/task-types/convenience.jpg",
-    "Other": "/static/task-types/other.jpg"
-  };
-  return taskTypeMap[taskType] || "/static/task-types/default.jpg";
+// 任务类型列表（用于获取emoji图标）
+const TASK_TYPES = [
+  "Housekeeping",
+  "Campus Life",
+  "Second-hand & Rental",
+  "Errand Running",
+  "Skill Service",
+  "Social Help",
+  "Transportation",
+  "Pet Care",
+  "Life Convenience",
+  "Other"
+];
+
+// 获取任务类型的emoji图标
+const getTaskTypeEmoji = (taskType: string): string => {
+  const emojiList = ['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'];
+  const index = TASK_TYPES.indexOf(taskType);
+  return index >= 0 ? emojiList[index] : '📋';
 };
 
 const MessagePage: React.FC = () => {
@@ -2409,64 +2413,62 @@ const MessagePage: React.FC = () => {
                       transition: 'background-color 0.2s'
                     }}
                   >
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', position: 'relative' }}>
-                      {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
-                      {(task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) ? (
-                        <img
-                          src={task.images[0]}
-                          alt={task.title}
-                          style={{
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                      {/* 任务图片容器 */}
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
+                        {(task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) ? (
+                          <img
+                            src={task.images[0]}
+                            alt={task.title}
+                            style={{
+                              width: '50px',
+                              height: '50px',
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                            onError={(e) => {
+                              // 如果任务图片加载失败，显示任务类型emoji图标
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (placeholder) {
+                                placeholder.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div style={{
                             width: '50px',
                             height: '50px',
                             borderRadius: '8px',
-                            objectFit: 'cover',
-                            flexShrink: 0
-                          }}
-                          onError={(e) => {
-                            // 如果任务图片加载失败，使用任务类型图片
-                            const taskTypeImage = getTaskTypeDefaultImage(task.task_type);
-                            if (e.currentTarget.src !== taskTypeImage) {
-                              e.currentTarget.src = taskTypeImage;
-                            }
-                          }}
-                        />
-                      ) : (
-                        <img
-                          src={getTaskTypeDefaultImage(task.task_type)}
-                          alt={task.title}
-                          style={{
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '8px',
-                            objectFit: 'cover',
-                            flexShrink: 0
-                          }}
-                          onError={(e) => {
-                            // 如果任务类型图片也加载失败，显示占位符
-                            e.currentTarget.style.display = 'none';
-                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (placeholder) {
-                              placeholder.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      )}
-                      {/* 占位符（仅在所有图片加载失败时显示） */}
-                      <div style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '8px',
-                        background: '#e5e7eb',
-                        display: 'none',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px',
-                        flexShrink: 0,
-                        position: 'absolute',
-                        top: 0,
-                        left: 0
-                      }}>
-                        📋
+                            background: '#f3f4f6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            color: '#6b7280'
+                          }}>
+                            {getTaskTypeEmoji(task.task_type)}
+                          </div>
+                        )}
+                        {/* 占位符（仅在任务图片加载失败时显示） */}
+                        <div style={{
+                          width: '50px',
+                          height: '50px',
+                          borderRadius: '8px',
+                          background: '#f3f4f6',
+                          display: 'none',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '24px',
+                          color: '#6b7280',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0
+                        }}>
+                          {getTaskTypeEmoji(task.task_type)}
+                        </div>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
@@ -2620,29 +2622,10 @@ const MessagePage: React.FC = () => {
                       height: '50px',
                       borderRadius: '8px',
                       objectFit: 'cover',
-                      flexShrink: 0
+                      display: 'block'
                     }}
                     onError={(e) => {
-                      // 如果任务图片加载失败，使用任务类型图片
-                      const taskTypeImage = getTaskTypeDefaultImage(activeTask.task_type);
-                      if (e.currentTarget.src !== taskTypeImage) {
-                        e.currentTarget.src = taskTypeImage;
-                      }
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={getTaskTypeDefaultImage(activeTask.task_type)}
-                    alt={activeTask.title}
-                    style={{
-                      width: '50px',
-                      height: '50px',
-                      borderRadius: '8px',
-                      objectFit: 'cover',
-                      flexShrink: 0
-                    }}
-                    onError={(e) => {
-                      // 如果任务类型图片也加载失败，显示占位符
+                      // 如果任务图片加载失败，显示任务类型emoji图标
                       e.currentTarget.style.display = 'none';
                       const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                       if (placeholder) {
@@ -2650,23 +2633,37 @@ const MessagePage: React.FC = () => {
                       }
                     }}
                   />
+                ) : (
+                  <div style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '8px',
+                    background: '#f3f4f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    color: '#6b7280'
+                  }}>
+                    {getTaskTypeEmoji(activeTask.task_type)}
+                  </div>
                 )}
-                {/* 占位符（仅在所有图片加载失败时显示） */}
+                {/* 占位符（仅在任务图片加载失败时显示） */}
                 <div style={{
                   width: '50px',
                   height: '50px',
                   borderRadius: '8px',
-                  background: '#e5e7eb',
+                  background: '#f3f4f6',
                   display: 'none',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '24px',
-                  flexShrink: 0,
+                  color: '#6b7280',
                   position: 'absolute',
                   top: 0,
                   left: 0
                 }}>
-                  📋
+                  {getTaskTypeEmoji(activeTask.task_type)}
                 </div>
               </div>
               <div style={{ flex: 1 }}>
