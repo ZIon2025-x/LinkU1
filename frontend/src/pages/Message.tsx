@@ -25,6 +25,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -284,6 +285,7 @@ const MessagePage: React.FC = () => {
   const [applicationsLoading, setApplicationsLoading] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
@@ -1183,6 +1185,10 @@ const MessagePage: React.FC = () => {
       console.log('loadApplications: 获取到申请列表数据:', data);
       const apps = data.applications || data || [];
       console.log('loadApplications: 申请列表已更新，申请数量:', apps.length);
+      // 调试：打印每个申请的议价金额
+      apps.forEach((app: any, index: number) => {
+        console.log(`loadApplications: 申请 ${index + 1} - ID: ${app.id}, negotiated_price: ${app.negotiated_price}, currency: ${app.currency}`);
+      });
       setApplications(apps);
     } catch (error: any) {
       console.error('加载申请列表失败:', error);
@@ -2612,7 +2618,10 @@ const MessagePage: React.FC = () => {
                 </button>
               )}
               {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div 
+                style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+                onClick={() => setShowTaskDetailModal(true)}
+              >
                 {(activeTask.images && Array.isArray(activeTask.images) && activeTask.images.length > 0 && activeTask.images[0]) ? (
                   <img
                     src={activeTask.images[0]}
@@ -2666,7 +2675,7 @@ const MessagePage: React.FC = () => {
                   {getTaskTypeEmoji(activeTask.task_type)}
                 </div>
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowTaskDetailModal(true)}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{activeTask.title}</h3>
                 <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {activeTask.status === 'open' && !activeTask.taker_id && (
@@ -3036,20 +3045,26 @@ const MessagePage: React.FC = () => {
                                     {app.message}
                                   </div>
                                 )}
-                                {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
-                                  <div style={{
-                                    fontSize: '13px',
-                                    fontWeight: 600,
+                                {/* 议价信息 - 有议价显示金额，无议价显示"无议价" */}
+                                <div style={{
+                                  fontSize: '13px',
+                                  fontWeight: 600,
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  display: 'inline-block',
+                                  marginBottom: '8px',
+                                  ...(app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0 ? {
                                     color: '#92400e',
-                                    padding: '4px 8px',
-                                    background: '#fef3c7',
-                                    borderRadius: '4px',
-                                    display: 'inline-block',
-                                    marginBottom: '8px'
-                                  }}>
-                                    议价: {app.negotiated_price} {app.currency || 'GBP'}
-                                  </div>
-                                )}
+                                    background: '#fef3c7'
+                                  } : {
+                                    color: '#6b7280',
+                                    background: '#f3f4f6'
+                                  })
+                                }}>
+                                  {app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
+                                    ? `议价: £${typeof app.negotiated_price === 'number' ? app.negotiated_price.toFixed(2) : parseFloat(String(app.negotiated_price)).toFixed(2)} ${app.currency || 'GBP'}`
+                                    : '无议价'}
+                                </div>
                                 {activeTask?.poster_id === user?.id && (
                                   <div style={{
                                     display: 'flex',
@@ -4805,19 +4820,25 @@ const MessagePage: React.FC = () => {
                       </div>
                     )}
 
-                    {(app.negotiated_price !== undefined && app.negotiated_price !== null) && (
-                      <div style={{
-                        marginBottom: '12px',
-                        padding: '8px 12px',
+                    {/* 议价信息 - 有议价显示金额，无议价显示"无议价" */}
+                    <div style={{
+                      marginBottom: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      ...(app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0 ? {
                         background: '#fef3c7',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: 600,
                         color: '#92400e'
-                      }}>
-                        议价金额: {app.negotiated_price} {app.currency || 'GBP'}
-                      </div>
-                    )}
+                      } : {
+                        background: '#f3f4f6',
+                        color: '#6b7280'
+                      })
+                    }}>
+                      议价金额: {app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
+                        ? `£${typeof app.negotiated_price === 'number' ? app.negotiated_price.toFixed(2) : parseFloat(String(app.negotiated_price)).toFixed(2)} ${app.currency || 'GBP'}`
+                        : '无议价'}
+                    </div>
 
                     {activeTask?.poster_id === user?.id && (
                       <div style={{
@@ -5251,6 +5272,13 @@ const MessagePage: React.FC = () => {
           }
         `}
       </style>
+      
+      {/* 任务详情弹窗 */}
+      <TaskDetailModal
+        isOpen={showTaskDetailModal}
+        onClose={() => setShowTaskDetailModal(false)}
+        taskId={activeTaskId}
+      />
     </div>
   );
 };
