@@ -261,8 +261,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = React.memo(({ isOpen, on
               applications={applications}
               loadingApplications={loadingApplications}
               actionLoading={actionLoading}
-              onApproveApplication={async (applicantId) => {
+              onApproveApplication={async (applicationId) => {
                 // 实现批准申请逻辑
+              }}
+              onRejectApplication={async (applicationId) => {
+                // 实现拒绝申请逻辑
               }}
               t={t}
             />

@@ -7,7 +7,8 @@ interface ApplicantListProps {
   applications: TaskApplication[];
   loadingApplications: boolean;
   actionLoading: boolean;
-  onApproveApplication: (applicantId: string) => Promise<void>;
+  onApproveApplication: (applicationId: number) => Promise<void>;
+  onRejectApplication: (applicationId: number) => Promise<void>;
   taskId?: number; // 添加任务ID，用于跳转到任务聊天
   t: (key: string) => string;
 }
@@ -17,6 +18,7 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
   loadingApplications,
   actionLoading,
   onApproveApplication,
+  onRejectApplication,
   taskId,
   t
 }) => {
@@ -91,36 +93,38 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
+                  onClick={() => onApproveApplication(app.id)}
+                  disabled={actionLoading || app.status !== 'pending'}
                   style={{
-                    background: '#007bff',
+                    background: app.status !== 'pending' ? '#6c757d' : '#28a745',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
                     padding: '8px 16px',
                     fontWeight: '600',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  {t('taskDetail.contact')}
-                </button>
-                <button
-                  onClick={() => onApproveApplication(app.applicant_id)}
-                  disabled={actionLoading}
-                  style={{
-                    background: '#28a745',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '8px 16px',
-                    fontWeight: '600',
-                    cursor: actionLoading ? 'not-allowed' : 'pointer',
-                    opacity: actionLoading ? 0.6 : 1,
+                    cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
+                    opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
                     fontSize: '14px'
                   }}
                 >
                   {actionLoading ? t('taskDetail.processing') : t('taskDetail.approve')}
+                </button>
+                <button
+                  onClick={() => onRejectApplication(app.id)}
+                  disabled={actionLoading || app.status !== 'pending'}
+                  style={{
+                    background: app.status !== 'pending' ? '#6c757d' : '#dc3545',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '8px 16px',
+                    fontWeight: '600',
+                    cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
+                    opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
+                    fontSize: '14px'
+                  }}
+                >
+                  {actionLoading ? t('taskDetail.processing') : t('taskDetail.reject')}
                 </button>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, approveApplication, getUserApplications } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -209,14 +209,14 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setTranslatedDescription(null);
   }, [task, language]);
 
-  const handleApproveApplication = async (applicantId: string) => {
+  const handleApproveApplication = async (applicationId: number) => {
     if (!window.confirm(t('taskDetail.confirmApprove'))) {
       return;
     }
 
     setActionLoading(true);
     try {
-      await approveApplication(taskId!, applicantId);
+      await acceptApplication(taskId!, applicationId);
       alert(t('taskDetail.approveSuccess'));
       
       // 重新加载任务信息和申请者列表
@@ -226,6 +226,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } catch (error: any) {
       console.error('批准申请者失败:', error);
       alert(error.response?.data?.detail || t('taskDetail.approveFailed'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectApplication = async (applicationId: number) => {
+    if (!window.confirm(t('taskDetail.confirmRejectApplication'))) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await rejectApplication(taskId!, applicationId);
+      alert(t('taskDetail.rejectApplicationSuccess'));
+      
+      // 重新加载申请者列表
+      await loadApplications();
+    } catch (error: any) {
+      console.error('拒绝申请者失败:', error);
+      alert(error.response?.data?.detail || t('taskDetail.rejectApplicationFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -1617,36 +1637,38 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
-                          onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
+                          onClick={() => handleApproveApplication(app.id)}
+                          disabled={actionLoading || app.status !== 'pending'}
                           style={{
-                            background: '#007bff',
+                            background: app.status !== 'pending' ? '#6c757d' : '#28a745',
                             color: '#fff',
                             border: 'none',
                             borderRadius: '6px',
                             padding: '8px 16px',
                             fontWeight: '600',
-                            cursor: 'pointer',
-                            fontSize: '14px'
-                          }}
-                        >
-                          {t('taskDetail.contact')}
-                        </button>
-                        <button
-                          onClick={() => handleApproveApplication(app.applicant_id)}
-                          disabled={actionLoading}
-                          style={{
-                            background: '#28a745',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '8px 16px',
-                            fontWeight: '600',
-                            cursor: actionLoading ? 'not-allowed' : 'pointer',
-                            opacity: actionLoading ? 0.6 : 1,
+                            cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
+                            opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
                             fontSize: '14px'
                           }}
                         >
                           {actionLoading ? t('taskDetail.processing') : t('taskDetail.approve')}
+                        </button>
+                        <button
+                          onClick={() => handleRejectApplication(app.id)}
+                          disabled={actionLoading || app.status !== 'pending'}
+                          style={{
+                            background: app.status !== 'pending' ? '#6c757d' : '#dc3545',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 16px',
+                            fontWeight: '600',
+                            cursor: (actionLoading || app.status !== 'pending') ? 'not-allowed' : 'pointer',
+                            opacity: (actionLoading || app.status !== 'pending') ? 0.6 : 1,
+                            fontSize: '14px'
+                          }}
+                        >
+                          {actionLoading ? t('taskDetail.processing') : t('taskDetail.reject')}
                         </button>
                       </div>
                     </div>

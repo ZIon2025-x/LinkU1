@@ -19,24 +19,37 @@ def send_task_application_notification(
     background_tasks: BackgroundTasks,
     task: models.Task,
     applicant: models.User,
-    application_message: str = ""
+    application_message: str = "",
+    negotiated_price: Optional[float] = None,
+    currency: str = "GBP",
+    application_id: Optional[int] = None
 ):
     """发送任务申请通知和邮件给发布者"""
     try:
         print(f"DEBUG: 开始发送任务申请通知，任务ID: {task.id}, 发布者ID: {task.poster_id}, 申请者: {applicant.name}")
         
-        # 创建通知
-        notification_content = f"用户 {applicant.name} 申请了您的任务：{task.title}"
-        if application_message:
-            notification_content += f"\n申请留言：{application_message}"
+        # 构建通知内容（JSON格式，包含议价信息）
+        import json
+        notification_content_dict = {
+            "type": "task_application",
+            "task_id": task.id,
+            "task_title": task.title,
+            "application_id": application_id,
+            "applicant_name": applicant.name or f"用户{applicant.id}",
+            "message": application_message,
+            "negotiated_price": negotiated_price,
+            "currency": currency
+        }
+        notification_content = json.dumps(notification_content_dict, ensure_ascii=False)
         
+        # 创建通知
         notification = crud.create_notification(
             db=db,
             user_id=task.poster_id,
             type="task_application",
             title="新任务申请",
             content=notification_content,
-            related_id=str(task.id)
+            related_id=str(application_id) if application_id else str(task.id)
         )
         print(f"DEBUG: 通知创建结果: {notification}")
         
@@ -61,6 +74,8 @@ def send_task_application_notification(
                 </div>
                 
                 {f'<p><strong>申请留言：</strong>{application_message}</p>' if application_message else ''}
+                
+                {f'<p><strong>议价金额：</strong>£{negotiated_price:.2f} {currency}</p>' if negotiated_price else ''}
                 
                 <p>请登录 Link²Ur 平台查看申请详情并决定是否同意该用户接受任务。</p>
                 

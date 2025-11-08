@@ -382,42 +382,49 @@ async def apply_for_task(
         await db.commit()
         await db.refresh(new_application)
         
-        # 发送通知给发布者（在申请记录提交后单独处理，避免影响申请流程）
+        # 发送通知和邮件给发布者（在申请记录提交后单独处理，避免影响申请流程）
         try:
-            from app.models import get_uk_time_naive
-            notification_time = get_uk_time_naive()
+            from app.task_notifications import send_task_application_notification
+            from app.database import get_db
             
-            # 构建通知内容
-            notification_content = {
-                "type": "task_application",
-                "task_id": task_id,
-                "task_title": task.title,
-                "application_id": new_application.id,
-                "applicant_name": current_user.name or f"用户{current_user.id}",
-                "message": message,
-                "negotiated_price": float(negotiated_price) if negotiated_price else None,
-                "currency": currency or task.currency or "GBP"
-            }
-            
-            new_notification = models.Notification(
-                user_id=task.poster_id,
-                type="task_application",
-                title="新任务申请",
-                content=json.dumps(notification_content, ensure_ascii=False),
-                related_id=str(new_application.id),
-                created_at=notification_time
-            )
-            db.add(new_notification)
-            await db.commit()
-            logger.info(f"已创建申请通知，任务ID: {task_id}, 申请ID: {new_application.id}")
-        except Exception as e:
-            logger.error(f"创建申请通知失败: {e}")
-            # 通知失败不影响申请流程，申请记录已经成功提交
-            # 如果通知创建失败，只回滚通知相关的操作，不影响已提交的申请记录
+            # 创建同步数据库会话用于通知和邮件发送
+            sync_db = next(get_db())
             try:
-                await db.rollback()
-            except:
-                pass
+                # 获取申请者信息（用于邮件）
+                applicant_query = select(models.User).where(models.User.id == applicant_id)
+                applicant_result = await db.execute(applicant_query)
+                applicant = applicant_result.scalar_one_or_none()
+                
+                if applicant:
+                    # 使用同步会话发送通知和邮件
+                    # 注意：这里需要重新查询任务和申请者，因为使用的是同步会话
+                    from app import crud
+                    sync_task = crud.get_task(sync_db, task_id)
+                    sync_applicant = crud.get_user_by_id(sync_db, applicant_id)
+                    
+                    if sync_task and sync_applicant:
+                        send_task_application_notification(
+                            db=sync_db,
+                            background_tasks=background_tasks,
+                            task=sync_task,
+                            applicant=sync_applicant,
+                            application_message=message,
+                            negotiated_price=float(negotiated_price) if negotiated_price else None,
+                            currency=currency or task.currency or "GBP",
+                            application_id=new_application.id
+                        )
+                        logger.info(f"已发送申请通知和邮件，任务ID: {task_id}, 申请ID: {new_application.id}")
+                    else:
+                        logger.warning(f"无法获取任务或申请者信息，跳过通知发送，任务ID: {task_id}")
+                else:
+                    logger.warning(f"申请者信息不存在，跳过通知发送，申请者ID: {applicant_id}")
+            finally:
+                sync_db.close()
+        except Exception as e:
+            logger.error(f"发送申请通知和邮件失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 通知和邮件发送失败不影响申请流程，申请记录已经成功提交
         
         return {
             "message": "申请成功，请等待发布者审核",

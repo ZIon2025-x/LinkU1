@@ -319,13 +319,10 @@ const MessagePage: React.FC = () => {
     return hasChinese ? 'zh' : 'en';
   };
   
-  // 获取消息的唯一标识
+  // 获取消息的唯一标识（与渲染时保持一致）
   const getMessageKey = (msg: Message): string => {
-    if (msg.id) {
-      return `msg_${msg.id}`;
-    }
-    // 如果没有ID，使用内容和时间戳
-    return `msg_${msg.content}_${msg.created_at}`;
+    // 与渲染时的key生成逻辑保持一致
+    return `msg_${msg.id || msg.content}_${msg.created_at}`;
   };
   
   // 翻译消息
@@ -1840,6 +1837,11 @@ const MessagePage: React.FC = () => {
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, noServiceMessage]);
+      // 确保滚动到底部显示系统消息
+      setTimeout(() => {
+        scrollToBottomImmediate(100);
+        scrollToBottomImmediate(300);
+      }, 100);
       return;
     }
 
@@ -1973,6 +1975,11 @@ const MessagePage: React.FC = () => {
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, noServiceMessage]);
+        // 确保滚动到底部显示系统消息
+        setTimeout(() => {
+          scrollToBottomImmediate(100);
+          scrollToBottomImmediate(300);
+        }, 100);
       }
     } catch (error) {
       console.error('连接客服失败:', error);
@@ -1983,6 +1990,11 @@ const MessagePage: React.FC = () => {
         created_at: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
+      // 确保滚动到底部显示错误消息
+      setTimeout(() => {
+        scrollToBottomImmediate(100);
+        scrollToBottomImmediate(300);
+      }, 100);
     } finally {
       setIsConnectingToService(false);
     }
@@ -3498,7 +3510,7 @@ const MessagePage: React.FC = () => {
                               }}
                             />
                           ) : (() => {
-                            const messageKey = `msg_${msg.id || msg.content}_${msg.created_at}`;
+                            const messageKey = getMessageKey(msg);
                             const hasTranslation = messageTranslations.has(messageKey);
                             const isTranslating = translatingMessages.has(messageKey);
                             const translatedText = messageTranslations.get(messageKey);
