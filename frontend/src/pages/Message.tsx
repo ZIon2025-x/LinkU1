@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
+import { API_BASE_URL, WS_BASE_URL } from '../config';
 import api, { 
   fetchCurrentUser, 
   assignCustomerService, 
@@ -236,6 +236,16 @@ const MessagePage: React.FC = () => {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      @keyframes slideDown {
+        0% {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
     `;
     document.head.appendChild(style);
     return () => {
@@ -254,7 +264,6 @@ const MessagePage: React.FC = () => {
   const [currentChat, setCurrentChat] = useState<CustomerServiceChat | null>(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
-  const [timezoneInfo, setTimezoneInfo] = useState<any>(null);
   const [userTimezone, setUserTimezone] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -289,6 +298,12 @@ const MessagePage: React.FC = () => {
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
+  
+  // UX优化相关状态
+  const [isNearBottom, setIsNearBottom] = useState(true); // 用户是否接近底部
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false); // 显示"滚动到底部"按钮
+  const [toastMessage, setToastMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null); // Toast通知
+  const messagesContainerRef = useRef<HTMLDivElement>(null); // 消息容器引用
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -373,7 +388,6 @@ const MessagePage: React.FC = () => {
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   // 滚动控制状态
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
@@ -949,24 +963,82 @@ const MessagePage: React.FC = () => {
     }
   };
 
-  // 发送任务消息
+  // 检查是否接近底部（用于智能滚动）
+  const checkIfNearBottom = useCallback(() => {
+    if (!messagesContainerRef.current) return true;
+    const container = messagesContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const nearBottom = distanceFromBottom < 150; // 150px内视为接近底部
+    setIsNearBottom(nearBottom);
+    setShowScrollToBottom(distanceFromBottom > 200);
+    return nearBottom;
+  }, []);
+
+  // 智能滚动到底部（只在用户接近底部时滚动）
+  const smartScrollToBottom = useCallback((force = false) => {
+    if (force || isNearBottom) {
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [isNearBottom]);
+
+  // Toast通知组件
+  const showToast = useCallback((type: 'success' | 'error' | 'info', text: string) => {
+    setToastMessage({ type, text });
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  // 发送任务消息（乐观更新）
   const handleSendTaskMessage = async () => {
     if (!activeTaskId || !input.trim() || isSending) return;
     
     const messageContent = input.trim();
+    const tempId = Date.now(); // 临时ID
+    
+    // 乐观更新：立即显示消息
+    const optimisticMessage = {
+      id: tempId,
+      sender_id: user?.id,
+      sender_name: user?.name || '我',
+      sender_avatar: user?.avatar,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      is_read: false,
+      attachments: [],
+      isPending: true // 标记为待确认
+    };
+    
+    setTaskMessages(prev => [...prev, optimisticMessage]);
     setInput('');
     setIsSending(true);
+    
+    // 如果用户接近底部，立即滚动
+    if (isNearBottom) {
+      smartScrollToBottom(true);
+    }
     
     try {
       const response = await sendTaskMessage(
         activeTaskId,
         messageContent,
         undefined, // meta
-        [] // attachments - 暂时不支持附件，后续可以扩展
+        [] // attachments
       );
       
-      // 重新加载消息列表
-      await loadTaskMessages(activeTaskId);
+      // 用服务器返回的真实消息替换临时消息
+      setTaskMessages(prev => prev.map(msg => 
+        msg.id === tempId ? {
+          ...response,
+          sender_id: response.sender_id || user?.id,
+          sender_name: response.sender_name || user?.name || '我',
+          sender_avatar: response.sender_avatar || user?.avatar,
+          isPending: false
+        } : msg
+      ));
       
       // 标记消息为已读
       if (response.id) {
@@ -976,16 +1048,18 @@ const MessagePage: React.FC = () => {
       // 重新加载任务列表以更新未读计数
       await loadTasks();
       
-      // 滚动到底部
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
+      // 显示成功提示
+      showToast('success', '消息已发送');
+      
     } catch (error: any) {
       console.error('发送任务消息失败:', error);
-      alert(error.response?.data?.detail || '发送消息失败，请重试');
+      
+      // 移除失败的消息
+      setTaskMessages(prev => prev.filter(msg => msg.id !== tempId));
       setInput(messageContent); // 恢复输入内容
+      
+      // 显示错误提示
+      showToast('error', error.response?.data?.detail || '发送消息失败，请重试');
     } finally {
       setIsSending(false);
     }
@@ -1026,10 +1100,8 @@ const MessagePage: React.FC = () => {
       const detectedTimezone = TimeHandlerV2.getUserTimezone();
       setUserTimezone(detectedTimezone);
       
-      const serverTimezoneInfo = await TimeHandlerV2.getTimezoneInfo();
-      if (serverTimezoneInfo) {
-        setTimezoneInfo(serverTimezoneInfo);
-      }
+      // 获取服务器时区信息（用于后续可能的时区转换）
+      await TimeHandlerV2.getTimezoneInfo();
     } catch (error) {
       console.error('初始化时区信息失败:', error);
     }
@@ -1092,6 +1164,17 @@ const MessagePage: React.FC = () => {
               
               // 加载该对话的聊天历史记录
               await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
+              
+              // 确保滚动到底部
+              setTimeout(() => {
+                const messagesContainer = messagesContainerRef.current;
+                if (messagesContainer) {
+                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                if (messagesEndRef.current) {
+                  messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+                }
+              }, 150);
             } else {
               // 对话无效，清除localStorage并重置状态
               localStorage.removeItem('currentCustomerServiceChat');
@@ -1159,10 +1242,12 @@ const MessagePage: React.FC = () => {
       // 首次加载时滚动到底部
       if (!cursor) {
         setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
+          smartScrollToBottom(true);
+          checkIfNearBottom();
         }, 100);
+      } else {
+        // 加载历史消息后检查位置
+        checkIfNearBottom();
       }
     } catch (error) {
       console.error('加载任务消息失败:', error);
@@ -1679,13 +1764,29 @@ const MessagePage: React.FC = () => {
         
         // 首次加载时直接设置到底部，不使用动画
         if (formattedMessages.length > 0) {
+          // 使用多个延迟确保消息完全渲染后再滚动
           setTimeout(() => {
             const messagesContainer = messagesContainerRef.current;
             if (messagesContainer) {
               // 直接设置到底部，不使用smooth滚动
               messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-          }, 50);
+            // 也尝试使用 messagesEndRef
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+            }
+          }, 100);
+          
+          // 再次确保滚动（防止第一次延迟不够）
+          setTimeout(() => {
+            const messagesContainer = messagesContainerRef.current;
+            if (messagesContainer) {
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+            }
+          }, 300);
         }
         
         // 注意：用户端不应调用markCustomerServiceMessagesRead，这是客服专用的接口
@@ -1770,6 +1871,18 @@ const MessagePage: React.FC = () => {
               
               // 加载该对话的聊天历史记录
               await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
+              
+              // 确保滚动到底部
+              setTimeout(() => {
+                const messagesContainer = messagesContainerRef.current;
+                if (messagesContainer) {
+                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                if (messagesEndRef.current) {
+                  messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+                }
+              }, 150);
+              
               setIsConnectingToService(false);
               return; // 直接返回，不创建新对话
             } else {
@@ -1858,6 +1971,18 @@ const MessagePage: React.FC = () => {
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, successMessage]);
+        
+        // 确保在添加成功消息后滚动到底部
+        setTimeout(() => {
+          const messagesContainer = messagesContainerRef.current;
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
+          // 也尝试使用 messagesEndRef
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 150);
       } else {
         // 客服不在线，显示系统提示
         const noServiceMessage: Message = {
@@ -2269,6 +2394,18 @@ const MessagePage: React.FC = () => {
                       
                       // 加载该对话的聊天历史记录
                       await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
+                      
+                      // 确保滚动到底部
+                      setTimeout(() => {
+                        const messagesContainer = messagesContainerRef.current;
+                        if (messagesContainer) {
+                          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                        if (messagesEndRef.current) {
+                          messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+                        }
+                      }, 150);
+                      
                       setIsConnectingToService(false);
                       
                       if (isMobile) {
@@ -2888,6 +3025,18 @@ const MessagePage: React.FC = () => {
                           created_at: new Date().toISOString()
                         };
                         setMessages(prev => [...prev, successMessage]);
+                        
+                        // 确保在添加成功消息后滚动到底部
+                        setTimeout(() => {
+                          const messagesContainer = messagesContainerRef.current;
+                          if (messagesContainer) {
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                          }
+                          // 也尝试使用 messagesEndRef
+                          if (messagesEndRef.current) {
+                            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }, 150);
                       } else {
                         const noServiceMessage: Message = {
                           id: Date.now(),
@@ -3326,15 +3475,31 @@ const MessagePage: React.FC = () => {
                             {msg.sender_name}
                           </div>
                         )}
-                        <div style={{
-                          padding: '8px 12px',
-                          borderRadius: '12px',
-                          backgroundColor: isOwn ? '#3b82f6' : 'white',
-                          color: isOwn ? 'white' : '#1f2937',
-                          fontSize: '14px',
-                          wordBreak: 'break-word',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                        }}>
+                        <div 
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(msg.content).then(() => {
+                                showToast('success', '消息已复制');
+                              }).catch(() => {
+                                showToast('error', '复制失败');
+                              });
+                            }
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            backgroundColor: isOwn ? '#3b82f6' : 'white',
+                            color: isOwn ? 'white' : '#1f2937',
+                            fontSize: '14px',
+                            wordBreak: 'break-word',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            cursor: 'context-menu',
+                            position: 'relative',
+                            opacity: msg.isPending ? 0.7 : 1,
+                            transition: 'opacity 0.3s'
+                          }}
+                        >
                           {msg.content.startsWith('[图片]') ? (
                             <img
                               src={`/api/blobs/${msg.content.replace('[图片]', '').trim()}`}
@@ -3434,6 +3599,44 @@ const MessagePage: React.FC = () => {
                   );
                 })}
                 <div ref={messagesEndRef} />
+                
+                {/* 滚动到底部按钮（任务聊天） */}
+                {showScrollToBottom && chatMode === 'tasks' && activeTaskId && (
+                  <button
+                    onClick={() => smartScrollToBottom(true)}
+                    style={{
+                      position: 'sticky',
+                      bottom: '20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      padding: '12px 20px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                      transition: 'all 0.3s ease',
+                      zIndex: 100,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                    }}
+                  >
+                    <span>↓</span>
+                    <span>滚动到底部</span>
+                  </button>
+                )}
               </>
             )}
 
@@ -5201,6 +5404,35 @@ const MessagePage: React.FC = () => {
               📥 下载图片
             </button>
           </div>
+        </div>
+      )}
+      
+      {/* Toast通知 */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '12px 24px',
+            backgroundColor: toastMessage.type === 'success' ? '#10b981' : toastMessage.type === 'error' ? '#ef4444' : '#3b82f6',
+            color: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 10000,
+            fontSize: '14px',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'slideDown 0.3s ease-out',
+            maxWidth: '90%',
+            textAlign: 'center'
+          }}
+        >
+          <span>{toastMessage.type === 'success' ? '✓' : toastMessage.type === 'error' ? '✕' : 'ℹ'}</span>
+          <span>{toastMessage.text}</span>
         </div>
       )}
       
