@@ -133,11 +133,18 @@ def create_user(db: Session, user: schemas.UserCreate):
 def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     from app.models import Task
     from sqlalchemy.orm import selectinload
-    from sqlalchemy import or_
+    from sqlalchemy import or_, and_
+    from datetime import datetime, timedelta, timezone
+    from app.time_utils_v2 import TimeHandlerV2
     
     # 直接从数据库查询，不使用缓存（避免缓存不一致问题）
     # 用户任务数据更新频繁，缓存TTL短且容易导致数据不一致
     # 使用预加载避免N+1查询
+    
+    # 计算3天前的时间（用于过滤已完成超过3天的任务）
+    now_utc = TimeHandlerV2.get_utc_now()
+    three_days_ago = now_utc - timedelta(days=3)
+    
     tasks = (
         db.query(Task)
         .options(
@@ -145,7 +152,18 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
             selectinload(Task.taker),   # 预加载接受者
             selectinload(Task.reviews)   # 预加载评论
         )
-        .filter(or_(Task.poster_id == user_id, Task.taker_id == user_id))
+        .filter(
+            or_(Task.poster_id == user_id, Task.taker_id == user_id),
+            # 过滤掉已完成超过3天的任务
+            or_(
+                Task.status != "completed",
+                and_(
+                    Task.status == "completed",
+                    Task.completed_at.isnot(None),
+                    Task.completed_at > three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else Task.completed_at > three_days_ago
+                )
+            )
+        )
         .order_by(Task.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -538,8 +556,106 @@ def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: fl
     return task
 
 
+def cleanup_task_files(db: Session, task_id: int):
+    """清理任务相关的所有图片和文件（不删除任务记录）"""
+    from app.models import Message, MessageAttachment, Task
+    from pathlib import Path
+    import os
+    import json
+    import logging
+    
+    logger = logging.getLogger(__name__)
+
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        logger.warning(f"任务 {task_id} 不存在，跳过清理")
+        return
+
+    railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+    if railway_env:
+        image_dir = Path("/data/uploads/private_images")
+        file_dir = Path("/data/uploads/private/files")
+    else:
+        image_dir = Path("uploads/private_images")
+        file_dir = Path("uploads/private/files")
+
+    image_ids_to_delete = []
+    file_ids_to_delete = []
+
+    # 1. 清理任务本身的图片（从 Task.images JSON 中解析）
+    if task.images:
+        try:
+            images_data = json.loads(task.images)
+            if isinstance(images_data, list):
+                for img in images_data:
+                    # 可能是 URL 或 image_id，需要提取 image_id
+                    if isinstance(img, str):
+                        # 如果是 URL，尝试从 URL 中提取 image_id
+                        # URL 格式可能是: /api/private-image/{image_id}?user=...&token=...
+                        if '/api/private-image/' in img:
+                            # 提取 image_id
+                            parts = img.split('/api/private-image/')
+                            if len(parts) > 1:
+                                image_id = parts[1].split('?')[0].split('&')[0]
+                                if image_id:
+                                    image_ids_to_delete.append(image_id)
+                        # 如果直接是 image_id（不包含 / 或 ?）
+                        elif '/' not in img and '?' not in img and len(img) > 10:
+                            image_ids_to_delete.append(img)
+        except Exception as e:
+            logger.error(f"解析任务图片 JSON 失败 {task_id}: {e}")
+
+    # 2. 查找并清理任务消息中的图片和文件
+    task_messages = db.query(Message).filter(Message.task_id == task_id).all()
+    message_ids = []
+    
+    for msg in task_messages:
+        message_ids.append(msg.id)
+        # 收集图片ID
+        if msg.image_id:
+            image_ids_to_delete.append(msg.image_id)
+    
+    # 3. 查找并清理消息附件
+    if message_ids:
+        attachments = db.query(MessageAttachment).filter(
+            MessageAttachment.message_id.in_(message_ids)
+        ).all()
+        
+        for attachment in attachments:
+            if attachment.blob_id:
+                file_ids_to_delete.append(attachment.blob_id)
+
+    # 4. 删除图片文件
+    deleted_images = 0
+    for image_id in set(image_ids_to_delete):  # 使用 set 去重
+        try:
+            # 查找并删除图片（可能有不同扩展名）
+            image_pattern = f"{image_id}.*"
+            for img_path in image_dir.glob(image_pattern):
+                img_path.unlink()
+                deleted_images += 1
+                logger.info(f"删除任务图片: {img_path}")
+        except Exception as e:
+            logger.error(f"删除图片失败 {image_id}: {e}")
+
+    # 5. 删除附件文件
+    deleted_files = 0
+    for file_id in set(file_ids_to_delete):  # 使用 set 去重
+        try:
+            # 查找并删除文件（可能有不同扩展名）
+            file_pattern = f"{file_id}.*"
+            for file_path in file_dir.glob(file_pattern):
+                file_path.unlink()
+                deleted_files += 1
+                logger.info(f"删除任务附件文件: {file_path}")
+        except Exception as e:
+            logger.error(f"删除附件文件失败 {file_id}: {e}")
+
+    logger.info(f"任务 {task_id} 文件清理完成: 删除 {deleted_images} 张图片, {deleted_files} 个附件文件")
+
+
 def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool = False):
-    """取消任务 - 支持管理员审核后的取消"""
+    """取消任务 - 支持管理员审核后的取消，并清理相关文件"""
     from app.models import Task
 
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -591,6 +707,15 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
 
     db.commit()
     db.refresh(task)
+
+    # 清理任务相关的所有图片和文件
+    try:
+        cleanup_task_files(db, task_id)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"清理任务文件失败 {task_id}: {e}")
+        # 文件清理失败不影响任务取消流程
 
     # 自动更新相关用户的统计信息
     update_user_statistics(db, task.poster_id)
@@ -997,8 +1122,13 @@ def mark_all_notifications_read(db: Session, user_id: str):
 
 
 def delete_task_safely(db: Session, task_id: int):
-    """安全删除任务及其所有相关记录"""
-    from app.models import Message, Notification, Review, Task, TaskHistory
+    """安全删除任务及其所有相关记录，包括图片和文件"""
+    from app.models import Message, Notification, Review, Task, TaskHistory, MessageAttachment
+    from pathlib import Path
+    import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
 
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -1018,9 +1148,70 @@ def delete_task_safely(db: Session, task_id: int):
         # 3. 删除相关的任务历史
         db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
 
-        # 4. 删除相关的消息（如果有的话）
-        # 注意：这里我们只删除与任务相关的消息，如果有的话
-        # 通常消息是用户之间的，不直接关联到任务，所以这里可能不需要
+        # 4. 查找并删除任务相关的消息、图片和文件
+        # 获取与任务相关的所有消息
+        task_messages = db.query(Message).filter(Message.task_id == task_id).all()
+        
+        # 收集需要删除的图片ID和文件ID
+        image_ids = []
+        message_ids = []
+        
+        for msg in task_messages:
+            message_ids.append(msg.id)
+            # 收集图片ID
+            if msg.image_id:
+                image_ids.append(msg.image_id)
+        
+        # 获取消息附件（文件）
+        if message_ids:
+            attachments = db.query(MessageAttachment).filter(
+                MessageAttachment.message_id.in_(message_ids)
+            ).all()
+            
+            # 删除附件文件
+            for attachment in attachments:
+                if attachment.blob_id:
+                    try:
+                        # 删除私密文件
+                        railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+                        if railway_env:
+                            file_dir = Path("/data/uploads/private/files")
+                        else:
+                            file_dir = Path("uploads/private/files")
+                        
+                        # 查找并删除文件（可能有不同扩展名）
+                        file_pattern = f"{attachment.blob_id}.*"
+                        for file_path in file_dir.glob(file_pattern):
+                            file_path.unlink()
+                            logger.info(f"删除任务附件文件: {file_path}")
+                    except Exception as e:
+                        logger.error(f"删除附件文件失败 {attachment.blob_id}: {e}")
+            
+            # 删除附件记录
+            db.query(MessageAttachment).filter(
+                MessageAttachment.message_id.in_(message_ids)
+            ).delete(synchronize_session=False)
+        
+        # 删除图片文件
+        for image_id in image_ids:
+            try:
+                # 删除私密图片
+                railway_env = os.getenv("RAILWAY_ENVIRONMENT")
+                if railway_env:
+                    image_dir = Path("/data/uploads/private_images")
+                else:
+                    image_dir = Path("uploads/private_images")
+                
+                # 查找并删除图片（可能有不同扩展名）
+                image_pattern = f"{image_id}.*"
+                for img_path in image_dir.glob(image_pattern):
+                    img_path.unlink()
+                    logger.info(f"删除任务图片: {img_path}")
+            except Exception as e:
+                logger.error(f"删除图片失败 {image_id}: {e}")
+        
+        # 删除消息记录
+        db.query(Message).filter(Message.task_id == task_id).delete()
 
         # 5. 最后删除任务本身
         db.delete(task)
@@ -1032,10 +1223,12 @@ def delete_task_safely(db: Session, task_id: int):
         if taker_id:
             update_user_statistics(db, taker_id)
 
+        logger.info(f"成功删除任务 {task_id}，包括 {len(image_ids)} 张图片和相关附件")
         return True
 
     except Exception as e:
         db.rollback()
+        logger.error(f"删除任务失败 {task_id}: {e}")
         raise e
 
 
@@ -1159,6 +1352,50 @@ def cleanup_cancelled_tasks(db: Session):
             continue
 
     return deleted_count
+
+
+def cleanup_completed_tasks_files(db: Session):
+    """清理已完成超过3天的任务的图片和文件"""
+    from app.models import Task
+    from datetime import timedelta
+    from app.time_utils_v2 import TimeHandlerV2
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # 计算3天前的时间
+    now_utc = TimeHandlerV2.get_utc_now()
+    three_days_ago = now_utc - timedelta(days=3)
+    
+    # 处理时区：将 three_days_ago 转换为 naive datetime（与数据库中的 completed_at 格式一致）
+    three_days_ago_naive = three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else three_days_ago
+    
+    # 查找已完成超过3天的任务
+    # completed_at 在数据库中通常是 naive datetime
+    completed_tasks = (
+        db.query(Task)
+        .filter(
+            Task.status == "completed",
+            Task.completed_at.isnot(None),
+            Task.completed_at <= three_days_ago_naive
+        )
+        .all()
+    )
+    
+    logger.info(f"找到 {len(completed_tasks)} 个已完成超过3天的任务，开始清理文件")
+    
+    cleaned_count = 0
+    for task in completed_tasks:
+        try:
+            cleanup_task_files(db, task.id)
+            cleaned_count += 1
+            logger.info(f"成功清理任务 {task.id} 的文件")
+        except Exception as e:
+            logger.error(f"清理任务 {task.id} 文件失败: {e}")
+            continue
+    
+    logger.info(f"完成清理，共清理 {cleaned_count} 个任务的文件")
+    return cleaned_count
 
 
 def delete_user_task(db: Session, task_id: int, user_id: str):

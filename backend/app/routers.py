@@ -5661,3 +5661,21 @@ async def translate_batch(
     except Exception as e:
         logger.error(f"批量翻译失败: {e}")
         raise HTTPException(status_code=500, detail=f"批量翻译失败: {str(e)}")
+
+
+@router.post("/admin/cleanup/completed-tasks")
+def cleanup_completed_tasks_files_api(
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """清理已完成超过3天的任务的图片和文件（管理员接口）"""
+    try:
+        cleaned_count = crud.cleanup_completed_tasks_files(db)
+        return {
+            "success": True,
+            "message": f"成功清理 {cleaned_count} 个已完成超过3天的任务的文件",
+            "cleaned_count": cleaned_count
+        }
+    except Exception as e:
+        logger.error(f"清理已完成任务文件失败: {e}")
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")

@@ -1173,8 +1173,26 @@ const MessagePage: React.FC = () => {
       const data = await getTaskChatList(50, 0);
       console.log('loadTasks: 获取到任务列表数据:', data);
       if (data && data.tasks) {
-        setTasks(data.tasks);
-        console.log('loadTasks: 任务列表已更新，任务数量:', data.tasks.length);
+        // 过滤掉已取消的任务和已完成超过3天的任务
+        const now = new Date();
+        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        
+        const activeTasks = data.tasks.filter((task: any) => {
+          // 过滤已取消的任务
+          if (task.status === 'cancelled') {
+            return false;
+          }
+          // 过滤已完成超过3天的任务
+          if (task.status === 'completed' && task.completed_at) {
+            const completedDate = new Date(task.completed_at);
+            if (completedDate <= threeDaysAgo) {
+              return false;
+            }
+          }
+          return true;
+        });
+        setTasks(activeTasks);
+        console.log('loadTasks: 任务列表已更新，任务数量:', activeTasks.length, '(已过滤已取消和已完成超过3天的任务)');
       } else {
         console.warn('loadTasks: 返回数据格式异常:', data);
         setTasks([]);
@@ -3093,6 +3111,58 @@ const MessagePage: React.FC = () => {
               </div>
             )}
             
+            {/* 已完成任务清理提醒 */}
+            {chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at && (() => {
+              const completedDate = new Date(activeTask.completed_at);
+              const now = new Date();
+              const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
+              const timeRemaining = cleanupDate.getTime() - now.getTime();
+              
+              // 如果还没到清理时间，显示提醒
+              if (timeRemaining > 0) {
+                const daysRemaining = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+                const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
+                
+                // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数
+                const timeText = daysRemaining >= 1 
+                  ? `${daysRemaining} 天` 
+                  : `${hoursRemaining} 小时`;
+                
+                return (
+                  <div style={{
+                    position: 'sticky',
+                    top: showSystemWarning ? '80px' : '20px',
+                    zIndex: 99,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginBottom: '16px',
+                    padding: '0 20px'
+                  }}>
+                    <div style={{
+                      padding: '12px 18px',
+                      background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      color: '#1e40af',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      border: '1px solid #60a5fa',
+                      boxShadow: '0 2px 8px rgba(96, 165, 250, 0.2)',
+                      maxWidth: '90%',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                      <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
+                      <span style={{ lineHeight: '1.4', flex: 1 }}>
+                        此任务已完成。任务相关的图片和文件将在 {timeText} 后自动清理以节省存储空间。
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            
             {isServiceMode && !serviceConnected ? (
               <div style={{ 
                 display: 'flex', 
@@ -4154,38 +4224,43 @@ const MessagePage: React.FC = () => {
                 </div>
               )}
               
-              {/* 输入框和按钮 */}
+              {/* 功能按钮行 */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px'
-              }} className="message-input-container">
+                gap: '8px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
                 {/* 表情按钮 */}
                 <button
                   data-emoji-button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={!serviceConnected || isSending}
                   style={{
-                    padding: '10px',
+                    padding: '8px 12px',
                     background: 'transparent',
-                    border: 'none',
+                    border: '1px solid #e5e7eb',
                     cursor: (!serviceConnected || isSending) ? 'not-allowed' : 'pointer',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     opacity: (!serviceConnected || isSending) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    transition: 'background 0.2s'
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (serviceConnected && !isSending) {
                       e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
+                  title="表情"
                 >
                   😊
                 </button>
@@ -4193,26 +4268,29 @@ const MessagePage: React.FC = () => {
                 {/* 图片上传按钮 */}
                 <label
                   style={{
-                    padding: '10px',
+                    padding: '8px 12px',
                     background: 'transparent',
-                    border: 'none',
+                    border: '1px solid #e5e7eb',
                     cursor: (!serviceConnected || isSending || uploadingImage) ? 'not-allowed' : 'pointer',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     opacity: (!serviceConnected || isSending || uploadingImage) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    transition: 'background 0.2s'
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (serviceConnected && !isSending && !uploadingImage) {
                       e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
+                  title="发送图片"
                 >
                   <input
                     type="file"
@@ -4224,29 +4302,32 @@ const MessagePage: React.FC = () => {
                   {uploadingImage ? '⏳' : '📷'}
                 </label>
                 
-                {/* 文件上传按钮（连接按钮） */}
+                {/* 文件上传按钮 */}
                 <label
                   style={{
-                    padding: '10px',
+                    padding: '8px 12px',
                     background: 'transparent',
-                    border: 'none',
+                    border: '1px solid #e5e7eb',
                     cursor: (!serviceConnected || isSending || uploadingFile) ? 'not-allowed' : 'pointer',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     opacity: (!serviceConnected || isSending || uploadingFile) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    transition: 'background 0.2s'
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (serviceConnected && !isSending && !uploadingFile) {
                       e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
+                  title="发送文件"
                 >
                   <input
                     type="file"
@@ -4257,6 +4338,38 @@ const MessagePage: React.FC = () => {
                   {uploadingFile ? '⏳' : '📎'}
                 </label>
                 
+                {/* 连接客服/结束对话按钮 */}
+                <button
+                  onClick={serviceConnected ? handleEndConversation : handleContactCustomerService}
+                  disabled={isConnectingToService}
+                  style={{
+                    padding: '8px 16px',
+                    background: isConnectingToService 
+                      ? '#9ca3af' 
+                      : serviceConnected 
+                        ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
+                        : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: isConnectingToService ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    marginLeft: 'auto'
+                  }}
+                  title={serviceConnected ? '结束对话' : '连接客服'}
+                >
+                  {isConnectingToService ? '连接中...' : serviceConnected ? '结束对话' : '连接客服'}
+                </button>
+              </div>
+              
+              {/* 输入框和发送按钮 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }} className="message-input-container">
                 <input
                   type="text"
                   value={input}
@@ -4487,12 +4600,13 @@ const MessagePage: React.FC = () => {
                 </div>
               )}
               
-              {/* 功能按钮行（表情和图片） */}
+              {/* 功能按钮行 */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                paddingBottom: '8px'
+                gap: '8px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid #e5e7eb'
               }}>
                 {/* 表情按钮 */}
                 <button
@@ -4503,20 +4617,20 @@ const MessagePage: React.FC = () => {
                     isSending
                   }
                   style={{
-                    padding: '10px',
+                    padding: '8px 12px',
                     background: 'transparent',
-                    border: 'none',
+                    border: '1px solid #e5e7eb',
                     cursor: (
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending
                     ) ? 'not-allowed' : 'pointer',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    transition: 'background 0.2s'
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (!(
@@ -4524,33 +4638,36 @@ const MessagePage: React.FC = () => {
                       isSending
                     )) {
                       e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
+                  title="表情"
                 >
-                  😀
+                  😊
                 </button>
                 
                 {/* 图片上传按钮 */}
                 <label
                   style={{
-                    padding: '10px',
+                    padding: '8px 12px',
                     background: 'transparent',
-                    border: 'none',
+                    border: '1px solid #e5e7eb',
                     cursor: (
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
                       isSending ||
                       uploadingImage
                     ) ? 'not-allowed' : 'pointer',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: '6px',
-                    transition: 'background 0.2s'
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (!(
@@ -4559,11 +4676,14 @@ const MessagePage: React.FC = () => {
                       uploadingImage
                     )) {
                       e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
+                  title="发送图片"
                 >
                   <input
                     type="file"
@@ -4577,6 +4697,54 @@ const MessagePage: React.FC = () => {
                     style={{ display: 'none' }}
                   />
                   {uploadingImage ? '⏳' : '📷'}
+                </label>
+                
+                {/* 文件上传按钮 */}
+                <label
+                  style={{
+                    padding: '8px 12px',
+                    background: 'transparent',
+                    border: '1px solid #e5e7eb',
+                    cursor: (
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingFile
+                    ) ? 'not-allowed' : 'pointer',
+                    fontSize: '18px',
+                    opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingFile
+                    )) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                  title="发送文件"
+                >
+                  <input
+                    type="file"
+                    onChange={handleFileSelect}
+                    disabled={
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingFile
+                    }
+                    style={{ display: 'none' }}
+                  />
+                  {uploadingFile ? '⏳' : '📎'}
                 </label>
               </div>
               
