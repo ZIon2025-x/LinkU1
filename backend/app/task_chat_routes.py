@@ -569,17 +569,42 @@ async def get_task_applications(
         for app in applications:
             applicant = users.get(app.applicant_id)
             
+            # 处理议价金额：从 task_applications 表中读取 negotiated_price 字段
+            # 调试日志：打印原始值
+            logger.info(f"[DEBUG] 申请ID {app.id}: negotiated_price 原始值={app.negotiated_price}, 类型={type(app.negotiated_price)}")
+            
+            negotiated_price_value = None
+            if app.negotiated_price is not None:
+                try:
+                    # Decimal 类型转换为 float
+                    from decimal import Decimal
+                    if isinstance(app.negotiated_price, Decimal):
+                        negotiated_price_value = float(app.negotiated_price)
+                    elif isinstance(app.negotiated_price, (int, float)):
+                        negotiated_price_value = float(app.negotiated_price)
+                    else:
+                        # 尝试字符串转换
+                        negotiated_price_value = float(str(app.negotiated_price))
+                    
+                    logger.info(f"[DEBUG] 申请ID {app.id}: 转换后的 negotiated_price={negotiated_price_value}")
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.warning(f"转换议价金额失败: app_id={app.id}, negotiated_price={app.negotiated_price}, 类型={type(app.negotiated_price)}, error={e}")
+                    negotiated_price_value = None
+            else:
+                logger.info(f"[DEBUG] 申请ID {app.id}: negotiated_price 为 None")
+            
             app_data = {
                 "id": app.id,
                 "applicant_id": app.applicant_id,
                 "applicant_name": applicant.name if applicant else None,
                 "applicant_avatar": applicant.avatar if applicant and hasattr(applicant, 'avatar') else None,
                 "message": app.message,
-                "negotiated_price": float(app.negotiated_price) if app.negotiated_price else None,
-                "currency": app.currency or "GBP",
+                "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
+                "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取
                 "status": app.status,
                 "created_at": app.created_at.isoformat() if app.created_at else None
             }
+            logger.info(f"[DEBUG] 申请ID {app.id}: 最终返回的 negotiated_price={negotiated_price_value}, currency={app_data['currency']}")
             applications_data.append(app_data)
         
         return {

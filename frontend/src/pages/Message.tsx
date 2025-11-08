@@ -1185,9 +1185,15 @@ const MessagePage: React.FC = () => {
       console.log('loadApplications: 获取到申请列表数据:', data);
       const apps = data.applications || data || [];
       console.log('loadApplications: 申请列表已更新，申请数量:', apps.length);
-      // 调试：打印每个申请的议价金额
+      // 调试：打印每个申请的议价金额（详细类型和值）
       apps.forEach((app: any, index: number) => {
-        console.log(`loadApplications: 申请 ${index + 1} - ID: ${app.id}, negotiated_price: ${app.negotiated_price}, currency: ${app.currency}`);
+        console.log(`loadApplications: 申请 ${index + 1} - ID: ${app.id}, negotiated_price: ${app.negotiated_price} (type: ${typeof app.negotiated_price}), currency: ${app.currency}`);
+        console.log(`loadApplications: 申请 ${index + 1} - 判断结果:`, {
+          '!== undefined': app.negotiated_price !== undefined,
+          '!== null': app.negotiated_price !== null,
+          '> 0': app.negotiated_price > 0,
+          '最终判断': app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
+        });
       });
       setApplications(apps);
     } catch (error: any) {
@@ -3046,25 +3052,35 @@ const MessagePage: React.FC = () => {
                                   </div>
                                 )}
                                 {/* 议价信息 - 有议价显示金额，无议价显示"无议价" */}
-                                <div style={{
-                                  fontSize: '13px',
-                                  fontWeight: 600,
-                                  padding: '4px 8px',
-                                  borderRadius: '4px',
-                                  display: 'inline-block',
-                                  marginBottom: '8px',
-                                  ...(app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0 ? {
-                                    color: '#92400e',
-                                    background: '#fef3c7'
-                                  } : {
-                                    color: '#6b7280',
-                                    background: '#f3f4f6'
-                                  })
-                                }}>
-                                  {app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
-                                    ? `议价: £${typeof app.negotiated_price === 'number' ? app.negotiated_price.toFixed(2) : parseFloat(String(app.negotiated_price)).toFixed(2)} ${app.currency || 'GBP'}`
-                                    : '无议价'}
-                                </div>
+                                {(() => {
+                                  // 确保negotiated_price是数字类型
+                                  const negotiatedPrice = app.negotiated_price !== undefined && app.negotiated_price !== null 
+                                    ? (typeof app.negotiated_price === 'number' ? app.negotiated_price : parseFloat(String(app.negotiated_price)))
+                                    : null;
+                                  const hasNegotiation = negotiatedPrice !== null && !isNaN(negotiatedPrice) && negotiatedPrice > 0;
+                                  
+                                  return (
+                                    <div style={{
+                                      fontSize: '13px',
+                                      fontWeight: 600,
+                                      padding: '4px 8px',
+                                      borderRadius: '4px',
+                                      display: 'inline-block',
+                                      marginBottom: '8px',
+                                      ...(hasNegotiation ? {
+                                        color: '#92400e',
+                                        background: '#fef3c7'
+                                      } : {
+                                        color: '#6b7280',
+                                        background: '#f3f4f6'
+                                      })
+                                    }}>
+                                      {hasNegotiation
+                                        ? `议价: £${negotiatedPrice.toFixed(2)} ${app.currency || 'GBP'}`
+                                        : '无议价'}
+                                    </div>
+                                  );
+                                })()}
                                 {activeTask?.poster_id === user?.id && (
                                   <div style={{
                                     display: 'flex',
@@ -4821,24 +4837,34 @@ const MessagePage: React.FC = () => {
                     )}
 
                     {/* 议价信息 - 有议价显示金额，无议价显示"无议价" */}
-                    <div style={{
-                      marginBottom: '12px',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      ...(app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0 ? {
-                        background: '#fef3c7',
-                        color: '#92400e'
-                      } : {
-                        background: '#f3f4f6',
-                        color: '#6b7280'
-                      })
-                    }}>
-                      议价金额: {app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
-                        ? `£${typeof app.negotiated_price === 'number' ? app.negotiated_price.toFixed(2) : parseFloat(String(app.negotiated_price)).toFixed(2)} ${app.currency || 'GBP'}`
-                        : '无议价'}
-                    </div>
+                    {(() => {
+                      // 确保negotiated_price是数字类型
+                      const negotiatedPrice = app.negotiated_price !== undefined && app.negotiated_price !== null 
+                        ? (typeof app.negotiated_price === 'number' ? app.negotiated_price : parseFloat(String(app.negotiated_price)))
+                        : null;
+                      const hasNegotiation = negotiatedPrice !== null && !isNaN(negotiatedPrice) && negotiatedPrice > 0;
+                      
+                      return (
+                        <div style={{
+                          marginBottom: '12px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          ...(hasNegotiation ? {
+                            background: '#fef3c7',
+                            color: '#92400e'
+                          } : {
+                            background: '#f3f4f6',
+                            color: '#6b7280'
+                          })
+                        }}>
+                          议价金额: {hasNegotiation
+                            ? `£${negotiatedPrice.toFixed(2)} ${app.currency || 'GBP'}`
+                            : '无议价'}
+                        </div>
+                      );
+                    })()}
 
                     {activeTask?.poster_id === user?.id && (
                       <div style={{
