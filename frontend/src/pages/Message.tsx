@@ -199,6 +199,23 @@ interface CustomerServiceChat {
   rated_at?: string;
 }
 
+// 获取任务类型的默认图片路径
+const getTaskTypeDefaultImage = (taskType: string): string => {
+  const taskTypeMap: Record<string, string> = {
+    "Housekeeping": "/static/task-types/housekeeping.jpg",
+    "Campus Life": "/static/task-types/campus-life.jpg",
+    "Second-hand & Rental": "/static/task-types/secondhand.jpg",
+    "Errand Running": "/static/task-types/errand.jpg",
+    "Skill Service": "/static/task-types/skill.jpg",
+    "Social Help": "/static/task-types/social.jpg",
+    "Transportation": "/static/task-types/transportation.jpg",
+    "Pet Care": "/static/task-types/pet.jpg",
+    "Life Convenience": "/static/task-types/convenience.jpg",
+    "Other": "/static/task-types/other.jpg"
+  };
+  return taskTypeMap[taskType] || "/static/task-types/default.jpg";
+};
+
 const MessagePage: React.FC = () => {
   const { t } = useLanguage();
   
@@ -2392,9 +2409,9 @@ const MessagePage: React.FC = () => {
                       transition: 'background-color 0.2s'
                     }}
                   >
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      {/* 任务图片 */}
-                      {task.images && task.images.length > 0 ? (
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', position: 'relative' }}>
+                      {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
+                      {(task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) ? (
                         <img
                           src={task.images[0]}
                           alt={task.title}
@@ -2405,22 +2422,52 @@ const MessagePage: React.FC = () => {
                             objectFit: 'cover',
                             flexShrink: 0
                           }}
+                          onError={(e) => {
+                            // 如果任务图片加载失败，使用任务类型图片
+                            const taskTypeImage = getTaskTypeDefaultImage(task.task_type);
+                            if (e.currentTarget.src !== taskTypeImage) {
+                              e.currentTarget.src = taskTypeImage;
+                            }
+                          }}
                         />
                       ) : (
-                        <div style={{
-                          width: '50px',
-                          height: '50px',
-                          borderRadius: '8px',
-                          background: '#e5e7eb',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '24px',
-                          flexShrink: 0
-                        }}>
-                          📋
-                        </div>
+                        <img
+                          src={getTaskTypeDefaultImage(task.task_type)}
+                          alt={task.title}
+                          style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '8px',
+                            objectFit: 'cover',
+                            flexShrink: 0
+                          }}
+                          onError={(e) => {
+                            // 如果任务类型图片也加载失败，显示占位符
+                            e.currentTarget.style.display = 'none';
+                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (placeholder) {
+                              placeholder.style.display = 'flex';
+                            }
+                          }}
+                        />
                       )}
+                      {/* 占位符（仅在所有图片加载失败时显示） */}
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '8px',
+                        background: '#e5e7eb',
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px',
+                        flexShrink: 0,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
+                      }}>
+                        📋
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
                         {task.last_message && (
@@ -2562,34 +2609,66 @@ const MessagePage: React.FC = () => {
                   ←
                 </button>
               )}
-              {/* 任务图片 */}
-              {activeTask.images && activeTask.images.length > 0 ? (
-                <img
-                  src={activeTask.images[0]}
-                  alt={activeTask.title}
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    flexShrink: 0
-                  }}
-                />
-              ) : (
+              {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                {(activeTask.images && Array.isArray(activeTask.images) && activeTask.images.length > 0 && activeTask.images[0]) ? (
+                  <img
+                    src={activeTask.images[0]}
+                    alt={activeTask.title}
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      flexShrink: 0
+                    }}
+                    onError={(e) => {
+                      // 如果任务图片加载失败，使用任务类型图片
+                      const taskTypeImage = getTaskTypeDefaultImage(activeTask.task_type);
+                      if (e.currentTarget.src !== taskTypeImage) {
+                        e.currentTarget.src = taskTypeImage;
+                      }
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={getTaskTypeDefaultImage(activeTask.task_type)}
+                    alt={activeTask.title}
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      flexShrink: 0
+                    }}
+                    onError={(e) => {
+                      // 如果任务类型图片也加载失败，显示占位符
+                      e.currentTarget.style.display = 'none';
+                      const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (placeholder) {
+                        placeholder.style.display = 'flex';
+                      }
+                    }}
+                  />
+                )}
+                {/* 占位符（仅在所有图片加载失败时显示） */}
                 <div style={{
                   width: '50px',
                   height: '50px',
                   borderRadius: '8px',
                   background: '#e5e7eb',
-                  display: 'flex',
+                  display: 'none',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '24px',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0
                 }}>
                   📋
                 </div>
-              )}
+              </div>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{activeTask.title}</h3>
                 <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2669,8 +2748,48 @@ const MessagePage: React.FC = () => {
             flex: 1, 
             overflowY: 'auto', 
             padding: '20px',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            position: 'relative'
           }}>
+            {/* 系统警告（任务聊天，浮空在消息区域顶部） */}
+            {chatMode === 'tasks' && activeTaskId && activeTask && showSystemWarning && (
+              <div style={{
+                position: 'sticky',
+                top: '20px',
+                zIndex: 100,
+                padding: '12px 16px',
+                background: '#fef3c7',
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#92400e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                border: '1px solid #fde68a',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>⚠️</span>
+                  <span>请注意：任务聊天中的消息仅对任务相关方可见</span>
+                </div>
+                <button
+                  onClick={() => setShowSystemWarning(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#92400e',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: '0 4px',
+                    lineHeight: 1
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            
             {isServiceMode && !serviceConnected ? (
               <div style={{ 
                 display: 'flex', 
@@ -3737,40 +3856,6 @@ const MessagePage: React.FC = () => {
               flexDirection: 'column',
               gap: '12px'
             }}>
-              {/* 系统警告（仅任务聊天） */}
-              {showSystemWarning && (
-                <div style={{
-                  padding: '12px 16px',
-                  background: '#fef3c7',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  color: '#92400e',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  border: '1px solid #fde68a'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>⚠️</span>
-                    <span>请注意：任务聊天中的消息仅对任务相关方可见</span>
-                  </div>
-                  <button
-                    onClick={() => setShowSystemWarning(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#92400e',
-                      cursor: 'pointer',
-                      fontSize: '18px',
-                      padding: '0 4px',
-                      lineHeight: 1
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              
               {/* 权限提示 */}
               {activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id && (
                 <div style={{
@@ -3851,12 +3936,13 @@ const MessagePage: React.FC = () => {
                 </div>
               )}
               
-              {/* 输入框和按钮 */}
+              {/* 功能按钮行（表情和图片） */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px'
-              }} className="message-input-container">
+                gap: '12px',
+                paddingBottom: '8px'
+              }}>
                 {/* 表情按钮 */}
                 <button
                   data-emoji-button
@@ -3877,7 +3963,20 @@ const MessagePage: React.FC = () => {
                     opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending
+                    )) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
                   }}
                 >
                   😀
@@ -3898,7 +3997,21 @@ const MessagePage: React.FC = () => {
                     opacity: (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(
+                      (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
+                      isSending ||
+                      uploadingImage
+                    )) {
+                      e.currentTarget.style.background = '#f3f4f6';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
                   }}
                 >
                   <input
@@ -3912,9 +4025,16 @@ const MessagePage: React.FC = () => {
                     }
                     style={{ display: 'none' }}
                   />
-                  📷
+                  {uploadingImage ? '⏳' : '📷'}
                 </label>
-                
+              </div>
+              
+              {/* 输入框和发送按钮 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }} className="message-input-container">
                 <input
                   type="text"
                   value={input}
