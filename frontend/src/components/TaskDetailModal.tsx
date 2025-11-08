@@ -1380,11 +1380,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.posterLabel')}：</span>
               <span style={{ color: '#1e293b', fontWeight: '500' }}>
                 {task.poster_id}
-                {task.poster_id && (
-                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>
-                    {t('taskDetail.contactHint')}
-                  </span>
-                )}
               </span>
             </div>
           </div>
@@ -1719,25 +1714,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               }}
             >
               {actionLoading ? t('taskDetail.processing') : t('taskDetail.confirmCompleteButton')}
-            </button>
-          )}
-          
-          {user && user.id !== task.poster_id && canViewTask(user, task) && (
-            <button
-              onClick={() => taskId && navigate(`/message?taskId=${taskId}`)}
-              style={{
-                background: '#A67C52',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: 'pointer'
-              }}
-              title="点击联系任务发布者进行沟通"
-            >
-              {t('taskDetail.contactPosterButton')}
             </button>
           )}
 

@@ -88,9 +88,15 @@ setTimeout(() => {
 3. 合并 `showScrollToBottom` 和 `showScrollToBottomButton`
 
 ### 🟡 中优先级（计划处理）
-1. 检查并清理 `timezoneInfo` 的使用
-2. 提取重复的滚动逻辑为函数
-3. 提取消息显示组件
+1. ✅ 检查并清理 `timezoneInfo` 的使用 - **已完成**
+2. ✅ 提取重复的滚动逻辑为函数 - **已完成**
+   - 创建了 `scrollToBottomImmediate()` 函数（立即滚动，无动画）
+   - 创建了 `scrollToBottomSmooth()` 函数（平滑滚动）
+   - 替换了多处重复的滚动代码（约减少50行代码）
+3. ⚠️ 提取消息显示组件 - **部分完成**
+   - 已创建 `MessageBubble.tsx` 组件框架
+   - 由于消息显示逻辑复杂（包含附件、翻译、图片预览等），建议保留在Message.tsx中
+   - 或创建更细粒度的子组件（如 `MessageContent.tsx`, `MessageAttachments.tsx` 等）
 
 ### 🟢 低优先级（长期重构）
 1. 拆分大文件为多个组件

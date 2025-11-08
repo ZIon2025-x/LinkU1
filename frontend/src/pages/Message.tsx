@@ -986,6 +986,32 @@ const MessagePage: React.FC = () => {
     }
   }, [isNearBottom]);
 
+  // 统一的滚动到底部函数（立即滚动，无动画）
+  const scrollToBottomImmediate = useCallback((delay: number = 100) => {
+    setTimeout(() => {
+      const messagesContainer = messagesContainerRef.current;
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+      }
+    }, delay);
+  }, []);
+
+  // 统一的滚动到底部函数（带平滑动画）
+  const scrollToBottomSmooth = useCallback((delay: number = 150) => {
+    setTimeout(() => {
+      const messagesContainer = messagesContainerRef.current;
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, delay);
+  }, []);
+
   // Toast通知组件
   const showToast = useCallback((type: 'success' | 'error' | 'info', text: string) => {
     setToastMessage({ type, text });
@@ -1166,15 +1192,7 @@ const MessagePage: React.FC = () => {
               await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
               
               // 确保滚动到底部
-              setTimeout(() => {
-                const messagesContainer = messagesContainerRef.current;
-                if (messagesContainer) {
-                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-                if (messagesEndRef.current) {
-                  messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-                }
-              }, 150);
+              scrollToBottomImmediate(150);
             } else {
               // 对话无效，清除localStorage并重置状态
               localStorage.removeItem('currentCustomerServiceChat');
@@ -1765,28 +1783,8 @@ const MessagePage: React.FC = () => {
         // 首次加载时直接设置到底部，不使用动画
         if (formattedMessages.length > 0) {
           // 使用多个延迟确保消息完全渲染后再滚动
-          setTimeout(() => {
-            const messagesContainer = messagesContainerRef.current;
-            if (messagesContainer) {
-              // 直接设置到底部，不使用smooth滚动
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-            // 也尝试使用 messagesEndRef
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-            }
-          }, 100);
-          
-          // 再次确保滚动（防止第一次延迟不够）
-          setTimeout(() => {
-            const messagesContainer = messagesContainerRef.current;
-            if (messagesContainer) {
-              messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-            }
-          }, 300);
+          scrollToBottomImmediate(100);
+          scrollToBottomImmediate(300); // 再次确保滚动（防止第一次延迟不够）
         }
         
         // 注意：用户端不应调用markCustomerServiceMessagesRead，这是客服专用的接口
@@ -1873,15 +1871,7 @@ const MessagePage: React.FC = () => {
               await loadChatHistory(chatData.service.id, chatData.chat.chat_id);
               
               // 确保滚动到底部
-              setTimeout(() => {
-                const messagesContainer = messagesContainerRef.current;
-                if (messagesContainer) {
-                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-                if (messagesEndRef.current) {
-                  messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-                }
-              }, 150);
+              scrollToBottomImmediate(150);
               
               setIsConnectingToService(false);
               return; // 直接返回，不创建新对话
@@ -1973,16 +1963,7 @@ const MessagePage: React.FC = () => {
         setMessages(prev => [...prev, successMessage]);
         
         // 确保在添加成功消息后滚动到底部
-        setTimeout(() => {
-          const messagesContainer = messagesContainerRef.current;
-          if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
-          // 也尝试使用 messagesEndRef
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 150);
+        scrollToBottomSmooth(150);
       } else {
         // 客服不在线，显示系统提示
         const noServiceMessage: Message = {
@@ -3491,7 +3472,7 @@ const MessagePage: React.FC = () => {
                             borderRadius: '12px',
                             backgroundColor: isOwn ? '#3b82f6' : 'white',
                             color: isOwn ? 'white' : '#1f2937',
-                            fontSize: '14px',
+                            fontSize: '16px',
                             wordBreak: 'break-word',
                             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                             cursor: 'context-menu',
@@ -3516,9 +3497,56 @@ const MessagePage: React.FC = () => {
                                 setShowImagePreview(true);
                               }}
                             />
-                          ) : (
-                            msg.content
-                          )}
+                          ) : (() => {
+                            const messageKey = `msg_${msg.id || msg.content}_${msg.created_at}`;
+                            const hasTranslation = messageTranslations.has(messageKey);
+                            const isTranslating = translatingMessages.has(messageKey);
+                            const translatedText = messageTranslations.get(messageKey);
+                            const textLang = detectTextLanguage(msg.content);
+                            const needsTranslation = textLang !== language && !msg.content.startsWith('[图片]') && !msg.content.startsWith('[文件]');
+                            
+                            return (
+                              <div>
+                                <div style={{ marginBottom: hasTranslation ? '8px' : '0' }}>
+                                  {hasTranslation ? translatedText : msg.content}
+                                </div>
+                                {hasTranslation && (
+                                  <div style={{ 
+                                    fontSize: '12px', 
+                                    color: isOwn ? 'rgba(255,255,255,0.7)' : '#9ca3af',
+                                    fontStyle: 'italic',
+                                    marginTop: '4px',
+                                    paddingTop: '4px',
+                                    borderTop: `1px solid ${isOwn ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}`
+                                  }}>
+                                    {msg.content}
+                                  </div>
+                                )}
+                                {needsTranslation && (
+                                  <button
+                                    onClick={() => handleTranslateMessage({ id: msg.id, from: msg.sender_name || '', content: msg.content, created_at: msg.created_at }, msg.content)}
+                                    disabled={isTranslating}
+                                    style={{
+                                      marginTop: '8px',
+                                      padding: '4px 8px',
+                                      background: isOwn ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
+                                      color: isOwn ? 'white' : '#3b82f6',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      cursor: isTranslating ? 'not-allowed' : 'pointer',
+                                      opacity: isTranslating ? 0.6 : 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    {isTranslating ? '⏳ 翻译中...' : hasTranslation ? '🔄 显示原文' : '🌐 翻译'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div style={{ marginTop: '8px' }}>
                               {msg.attachments.map((att: any) => (
@@ -3696,11 +3724,56 @@ const MessagePage: React.FC = () => {
                           下载文件
                         </a>
                       </div>
-                    ) : (
-                      <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
-                        {msg.content}
-                      </div>
-                    )}
+                    ) : (() => {
+                      const messageKey = getMessageKey(msg);
+                      const hasTranslation = messageTranslations.has(messageKey);
+                      const isTranslating = translatingMessages.has(messageKey);
+                      const translatedText = messageTranslations.get(messageKey);
+                      const textLang = detectTextLanguage(msg.content);
+                      const needsTranslation = textLang !== language && !isSystemMessage && !isImageMessage && !isFileMessage;
+                      
+                      return (
+                        <div>
+                          <div style={{ fontSize: '16px', lineHeight: '1.5', marginBottom: hasTranslation ? '8px' : '0' }}>
+                            {hasTranslation ? translatedText : msg.content}
+                          </div>
+                          {hasTranslation && (
+                            <div style={{ 
+                              fontSize: '12px', 
+                              color: msg.from === meText ? 'rgba(255,255,255,0.7)' : '#9ca3af',
+                              fontStyle: 'italic',
+                              marginTop: '4px',
+                              paddingTop: '4px',
+                              borderTop: `1px solid ${msg.from === meText ? 'rgba(255,255,255,0.2)' : '#e5e7eb'}`
+                            }}>
+                              {msg.content}
+                            </div>
+                          )}
+                          {needsTranslation && (
+                            <button
+                              onClick={() => handleTranslateMessage(msg, msg.content)}
+                              disabled={isTranslating}
+                              style={{
+                                marginTop: '8px',
+                                padding: '4px 8px',
+                                background: msg.from === meText ? 'rgba(255,255,255,0.2)' : '#f3f4f6',
+                                color: msg.from === meText ? 'white' : '#3b82f6',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                cursor: isTranslating ? 'not-allowed' : 'pointer',
+                                opacity: isTranslating ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              {isTranslating ? '⏳ 翻译中...' : hasTranslation ? '🔄 显示原文' : '🌐 翻译'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div style={{ 
                       fontSize: '11px', 
                       color: msg.from === meText ? 'rgba(255,255,255,0.7)' : '#9ca3af',
