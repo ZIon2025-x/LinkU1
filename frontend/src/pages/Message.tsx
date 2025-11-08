@@ -1174,31 +1174,13 @@ const MessagePage: React.FC = () => {
   // 加载申请列表
   const loadApplications = useCallback(async (taskId: number) => {
     if (!user) {
-      console.log('loadApplications: 用户未登录，跳过加载');
       return;
     }
     
-    console.log('loadApplications: 开始加载申请列表，任务ID:', taskId, '用户ID:', user.id);
     setApplicationsLoading(true);
     try {
       const data = await getTaskApplicationsWithFilter(taskId, 'pending', 50, 0);
-      console.log('loadApplications: 获取到申请列表数据（完整）:', JSON.stringify(data, null, 2));
       const apps = data.applications || data || [];
-      console.log('loadApplications: 申请列表已更新，申请数量:', apps.length);
-      // 打印第一个申请的完整数据
-      if (apps.length > 0) {
-        console.log('loadApplications: 第一个申请的完整数据:', JSON.stringify(apps[0], null, 2));
-      }
-      // 调试：打印每个申请的议价金额（详细类型和值）
-      apps.forEach((app: any, index: number) => {
-        console.log(`loadApplications: 申请 ${index + 1} - ID: ${app.id}, negotiated_price: ${app.negotiated_price} (type: ${typeof app.negotiated_price}), currency: ${app.currency}`);
-        console.log(`loadApplications: 申请 ${index + 1} - 判断结果:`, {
-          '!== undefined': app.negotiated_price !== undefined,
-          '!== null': app.negotiated_price !== null,
-          '> 0': app.negotiated_price > 0,
-          '最终判断': app.negotiated_price !== undefined && app.negotiated_price !== null && app.negotiated_price > 0
-        });
-      });
       setApplications(apps);
     } catch (error: any) {
       console.error('加载申请列表失败:', error);
@@ -2773,36 +2755,56 @@ const MessagePage: React.FC = () => {
                 position: 'sticky',
                 top: '20px',
                 zIndex: 100,
-                padding: '12px 16px',
-                background: '#fef3c7',
-                borderRadius: '8px',
-                fontSize: '14px',
-                color: '#92400e',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                border: '1px solid #fde68a',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                marginBottom: '16px'
+                justifyContent: 'center',
+                marginBottom: '16px',
+                padding: '0 20px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>⚠️</span>
-                  <span>请注意：任务聊天中的消息仅对任务相关方可见</span>
+                <div style={{
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  color: '#92400e',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  border: '1px solid #fbbf24',
+                  boxShadow: '0 2px 8px rgba(251, 191, 36, 0.2)',
+                  maxWidth: '90%',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <span style={{ fontSize: '16px', flexShrink: 0 }}>⚠️</span>
+                  <span style={{ lineHeight: '1.4', flex: 1 }}>{t('seo.tradeWarning')}</span>
+                  <button
+                    onClick={() => setShowSystemWarning(false)}
+                    style={{
+                      background: 'rgba(146, 64, 14, 0.1)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      color: '#92400e',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      width: '20px',
+                      height: '20px',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'background 0.2s',
+                      lineHeight: 1
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(146, 64, 14, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(146, 64, 14, 0.1)';
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowSystemWarning(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#92400e',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    padding: '0 4px',
-                    lineHeight: 1
-                  }}
-                >
-                  ×
-                </button>
               </div>
             )}
             

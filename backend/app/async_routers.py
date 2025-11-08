@@ -484,8 +484,6 @@ async def get_task_applications(
 ):
     """获取任务的申请者列表（仅任务发布者可查看）"""
     try:
-        print(f"[DEBUG] 获取任务 {task_id} 的申请列表，用户: {current_user.id}")
-        
         # 检查是否为任务发布者
         task = await db.execute(
             select(models.Task).where(models.Task.id == task_id)
@@ -493,31 +491,22 @@ async def get_task_applications(
         task = task.scalar_one_or_none()
         
         if not task:
-            print(f"[DEBUG] 任务 {task_id} 不存在")
             raise HTTPException(status_code=404, detail="Task not found")
         
-        print(f"[DEBUG] 任务 {task_id} 发布者: {task.poster_id}, 当前用户: {current_user.id}")
-        
         if task.poster_id != current_user.id:
-            print(f"[DEBUG] 用户 {current_user.id} 不是任务 {task_id} 的发布者")
             raise HTTPException(status_code=403, detail="Only task poster can view applications")
         
-        print(f"[DEBUG] 开始获取任务 {task_id} 的申请列表")
         applications = await async_crud.async_task_crud.get_task_applications(db, task_id)
-        print(f"[DEBUG] 找到 {len(applications)} 个申请")
     
         # 获取申请者详细信息
         result = []
         for app in applications:
-            print(f"[DEBUG] 处理申请 {app.id}, 申请者: {app.applicant_id}")
             user = await db.execute(
                 select(models.User).where(models.User.id == app.applicant_id)
             )
             user = user.scalar_one_or_none()
             
             if user:
-                print(f"[DEBUG] 找到申请者用户: {user.name}")
-                
                 # 处理议价金额：从 task_applications 表中读取 negotiated_price 字段
                 negotiated_price_value = None
                 if app.negotiated_price is not None:
@@ -530,7 +519,7 @@ async def get_task_applications(
                         else:
                             negotiated_price_value = float(str(app.negotiated_price))
                     except (ValueError, TypeError, AttributeError) as e:
-                        print(f"[WARNING] 转换议价金额失败: app_id={app.id}, error={e}")
+                        logger.warning(f"转换议价金额失败: app_id={app.id}, error={e}")
                         negotiated_price_value = None
                 
                 result.append({
@@ -544,14 +533,12 @@ async def get_task_applications(
                     "created_at": app.created_at.isoformat() if app.created_at else None,
                     "status": app.status
                 })
-            else:
-                print(f"[DEBUG] 申请者用户 {app.applicant_id} 不存在")
         
-        print(f"[DEBUG] 返回 {len(result)} 个申请结果")
         return result
         
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[ERROR] 获取任务申请列表失败: {e}")
         logger.error(f"Error getting task applications for {task_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get applications: {str(e)}")
 
