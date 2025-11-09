@@ -35,6 +35,7 @@ from app.rate_limit_routes import router as rate_limit_router
 from app.security_monitoring_routes import router as security_monitoring_router
 from app.deps import get_db
 from app.routers import router as user_router, router as main_router
+from app.sitemap_routes import sitemap_router
 from app.security import add_security_headers
 from app.security_monitoring import check_security_middleware
 from app.error_handlers import (
@@ -173,6 +174,9 @@ app.include_router(cleanup_router, prefix="/api/cleanup", tags=["数据清理"])
 # Add time validation endpoint
 from app.time_validation_endpoint import router as time_validation_router
 app.include_router(time_validation_router, tags=["时间验证"])
+
+# 添加sitemap路由（不需要/api前缀，直接访问/sitemap.xml）
+app.include_router(sitemap_router, tags=["SEO"])
 # 暂时禁用安全监控路由以解决异步/同步混用问题
 # app.include_router(security_monitoring_router, tags=["安全监控"])
 

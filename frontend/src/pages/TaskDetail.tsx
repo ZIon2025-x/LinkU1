@@ -186,7 +186,8 @@ const TaskDetail: React.FC = () => {
       // 创建任务相关的描述（使用任务描述内容）
       // 格式：任务描述内容 | 类型 | 金额 | 截至时间 | 地点
       // 包含任务描述、金额、截至时间等关键信息
-      const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2);
+      const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0);
+      const rewardStr = reward.toFixed(2);
       const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
       
       // 构建完整的分享描述
@@ -197,16 +198,16 @@ const TaskDetail: React.FC = () => {
       let taskDescription = '';
       if (language === 'zh') {
         if (descriptionPreview) {
-          taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${reward} | 截至：${deadlineStr} | 地点：${task.location}`;
+          taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
         } else {
-          taskDescription = `${task.task_type}任务 | 金额：£${reward} | 截至：${deadlineStr} | 地点：${task.location}`;
+          taskDescription = `${task.task_type}任务 | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
         }
       } else {
         // English
         if (descriptionPreview) {
-          taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${reward} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+          taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
         } else {
-          taskDescription = `${task.task_type} Task | Amount: £${reward} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+          taskDescription = `${task.task_type} Task | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
         }
       }
       
@@ -304,33 +305,45 @@ const TaskDetail: React.FC = () => {
         moveToTop('meta[property="og:description"]');
       }, 0);
       
-      // 添加结构化数据
+      // 添加结构化数据 - 使用JobPosting类型以便搜索引擎识别
+      // reward 变量已在上面声明，直接使用
       const structuredData = {
         "@context": "https://schema.org",
         "@type": "JobPosting",
         "title": task.title,
         "description": task.description,
+        "identifier": {
+          "@type": "PropertyValue",
+          "name": "Task ID",
+          "value": task.id.toString()
+        },
         "hiringOrganization": {
           "@type": "Organization",
           "name": "Link²Ur",
-          "url": "https://link2ur.com"
+          "url": "https://www.link2ur.com"
         },
         "jobLocation": {
           "@type": "Place",
           "address": {
             "@type": "PostalAddress",
             "addressLocality": task.location,
-            "addressCountry": "UK"
+            "addressCountry": "GB"
           }
         },
         "employmentType": "CONTRACTOR",
         "baseSalary": {
           "@type": "MonetaryAmount",
           "currency": "GBP",
-          "value": task.reward.toString()
+          "value": {
+            "@type": "QuantitativeValue",
+            "value": reward,
+            "unitText": "GBP"
+          }
         },
         "datePosted": task.created_at,
-        "validThrough": task.deadline
+        "validThrough": task.deadline,
+        "url": taskUrl,
+        "workHours": "FLEXIBLE"
       };
       
       // 移除旧的structured data

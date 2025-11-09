@@ -766,10 +766,12 @@ const Tasks: React.FC = () => {
     setLoading(true);
     try {
       // 使用优化后的 fetchTasks，它已经包含了缓存和防抖
+      // 使用防抖后的关键词，确保搜索更稳定
+      const searchKeyword = debouncedKeyword.trim() || keyword.trim() || undefined;
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
         city: city !== 'all' ? city : undefined,
-        keyword: keyword || undefined,
+        keyword: searchKeyword,
         page: page,
         pageSize: pageSize
       });
@@ -801,14 +803,15 @@ const Tasks: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, type, city, keyword, sortBy]);
+  }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy]);
 
   useEffect(() => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
+    // 使用 debouncedKeyword 触发搜索，避免频繁请求
     if (cityInitialized) {
       loadTasks();
     }
-  }, [page, type, city, keyword, sortBy, loadTasks, cityInitialized]);
+  }, [page, type, city, debouncedKeyword, sortBy, loadTasks, cityInitialized]);
 
   // 点击外部关闭下拉菜单
   useEffect(() => {
@@ -1044,15 +1047,9 @@ const Tasks: React.FC = () => {
       filtered = filtered.filter(task => task.task_type === type);
     }
 
-    // 按搜索关键词筛选（使用防抖后的关键词）
-    if (debouncedKeyword.trim()) {
-      const query = debouncedKeyword.toLowerCase();
-      filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query) ||
-        task.location.toLowerCase().includes(query)
-      );
-    }
+    // 注意：搜索关键词已经在服务端处理，这里不需要再次过滤
+    // 如果服务端返回了搜索结果，说明已经匹配了标题和描述
+    // 客户端过滤会导致搜索结果不准确，因为只过滤了已加载的任务
 
     // 注意：排序应该在服务端进行，这里只进行筛选
     // 客户端排序会破坏服务端的分页排序逻辑
@@ -2244,8 +2241,8 @@ const Tasks: React.FC = () => {
               color: '#6b7280',
               fontWeight: '500'
             }}>
-              {t('tasks.search.found')} <span style={{ color: '#3b82f6', fontWeight: '600' }}>{filteredTasks.length}</span> {t('tasks.search.tasks')}
-              {tasks.length !== filteredTasks.length && (
+              {t('tasks.search.found')} <span style={{ color: '#3b82f6', fontWeight: '600' }}>{total}</span> {t('tasks.search.tasks')}
+              {debouncedKeyword && (
                 <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
                   ({t('tasks.search.total')} {tasks.length} {t('tasks.search.tasks')})
                 </span>
