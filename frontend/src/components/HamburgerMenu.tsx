@@ -53,8 +53,8 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               className="unread-dot hamburger-dot"
               style={{
                 position: 'absolute',
-                top: '-4px',
-                right: '-4px',
+                top: '2px',
+                right: '2px',
                 width: '12px',
                 height: '12px',
                 backgroundColor: '#ef4444',
