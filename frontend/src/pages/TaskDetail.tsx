@@ -1696,7 +1696,7 @@ const TaskDetail: React.FC = () => {
         {/* 任务信息卡片 */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '20px',
           marginBottom: '32px',
           position: 'relative',
@@ -1758,7 +1758,7 @@ const TaskDetail: React.FC = () => {
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (英国时间)
+              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (GMT)
             </div>
           </div>
         </div>
