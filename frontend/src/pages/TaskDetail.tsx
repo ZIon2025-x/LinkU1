@@ -124,19 +124,82 @@ const TaskDetail: React.FC = () => {
     // 即使任务数据还没加载，也先更新URL和类型，确保不会被抓取到默认值
     const taskUrl = `${window.location.origin}${window.location.pathname}`;
     
-    // 强制移除默认的描述标签，避免被微信缓存
-    const existingOgDescription = document.querySelector('meta[property="og:description"]');
-    if (existingOgDescription) {
-      existingOgDescription.remove();
-    }
-    const existingDescription = document.querySelector('meta[name="description"]') as HTMLMetaElement;
-    if (existingDescription && existingDescription.content && existingDescription.content.includes('Professional task publishing')) {
-      existingDescription.remove();
-    }
-    const existingTwitterDescription = document.querySelector('meta[name="twitter:description"]') as HTMLMetaElement;
-    if (existingTwitterDescription && existingTwitterDescription.content && existingTwitterDescription.content.includes('Professional task publishing')) {
-      existingTwitterDescription.remove();
-    }
+    // 强制移除所有默认的描述标签（任务详情页不使用默认描述）
+    // 移除所有包含默认平台描述的标签
+    const removeDefaultDescriptions = () => {
+      // 移除所有description标签（包含默认描述的）
+      const allDescriptions = document.querySelectorAll('meta[name="description"]');
+      allDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除所有og:description标签（包含默认描述的）
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      allOgDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除所有twitter:description标签（包含默认描述的）
+      const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
+      allTwitterDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 强制移除所有默认的微信描述标签
+      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 强制移除默认的微信标题标签
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && metaTag.content === 'Link²Ur') {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除默认的og:title（如果是默认的）
+      const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+      allOgTitles.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && metaTag.content === 'Link²Ur') {
+          metaTag.remove();
+        }
+      });
+    };
+    
+    // 立即移除所有默认描述
+    removeDefaultDescriptions();
     
     updateMetaTag('og:url', taskUrl, true);
     updateMetaTag('og:type', 'article', true);
@@ -151,6 +214,19 @@ const TaskDetail: React.FC = () => {
     updateMetaTag('og:image', shareImageUrl, true);
     updateMetaTag('og:image:type', 'image/png', true);
     updateMetaTag('twitter:image', shareImageUrl);
+    
+    // 强制移除并更新微信图片标签
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    const weixinImageTag = document.createElement('meta');
+    weixinImageTag.setAttribute('name', 'weixin:image');
+    weixinImageTag.content = shareImageUrl;
+    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+    
+    // 使用setTimeout再次确保移除默认描述（防止被其他脚本重新添加）
+    setTimeout(() => {
+      removeDefaultDescriptions();
+    }, 50);
   }, [id]);
 
   // 加载任务数据
@@ -176,6 +252,35 @@ const TaskDetail: React.FC = () => {
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
   useLayoutEffect(() => {
+    // 移除所有默认的描述标签（任务详情页不使用默认描述）
+    const removeAllDefaultDescriptions = () => {
+      // 移除所有包含默认平台描述的标签
+      const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people') ||
+          metaTag.content.includes('making value creation more efficient')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除默认标题
+      const allTitles = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+      allTitles.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && metaTag.content === 'Link²Ur') {
+          metaTag.remove();
+        }
+      });
+    };
+    
+    // 立即移除所有默认标签
+    removeAllDefaultDescriptions();
+    
     if (task) {
       // 构建任务详情页的URL
       const taskUrl = `${window.location.origin}${window.location.pathname}`;
@@ -341,11 +446,14 @@ const TaskDetail: React.FC = () => {
         moveToTop('meta[property="og:image"]');
       }, 0);
       
-      // 使用额外的setTimeout确保在DOM完全加载后再次强制更新微信标签（防止被其他脚本覆盖）
+      // 使用多个setTimeout确保在DOM完全加载后多次强制更新微信标签（防止被其他脚本覆盖）
+      // 微信爬虫可能在页面加载的不同阶段抓取，所以需要多次更新
       setTimeout(() => {
-        // 再次检查并确保微信描述正确
+        // 再次检查并确保微信描述正确（特别检查是否包含默认描述）
         const weixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
-        if (!weixinDesc || weixinDesc.content !== seoDescription) {
+        if (!weixinDesc || weixinDesc.content !== seoDescription || 
+            weixinDesc.content.includes('Professional task publishing') ||
+            weixinDesc.content.includes('skill matching platform')) {
           if (weixinDesc) weixinDesc.remove();
           const finalWeixinDesc = document.createElement('meta');
           finalWeixinDesc.setAttribute('name', 'weixin:description');
@@ -356,7 +464,7 @@ const TaskDetail: React.FC = () => {
         // 再次检查并确保微信标题正确
         const weixinTitle = document.querySelector('meta[name="weixin:title"]') as HTMLMetaElement;
         const expectedTitle = `${task.title} - Link²Ur任务平台`;
-        if (!weixinTitle || weixinTitle.content !== expectedTitle) {
+        if (!weixinTitle || weixinTitle.content !== expectedTitle || weixinTitle.content === 'Link²Ur') {
           if (weixinTitle) weixinTitle.remove();
           const finalWeixinTitle = document.createElement('meta');
           finalWeixinTitle.setAttribute('name', 'weixin:title');
@@ -373,7 +481,59 @@ const TaskDetail: React.FC = () => {
           finalWeixinImage.content = shareImageUrl;
           document.head.insertBefore(finalWeixinImage, document.head.firstChild);
         }
-      }, 200);
+      }, 100);
+      
+      // 再次更新（确保微信爬虫能抓取到）
+      setTimeout(() => {
+        // 移除所有包含默认描述的标签（包括所有类型的描述标签）
+        const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+        allDescriptionTags.forEach(tag => {
+          const metaTag = tag as HTMLMetaElement;
+          if (metaTag.content && (
+            metaTag.content.includes('Professional task publishing') ||
+            metaTag.content.includes('skill matching platform') ||
+            metaTag.content.includes('linking skilled people') ||
+            metaTag.content.includes('making value creation more efficient')
+          )) {
+            metaTag.remove();
+          }
+        });
+        
+        // 移除默认标题
+        const allTitleTags = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+        allTitleTags.forEach(tag => {
+          const metaTag = tag as HTMLMetaElement;
+          if (metaTag.content && metaTag.content === 'Link²Ur') {
+            metaTag.remove();
+          }
+        });
+        
+        // 重新插入正确的任务描述标签（只使用任务信息）
+        const finalWeixinDesc = document.createElement('meta');
+        finalWeixinDesc.setAttribute('name', 'weixin:description');
+        finalWeixinDesc.content = seoDescription;
+        document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+        
+        const finalOgDesc = document.createElement('meta');
+        finalOgDesc.setAttribute('property', 'og:description');
+        finalOgDesc.content = seoDescription;
+        document.head.insertBefore(finalOgDesc, document.head.firstChild);
+        
+        const finalDesc = document.createElement('meta');
+        finalDesc.name = 'description';
+        finalDesc.content = seoDescription;
+        document.head.insertBefore(finalDesc, document.head.firstChild);
+        
+        const finalWeixinTitle = document.createElement('meta');
+        finalWeixinTitle.setAttribute('name', 'weixin:title');
+        finalWeixinTitle.content = `${task.title} - Link²Ur任务平台`;
+        document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
+        
+        const finalWeixinImage = document.createElement('meta');
+        finalWeixinImage.setAttribute('name', 'weixin:image');
+        finalWeixinImage.content = shareImageUrl;
+        document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+      }, 500);
       
       // 添加结构化数据 - 使用JobPosting类型以便搜索引擎识别
       // reward 变量已在上面声明，直接使用
@@ -428,7 +588,32 @@ const TaskDetail: React.FC = () => {
       script.textContent = JSON.stringify(structuredData);
       document.head.appendChild(script);
     }
-  }, [task]);
+    
+    // 即使任务数据还没加载，也确保移除默认的微信标签
+    if (!task) {
+      const removeDefaultWeixinTags = () => {
+        const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+        allWeixinDescriptions.forEach(tag => {
+          const metaTag = tag as HTMLMetaElement;
+          if (metaTag.content && (
+            metaTag.content.includes('Professional task publishing') ||
+            metaTag.content.includes('skill matching platform')
+          )) {
+            metaTag.remove();
+          }
+        });
+        
+        const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+        allWeixinTitles.forEach(tag => {
+          const metaTag = tag as HTMLMetaElement;
+          if (metaTag.content && metaTag.content === 'Link²Ur') {
+            metaTag.remove();
+          }
+        });
+      };
+      removeDefaultWeixinTags();
+    }
+  }, [task, language]);
 
   // 标记通知为已读
   const handleMarkAsRead = async (notificationId: number) => {
