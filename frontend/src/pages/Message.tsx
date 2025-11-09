@@ -317,8 +317,10 @@ const MessagePage: React.FC = () => {
   const lastTaskMessageIdRef = useRef<number | null>(null); // 最后一条任务消息的ID（使用ref避免依赖循环）
   const [toastMessage, setToastMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null); // Toast通知
   const messagesContainerRef = useRef<HTMLDivElement>(null); // 消息容器引用
-  const inputAreaRef = useRef<HTMLDivElement>(null); // 输入框区域引用
-  const [scrollButtonBottom, setScrollButtonBottom] = useState(100); // 滚动按钮距离底部的位置
+  const inputAreaRef = useRef<HTMLDivElement>(null); // 输入框区域引用（客服模式）
+  const taskInputAreaRef = useRef<HTMLDivElement>(null); // 任务聊天输入框区域引用
+  const [scrollButtonBottom, setScrollButtonBottom] = useState(100); // 滚动按钮距离底部的位置（客服模式）
+  const [taskScrollButtonBottom, setTaskScrollButtonBottom] = useState(100); // 任务聊天滚动按钮距离底部的位置
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -2138,6 +2140,7 @@ const MessagePage: React.FC = () => {
   // 动态计算滚动按钮位置（相对于输入框区域）
   useEffect(() => {
     const updateButtonPosition = () => {
+      // 客服模式：计算客服输入框上方位置
       if (inputAreaRef.current && isServiceMode) {
         const rect = inputAreaRef.current.getBoundingClientRect();
         // 计算输入框顶部距离视口底部的距离，然后加上20px作为按钮位置
@@ -2147,9 +2150,20 @@ const MessagePage: React.FC = () => {
         // 如果输入框还未渲染，使用默认值
         setScrollButtonBottom(120);
       }
+      
+      // 任务聊天模式：计算任务输入框上方位置
+      if (taskInputAreaRef.current && chatMode === 'tasks' && activeTaskId) {
+        const rect = taskInputAreaRef.current.getBoundingClientRect();
+        // 计算输入框顶部距离视口底部的距离，然后加上20px作为按钮位置
+        const distanceFromBottom = window.innerHeight - rect.top;
+        setTaskScrollButtonBottom(Math.max(100, distanceFromBottom + 20)); // 输入框上方20px，最小100px
+      } else if (chatMode === 'tasks' && activeTaskId) {
+        // 如果输入框还未渲染，使用默认值
+        setTaskScrollButtonBottom(120);
+      }
     };
 
-    if (isServiceMode) {
+    if (isServiceMode || (chatMode === 'tasks' && activeTaskId)) {
       // 立即执行一次
       updateButtonPosition();
       // 延迟执行以确保DOM已渲染
@@ -2159,9 +2173,15 @@ const MessagePage: React.FC = () => {
       window.addEventListener('resize', updateButtonPosition);
       // 使用 ResizeObserver 监听输入框区域大小变化
       let resizeObserver: ResizeObserver | null = null;
-      if (inputAreaRef.current) {
+      if (inputAreaRef.current && isServiceMode) {
         resizeObserver = new ResizeObserver(updateButtonPosition);
         resizeObserver.observe(inputAreaRef.current);
+      }
+      if (taskInputAreaRef.current && chatMode === 'tasks' && activeTaskId) {
+        if (!resizeObserver) {
+          resizeObserver = new ResizeObserver(updateButtonPosition);
+        }
+        resizeObserver.observe(taskInputAreaRef.current);
       }
       return () => {
         clearTimeout(timeoutId);
@@ -2173,7 +2193,7 @@ const MessagePage: React.FC = () => {
         }
       };
     }
-  }, [isServiceMode, imagePreview, filePreview, showEmojiPicker]);
+  }, [isServiceMode, chatMode, activeTaskId, imagePreview, filePreview, showEmojiPicker]);
 
   // 跟踪最后处理的消息ID，避免重复滚动
   const lastProcessedMessageIdRef = useRef<number | null>(null);
@@ -4043,56 +4063,6 @@ const MessagePage: React.FC = () => {
                   );
                 })}
                 <div ref={messagesEndRef} />
-                
-                {/* 浮空圆形滚动到底部按钮（任务聊天） */}
-                {showScrollToBottom && chatMode === 'tasks' && activeTaskId && (
-                  <button
-                    onClick={() => {
-                      smartScrollToBottom(true);
-                      setHasNewTaskMessages(false); // 清除新消息提示
-                    }}
-                    style={{
-                      position: 'absolute',
-                      bottom: '20px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      backgroundColor: hasNewTaskMessages ? '#10b981' : '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: hasNewTaskMessages 
-                        ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
-                        : '0 4px 12px rgba(59, 130, 246, 0.4)',
-                      transition: 'all 0.3s ease',
-                      zIndex: 100,
-                      fontSize: '20px',
-                      animation: hasNewTaskMessages ? 'pulse 2s infinite' : 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#059669' : '#2563eb';
-                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
-                      e.currentTarget.style.boxShadow = hasNewTaskMessages 
-                        ? '0 6px 16px rgba(16, 185, 129, 0.5)' 
-                        : '0 6px 16px rgba(59, 130, 246, 0.5)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#10b981' : '#3b82f6';
-                      e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
-                      e.currentTarget.style.boxShadow = hasNewTaskMessages 
-                        ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
-                        : '0 4px 12px rgba(59, 130, 246, 0.4)';
-                    }}
-                    title={hasNewTaskMessages ? '有新消息，点击滚动到底部' : '滚动到底部'}
-                  >
-                    {hasNewTaskMessages ? '🔔' : '↓'}
-                  </button>
-                )}
               </>
             )}
 
@@ -4632,14 +4602,17 @@ const MessagePage: React.FC = () => {
               )}
             </div>
           ) : chatMode === 'tasks' && activeTaskId && activeTask ? (
-            <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid #e2e8f0',
-              background: 'white',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
+            <div 
+              ref={taskInputAreaRef}
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid #e2e8f0',
+                background: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                position: 'relative'
+              }}>
               {/* 权限提示 */}
               {activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id && (
                 <div style={{
@@ -6007,6 +5980,56 @@ const MessagePage: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+      
+      {/* 任务聊天模式滚动到底部按钮 - 固定在输入框上方 */}
+      {showScrollToBottom && chatMode === 'tasks' && activeTaskId && (
+        <button
+          onClick={() => {
+            smartScrollToBottom(true);
+            setHasNewTaskMessages(false); // 清除新消息提示
+          }}
+          style={{
+            position: 'fixed',
+            bottom: `${taskScrollButtonBottom}px`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: hasNewTaskMessages ? '#10b981' : '#3b82f6',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: hasNewTaskMessages 
+              ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
+              : '0 4px 12px rgba(59, 130, 246, 0.4)',
+            transition: 'all 0.3s ease',
+            zIndex: 1000,
+            fontSize: '20px',
+            animation: hasNewTaskMessages ? 'pulse 2s infinite' : 'none'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#059669' : '#2563eb';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+            e.currentTarget.style.boxShadow = hasNewTaskMessages 
+              ? '0 6px 16px rgba(16, 185, 129, 0.5)' 
+              : '0 6px 16px rgba(59, 130, 246, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#10b981' : '#3b82f6';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+            e.currentTarget.style.boxShadow = hasNewTaskMessages 
+              ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
+              : '0 4px 12px rgba(59, 130, 246, 0.4)';
+          }}
+          title={hasNewTaskMessages ? '有新消息，点击滚动到底部' : '滚动到底部'}
+        >
+          {hasNewTaskMessages ? '🔔' : '↓'}
+        </button>
       )}
       
       {/* 客服模式滚动到底部按钮 - 固定在视口右下角 */}
