@@ -146,6 +146,13 @@ async def register(
     except HTTPException as e:
         raise e
     
+    # 注册接口需要邮箱（手机号登录通过验证码登录接口，不需要注册接口）
+    if not validated_data.get('email'):
+        raise HTTPException(
+            status_code=400,
+            detail="注册需要提供邮箱地址"
+        )
+    
     # 调试信息
     print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}, inviter_id={validated_data.get('inviter_id', 'None')}")
     

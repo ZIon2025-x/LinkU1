@@ -176,6 +176,9 @@ class UserValidator(BaseValidator):
     
     @validator('email')
     def validate_email(cls, v):
+        # 如果email为None或空字符串，返回None（允许为空，用于手机号登录场景）
+        if v is None or v == "":
+            return None
         return StringValidator.validate_email(v)
     
     @validator('password')

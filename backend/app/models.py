@@ -151,9 +151,9 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String(8), primary_key=True, index=True)  # 8位数字格式
     name = Column(String(50), unique=True, nullable=False)  # 用户名唯一
-    email = Column(String(120), unique=True, nullable=False)  # 邮箱唯一
+    email = Column(String(120), unique=True, nullable=True)  # 邮箱唯一，可为空（手机号登录时为空）
     hashed_password = Column(String(128), nullable=False)
-    phone = Column(String(20), nullable=True)
+    phone = Column(String(20), unique=True, nullable=True)  # 手机号唯一，可为空（邮箱登录时为空）
     created_at = Column(DateTime, default=get_uk_time)
     is_active = Column(Integer, default=1)  # 1=active, 0=inactive
     is_verified = Column(Integer, default=0)  # 1=verified, 0=not verified

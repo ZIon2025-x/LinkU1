@@ -33,6 +33,14 @@ def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
 
+def get_user_by_phone(db: Session, phone: str):
+    """通过手机号查找用户"""
+    # 清理手机号格式（移除所有非数字字符）
+    import re
+    phone_digits = re.sub(r'\D', '', phone)
+    return db.query(models.User).filter(models.User.phone == phone_digits).first()
+
+
 def get_user_by_id(db: Session, user_id: str):
     # 尝试从Redis缓存获取
     from app.redis_cache import get_user_info, cache_user_info

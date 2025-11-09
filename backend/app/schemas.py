@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, validator, model_validator
 
 class UserBase(BaseModel):
     name: str
-    email: str
-    phone: Optional[str] = None
+    email: Optional[str] = None  # 邮箱可为空（手机号登录时为空）
+    phone: Optional[str] = None  # 手机号可为空（邮箱登录时为空）
     avatar: Optional[str] = ""
 
 
@@ -39,6 +39,15 @@ class EmailVerificationCodeRequest(BaseModel):
 class EmailVerificationCodeLogin(BaseModel):
     """使用邮箱验证码登录"""
     email: str
+    verification_code: str
+
+class PhoneVerificationCodeRequest(BaseModel):
+    """请求发送手机验证码"""
+    phone: str
+
+class PhoneVerificationCodeLogin(BaseModel):
+    """使用手机号验证码登录"""
+    phone: str
     verification_code: str
 
 class PasswordValidationRequest(BaseModel):

@@ -28,6 +28,11 @@ from app.verification_code_manager import (
     store_verification_code,
     verify_and_delete_code
 )
+from app.phone_verification_code_manager import (
+    generate_verification_code as generate_phone_code,
+    store_verification_code as store_phone_code,
+    verify_and_delete_code as verify_phone_code
+)
 from app.email_utils import send_email
 from fastapi import BackgroundTasks
 
@@ -901,6 +906,269 @@ def send_email_verification_code(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="发送验证码失败"
         )
+
+
+@secure_auth_router.post("/send-phone-verification-code", response_model=Dict[str, Any])
+@rate_limit("send_code")
+def send_phone_verification_code(
+    request_data: schemas.PhoneVerificationCodeRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+):
+    """发送手机验证码"""
+    try:
+        import re
+        from app.validators import StringValidator
+        
+        phone = request_data.phone.strip()
+        
+        # 验证手机号格式
+        try:
+            phone_digits = StringValidator.validate_phone(phone)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+        
+        # 生成6位数字验证码
+        verification_code = generate_phone_code(6)
+        
+        # 存储验证码到Redis，有效期5分钟
+        if not store_phone_code(phone_digits, verification_code):
+            logger.error(f"存储手机验证码失败: phone={phone_digits}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="发送验证码失败，请稍后重试"
+            )
+        
+        # 发送短信
+        # TODO: 集成短信服务（如Twilio、阿里云短信等）
+        # 目前先记录日志，后续可以集成实际的短信服务
+        logger.info(f"手机验证码已生成: phone={phone_digits}, code={verification_code}")
+        
+        # 在实际生产环境中，这里应该调用短信服务API
+        # 示例：send_sms(phone_digits, f"您的Link²Ur登录验证码是：{verification_code}，有效期5分钟。")
+        
+        # 为了开发测试，我们可以在开发环境中打印验证码
+        # 在生产环境中应该移除或注释掉
+        if os.getenv("ENVIRONMENT", "production") == "development":
+            logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
+        
+        return {
+            "message": "验证码已发送到您的手机",
+            "phone": phone_digits,
+            "expires_in": 300  # 5分钟
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"发送手机验证码失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="发送验证码失败"
+        )
+
+
+@secure_auth_router.post("/login-with-phone-code", response_model=Dict[str, Any])
+@rate_limit("login")
+def login_with_phone_verification_code(
+    login_data: schemas.PhoneVerificationCodeLogin,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_sync_db),
+):
+    """使用手机号验证码登录，新用户自动创建"""
+    try:
+        import re
+        from app.validators import StringValidator
+        
+        phone = login_data.phone.strip()
+        verification_code = login_data.verification_code.strip()
+        
+        # 验证并清理手机号格式
+        try:
+            phone_digits = StringValidator.validate_phone(phone)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+        
+        # 验证验证码
+        if not verify_phone_code(phone_digits, verification_code):
+            logger.warning(f"手机验证码验证失败: phone={phone_digits}")
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "LOGIN_FAILED", phone_digits, client_ip, "手机验证码错误或已过期"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="验证码错误或已过期"
+            )
+        
+        # 查找用户
+        user = crud.get_user_by_phone(db, phone_digits)
+        
+        # 如果用户不存在，自动创建新用户
+        is_new_user = False
+        if not user:
+            is_new_user = True
+            import random
+            # 生成唯一的8位用户ID
+            while True:
+                user_id = str(random.randint(10000000, 99999999))
+                existing_user = crud.get_user_by_id(db, user_id)
+                if not existing_user:
+                    break
+            
+            # 生成强密码
+            strong_password = generate_strong_password(16)
+            hashed_password = get_password_hash(strong_password)
+            
+            # 生成用户名：user + 用户ID
+            username = f"user{user_id}"
+            
+            # 检查用户名是否已存在（虽然理论上不应该，但为了安全）
+            while True:
+                existing_name = db.query(models.User).filter(models.User.name == username).first()
+                if not existing_name:
+                    break
+                # 如果用户名已存在，重新生成用户ID和用户名
+                while True:
+                    user_id = str(random.randint(10000000, 99999999))
+                    existing_user = crud.get_user_by_id(db, user_id)
+                    if not existing_user:
+                        break
+                username = f"user{user_id}"
+            
+            # 创建新用户（手机号登录时，邮箱为空）
+            try:
+                db_user = models.User(
+                    id=user_id,
+                    name=username,
+                    email=None,  # 手机号登录时，邮箱为空
+                    hashed_password=hashed_password,
+                    phone=phone_digits,
+                    avatar="",
+                    agreed_to_terms=1,
+                    terms_agreed_at=datetime.utcnow(),
+                    inviter_id=None,
+                )
+                db.add(db_user)
+                db.commit()
+                db.refresh(db_user)
+                
+                user = db_user
+                logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email=None")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"创建新用户失败: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"创建用户失败: {str(e)}"
+                )
+        
+        # 检查用户状态
+        if user.is_suspended:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "SUSPENDED_USER_LOGIN", user.id, client_ip, "被暂停用户尝试登录"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账户已被暂停"
+            )
+        
+        if user.is_banned:
+            client_ip = get_client_ip(request)
+            log_security_event(
+                "BANNED_USER_LOGIN", user.id, client_ip, "被封禁用户尝试登录"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账户已被封禁"
+            )
+        
+        # 获取设备信息
+        device_fingerprint = get_device_fingerprint(request)
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        
+        # 生成并存储刷新令牌到Redis
+        from app.secure_auth import create_user_refresh_token
+        refresh_token = create_user_refresh_token(user.id, client_ip, device_fingerprint)
+        
+        # 创建新会话
+        session = SecureAuthManager.create_session(
+            user_id=user.id,
+            device_fingerprint=device_fingerprint,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            refresh_token=refresh_token
+        )
+        
+        # 设置安全Cookie（传递User-Agent用于移动端检测）
+        CookieManager.set_session_cookies(
+            response=response,
+            session_id=session.session_id,
+            refresh_token=refresh_token,
+            user_id=user.id,
+            user_agent=user_agent
+        )
+        
+        # 生成并设置CSRF token
+        from app.csrf import CSRFProtection
+        csrf_token = CSRFProtection.generate_csrf_token()
+        CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
+        
+        # 记录成功登录
+        log_security_event("LOGIN_SUCCESS", user.id, client_ip, "用户手机验证码登录成功")
+        
+        # 检测是否为移动端
+        is_mobile = any(keyword in user_agent.lower() for keyword in [
+            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
+            'windows phone', 'opera mini', 'iemobile'
+        ])
+        
+        # 为移动端添加特殊的响应头
+        if is_mobile:
+            response.headers["X-Session-ID"] = session.session_id
+            response.headers["X-User-ID"] = user.id
+            response.headers["X-Auth-Status"] = "authenticated"
+            response.headers["X-Mobile-Auth"] = "true"
+
+        return {
+            "message": "登录成功",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "phone": user.phone,
+                "user_level": user.user_level,
+                "is_verified": user.is_verified,
+            },
+            "session_id": session.session_id,
+            "expires_in": 300,
+            "mobile_auth": is_mobile,
+            "auth_headers": {
+                "X-Session-ID": session.session_id,
+                "X-User-ID": user.id,
+                "X-Auth-Status": "authenticated"
+            } if is_mobile else None,
+            "is_new_user": is_new_user
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"手机验证码登录失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"登录失败: {str(e)}"
+        )
+
 
 @secure_auth_router.post("/login-with-code", response_model=Dict[str, Any])
 @rate_limit("login")

@@ -40,10 +40,11 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [loginMethod, setLoginMethod] = useState<'password' | 'code'>('password');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'code' | 'phone'>('password');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [phoneForCode, setPhoneForCode] = useState('');
   const countdownTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // 清理倒计时
@@ -282,13 +283,122 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  // 验证码登录
+  // 发送手机验证码
+  const handleSendPhoneCode = async (phone: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/api/secure-auth/send-phone-verification-code', {
+        phone: phone.trim(),
+      });
+      
+      setPhoneForCode(phone.trim());
+      setCodeSent(true);
+      setCountdown(300); // 5分钟倒计时
+      message.success(t('auth.codeSent') || '验证码已发送');
+      
+      // 开始倒计时
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+      countdownTimerRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownTimerRef.current) {
+              clearInterval(countdownTimerRef.current);
+              countdownTimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+    } catch (err: any) {
+      let msg = t('auth.codeSent') || '发送验证码失败';
+      if (err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setError(msg);
+      message.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 验证码登录（邮箱）
   const handleCodeLogin = async (email: string, code: string) => {
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/api/secure-auth/login-with-code', {
         email: email.trim().toLowerCase(),
+        verification_code: code.trim(),
+      });
+      
+      // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
+      
+      // 登录成功后获取CSRF token
+      try {
+        await api.get('/api/csrf/token');
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
+      
+      // 登录成功后获取用户资料，更新语言偏好
+      try {
+        const userRes = await api.get('/api/users/profile/me');
+        const userData = userRes.data;
+        
+        // 如果用户有语言偏好设置，且与当前语言不同，则更新语言
+        if (userData.language_preference && userData.language_preference !== localStorage.getItem('language')) {
+          localStorage.setItem('language', userData.language_preference);
+        }
+      } catch (error) {
+        console.warn('获取用户资料失败:', error);
+      }
+      
+      if (res.data.is_new_user) {
+        message.success(t('auth.newUserCreated') || '新用户已自动创建');
+      }
+      message.success(t('auth.loginWithCodeSuccess') || t('auth.loginSuccess'));
+      
+      // 添加短暂延迟确保认证信息设置完成
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+        window.location.reload();
+      }, 100);
+    } catch (err: any) {
+      let msg = t('auth.loginError');
+      if (err?.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          msg = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail)) {
+          msg = err.response.data.detail.map((item: any) => item.msg).join('；');
+        } else if (typeof err.response.data.detail === 'object' && err.response.data.detail.msg) {
+          msg = err.response.data.detail.msg;
+        } else {
+          msg = JSON.stringify(err.response.data.detail);
+        }
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 手机号验证码登录
+  const handlePhoneCodeLogin = async (phone: string, code: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.post('/api/secure-auth/login-with-phone-code', {
+        phone: phone.trim(),
         verification_code: code.trim(),
       });
       
@@ -353,7 +463,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
     try {
       if (isLogin) {
-        // 如果是验证码登录模式
+        // 如果是邮箱验证码登录模式
         if (loginMethod === 'code') {
           if (!codeSent) {
             // 发送验证码
@@ -362,6 +472,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
           } else {
             // 使用验证码登录
             await handleCodeLogin(formData.email, verificationCode);
+            return;
+          }
+        }
+        
+        // 如果是手机号验证码登录模式
+        if (loginMethod === 'phone') {
+          if (!codeSent) {
+            // 发送手机验证码
+            await handleSendPhoneCode(formData.phone);
+            return;
+          } else {
+            // 使用手机验证码登录
+            await handlePhoneCodeLogin(phoneForCode || formData.phone, verificationCode);
             return;
           }
         }
@@ -618,6 +741,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 setLoginMethod('password');
                 setCodeSent(false);
                 setVerificationCode('');
+                setPhoneForCode('');
                 setError('');
               }}
               style={{
@@ -641,6 +765,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 setLoginMethod('code');
                 setCodeSent(false);
                 setVerificationCode('');
+                setPhoneForCode('');
                 setError('');
               }}
               style={{
@@ -658,50 +783,161 @@ const LoginModal: React.FC<LoginModalProps> = ({
             >
               {t('auth.loginWithCode')}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginMethod('phone');
+                setCodeSent(false);
+                setVerificationCode('');
+                setPhoneForCode('');
+                setError('');
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                backgroundColor: loginMethod === 'phone' ? '#3b82f6' : '#f3f4f6',
+                color: loginMethod === 'phone' ? '#fff' : '#666',
+              }}
+            >
+              {t('auth.phoneLogin')}
+            </button>
           </div>
         )}
 
         {/* 表单 */}
         <form onSubmit={handleSubmit}>
-          {/* 邮箱输入 */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#333',
-              marginBottom: '8px'
-            }}>
-              {t('common.email')}
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder={t('common.email')}
-              required
-              disabled={isLogin && loginMethod === 'code' && codeSent}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '16px',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s',
-                backgroundColor: isLogin && loginMethod === 'code' && codeSent ? '#f5f5f5' : '#fff'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#3b82f6';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#ddd';
-              }}
-            />
-          </div>
+          {/* 邮箱输入（密码登录和邮箱验证码登录时显示） */}
+          {isLogin && loginMethod !== 'phone' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#333',
+                marginBottom: '8px'
+              }}>
+                {t('common.email')}
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder={t('common.email')}
+                required
+                disabled={isLogin && loginMethod === 'code' && codeSent}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                  backgroundColor: isLogin && loginMethod === 'code' && codeSent ? '#f5f5f5' : '#fff'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                }}
+              />
+            </div>
+          )}
 
-          {/* 验证码输入（仅在验证码登录模式下显示） */}
+          {/* 手机号输入（手机号验证码登录时显示） */}
+          {isLogin && loginMethod === 'phone' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#333',
+                marginBottom: '8px'
+              }}>
+                {t('common.phone')}
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                  setFormData(prev => ({ ...prev, phone: value }));
+                  if (!codeSent) {
+                    setPhoneForCode(value);
+                  }
+                }}
+                placeholder={t('auth.phonePlaceholder')}
+                required
+                disabled={codeSent}
+                maxLength={11}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s',
+                  backgroundColor: codeSent ? '#f5f5f5' : '#fff'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                }}
+              />
+            </div>
+          )}
+
+          {/* 注册时显示邮箱输入 */}
+          {!isLogin && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#333',
+                marginBottom: '8px'
+              }}>
+                {t('common.email')}
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder={t('common.email')}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#ddd';
+                }}
+              />
+            </div>
+          )}
+
+          {/* 验证码输入（邮箱验证码登录模式下显示） */}
           {isLogin && loginMethod === 'code' && codeSent && (
             <>
               <div style={{ marginBottom: '16px' }}>
@@ -756,6 +992,78 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSendCode(formData.email)}
+                  disabled={countdown > 0 || loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: countdown > 0 ? '#999' : '#3b82f6',
+                    cursor: countdown > 0 ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    textDecoration: 'underline',
+                    padding: '4px 8px'
+                  }}
+                >
+                  {countdown > 0 ? `${t('auth.resendCode')} (${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')})` : t('auth.resendCode')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* 验证码输入（手机号验证码登录模式下显示） */}
+          {isLogin && loginMethod === 'phone' && codeSent && (
+            <>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#333',
+                  marginBottom: '8px'
+                }}>
+                  {t('auth.verificationCode')}
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    setVerificationCode(value.slice(0, 6));
+                  }}
+                  placeholder={t('auth.enterVerificationCode')}
+                  maxLength={6}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '24px',
+                    letterSpacing: '8px',
+                    textAlign: 'center',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s',
+                    fontFamily: 'monospace'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#ddd';
+                  }}
+                />
+              </div>
+              <div style={{ textAlign: 'center', marginBottom: '16px', color: '#666', fontSize: '12px' }}>
+                <div>{t('auth.codeSentToPhone').replace('{phone}', phoneForCode)}</div>
+                {countdown > 0 && (
+                  <div style={{ marginTop: '4px' }}>
+                    {t('auth.codeExpiresIn').replace('{seconds}', String(countdown))}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleSendPhoneCode(phoneForCode)}
                   disabled={countdown > 0 || loading}
                   style={{
                     background: 'none',
@@ -1144,22 +1452,22 @@ const LoginModal: React.FC<LoginModalProps> = ({
           {/* 提交按钮 */}
           <button
             type="submit"
-            disabled={loading || (!isLogin && !agreedToTerms)}
+            disabled={loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)}
             style={{
               width: '100%',
               padding: '14px',
-              backgroundColor: (loading || (!isLogin && !agreedToTerms)) ? '#ccc' : '#3b82f6',
+              backgroundColor: (loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)) ? '#ccc' : '#3b82f6',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: (loading || (!isLogin && !agreedToTerms)) ? 'not-allowed' : 'pointer',
+              cursor: (loading || (!isLogin && !agreedToTerms) || (isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6)) ? 'not-allowed' : 'pointer',
               marginBottom: '16px',
               transition: 'background-color 0.2s'
             }}
             onMouseEnter={(e) => {
-              if (!loading) {
+              if (!loading && !((isLogin && loginMethod === 'code' && codeSent && verificationCode.length !== 6) || (isLogin && loginMethod === 'phone' && codeSent && verificationCode.length !== 6))) {
                 e.currentTarget.style.backgroundColor = '#2563eb';
               }
             }}
@@ -1169,7 +1477,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
               }
             }}
           >
-            {loading ? t('common.processing') : (isLogin ? t('auth.login') : t('auth.register'))}
+            {loading ? t('common.processing') : 
+             (isLogin && loginMethod === 'code' && !codeSent) ? t('auth.sendVerificationCode') :
+             (isLogin && loginMethod === 'phone' && !codeSent) ? t('auth.sendVerificationCode') :
+             (isLogin ? t('auth.login') : t('auth.register'))}
           </button>
 
           {/* 切换登录/注册 */}

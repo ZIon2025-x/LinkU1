@@ -36,11 +36,12 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'password' | 'code'>('password');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'code' | 'phone'>('password');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [emailForCode, setEmailForCode] = useState('');
+  const [phoneForCode, setPhoneForCode] = useState('');
   const countdownTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // 生成canonical URL
@@ -114,13 +115,121 @@ const Login: React.FC = () => {
     }
   };
 
-  // 验证码登录
+  // 发送手机验证码
+  const handleSendPhoneCode = async (phone: string) => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await api.post('/api/secure-auth/send-phone-verification-code', {
+        phone: phone.trim(),
+      });
+      
+      setPhoneForCode(phone.trim());
+      setCodeSent(true);
+      setCountdown(300); // 5分钟倒计时
+      message.success(t('auth.codeSent') || '验证码已发送');
+      
+      // 开始倒计时
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+      countdownTimerRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownTimerRef.current) {
+              clearInterval(countdownTimerRef.current);
+              countdownTimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+    } catch (err: any) {
+      let msg = t('auth.codeSent') || '发送验证码失败';
+      if (err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setErrorMsg(msg);
+      message.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 验证码登录（邮箱）
   const handleCodeLogin = async (email: string, code: string) => {
     setLoading(true);
     setErrorMsg('');
     try {
       const res = await api.post('/api/secure-auth/login-with-code', {
         email: email.trim().toLowerCase(),
+        verification_code: code.trim(),
+      });
+      
+      // 所有设备都使用HttpOnly Cookie认证，无需localStorage存储
+      
+      // 登录成功后获取CSRF token
+      try {
+        await api.get('/api/csrf/token');
+      } catch (error) {
+        console.warn('获取CSRF token失败:', error);
+      }
+      
+      setErrorMsg('');
+      if (res.data.is_new_user) {
+        message.success(t('auth.newUserCreated') || '新用户已自动创建');
+      }
+      message.success(t('auth.loginWithCodeSuccess') || t('auth.loginSuccess'));
+      
+      // 登录成功后获取用户资料，更新语言偏好
+      try {
+        const userRes = await api.get('/api/users/profile/me');
+        const userData = userRes.data;
+        
+        // 如果用户有语言偏好设置，且与当前语言不同，则更新语言
+        if (userData.language_preference && userData.language_preference !== localStorage.getItem('language')) {
+          localStorage.setItem('language', userData.language_preference);
+        }
+      } catch (error) {
+        console.warn('获取用户资料失败:', error);
+      }
+      
+      // 添加短暂延迟确保认证信息设置完成
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
+    } catch (err: any) {
+      let msg = t('auth.loginError');
+      if (err?.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          msg = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail)) {
+          msg = err.response.data.detail.map((item: any) => item.msg).join('；');
+        } else if (typeof err.response.data.detail === 'object' && err.response.data.detail.msg) {
+          msg = err.response.data.detail.msg;
+        } else {
+          msg = JSON.stringify(err.response.data.detail);
+        }
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setErrorMsg(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 手机号验证码登录
+  const handlePhoneCodeLogin = async (phone: string, code: string) => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await api.post('/api/secure-auth/login-with-phone-code', {
+        phone: phone.trim(),
         verification_code: code.trim(),
       });
       
@@ -296,6 +405,18 @@ const Login: React.FC = () => {
           >
             {t('auth.loginWithCode')}
           </Button>
+          <Button 
+            type={loginMethod === 'phone' ? 'primary' : 'default'}
+            onClick={() => {
+              setLoginMethod('phone');
+              setCodeSent(false);
+              setVerificationCode('');
+              setErrorMsg('');
+            }}
+            style={{ flex: 1 }}
+          >
+            {t('auth.phoneLogin')}
+          </Button>
         </div>
 
         {loginMethod === 'password' ? (
@@ -310,7 +431,7 @@ const Login: React.FC = () => {
               <Button type="primary" htmlType="submit" block loading={loading}>{t('common.login')}</Button>
             </Form.Item>
           </Form>
-        ) : (
+        ) : loginMethod === 'code' ? (
           <Form layout="vertical" onFinish={(values) => {
             if (!codeSent) {
               handleSendCode(values.email);
@@ -351,6 +472,79 @@ const Login: React.FC = () => {
                   <Button 
                     type="link" 
                     onClick={() => handleSendCode(emailForCode)}
+                    disabled={countdown > 0 || loading}
+                  >
+                    {countdown > 0 ? `${t('auth.resendCode')} (${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')})` : t('auth.resendCode')}
+                  </Button>
+                </div>
+              </>
+            )}
+            <Form.Item>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                block 
+                loading={loading}
+                disabled={codeSent && verificationCode.length !== 6}
+              >
+                {codeSent ? t('common.login') : t('auth.sendVerificationCode')}
+              </Button>
+            </Form.Item>
+          </Form>
+        ) : (
+          <Form layout="vertical" onFinish={(values) => {
+            if (!codeSent) {
+              handleSendPhoneCode(values.phone);
+            } else {
+              handlePhoneCodeLogin(phoneForCode || values.phone, verificationCode);
+            }
+          }}>
+            <Form.Item 
+              label={t('common.phone')} 
+              name="phone" 
+              rules={[
+                { required: true, message: t('auth.enterPhone') },
+                { pattern: /^1[3-9]\d{9}$/, message: t('auth.phonePlaceholder') }
+              ]}
+            > 
+              <Input 
+                placeholder={t('auth.phonePlaceholder')} 
+                disabled={codeSent}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                  if (!codeSent) {
+                    setPhoneForCode(value);
+                  }
+                }}
+                maxLength={11}
+              />
+            </Form.Item>
+            {codeSent && (
+              <>
+                <Form.Item label={t('auth.verificationCode')}>
+                  <Input
+                    placeholder={t('auth.enterVerificationCode')}
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                      setVerificationCode(value);
+                    }}
+                    style={{ fontSize: '20px', letterSpacing: '8px', textAlign: 'center' }}
+                  />
+                </Form.Item>
+                <div style={{ textAlign: 'center', marginBottom: '16px', color: '#666', fontSize: '12px' }}>
+                  {t('auth.codeSentToPhone').replace('{phone}', phoneForCode)}
+                  {countdown > 0 && (
+                    <div style={{ marginTop: '4px' }}>
+                      {t('auth.codeExpiresIn').replace('{seconds}', String(countdown))}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                  <Button 
+                    type="link" 
+                    onClick={() => handleSendPhoneCode(phoneForCode)}
                     disabled={countdown > 0 || loading}
                   >
                     {countdown > 0 ? `${t('auth.resendCode')} (${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')})` : t('auth.resendCode')}
