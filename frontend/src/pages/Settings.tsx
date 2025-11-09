@@ -38,6 +38,12 @@ const Settings: React.FC = () => {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string>('');
   const [newKeyword, setNewKeyword] = useState('');
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [emailCodeCountdown, setEmailCodeCountdown] = useState(0);
+  const [phoneCodeCountdown, setPhoneCodeCountdown] = useState(0);
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [phoneVerificationCode, setPhoneVerificationCode] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -218,6 +224,32 @@ const Settings: React.FC = () => {
         updatePayload.language_preference = formData.language_preference || 'en';
       }
       
+      // 邮箱：如果改变则更新（允许设置为空）
+      if (formData.email !== user?.email) {
+        updatePayload.email = formData.email || null;
+        // 如果修改邮箱，需要验证码
+        if (formData.email && formData.email !== user?.email) {
+          if (!emailVerificationCode) {
+            message.error('修改邮箱需要验证码，请先发送验证码');
+            return;
+          }
+          updatePayload.email_verification_code = emailVerificationCode;
+        }
+      }
+      
+      // 手机号：如果改变则更新（允许设置为空）
+      if (formData.phone !== user?.phone) {
+        updatePayload.phone = formData.phone || null;
+        // 如果修改手机号，需要验证码
+        if (formData.phone && formData.phone !== user?.phone) {
+          if (!phoneVerificationCode) {
+            message.error('修改手机号需要验证码，请先发送验证码');
+            return;
+          }
+          updatePayload.phone_verification_code = phoneVerificationCode;
+        }
+      }
+      
       // 如果没有要更新的字段，提示用户
       if (Object.keys(updatePayload).length === 0) {
         message.info('没有需要更新的信息');
@@ -258,6 +290,14 @@ const Settings: React.FC = () => {
         console.error('保存后重新加载用户数据失败:', error);
       }
       
+      // 重置验证码状态
+      setEmailCodeSent(false);
+      setPhoneCodeSent(false);
+      setEmailVerificationCode('');
+      setPhoneVerificationCode('');
+      setEmailCodeCountdown(0);
+      setPhoneCodeCountdown(0);
+      
       message.success('设置已保存！');
       // 如果语言偏好改变，刷新页面以应用新语言
       const currentLang = localStorage.getItem('language') || 'zh';
@@ -295,6 +335,76 @@ const Settings: React.FC = () => {
 
   const handleChangePassword = () => {
     message.info('修改密码功能开发中...');
+  };
+
+  // 发送邮箱修改验证码
+  const handleSendEmailCode = async () => {
+    if (!formData.email) {
+      message.error('请先输入新邮箱');
+      return;
+    }
+    
+    if (formData.email === user?.email) {
+      message.info('新邮箱与当前邮箱相同，无需修改');
+      return;
+    }
+    
+    try {
+      await api.post('/api/users/profile/send-email-update-code', {
+        new_email: formData.email
+      });
+      message.success('验证码已发送到新邮箱，请查收');
+      setEmailCodeSent(true);
+      setEmailCodeCountdown(60);
+      
+      // 倒计时
+      const timer = setInterval(() => {
+        setEmailCodeCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '发送验证码失败');
+    }
+  };
+
+  // 发送手机号修改验证码
+  const handleSendPhoneCode = async () => {
+    if (!formData.phone) {
+      message.error('请先输入新手机号');
+      return;
+    }
+    
+    if (formData.phone === user?.phone) {
+      message.info('新手机号与当前手机号相同，无需修改');
+      return;
+    }
+    
+    try {
+      await api.post('/api/users/profile/send-phone-update-code', {
+        new_phone: formData.phone
+      });
+      message.success('验证码已发送到新手机号，请查收');
+      setPhoneCodeSent(true);
+      setPhoneCodeCountdown(60);
+      
+      // 倒计时
+      const timer = setInterval(() => {
+        setPhoneCodeCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '发送验证码失败');
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -613,26 +723,74 @@ const Settings: React.FC = () => {
                       color: '#333',
                       fontSize: isMobile ? '14px' : '16px'
                     }}>
-                      邮箱
+                      邮箱 {!formData.email && <span style={{ color: '#999', fontSize: '12px', fontWeight: 'normal' }}>(可选)</span>}
                     </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      disabled
-                      style={{
-                        width: '100%',
-                        padding: isMobile ? '14px' : '12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        background: '#f8f9fa',
-                        color: '#666',
-                        cursor: 'not-allowed',
-                        boxSizing: 'border-box'
-                      }}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                      <input
+                        type="email"
+                        value={formData.email || ''}
+                        onChange={(e) => {
+                          handleInputChange('email', e.target.value);
+                          setEmailCodeSent(false);
+                          setEmailVerificationCode('');
+                        }}
+                        placeholder="请输入邮箱（可选）"
+                        style={{
+                          flex: 1,
+                          padding: isMobile ? '14px' : '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      {formData.email && formData.email !== user?.email && (
+                        <button
+                          type="button"
+                          onClick={handleSendEmailCode}
+                          disabled={emailCodeCountdown > 0}
+                          style={{
+                            padding: isMobile ? '14px 20px' : '12px 20px',
+                            backgroundColor: emailCodeCountdown > 0 ? '#ccc' : '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: isMobile ? '14px' : '16px',
+                            cursor: emailCodeCountdown > 0 ? 'not-allowed' : 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {emailCodeCountdown > 0 ? `${emailCodeCountdown}秒` : '发送验证码'}
+                        </button>
+                      )}
+                    </div>
+                    {formData.email && formData.email !== user?.email && emailCodeSent && (
+                      <input
+                        type="text"
+                        value={emailVerificationCode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setEmailVerificationCode(value);
+                        }}
+                        placeholder="请输入6位验证码"
+                        maxLength={6}
+                        style={{
+                          width: '100%',
+                          padding: isMobile ? '14px' : '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          marginTop: '8px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    )}
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
-                      暂不支持修改
+                      {formData.email && formData.email !== user?.email 
+                        ? '修改邮箱需要验证码验证，验证码将发送到新邮箱' 
+                        : formData.email 
+                          ? '可以修改邮箱地址' 
+                          : '如果使用手机号登录，可以在此绑定邮箱'}
                     </p>
                   </div>
 
@@ -644,22 +802,77 @@ const Settings: React.FC = () => {
                       color: '#333',
                       fontSize: isMobile ? '14px' : '16px'
                     }}>
-                      手机号
+                      手机号 {!formData.phone && <span style={{ color: '#999', fontSize: '12px', fontWeight: 'normal' }}>(可选)</span>}
                     </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="请输入手机号"
-                      style={{
-                        width: '100%',
-                        padding: isMobile ? '14px' : '12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                      <input
+                        type="tel"
+                        value={formData.phone || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                          handleInputChange('phone', value);
+                          setPhoneCodeSent(false);
+                          setPhoneVerificationCode('');
+                        }}
+                        placeholder="请输入手机号（可选）"
+                        maxLength={15}
+                        style={{
+                          flex: 1,
+                          padding: isMobile ? '14px' : '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      {formData.phone && formData.phone !== user?.phone && (
+                        <button
+                          type="button"
+                          onClick={handleSendPhoneCode}
+                          disabled={phoneCodeCountdown > 0}
+                          style={{
+                            padding: isMobile ? '14px 20px' : '12px 20px',
+                            backgroundColor: phoneCodeCountdown > 0 ? '#ccc' : '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: isMobile ? '14px' : '16px',
+                            cursor: phoneCodeCountdown > 0 ? 'not-allowed' : 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {phoneCodeCountdown > 0 ? `${phoneCodeCountdown}秒` : '发送验证码'}
+                        </button>
+                      )}
+                    </div>
+                    {formData.phone && formData.phone !== user?.phone && phoneCodeSent && (
+                      <input
+                        type="text"
+                        value={phoneVerificationCode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setPhoneVerificationCode(value);
+                        }}
+                        placeholder="请输入6位验证码"
+                        maxLength={6}
+                        style={{
+                          width: '100%',
+                          padding: isMobile ? '14px' : '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          marginTop: '8px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    )}
+                    <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
+                      {formData.phone && formData.phone !== user?.phone 
+                        ? '修改手机号需要验证码验证，验证码将发送到新手机号' 
+                        : formData.phone 
+                          ? '可以修改手机号' 
+                          : '如果使用邮箱登录，可以在此绑定手机号'}
+                    </p>
                   </div>
 
                   <div>

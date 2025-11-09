@@ -1566,6 +1566,171 @@ def user_profile(
     }
 
 
+@router.post("/profile/send-email-update-code")
+@rate_limit("send_code")
+def send_email_update_code(
+    request_data: schemas.UpdateEmailRequest,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+):
+    """发送邮箱修改验证码到新邮箱"""
+    try:
+        from app.update_verification_code_manager import generate_verification_code, store_email_update_code
+        from app.validators import StringValidator
+        from app.email_utils import send_email
+        
+        new_email = request_data.new_email.strip().lower()
+        
+        # 验证邮箱格式
+        try:
+            validated_email = StringValidator.validate_email(new_email)
+            new_email = validated_email.lower()
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        # 检查邮箱是否已被其他用户使用
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            existing_user = db.query(models.User).filter(
+                models.User.email == new_email,
+                models.User.id != current_user.id
+            ).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="该邮箱已被其他用户使用")
+        finally:
+            db.close()
+        
+        # 生成6位数字验证码
+        verification_code = generate_verification_code(6)
+        
+        # 存储验证码到Redis，有效期5分钟
+        if not store_email_update_code(current_user.id, new_email, verification_code):
+            logger.error(f"存储邮箱修改验证码失败: user_id={current_user.id}, new_email={new_email}")
+            raise HTTPException(
+                status_code=500,
+                detail="发送验证码失败，请稍后重试"
+            )
+        
+        # 发送邮件
+        subject = "Link²Ur 邮箱修改验证码"
+        body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333; text-align: center;">邮箱修改验证码</h2>
+            <p>您好，</p>
+            <p>您正在尝试将 Link²Ur 账户的邮箱修改为：<strong>{new_email}</strong></p>
+            <p>请使用以下验证码完成修改：</p>
+            
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">{verification_code}</h1>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">
+                <strong>重要提示：</strong><br>
+                • 验证码有效期为 5 分钟<br>
+                • 验证码只能使用一次<br>
+                • 如果您没有尝试修改邮箱，请忽略此邮件<br>
+                • 请勿将验证码泄露给他人
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                此邮件由 Link²Ur 系统自动发送，请勿回复。
+            </p>
+        </div>
+        """
+        
+        # 异步发送邮件
+        background_tasks.add_task(send_email, new_email, subject, body)
+        
+        logger.info(f"邮箱修改验证码已发送: user_id={current_user.id}, new_email={new_email}")
+        
+        return {
+            "message": "验证码已发送到新邮箱",
+            "email": new_email,
+            "expires_in": 300  # 5分钟
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"发送邮箱修改验证码失败: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="发送验证码失败"
+        )
+
+
+@router.post("/profile/send-phone-update-code")
+@rate_limit("send_code")
+def send_phone_update_code(
+    request_data: schemas.UpdatePhoneRequest,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+):
+    """发送手机号修改验证码到新手机号"""
+    try:
+        from app.update_verification_code_manager import generate_verification_code, store_phone_update_code
+        from app.validators import StringValidator
+        import os
+        
+        new_phone = request_data.new_phone.strip()
+        
+        # 验证手机号格式
+        try:
+            validated_phone = StringValidator.validate_phone(new_phone)
+            new_phone = validated_phone
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        
+        # 检查手机号是否已被其他用户使用
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            existing_user = db.query(models.User).filter(
+                models.User.phone == new_phone,
+                models.User.id != current_user.id
+            ).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="该手机号已被其他用户使用")
+        finally:
+            db.close()
+        
+        # 生成6位数字验证码
+        verification_code = generate_verification_code(6)
+        
+        # 存储验证码到Redis，有效期5分钟
+        if not store_phone_update_code(current_user.id, new_phone, verification_code):
+            logger.error(f"存储手机号修改验证码失败: user_id={current_user.id}, new_phone={new_phone}")
+            raise HTTPException(
+                status_code=500,
+                detail="发送验证码失败，请稍后重试"
+            )
+        
+        # 发送短信
+        # TODO: 集成短信服务（如Twilio、阿里云短信等）
+        logger.info(f"手机号修改验证码已生成: user_id={current_user.id}, new_phone={new_phone}, code={verification_code}")
+        
+        # 为了开发测试，在开发环境中打印验证码
+        if os.getenv("ENVIRONMENT", "production") == "development":
+            logger.warning(f"[开发环境] 手机号修改验证码: {new_phone} -> {verification_code}")
+        
+        return {
+            "message": "验证码已发送到新手机号",
+            "phone": new_phone,
+            "expires_in": 300  # 5分钟
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"发送手机号修改验证码失败: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="发送验证码失败"
+        )
+
+
 class AvatarUpdate(BaseModel):
     avatar: str
 
@@ -1604,6 +1769,10 @@ def update_avatar(
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None
+    email: Optional[str] = None
+    email_verification_code: Optional[str] = None  # 修改邮箱时需要验证码
+    phone: Optional[str] = None
+    phone_verification_code: Optional[str] = None  # 修改手机号时需要验证码
     residence_city: Optional[str] = None
     language_preference: Optional[str] = None
 
@@ -1702,6 +1871,92 @@ def update_profile(
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
             logger.info(f"[DEBUG] 更新语言偏好: {data.language_preference}")
+        
+        # 处理邮箱更新
+        if data.email is not None:
+            new_email = data.email.strip() if data.email else None
+            
+            # 如果邮箱为空，允许设置为None（用于手机号登录用户绑定邮箱）
+            if new_email == "":
+                new_email = None
+            
+            # 如果提供了新邮箱且与当前邮箱不同，需要验证码验证
+            if new_email and new_email != current_user.email:
+                # 验证格式
+                try:
+                    validated_email = StringValidator.validate_email(new_email)
+                    new_email = validated_email.lower()
+                except ValueError as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+                
+                # 检查邮箱是否已被其他用户使用
+                existing_user = db.query(models.User).filter(
+                    models.User.email == new_email,
+                    models.User.id != current_user.id
+                ).first()
+                if existing_user:
+                    raise HTTPException(status_code=400, detail="该邮箱已被其他用户使用")
+                
+                # 验证验证码
+                if not data.email_verification_code:
+                    raise HTTPException(status_code=400, detail="修改邮箱需要验证码，请先发送验证码到新邮箱")
+                
+                from app.update_verification_code_manager import verify_email_update_code
+                if not verify_email_update_code(current_user.id, new_email, data.email_verification_code):
+                    raise HTTPException(status_code=400, detail="验证码错误或已过期，请重新发送")
+                
+                update_data["email"] = new_email
+                logger.info(f"[DEBUG] 更新邮箱: {current_user.email} -> {new_email}")
+            elif new_email == current_user.email:
+                # 邮箱没变化，不需要更新
+                pass
+            elif new_email is None and current_user.email:
+                # 清空邮箱（解绑），不需要验证码
+                update_data["email"] = None
+                logger.info(f"[DEBUG] 清空邮箱: {current_user.email} -> None")
+        
+        # 处理手机号更新
+        if data.phone is not None:
+            new_phone = data.phone.strip() if data.phone else None
+            
+            # 如果手机号为空，允许设置为None（用于邮箱登录用户绑定手机号）
+            if new_phone == "":
+                new_phone = None
+            
+            # 如果提供了新手机号且与当前手机号不同，需要验证码验证
+            if new_phone and new_phone != current_user.phone:
+                # 验证格式
+                try:
+                    validated_phone = StringValidator.validate_phone(new_phone)
+                    new_phone = validated_phone
+                except ValueError as e:
+                    raise HTTPException(status_code=400, detail=str(e))
+                
+                # 检查手机号是否已被其他用户使用
+                existing_user = db.query(models.User).filter(
+                    models.User.phone == new_phone,
+                    models.User.id != current_user.id
+                ).first()
+                if existing_user:
+                    raise HTTPException(status_code=400, detail="该手机号已被其他用户使用")
+                
+                # 验证验证码
+                if not data.phone_verification_code:
+                    raise HTTPException(status_code=400, detail="修改手机号需要验证码，请先发送验证码到新手机号")
+                
+                from app.update_verification_code_manager import verify_phone_update_code
+                if not verify_phone_update_code(current_user.id, new_phone, data.phone_verification_code):
+                    raise HTTPException(status_code=400, detail="验证码错误或已过期，请重新发送")
+                
+                update_data["phone"] = new_phone
+                logger.info(f"[DEBUG] 更新手机号: {current_user.phone} -> {new_phone}")
+            elif new_phone == current_user.phone:
+                # 手机号没变化，不需要更新
+                pass
+            elif new_phone is None and current_user.phone:
+                # 清空手机号（解绑），不需要验证码
+                update_data["phone"] = None
+                logger.info(f"[DEBUG] 清空手机号: {current_user.phone} -> None")
         
         # 如果没有要更新的字段，返回错误（但名字不变时不更新名字字段是正常的）
         if not update_data:

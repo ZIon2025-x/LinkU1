@@ -50,6 +50,24 @@ class PhoneVerificationCodeLogin(BaseModel):
     phone: str
     verification_code: str
 
+class UpdateEmailRequest(BaseModel):
+    """请求发送邮箱修改验证码"""
+    new_email: str
+
+class UpdateEmailVerify(BaseModel):
+    """验证邮箱修改验证码"""
+    new_email: str
+    verification_code: str
+
+class UpdatePhoneRequest(BaseModel):
+    """请求发送手机号修改验证码"""
+    new_phone: str
+
+class UpdatePhoneVerify(BaseModel):
+    """验证手机号修改验证码"""
+    new_phone: str
+    verification_code: str
+
 class PasswordValidationRequest(BaseModel):
     password: str
     username: Optional[str] = None
