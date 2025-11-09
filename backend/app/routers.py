@@ -1707,13 +1707,50 @@ def send_phone_update_code(
                 detail="发送验证码失败，请稍后重试"
             )
         
-        # 发送短信
-        # TODO: 集成短信服务（如Twilio、阿里云短信等）
-        logger.info(f"手机号修改验证码已生成: user_id={current_user.id}, new_phone={new_phone}, code={verification_code}")
-        
-        # 为了开发测试，在开发环境中打印验证码
-        if os.getenv("ENVIRONMENT", "production") == "development":
-            logger.warning(f"[开发环境] 手机号修改验证码: {new_phone} -> {verification_code}")
+        # 发送短信（使用 Twilio）
+        try:
+            from app.twilio_sms import twilio_sms
+            # 获取用户语言偏好
+            language = current_user.language_preference if hasattr(current_user, 'language_preference') and current_user.language_preference else 'zh'
+            
+            # 尝试发送短信
+            sms_sent = twilio_sms.send_update_verification_code(new_phone, verification_code, language)
+            
+            if not sms_sent:
+                # 如果 Twilio 发送失败，在开发环境中记录日志
+                if os.getenv("ENVIRONMENT", "production") == "development":
+                    logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机号修改验证码: {new_phone} -> {verification_code}")
+                else:
+                    logger.error(f"Twilio 短信发送失败: user_id={current_user.id}, phone={new_phone}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="发送验证码失败，请稍后重试"
+                    )
+            else:
+                logger.info(f"手机号修改验证码已通过 Twilio 发送: user_id={current_user.id}, phone={new_phone}")
+        except ImportError:
+            # 如果 Twilio 未安装，在开发环境中记录日志
+            logger.warning("Twilio 模块未安装，无法发送短信")
+            if os.getenv("ENVIRONMENT", "production") == "development":
+                logger.warning(f"[开发环境] 手机号修改验证码: {new_phone} -> {verification_code}")
+            else:
+                logger.error("Twilio 模块未安装，无法发送短信")
+                raise HTTPException(
+                    status_code=500,
+                    detail="短信服务未配置，请联系管理员"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"发送短信时发生异常: {e}")
+            # 在开发环境中，即使发送失败也继续（记录验证码）
+            if os.getenv("ENVIRONMENT", "production") == "development":
+                logger.warning(f"[开发环境] 手机号修改验证码: {new_phone} -> {verification_code}")
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail="发送验证码失败，请稍后重试"
+                )
         
         return {
             "message": "验证码已发送到新手机号",

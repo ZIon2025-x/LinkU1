@@ -40,7 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const [error, setError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [loginMethod, setLoginMethod] = useState<'password' | 'code' | 'phone'>('password');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'code' | 'phone'>('code');
   const [verificationCode, setVerificationCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -732,83 +732,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
           </div>
         )}
 
-        {/* 登录方式切换（仅在登录模式下显示） */}
-        {isLogin && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('password');
-                setCodeSent(false);
-                setVerificationCode('');
-                setPhoneForCode('');
-                setError('');
-              }}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: loginMethod === 'password' ? '#3b82f6' : '#f3f4f6',
-                color: loginMethod === 'password' ? '#fff' : '#666',
-              }}
-            >
-              {t('auth.passwordLogin')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('code');
-                setCodeSent(false);
-                setVerificationCode('');
-                setPhoneForCode('');
-                setError('');
-              }}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: loginMethod === 'code' ? '#3b82f6' : '#f3f4f6',
-                color: loginMethod === 'code' ? '#fff' : '#666',
-              }}
-            >
-              {t('auth.loginWithCode')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMethod('phone');
-                setCodeSent(false);
-                setVerificationCode('');
-                setPhoneForCode('');
-                setError('');
-              }}
-              style={{
-                flex: 1,
-                padding: '10px 16px',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backgroundColor: loginMethod === 'phone' ? '#3b82f6' : '#f3f4f6',
-                color: loginMethod === 'phone' ? '#fff' : '#666',
-              }}
-            >
-              {t('auth.phoneLogin')}
-            </button>
-          </div>
-        )}
 
         {/* 表单 */}
         <form onSubmit={handleSubmit}>
@@ -1546,7 +1469,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '12px',
-              transition: 'border-color 0.2s'
+              transition: 'border-color 0.2s',
+              marginBottom: '12px'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = '#3b82f6';
@@ -1571,6 +1495,148 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
             {t('auth.continueWithGoogle')}
           </button>
+
+          {/* 登录方式切换（仅在登录模式下显示） */}
+          {isLogin && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('password');
+                  setCodeSent(false);
+                  setVerificationCode('');
+                  setPhoneForCode('');
+                  setError('');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  backgroundColor: loginMethod === 'password' ? '#3b82f6' : '#fff',
+                  color: loginMethod === 'password' ? '#fff' : '#333',
+                  border: loginMethod === 'password' ? 'none' : '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  marginBottom: '12px'
+                }}
+                onMouseEnter={(e) => {
+                  if (loginMethod !== 'password') {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (loginMethod !== 'password') {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.backgroundColor = '#fff';
+                  }
+                }}
+              >
+                {t('auth.passwordLogin')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('code');
+                  setCodeSent(false);
+                  setVerificationCode('');
+                  setPhoneForCode('');
+                  setError('');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  backgroundColor: loginMethod === 'code' ? '#3b82f6' : '#fff',
+                  color: loginMethod === 'code' ? '#fff' : '#333',
+                  border: loginMethod === 'code' ? 'none' : '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  marginBottom: '12px'
+                }}
+                onMouseEnter={(e) => {
+                  if (loginMethod !== 'code') {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (loginMethod !== 'code') {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.backgroundColor = '#fff';
+                  }
+                }}
+              >
+                {t('auth.loginWithCode')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('phone');
+                  setCodeSent(false);
+                  setVerificationCode('');
+                  setPhoneForCode('');
+                  setError('');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  backgroundColor: loginMethod === 'phone' ? '#3b82f6' : '#fff',
+                  color: loginMethod === 'phone' ? '#fff' : '#333',
+                  border: loginMethod === 'phone' ? 'none' : '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s',
+                  marginBottom: '12px'
+                }}
+                onMouseEnter={(e) => {
+                  if (loginMethod !== 'phone') {
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (loginMethod !== 'phone') {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.backgroundColor = '#fff';
+                  }
+                }}
+              >
+                {t('auth.phoneLogin')}
+              </button>
+              
+              {/* 提示信息：新用户可以直接使用验证码登录创建新账号 */}
+              {(loginMethod === 'code' || loginMethod === 'phone') && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#e6f7ff',
+                  border: '1px solid #91d5ff',
+                  borderRadius: '8px',
+                  marginBottom: '12px',
+                  fontSize: '13px',
+                  color: '#0050b3',
+                  lineHeight: '1.5'
+                }}>
+                  💡 {t('auth.newUserCanLoginWithCode')}
+                </div>
+              )}
+            </>
+          )}
         </form>
         </div>
       )}

@@ -942,18 +942,50 @@ def send_phone_verification_code(
                 detail="发送验证码失败，请稍后重试"
             )
         
-        # 发送短信
-        # TODO: 集成短信服务（如Twilio、阿里云短信等）
-        # 目前先记录日志，后续可以集成实际的短信服务
-        logger.info(f"手机验证码已生成: phone={phone_digits}, code={verification_code}")
-        
-        # 在实际生产环境中，这里应该调用短信服务API
-        # 示例：send_sms(phone_digits, f"您的Link²Ur登录验证码是：{verification_code}，有效期5分钟。")
-        
-        # 为了开发测试，我们可以在开发环境中打印验证码
-        # 在生产环境中应该移除或注释掉
-        if os.getenv("ENVIRONMENT", "production") == "development":
-            logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
+        # 发送短信（使用 Twilio）
+        try:
+            from app.twilio_sms import twilio_sms
+            # 获取用户语言偏好（默认为中文）
+            language = 'zh'  # 可以从请求中获取，暂时默认为中文
+            
+            # 尝试发送短信
+            sms_sent = twilio_sms.send_verification_code(phone_digits, verification_code, language)
+            
+            if not sms_sent:
+                # 如果 Twilio 发送失败，在开发环境中记录日志
+                if os.getenv("ENVIRONMENT", "production") == "development":
+                    logger.warning(f"[开发环境] Twilio 未配置或发送失败，手机验证码: {phone_digits} -> {verification_code}")
+                else:
+                    logger.error(f"Twilio 短信发送失败: phone={phone_digits}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="发送验证码失败，请稍后重试"
+                    )
+            else:
+                logger.info(f"手机验证码已通过 Twilio 发送: phone={phone_digits}")
+        except ImportError:
+            # 如果 Twilio 未安装，在开发环境中记录日志
+            logger.warning("Twilio 模块未安装，无法发送短信")
+            if os.getenv("ENVIRONMENT", "production") == "development":
+                logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
+            else:
+                logger.error("Twilio 模块未安装，无法发送短信")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="短信服务未配置，请联系管理员"
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"发送短信时发生异常: {e}")
+            # 在开发环境中，即使发送失败也继续（记录验证码）
+            if os.getenv("ENVIRONMENT", "production") == "development":
+                logger.warning(f"[开发环境] 手机验证码: {phone_digits} -> {verification_code}")
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="发送验证码失败，请稍后重试"
+                )
         
         return {
             "message": "验证码已发送到您的手机",
