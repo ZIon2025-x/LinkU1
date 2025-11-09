@@ -76,11 +76,24 @@ const FaviconManager: React.FC = () => {
         document.head.appendChild(sizeLink);
       });
 
-      // 5. 设置Apple Touch Icon（iOS设备需要）
+      // 5. 设置Apple Touch Icon（iOS设备需要）- 移动端关键配置
+      // iOS设备会优先查找apple-touch-icon，必须使用绝对路径
       const appleIcon = document.createElement('link');
       appleIcon.rel = 'apple-touch-icon';
       appleIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
+      // 设置sizes属性，iOS会优先使用180x180
+      appleIcon.setAttribute('sizes', '180x180');
       document.head.insertBefore(appleIcon, document.head.firstChild);
+      
+      // 5.1. 设置多个尺寸的Apple Touch Icon（确保iOS设备能找到合适的尺寸）
+      const appleSizes = ['57x57', '60x60', '72x72', '76x76', '114x114', '120x120', '144x144', '152x152', '180x180'];
+      appleSizes.forEach(size => {
+        const appleSizeIcon = document.createElement('link');
+        appleSizeIcon.rel = 'apple-touch-icon';
+        appleSizeIcon.setAttribute('sizes', size);
+        appleSizeIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        document.head.insertBefore(appleSizeIcon, appleIcon.nextSibling);
+      });
       
       // 6. 额外设置一个无sizes的PNG favicon（现代浏览器和移动端需要，作为.ico的备选）
       const defaultPngIcon = document.createElement('link');
@@ -155,6 +168,25 @@ const FaviconManager: React.FC = () => {
         // 如果存在但不是绝对路径，更新为绝对路径
         sizes512.href = `${baseUrl}/static/favicon.png?v=${version}`;
         document.head.insertBefore(sizes512, document.head.firstChild);
+      }
+      
+      // 确保Apple Touch Icon使用绝对路径（移动端iOS关键配置）
+      const appleTouchIcons = document.querySelectorAll("link[rel='apple-touch-icon']") as NodeListOf<HTMLLinkElement>;
+      appleTouchIcons.forEach(icon => {
+        if (!icon.href.startsWith('http')) {
+          icon.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        } else if (!icon.href.includes('?v=')) {
+          // 如果已有绝对路径但没有版本号，添加版本号避免缓存
+          icon.href = `${icon.href.split('?')[0]}?v=${version}`;
+        }
+      });
+      
+      // 如果没有任何apple-touch-icon，创建一个默认的
+      if (appleTouchIcons.length === 0) {
+        const defaultAppleIcon = document.createElement('link');
+        defaultAppleIcon.rel = 'apple-touch-icon';
+        defaultAppleIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        document.head.insertBefore(defaultAppleIcon, document.head.firstChild);
       }
     };
 
