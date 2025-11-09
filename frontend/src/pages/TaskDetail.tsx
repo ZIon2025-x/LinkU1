@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
 import dayjs from 'dayjs';
@@ -173,8 +173,9 @@ const TaskDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // SEO优化：动态更新页面标题和Meta标签
-  useEffect(() => {
+  // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
+  // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
+  useLayoutEffect(() => {
     if (task) {
       // 构建任务详情页的URL
       const taskUrl = `${window.location.origin}${window.location.pathname}`;
@@ -214,26 +215,37 @@ const TaskDetail: React.FC = () => {
       // 限制总长度在200字符内（微信分享建议不超过200字符）
       const seoDescription = taskDescription.substring(0, 200);
       
-      // 强制更新meta描述（先移除旧标签再创建新标签，避免微信缓存问题）
-      const existingDescription = document.querySelector('meta[name="description"]');
-      if (existingDescription) {
-        existingDescription.remove();
-      }
-      updateMetaTag('description', seoDescription);
+      // 强制更新meta描述（先移除所有旧标签，再插入到head最前面，确保优先被读取）
+      const allDescriptions = document.querySelectorAll('meta[name="description"]');
+      allDescriptions.forEach(tag => tag.remove());
+      const descTag = document.createElement('meta');
+      descTag.name = 'description';
+      descTag.content = seoDescription;
+      document.head.insertBefore(descTag, document.head.firstChild);
       
-      // 强制更新og:description（先移除旧标签再创建新标签）
-      const existingOgDescription = document.querySelector('meta[property="og:description"]');
-      if (existingOgDescription) {
-        existingOgDescription.remove();
-      }
-      updateMetaTag('og:description', seoDescription, true);
+      // 强制更新og:description（先移除所有旧标签，再插入到head最前面）
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      allOgDescriptions.forEach(tag => tag.remove());
+      const ogDescTag = document.createElement('meta');
+      ogDescTag.setAttribute('property', 'og:description');
+      ogDescTag.content = seoDescription;
+      document.head.insertBefore(ogDescTag, document.head.firstChild);
       
       // 强制更新twitter:description
-      const existingTwitterDescription = document.querySelector('meta[name="twitter:description"]');
-      if (existingTwitterDescription) {
-        existingTwitterDescription.remove();
-      }
-      updateMetaTag('twitter:description', seoDescription);
+      const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
+      allTwitterDescriptions.forEach(tag => tag.remove());
+      const twitterDescTag = document.createElement('meta');
+      twitterDescTag.name = 'twitter:description';
+      twitterDescTag.content = seoDescription;
+      document.head.insertBefore(twitterDescTag, document.head.firstChild);
+      
+      // 强制更新微信分享描述（微信优先读取weixin:description）
+      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDescriptions.forEach(tag => tag.remove());
+      const weixinDescTag = document.createElement('meta');
+      weixinDescTag.setAttribute('name', 'weixin:description');
+      weixinDescTag.content = seoDescription;
+      document.head.insertBefore(weixinDescTag, document.head.firstChild);
       
       // 更新meta关键词
       const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;

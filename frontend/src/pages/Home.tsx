@@ -498,9 +498,24 @@ const Home: React.FC = () => {
     // 强制更新meta description，确保在head最前面
     const description = t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.';
     
-    // 移除所有旧的description标签
+    // 移除所有旧的description标签（包括可能包含公告内容的标签）
     const allDescriptions = document.querySelectorAll('meta[name="description"]');
-    allDescriptions.forEach(tag => tag.remove());
+    allDescriptions.forEach(tag => {
+      const metaTag = tag as HTMLMetaElement;
+      // 特别检查并移除包含公告关键词的标签
+      if (metaTag.content && (
+        metaTag.content.includes('平台公告') || 
+        metaTag.content.includes('测试阶段') || 
+        metaTag.content.includes('support@link2ur.com') ||
+        metaTag.content.includes('Platform Announcement') ||
+        metaTag.content.includes('testing phase') ||
+        metaTag.content.includes('2025-10-09')
+      )) {
+        metaTag.remove();
+      } else {
+        metaTag.remove(); // 移除所有，重新创建
+      }
+    });
     
     // 创建新的description标签并插入到head最前面
     const descTag = document.createElement('meta');
@@ -511,12 +526,85 @@ const Home: React.FC = () => {
     // 同样处理og:description
     const ogDescription = description;
     const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
-    allOgDescriptions.forEach(tag => tag.remove());
+    allOgDescriptions.forEach(tag => {
+      const metaTag = tag as HTMLMetaElement;
+      // 特别检查并移除包含公告关键词的标签
+      if (metaTag.content && (
+        metaTag.content.includes('平台公告') || 
+        metaTag.content.includes('测试阶段') || 
+        metaTag.content.includes('support@link2ur.com') ||
+        metaTag.content.includes('Platform Announcement') ||
+        metaTag.content.includes('testing phase') ||
+        metaTag.content.includes('2025-10-09')
+      )) {
+        metaTag.remove();
+      } else {
+        metaTag.remove(); // 移除所有，重新创建
+      }
+    });
     
     const ogDescTag = document.createElement('meta');
     ogDescTag.setAttribute('property', 'og:description');
     ogDescTag.content = ogDescription;
     document.head.insertBefore(ogDescTag, document.head.firstChild);
+    
+    // 同样处理微信分享描述
+    const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+    allWeixinDescriptions.forEach(tag => {
+      const metaTag = tag as HTMLMetaElement;
+      if (metaTag.content && (
+        metaTag.content.includes('平台公告') || 
+        metaTag.content.includes('测试阶段') || 
+        metaTag.content.includes('support@link2ur.com') ||
+        metaTag.content.includes('Platform Announcement') ||
+        metaTag.content.includes('testing phase') ||
+        metaTag.content.includes('2025-10-09')
+      )) {
+        metaTag.remove();
+      } else {
+        metaTag.remove();
+      }
+    });
+    
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = ogDescription;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+    
+    // 使用setTimeout确保在DOM完全加载后再次检查并移除公告内容
+    setTimeout(() => {
+      // 再次检查并移除任何包含公告内容的meta标签
+      const allMetaDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="weixin:description"]');
+      allMetaDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('平台公告') || 
+          metaTag.content.includes('测试阶段') || 
+          metaTag.content.includes('support@link2ur.com') ||
+          metaTag.content.includes('Platform Announcement') ||
+          metaTag.content.includes('testing phase') ||
+          metaTag.content.includes('2025-10-09')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 重新插入正确的描述
+      const finalDescTag = document.createElement('meta');
+      finalDescTag.name = 'description';
+      finalDescTag.content = description;
+      document.head.insertBefore(finalDescTag, document.head.firstChild);
+      
+      const finalOgDescTag = document.createElement('meta');
+      finalOgDescTag.setAttribute('property', 'og:description');
+      finalOgDescTag.content = ogDescription;
+      document.head.insertBefore(finalOgDescTag, document.head.firstChild);
+      
+      const finalWeixinDescTag = document.createElement('meta');
+      finalWeixinDescTag.setAttribute('name', 'weixin:description');
+      finalWeixinDescTag.content = ogDescription;
+      document.head.insertBefore(finalWeixinDescTag, document.head.firstChild);
+    }, 100);
   }, [t]);
 
   return (
@@ -1192,23 +1280,38 @@ const Home: React.FC = () => {
           </div>
         )}
       </main>
-      {/* 平台公告区块 - 使用data-nosnippet防止搜索引擎抓取为描述 */}
+      {/* 平台公告区块 - 使用多种方法防止搜索引擎抓取为描述 */}
+      {/* 注意：此区块内容不应被搜索引擎抓取，仅用于用户查看 */}
       <section 
         style={{background: '#f8fbff', padding: '48px 0'}}
         data-nosnippet="true"
+        data-noindex="true"
+        aria-hidden="true"
       >
         <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}} data-nosnippet="true">
+          <h3 
+            style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}} 
+            data-nosnippet="true"
+            data-noindex="true"
+            aria-hidden="true"
+          >
             {t('home.announcementTitle')}
           </h3>
           <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
             <div 
               style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}
               data-nosnippet="true"
+              data-noindex="true"
+              aria-hidden="true"
             >
+              {/* 使用注释包裹内容，进一步防止抓取 */}
+              {/*googleoff: snippet*/}
+              {/*googleoff: index*/}
               {t('home.announcementContent')}
               <br/>
               <span style={{color: '#888', fontSize: '14px'}}>{t('home.announcementDate')}</span>
+              {/*googleon: index*/}
+              {/*googleon: snippet*/}
             </div>
           </div>
         </div>
