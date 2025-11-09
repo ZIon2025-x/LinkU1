@@ -500,7 +500,7 @@ const Home: React.FC = () => {
         canonicalUrl={canonicalUrl}
         ogTitle={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
         ogDescription={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
-        ogImage="/static/logo.png"
+        ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
       {/* 顶部导航栏 - 使用汉堡菜单 */}

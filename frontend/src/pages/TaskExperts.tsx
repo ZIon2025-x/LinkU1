@@ -145,8 +145,8 @@ const TaskExperts: React.FC = () => {
       existingOgImage.remove();
     }
 
-    // 设置logo图片（完整URL，添加版本号避免缓存）
-    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    // 设置favicon图片（完整URL，添加版本号避免缓存）
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     
     // 创建新的og:image标签
     updateMetaTag('og:image', shareImageUrl, true);
@@ -369,7 +369,7 @@ const TaskExperts: React.FC = () => {
           canonicalUrl={canonicalUrl}
           ogTitle={t('taskExperts.title')}
           ogDescription={t('taskExperts.subtitle')}
-          ogImage="/static/logo.png"
+          ogImage="/static/favicon.png"
           ogUrl={canonicalUrl}
         />
         {/* 顶部导航栏 - 与首页一致 */}
@@ -480,7 +480,7 @@ const TaskExperts: React.FC = () => {
         canonicalUrl={canonicalUrl}
         ogTitle={t('taskExperts.title')}
         ogDescription={t('taskExperts.subtitle')}
-        ogImage="/static/logo.png"
+        ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
       {/* 顶部导航栏 - 与首页一致 */}

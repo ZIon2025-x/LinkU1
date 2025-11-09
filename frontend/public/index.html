@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <!-- Favicon配置 - 多种格式和尺寸，确保Google和Bing能正确识别 -->
-    <!-- 使用相对路径，FaviconManager会在运行时动态更新为完整URL -->
+    <!-- FaviconManager会在运行时动态更新为完整URL，这里设置默认值 -->
     <!-- 优先设置默认favicon（浏览器和搜索引擎默认查找的路径） -->
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
@@ -75,7 +75,10 @@
     <meta property="og:url" content="https://www.link2ur.com" />
     <meta property="og:title" content="Link²Ur" />
     <meta property="og:description" content="Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient." />
-    <meta property="og:image" content="https://www.link2ur.com/static/og-image.jpg" />
+    <meta property="og:image" content="https://www.link2ur.com/static/favicon.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:site_name" content="Link²Ur" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:brand" content="Link²Ur" />
@@ -85,7 +88,12 @@
     <meta name="twitter:url" content="https://www.link2ur.com" />
     <meta name="twitter:title" content="Link²Ur" />
     <meta name="twitter:description" content="Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient." />
-    <meta name="twitter:image" content="https://www.link2ur.com/static/twitter-image.jpg" />
+    <meta name="twitter:image" content="https://www.link2ur.com/static/favicon.png" />
+    
+    <!-- 微信分享 -->
+    <meta name="weixin:image" content="https://www.link2ur.com/static/favicon.png" />
+    <meta name="weixin:title" content="Link²Ur" />
+    <meta name="weixin:description" content="Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient." />
     
     <!-- Additional SEO Meta Tags -->
     <meta name="theme-color" content="#1890ff" />
@@ -117,7 +125,7 @@
         "url": "https://www.link2ur.com",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://www.link2ur.com/static/logo.png"
+          "url": "https://www.link2ur.com/static/favicon.png"
         }
       },
       "sameAs": [
@@ -133,7 +141,7 @@
       "name": "Link²Ur",
       "alternateName": "Link²Ur",
       "url": "https://www.link2ur.com",
-      "logo": "https://www.link2ur.com/static/logo.png",
+      "logo": "https://www.link2ur.com/static/favicon.png",
       "description": "Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.",
       "contactPoint": {
         "@type": "ContactPoint",

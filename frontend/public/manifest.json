@@ -4,13 +4,13 @@
   "description": "Professional task publishing and skill matching platform",
   "icons": [
     {
-      "src": "https://www.link2ur.com/static/favicon.png",
+      "src": "/static/favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://www.link2ur.com/static/favicon.png",
+      "src": "/static/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

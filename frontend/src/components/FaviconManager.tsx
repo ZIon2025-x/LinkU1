@@ -21,6 +21,7 @@ const FaviconManager: React.FC = () => {
       
       // 2. 设置根目录favicon.ico（搜索引擎和浏览器默认查找的路径，必须优先设置）
       // 插入到head的最前面，确保优先读取
+      // 移动端Chrome需要绝对路径
       const rootFavicon = document.createElement('link');
       rootFavicon.rel = 'icon';
       rootFavicon.type = 'image/x-icon';
@@ -35,9 +36,13 @@ const FaviconManager: React.FC = () => {
       document.head.insertBefore(shortcutIcon, rootFavicon.nextSibling);
 
       // 4. 设置所有尺寸的PNG favicon（移动端Chrome和Google需要）
-      // 关键尺寸：16x16, 32x32, 192x192, 512x512
-      const sizes = ['16x16', '32x32', '48x48', '96x96', '128x128', '192x192', '256x256', '512x512'];
-      sizes.forEach(size => {
+      // 关键尺寸：16x16, 32x32, 192x192, 512x512（移动端Chrome特别需要192x192和512x512）
+      // 按优先级排序：先设置关键尺寸，再设置其他尺寸
+      const criticalSizes = ['192x192', '512x512', '32x32', '16x16'];
+      const otherSizes = ['48x48', '96x96', '128x128', '256x256'];
+      
+      // 先设置关键尺寸（移动端Chrome优先读取）
+      criticalSizes.forEach(size => {
         const sizeLink = document.createElement('link');
         sizeLink.rel = 'icon';
         sizeLink.setAttribute('sizes', size);
@@ -45,12 +50,29 @@ const FaviconManager: React.FC = () => {
         sizeLink.href = `${baseUrl}/static/favicon.png?v=${version}`;
         document.head.insertBefore(sizeLink, shortcutIcon.nextSibling);
       });
+      
+      // 再设置其他尺寸
+      otherSizes.forEach(size => {
+        const sizeLink = document.createElement('link');
+        sizeLink.rel = 'icon';
+        sizeLink.setAttribute('sizes', size);
+        sizeLink.type = 'image/png';
+        sizeLink.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        document.head.appendChild(sizeLink);
+      });
 
       // 5. 设置Apple Touch Icon（iOS设备需要）
       const appleIcon = document.createElement('link');
       appleIcon.rel = 'apple-touch-icon';
       appleIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
       document.head.insertBefore(appleIcon, document.head.firstChild);
+      
+      // 6. 额外设置一个无sizes的PNG favicon（某些浏览器需要）
+      const defaultPngIcon = document.createElement('link');
+      defaultPngIcon.rel = 'icon';
+      defaultPngIcon.type = 'image/png';
+      defaultPngIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
+      document.head.insertBefore(defaultPngIcon, rootFavicon.nextSibling);
     };
 
     // 立即执行
@@ -75,30 +97,45 @@ const FaviconManager: React.FC = () => {
         rootFavicon.type = 'image/x-icon';
         rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
         document.head.insertBefore(rootFavicon, document.head.firstChild);
+      } else if (!rootFavicon.href.startsWith('http')) {
+        // 如果存在但不是绝对路径，更新为绝对路径
+        rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+        document.head.insertBefore(rootFavicon, document.head.firstChild);
       }
       
       // 确保192x192和512x512存在（Google移动端关键尺寸）
+      // 移动端Chrome特别需要这两个尺寸，且必须是绝对路径
       const sizes192 = document.querySelector("link[rel='icon'][sizes='192x192']") as HTMLLinkElement;
       const sizes512 = document.querySelector("link[rel='icon'][sizes='512x512']") as HTMLLinkElement;
       
-      if (!sizes192 || !sizes192.href.includes('/static/favicon.png')) {
+      if (!sizes192 || !sizes192.href.includes('/static/favicon.png') || !sizes192.href.startsWith('http')) {
         if (sizes192) sizes192.remove();
         const icon192 = document.createElement('link');
         icon192.rel = 'icon';
         icon192.setAttribute('sizes', '192x192');
         icon192.type = 'image/png';
         icon192.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        // 插入到head最前面，确保移动端Chrome能优先读取
         document.head.insertBefore(icon192, document.head.firstChild);
+      } else if (!sizes192.href.startsWith('http')) {
+        // 如果存在但不是绝对路径，更新为绝对路径
+        sizes192.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        document.head.insertBefore(sizes192, document.head.firstChild);
       }
       
-      if (!sizes512 || !sizes512.href.includes('/static/favicon.png')) {
+      if (!sizes512 || !sizes512.href.includes('/static/favicon.png') || !sizes512.href.startsWith('http')) {
         if (sizes512) sizes512.remove();
         const icon512 = document.createElement('link');
         icon512.rel = 'icon';
         icon512.setAttribute('sizes', '512x512');
         icon512.type = 'image/png';
         icon512.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        // 插入到head最前面，确保移动端Chrome能优先读取
         document.head.insertBefore(icon512, document.head.firstChild);
+      } else if (!sizes512.href.startsWith('http')) {
+        // 如果存在但不是绝对路径，更新为绝对路径
+        sizes512.href = `${baseUrl}/static/favicon.png?v=${version}`;
+        document.head.insertBefore(sizes512, document.head.firstChild);
       }
     };
 

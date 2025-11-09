@@ -400,8 +400,8 @@ const Tasks: React.FC = () => {
     const allOgImages = document.querySelectorAll('meta[property="og:image"], meta[property="og:image:width"], meta[property="og:image:height"], meta[property="og:image:type"]');
     allOgImages.forEach(tag => tag.remove());
 
-    // 设置logo图片（完整URL，添加版本号避免缓存）
-    const shareImageUrl = `${window.location.origin}/static/logo.png?v=3`;
+    // 设置favicon图片（完整URL，添加版本号避免缓存）
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=3`;
     
     // 创建新的og:image标签（直接插入到head最前面）
     const ogImage = document.createElement('meta');
@@ -474,13 +474,13 @@ const Tasks: React.FC = () => {
 
   // 额外的useEffect，在SEOHead执行后再次强制更新（作为保险）
   useEffect(() => {
-    const shareImageUrl = `${window.location.origin}/static/logo.png?v=3`;
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=3`;
     
     // 等待一小段时间确保SEOHead已经执行
     const timer = setTimeout(() => {
       // 强制检查并更新og:image
       const existingOgImage = document.querySelector('meta[property="og:image"]') as HTMLMetaElement;
-      if (!existingOgImage || !existingOgImage.content.includes('/static/logo.png')) {
+      if (!existingOgImage || !existingOgImage.content.includes('/static/favicon.png')) {
         // 如果不存在或不正确，强制更新
         if (existingOgImage) {
           existingOgImage.remove();
@@ -497,7 +497,7 @@ const Tasks: React.FC = () => {
       
       // 同样处理weixin:image
       const existingWeixinImage = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
-      if (!existingWeixinImage || !existingWeixinImage.content.includes('/static/logo.png')) {
+      if (!existingWeixinImage || !existingWeixinImage.content.includes('/static/favicon.png')) {
         if (existingWeixinImage) {
           existingWeixinImage.remove();
         }
@@ -1072,7 +1072,7 @@ const Tasks: React.FC = () => {
         canonicalUrl={canonicalUrl}
         ogTitle={t('tasks.pageTitle')}
         ogDescription={t('tasks.seoDescription')}
-        ogImage="/static/logo.png"
+        ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
 

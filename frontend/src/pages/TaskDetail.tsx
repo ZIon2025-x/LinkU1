@@ -141,8 +141,8 @@ const TaskDetail: React.FC = () => {
     updateMetaTag('og:url', taskUrl, true);
     updateMetaTag('og:type', 'article', true);
     
-    // 设置logo图片（带版本号避免缓存问题）
-    const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+    // 设置favicon图片（带版本号避免缓存问题）
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     // 强制移除旧的图片标签
     const existingOgImage = document.querySelector('meta[property="og:image"]');
     if (existingOgImage) {
@@ -230,9 +230,9 @@ const TaskDetail: React.FC = () => {
       
       updateMetaTag('og:url', taskUrl, true);
       
-      // 设置平台logo作为og:image（微信和社交媒体分享会使用）
-      // 使用public/static/logo.png，添加版本号避免缓存问题
-      const shareImageUrl = `${window.location.origin}/static/logo.png?v=2`;
+      // 设置favicon作为og:image（微信和社交媒体分享会使用）
+      // 使用public/static/favicon.png，添加版本号避免缓存问题
+      const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
       // 强制更新og:image（通过先移除再添加的方式）
       const existingOgImage = document.querySelector('meta[property="og:image"]');
       if (existingOgImage) {

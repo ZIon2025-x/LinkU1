@@ -4392,7 +4392,8 @@ const MessagePage: React.FC = () => {
                 >
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
+                    capture={isMobile ? "environment" : undefined}
                     onChange={handleImageSelect}
                     disabled={!serviceConnected || isSending || uploadingImage}
                     style={{ display: 'none' }}
@@ -4788,7 +4789,8 @@ const MessagePage: React.FC = () => {
                 >
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
+                    capture={isMobile ? "environment" : undefined}
                     onChange={handleImageSelect}
                     disabled={
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||

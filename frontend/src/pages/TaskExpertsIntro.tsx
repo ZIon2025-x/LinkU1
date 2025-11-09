@@ -64,7 +64,7 @@ const TaskExpertsIntro: React.FC = () => {
         canonicalUrl={canonicalUrl}
         ogTitle={t('taskExpertsIntro.title')}
         ogDescription={t('taskExpertsIntro.description')}
-        ogImage="/static/logo.png"
+        ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
       
