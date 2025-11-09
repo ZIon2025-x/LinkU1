@@ -1195,6 +1195,28 @@ def complete_task(
     db.commit()
     db.refresh(db_task)
 
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message, get_uk_time_naive
+        import json
+        
+        taker_name = current_user.name or f"用户{current_user.id}"
+        system_message = Message(
+            sender_id=None,  # 系统消息，sender_id为None
+            receiver_id=None,
+            content=f"接收者 {taker_name} 已确认完成任务，等待发布者确认。",
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({"system_action": "task_completed_by_taker"}),
+            created_at=get_uk_time_naive()
+        )
+        db.add(system_message)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to send system message: {e}")
+        # 系统消息发送失败不影响任务完成流程
+
     # 发送任务完成通知和邮件给发布者
     if background_tasks:
         try:
@@ -1240,6 +1262,28 @@ def confirm_task_completion(
     db.commit()
     crud.add_task_history(db, task_id, current_user.id, "confirmed_completion")
     db.refresh(task)
+
+    # 发送系统消息到任务聊天框
+    try:
+        from app.models import Message, get_uk_time_naive
+        import json
+        
+        poster_name = current_user.name or f"用户{current_user.id}"
+        system_message = Message(
+            sender_id=None,  # 系统消息，sender_id为None
+            receiver_id=None,
+            content=f"发布者 {poster_name} 已确认任务完成。",
+            task_id=task_id,
+            message_type="system",
+            conversation_type="task",
+            meta=json.dumps({"system_action": "task_confirmed_by_poster"}),
+            created_at=get_uk_time_naive()
+        )
+        db.add(system_message)
+        db.commit()
+    except Exception as e:
+        print(f"Failed to send system message: {e}")
+        # 系统消息发送失败不影响任务确认流程
 
     # 发送任务确认完成通知和邮件给接收者
     if task.taker_id and background_tasks:

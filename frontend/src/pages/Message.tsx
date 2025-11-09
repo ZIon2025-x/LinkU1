@@ -17,7 +17,11 @@ import api, {
   withdrawApplication,
   negotiateApplication,
   respondNegotiation,
-  applyForTask
+  applyForTask,
+  // 任务操作相关API
+  completeTask,
+  confirmTaskCompletion,
+  createReview
 } from '../api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -303,6 +307,11 @@ const MessagePage: React.FC = () => {
   const [taskHasMore, setTaskHasMore] = useState(false);
   const [applications, setApplications] = useState<any[]>([]); // 申请列表
   const [applicationsLoading, setApplicationsLoading] = useState(false);
+  // 任务操作相关状态
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
@@ -1123,6 +1132,104 @@ const MessagePage: React.FC = () => {
     } finally {
       setIsSending(false);
     }
+  };
+
+  // 完成任务（接收者）
+  const handleCompleteTask = async () => {
+    if (!activeTaskId || !user) return;
+    
+    // 确认提示
+    if (!window.confirm('确定已经完成任务了吗？')) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await completeTask(activeTaskId);
+      showToast('success', '任务已标记为完成，等待发布者确认！');
+      // 重新加载任务信息
+      await loadTasks();
+      // 重新加载消息（包含系统消息）
+      await loadTaskMessages(activeTaskId);
+    } catch (error: any) {
+      console.error('完成任务失败:', error);
+      const errorMsg = error.response?.data?.detail || error.message || '操作失败，请重试';
+      showToast('error', errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 确认完成（发布者）
+  const handleConfirmCompletion = async () => {
+    if (!activeTaskId || !user) return;
+    
+    // 确认提示
+    if (!window.confirm('确定此任务已经完成了吗？')) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await confirmTaskCompletion(activeTaskId);
+      showToast('success', '任务已确认完成！');
+      // 重新加载任务信息
+      await loadTasks();
+      // 重新加载消息（包含系统消息）
+      await loadTaskMessages(activeTaskId);
+    } catch (error: any) {
+      console.error('确认完成失败:', error);
+      const errorMsg = error.response?.data?.detail || error.message || '操作失败，请重试';
+      showToast('error', errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 评价任务
+  const handleReviewTask = async () => {
+    if (!activeTaskId || !user || !reviewComment.trim()) {
+      showToast('error', '请输入评价内容');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await api.post(`/api/tasks/${activeTaskId}/review`, {
+        rating: reviewRating,
+        comment: reviewComment
+      });
+      showToast('success', '评价提交成功！');
+      setShowReviewModal(false);
+      setReviewComment('');
+      setReviewRating(5);
+      // 重新加载任务信息
+      await loadTasks();
+    } catch (error: any) {
+      console.error('评价失败:', error);
+      const errorMsg = error.response?.data?.detail || error.message || '评价失败，请重试';
+      showToast('error', errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // 检查是否可以评价
+  const canReview = () => {
+    if (!activeTask || !user) return false;
+    // 任务必须已完成
+    if (activeTask.status !== 'completed') return false;
+    // 必须是任务的参与者
+    if (activeTask.poster_id !== user.id && activeTask.taker_id !== user.id) return false;
+    return true;
+  };
+
+  // 检查是否已评价
+  const hasReviewed = () => {
+    if (!activeTask || !user) return false;
+    // 这里需要检查用户是否已经评价过，暂时返回false
+    // 实际应该从任务数据中获取评价信息
+    return false;
   };
 
   // 检测移动端设备
@@ -4849,6 +4956,104 @@ const MessagePage: React.FC = () => {
                   />
                   {uploadingFile ? '⏳' : '📎'}
                 </label>
+                
+                {/* 完成任务按钮（接收者，任务进行中时显示） */}
+                {activeTask.status === 'in_progress' && activeTask.taker_id === user?.id && (
+                  <button
+                    onClick={handleCompleteTask}
+                    disabled={actionLoading}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#28a745',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: actionLoading ? 'not-allowed' : 'pointer',
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!actionLoading) {
+                        e.currentTarget.style.background = '#218838';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#28a745';
+                    }}
+                    title="完成任务"
+                  >
+                    {actionLoading ? '处理中...' : '✅ 完成任务'}
+                  </button>
+                )}
+                
+                {/* 确认完成按钮（发布者，等待确认时显示） */}
+                {activeTask.status === 'pending_confirmation' && activeTask.poster_id === user?.id && (
+                  <button
+                    onClick={handleConfirmCompletion}
+                    disabled={actionLoading}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#28a745',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: actionLoading ? 'not-allowed' : 'pointer',
+                      opacity: actionLoading ? 0.6 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!actionLoading) {
+                        e.currentTarget.style.background = '#218838';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#28a745';
+                    }}
+                    title="确认完成"
+                  >
+                    {actionLoading ? '处理中...' : '✅ 确认完成'}
+                  </button>
+                )}
+                
+                {/* 评价按钮（双方，任务已完成时显示） */}
+                {canReview() && !hasReviewed() && (
+                  <button
+                    onClick={() => setShowReviewModal(true)}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#ffc107',
+                      color: '#000',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#ffb300';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#ffc107';
+                    }}
+                    title="评价任务"
+                  >
+                    ⭐ 评价
+                  </button>
+                )}
               </div>
               
               {/* 输入框和发送按钮 */}
@@ -6180,6 +6385,125 @@ const MessagePage: React.FC = () => {
           }
         `}
       </style>
+      
+      {/* 评价弹窗 */}
+      {showReviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: 16,
+            padding: 32,
+            maxWidth: 500,
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <h2 style={{marginBottom: 24, color: '#A67C52', textAlign: 'center'}}>评价任务</h2>
+            
+            <div style={{marginBottom: 20}}>
+              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
+                评分 (1-5星)
+              </label>
+              <div style={{display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center'}}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => setReviewRating(star)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '32px',
+                      cursor: 'pointer',
+                      color: star <= reviewRating ? '#ffc107' : '#ddd',
+                      padding: '4px'
+                    }}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+              <div style={{textAlign: 'center', marginTop: 8, color: '#666', fontSize: '14px'}}>
+                当前评分: {reviewRating} 星
+              </div>
+            </div>
+            
+            <div style={{marginBottom: 20}}>
+              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
+                评价内容 <span style={{color: '#999', fontWeight: 'normal'}}>(必填)</span>
+              </label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder="请输入您的评价..."
+                style={{
+                  width: '100%',
+                  minHeight: '120px',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              />
+            </div>
+            
+            <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setReviewComment('');
+                  setReviewRating(5);
+                }}
+                style={{
+                  padding: '10px 24px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  background: '#fff',
+                  color: '#666',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReviewTask}
+                disabled={actionLoading || !reviewComment.trim()}
+                style={{
+                  padding: '10px 24px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: actionLoading || !reviewComment.trim() ? '#ccc' : '#ffc107',
+                  color: '#000',
+                  cursor: actionLoading || !reviewComment.trim() ? 'not-allowed' : 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                {actionLoading ? '提交中...' : '提交评价'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* 任务详情弹窗 */}
       <TaskDetailModal

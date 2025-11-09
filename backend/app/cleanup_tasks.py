@@ -16,6 +16,7 @@ class CleanupTasks:
     def __init__(self):
         self.running = False
         self.cleanup_interval = 3600  # 1小时清理一次
+        self.last_completed_tasks_cleanup_date = None  # 上次清理已完成任务的日期
     
     async def start_cleanup_tasks(self):
         """启动清理任务"""
@@ -46,6 +47,9 @@ class CleanupTasks:
             
             # 清理过期缓存
             await self._cleanup_expired_cache()
+            
+            # 清理已完成任务的文件（每天检查一次）
+            await self._cleanup_completed_tasks_files()
             
             logger.info("清理任务完成")
             
@@ -124,6 +128,33 @@ class CleanupTasks:
                     
         except Exception as e:
             logger.error(f"清理过期缓存失败: {e}")
+    
+    async def _cleanup_completed_tasks_files(self):
+        """清理已完成超过3天的任务的图片和文件（每天检查一次）"""
+        try:
+            # 检查今天是否已经清理过
+            today = datetime.utcnow().date()
+            if self.last_completed_tasks_cleanup_date == today:
+                # 今天已经清理过，跳过
+                return
+            
+            from app.deps import get_sync_db
+            from app.crud import cleanup_completed_tasks_files
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用清理函数
+                cleaned_count = cleanup_completed_tasks_files(db)
+                if cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 个已完成任务的文件")
+                # 更新最后清理日期
+                self.last_completed_tasks_cleanup_date = today
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"清理已完成任务文件失败: {e}")
     
     def stop_cleanup_tasks(self):
         """停止清理任务"""
