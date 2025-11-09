@@ -32,8 +32,10 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     const loadUser = async () => {
       try {
         const userData = await fetchCurrentUser();
+        console.log('[UnreadMessageContext] 加载用户信息:', userData?.id);
         setUser(userData);
       } catch (error) {
+        console.log('[UnreadMessageContext] 用户未登录');
         setUser(null);
       }
     };
@@ -53,9 +55,10 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     try {
       const response = await api.get('/api/users/messages/unread/count');
       const count = response.data.unread_count || 0;
+      console.log('[UnreadMessageContext] 刷新未读消息数量:', count, '用户ID:', user.id);
       setUnreadCount(count);
     } catch (error) {
-      console.error('获取未读消息数量失败:', error);
+      console.error('[UnreadMessageContext] 获取未读消息数量失败:', error);
     }
   }, [user]);
 
@@ -67,8 +70,10 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
   // 初始加载
   useEffect(() => {
     if (user) {
+      console.log('[UnreadMessageContext] 用户已登录，开始加载未读消息数量');
       refreshUnreadCount();
     } else {
+      console.log('[UnreadMessageContext] 用户未登录，重置未读数量为0');
       setUnreadCount(0);
     }
   }, [user, refreshUnreadCount]);

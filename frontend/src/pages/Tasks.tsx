@@ -597,6 +597,11 @@ const Tasks: React.FC = () => {
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // 调试：打印未读数量
+  React.useEffect(() => {
+    console.log('[Tasks] 未读消息数量:', messageUnreadCount);
+  }, [messageUnreadCount]);
+  
   // 系统设置状态
   const [systemSettings, setSystemSettings] = useState<any>({
     vip_button_visible: false

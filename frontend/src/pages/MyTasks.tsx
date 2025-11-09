@@ -47,6 +47,12 @@ const MyTasks: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
+  
+  // 调试：打印未读数量
+  React.useEffect(() => {
+    console.log('[MyTasks] 未读消息数量:', messageUnreadCount);
+  }, [messageUnreadCount]);
+  
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);

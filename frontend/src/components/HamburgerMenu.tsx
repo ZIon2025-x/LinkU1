@@ -20,6 +20,11 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { navigate } = useLocalizedNavigation();
   const { t } = useLanguage();
+  
+  // 调试：打印未读数量
+  React.useEffect(() => {
+    console.log('[HamburgerMenu] 未读消息数量:', unreadCount, '用户:', user?.id, '是否显示红点:', unreadCount > 0);
+  }, [unreadCount, user]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -48,15 +53,18 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               className="unread-dot hamburger-dot"
               style={{
                 position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                width: '10px',
-                height: '10px',
+                top: '-4px',
+                right: '-4px',
+                width: '12px',
+                height: '12px',
                 backgroundColor: '#ef4444',
                 borderRadius: '50%',
                 border: '2px solid #fff',
-                animation: 'pulse 1.5s ease-in-out infinite'
+                animation: 'pulse 1.5s ease-in-out infinite',
+                zIndex: 1001,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
               }}
+              title={`${unreadCount} 条未读消息`}
             />
           )}
         </button>
@@ -176,13 +184,16 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                           top: '50%',
                           right: '2rem',
                           transform: 'translateY(-50%)',
-                          width: '10px',
-                          height: '10px',
+                          width: '12px',
+                          height: '12px',
                           backgroundColor: '#ef4444',
                           borderRadius: '50%',
                           border: '2px solid #fff',
-                          animation: 'pulse 1.5s ease-in-out infinite'
+                          animation: 'pulse 1.5s ease-in-out infinite',
+                          zIndex: 10,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                         }}
+                        title={`${unreadCount} 条未读消息`}
                       />
                     )}
                   </button>
@@ -273,6 +284,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             padding: 0;
             z-index: 1002;
             position: relative;
+            overflow: visible;
           }
 
           .hamburger-line {
