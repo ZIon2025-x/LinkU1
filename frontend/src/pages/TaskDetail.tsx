@@ -145,26 +145,17 @@ const TaskDetail: React.FC = () => {
       allTwitterDescriptions.forEach(tag => tag.remove());
       
       // 移除所有微信描述标签（这是关键，微信优先读取这个）
+      // 无条件移除所有weixin:description标签，不检查内容
       const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDescriptions.forEach(tag => tag.remove());
       
-      // 移除默认的微信标题标签
+      // 移除所有微信标题标签（不检查内容，全部移除）
       const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
-      allWeixinTitles.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content === 'Link²Ur') {
-          metaTag.remove();
-        }
-      });
+      allWeixinTitles.forEach(tag => tag.remove());
       
-      // 移除默认的og:title
+      // 移除所有og:title标签（不检查内容，全部移除）
       const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
-      allOgTitles.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content === 'Link²Ur') {
-          metaTag.remove();
-        }
-      });
+      allOgTitles.forEach(tag => tag.remove());
     };
     
     // 立即移除所有描述标签（不等待任务数据加载）
@@ -192,15 +183,23 @@ const TaskDetail: React.FC = () => {
     weixinImageTag.content = shareImageUrl;
     document.head.insertBefore(weixinImageTag, document.head.firstChild);
     
-    // 使用setTimeout再次确保移除所有描述标签（防止被其他脚本重新添加）
+    // 使用多个setTimeout确保在不同阶段都移除默认描述标签
+    // 微信爬虫可能在页面加载的不同阶段抓取，所以需要多次清理
     setTimeout(() => {
       removeAllDescriptions();
     }, 50);
     
-    // 再次延迟移除，确保在React组件完全加载后也移除
     setTimeout(() => {
       removeAllDescriptions();
     }, 200);
+    
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 500);
+    
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 1000);
   }, [id]);
 
   // 加载任务数据
@@ -214,6 +213,90 @@ const TaskDetail: React.FC = () => {
           loadTaskReviews();
         }
         
+        // 任务数据加载完成后，立即设置meta标签（确保微信爬虫能读取到）
+        // 使用setTimeout确保在下一个事件循环中执行，让React先完成渲染
+        setTimeout(() => {
+          if (res.data) {
+            const task = res.data;
+            const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0);
+            const rewardStr = reward.toFixed(2);
+            const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
+            
+            const descriptionPreview = task.description ? task.description.substring(0, 60).replace(/\n/g, ' ').trim() : '';
+            let taskDescription = '';
+            if (language === 'zh') {
+              if (descriptionPreview) {
+                taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+              } else {
+                taskDescription = `${task.task_type}任务 | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+              }
+            } else {
+              if (descriptionPreview) {
+                taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+              } else {
+                taskDescription = `${task.task_type} Task | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+              }
+            }
+            const seoDescription = taskDescription.substring(0, 200);
+            
+            // 强制移除所有默认描述标签
+            const removeAllDescriptions = () => {
+              const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+              allDescriptions.forEach(tag => {
+                const metaTag = tag as HTMLMetaElement;
+                if (metaTag.content && (
+                  metaTag.content.includes('Professional task publishing') ||
+                  metaTag.content.includes('skill matching platform') ||
+                  metaTag.content.includes('linking skilled people') ||
+                  metaTag.content.includes('making value creation more efficient')
+                )) {
+                  metaTag.remove();
+                }
+              });
+            };
+            removeAllDescriptions();
+            
+            // 设置微信描述标签（最重要，微信优先读取）
+            const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+            allWeixinDescriptions.forEach(tag => tag.remove());
+            const weixinDescTag = document.createElement('meta');
+            weixinDescTag.setAttribute('name', 'weixin:description');
+            weixinDescTag.content = seoDescription;
+            document.head.insertBefore(weixinDescTag, document.head.firstChild);
+            
+            // 设置微信标题
+            const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+            allWeixinTitles.forEach(tag => tag.remove());
+            const weixinTitleTag = document.createElement('meta');
+            weixinTitleTag.setAttribute('name', 'weixin:title');
+            weixinTitleTag.content = `${task.title} - Link²Ur任务平台`;
+            document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+            
+            // 设置og:description（微信也会读取作为备选）
+            const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+            allOgDescriptions.forEach(tag => tag.remove());
+            const ogDescTag = document.createElement('meta');
+            ogDescTag.setAttribute('property', 'og:description');
+            ogDescTag.content = seoDescription;
+            document.head.insertBefore(ogDescTag, document.head.firstChild);
+            
+            // 设置og:title
+            const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+            allOgTitles.forEach(tag => tag.remove());
+            const ogTitleTag = document.createElement('meta');
+            ogTitleTag.setAttribute('property', 'og:title');
+            ogTitleTag.content = `${task.title} - Link²Ur任务平台`;
+            document.head.insertBefore(ogTitleTag, document.head.firstChild);
+            
+            // 设置标准description
+            const allDescriptions = document.querySelectorAll('meta[name="description"]');
+            allDescriptions.forEach(tag => tag.remove());
+            const descTag = document.createElement('meta');
+            descTag.name = 'description';
+            descTag.content = seoDescription;
+            document.head.insertBefore(descTag, document.head.firstChild);
+          }
+        }, 0);
       })
       .catch((error) => {
         console.error('获取任务详情失败:', error);
@@ -221,7 +304,7 @@ const TaskDetail: React.FC = () => {
         setError('任务不存在');
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, language]);
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
@@ -1653,31 +1736,6 @@ const TaskDetail: React.FC = () => {
             </div>
           </div>
           
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</div>
-          </div>
-          
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (英国时间)
-            </div>
-          </div>
         </div>
         
         {/* 任务描述 */}
@@ -1784,91 +1842,6 @@ const TaskDetail: React.FC = () => {
             }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
           </div>
         
-        {/* 其他任务信息 */}
-        <div style={{
-          background: '#f8fafc',
-          padding: '20px',
-          borderRadius: '16px',
-          border: '2px solid #e2e8f0',
-          marginBottom: '32px',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontSize: '20px' }}>ℹ️</div>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1e293b',
-              margin: 0
-            }}>任务详情</h3>
-          </div>
-          
-          <div style={{
-            display: 'grid',
-            gap: '12px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>截止时间：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} (英国时间)
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>任务等级：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {getTaskLevelText(task.task_level || 'normal')}
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>可见性：</span>
-              <span style={{
-                color: task.is_public === 1 ? '#059669' : '#dc2626',
-                fontWeight: '600',
-                padding: '2px 8px',
-                borderRadius: '8px',
-                background: task.is_public === 1 ? '#d1fae5' : '#fee2e2',
-                border: `1px solid ${task.is_public === 1 ? '#a7f3d0' : '#fecaca'}`
-              }}>
-                {task.is_public === 1 ? '🌍 公开显示' : '🔒 仅自己可见'}
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>发布者：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.poster_id}
-              </span>
-            </div>
-          </div>
-        </div>
         
         {/* 操作按钮区域 */}
         <div style={{

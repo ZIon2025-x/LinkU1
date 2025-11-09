@@ -1104,38 +1104,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             </div>
           </div>
           
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.rewardLabel')}</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
-              {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
-            </div>
-            {task.agreed_reward && task.agreed_reward !== task.base_reward && (
-              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                原价: {task.base_reward?.toFixed(2) || '0.00'} {task.currency || 'CNY'}
-              </div>
-            )}
-          </div>
-          
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '16px',
-            border: '2px solid #e2e8f0',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
-            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.deadlineLabel')}</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} {t('taskDetail.ukTime')}
-            </div>
-          </div>
         </div>
         
         {/* 任务描述 */}
@@ -1319,91 +1287,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             )}
           </div>
 
-        {/* 其他任务信息 */}
-        <div style={{
-          background: '#f8fafc',
-          padding: '20px',
-          borderRadius: '16px',
-          border: '2px solid #e2e8f0',
-          marginBottom: '32px',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontSize: '20px' }}>ℹ️</div>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1e293b',
-              margin: 0
-            }}>{t('taskDetail.taskDetailsLabel')}</h3>
-          </div>
-          
-          <div style={{
-            display: 'grid',
-            gap: '12px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.deadlineTime')}：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'YYYY/MM/DD HH:mm:ss', 'Europe/London')} {t('taskDetail.ukTime')}
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.taskLevel')}：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {getTaskLevelText(task.task_level || 'normal')}
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.visibilityLabel')}：</span>
-              <span style={{
-                color: task.is_public === 1 ? '#059669' : '#dc2626',
-                fontWeight: '600',
-                padding: '2px 8px',
-                borderRadius: '8px',
-                background: task.is_public === 1 ? '#d1fae5' : '#fee2e2',
-                border: `1px solid ${task.is_public === 1 ? '#a7f3d0' : '#fecaca'}`
-              }}>
-                {task.is_public === 1 ? t('taskDetail.publicVisible') : t('taskDetail.privateVisible')}
-              </span>
-            </div>
-            
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              <span style={{ color: '#64748b', minWidth: '80px' }}>{t('taskDetail.posterLabel')}：</span>
-              <span style={{ color: '#1e293b', fontWeight: '500' }}>
-                {task.poster_id}
-              </span>
-            </div>
-          </div>
-        </div>
         
         {/* 操作按钮区域 */}
         <div style={{
