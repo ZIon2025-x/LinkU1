@@ -211,11 +211,22 @@ async def get_task_chat_list(
                     "created_at": last_msg["created_at"].isoformat() if last_msg["created_at"] else None
                 }
             
+            # 解析任务图片（JSON字符串转数组）
+            images_list = []
+            if task.images:
+                try:
+                    if isinstance(task.images, str):
+                        images_list = json.loads(task.images)
+                    elif isinstance(task.images, list):
+                        images_list = task.images
+                except (json.JSONDecodeError, TypeError):
+                    images_list = []
+            
             task_data = {
                 "id": task.id,
                 "title": task.title,
                 "task_type": task.task_type,
-                "images": task.images if task.images else [],
+                "images": images_list,
                 "poster_id": task.poster_id,
                 "status": task.status,
                 "taker_id": task.taker_id,
@@ -402,12 +413,23 @@ async def get_task_messages(
             }
             messages_data.append(message_data)
         
+        # 解析任务图片（JSON字符串转数组）
+        images_list = []
+        if task.images:
+            try:
+                if isinstance(task.images, str):
+                    images_list = json.loads(task.images)
+                elif isinstance(task.images, list):
+                    images_list = task.images
+            except (json.JSONDecodeError, TypeError):
+                images_list = []
+        
         # 构建任务信息
         task_data = {
             "id": task.id,
             "title": task.title,
             "task_type": task.task_type,
-            "images": task.images if task.images else [],
+            "images": images_list,
             "poster_id": task.poster_id,
             "taker_id": task.taker_id,
             "status": task.status,
