@@ -3561,133 +3561,6 @@ const MessagePage: React.FC = () => {
               </div>
             )}
             
-            {/* 已完成任务清理提醒 - 任务一完成就显示，告知用户清理时间 */}
-            {chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at && (() => {
-              try {
-                const completedDate = new Date(activeTask.completed_at);
-                const now = new Date();
-                const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
-                const timeRemaining = cleanupDate.getTime() - now.getTime();
-                
-                // 任务一完成就显示提醒，无论是否已到清理时间
-                if (timeRemaining > 0) {
-                  // 还没到清理时间，显示剩余时间
-                  const daysRemaining = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
-                  const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
-                  
-                  // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数
-                  const timeText = daysRemaining >= 1 
-                    ? `${daysRemaining} 天` 
-                    : `${hoursRemaining} 小时`;
-                  
-                  return (
-                    <div style={{
-                      position: 'sticky',
-                      top: showSystemWarning ? '80px' : '20px',
-                      zIndex: 99,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      marginBottom: '16px',
-                      padding: '0 20px',
-                      width: '100%'
-                    }}>
-                      <div style={{
-                        padding: '12px 18px',
-                        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                        borderRadius: '20px',
-                        fontSize: isMobile ? '12px' : '13px',
-                        color: '#1e40af',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        border: '1px solid #60a5fa',
-                        boxShadow: '0 2px 8px rgba(96, 165, 250, 0.2)',
-                        maxWidth: '90%',
-                        backdropFilter: 'blur(10px)',
-                        width: '100%',
-                        boxSizing: 'border-box'
-                      }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
-                        <span style={{ lineHeight: '1.4', flex: 1 }}>
-                          此任务已完成。任务相关的图片和文件将在 <strong>{timeText}</strong> 后自动清理以节省存储空间。
-                        </span>
-                      </div>
-                    </div>
-                  );
-                } else {
-                  // 已经过了清理时间，显示已清理提示
-                  return (
-                    <div style={{
-                      position: 'sticky',
-                      top: showSystemWarning ? '80px' : '20px',
-                      zIndex: 99,
-                      display: 'flex',
-                      justifyContent: 'center',
-                      marginBottom: '16px',
-                      padding: '0 20px',
-                      width: '100%'
-                    }}>
-                      <div style={{
-                        padding: '12px 18px',
-                        background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-                        borderRadius: '20px',
-                        fontSize: isMobile ? '12px' : '13px',
-                        color: '#6b7280',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        border: '1px solid #d1d5db',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                        maxWidth: '90%',
-                        width: '100%',
-                        boxSizing: 'border-box'
-                      }}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>✅</span>
-                        <span style={{ lineHeight: '1.4', flex: 1 }}>
-                          此任务已完成。任务相关的图片和文件已自动清理。
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-              } catch (error) {
-                console.error('计算清理时间失败:', error);
-                // 即使计算失败，也显示一个基本提醒
-                return (
-                  <div style={{
-                    position: 'sticky',
-                    top: showSystemWarning ? '80px' : '20px',
-                    zIndex: 99,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    marginBottom: '16px',
-                    padding: '0 20px',
-                    width: '100%'
-                  }}>
-                    <div style={{
-                      padding: '12px 18px',
-                      background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                      borderRadius: '20px',
-                      fontSize: isMobile ? '12px' : '13px',
-                      color: '#1e40af',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      border: '1px solid #60a5fa',
-                      boxShadow: '0 2px 8px rgba(96, 165, 250, 0.2)',
-                      maxWidth: '90%',
-                      width: '100%',
-                      boxSizing: 'border-box'
-                    }}>
-                      <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
-                      <span style={{ lineHeight: '1.4', flex: 1 }}>
-                        此任务已完成。任务相关的图片和文件将在 <strong>3天</strong> 后自动清理以节省存储空间。
-                      </span>
-                    </div>
-                  </div>
-                );
-              }
-            })()}
             
             {isServiceMode && !serviceConnected ? (
               <div style={{ 
@@ -5193,6 +5066,109 @@ const MessagePage: React.FC = () => {
                     ⭐ 评价
                   </button>
                 )}
+                
+                {/* 已完成任务清理提醒 - 显示在功能行右侧 */}
+                {chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at && (() => {
+                  try {
+                    const completedDate = new Date(activeTask.completed_at);
+                    const now = new Date();
+                    const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
+                    const timeRemaining = cleanupDate.getTime() - now.getTime();
+                    
+                    // 任务一完成就显示提醒，无论是否已到清理时间
+                    if (timeRemaining > 0) {
+                      // 还没到清理时间，显示剩余时间
+                      const daysRemaining = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
+                      const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
+                      
+                      // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数
+                      const timeText = daysRemaining >= 1 
+                        ? `${daysRemaining} 天` 
+                        : `${hoursRemaining} 小时`;
+                      
+                      return (
+                        <div style={{
+                          padding: '6px 10px',
+                          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                          borderRadius: '6px',
+                          fontSize: isMobile ? '10px' : '11px',
+                          color: '#1e40af',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: '1px solid #60a5fa',
+                          flex: 1,
+                          minWidth: 0,
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
+                          <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            将在 <strong>{timeText}</strong> 后清理
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      // 已经过了清理时间，显示已清理提示
+                      return (
+                        <div style={{
+                          padding: '6px 10px',
+                          background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                          borderRadius: '6px',
+                          fontSize: isMobile ? '10px' : '11px',
+                          color: '#6b7280',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: '1px solid #d1d5db',
+                          flex: 1,
+                          minWidth: 0,
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
+                          <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            已清理
+                          </span>
+                        </div>
+                      );
+                    }
+                  } catch (error) {
+                    console.error('计算清理时间失败:', error);
+                    // 即使计算失败，也显示一个基本提醒
+                    return (
+                      <div style={{
+                        padding: '6px 10px',
+                        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                        borderRadius: '6px',
+                        fontSize: isMobile ? '10px' : '11px',
+                        color: '#1e40af',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        border: '1px solid #60a5fa',
+                        flex: 1,
+                        minWidth: 0,
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
+                        <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          将在 <strong>3天</strong> 后清理
+                        </span>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
               
               {/* 输入框和发送按钮 */}
