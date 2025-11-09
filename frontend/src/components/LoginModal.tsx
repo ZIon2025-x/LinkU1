@@ -1451,7 +1451,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
             }}></div>
           </div>
 
-          {/* Google登录按钮 */}
+          {/* Google登录按钮 - 暂时隐藏，功能未实现 */}
+          {false && (
           <button
             type="button"
             onClick={handleGoogleLogin}
@@ -1495,6 +1496,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
             {t('auth.continueWithGoogle')}
           </button>
+          )}
 
           {/* 登录方式切换（仅在登录模式下显示） */}
           {isLogin && (

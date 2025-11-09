@@ -1736,6 +1736,31 @@ const TaskDetail: React.FC = () => {
             </div>
           </div>
           
+          <div style={{
+            background: '#f8fafc',
+            padding: '20px',
+            borderRadius: '16px',
+            border: '2px solid #e2e8f0',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>💰</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>任务金额</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</div>
+          </div>
+          
+          <div style={{
+            background: '#f8fafc',
+            padding: '20px',
+            borderRadius: '16px',
+            border: '2px solid #e2e8f0',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
+            <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
+              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')} (英国时间)
+            </div>
+          </div>
         </div>
         
         {/* 任务描述 */}
