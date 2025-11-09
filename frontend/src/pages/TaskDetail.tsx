@@ -225,6 +225,7 @@ const TaskDetail: React.FC = () => {
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
+  // 使用多个延迟执行确保在其他页面的useLayoutEffect之后执行
   useLayoutEffect(() => {
     // 移除所有默认的描述标签（任务详情页不使用默认描述）
     const removeAllDefaultDescriptions = () => {
@@ -457,7 +458,7 @@ const TaskDetail: React.FC = () => {
         }
       }, 100);
       
-      // 再次更新（确保微信爬虫能抓取到）
+      // 再次更新（确保微信爬虫能抓取到，延迟更长时间确保在其他页面的useLayoutEffect之后执行）
       setTimeout(() => {
         // 移除所有包含默认描述的标签（包括所有类型的描述标签）
         const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
@@ -507,7 +508,7 @@ const TaskDetail: React.FC = () => {
         finalWeixinImage.setAttribute('name', 'weixin:image');
         finalWeixinImage.content = shareImageUrl;
         document.head.insertBefore(finalWeixinImage, document.head.firstChild);
-      }, 500);
+      }, 1000); // 延迟1秒，确保在其他页面的useLayoutEffect之后执行
       
       // 添加结构化数据 - 使用JobPosting类型以便搜索引擎识别
       // reward 变量已在上面声明，直接使用

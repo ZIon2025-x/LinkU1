@@ -495,6 +495,12 @@ const Home: React.FC = () => {
   // 使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止搜索引擎抓取到页面内容（如公告）作为描述
   useLayoutEffect(() => {
+    // 检查是否是任务详情页，如果是则不设置meta标签（让任务详情页自己管理）
+    const isTaskDetailPage = /\/tasks\/\d+/.test(location.pathname);
+    if (isTaskDetailPage) {
+      return; // 不设置meta标签，让任务详情页自己管理
+    }
+    
     // 强制更新meta description，确保在head最前面
     const description = t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.';
     

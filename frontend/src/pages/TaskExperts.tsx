@@ -122,6 +122,12 @@ const TaskExperts: React.FC = () => {
 
   // 立即更新meta标签以确保微信分享能识别logo（必须在组件加载时立即执行）
   useEffect(() => {
+    // 检查是否是任务详情页，如果是则不设置meta标签（让任务详情页自己管理）
+    const isTaskDetailPage = /\/tasks\/\d+/.test(location.pathname);
+    if (isTaskDetailPage) {
+      return; // 不设置meta标签，让任务详情页自己管理
+    }
+    
     const updateMetaTag = (name: string, content: string, property?: boolean) => {
       const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
       let metaTag = document.querySelector(selector) as HTMLMetaElement;
