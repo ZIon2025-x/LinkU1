@@ -318,9 +318,9 @@ def get_task_application_email(language: str, task_title: str, task_description:
                     <p><strong>任务奖励：</strong>£{reward:.2f}</p>
                 </div>
                 
-                {f'<p><strong>申请留言：</strong>{application_message}</p>' if application_message else ''}
+                {f'<p><strong>申请留言：</strong>{application_message}</p>' if application_message else '<p><strong>申请留言：</strong>无</p>'}
                 
-                {f'<p><strong>议价金额：</strong>£{negotiated_price:.2f} {currency}</p>' if negotiated_price else ''}
+                {f'<p><strong>议价金额：</strong>£{negotiated_price:.2f} {currency}</p>' if negotiated_price else '<p><strong>议价金额：</strong>无议价（使用任务原定金额）</p>'}
                 
                 <p>请登录 Link²Ur 平台查看申请详情并决定是否同意该用户接受任务。</p>
                 
@@ -359,9 +359,9 @@ def get_task_application_email(language: str, task_title: str, task_description:
                     <p><strong>Task Reward:</strong> £{reward:.2f}</p>
                 </div>
                 
-                {f'<p><strong>Application Message:</strong> {application_message}</p>' if application_message else ''}
+                {f'<p><strong>Application Message:</strong> {application_message}</p>' if application_message else '<p><strong>Application Message:</strong> None</p>'}
                 
-                {f'<p><strong>Negotiated Price:</strong> £{negotiated_price:.2f} {currency}</p>' if negotiated_price else ''}
+                {f'<p><strong>Negotiated Price:</strong> £{negotiated_price:.2f} {currency}</p>' if negotiated_price else '<p><strong>Negotiated Price:</strong> No negotiation (using original task reward)</p>'}
                 
                 <p>Please log in to Link²Ur platform to view the application details and decide whether to approve this user for the task.</p>
                 
