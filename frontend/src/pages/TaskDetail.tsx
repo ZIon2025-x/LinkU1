@@ -184,13 +184,34 @@ const TaskDetail: React.FC = () => {
       document.title = seoTitle;
       
       // 创建任务相关的描述（使用任务描述内容）
-      // 格式：任务描述内容 - 任务类型，赏金£XX，地点XX
-      // 取任务描述的前80字符，确保总长度不超过120字符
-      const descriptionPreview = task.description ? task.description.substring(0, 80).replace(/\n/g, ' ').trim() : '';
-      const taskDescription = descriptionPreview 
-        ? `${descriptionPreview} - ${task.task_type}任务，金额£${((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}，地点${task.location}`
-        : `${task.task_type}任务，金额£${((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}，地点${task.location}`;
-      const seoDescription = taskDescription.substring(0, 120); // 限制在120字符内，确保简洁
+      // 格式：任务描述内容 | 类型 | 金额 | 截至时间 | 地点
+      // 包含任务描述、金额、截至时间等关键信息
+      const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2);
+      const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
+      
+      // 构建完整的分享描述
+      // 先取任务描述的前60字符（为其他信息留空间）
+      const descriptionPreview = task.description ? task.description.substring(0, 60).replace(/\n/g, ' ').trim() : '';
+      
+      // 根据语言构建包含所有关键信息的描述
+      let taskDescription = '';
+      if (language === 'zh') {
+        if (descriptionPreview) {
+          taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${reward} | 截至：${deadlineStr} | 地点：${task.location}`;
+        } else {
+          taskDescription = `${task.task_type}任务 | 金额：£${reward} | 截至：${deadlineStr} | 地点：${task.location}`;
+        }
+      } else {
+        // English
+        if (descriptionPreview) {
+          taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${reward} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+        } else {
+          taskDescription = `${task.task_type} Task | Amount: £${reward} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+        }
+      }
+      
+      // 限制总长度在200字符内（微信分享建议不超过200字符）
+      const seoDescription = taskDescription.substring(0, 200);
       
       // 强制更新meta描述（先移除旧标签再创建新标签，避免微信缓存问题）
       const existingDescription = document.querySelector('meta[name="description"]');
