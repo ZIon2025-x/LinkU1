@@ -937,14 +937,111 @@ def get_chat_history(
 
 
 def get_unread_messages(db: Session, user_id: str):
-    from app.models import Message
-
-    return (
+    """
+    获取未读消息（包括普通消息和任务消息）
+    统一使用 MessageRead 表来判断已读状态，不再使用 Message.is_read 字段
+    """
+    from app.models import Message, MessageRead, MessageReadCursor
+    from sqlalchemy import and_, or_, not_, exists, select
+    
+    # 1. 普通消息（receiver_id不为空，task_id为空，通过MessageRead表判断）
+    # 查询在MessageRead表中没有记录的消息（排除自己发送的）
+    regular_unread = (
         db.query(Message)
-        .filter(Message.receiver_id == user_id, Message.is_read == 0)
-        .order_by(Message.created_at.desc())
+        .filter(
+            Message.receiver_id == user_id,
+            Message.task_id.is_(None),  # 排除任务消息
+            Message.sender_id != user_id,  # 排除自己发送的消息
+            ~exists(
+                select(1).where(
+                    and_(
+                        MessageRead.message_id == Message.id,
+                        MessageRead.user_id == user_id
+                    )
+                )
+            )
+        )
         .all()
     )
+    
+    # 2. 任务消息（通过MessageRead和MessageReadCursor判断）
+    # 获取用户参与的所有任务
+    from app.models import Task
+    user_tasks = (
+        db.query(Task.id)
+        .filter(
+            or_(
+                Task.poster_id == user_id,
+                Task.taker_id == user_id
+            )
+        )
+        .all()
+    )
+    task_ids = [task.id for task in user_tasks]
+    
+    if not task_ids:
+        # 如果没有任务，只返回普通消息
+        all_unread = regular_unread
+        all_unread.sort(key=lambda x: x.created_at, reverse=True)
+        return all_unread
+    
+    # 获取所有任务的游标
+    cursors = (
+        db.query(MessageReadCursor)
+        .filter(
+            MessageReadCursor.task_id.in_(task_ids),
+            MessageReadCursor.user_id == user_id
+        )
+        .all()
+    )
+    cursor_dict = {c.task_id: c.last_read_message_id for c in cursors}
+    
+    # 查询任务消息的未读数
+    task_unread_messages = []
+    for task_id in task_ids:
+        cursor = cursor_dict.get(task_id)
+        
+        if cursor:
+            # 有游标：查询ID大于游标的、不是自己发送的消息
+            unread_msgs = (
+                db.query(Message)
+                .filter(
+                    Message.task_id == task_id,
+                    Message.id > cursor,
+                    Message.sender_id != user_id,
+                    Message.conversation_type == 'task'
+                )
+                .all()
+            )
+        else:
+            # 没有游标：查询在MessageRead表中没有记录的消息（排除自己发送的）
+            unread_msgs = (
+                db.query(Message)
+                .filter(
+                    Message.task_id == task_id,
+                    Message.sender_id != user_id,
+                    Message.conversation_type == 'task',
+                    ~exists(
+                        select(1).where(
+                            and_(
+                                MessageRead.message_id == Message.id,
+                                MessageRead.user_id == user_id
+                            )
+                        )
+                    )
+                )
+                .all()
+            )
+        
+        task_unread_messages.extend(unread_msgs)
+    
+    # 合并普通消息和任务消息
+    all_unread = regular_unread + task_unread_messages
+    
+    # 按创建时间排序
+    all_unread.sort(key=lambda x: x.created_at, reverse=True)
+    
+    return all_unread
 
 
 def get_customer_service_messages(db: Session, session_id: int, limit: int = 50):

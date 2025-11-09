@@ -2081,10 +2081,25 @@ const MessagePage: React.FC = () => {
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
+    console.log('[scrollToBottom] 开始滚动到底部');
+    const messagesContainer = messagesContainerRef.current;
+    if (messagesContainer) {
+      // 立即滚动到底部
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      setShowScrollToBottomButton(false);
     }
+    // 延迟检查是否到达底部，如果是则隐藏按钮
+    setTimeout(() => {
+      if (messagesContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        if (distanceFromBottom < 200) {
+          setShowScrollToBottomButton(false);
+        }
+      }
+    }, 300);
   }, []);
 
   // 滚动监听器 - 检测是否滚动到顶部（仅用于客服模式）和任务聊天的滚动位置
@@ -5997,11 +6012,17 @@ const MessagePage: React.FC = () => {
       {/* 客服模式滚动到底部按钮 - 固定在视口右下角 */}
       {showScrollToBottomButton && isServiceMode && (
         <div
-          onClick={scrollToBottom}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[滚动按钮] 点击事件触发');
+            scrollToBottom();
+          }}
           style={{
             position: 'fixed',
             bottom: `${scrollButtonBottom}px`,
-            right: isMobile ? '20px' : '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
             width: '48px',
             height: '48px',
             borderRadius: '50%',
@@ -6016,15 +6037,16 @@ const MessagePage: React.FC = () => {
             zIndex: 1000,
             fontSize: '20px',
             fontWeight: 'bold',
-            border: '2px solid white'
+            border: '2px solid white',
+            userSelect: 'none'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
             e.currentTarget.style.backgroundColor = '#0056b3';
             e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
             e.currentTarget.style.backgroundColor = '#007bff';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
           }}
