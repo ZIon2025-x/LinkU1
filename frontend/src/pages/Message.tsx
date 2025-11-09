@@ -315,6 +315,8 @@ const MessagePage: React.FC = () => {
   const lastTaskMessageIdRef = useRef<number | null>(null); // 最后一条任务消息的ID（使用ref避免依赖循环）
   const [toastMessage, setToastMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null); // Toast通知
   const messagesContainerRef = useRef<HTMLDivElement>(null); // 消息容器引用
+  const inputAreaRef = useRef<HTMLDivElement>(null); // 输入框区域引用
+  const [scrollButtonBottom, setScrollButtonBottom] = useState(100); // 滚动按钮距离底部的位置
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -1929,6 +1931,36 @@ const MessagePage: React.FC = () => {
     };
   }, [isServiceMode, chatMode, activeTaskId, hasNewTaskMessages]);
 
+  // 动态计算滚动按钮位置（相对于输入框区域）
+  useEffect(() => {
+    const updateButtonPosition = () => {
+      if (inputAreaRef.current && isServiceMode) {
+        const rect = inputAreaRef.current.getBoundingClientRect();
+        const distanceFromBottom = window.innerHeight - rect.top;
+        setScrollButtonBottom(distanceFromBottom + 20); // 输入框上方20px
+      }
+    };
+
+    if (isServiceMode) {
+      // 延迟执行以确保DOM已渲染
+      const timeoutId = setTimeout(updateButtonPosition, 100);
+      window.addEventListener('resize', updateButtonPosition);
+      // 使用 ResizeObserver 监听输入框区域大小变化
+      let resizeObserver: ResizeObserver | null = null;
+      if (inputAreaRef.current) {
+        resizeObserver = new ResizeObserver(updateButtonPosition);
+        resizeObserver.observe(inputAreaRef.current);
+      }
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('resize', updateButtonPosition);
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+      };
+    }
+  }, [isServiceMode, imagePreview, filePreview, showEmojiPicker]);
+
   // 跟踪最后处理的消息ID，避免重复滚动
   const lastProcessedMessageIdRef = useRef<number | null>(null);
 
@@ -2818,6 +2850,12 @@ const MessagePage: React.FC = () => {
           zIndex: isMobile ? 1001 : 'auto',
           left: isMobile ? '0' : 'auto',
           top: isMobile ? '0' : 'auto'
+        }}
+        ref={(el) => {
+          // 保存右侧聊天区域的引用，用于计算按钮位置
+          if (el) {
+            (window as any).chatAreaRef = el;
+          }
         }}>
           {/* 聊天头部 */}
           {isServiceMode ? (
@@ -3163,138 +3201,7 @@ const MessagePage: React.FC = () => {
               return null;
             })()}
             
-            {isServiceMode && !serviceConnected ? (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%',
-                color: '#64748b',
-                fontSize: '18px',
-                flexDirection: 'column',
-                gap: '20px',
-                padding: '40px'
-              }}>
-                <div style={{ 
-                  fontSize: '80px', 
-                  opacity: 0.3,
-                  marginBottom: '10px'
-                }}>🎧</div>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '8px'
-                }}>
-                  {t('messages.contactCustomerService')}
-                </div>
-                <div style={{
-                  fontSize: '16px',
-                  color: '#6b7280',
-                  textAlign: 'center',
-                  lineHeight: '1.5',
-                  maxWidth: '400px',
-                  marginBottom: '20px'
-                }}>
-                  {t('messages.ourTeamReadyToHelpWithButton')}
-                </div>
-                <button
-                  onClick={async () => {
-                    setIsConnectingToService(true);
-                    try {
-                      const isServiceAvailable = await checkCustomerServiceAvailabilityLocal();
-                        
-                      if (isServiceAvailable) {
-                        const response = await assignCustomerService();
-                          
-                        if (response.error) {
-                          console.error('客服连接失败:', response.error);
-                          const errorMessage: Message = {
-                            id: Date.now(),
-                            from: t('messages.system'),
-                            content: t('messages.connectServiceFailed', { error: response.error }),
-                            created_at: new Date().toISOString()
-                          };
-                          setMessages(prev => [...prev, errorMessage]);
-                          return;
-                        }
-                          
-                        setServiceConnected(true);
-                        setCurrentChatId(response.chat.chat_id);
-                        setCurrentChat(response.chat);
-                          
-                        const chatToSave = {
-                          chat: response.chat,
-                          service: {
-                            id: response.service.id,
-                            name: response.service.name,
-                            is_online: response.service.is_online
-                          },
-                          chatId: response.chat.chat_id
-                        };
-                        localStorage.setItem('currentCustomerServiceChat', JSON.stringify(chatToSave));
-                          
-                        await loadChatHistory(response.service.id, response.chat.chat_id);
-                          
-                        const successMessage: Message = {
-                          id: Date.now(),
-                          from: t('messages.system'),
-                          content: t('messages.connectedToService', { name: response.service.name }),
-                          created_at: new Date().toISOString()
-                        };
-                        setMessages(prev => [...prev, successMessage]);
-                        
-                        // 确保在添加成功消息后滚动到底部
-                        setTimeout(() => {
-                          const messagesContainer = messagesContainerRef.current;
-                          if (messagesContainer) {
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                          }
-                          // 也尝试使用 messagesEndRef
-                          if (messagesEndRef.current) {
-                            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                          }
-                        }, 150);
-                      } else {
-                        const noServiceMessage: Message = {
-                          id: Date.now(),
-                          from: t('messages.system'),
-                          content: t('messages.noServiceAvailableShort'),
-                          created_at: new Date().toISOString()
-                        };
-                        setMessages(prev => [...prev, noServiceMessage]);
-                      }
-                    } catch (error) {
-                      console.error('连接客服失败:', error);
-                      const errorMessage: Message = {
-                        id: Date.now(),
-                        from: t('messages.system'),
-                        content: t('messages.connectServiceError'),
-                        created_at: new Date().toISOString()
-                      };
-                      setMessages(prev => [...prev, errorMessage]);
-                    } finally {
-                      setIsConnectingToService(false);
-                    }
-                  }}
-                  disabled={isConnectingToService}
-                  style={{
-                    background: isConnectingToService ? '#9ca3af' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '25px',
-                    padding: '16px 32px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    cursor: isConnectingToService ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                  }}
-                >
-                  {isConnectingToService ? '连接中...' : '开始对话'}
-                </button>
-              </div>
-            ) : !activeTaskId && !isServiceMode ? (
+            {!activeTaskId && !isServiceMode ? (
               (
                 <div style={{ 
                   display: 'flex', 
@@ -4058,60 +3965,62 @@ const MessagePage: React.FC = () => {
               );
             })}
             
-            {/* 客服模式滚动到底部按钮 - 固定在聊天框底部 */}
-            {showScrollToBottomButton && isServiceMode && (
-              <div
-                onClick={scrollToBottom}
-                style={{
-                  position: 'absolute',
-                  bottom: '20px',
-                  right: '20px',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
-                  transition: 'all 0.3s ease',
-                  zIndex: 100,
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  border: '2px solid white'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                  e.currentTarget.style.backgroundColor = '#0056b3';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.backgroundColor = '#007bff';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
-                }}
-                title="滚动到底部"
-              >
-                ↓
-              </div>
-            )}
-            
             {/* 消息区域结束 */}
           </div>
           
+          {/* 客服模式滚动到底部按钮 - 固定在输入框上方 */}
+          {showScrollToBottomButton && isServiceMode && (
+            <div
+              onClick={scrollToBottom}
+              style={{
+                position: 'fixed',
+                bottom: `${scrollButtonBottom}px`,
+                right: isMobile ? '20px' : '20px',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#007bff',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
+                transition: 'all 0.3s ease',
+                zIndex: 1000,
+                fontSize: '20px',
+                fontWeight: 'bold',
+                border: '2px solid white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+                e.currentTarget.style.backgroundColor = '#0056b3';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.backgroundColor = '#007bff';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
+              }}
+              title="滚动到底部"
+            >
+              ↓
+            </div>
+          )}
+          
           {/* 输入框区域 */}
           {isServiceMode ? (
-            <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid #e2e8f0',
-              background: 'white',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              position: 'relative'
-            }}>
+            <div 
+              ref={inputAreaRef}
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid #e2e8f0',
+                background: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                position: 'relative'
+              }}>
               {/* 图片预览（桌面端） */}
               {imagePreview && !isMobile && (
                 <div style={{

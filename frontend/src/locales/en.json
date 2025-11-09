@@ -744,7 +744,9 @@
     "noNotifications": "No notifications",
     "newNotification": "New notification",
     "notificationRead": "Notification marked as read",
-    "allNotificationsRead": "All notifications marked as read"
+    "allNotificationsRead": "All notifications marked as read",
+    "applicationRejectedMessage": "Your application for task \"{taskTitle}\" has been rejected by the publisher.",
+    "unknownTask": "Unknown Task"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
@@ -2207,7 +2209,7 @@
     "connecting": "Connecting...",
     "loadingHistory": "Loading message history...",
     "loadHistoryFailed": "Failed to load chat history, please refresh the page",
-    "noServiceAvailable": "No customer service available at the moment. Please try again later. Service hours: 8:00-18:00 daily. For urgent matters, please email customer service.",
+    "noServiceAvailable": "No customer service available at the moment. Please try again later. For urgent matters, please email customer service.",
     "noServiceAvailableShort": "No customer service available at the moment, please try again later",
     "connectServiceError": "Error connecting to customer service, please try again later",
     "noActiveChat": "No active customer service chat, cannot end conversation",
