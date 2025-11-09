@@ -287,7 +287,7 @@ class TaskOut(TaskBase):
             return v
         return None
 
-    @root_validator
+    @root_validator(pre=False, skip_on_failure=True)
     def set_reward_from_agreed_or_base(cls, values):
         """设置reward字段：优先使用agreed_reward，否则使用base_reward"""
         # 优先使用agreed_reward
