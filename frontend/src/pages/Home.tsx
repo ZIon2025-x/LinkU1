@@ -17,6 +17,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -251,6 +252,9 @@ const Home: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   
+  // Message unread count from context
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
+  
   // System settings state
   const [systemSettings, setSystemSettings] = useState<any>({
     vip_button_visible: false
@@ -307,6 +311,7 @@ const Home: React.FC = () => {
       }).catch(error => {
         console.error('Failed to get unread count:', error);
       });
+      
     }
   }, [user]);
 
@@ -321,6 +326,7 @@ const Home: React.FC = () => {
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
           });
+          
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
@@ -517,6 +523,7 @@ const Home: React.FC = () => {
               }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
         </div>

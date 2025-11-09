@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import api, { fetchCurrentUser, logout, getPublicSystemSettings } from '../api';
 import SEOHead from '../components/SEOHead';
 import Footer from '../components/Footer';
@@ -13,6 +14,7 @@ import LoginModal from '../components/LoginModal';
 const TaskExpertsIntro: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const location = useLocation();
   
   // 用户和系统设置状态
@@ -115,6 +117,7 @@ const TaskExpertsIntro: React.FC = () => {
               }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
         </div>

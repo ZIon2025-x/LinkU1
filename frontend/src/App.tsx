@@ -12,6 +12,7 @@ import LanguageMetaManager from './components/LanguageMetaManager';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
 import AdminAuth from './components/AdminAuth';
 import ServiceAuth from './components/ServiceAuth';
@@ -231,13 +232,15 @@ function App() {
     <LanguageProvider>
       <CookieProvider>
         <AuthProvider>
-          <Router>
-            <LanguageMetaManager />
-            <FaviconManager />
-            <ScrollToTop />
-            <LanguageRoutes />
-            <CookieManager />
-          </Router>
+          <UnreadMessageProvider>
+            <Router>
+              <LanguageMetaManager />
+              <FaviconManager />
+              <ScrollToTop />
+              <LanguageRoutes />
+              <CookieManager />
+            </Router>
+          </UnreadMessageProvider>
         </AuthProvider>
       </CookieProvider>
     </LanguageProvider>

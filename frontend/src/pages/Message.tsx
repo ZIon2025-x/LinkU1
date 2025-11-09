@@ -28,6 +28,7 @@ import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 
 // 私密图片显示组件
 const PrivateImageDisplay: React.FC<{
@@ -232,6 +233,7 @@ const getTaskTypeEmoji = (taskType: string): string => {
 
 const MessagePage: React.FC = () => {
   const { t } = useLanguage();
+  const { refreshUnreadCount, updateUnreadCount } = useUnreadMessages();
   
   // 添加CSS动画样式
   React.useEffect(() => {
@@ -1360,6 +1362,8 @@ const MessagePage: React.FC = () => {
 
   // 跟踪最后加载的任务ID，避免重复加载
   const lastLoadedTaskIdRef = useRef<number | null>(null);
+  // 跟踪最后检查消息的时间戳，用于轮询
+  const lastMessageCheckTimeRef = useRef<number>(Date.now());
 
   // 当选择任务时加载消息和申请
   useEffect(() => {
@@ -1370,6 +1374,7 @@ const MessagePage: React.FC = () => {
       }
       
       lastLoadedTaskIdRef.current = activeTaskId;
+      lastMessageCheckTimeRef.current = Date.now();
       setTaskMessages([]);
       setTaskNextCursor(null);
       loadTaskMessages(activeTaskId);
@@ -1379,6 +1384,88 @@ const MessagePage: React.FC = () => {
       lastLoadedTaskIdRef.current = null;
     }
   }, [activeTaskId, chatMode, user, loadTaskMessages, loadApplications]);
+
+  // 轮询检查新任务消息（作为WebSocket的备用方案）
+  useEffect(() => {
+    if (chatMode === 'tasks' && activeTaskId && user) {
+      const pollInterval = setInterval(async () => {
+        try {
+          // 只检查是否有新消息（通过获取最新消息并比较ID）
+          const data = await getTaskMessages(activeTaskId, 1);
+          if (data && data.messages && data.messages.length > 0) {
+            const latestMessage = data.messages[0]; // 后端返回的最新消息
+            
+            // 检查是否是新消息
+            if (lastTaskMessageIdRef.current === null || 
+                latestMessage.id !== lastTaskMessageIdRef.current) {
+              
+              // 如果最后一条消息ID不同，说明有新消息，重新加载所有消息
+              if (latestMessage.id !== lastTaskMessageIdRef.current) {
+                console.log('检测到新任务消息，重新加载消息列表');
+                await loadTaskMessages(activeTaskId);
+                lastTaskMessageIdRef.current = latestMessage.id;
+                
+                // 如果用户不在底部，显示新消息提示
+                if (!isNearBottom) {
+                  setHasNewTaskMessages(true);
+                }
+                
+                // 如果是接收到的消息（不是自己发送的），播放提示音
+                if (latestMessage.sender_id !== user.id) {
+                  playMessageSound();
+                  
+                  // 更新未读消息数量
+                  setTotalUnreadCount(prev => {
+                    const newCount = prev + 1;
+                    if (newCount > 0) {
+                      document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
+                    } else {
+                      document.title = t('notifications.pageTitle');
+                    }
+                    return newCount;
+                  });
+                  
+                  // 显示桌面通知
+                  if ('Notification' in window && Notification.permission === 'granted') {
+                    if (document.hidden) {
+                      const notification = new Notification('新任务消息', {
+                        body: `${latestMessage.sender_name || '对方'}: ${latestMessage.content.substring(0, 50)}${latestMessage.content.length > 50 ? '...' : ''}`,
+                        icon: '/static/favicon.png',
+                        tag: 'task-message-notification',
+                        requireInteraction: false
+                      });
+                      
+                      setTimeout(() => {
+                        notification.close();
+                      }, 3000);
+                    }
+                  }
+                  
+                  // 自动标记为已读
+                  if (latestMessage.id) {
+                    markTaskMessagesRead(activeTaskId, latestMessage.id).catch(err => {
+                      console.error('标记任务消息已读失败:', err);
+                    });
+                  }
+                  
+                  // 重新加载任务列表以更新未读计数
+                  loadTasks().catch(err => {
+                    console.error('重新加载任务列表失败:', err);
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('轮询检查任务消息失败:', error);
+        }
+      }, 3000); // 每3秒检查一次
+      
+      return () => {
+        clearInterval(pollInterval);
+      };
+    }
+  }, [chatMode, activeTaskId, user, isNearBottom, loadTaskMessages, loadTasks, t]);
 
   // 跟踪最后加载任务列表的用户ID和模式，避免重复加载
   const lastLoadedTasksRef = useRef<{ userId: number | undefined; chatMode: string } | null>(null);
@@ -1575,6 +1662,8 @@ const MessagePage: React.FC = () => {
       const response = await api.get('/api/users/messages/unread/count');
       const newCount = response.data.unread_count || 0;
       setTotalUnreadCount(newCount);
+      // 同步更新全局Context
+      updateUnreadCount(newCount);
       
       // 更新页面标题
       if (newCount > 0) {
@@ -1674,6 +1763,99 @@ const MessagePage: React.FC = () => {
               return;
             }
             
+            // 处理任务消息（通过 task_id 字段判断）
+            if (msg.task_id && chatMode === 'tasks' && activeTaskId === msg.task_id) {
+              // 使用函数式更新来访问最新的taskMessages状态
+              setTaskMessages(prev => {
+                // 检查是否已经存在相同的消息（避免重复显示）
+                const messageExists = prev.some(m => m.id === msg.id || m.id === msg.message_id);
+                
+                if (messageExists || !msg.content) {
+                  return prev; // 已存在或没有内容，不添加
+                }
+                
+                // 构建任务消息对象
+                const taskMessage = {
+                  id: msg.id || msg.message_id || Date.now(),
+                  sender_id: msg.sender_id || msg.from,
+                  sender_name: msg.sender_name || '对方',
+                  sender_avatar: msg.sender_avatar,
+                  content: msg.content,
+                  task_id: msg.task_id,
+                  created_at: msg.created_at || new Date().toISOString(),
+                  attachments: msg.attachments || []
+                };
+                
+                // 检查是否已存在（通过ID或内容+时间判断）
+                const exists = prev.some(m => 
+                  m.id === taskMessage.id || 
+                  (m.content === taskMessage.content && 
+                   Math.abs(new Date(m.created_at).getTime() - new Date(taskMessage.created_at).getTime()) < 5000)
+                );
+                if (exists) {
+                  return prev;
+                }
+                
+                // 更新最后一条消息ID
+                if (taskMessage.id && typeof taskMessage.id === 'number') {
+                  lastTaskMessageIdRef.current = taskMessage.id;
+                }
+                
+                // 如果用户不在底部，显示新消息提示
+                if (!isNearBottom) {
+                  setHasNewTaskMessages(true);
+                }
+                
+                // 如果是接收到的消息（不是自己发送的），播放提示音
+                if (msg.sender_id !== user?.id && msg.from !== user?.id) {
+                  playMessageSound();
+                  
+                  // 更新未读消息数量
+                  setTotalUnreadCount(prev => {
+                    const newCount = prev + 1;
+                    if (newCount > 0) {
+                      document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
+                    } else {
+                      document.title = t('notifications.pageTitle');
+                    }
+                    return newCount;
+                  });
+                  
+                  // 显示桌面通知
+                  if ('Notification' in window && Notification.permission === 'granted') {
+                    if (document.hidden) {
+                      const notification = new Notification('新任务消息', {
+                        body: `${taskMessage.sender_name}: ${taskMessage.content.substring(0, 50)}${taskMessage.content.length > 50 ? '...' : ''}`,
+                        icon: '/static/favicon.png',
+                        tag: 'task-message-notification',
+                        requireInteraction: false
+                      });
+                      
+                      setTimeout(() => {
+                        notification.close();
+                      }, 3000);
+                    }
+                  }
+                  
+                  // 自动标记为已读（如果用户正在查看该任务）
+                  if (activeTaskId && activeTaskId === msg.task_id && taskMessage.id && typeof taskMessage.id === 'number') {
+                    markTaskMessagesRead(activeTaskId, taskMessage.id).catch(err => {
+                      console.error('标记任务消息已读失败:', err);
+                    });
+                  }
+                  
+                  // 重新加载任务列表以更新未读计数
+                  loadTasks().catch(err => {
+                    console.error('重新加载任务列表失败:', err);
+                  });
+                }
+                
+                return [...prev, taskMessage];
+              });
+              
+              return; // 任务消息已处理，不再处理为普通消息
+            }
+            
             if (msg.from) {
               // 确定消息发送者显示名称
               let fromName = t('messages.other');
@@ -1723,7 +1905,7 @@ const MessagePage: React.FC = () => {
                 if (msg.from !== user.id && msg.from !== 'system' && msg.from !== 'customer_service' && msg.from !== 'admin') {
                   playMessageSound();
                   
-                  // 更新未读消息数量（避免重复更新）
+                  // 更新未读消息数量（避免重复更新，同时更新全局Context）
                   setTotalUnreadCount(prev => {
                     const newCount = prev + 1;
                     // 更新页面标题
@@ -1732,6 +1914,10 @@ const MessagePage: React.FC = () => {
                     } else {
                       document.title = t('notifications.pageTitle');
                     }
+                    // 立即更新全局Context
+                    setTimeout(() => {
+                      refreshUnreadCount();
+                    }, 300);
                     return newCount;
                   });
                   
@@ -1766,6 +1952,9 @@ const MessagePage: React.FC = () => {
         };
         
         socket.onclose = (event) => {
+          if (socket) {
+            setWs(null);
+          }
           setWs(null);
           
           // 只在异常关闭时重连（代码1000是正常关闭）
@@ -1936,14 +2125,22 @@ const MessagePage: React.FC = () => {
     const updateButtonPosition = () => {
       if (inputAreaRef.current && isServiceMode) {
         const rect = inputAreaRef.current.getBoundingClientRect();
+        // 计算输入框顶部距离视口底部的距离，然后加上20px作为按钮位置
         const distanceFromBottom = window.innerHeight - rect.top;
-        setScrollButtonBottom(distanceFromBottom + 20); // 输入框上方20px
+        setScrollButtonBottom(Math.max(100, distanceFromBottom + 20)); // 输入框上方20px，最小100px
+      } else if (isServiceMode) {
+        // 如果输入框还未渲染，使用默认值
+        setScrollButtonBottom(120);
       }
     };
 
     if (isServiceMode) {
+      // 立即执行一次
+      updateButtonPosition();
       // 延迟执行以确保DOM已渲染
       const timeoutId = setTimeout(updateButtonPosition, 100);
+      const timeoutId2 = setTimeout(updateButtonPosition, 300);
+      const timeoutId3 = setTimeout(updateButtonPosition, 500);
       window.addEventListener('resize', updateButtonPosition);
       // 使用 ResizeObserver 监听输入框区域大小变化
       let resizeObserver: ResizeObserver | null = null;
@@ -1953,6 +2150,8 @@ const MessagePage: React.FC = () => {
       }
       return () => {
         clearTimeout(timeoutId);
+        clearTimeout(timeoutId2);
+        clearTimeout(timeoutId3);
         window.removeEventListener('resize', updateButtonPosition);
         if (resizeObserver) {
           resizeObserver.disconnect();
@@ -3201,7 +3400,43 @@ const MessagePage: React.FC = () => {
               return null;
             })()}
             
-            {!activeTaskId && !isServiceMode ? (
+            {isServiceMode && !serviceConnected ? (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%',
+                color: '#64748b',
+                fontSize: '18px',
+                flexDirection: 'column',
+                gap: '20px',
+                padding: '40px'
+              }}>
+                <div style={{ 
+                  fontSize: '80px', 
+                  opacity: 0.3,
+                  marginBottom: '10px'
+                }}>🎧</div>
+                <div style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  {t('messages.contactCustomerService')}
+                </div>
+                <div style={{
+                  fontSize: '16px',
+                  color: '#6b7280',
+                  textAlign: 'center',
+                  lineHeight: '1.5',
+                  maxWidth: '400px',
+                  marginBottom: '20px'
+                }}>
+                  {t('messages.ourTeamReadyToHelpWithButton')}
+                </div>
+              </div>
+            ) : !activeTaskId && !isServiceMode ? (
               (
                 <div style={{ 
                   display: 'flex', 
@@ -3968,45 +4203,6 @@ const MessagePage: React.FC = () => {
             {/* 消息区域结束 */}
           </div>
           
-          {/* 客服模式滚动到底部按钮 - 固定在输入框上方 */}
-          {showScrollToBottomButton && isServiceMode && (
-            <div
-              onClick={scrollToBottom}
-              style={{
-                position: 'fixed',
-                bottom: `${scrollButtonBottom}px`,
-                right: isMobile ? '20px' : '20px',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: '#007bff',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
-                transition: 'all 0.3s ease',
-                zIndex: 1000,
-                fontSize: '20px',
-                fontWeight: 'bold',
-                border: '2px solid white'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.backgroundColor = '#0056b3';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.backgroundColor = '#007bff';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
-              }}
-              title="滚动到底部"
-            >
-              ↓
-            </div>
-          )}
           
           {/* 输入框区域 */}
           {isServiceMode ? (
@@ -5795,6 +5991,46 @@ const MessagePage: React.FC = () => {
               📥 下载图片
             </button>
           </div>
+        </div>
+      )}
+      
+      {/* 客服模式滚动到底部按钮 - 固定在视口右下角 */}
+      {showScrollToBottomButton && isServiceMode && (
+        <div
+          onClick={scrollToBottom}
+          style={{
+            position: 'fixed',
+            bottom: `${scrollButtonBottom}px`,
+            right: isMobile ? '20px' : '20px',
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: '#007bff',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0, 123, 255, 0.4)',
+            transition: 'bottom 0.3s ease, transform 0.3s ease',
+            zIndex: 1000,
+            fontSize: '20px',
+            fontWeight: 'bold',
+            border: '2px solid white'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.backgroundColor = '#0056b3';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 123, 255, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.backgroundColor = '#007bff';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.4)';
+          }}
+          title="滚动到底部"
+        >
+          ↓
         </div>
       )}
       

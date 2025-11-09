@@ -40,6 +40,7 @@ import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import './JoinUs.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -57,6 +58,7 @@ interface Notification {
 const JoinUs: React.FC = () => {
   const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -274,6 +276,7 @@ const JoinUs: React.FC = () => {
               }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
         </div>

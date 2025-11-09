@@ -7,13 +7,15 @@ interface HamburgerMenuProps {
   onLogout: () => void;
   onLoginClick: () => void;
   systemSettings: any;
+  unreadCount?: number; // 未读消息数量
 }
 
 const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   user,
   onLogout,
   onLoginClick,
-  systemSettings
+  systemSettings,
+  unreadCount = 0
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { navigate } = useLocalizedNavigation();
@@ -35,10 +37,28 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
         <button
           className={`hamburger-btn ${isOpen ? 'hidden' : ''}`}
           onClick={toggleMenu}
+          style={{ position: 'relative' }}
         >
           <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
           <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
           <div className={`hamburger-line ${isOpen ? 'open' : ''}`} />
+          {/* 未读消息红点指示器 */}
+          {unreadCount > 0 && (
+            <span 
+              className="unread-dot hamburger-dot"
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                width: '10px',
+                height: '10px',
+                backgroundColor: '#ef4444',
+                borderRadius: '50%',
+                border: '2px solid #fff',
+                animation: 'pulse 1.5s ease-in-out infinite'
+              }}
+            />
+          )}
         </button>
       </div>
 
@@ -143,9 +163,28 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                   <button
                     className="menu-item"
                     onClick={() => handleNavigation('/message')}
+                    style={{ position: 'relative' }}
                   >
                     <span className="menu-icon">💬</span>
                     {t('hamburgerMenu.messages')}
+                    {/* 未读消息红点指示器 */}
+                    {unreadCount > 0 && (
+                      <span 
+                        className="unread-dot menu-dot"
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          right: '2rem',
+                          transform: 'translateY(-50%)',
+                          width: '10px',
+                          height: '10px',
+                          backgroundColor: '#ef4444',
+                          borderRadius: '50%',
+                          border: '2px solid #fff',
+                          animation: 'pulse 1.5s ease-in-out infinite'
+                        }}
+                      />
+                    )}
                   </button>
 
                   <button
@@ -532,6 +571,29 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             to {
               opacity: 1;
             }
+          }
+          
+          /* 闪烁动画 */
+          @keyframes pulse {
+            0% {
+              opacity: 1;
+              transform: scale(1);
+              box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+              opacity: 0.7;
+              transform: scale(1.1);
+              box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+            }
+            100% {
+              opacity: 1;
+              transform: scale(1);
+              box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+          }
+          
+          .unread-dot {
+            animation: pulse 1.5s ease-in-out infinite;
           }
 
           /* 平板和桌面端适配 */

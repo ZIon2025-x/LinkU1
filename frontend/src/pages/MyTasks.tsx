@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
 import api from '../api';
 import dayjs from 'dayjs';
@@ -45,6 +46,7 @@ interface Notification {
 const MyTasks: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -626,6 +628,7 @@ const MyTasks: React.FC = () => {
               }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
           

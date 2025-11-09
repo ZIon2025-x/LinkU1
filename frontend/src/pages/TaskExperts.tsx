@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -49,6 +50,7 @@ interface Notification {
 const TaskExperts: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const location = useLocation();
   const [experts, setExperts] = useState<TaskExpert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,6 +409,7 @@ const TaskExperts: React.FC = () => {
                 }}
                 onLoginClick={() => setShowLoginModal(true)}
                 systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
               />
             </div>
           </div>

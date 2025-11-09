@@ -13,6 +13,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -28,6 +29,7 @@ interface Notification {
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const { translate } = useTranslation();
@@ -782,6 +784,7 @@ const TaskDetail: React.FC = () => {
                 }}
                 onLoginClick={() => setShowLoginModal(true)}
                 systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
               />
             </div>
           </div>
@@ -845,6 +848,7 @@ const TaskDetail: React.FC = () => {
                 }}
                 onLoginClick={() => setShowLoginModal(true)}
                 systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
               />
             </div>
           </div>

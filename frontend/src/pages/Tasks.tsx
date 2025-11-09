@@ -16,6 +16,7 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -593,6 +594,7 @@ const Tasks: React.FC = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [showNotifications, setShowNotifications] = useState(false);
   
   // 系统设置状态
@@ -712,6 +714,7 @@ const Tasks: React.FC = () => {
           }).catch(error => {
             console.error('定期更新未读数量失败:', error);
           });
+          
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
@@ -1263,6 +1266,7 @@ const Tasks: React.FC = () => {
                       }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
         </div>

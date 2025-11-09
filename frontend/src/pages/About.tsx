@@ -18,6 +18,7 @@ import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import './About.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -33,6 +34,7 @@ interface Notification {
 const About: React.FC = () => {
   const { t } = useLanguage();
   const { navigate } = useLocalizedNavigation();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -211,6 +213,7 @@ const About: React.FC = () => {
               }}
               onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
             />
           </div>
         </div>
