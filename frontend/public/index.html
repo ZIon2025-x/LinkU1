@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!-- Favicon配置 - 多种格式和尺寸，确保Google和Bing能正确识别 -->
+    <!-- Favicon配置 - 优先使用.ico格式，Bing和搜索引擎更容易识别 -->
     <!-- FaviconManager会在运行时动态更新为完整URL，这里设置默认值 -->
-    <!-- 优先设置默认favicon（浏览器和搜索引擎默认查找的路径） -->
+    <!-- 优先设置.ico格式favicon（搜索引擎和浏览器默认查找的路径，Bing优先识别） -->
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
+    <!-- 根目录favicon.ico（搜索引擎默认查找的路径） -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <!-- Chrome移动端和Google搜索引擎优先读取的favicon（192x192和512x512是关键尺寸） -->
     <link rel="icon" type="image/png" sizes="192x192" href="/static/favicon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/static/favicon.png" />

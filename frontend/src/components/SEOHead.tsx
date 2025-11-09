@@ -78,9 +78,17 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       linkTag.href = href;
     };
 
-    // 更新description
+    // 更新description - 确保在head最前面，优先被搜索引擎读取
     if (description) {
-      updateMetaTag('description', description);
+      // 先移除所有旧的description标签
+      const allDescriptions = document.querySelectorAll('meta[name="description"]');
+      allDescriptions.forEach(tag => tag.remove());
+      
+      // 创建新的description标签并插入到head最前面
+      const descTag = document.createElement('meta');
+      descTag.name = 'description';
+      descTag.content = description;
+      document.head.insertBefore(descTag, document.head.firstChild);
     }
 
     // 更新keywords
@@ -92,12 +100,28 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     const robotsContent = noindex ? 'noindex, nofollow' : 'index, follow';
     updateMetaTag('robots', robotsContent);
 
-    // 更新Open Graph标签
+    // 更新Open Graph标签 - 确保在head最前面，优先被搜索引擎读取
     if (ogTitle) {
-      updateMetaTag('og:title', ogTitle, true);
+      // 先移除所有旧的og:title标签
+      const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+      allOgTitles.forEach(tag => tag.remove());
+      
+      // 创建新的og:title标签并插入到head最前面
+      const ogTitleTag = document.createElement('meta');
+      ogTitleTag.setAttribute('property', 'og:title');
+      ogTitleTag.content = ogTitle;
+      document.head.insertBefore(ogTitleTag, document.head.firstChild);
     }
     if (ogDescription) {
-      updateMetaTag('og:description', ogDescription, true);
+      // 先移除所有旧的og:description标签
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      allOgDescriptions.forEach(tag => tag.remove());
+      
+      // 创建新的og:description标签并插入到head最前面
+      const ogDescTag = document.createElement('meta');
+      ogDescTag.setAttribute('property', 'og:description');
+      ogDescTag.content = ogDescription;
+      document.head.insertBefore(ogDescTag, document.head.firstChild);
     }
     // ogImage的处理移到后面，确保转换为完整URL并添加微信标签
     if (ogUrl) {
@@ -176,19 +200,21 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     };
     
     // 将关键标签移到前面（使用setTimeout确保DOM已更新）
+    // 确保description和og:description在最前面，防止搜索引擎抓取页面内容
     setTimeout(() => {
-      if (ogImage) {
-        moveToTop('meta[property="og:image"]');
-      }
-      if (ogTitle) {
-        moveToTop('meta[property="og:title"]');
-        moveToTop('meta[name="weixin:title"]');
+      if (description) {
+        moveToTop('meta[name="description"]');
       }
       if (ogDescription) {
         moveToTop('meta[property="og:description"]');
         moveToTop('meta[name="weixin:description"]');
       }
+      if (ogTitle) {
+        moveToTop('meta[property="og:title"]');
+        moveToTop('meta[name="weixin:title"]');
+      }
       if (ogImage) {
+        moveToTop('meta[property="og:image"]');
         moveToTop('meta[name="weixin:image"]');
       }
     }, 0);

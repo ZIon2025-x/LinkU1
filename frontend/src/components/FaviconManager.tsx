@@ -19,21 +19,36 @@ const FaviconManager: React.FC = () => {
       const allFavicons = document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']");
       allFavicons.forEach(icon => icon.remove());
       
-      // 2. 设置根目录favicon.ico（搜索引擎和浏览器默认查找的路径，必须优先设置）
+      // 2. 优先设置favicon.ico（搜索引擎和浏览器默认查找的路径，Bing和Google都优先识别.ico格式）
       // 插入到head的最前面，确保优先读取
-      // 移动端Chrome需要绝对路径
+      // 使用绝对路径，确保搜索引擎能正确识别
+      // 首先设置根目录的favicon.ico（搜索引擎默认查找的路径）
       const rootFavicon = document.createElement('link');
       rootFavicon.rel = 'icon';
       rootFavicon.type = 'image/x-icon';
-      rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+      rootFavicon.href = `${baseUrl}/favicon.ico?v=${version}`;
       document.head.insertBefore(rootFavicon, document.head.firstChild);
+      
+      // 然后设置static目录的favicon.ico（作为备选）
+      const staticFavicon = document.createElement('link');
+      staticFavicon.rel = 'icon';
+      staticFavicon.type = 'image/x-icon';
+      staticFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+      document.head.insertBefore(staticFavicon, rootFavicon.nextSibling);
 
-      // 3. 设置shortcut icon（旧版浏览器需要）
+      // 3. 设置shortcut icon（旧版浏览器和搜索引擎需要）
       const shortcutIcon = document.createElement('link');
       shortcutIcon.rel = 'shortcut icon';
       shortcutIcon.type = 'image/x-icon';
-      shortcutIcon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
-      document.head.insertBefore(shortcutIcon, rootFavicon.nextSibling);
+      shortcutIcon.href = `${baseUrl}/favicon.ico?v=${version}`;
+      document.head.insertBefore(shortcutIcon, staticFavicon.nextSibling);
+      
+      // 3.5. 额外设置一个无sizes的.ico favicon（某些搜索引擎需要）
+      const defaultIcoIcon = document.createElement('link');
+      defaultIcoIcon.rel = 'icon';
+      defaultIcoIcon.type = 'image/x-icon';
+      defaultIcoIcon.href = `${baseUrl}/favicon.ico?v=${version}`;
+      document.head.insertBefore(defaultIcoIcon, shortcutIcon.nextSibling);
 
       // 4. 设置所有尺寸的PNG favicon（移动端Chrome和Google需要）
       // 关键尺寸：16x16, 32x32, 192x192, 512x512（移动端Chrome特别需要192x192和512x512）
@@ -67,12 +82,12 @@ const FaviconManager: React.FC = () => {
       appleIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
       document.head.insertBefore(appleIcon, document.head.firstChild);
       
-      // 6. 额外设置一个无sizes的PNG favicon（某些浏览器需要）
+      // 6. 额外设置一个无sizes的PNG favicon（现代浏览器和移动端需要，作为.ico的备选）
       const defaultPngIcon = document.createElement('link');
       defaultPngIcon.rel = 'icon';
       defaultPngIcon.type = 'image/png';
       defaultPngIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
-      document.head.insertBefore(defaultPngIcon, rootFavicon.nextSibling);
+      document.head.insertBefore(defaultPngIcon, defaultIcoIcon.nextSibling);
     };
 
     // 立即执行
@@ -85,21 +100,25 @@ const FaviconManager: React.FC = () => {
       const baseUrl = window.location.origin;
       const version = Date.now();
       
-      // 检查并确保favicon.ico在最前面
-      let rootFavicon = document.querySelector("link[rel='icon']:not([sizes])") as HTMLLinkElement;
-      if (!rootFavicon || !rootFavicon.href.includes('/static/favicon.ico')) {
-        // 如果不存在或不正确，重新创建
+      // 检查并确保favicon.ico在最前面（优先使用根目录的favicon.ico，搜索引擎默认查找的路径）
+      let rootFavicon = document.querySelector("link[rel='icon'][type='image/x-icon']") as HTMLLinkElement;
+      if (!rootFavicon || (!rootFavicon.href.includes('/favicon.ico') && !rootFavicon.href.includes('/static/favicon.ico'))) {
+        // 如果不存在或不正确，重新创建（优先使用根目录）
         if (rootFavicon) {
           rootFavicon.remove();
         }
         rootFavicon = document.createElement('link');
         rootFavicon.rel = 'icon';
         rootFavicon.type = 'image/x-icon';
-        rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+        rootFavicon.href = `${baseUrl}/favicon.ico?v=${version}`;
         document.head.insertBefore(rootFavicon, document.head.firstChild);
       } else if (!rootFavicon.href.startsWith('http')) {
-        // 如果存在但不是绝对路径，更新为绝对路径
-        rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+        // 如果存在但不是绝对路径，更新为绝对路径（优先使用根目录）
+        if (rootFavicon.href.includes('/favicon.ico')) {
+          rootFavicon.href = `${baseUrl}/favicon.ico?v=${version}`;
+        } else {
+          rootFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+        }
         document.head.insertBefore(rootFavicon, document.head.firstChild);
       }
       

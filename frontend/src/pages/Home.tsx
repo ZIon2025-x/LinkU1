@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
@@ -491,6 +491,33 @@ const Home: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // 使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
+  // 防止搜索引擎抓取到页面内容（如公告）作为描述
+  useLayoutEffect(() => {
+    // 强制更新meta description，确保在head最前面
+    const description = t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.';
+    
+    // 移除所有旧的description标签
+    const allDescriptions = document.querySelectorAll('meta[name="description"]');
+    allDescriptions.forEach(tag => tag.remove());
+    
+    // 创建新的description标签并插入到head最前面
+    const descTag = document.createElement('meta');
+    descTag.name = 'description';
+    descTag.content = description;
+    document.head.insertBefore(descTag, document.head.firstChild);
+    
+    // 同样处理og:description
+    const ogDescription = description;
+    const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+    allOgDescriptions.forEach(tag => tag.remove());
+    
+    const ogDescTag = document.createElement('meta');
+    ogDescTag.setAttribute('property', 'og:description');
+    ogDescTag.content = ogDescription;
+    document.head.insertBefore(ogDescTag, document.head.firstChild);
+  }, [t]);
 
   return (
     <div>
@@ -1165,23 +1192,24 @@ const Home: React.FC = () => {
           </div>
         )}
       </main>
-      {/* 平台公告区块 - 使用data属性标记防止搜索引擎抓取 */}
+      {/* 平台公告区块 - 使用data-nosnippet防止搜索引擎抓取为描述 */}
       <section 
         style={{background: '#f8fbff', padding: '48px 0'}}
-        data-noindex="true"
+        data-nosnippet="true"
       >
         <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}}>
+          <h3 style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}} data-nosnippet="true">
             {t('home.announcementTitle')}
           </h3>
           <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
             <div 
               style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}
-              data-noindex="true"
-              dangerouslySetInnerHTML={{
-                __html: `<!--googleoff: index--><!--googleoff: snippet-->${t('home.announcementContent')}<br/><span style="color: #888; font-size: 14px;">${t('home.announcementDate')}</span><!--googleon: snippet--><!--googleon: index-->`
-              }}
-            />
+              data-nosnippet="true"
+            >
+              {t('home.announcementContent')}
+              <br/>
+              <span style={{color: '#888', fontSize: '14px'}}>{t('home.announcementDate')}</span>
+            </div>
           </div>
         </div>
       </section>
