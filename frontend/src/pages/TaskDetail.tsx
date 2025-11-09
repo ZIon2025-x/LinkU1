@@ -130,81 +130,45 @@ const TaskDetail: React.FC = () => {
     const taskUrl = `${window.location.origin}${window.location.pathname}`;
     
     // 强制移除所有默认的描述标签（任务详情页不使用默认描述）
-    // 移除所有包含默认平台描述的标签
-    const removeDefaultDescriptions = () => {
-      // 移除所有description标签（包含默认描述的）
+    // 在任务数据加载前就移除所有描述标签，避免微信爬虫抓取到默认值
+    const removeAllDescriptions = () => {
+      // 移除所有description标签（任务详情页会在数据加载后重新设置）
       const allDescriptions = document.querySelectorAll('meta[name="description"]');
-      allDescriptions.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && (
-          metaTag.content.includes('Professional task publishing') ||
-          metaTag.content.includes('skill matching platform') ||
-          metaTag.content.includes('linking skilled people')
-        )) {
-          metaTag.remove();
-        }
-      });
+      allDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有og:description标签（包含默认描述的）
+      // 移除所有og:description标签
       const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
-      allOgDescriptions.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && (
-          metaTag.content.includes('Professional task publishing') ||
-          metaTag.content.includes('skill matching platform') ||
-          metaTag.content.includes('linking skilled people')
-        )) {
-          metaTag.remove();
-        }
-      });
+      allOgDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有twitter:description标签（包含默认描述的）
+      // 移除所有twitter:description标签
       const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
-      allTwitterDescriptions.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && (
-          metaTag.content.includes('Professional task publishing') ||
-          metaTag.content.includes('skill matching platform') ||
-          metaTag.content.includes('linking skilled people')
-        )) {
-          metaTag.remove();
-        }
-      });
+      allTwitterDescriptions.forEach(tag => tag.remove());
       
-      // 强制移除所有默认的微信描述标签
+      // 移除所有微信描述标签（这是关键，微信优先读取这个）
       const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
-      allWeixinDescriptions.forEach(tag => {
-        const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && (
-          metaTag.content.includes('Professional task publishing') ||
-          metaTag.content.includes('skill matching platform') ||
-          metaTag.content.includes('linking skilled people')
-        )) {
-          metaTag.remove();
-        }
-      });
+      allWeixinDescriptions.forEach(tag => tag.remove());
       
-      // 强制移除默认的微信标题标签
+      // 移除默认的微信标题标签
       const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
       allWeixinTitles.forEach(tag => {
         const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && metaTag.content === 'Link²Ur') {
+        if (metaTag.content === 'Link²Ur') {
           metaTag.remove();
         }
       });
       
-      // 移除默认的og:title（如果是默认的）
+      // 移除默认的og:title
       const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
       allOgTitles.forEach(tag => {
         const metaTag = tag as HTMLMetaElement;
-        if (metaTag.content && metaTag.content === 'Link²Ur') {
+        if (metaTag.content === 'Link²Ur') {
           metaTag.remove();
         }
       });
     };
     
-    // 立即移除所有默认描述
-    removeDefaultDescriptions();
+    // 立即移除所有描述标签（不等待任务数据加载）
+    removeAllDescriptions();
     
     updateMetaTag('og:url', taskUrl, true);
     updateMetaTag('og:type', 'article', true);
@@ -228,10 +192,15 @@ const TaskDetail: React.FC = () => {
     weixinImageTag.content = shareImageUrl;
     document.head.insertBefore(weixinImageTag, document.head.firstChild);
     
-    // 使用setTimeout再次确保移除默认描述（防止被其他脚本重新添加）
+    // 使用setTimeout再次确保移除所有描述标签（防止被其他脚本重新添加）
     setTimeout(() => {
-      removeDefaultDescriptions();
+      removeAllDescriptions();
     }, 50);
+    
+    // 再次延迟移除，确保在React组件完全加载后也移除
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 200);
   }, [id]);
 
   // 加载任务数据

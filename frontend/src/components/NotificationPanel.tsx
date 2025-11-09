@@ -23,6 +23,17 @@ interface NegotiationContent {
   token_reject: string;
 }
 
+interface TaskApplicationContent {
+  type: string;
+  task_id: number;
+  task_title: string;
+  application_id: number;
+  applicant_name: string;
+  message?: string | null;
+  negotiated_price?: number | null;
+  currency?: string;
+}
+
 interface NotificationPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -386,6 +397,95 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             lineHeight: '1.4'
                           }}>
                             {message}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // 如果解析失败，显示原始内容
+                      return (
+                        <>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {notification.content}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </>
+                      );
+                    }
+                  })() : notification.type === 'task_application' ? (() => {
+                    try {
+                      const appData: TaskApplicationContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            <strong>{appData.applicant_name}</strong> 申请了任务 <strong>{appData.task_title}</strong>
+                            <br />
+                            {appData.message ? (
+                              <>
+                                申请留言：{appData.message}
+                                <br />
+                              </>
+                            ) : (
+                              <>
+                                申请留言：无
+                                <br />
+                              </>
+                            )}
+                            {appData.negotiated_price !== null && appData.negotiated_price !== undefined ? (
+                              <>
+                                议价金额：<strong style={{ color: '#059669' }}>
+                                  £{appData.negotiated_price.toFixed(2)} {appData.currency || 'GBP'}
+                                </strong>
+                              </>
+                            ) : (
+                              <>议价金额：无议价（使用任务原定金额）</>
+                            )}
                           </p>
                           {notification.is_read === 0 && (
                             <button
