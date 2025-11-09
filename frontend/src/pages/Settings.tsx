@@ -504,7 +504,8 @@ const Settings: React.FC = () => {
           color: '#fff',
           padding: isMobile ? '16px' : '30px',
           textAlign: 'center',
-          position: 'relative'
+          position: 'relative',
+          zIndex: 10
         }}>
           <button
             onClick={() => navigate('/')}
@@ -520,7 +521,18 @@ const Settings: React.FC = () => {
               cursor: 'pointer',
               fontSize: isMobile ? '12px' : '14px',
               marginBottom: isMobile ? '8px' : '0',
-              display: 'inline-block'
+              display: 'inline-block',
+              zIndex: 100,
+              pointerEvents: 'auto',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
           >
             ← {isMobile ? '返回' : '返回首页'}
@@ -554,7 +566,9 @@ const Settings: React.FC = () => {
             overflowX: 'auto',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            position: 'relative',
+            zIndex: 1
           }}>
             <div style={{
               display: 'flex',
