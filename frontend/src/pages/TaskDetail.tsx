@@ -240,12 +240,22 @@ const TaskDetail: React.FC = () => {
       document.head.insertBefore(twitterDescTag, document.head.firstChild);
       
       // 强制更新微信分享描述（微信优先读取weixin:description）
+      // 微信会缓存，所以必须确保每次都强制更新
       const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDescriptions.forEach(tag => tag.remove());
       const weixinDescTag = document.createElement('meta');
       weixinDescTag.setAttribute('name', 'weixin:description');
       weixinDescTag.content = seoDescription;
+      // 插入到head最前面，确保微信爬虫优先读取
       document.head.insertBefore(weixinDescTag, document.head.firstChild);
+      
+      // 同时设置微信分享标题（微信也会读取）
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => tag.remove());
+      const weixinTitleTag = document.createElement('meta');
+      weixinTitleTag.setAttribute('name', 'weixin:title');
+      weixinTitleTag.content = `${task.title} - Link²Ur任务平台`;
+      document.head.insertBefore(weixinTitleTag, document.head.firstChild);
       
       // 更新meta关键词
       const keywords = `${task.task_type},${task.location},${task.title},任务,兼职,技能服务,Link²Ur`;
@@ -280,6 +290,14 @@ const TaskDetail: React.FC = () => {
       updateMetaTag('og:site_name', 'Link²Ur', true);
       updateMetaTag('og:locale', 'zh_CN', true);
       
+      // 强制更新微信分享图片（微信优先读取weixin:image）
+      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImages.forEach(tag => tag.remove());
+      const weixinImageTag = document.createElement('meta');
+      weixinImageTag.setAttribute('name', 'weixin:image');
+      weixinImageTag.content = shareImageUrl;
+      document.head.insertBefore(weixinImageTag, document.head.firstChild);
+      
       // 更新Twitter Card标签
       updateMetaTag('twitter:card', 'summary_large_image');
       updateMetaTag('twitter:title', `${task.title} - Link²Ur任务平台`);
@@ -299,6 +317,7 @@ const TaskDetail: React.FC = () => {
       // 微信分享会读取og:image, og:title, og:description等标签
       
       // 将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
+      // 微信爬虫会优先读取head前面的标签
       const moveToTop = (selector: string) => {
         const element = document.querySelector(selector);
         if (element && element.parentNode) {
@@ -310,12 +329,51 @@ const TaskDetail: React.FC = () => {
         }
       };
       
-      // 将关键标签移到前面
+      // 将关键标签移到前面（微信优先读取顺序：weixin:title, weixin:description, weixin:image, og:title, og:description, og:image）
       setTimeout(() => {
-        moveToTop('meta[property="og:image"]');
+        // 微信专用标签优先
+        moveToTop('meta[name="weixin:title"]');
+        moveToTop('meta[name="weixin:description"]');
+        moveToTop('meta[name="weixin:image"]');
+        // Open Graph标签作为备选
         moveToTop('meta[property="og:title"]');
         moveToTop('meta[property="og:description"]');
+        moveToTop('meta[property="og:image"]');
       }, 0);
+      
+      // 使用额外的setTimeout确保在DOM完全加载后再次强制更新微信标签（防止被其他脚本覆盖）
+      setTimeout(() => {
+        // 再次检查并确保微信描述正确
+        const weixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
+        if (!weixinDesc || weixinDesc.content !== seoDescription) {
+          if (weixinDesc) weixinDesc.remove();
+          const finalWeixinDesc = document.createElement('meta');
+          finalWeixinDesc.setAttribute('name', 'weixin:description');
+          finalWeixinDesc.content = seoDescription;
+          document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+        }
+        
+        // 再次检查并确保微信标题正确
+        const weixinTitle = document.querySelector('meta[name="weixin:title"]') as HTMLMetaElement;
+        const expectedTitle = `${task.title} - Link²Ur任务平台`;
+        if (!weixinTitle || weixinTitle.content !== expectedTitle) {
+          if (weixinTitle) weixinTitle.remove();
+          const finalWeixinTitle = document.createElement('meta');
+          finalWeixinTitle.setAttribute('name', 'weixin:title');
+          finalWeixinTitle.content = expectedTitle;
+          document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
+        }
+        
+        // 再次检查并确保微信图片正确
+        const weixinImage = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
+        if (!weixinImage || weixinImage.content !== shareImageUrl) {
+          if (weixinImage) weixinImage.remove();
+          const finalWeixinImage = document.createElement('meta');
+          finalWeixinImage.setAttribute('name', 'weixin:image');
+          finalWeixinImage.content = shareImageUrl;
+          document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+        }
+      }, 200);
       
       // 添加结构化数据 - 使用JobPosting类型以便搜索引擎识别
       // reward 变量已在上面声明，直接使用
