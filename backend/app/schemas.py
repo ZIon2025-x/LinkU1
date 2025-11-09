@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 
 
 class UserBase(BaseModel):
@@ -286,6 +286,23 @@ class TaskOut(TaskBase):
         if isinstance(v, list):
             return v
         return None
+
+    @root_validator
+    def set_reward_from_agreed_or_base(cls, values):
+        """设置reward字段：优先使用agreed_reward，否则使用base_reward"""
+        # 优先使用agreed_reward
+        agreed_reward = values.get('agreed_reward')
+        if agreed_reward is not None:
+            values['reward'] = float(agreed_reward)
+        # 否则使用base_reward
+        elif values.get('base_reward') is not None:
+            values['reward'] = float(values['base_reward'])
+        # 如果都没有，保持原有的reward值或设为0.0
+        elif values.get('reward') is None:
+            values['reward'] = 0.0
+        else:
+            values['reward'] = float(values['reward'])
+        return values
 
     class Config:
         from_attributes = True

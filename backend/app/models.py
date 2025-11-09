@@ -460,7 +460,7 @@ Index("ix_tasks_task_type", Task.task_type)
 Index("ix_tasks_location", Task.location)
 Index("ix_tasks_created_at", Task.created_at)
 Index("ix_tasks_deadline", Task.deadline)
-Index("ix_tasks_reward", Task.reward)
+Index("ix_tasks_base_reward", Task.base_reward)
 
 # 消息表索引
 Index("ix_messages_sender_id", Message.sender_id)

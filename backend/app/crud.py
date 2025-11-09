@@ -255,24 +255,25 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
     super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
 
-    # 任务等级分配逻辑
+    # 处理价格字段：base_reward 是发布时的价格
+    from decimal import Decimal
+    base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
+    
+    # 任务等级分配逻辑（使用base_reward）
     if user.user_level == "super":
         task_level = "vip"
-    elif task.reward >= super_vip_price_threshold:
+    elif float(base_reward_value) >= super_vip_price_threshold:
         task_level = "super"
-    elif task.reward >= vip_price_threshold:
+    elif float(base_reward_value) >= vip_price_threshold:
         task_level = "vip"
     else:
         task_level = "normal"
+    
     # 处理图片字段：将列表转为JSON字符串
     import json
     images_json = None
     if task.images and len(task.images) > 0:
         images_json = json.dumps(task.images)
-    
-    # 处理价格字段：base_reward 是发布时的价格
-    from decimal import Decimal
-    base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
     
     db_task = Task(
         title=task.title,
@@ -389,9 +390,9 @@ def list_tasks(
     if sort_by == "latest":
         query = query.order_by(Task.created_at.desc())
     elif sort_by == "reward_asc":
-        query = query.order_by(Task.reward.asc())
+        query = query.order_by(Task.base_reward.asc())
     elif sort_by == "reward_desc":
-        query = query.order_by(Task.reward.desc())
+        query = query.order_by(Task.base_reward.desc())
     elif sort_by == "deadline_asc":
         query = query.order_by(Task.deadline.asc())
     elif sort_by == "deadline_desc":
@@ -1921,9 +1922,9 @@ def get_dashboard_stats(db: Session):
         .count()
     )
 
-    # 计算总收入（任务奖励总和）
+    # 计算总收入（任务奖励总和，使用base_reward）
     total_revenue = (
-        db.query(func.sum(models.Task.reward))
+        db.query(func.sum(models.Task.base_reward))
         .filter(models.Task.status == "completed")
         .scalar()
         or 0.0

@@ -66,7 +66,7 @@ class QueryOptimizer:
         if filters.get('sort_by') == 'latest':
             query = query.order_by(models.Task.created_at.desc())
         elif filters.get('sort_by') == 'reward_high':
-            query = query.order_by(models.Task.reward.desc())
+            query = query.order_by(models.Task.base_reward.desc())
         elif filters.get('sort_by') == 'deadline':
             query = query.order_by(models.Task.deadline.asc())
         
@@ -146,7 +146,7 @@ class QueryOptimizer:
         if filters.get('sort_by') == 'latest':
             tasks_query = tasks_query.order_by(models.Task.created_at.desc())
         elif filters.get('sort_by') == 'reward_high':
-            tasks_query = tasks_query.order_by(models.Task.reward.desc())
+            tasks_query = tasks_query.order_by(models.Task.base_reward.desc())
         elif filters.get('sort_by') == 'deadline':
             tasks_query = tasks_query.order_by(models.Task.deadline.asc())
         
@@ -286,7 +286,7 @@ class AsyncQueryOptimizer:
         if filters.get('sort_by') == 'latest':
             query = query.order_by(models.Task.created_at.desc())
         elif filters.get('sort_by') == 'reward_high':
-            query = query.order_by(models.Task.reward.desc())
+            query = query.order_by(models.Task.base_reward.desc())
         elif filters.get('sort_by') == 'deadline':
             query = query.order_by(models.Task.deadline.asc())
         

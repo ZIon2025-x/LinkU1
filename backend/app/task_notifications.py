@@ -10,8 +10,19 @@ from app import crud, models
 from app.email_utils import send_email
 from app.config import Config
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
+
+
+def get_display_reward(task: models.Task) -> float:
+    """获取显示价格：agreed_reward 或 base_reward"""
+    if task.agreed_reward is not None:
+        return float(task.agreed_reward)
+    elif task.base_reward is not None:
+        return float(task.base_reward)
+    else:
+        return 0.0
 
 
 def send_task_application_notification(
@@ -70,7 +81,7 @@ def send_task_application_notification(
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">{task.title}</h3>
                     <p><strong>任务描述：</strong>{task.description}</p>
-                    <p><strong>任务奖励：</strong>£{task.reward}</p>
+                    <p><strong>任务奖励：</strong>£{get_display_reward(task):.2f}</p>
                 </div>
                 
                 {f'<p><strong>申请留言：</strong>{application_message}</p>' if application_message else ''}
@@ -142,7 +153,7 @@ def send_task_approval_notification(
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">{task.title}</h3>
                     <p><strong>任务描述：</strong>{task.description}</p>
-                    <p><strong>任务奖励：</strong>£{task.reward}</p>
+                    <p><strong>任务奖励：</strong>£{get_display_reward(task):.2f}</p>
                 </div>
                 
                 <p>请按照任务要求完成工作，完成后记得标记任务完成。</p>
@@ -208,7 +219,7 @@ def send_task_completion_notification(
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">{task.title}</h3>
                     <p><strong>任务描述：</strong>{task.description}</p>
-                    <p><strong>任务奖励：</strong>£{task.reward}</p>
+                    <p><strong>任务奖励：</strong>£{get_display_reward(task):.2f}</p>
                 </div>
                 
                 <p>请检查任务完成情况，如果满意请确认完成以释放奖励。</p>
@@ -276,7 +287,7 @@ def send_task_confirmation_notification(
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">{task.title}</h3>
                     <p><strong>任务描述：</strong>{task.description}</p>
-                    <p><strong>获得奖励：</strong>£{task.reward}</p>
+                    <p><strong>获得奖励：</strong>£{get_display_reward(task):.2f}</p>
                 </div>
                 
                 <p>感谢您使用 Link²Ur 平台！继续寻找更多任务机会吧。</p>
@@ -342,7 +353,7 @@ def send_task_rejection_notification(
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #333;">{task.title}</h3>
                     <p><strong>任务描述：</strong>{task.description}</p>
-                    <p><strong>任务奖励：</strong>£{task.reward}</p>
+                    <p><strong>任务奖励：</strong>£{get_display_reward(task):.2f}</p>
                 </div>
                 
                 <p>不要灰心！还有很多其他任务机会等着您。</p>

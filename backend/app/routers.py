@@ -1537,7 +1537,7 @@ def user_profile(
                 "title": t.title,
                 "status": t.status,
                 "created_at": t.created_at,
-                "reward": t.reward,
+                "reward": float(t.agreed_reward) if t.agreed_reward is not None else float(t.base_reward) if t.base_reward is not None else 0.0,
                 "task_type": t.task_type,
             }
             for t in (posted_tasks + taken_tasks)[
@@ -2071,7 +2071,7 @@ def create_payment(
                 "price_data": {
                     "currency": "gbp",
                     "product_data": {"name": task.title},
-                    "unit_amount": int((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward)) * 100),
+                    "unit_amount": int((float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0) * 100),
                 },
                 "quantity": 1,
             }
@@ -2100,7 +2100,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if task:
             task.is_paid = 1
             # 使用最终成交价（如果有议价）或原始标价
-            task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward)
+            task.escrow_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
             db.commit()
     return {"status": "success"}
 
@@ -2637,7 +2637,7 @@ def get_shared_tasks(
             "title": task.title,
             "status": task.status,
             "created_at": task.created_at,
-            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else float(task.reward),
+            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
             "task_type": task.task_type,
             "is_poster": task.poster_id == current_user.id,
         }
