@@ -64,6 +64,66 @@
       "source": "/contact",
       "destination": "/en/faq",
       "permanent": true
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/apple-touch-icon.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/apple-touch-icon-precomposed.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-16x16.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-32x32.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-48x48.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-96x96.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-128x128.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-192x192.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-256x256.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
+    },
+    {
+      "source": "/favicon-512x512.png",
+      "destination": "/static/favicon.ico",
+      "permanent": true
     }
   ],
   "headers": [
@@ -81,6 +141,24 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/static/favicon.ico",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/static/favicon.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     }
