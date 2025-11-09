@@ -253,8 +253,8 @@ async def register(
         finally:
             sync_db.close()
         
-        # 发送验证邮件
-        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token)
+        # 发送验证邮件（新用户注册，默认使用英文，因为还没有用户记录）
+        send_verification_email_with_token(background_tasks, validated_data['email'], verification_token, language='en')
         
         return {
             "message": "注册成功！请检查您的邮箱并点击验证链接完成注册。",
@@ -761,7 +761,12 @@ def forgot_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     token = generate_reset_token(email)
-    send_reset_email(background_tasks, email, token)
+    # 尝试获取用户语言偏好
+    from app.email_templates import get_user_language
+    user = crud.get_user_by_email(db, email)
+    language = get_user_language(user) if user else 'en'
+    
+    send_reset_email(background_tasks, email, token, language)
     return {"message": "Password reset email sent."}
 
 
@@ -1612,33 +1617,11 @@ def send_email_update_code(
                 detail="发送验证码失败，请稍后重试"
             )
         
-        # 发送邮件
-        subject = "Link²Ur 邮箱修改验证码"
-        body = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #333; text-align: center;">邮箱修改验证码</h2>
-            <p>您好，</p>
-            <p>您正在尝试将 Link²Ur 账户的邮箱修改为：<strong>{new_email}</strong></p>
-            <p>请使用以下验证码完成修改：</p>
-            
-            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                <h1 style="color: #007bff; font-size: 32px; margin: 0; letter-spacing: 5px;">{verification_code}</h1>
-            </div>
-            
-            <p style="color: #666; font-size: 14px;">
-                <strong>重要提示：</strong><br>
-                • 验证码有效期为 5 分钟<br>
-                • 验证码只能使用一次<br>
-                • 如果您没有尝试修改邮箱，请忽略此邮件<br>
-                • 请勿将验证码泄露给他人
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            <p style="color: #999; font-size: 12px; text-align: center;">
-                此邮件由 Link²Ur 系统自动发送，请勿回复。
-            </p>
-        </div>
-        """
+        # 根据用户语言偏好获取邮件模板
+        from app.email_templates import get_user_language, get_email_update_verification_code_email
+        
+        language = get_user_language(current_user)
+        subject, body = get_email_update_verification_code_email(language, new_email, verification_code)
         
         # 异步发送邮件
         background_tasks.add_task(send_email, new_email, subject, body)

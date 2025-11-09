@@ -321,6 +321,7 @@ const MessagePage: React.FC = () => {
   const taskInputAreaRef = useRef<HTMLDivElement>(null); // 任务聊天输入框区域引用
   const [scrollButtonBottom, setScrollButtonBottom] = useState(100); // 滚动按钮距离底部的位置（客服模式）
   const [taskScrollButtonBottom, setTaskScrollButtonBottom] = useState(100); // 任务聊天滚动按钮距离底部的位置
+  const [taskScrollButtonLeft, setTaskScrollButtonLeft] = useState<number | null>(null); // 任务聊天滚动按钮距离左侧的位置（相对于输入框居中）
   
   // 翻译相关状态
   const { translate } = useTranslation();
@@ -2151,15 +2152,22 @@ const MessagePage: React.FC = () => {
         setScrollButtonBottom(120);
       }
       
-      // 任务聊天模式：计算任务输入框上方位置
+      // 任务聊天模式：计算任务输入框上方位置和水平居中位置
       if (taskInputAreaRef.current && chatMode === 'tasks' && activeTaskId) {
         const rect = taskInputAreaRef.current.getBoundingClientRect();
         // 计算输入框顶部距离视口底部的距离，然后加上20px作为按钮位置
         const distanceFromBottom = window.innerHeight - rect.top;
         setTaskScrollButtonBottom(Math.max(100, distanceFromBottom + 20)); // 输入框上方20px，最小100px
+        
+        // 计算按钮的水平位置：输入框中心 - 按钮宽度的一半（24px）
+        const buttonWidth = 48; // 按钮宽度
+        const inputBoxCenter = rect.left + (rect.width / 2);
+        const buttonLeft = inputBoxCenter - (buttonWidth / 2);
+        setTaskScrollButtonLeft(buttonLeft);
       } else if (chatMode === 'tasks' && activeTaskId) {
         // 如果输入框还未渲染，使用默认值
         setTaskScrollButtonBottom(120);
+        setTaskScrollButtonLeft(null);
       }
     };
 
@@ -5992,8 +6000,8 @@ const MessagePage: React.FC = () => {
           style={{
             position: 'fixed',
             bottom: `${taskScrollButtonBottom}px`,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: taskScrollButtonLeft !== null ? `${taskScrollButtonLeft}px` : '50%',
+            transform: taskScrollButtonLeft !== null ? 'none' : 'translateX(-50%)',
             width: '48px',
             height: '48px',
             borderRadius: '50%',
@@ -6014,14 +6022,16 @@ const MessagePage: React.FC = () => {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#059669' : '#2563eb';
-            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+            const currentTransform = taskScrollButtonLeft !== null ? 'scale(1.1)' : 'translateX(-50%) scale(1.1)';
+            e.currentTarget.style.transform = currentTransform;
             e.currentTarget.style.boxShadow = hasNewTaskMessages 
               ? '0 6px 16px rgba(16, 185, 129, 0.5)' 
               : '0 6px 16px rgba(59, 130, 246, 0.5)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = hasNewTaskMessages ? '#10b981' : '#3b82f6';
-            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+            const currentTransform = taskScrollButtonLeft !== null ? 'scale(1)' : 'translateX(-50%) scale(1)';
+            e.currentTarget.style.transform = currentTransform;
             e.currentTarget.style.boxShadow = hasNewTaskMessages 
               ? '0 4px 12px rgba(16, 185, 129, 0.4)' 
               : '0 4px 12px rgba(59, 130, 246, 0.4)';

@@ -299,6 +299,15 @@ def send_admin_verification_code(
     
     # 发送验证码邮件
     admin_email = AdminVerificationManager.get_admin_email()
+    # 获取管理员语言偏好（默认英文）
+    language = getattr(admin_user, 'language_preference', 'en') if admin_user else 'en'
+    if language and isinstance(language, str):
+        language = language.strip().lower()
+        if language not in ['zh', 'en']:
+            language = 'en'
+    else:
+        language = 'en'
+    
     send_admin_verification_code_email(
         background_tasks, 
         admin_email, 
