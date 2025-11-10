@@ -1041,6 +1041,18 @@ class RespondNegotiationRequest(BaseModel):
     token: str = Field(..., description="一次性签名token")
 
 
+class SendApplicationMessageRequest(BaseModel):
+    """发送申请留言请求体"""
+    message: str = Field(..., max_length=1000, description="留言内容")
+    negotiated_price: Optional[float] = Field(None, ge=0, description="议价金额（可选）")
+
+
+class ReplyApplicationMessageRequest(BaseModel):
+    """回复申请留言请求体"""
+    message: str = Field(..., max_length=1000, description="回复内容")
+    notification_id: int = Field(..., description="原始通知ID")
+
+
 @task_chat_router.post("/tasks/{task_id}/applications/{application_id}/accept")
 async def accept_application(
     task_id: int,
@@ -1879,5 +1891,328 @@ async def respond_negotiation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"处理再次议价失败: {str(e)}"
+        )
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/send-message")
+async def send_application_message(
+    task_id: int,
+    application_id: int,
+    request: SendApplicationMessageRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    发布者向申请者发送留言（可包含议价）
+    """
+    try:
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="任务不存在"
+            )
+        
+        # 权限检查：必须是发布者
+        if task.poster_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有发布者可以发送留言"
+            )
+        
+        # 检查申请是否存在且属于该任务
+        application_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id
+            )
+        )
+        application_result = await db.execute(application_query)
+        application = application_result.scalar_one_or_none()
+        
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请不存在"
+            )
+        
+        # 如果包含议价，更新申请的negotiated_price
+        if request.negotiated_price is not None:
+            from decimal import Decimal
+            application.negotiated_price = Decimal(str(request.negotiated_price))
+            
+            # 校验货币一致性
+            if application.currency and task.currency:
+                if application.currency != task.currency:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"货币不一致：申请使用 {application.currency}，任务使用 {task.currency}"
+                    )
+        
+        # 确定通知类型
+        notification_type = "negotiation_offer" if request.negotiated_price is not None else "application_message"
+        
+        # 生成一次性签名token（如果包含议价）
+        token_accept = None
+        token_reject = None
+        if request.negotiated_price is not None:
+            import secrets
+            import time
+            
+            token_accept = secrets.token_urlsafe(32)
+            token_reject = secrets.token_urlsafe(32)
+            
+            current_timestamp = int(time.time())
+            expires_at = current_timestamp + 300  # 5分钟后过期
+            
+            nonce_accept = secrets.token_urlsafe(16)
+            nonce_reject = secrets.token_urlsafe(16)
+            
+            # 存储token到Redis
+            from app.redis_cache import get_redis_client
+            redis_client = get_redis_client()
+            
+            if redis_client:
+                token_data_accept = {
+                    "user_id": application.applicant_id,
+                    "action": "accept",
+                    "application_id": application_id,
+                    "task_id": task_id,
+                    "nonce": nonce_accept,
+                    "exp": expires_at,
+                    "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                }
+                
+                token_data_reject = {
+                    "user_id": application.applicant_id,
+                    "action": "reject",
+                    "application_id": application_id,
+                    "task_id": task_id,
+                    "nonce": nonce_reject,
+                    "exp": expires_at,
+                    "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                }
+                
+                redis_client.setex(
+                    f"negotiation_token:{token_accept}",
+                    300,
+                    json.dumps(token_data_accept)
+                )
+                
+                redis_client.setex(
+                    f"negotiation_token:{token_reject}",
+                    300,
+                    json.dumps(token_data_reject)
+                )
+            else:
+                logger.warning("Redis不可用，无法存储token")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="服务暂时不可用"
+                )
+        
+        # 创建系统通知
+        from app.models import get_uk_time_naive
+        current_time = get_uk_time_naive()
+        
+        notification_content = {
+            "type": notification_type,
+            "task_id": task_id,
+            "task_title": task.title,
+            "message": request.message,
+            "application_id": application_id
+        }
+        
+        if request.negotiated_price is not None:
+            notification_content["negotiated_price"] = float(request.negotiated_price)
+            notification_content["currency"] = task.currency or "GBP"
+            notification_content["token_accept"] = token_accept
+            notification_content["token_reject"] = token_reject
+        
+        new_notification = models.Notification(
+            user_id=application.applicant_id,
+            type=notification_type,
+            title="新的留言" if notification_type == "application_message" else "新的议价提议",
+            content=json.dumps(notification_content),
+            related_id=application_id,
+            created_at=current_time
+        )
+        db.add(new_notification)
+        await db.flush()
+        
+        # 如果包含议价，更新token payload添加notification_id
+        if request.negotiated_price is not None and token_accept:
+            notification_id = new_notification.id
+            from app.redis_cache import get_redis_client
+            redis_client = get_redis_client()
+            
+            if redis_client:
+                token_data_accept = json.loads(redis_client.get(f"negotiation_token:{token_accept}") or "{}")
+                token_data_reject = json.loads(redis_client.get(f"negotiation_token:{token_reject}") or "{}")
+                
+                if token_data_accept:
+                    token_data_accept["notification_id"] = notification_id
+                    redis_client.setex(
+                        f"negotiation_token:{token_accept}",
+                        300,
+                        json.dumps(token_data_accept)
+                    )
+                
+                if token_data_reject:
+                    token_data_reject["notification_id"] = notification_id
+                    redis_client.setex(
+                        f"negotiation_token:{token_reject}",
+                        300,
+                        json.dumps(token_data_reject)
+                    )
+        
+        await db.commit()
+        
+        return {
+            "message": "留言已发送",
+            "application_id": application_id,
+            "task_id": task_id,
+            "notification_id": new_notification.id,
+            "has_negotiation": request.negotiated_price is not None
+        }
+    
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"发送申请留言失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"发送留言失败: {str(e)}"
+        )
+
+
+@task_chat_router.post("/tasks/{task_id}/applications/{application_id}/reply-message")
+async def reply_application_message(
+    task_id: int,
+    application_id: int,
+    request: ReplyApplicationMessageRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    申请者回复发布者的留言（每次留言只能回复一次）
+    """
+    try:
+        # 检查任务是否存在
+        task_query = select(models.Task).where(models.Task.id == task_id)
+        task_result = await db.execute(task_query)
+        task = task_result.scalar_one_or_none()
+        
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="任务不存在"
+            )
+        
+        # 检查申请是否存在且属于该任务
+        application_query = select(models.TaskApplication).where(
+            and_(
+                models.TaskApplication.id == application_id,
+                models.TaskApplication.task_id == task_id
+            )
+        )
+        application_result = await db.execute(application_query)
+        application = application_result.scalar_one_or_none()
+        
+        if not application:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="申请不存在"
+            )
+        
+        # 权限检查：必须是申请者本人
+        if application.applicant_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只有申请者可以回复留言"
+            )
+        
+        # 检查原始通知是否存在
+        notification_query = select(models.Notification).where(
+            and_(
+                models.Notification.id == request.notification_id,
+                models.Notification.user_id == current_user.id,
+                models.Notification.related_id == application_id
+            )
+        )
+        notification_result = await db.execute(notification_query)
+        original_notification = notification_result.scalar_one_or_none()
+        
+        if not original_notification:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="原始通知不存在"
+            )
+        
+        # 检查是否已经回复过（通过查找是否有回复通知）
+        # related_id存储的是原始通知ID，user_id是接收回复的用户（发布者）
+        reply_query = select(func.count(models.Notification.id)).where(
+            and_(
+                models.Notification.user_id == task.poster_id,
+                models.Notification.type == "application_message_reply",
+                models.Notification.related_id == request.notification_id
+            )
+        )
+        reply_result = await db.execute(reply_query)
+        reply_count = reply_result.scalar() or 0
+        
+        if reply_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="您已经回复过这条留言，每次留言只能回复一次"
+            )
+        
+        # 创建回复通知给发布者
+        from app.models import get_uk_time_naive
+        current_time = get_uk_time_naive()
+        
+        reply_content = {
+            "type": "application_message_reply",
+            "task_id": task_id,
+            "task_title": task.title,
+            "message": request.message,
+            "application_id": application_id,
+            "original_notification_id": request.notification_id
+        }
+        
+        reply_notification = models.Notification(
+            user_id=task.poster_id,
+            type="application_message_reply",
+            title="申请者回复了您的留言",
+            content=json.dumps(reply_content),
+            related_id=request.notification_id,  # 关联到原始通知
+            created_at=current_time
+        )
+        db.add(reply_notification)
+        
+        await db.commit()
+        
+        return {
+            "message": "回复已发送",
+            "application_id": application_id,
+            "task_id": task_id,
+            "notification_id": reply_notification.id
+        }
+    
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"回复申请留言失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"回复留言失败: {str(e)}"
         )
 

@@ -17,6 +17,8 @@ import api, {
   withdrawApplication,
   negotiateApplication,
   respondNegotiation,
+  sendApplicationMessage,
+  replyApplicationMessage,
   applyForTask,
   // 任务操作相关API
   completeTask,
@@ -349,6 +351,12 @@ const MessagePage: React.FC = () => {
   const [applicationMessage, setApplicationMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
+  // 留言相关状态
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [messageContent, setMessageContent] = useState('');
+  const [messageNegotiatedPrice, setMessageNegotiatedPrice] = useState<number | undefined>();
+  const [isMessageNegotiateChecked, setIsMessageNegotiateChecked] = useState(false);
   
   // UX优化相关状态
   const [isNearBottom, setIsNearBottom] = useState(true); // 用户是否接近底部
@@ -3762,7 +3770,8 @@ const MessagePage: React.FC = () => {
                                   <div style={{
                                     display: 'flex',
                                     gap: '8px',
-                                    marginTop: '8px'
+                                    marginTop: '8px',
+                                    flexWrap: 'wrap'
                                   }}>
                                     <button
                                       onClick={async (e) => {
@@ -3780,6 +3789,7 @@ const MessagePage: React.FC = () => {
                                       }}
                                       style={{
                                         flex: 1,
+                                        minWidth: '60px',
                                         padding: '6px 12px',
                                         background: '#10b981',
                                         color: 'white',
@@ -3806,6 +3816,7 @@ const MessagePage: React.FC = () => {
                                       }}
                                       style={{
                                         flex: 1,
+                                        minWidth: '60px',
                                         padding: '6px 12px',
                                         background: '#ef4444',
                                         color: 'white',
@@ -3817,6 +3828,30 @@ const MessagePage: React.FC = () => {
                                       }}
                                     >
                                       拒绝
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedApplication(app);
+                                        setMessageContent('');
+                                        setMessageNegotiatedPrice(undefined);
+                                        setIsMessageNegotiateChecked(false);
+                                        setShowMessageModal(true);
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        minWidth: '60px',
+                                        padding: '6px 12px',
+                                        background: '#3b82f6',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 600
+                                      }}
+                                    >
+                                      留言
                                     </button>
                                   </div>
                                 )}
@@ -6640,6 +6675,258 @@ const MessagePage: React.FC = () => {
         </div>
       )}
       
+      {/* 留言弹窗 */}
+      {showMessageModal && selectedApplication && activeTaskId && activeTask && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+        onClick={() => setShowMessageModal(false)}
+        >
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>发送留言</h3>
+            
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#f3f4f6', borderRadius: '8px' }}>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>申请者</div>
+              <div style={{ fontSize: '14px', fontWeight: 600 }}>{selectedApplication.applicant_name || '用户'}</div>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151'
+              }}>
+                留言内容
+              </label>
+              <textarea
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                placeholder="请输入留言内容..."
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                  outline: 'none',
+                  transition: 'border-color 0.2s ease'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#3b82f6';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#374151',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isMessageNegotiateChecked}
+                  onChange={(e) => {
+                    setIsMessageNegotiateChecked(e.target.checked);
+                    if (e.target.checked) {
+                      const defaultPrice = activeTask?.agreed_reward ?? activeTask?.base_reward ?? activeTask?.reward;
+                      setMessageNegotiatedPrice(defaultPrice);
+                    } else {
+                      setMessageNegotiatedPrice(undefined);
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>包含议价</span>
+              </label>
+              
+              {isMessageNegotiateChecked && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151'
+                  }}>
+                    议价金额
+                  </label>
+                  <input
+                    type="number"
+                    value={messageNegotiatedPrice !== undefined ? messageNegotiatedPrice : ''}
+                    onChange={(e) => {
+                      const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                      setMessageNegotiatedPrice(value);
+                    }}
+                    placeholder="请输入议价金额（必须大于0）"
+                    min="0"
+                    step="0.01"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowMessageModal(false);
+                  setMessageContent('');
+                  setMessageNegotiatedPrice(undefined);
+                  setIsMessageNegotiateChecked(false);
+                  setSelectedApplication(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e5e7eb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  if (!messageContent.trim()) {
+                    alert('请输入留言内容');
+                    return;
+                  }
+                  
+                  // 验证议价金额：如果勾选了议价，金额必须大于0
+                  if (isMessageNegotiateChecked && (messageNegotiatedPrice === undefined || messageNegotiatedPrice === null || messageNegotiatedPrice <= 0)) {
+                    alert('如果选择议价，请输入大于0的议价金额');
+                    return;
+                  }
+                  
+                  const baseReward = activeTask?.base_reward ?? activeTask?.reward ?? 0;
+                  
+                  // 如果没有勾选议价或输入框为空，则不发送议价金额
+                  const finalNegotiatedPrice = (isMessageNegotiateChecked && messageNegotiatedPrice !== undefined && messageNegotiatedPrice !== null && messageNegotiatedPrice > 0) 
+                    ? messageNegotiatedPrice 
+                    : undefined;
+                  
+                  // 如果议价金额小于原本金额，提示用户确认
+                  if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+                    const confirmed = window.confirm(
+                      `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
+                      `这将降低您获得的金额。是否确定要继续？`
+                    );
+                    if (!confirmed) {
+                      return;
+                    }
+                  }
+                  
+                  try {
+                    await sendApplicationMessage(
+                      activeTaskId,
+                      selectedApplication.id,
+                      messageContent,
+                      finalNegotiatedPrice
+                    );
+                    setShowMessageModal(false);
+                    setMessageContent('');
+                    setMessageNegotiatedPrice(undefined);
+                    setIsMessageNegotiateChecked(false);
+                    setSelectedApplication(null);
+                    showToast('success', '留言已发送');
+                    // 重新加载申请列表
+                    if (activeTaskId) {
+                      await loadApplications(activeTaskId);
+                    }
+                  } catch (error: any) {
+                    console.error('发送留言失败:', error);
+                    showToast('error', error.response?.data?.detail || '发送留言失败，请重试');
+                  }
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                发送
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 任务详情弹窗 */}
       <TaskDetailModal
         isOpen={showTaskDetailModal}

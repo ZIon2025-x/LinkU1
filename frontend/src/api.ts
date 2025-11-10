@@ -712,6 +712,34 @@ export async function respondNegotiation(
   return res.data;
 }
 
+// 发送申请留言（可包含议价）
+export async function sendApplicationMessage(
+  taskId: number,
+  applicationId: number,
+  message: string,
+  negotiatedPrice?: number
+) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/send-message`, {
+    message,
+    negotiated_price: negotiatedPrice
+  });
+  return res.data;
+}
+
+// 回复申请留言
+export async function replyApplicationMessage(
+  taskId: number,
+  applicationId: number,
+  message: string,
+  notificationId: number
+) {
+  const res = await api.post(`/api/tasks/${taskId}/applications/${applicationId}/reply-message`, {
+    message,
+    notification_id: notificationId
+  });
+  return res.data;
+}
+
 // 获取用户申请记录
 export async function getUserApplications() {
   const res = await api.get(`/api/my-applications`);

@@ -289,7 +289,7 @@ class Notification(Base):
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     type = Column(
         String(32), nullable=False
-    )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement'
+    )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply'
     related_id = Column(Integer, nullable=True)  # application_id 或 task_id（根据 type 而定）
     content = Column(Text, nullable=False)  # JSON 格式存储通知数据
     created_at = Column(DateTime, default=get_uk_time_naive)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TimeHandlerV2 } from '../utils/timeUtils';
-import { respondNegotiation } from '../api';
+import { respondNegotiation, replyApplicationMessage } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Notification {
@@ -21,6 +21,15 @@ interface NegotiationContent {
   message?: string;
   token_accept: string;
   token_reject: string;
+  application_id?: number;
+}
+
+interface ApplicationMessageContent {
+  type: string;
+  task_title: string;
+  task_id: number;
+  message: string;
+  application_id: number;
 }
 
 interface TaskApplicationContent {
@@ -52,6 +61,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onMarkAllRead
 }) => {
   const { t } = useLanguage();
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replying, setReplying] = useState(false);
   
   if (!isOpen) return <></>;
 
@@ -266,7 +279,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             <div style={{
                               display: 'flex',
                               gap: '8px',
-                              marginTop: '8px'
+                              marginTop: '8px',
+                              flexWrap: 'wrap'
                             }}>
                               <button
                                 onClick={async () => {
@@ -297,6 +311,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                                 }}
                                 style={{
                                   flex: 1,
+                                  minWidth: '60px',
                                   padding: '8px 12px',
                                   border: 'none',
                                   background: '#10b981',
@@ -345,6 +360,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                                 }}
                                 style={{
                                   flex: 1,
+                                  minWidth: '60px',
                                   padding: '8px 12px',
                                   border: 'none',
                                   background: '#ef4444',
@@ -365,6 +381,36 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                                 }}
                               >
                                 拒绝
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedNotification(notification);
+                                  setReplyContent('');
+                                  setShowReplyModal(true);
+                                }}
+                                style={{
+                                  flex: 1,
+                                  minWidth: '60px',
+                                  padding: '8px 12px',
+                                  border: 'none',
+                                  background: '#3b82f6',
+                                  color: 'white',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#2563eb';
+                                  e.currentTarget.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = '#3b82f6';
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                }}
+                              >
+                                留言
                               </button>
                             </div>
                           )}
@@ -451,6 +497,67 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             </button>
                           )}
                         </>
+                      );
+                    }
+                  })() : notification.type === 'application_message' ? (() => {
+                    try {
+                      const messageData: ApplicationMessageContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            <strong>{messageData.task_title}</strong>
+                            <br />
+                            {messageData.message}
+                          </p>
+                          
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => {
+                                setSelectedNotification(notification);
+                                setReplyContent('');
+                                setShowReplyModal(true);
+                              }}
+                              style={{
+                                padding: '8px 12px',
+                                border: 'none',
+                                background: '#3b82f6',
+                                color: 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                                marginTop: '8px'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#2563eb';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#3b82f6';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }}
+                            >
+                              回复留言
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      return (
+                        <p style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '13px',
+                          color: '#333',
+                          lineHeight: '1.4'
+                        }}>
+                          {notification.content}
+                        </p>
                       );
                     }
                   })() : notification.type === 'task_application' ? (() => {
@@ -580,6 +687,197 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
           ))
         )}
       </div>
+      
+      {/* 回复留言弹窗 */}
+      {showReplyModal && selectedNotification && (() => {
+        try {
+          const notificationData = JSON.parse(selectedNotification.content);
+          const taskId = notificationData.task_id;
+          const applicationId = selectedNotification.related_id;
+          
+          if (!taskId || !applicationId) {
+            return null;
+          }
+          
+          return (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 10001,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
+            }}
+            onClick={() => {
+              setShowReplyModal(false);
+              setSelectedNotification(null);
+              setReplyContent('');
+            }}
+            >
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '24px',
+                maxWidth: '500px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              }}
+              onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>回复留言</h3>
+                
+                <div style={{ marginBottom: '16px', padding: '12px', background: '#f3f4f6', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>任务</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>{notificationData.task_title}</div>
+                  {notificationData.message && (
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                      <div style={{ marginBottom: '4px' }}>发布者留言：</div>
+                      <div>{notificationData.message}</div>
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151'
+                  }}>
+                    回复内容
+                  </label>
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    placeholder="请输入回复内容..."
+                    style={{
+                      width: '100%',
+                      minHeight: '100px',
+                      padding: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '12px',
+                  justifyContent: 'flex-end'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowReplyModal(false);
+                      setSelectedNotification(null);
+                      setReplyContent('');
+                    }}
+                    disabled={replying}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: replying ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: replying ? 0.6 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!replying) {
+                        e.currentTarget.style.background = '#e5e7eb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!replying) {
+                        e.currentTarget.style.background = '#f3f4f6';
+                      }
+                    }}
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!replyContent.trim()) {
+                        alert('请输入回复内容');
+                        return;
+                      }
+                      
+                      setReplying(true);
+                      try {
+                        await replyApplicationMessage(
+                          taskId,
+                          applicationId,
+                          replyContent,
+                          selectedNotification.id
+                        );
+                        alert('回复已发送');
+                        setShowReplyModal(false);
+                        setSelectedNotification(null);
+                        setReplyContent('');
+                        onMarkAsRead(selectedNotification.id);
+                      } catch (error: any) {
+                        console.error('回复留言失败:', error);
+                        alert(error.response?.data?.detail || '回复失败，请重试');
+                      } finally {
+                        setReplying(false);
+                      }
+                    }}
+                    disabled={replying || !replyContent.trim()}
+                    style={{
+                      padding: '12px 24px',
+                      background: replying || !replyContent.trim() ? '#cbd5e1' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      cursor: replying || !replyContent.trim() ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!replying && replyContent.trim()) {
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!replying) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }
+                    }}
+                  >
+                    {replying ? '发送中...' : '发送'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        } catch (error) {
+          return null;
+        }
+      })()}
     </div>
   );
 };
