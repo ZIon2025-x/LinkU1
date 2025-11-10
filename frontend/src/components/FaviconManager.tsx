@@ -16,8 +16,15 @@ const FaviconManager: React.FC = () => {
       const version = Date.now(); // 使用时间戳避免缓存
       
       // 1. 移除所有旧的favicon链接（包括所有格式）
-      const allFavicons = document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']");
+      const allFavicons = document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon'], link[rel='mask-icon']");
       allFavicons.forEach(icon => icon.remove());
+      
+      // 1.5. 优先设置SVG favicon（现代浏览器优先，可缩放矢量图标）
+      const svgFavicon = document.createElement('link');
+      svgFavicon.rel = 'icon';
+      svgFavicon.type = 'image/svg+xml';
+      svgFavicon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+      document.head.insertBefore(svgFavicon, document.head.firstChild);
       
       // 2. 优先设置favicon.ico（搜索引擎和浏览器默认查找的路径，Bing和Google都优先识别.ico格式）
       // 插入到head的最前面，确保优先读取
@@ -27,7 +34,7 @@ const FaviconManager: React.FC = () => {
       rootFavicon.rel = 'icon';
       rootFavicon.type = 'image/x-icon';
       rootFavicon.href = `${baseUrl}/favicon.ico?v=${version}`;
-      document.head.insertBefore(rootFavicon, document.head.firstChild);
+      document.head.insertBefore(rootFavicon, svgFavicon.nextSibling);
       
       // 然后设置static目录的favicon.ico（作为备选）
       const staticFavicon = document.createElement('link');
@@ -101,6 +108,13 @@ const FaviconManager: React.FC = () => {
       defaultPngIcon.type = 'image/png';
       defaultPngIcon.href = `${baseUrl}/static/favicon.png?v=${version}`;
       document.head.insertBefore(defaultPngIcon, defaultIcoIcon.nextSibling);
+      
+      // 7. 设置Safari Mask Icon（Safari浏览器标签页图标）
+      const maskIcon = document.createElement('link');
+      maskIcon.rel = 'mask-icon';
+      maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+      maskIcon.setAttribute('color', '#1890ff');
+      document.head.insertBefore(maskIcon, svgFavicon.nextSibling);
     };
 
     // 立即执行
@@ -112,6 +126,40 @@ const FaviconManager: React.FC = () => {
     const setFaviconOnLoad = () => {
       const baseUrl = window.location.origin;
       const version = Date.now();
+      
+      // 检查并确保SVG favicon存在（现代浏览器优先）
+      let svgFavicon = document.querySelector("link[rel='icon'][type='image/svg+xml']") as HTMLLinkElement;
+      if (!svgFavicon || !svgFavicon.href.includes('/static/favicon.svg')) {
+        if (svgFavicon) {
+          svgFavicon.remove();
+        }
+        svgFavicon = document.createElement('link');
+        svgFavicon.rel = 'icon';
+        svgFavicon.type = 'image/svg+xml';
+        svgFavicon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+        document.head.insertBefore(svgFavicon, document.head.firstChild);
+      } else if (!svgFavicon.href.startsWith('http')) {
+        svgFavicon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+        document.head.insertBefore(svgFavicon, document.head.firstChild);
+      }
+      
+      // 检查并确保Safari mask-icon存在
+      let maskIcon = document.querySelector("link[rel='mask-icon']") as HTMLLinkElement;
+      if (!maskIcon || !maskIcon.href.includes('/static/favicon.svg')) {
+        if (maskIcon) {
+          maskIcon.remove();
+        }
+        maskIcon = document.createElement('link');
+        maskIcon.rel = 'mask-icon';
+        maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+        maskIcon.setAttribute('color', '#1890ff');
+        document.head.insertBefore(maskIcon, svgFavicon.nextSibling);
+      } else if (!maskIcon.href.startsWith('http')) {
+        maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+        if (!maskIcon.getAttribute('color')) {
+          maskIcon.setAttribute('color', '#1890ff');
+        }
+      }
       
       // 检查并确保favicon.ico在最前面（优先使用根目录的favicon.ico，搜索引擎默认查找的路径）
       let rootFavicon = document.querySelector("link[rel='icon'][type='image/x-icon']") as HTMLLinkElement;
