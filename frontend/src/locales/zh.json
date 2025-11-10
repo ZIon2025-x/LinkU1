@@ -869,7 +869,8 @@
       "in_progress": "进行中",
       "pending_confirmation": "待确认",
       "completed": "已完成",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "pending_applications": "申请中"
     },
     "userRole": {
       "poster": "发布者",

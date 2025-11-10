@@ -3230,6 +3230,44 @@ const MessagePage: React.FC = () => {
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        {task.status === 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm('确定要从任务列表中移除此已完成任务吗？')) {
+                                setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
+                                // 如果移除的是当前激活的任务，清除激活状态
+                                if (activeTaskId === task.id) {
+                                  setActiveTaskId(null);
+                                  setActiveTask(null);
+                                  setTaskMessages([]);
+                                }
+                              }
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#ef4444',
+                              fontSize: '18px',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '4px',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#fee2e2';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
+                            title="从列表中移除"
+                          >
+                            ❌
+                          </button>
+                        )}
                         {task.unread_count > 0 && (
                           <div style={{
                             backgroundColor: '#ef4444',
@@ -4547,7 +4585,6 @@ const MessagePage: React.FC = () => {
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
-                    capture={isMobile ? "environment" : undefined}
                     onChange={handleImageSelect}
                     disabled={!serviceConnected || isSending || uploadingImage}
                     style={{ display: 'none' }}
@@ -4944,7 +4981,6 @@ const MessagePage: React.FC = () => {
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
-                    capture={isMobile ? "environment" : undefined}
                     onChange={handleImageSelect}
                     disabled={
                       (activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id) ||
@@ -5248,7 +5284,7 @@ const MessagePage: React.FC = () => {
                     activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id !== user?.id
                       ? '任务开始后才能发送消息'
                       : activeTask.status === 'open' && !activeTask.taker_id && activeTask.poster_id === user?.id
-                      ? '可以发送说明类消息（用于需求澄清）'
+                      ? '可以发送一些任务相关信息（帮助接收人快速了解任务）'
                       : '输入消息...'
                   }
                   disabled={
@@ -6734,7 +6770,7 @@ const MessagePage: React.FC = () => {
             borderRadius: '16px',
             padding: '24px',
             width: '100%',
-            maxWidth: 'calc(100vw - 40px)',
+            maxWidth: 'min(500px, calc(100vw - 40px))',
             maxHeight: '90vh',
             overflowY: 'auto',
             overflowX: 'hidden',

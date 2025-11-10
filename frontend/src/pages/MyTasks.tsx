@@ -3,7 +3,7 @@ import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications } from '../api';
+import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications } from '../api';
 import api from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -87,6 +87,8 @@ const MyTasks: React.FC = () => {
   // 申请状态相关
   const [applications, setApplications] = useState<any[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
+  // 任务申请信息（taskId -> applications数组）
+  const [taskApplicationsMap, setTaskApplicationsMap] = useState<{[key: number]: any[]}>({});
   
   // 已操作任务状态
   const [completedTasks, setCompletedTasks] = useState<Set<number>>(new Set());
@@ -193,6 +195,27 @@ const MyTasks: React.FC = () => {
       const completedTasks = tasksData.filter((task: Task) => task.status === 'completed');
       for (const task of completedTasks) {
         await loadTaskReviews(task.id);
+      }
+      
+      // 为发布者的open任务加载申请信息
+      if (user) {
+        const postedOpenTasks = tasksData.filter((task: Task) => 
+          task.poster_id === user.id && task.status === 'open'
+        );
+        
+        const applicationsMap: {[key: number]: any[]} = {};
+        await Promise.all(
+          postedOpenTasks.map(async (task: Task) => {
+            try {
+              const apps = await getTaskApplications(task.id);
+              applicationsMap[task.id] = apps.applications || apps || [];
+            } catch (error) {
+              console.error(`加载任务 ${task.id} 的申请失败:`, error);
+              applicationsMap[task.id] = [];
+            }
+          })
+        );
+        setTaskApplicationsMap(applicationsMap);
       }
     } catch (error) {
       console.error('获取任务失败:', error);
@@ -445,20 +468,38 @@ const MyTasks: React.FC = () => {
     return taskReviews[task.id].some((review: any) => review.user_id === user.id);
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
+  const getStatusText = (task: Task) => {
+    // 如果是发布者的open任务且有pending申请，显示"申请中"
+    if (task.status === 'open' && user && task.poster_id === user.id) {
+      const taskApps = taskApplicationsMap[task.id] || [];
+      const hasPendingApplications = taskApps.some((app: any) => app.status === 'pending');
+      if (hasPendingApplications) {
+        return t('myTasks.taskStatus.pending_applications');
+      }
+    }
+    
+    switch (task.status) {
       case 'open': return t('myTasks.taskStatus.open');
       case 'taken': return t('myTasks.taskStatus.taken');
       case 'in_progress': return t('myTasks.taskStatus.in_progress');
       case 'pending_confirmation': return t('myTasks.taskStatus.pending_confirmation');
       case 'completed': return t('myTasks.taskStatus.completed');
       case 'cancelled': return t('myTasks.taskStatus.cancelled');
-      default: return status;
+      default: return task.status;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (task: Task) => {
+    // 如果是发布者的open任务且有pending申请，使用"申请中"的颜色
+    if (task.status === 'open' && user && task.poster_id === user.id) {
+      const taskApps = taskApplicationsMap[task.id] || [];
+      const hasPendingApplications = taskApps.some((app: any) => app.status === 'pending');
+      if (hasPendingApplications) {
+        return '#f59e0b'; // 使用与taken相同的颜色
+      }
+    }
+    
+    switch (task.status) {
       case 'open': return '#10b981';
       case 'taken': return '#f59e0b';
       case 'in_progress': return '#3b82f6';
@@ -1138,10 +1179,10 @@ const MyTasks: React.FC = () => {
                         fontSize: '12px',
                         fontWeight: '600',
                         color: '#fff',
-                        background: getStatusColor(task.status),
+                        background: getStatusColor(task),
                         whiteSpace: 'nowrap'
                       }}>
-                        {getStatusText(task.status)}
+                        {getStatusText(task)}
                       </span>
                     </div>
 

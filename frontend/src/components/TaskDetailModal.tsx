@@ -2308,7 +2308,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             borderRadius: '16px',
             padding: '24px',
             width: '100%',
-            maxWidth: 'calc(100vw - 40px)',
+            maxWidth: 'min(500px, calc(100vw - 40px))',
             maxHeight: '90vh',
             overflowY: 'auto',
             overflowX: 'hidden',
