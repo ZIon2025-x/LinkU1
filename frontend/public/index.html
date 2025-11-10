@@ -93,10 +93,32 @@
     <meta name="twitter:description" content="Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient." />
     <meta name="twitter:image" content="https://www.link2ur.com/static/favicon.png" />
     
-    <!-- 微信分享 -->
+    <!-- 微信分享 - 默认值，任务详情页会通过JavaScript动态更新 -->
     <meta name="weixin:image" content="https://www.link2ur.com/static/favicon.png" />
     <meta name="weixin:title" content="Link²Ur" />
     <meta name="weixin:description" content="Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient." />
+    
+    <!-- 在页面加载的最早阶段就移除任务详情页的默认微信标签，避免微信爬虫抓取到默认值 -->
+    <script>
+      (function() {
+        // 检查是否是任务详情页（URL格式：/tasks/数字 或 /en/tasks/数字 或 /zh/tasks/数字）
+        var isTaskDetailPage = /\/tasks\/\d+/.test(window.location.pathname);
+        if (isTaskDetailPage) {
+          // 立即移除默认的微信分享标签，任务详情页会通过React动态设置正确的标签
+          var weixinDesc = document.querySelector('meta[name="weixin:description"]');
+          var weixinTitle = document.querySelector('meta[name="weixin:title"]');
+          var ogDesc = document.querySelector('meta[property="og:description"]');
+          var ogTitle = document.querySelector('meta[property="og:title"]');
+          var description = document.querySelector('meta[name="description"]');
+          
+          if (weixinDesc) weixinDesc.remove();
+          if (weixinTitle) weixinTitle.remove();
+          if (ogDesc) ogDesc.remove();
+          if (ogTitle) ogTitle.remove();
+          if (description) description.remove();
+        }
+      })();
+    </script>
     
     <!-- Additional SEO Meta Tags -->
     <meta name="theme-color" content="#1890ff" />
