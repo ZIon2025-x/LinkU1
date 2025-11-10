@@ -5069,11 +5069,29 @@ const MessagePage: React.FC = () => {
                 
                 {/* 已完成任务清理提醒 - 显示在功能行右侧 */}
                 {chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at && (() => {
+                  // 调试信息
+                  console.log('清理提醒条件检查:', {
+                    chatMode,
+                    activeTaskId,
+                    hasActiveTask: !!activeTask,
+                    taskStatus: activeTask?.status,
+                    completedAt: activeTask?.completed_at,
+                    allConditionsMet: chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at
+                  });
+                  
                   try {
                     const completedDate = new Date(activeTask.completed_at);
                     const now = new Date();
                     const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
                     const timeRemaining = cleanupDate.getTime() - now.getTime();
+                    
+                    console.log('清理时间计算:', {
+                      completedDate: completedDate.toISOString(),
+                      now: now.toISOString(),
+                      cleanupDate: cleanupDate.toISOString(),
+                      timeRemaining,
+                      timeRemainingHours: timeRemaining / (60 * 60 * 1000)
+                    });
                     
                     // 任务一完成就显示提醒，无论是否已到清理时间
                     if (timeRemaining > 0) {
@@ -5087,24 +5105,28 @@ const MessagePage: React.FC = () => {
                         : `${hoursRemaining} 小时`;
                       
                       return (
-                        <div style={{
-                          padding: '6px 10px',
-                          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                          borderRadius: '6px',
-                          fontSize: isMobile ? '10px' : '11px',
-                          color: '#1e40af',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: '1px solid #60a5fa',
-                          flex: 1,
-                          minWidth: 0,
-                          maxWidth: '100%',
-                          boxSizing: 'border-box',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
+                        <div 
+                          key="cleanup-reminder"
+                          style={{
+                            padding: '6px 10px',
+                            background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                            borderRadius: '6px',
+                            fontSize: isMobile ? '10px' : '11px',
+                            color: '#1e40af',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            border: '1px solid #60a5fa',
+                            flex: '1 1 auto',
+                            minWidth: '120px',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                            whiteSpace: 'nowrap',
+                            overflow: 'visible',
+                            textOverflow: 'ellipsis',
+                            position: 'relative',
+                            zIndex: 1
+                          }}>
                           <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
                           <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             将在 <strong>{timeText}</strong> 后清理
@@ -5114,24 +5136,28 @@ const MessagePage: React.FC = () => {
                     } else {
                       // 已经过了清理时间，显示已清理提示
                       return (
-                        <div style={{
-                          padding: '6px 10px',
-                          background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-                          borderRadius: '6px',
-                          fontSize: isMobile ? '10px' : '11px',
-                          color: '#6b7280',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          border: '1px solid #d1d5db',
-                          flex: 1,
-                          minWidth: 0,
-                          maxWidth: '100%',
-                          boxSizing: 'border-box',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }}>
+                        <div 
+                          key="cleanup-done"
+                          style={{
+                            padding: '6px 10px',
+                            background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                            borderRadius: '6px',
+                            fontSize: isMobile ? '10px' : '11px',
+                            color: '#6b7280',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            border: '1px solid #d1d5db',
+                            flex: '1 1 auto',
+                            minWidth: '80px',
+                            maxWidth: '100%',
+                            boxSizing: 'border-box',
+                            whiteSpace: 'nowrap',
+                            overflow: 'visible',
+                            textOverflow: 'ellipsis',
+                            position: 'relative',
+                            zIndex: 1
+                          }}>
                           <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
                           <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             已清理
@@ -5143,24 +5169,28 @@ const MessagePage: React.FC = () => {
                     console.error('计算清理时间失败:', error);
                     // 即使计算失败，也显示一个基本提醒
                     return (
-                      <div style={{
-                        padding: '6px 10px',
-                        background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                        borderRadius: '6px',
-                        fontSize: isMobile ? '10px' : '11px',
-                        color: '#1e40af',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        border: '1px solid #60a5fa',
-                        flex: 1,
-                        minWidth: 0,
-                        maxWidth: '100%',
-                        boxSizing: 'border-box',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
+                      <div 
+                        key="cleanup-fallback"
+                        style={{
+                          padding: '6px 10px',
+                          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                          borderRadius: '6px',
+                          fontSize: isMobile ? '10px' : '11px',
+                          color: '#1e40af',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: '1px solid #60a5fa',
+                          flex: '1 1 auto',
+                          minWidth: '120px',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                          whiteSpace: 'nowrap',
+                          overflow: 'visible',
+                          textOverflow: 'ellipsis',
+                          position: 'relative',
+                          zIndex: 1
+                        }}>
                         <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
                         <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           将在 <strong>3天</strong> 后清理
