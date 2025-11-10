@@ -32,6 +32,15 @@ interface ApplicationMessageContent {
   application_id: number;
 }
 
+interface ApplicationMessageReplyContent {
+  type: string;
+  task_title: string;
+  task_id: number;
+  message: string;
+  application_id: number;
+  original_notification_id: number;
+}
+
 interface TaskApplicationContent {
   type: string;
   task_id: number;
@@ -544,6 +553,64 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                               }}
                             >
                               回复留言
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      return (
+                        <p style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '13px',
+                          color: '#333',
+                          lineHeight: '1.4'
+                        }}>
+                          {notification.content}
+                        </p>
+                      );
+                    }
+                  })() : notification.type === 'application_message_reply' ? (() => {
+                    try {
+                      const replyData: ApplicationMessageReplyContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            <strong>{replyData.task_title}</strong>
+                            <br />
+                            申请者回复了您的留言：
+                            <br />
+                            {replyData.message}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '8px 12px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                transition: 'all 0.2s',
+                                marginTop: '8px'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#1976D2';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#2196F3';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                              }}
+                            >
+                              标记已读
                             </button>
                           )}
                         </div>

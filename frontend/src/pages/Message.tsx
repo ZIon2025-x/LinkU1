@@ -6039,7 +6039,8 @@ const MessagePage: React.FC = () => {
                       <div style={{
                         display: 'flex',
                         gap: '8px',
-                        marginTop: '12px'
+                        marginTop: '12px',
+                        flexWrap: 'wrap'
                       }}>
                         <button
                           onClick={async () => {
@@ -6060,6 +6061,7 @@ const MessagePage: React.FC = () => {
                           }}
                           style={{
                             flex: 1,
+                            minWidth: '60px',
                             padding: '8px 16px',
                             background: '#10b981',
                             color: 'white',
@@ -6097,6 +6099,7 @@ const MessagePage: React.FC = () => {
                           }}
                           style={{
                             flex: 1,
+                            minWidth: '60px',
                             padding: '8px 16px',
                             background: '#ef4444',
                             color: 'white',
@@ -6117,6 +6120,39 @@ const MessagePage: React.FC = () => {
                           }}
                         >
                           拒绝
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedApplication(app);
+                            setMessageContent('');
+                            setMessageNegotiatedPrice(undefined);
+                            setIsMessageNegotiateChecked(false);
+                            setShowMessageModal(true);
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: '60px',
+                            padding: '8px 16px',
+                            background: '#3b82f6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#2563eb';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#3b82f6';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          留言
                         </button>
                       </div>
                     )}
@@ -6688,7 +6724,8 @@ const MessagePage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: '20px',
+          overflow: 'hidden'
         }}
         onClick={() => setShowMessageModal(false)}
         >
@@ -6696,11 +6733,13 @@ const MessagePage: React.FC = () => {
             background: '#fff',
             borderRadius: '16px',
             padding: '24px',
-            maxWidth: '500px',
             width: '100%',
+            maxWidth: 'calc(100vw - 40px)',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            overflowX: 'hidden',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            boxSizing: 'border-box'
           }}
           onClick={(e) => e.stopPropagation()}
           >
