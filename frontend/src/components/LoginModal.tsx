@@ -775,8 +775,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           )}
 
-          {/* 手机号输入（手机号验证码登录时显示） */}
-          {isLogin && loginMethod === 'phone' && (
+          {/* 手机号输入（手机号验证码登录时显示） - 暂时隐藏 */}
+          {false && isLogin && loginMethod === 'phone' && (
             <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',
@@ -932,8 +932,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
             </>
           )}
 
-          {/* 验证码输入（手机号验证码登录模式下显示） */}
-          {isLogin && loginMethod === 'phone' && codeSent && (
+          {/* 验证码输入（手机号验证码登录模式下显示） - 暂时隐藏 */}
+          {false && isLogin && loginMethod === 'phone' && codeSent && (
             <>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
@@ -1581,6 +1581,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
               >
                 {t('auth.loginWithCode')}
               </button>
+              {/* 手机号登录按钮 - 暂时隐藏 */}
+              {false && (
               <button
                 type="button"
                 onClick={() => {
@@ -1621,9 +1623,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
               >
                 {t('auth.phoneLogin')}
               </button>
+              )}
               
               {/* 提示信息：新用户可以直接使用验证码登录创建新账号 */}
-              {(loginMethod === 'code' || loginMethod === 'phone') && (
+              {loginMethod === 'code' && (
                 <div style={{
                   padding: '12px',
                   backgroundColor: '#e6f7ff',

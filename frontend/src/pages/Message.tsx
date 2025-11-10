@@ -5069,24 +5069,9 @@ const MessagePage: React.FC = () => {
                 
                 {/* 已完成任务清理提醒 - 显示在功能行右侧 */}
                 {(() => {
-                  // 先检查条件，无论是否满足都输出调试信息
                   // 如果没有completed_at，使用当前时间作为完成时间（向后兼容）
                   const completedAt = activeTask?.completed_at || new Date().toISOString();
                   const shouldShow = chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed';
-                  
-                  console.log('清理提醒条件检查:', {
-                    chatMode,
-                    activeTaskId,
-                    hasActiveTask: !!activeTask,
-                    taskStatus: activeTask?.status,
-                    completedAt: activeTask?.completed_at,
-                    usingFallback: !activeTask?.completed_at,
-                    allConditionsMet: shouldShow,
-                    condition1: chatMode === 'tasks',
-                    condition2: !!activeTaskId,
-                    condition3: !!activeTask,
-                    condition4: activeTask?.status === 'completed'
-                  });
                   
                   if (!shouldShow) {
                     return null;
@@ -5097,14 +5082,6 @@ const MessagePage: React.FC = () => {
                     const now = new Date();
                     const cleanupDate = new Date(completedDate.getTime() + 3 * 24 * 60 * 60 * 1000); // 完成时间 + 3天
                     const timeRemaining = cleanupDate.getTime() - now.getTime();
-                    
-                    console.log('清理时间计算:', {
-                      completedDate: completedDate.toISOString(),
-                      now: now.toISOString(),
-                      cleanupDate: cleanupDate.toISOString(),
-                      timeRemaining,
-                      timeRemainingHours: timeRemaining / (60 * 60 * 1000)
-                    });
                     
                     // 任务一完成就显示提醒，无论是否已到清理时间
                     if (timeRemaining > 0) {
@@ -5184,7 +5161,6 @@ const MessagePage: React.FC = () => {
                       );
                     }
                   } catch (error) {
-                    console.error('计算清理时间失败:', error);
                     // 即使计算失败，也显示一个基本提醒
                     return (
                       <div 

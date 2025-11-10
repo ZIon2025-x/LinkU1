@@ -804,10 +804,12 @@ const Settings: React.FC = () => {
                         ? '修改邮箱需要验证码验证，验证码将发送到新邮箱' 
                         : formData.email 
                           ? '可以修改邮箱地址' 
-                          : '如果使用手机号登录，可以在此绑定邮箱'}
+                          : '可以在此绑定或修改邮箱地址'}
                     </p>
                   </div>
 
+                  {/* 手机号设置 - 暂时隐藏 */}
+                  {false && (
                   <div>
                     <label style={{ 
                       display: 'block', 
@@ -888,6 +890,7 @@ const Settings: React.FC = () => {
                           : '如果使用邮箱登录，可以在此绑定手机号'}
                     </p>
                   </div>
+                  )}
 
                   <div>
                     <label style={{ 
