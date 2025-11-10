@@ -5068,16 +5068,26 @@ const MessagePage: React.FC = () => {
                 )}
                 
                 {/* 已完成任务清理提醒 - 显示在功能行右侧 */}
-                {chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at && (() => {
-                  // 调试信息
+                {(() => {
+                  // 先检查条件，无论是否满足都输出调试信息
+                  const shouldShow = chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at;
                   console.log('清理提醒条件检查:', {
                     chatMode,
                     activeTaskId,
                     hasActiveTask: !!activeTask,
                     taskStatus: activeTask?.status,
                     completedAt: activeTask?.completed_at,
-                    allConditionsMet: chatMode === 'tasks' && activeTaskId && activeTask && activeTask.status === 'completed' && activeTask.completed_at
+                    allConditionsMet: shouldShow,
+                    condition1: chatMode === 'tasks',
+                    condition2: !!activeTaskId,
+                    condition3: !!activeTask,
+                    condition4: activeTask?.status === 'completed',
+                    condition5: !!activeTask?.completed_at
                   });
+                  
+                  if (!shouldShow) {
+                    return null;
+                  }
                   
                   try {
                     const completedDate = new Date(activeTask.completed_at);
