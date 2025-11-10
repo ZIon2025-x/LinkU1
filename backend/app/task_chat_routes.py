@@ -230,6 +230,7 @@ async def get_task_chat_list(
                 "poster_id": task.poster_id,
                 "status": task.status,
                 "taker_id": task.taker_id,
+                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
                 "unread_count": unread_count,
                 "last_message": last_message_data
             }
@@ -433,6 +434,7 @@ async def get_task_messages(
             "poster_id": task.poster_id,
             "taker_id": task.taker_id,
             "status": task.status,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
             "base_reward": float(task.base_reward) if task.base_reward else None,
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
             "currency": task.currency or "GBP"
