@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
 import dayjs from 'dayjs';
@@ -131,34 +131,36 @@ const TaskDetail: React.FC = () => {
     
     // 强制移除所有默认的描述标签（任务详情页不使用默认描述）
     // 在任务数据加载前就移除所有描述标签，避免微信爬虫抓取到默认值
+    // 微信爬虫会在页面加载的早期阶段抓取，所以必须立即且无条件移除所有默认标签
     const removeAllDescriptions = () => {
-      // 移除所有description标签（任务详情页会在数据加载后重新设置）
+      // 无条件移除所有description标签（不检查内容，全部移除）
       const allDescriptions = document.querySelectorAll('meta[name="description"]');
       allDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有og:description标签
+      // 无条件移除所有og:description标签（不检查内容，全部移除）
       const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
       allOgDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有twitter:description标签
+      // 无条件移除所有twitter:description标签
       const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
       allTwitterDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有微信描述标签（这是关键，微信优先读取这个）
-      // 无条件移除所有weixin:description标签，不检查内容
+      // 无条件移除所有微信描述标签（这是关键，微信优先读取这个）
+      // 必须无条件移除，不检查内容，因为微信爬虫可能在数据加载前就抓取
       const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDescriptions.forEach(tag => tag.remove());
       
-      // 移除所有微信标题标签（不检查内容，全部移除）
+      // 无条件移除所有微信标题标签（不检查内容，全部移除）
       const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
       allWeixinTitles.forEach(tag => tag.remove());
       
-      // 移除所有og:title标签（不检查内容，全部移除）
+      // 无条件移除所有og:title标签（不检查内容，全部移除）
       const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
       allOgTitles.forEach(tag => tag.remove());
     };
     
     // 立即移除所有描述标签（不等待任务数据加载）
+    // 必须在组件挂载时立即执行，确保微信爬虫不会抓取到默认值
     removeAllDescriptions();
     
     updateMetaTag('og:url', taskUrl, true);
@@ -185,9 +187,18 @@ const TaskDetail: React.FC = () => {
     
     // 使用多个setTimeout确保在不同阶段都移除默认描述标签
     // 微信爬虫可能在页面加载的不同阶段抓取，所以需要多次清理
+    // 增加更多延迟执行，确保覆盖微信爬虫的所有可能抓取时机
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 0);
+    
     setTimeout(() => {
       removeAllDescriptions();
     }, 50);
+    
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 100);
     
     setTimeout(() => {
       removeAllDescriptions();
@@ -200,7 +211,81 @@ const TaskDetail: React.FC = () => {
     setTimeout(() => {
       removeAllDescriptions();
     }, 1000);
+    
+    setTimeout(() => {
+      removeAllDescriptions();
+    }, 2000);
   }, [id]);
+
+  // 提取SEO描述生成逻辑为useMemo，避免重复计算
+  const seoDescription = useMemo(() => {
+    if (!task) return '';
+    const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0);
+    const rewardStr = reward.toFixed(2);
+    const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
+    
+    const descriptionPreview = task.description ? task.description.substring(0, 60).replace(/\n/g, ' ').trim() : '';
+    let taskDescription = '';
+    if (language === 'zh') {
+      if (descriptionPreview) {
+        taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+      } else {
+        taskDescription = `${task.task_type}任务 | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+      }
+    } else {
+      if (descriptionPreview) {
+        taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+      } else {
+        taskDescription = `${task.task_type} Task | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+      }
+    }
+    return taskDescription.substring(0, 200);
+  }, [task, language]);
+
+  // 提取meta标签设置逻辑为useCallback，避免重复创建函数
+  const setMetaTags = useCallback((description: string, title: string) => {
+    // 强制移除所有描述标签（无条件移除，不检查内容）
+    const removeAllDescriptions = () => {
+      document.querySelectorAll('meta[name="description"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[property="og:description"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[name="twitter:description"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[name="weixin:description"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[name="weixin:title"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[property="og:title"]').forEach(tag => tag.remove());
+    };
+    
+    removeAllDescriptions();
+    
+    // 设置微信描述标签（最重要，微信优先读取）
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = description;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+    
+    // 设置微信标题
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = title;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+    
+    // 设置og:description
+    const ogDescTag = document.createElement('meta');
+    ogDescTag.setAttribute('property', 'og:description');
+    ogDescTag.content = description;
+    document.head.insertBefore(ogDescTag, document.head.firstChild);
+    
+    // 设置og:title
+    const ogTitleTag = document.createElement('meta');
+    ogTitleTag.setAttribute('property', 'og:title');
+    ogTitleTag.content = title;
+    document.head.insertBefore(ogTitleTag, document.head.firstChild);
+    
+    // 设置标准description
+    const descTag = document.createElement('meta');
+    descTag.name = 'description';
+    descTag.content = description;
+    document.head.insertBefore(descTag, document.head.firstChild);
+  }, []);
 
   // 加载任务数据
   useEffect(() => {
@@ -218,31 +303,65 @@ const TaskDetail: React.FC = () => {
         setTimeout(() => {
           if (res.data) {
             const task = res.data;
-            const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0);
-            const rewardStr = reward.toFixed(2);
-            const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
-            
-            const descriptionPreview = task.description ? task.description.substring(0, 60).replace(/\n/g, ' ').trim() : '';
-            let taskDescription = '';
-            if (language === 'zh') {
-              if (descriptionPreview) {
-                taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+            const seoDesc = seoDescription || (() => {
+              const reward = ((task.agreed_reward ?? task.base_reward ?? task.reward) || 0);
+              const rewardStr = reward.toFixed(2);
+              const deadlineStr = task.deadline ? TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London') : (language === 'zh' ? '未设置' : 'Not set');
+              
+              const descriptionPreview = task.description ? task.description.substring(0, 60).replace(/\n/g, ' ').trim() : '';
+              let taskDescription = '';
+              if (language === 'zh') {
+                if (descriptionPreview) {
+                  taskDescription = `${descriptionPreview} | 类型：${task.task_type} | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+                } else {
+                  taskDescription = `${task.task_type}任务 | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+                }
               } else {
-                taskDescription = `${task.task_type}任务 | 金额：£${rewardStr} | 截至：${deadlineStr} | 地点：${task.location}`;
+                if (descriptionPreview) {
+                  taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+                } else {
+                  taskDescription = `${task.task_type} Task | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
+                }
               }
-            } else {
-              if (descriptionPreview) {
-                taskDescription = `${descriptionPreview} | Type: ${task.task_type} | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
-              } else {
-                taskDescription = `${task.task_type} Task | Amount: £${rewardStr} | Deadline: ${deadlineStr} | Location: ${task.location}`;
-              }
-            }
-            const seoDescription = taskDescription.substring(0, 200);
+              return taskDescription.substring(0, 200);
+            })();
             
-            // 强制移除所有默认描述标签
+            // 强制移除所有描述标签（无条件移除，不检查内容）
+            // 确保在设置新标签前，所有旧标签都被移除
             const removeAllDescriptions = () => {
-              const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
-              allDescriptions.forEach(tag => {
+              // 无条件移除所有description标签
+              const allDescriptions = document.querySelectorAll('meta[name="description"]');
+              allDescriptions.forEach(tag => tag.remove());
+              
+              // 无条件移除所有og:description标签
+              const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+              allOgDescriptions.forEach(tag => tag.remove());
+              
+              // 无条件移除所有twitter:description标签
+              const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
+              allTwitterDescriptions.forEach(tag => tag.remove());
+              
+              // 无条件移除所有weixin:description标签（最关键）
+              const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+              allWeixinDescriptions.forEach(tag => tag.remove());
+              
+              // 无条件移除所有weixin:title标签
+              const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+              allWeixinTitles.forEach(tag => tag.remove());
+              
+              // 无条件移除所有og:title标签
+              const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+              allOgTitles.forEach(tag => tag.remove());
+            };
+            
+            // 使用提取的函数设置meta标签
+            setMetaTags(seoDesc, `${task.title} - Link²Ur任务平台`);
+            
+            // 使用多个延迟再次确保标签正确设置（防止被其他组件覆盖）
+            setTimeout(() => {
+              // 再次移除可能被其他组件设置的默认描述
+              const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+              allWeixinDesc.forEach(tag => {
                 const metaTag = tag as HTMLMetaElement;
                 if (metaTag.content && (
                   metaTag.content.includes('Professional task publishing') ||
@@ -253,48 +372,33 @@ const TaskDetail: React.FC = () => {
                   metaTag.remove();
                 }
               });
-            };
-            removeAllDescriptions();
+              
+              // 确保weixin:description存在且内容正确
+              const seoDesc = seoDescription || '';
+              const taskTitle = `${task.title} - Link²Ur任务平台`;
+              let finalWeixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
+              if (!finalWeixinDesc || finalWeixinDesc.content !== seoDesc) {
+                setMetaTags(seoDesc, taskTitle);
+              }
+            }, 100);
             
-            // 设置微信描述标签（最重要，微信优先读取）
-            const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
-            allWeixinDescriptions.forEach(tag => tag.remove());
-            const weixinDescTag = document.createElement('meta');
-            weixinDescTag.setAttribute('name', 'weixin:description');
-            weixinDescTag.content = seoDescription;
-            document.head.insertBefore(weixinDescTag, document.head.firstChild);
-            
-            // 设置微信标题
-            const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
-            allWeixinTitles.forEach(tag => tag.remove());
-            const weixinTitleTag = document.createElement('meta');
-            weixinTitleTag.setAttribute('name', 'weixin:title');
-            weixinTitleTag.content = `${task.title} - Link²Ur任务平台`;
-            document.head.insertBefore(weixinTitleTag, document.head.firstChild);
-            
-            // 设置og:description（微信也会读取作为备选）
-            const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
-            allOgDescriptions.forEach(tag => tag.remove());
-            const ogDescTag = document.createElement('meta');
-            ogDescTag.setAttribute('property', 'og:description');
-            ogDescTag.content = seoDescription;
-            document.head.insertBefore(ogDescTag, document.head.firstChild);
-            
-            // 设置og:title
-            const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
-            allOgTitles.forEach(tag => tag.remove());
-            const ogTitleTag = document.createElement('meta');
-            ogTitleTag.setAttribute('property', 'og:title');
-            ogTitleTag.content = `${task.title} - Link²Ur任务平台`;
-            document.head.insertBefore(ogTitleTag, document.head.firstChild);
-            
-            // 设置标准description
-            const allDescriptions = document.querySelectorAll('meta[name="description"]');
-            allDescriptions.forEach(tag => tag.remove());
-            const descTag = document.createElement('meta');
-            descTag.name = 'description';
-            descTag.content = seoDescription;
-            document.head.insertBefore(descTag, document.head.firstChild);
+            setTimeout(() => {
+              // 再次确保weixin:description正确
+              const seoDesc = seoDescription || '';
+              const taskTitle = `${task.title} - Link²Ur任务平台`;
+              const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+              allWeixinDesc.forEach(tag => {
+                const metaTag = tag as HTMLMetaElement;
+                if (metaTag.content !== seoDesc) {
+                  metaTag.remove();
+                }
+              });
+              
+              let finalWeixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
+              if (!finalWeixinDesc) {
+                setMetaTags(seoDesc, taskTitle);
+              }
+            }, 500);
           }
         }, 0);
       })
@@ -304,7 +408,7 @@ const TaskDetail: React.FC = () => {
         setError('任务不存在');
       })
       .finally(() => setLoading(false));
-  }, [id, language]);
+  }, [id, language, seoDescription, setMetaTags]);
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 防止被其他页面的useLayoutEffect覆盖，确保任务描述优先显示
