@@ -5109,13 +5109,26 @@ const MessagePage: React.FC = () => {
                     // 任务一完成就显示提醒，无论是否已到清理时间
                     if (timeRemaining > 0) {
                       // 还没到清理时间，显示剩余时间
-                      const daysRemaining = Math.ceil(timeRemaining / (24 * 60 * 60 * 1000));
-                      const hoursRemaining = Math.ceil(timeRemaining / (60 * 60 * 1000));
+                      const totalHours = timeRemaining / (60 * 60 * 1000);
+                      const totalDays = timeRemaining / (24 * 60 * 60 * 1000);
                       
-                      // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数
-                      const timeText = daysRemaining >= 1 
-                        ? `${daysRemaining} 天` 
-                        : `${hoursRemaining} 小时`;
+                      // 显示文本：如果剩余时间少于1天，显示小时；否则显示天数（向下取整，更准确）
+                      let timeText: string;
+                      if (totalDays >= 1) {
+                        const days = Math.floor(totalDays);
+                        const remainingHours = Math.floor(totalHours % 24);
+                        if (remainingHours > 0 && days < 3) {
+                          // 如果少于3天且有剩余小时，显示"X天X小时"
+                          timeText = `${days} 天 ${remainingHours} 小时`;
+                        } else {
+                          // 否则只显示天数
+                          timeText = `${days} 天`;
+                        }
+                      } else {
+                        // 少于1天，显示小时
+                        const hours = Math.floor(totalHours);
+                        timeText = `${hours} 小时`;
+                      }
                       
                       return (
                         <div 
@@ -5130,19 +5143,15 @@ const MessagePage: React.FC = () => {
                             alignItems: 'center',
                             gap: '6px',
                             border: '1px solid #60a5fa',
-                            flex: '1 1 auto',
-                            minWidth: '120px',
-                            maxWidth: '100%',
-                            boxSizing: 'border-box',
+                            marginLeft: 'auto',
                             whiteSpace: 'nowrap',
-                            overflow: 'visible',
-                            textOverflow: 'ellipsis',
                             position: 'relative',
-                            zIndex: 1
+                            zIndex: 1,
+                            flexShrink: 0
                           }}>
                           <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
-                          <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            将在 <strong>{timeText}</strong> 后清理
+                          <span style={{ lineHeight: '1.3' }}>
+                            将在 <strong>{timeText}</strong> 后清理相关图片与文件
                           </span>
                         </div>
                       );
@@ -5161,19 +5170,15 @@ const MessagePage: React.FC = () => {
                             alignItems: 'center',
                             gap: '6px',
                             border: '1px solid #d1d5db',
-                            flex: '1 1 auto',
-                            minWidth: '80px',
-                            maxWidth: '100%',
-                            boxSizing: 'border-box',
+                            marginLeft: 'auto',
                             whiteSpace: 'nowrap',
-                            overflow: 'visible',
-                            textOverflow: 'ellipsis',
                             position: 'relative',
-                            zIndex: 1
+                            zIndex: 1,
+                            flexShrink: 0
                           }}>
                           <span style={{ fontSize: '12px', flexShrink: 0 }}>✅</span>
-                          <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            已清理
+                          <span style={{ lineHeight: '1.3' }}>
+                            已清理相关图片与文件
                           </span>
                         </div>
                       );
@@ -5194,19 +5199,15 @@ const MessagePage: React.FC = () => {
                           alignItems: 'center',
                           gap: '6px',
                           border: '1px solid #60a5fa',
-                          flex: '1 1 auto',
-                          minWidth: '120px',
-                          maxWidth: '100%',
-                          boxSizing: 'border-box',
+                          marginLeft: 'auto',
                           whiteSpace: 'nowrap',
-                          overflow: 'visible',
-                          textOverflow: 'ellipsis',
                           position: 'relative',
-                          zIndex: 1
+                          zIndex: 1,
+                          flexShrink: 0
                         }}>
                         <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
-                        <span style={{ lineHeight: '1.3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          将在 <strong>3天</strong> 后清理
+                        <span style={{ lineHeight: '1.3' }}>
+                          将在 <strong>3天</strong> 后清理相关图片与文件
                         </span>
                       </div>
                     );
