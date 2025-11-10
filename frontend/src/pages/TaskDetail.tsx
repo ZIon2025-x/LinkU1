@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings, fetchTasks } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -66,6 +66,10 @@ const TaskDetail: React.FC = () => {
   const [applyMessage, setApplyMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
+  // 推荐任务相关状态
+  const [recommendedTasks, setRecommendedTasks] = useState<any[]>([]);
+  const [loadingRecommendedTasks, setLoadingRecommendedTasks] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 加载用户数据、通知和系统设置
   useEffect(() => {
@@ -287,6 +291,104 @@ const TaskDetail: React.FC = () => {
     document.head.insertBefore(descTag, document.head.firstChild);
   }, []);
 
+  // 加载推荐任务
+  const loadRecommendedTasks = useCallback(async (currentTask: any) => {
+    if (!currentTask) return;
+    
+    setLoadingRecommendedTasks(true);
+    try {
+      const allTasks: any[] = [];
+      
+      // 优先获取同城同类型的任务
+      if (currentTask.location && currentTask.task_type) {
+        try {
+          const sameCitySameType = await fetchTasks({
+            type: currentTask.task_type,
+            city: currentTask.location,
+            page: 1,
+            pageSize: 20
+          });
+          if (sameCitySameType?.tasks) {
+            // 排除当前任务
+            const filtered = sameCitySameType.tasks.filter((t: any) => t.id !== currentTask.id && t.status === 'open');
+            allTasks.push(...filtered);
+          }
+        } catch (error) {
+          console.error('获取同城同类型任务失败:', error);
+        }
+      }
+      
+      // 如果同城同类型的任务不够，补充同类型的任务
+      if (allTasks.length < 10 && currentTask.task_type) {
+        try {
+          const sameType = await fetchTasks({
+            type: currentTask.task_type,
+            page: 1,
+            pageSize: 20
+          });
+          if (sameType?.tasks) {
+            const filtered = sameType.tasks.filter((t: any) => 
+              t.id !== currentTask.id && 
+              t.status === 'open' &&
+              !allTasks.some(existing => existing.id === t.id)
+            );
+            allTasks.push(...filtered);
+          }
+        } catch (error) {
+          console.error('获取同类型任务失败:', error);
+        }
+      }
+      
+      // 如果还不够，补充同城的任务
+      if (allTasks.length < 10 && currentTask.location) {
+        try {
+          const sameCity = await fetchTasks({
+            city: currentTask.location,
+            page: 1,
+            pageSize: 20
+          });
+          if (sameCity?.tasks) {
+            const filtered = sameCity.tasks.filter((t: any) => 
+              t.id !== currentTask.id && 
+              t.status === 'open' &&
+              !allTasks.some(existing => existing.id === t.id)
+            );
+            allTasks.push(...filtered);
+          }
+        } catch (error) {
+          console.error('获取同城任务失败:', error);
+        }
+      }
+      
+      // 如果还不够，获取其他任务
+      if (allTasks.length < 10) {
+        try {
+          const otherTasks = await fetchTasks({
+            page: 1,
+            pageSize: 20
+          });
+          if (otherTasks?.tasks) {
+            const filtered = otherTasks.tasks.filter((t: any) => 
+              t.id !== currentTask.id && 
+              t.status === 'open' &&
+              !allTasks.some(existing => existing.id === t.id)
+            );
+            allTasks.push(...filtered);
+          }
+        } catch (error) {
+          console.error('获取其他任务失败:', error);
+        }
+      }
+      
+      // 限制最多显示12个推荐任务
+      setRecommendedTasks(allTasks.slice(0, 12));
+    } catch (error) {
+      console.error('加载推荐任务失败:', error);
+    } finally {
+      setLoadingRecommendedTasks(false);
+    }
+  }, []);
+
   // 加载任务数据
   useEffect(() => {
     setLoading(true);
@@ -297,6 +399,8 @@ const TaskDetail: React.FC = () => {
         if (res.data.status === 'completed') {
           loadTaskReviews();
         }
+        // 加载推荐任务
+        loadRecommendedTasks(res.data);
         
         // 任务数据加载完成后，立即设置meta标签（确保微信爬虫能读取到）
         // 使用setTimeout确保在下一个事件循环中执行，让React先完成渲染
@@ -2526,7 +2630,283 @@ const TaskDetail: React.FC = () => {
         {/* 评价不会显示在任务上，已移除查看评价按钮 */}
       </div>
 
-      {/* 评价不会显示在任务上，已移除评价列表 */}
+        {/* 推荐任务区域 - 你可能感兴趣 */}
+        {task && recommendedTasks.length > 0 && (
+          <>
+            {/* 滚动条样式 */}
+            <style>{`
+              .recommended-tasks-scroll::-webkit-scrollbar {
+                height: 6px;
+              }
+              .recommended-tasks-scroll::-webkit-scrollbar-track {
+                background: #f1f5f9;
+                border-radius: 3px;
+              }
+              .recommended-tasks-scroll::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 3px;
+              }
+              .recommended-tasks-scroll::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+              }
+            `}</style>
+            <div style={{
+              marginTop: '60px',
+              paddingTop: '40px',
+              borderTop: '2px solid #e5e7eb',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              <h3 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                marginBottom: '24px',
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  {language === 'zh' ? '你可能感兴趣' : 'You May Also Like'}
+                </span>
+              </h3>
+              
+              <div style={{
+                position: 'relative',
+                width: '100%'
+              }}>
+                {/* 滚动容器 */}
+                <div
+                  ref={scrollContainerRef}
+                  className="recommended-tasks-scroll"
+                  style={{
+                    display: 'flex',
+                    gap: '20px',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    scrollBehavior: 'smooth',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#cbd5e1 #f1f5f9',
+                    paddingBottom: '10px',
+                    WebkitOverflowScrolling: 'touch',
+                    msOverflowStyle: '-ms-autohiding-scrollbar',
+                  }}
+                  onWheel={(e) => {
+                    // 鼠标滚轮水平滚动（按住Shift时垂直滚动转换为水平滚动）
+                    if (e.deltaY !== 0 && !e.shiftKey) {
+                      e.preventDefault();
+                      if (scrollContainerRef.current) {
+                        scrollContainerRef.current.scrollLeft += e.deltaY;
+                      }
+                    }
+                  }}
+                >
+                {recommendedTasks.map((recommendedTask) => {
+                  const taskReward = (recommendedTask.agreed_reward ?? recommendedTask.base_reward ?? recommendedTask.reward) || 0;
+                  const isVip = recommendedTask.task_level === 'vip';
+                  const isSuper = recommendedTask.task_level === 'super';
+                  
+                  return (
+                    <div
+                      key={recommendedTask.id}
+                      onClick={() => navigate(`/task/${recommendedTask.id}`)}
+                      style={{
+                        minWidth: '280px',
+                        maxWidth: '280px',
+                        background: '#fff',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        boxShadow: isVip ? '0 4px 15px rgba(245, 158, 11, 0.2)' : 
+                                   isSuper ? '0 4px 20px rgba(139, 92, 246, 0.3)' : 
+                                   '0 2px 8px rgba(0,0,0,0.08)',
+                        border: isVip ? '2px solid #f59e0b' : 
+                                isSuper ? '2px solid #8b5cf6' : 
+                                '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        if (isVip) {
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.4)';
+                        } else if (isSuper) {
+                          e.currentTarget.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.5)';
+                        } else {
+                          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        if (isVip) {
+                          e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.2)';
+                        } else if (isSuper) {
+                          e.currentTarget.style.boxShadow = '0 4px 20px rgba(139, 92, 246, 0.3)';
+                        } else {
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        }
+                      }}
+                    >
+                      {/* 任务等级标签 */}
+                      {(isVip || isSuper) && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '12px',
+                          right: '12px',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          zIndex: 2,
+                          background: isVip ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 
+                                      'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                          color: '#fff',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                        }}>
+                          {isVip ? 'VIP' : 'SUPER'}
+                        </div>
+                      )}
+                      
+                      {/* 任务内容 */}
+                      <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        {/* 标题 */}
+                        <h4 style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          marginBottom: '12px',
+                          color: '#1f2937',
+                          lineHeight: '1.4',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          minHeight: '44px'
+                        }}>
+                          {recommendedTask.title}
+                        </h4>
+                        
+                        {/* 描述预览 */}
+                        <p style={{
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          marginBottom: '16px',
+                          lineHeight: '1.5',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          flex: 1
+                        }}>
+                          {recommendedTask.description?.substring(0, 80) || ''}
+                        </p>
+                        
+                        {/* 任务信息 */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          marginTop: 'auto'
+                        }}>
+                          {/* 类型和城市 */}
+                          <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{
+                              padding: '4px 10px',
+                              background: '#f3f4f6',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: '#4b5563',
+                              fontWeight: '500'
+                            }}>
+                              {recommendedTask.task_type}
+                            </span>
+                            <span style={{
+                              padding: '4px 10px',
+                              background: '#eff6ff',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              color: '#3b82f6',
+                              fontWeight: '500'
+                            }}>
+                              📍 {recommendedTask.location}
+                            </span>
+                          </div>
+                          
+                          {/* 奖励和截止时间 */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingTop: '12px',
+                            borderTop: '1px solid #e5e7eb'
+                          }}>
+                            <div style={{
+                              fontSize: '20px',
+                              fontWeight: '700',
+                              color: '#10b981',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <span>£</span>
+                              <span>{taskReward.toFixed(2)}</span>
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#9ca3af'
+                            }}>
+                              {recommendedTask.deadline ? 
+                                TimeHandlerV2.formatUtcToLocal(recommendedTask.deadline, 'MM/DD', 'Europe/London') : 
+                                ''
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* 滚动提示（仅在可以滚动时显示） */}
+              {recommendedTasks.length > 3 && (
+                <div style={{
+                  position: 'absolute',
+                  right: '0',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.9))',
+                  width: '60px',
+                  height: '100%',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingRight: '10px',
+                  fontSize: '24px',
+                  color: '#9ca3af'
+                }}>
+                  →
+                </div>
+              )}
+            </div>
+          </div>
+          </>
+        )}
+        
+        {/* 评价不会显示在任务上，已移除评价列表 */}
       {false && (
         <div style={{marginTop: 24, padding: 20, background: '#f8f9fa', borderRadius: 8}}>
           <h3 style={{marginBottom: 16, color: '#A67C52'}}>任务评价</h3>
