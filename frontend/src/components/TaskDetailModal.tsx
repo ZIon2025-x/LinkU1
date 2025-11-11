@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -60,38 +60,36 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [messageNegotiatedPrice, setMessageNegotiatedPrice] = useState<number | undefined>();
   const [isMessageNegotiateChecked, setIsMessageNegotiateChecked] = useState(false);
 
-  // 当弹窗打开且taskId存在时加载任务数据
-  useEffect(() => {
-    if (isOpen && taskId) {
-      loadTaskData();
+  // 加载任务评价
+  const loadTaskReviews = useCallback(async () => {
+    if (!taskId) return;
+    try {
+      const reviewsData = await getTaskReviews(taskId);
+      setReviews(reviewsData);
+    } catch (error) {
+      console.error('加载评价失败:', error);
     }
-  }, [isOpen, taskId]);
+  }, [taskId]);
 
-  // 键盘事件处理（用于图片放大弹窗）
-  useEffect(() => {
-    if (!enlargedImage || !task || !task.images) return;
+  // 加载申请者列表
+  const loadApplications = useCallback(async () => {
+    if (!user || !task || user.id !== task.poster_id || !taskId) {
+      return;
+    }
+    
+    setLoadingApplications(true);
+    try {
+      const res = await getTaskApplications(taskId);
+      setApplications(res);
+    } catch (error) {
+      console.error('加载申请者列表失败:', error);
+    } finally {
+      setLoadingApplications(false);
+    }
+  }, [user, task, taskId]);
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setEnlargedImage(null);
-      } else if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
-        const prevIndex = currentImageIndex - 1;
-        setCurrentImageIndex(prevIndex);
-        setEnlargedImage(task.images[prevIndex]);
-      } else if (e.key === 'ArrowRight' && currentImageIndex < task.images.length - 1) {
-        const nextIndex = currentImageIndex + 1;
-        setCurrentImageIndex(nextIndex);
-        setEnlargedImage(task.images[nextIndex]);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [enlargedImage, task, currentImageIndex]);
-
-  const loadTaskData = async () => {
+  // 加载任务数据函数 - 使用 useCallback 缓存
+  const loadTaskData = useCallback(async () => {
     if (!taskId) return;
     
     setLoading(true);
@@ -120,7 +118,38 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } catch (error) {
       setUser(null);
     }
-  };
+  }, [taskId, t, loadTaskReviews]);
+
+  // 当弹窗打开且taskId存在时加载任务数据
+  useEffect(() => {
+    if (isOpen && taskId) {
+      loadTaskData();
+    }
+  }, [isOpen, taskId, loadTaskData]);
+
+  // 键盘事件处理（用于图片放大弹窗）
+  useEffect(() => {
+    if (!enlargedImage || !task || !task.images) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEnlargedImage(null);
+      } else if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
+        const prevIndex = currentImageIndex - 1;
+        setCurrentImageIndex(prevIndex);
+        setEnlargedImage(task.images[prevIndex]);
+      } else if (e.key === 'ArrowRight' && currentImageIndex < task.images.length - 1) {
+        const nextIndex = currentImageIndex + 1;
+        setCurrentImageIndex(nextIndex);
+        setEnlargedImage(task.images[nextIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [enlargedImage, task, currentImageIndex]);
 
   // 当用户信息加载后，如果是任务发布者，加载申请者列表
   useEffect(() => {
@@ -147,33 +176,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setUserApplication(userApp);
     } catch (error) {
       console.error('检查用户申请状态失败:', error);
-    }
-  };
-
-  const loadTaskReviews = async () => {
-    if (!taskId) return;
-    
-    try {
-      const reviewsData = await getTaskReviews(taskId);
-      setReviews(reviewsData);
-    } catch (error) {
-      console.error('加载评价失败:', error);
-    }
-  };
-
-  const loadApplications = async () => {
-    if (!user || !task || user.id !== task.poster_id || !taskId) {
-      return;
-    }
-    
-    setLoadingApplications(true);
-    try {
-      const res = await getTaskApplications(taskId);
-      setApplications(res);
-    } catch (error) {
-      console.error('加载申请者列表失败:', error);
-    } finally {
-      setLoadingApplications(false);
     }
   };
 

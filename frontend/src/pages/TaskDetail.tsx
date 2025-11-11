@@ -2628,6 +2628,7 @@ const TaskDetail: React.FC = () => {
         )}
 
         {/* 评价不会显示在任务上，已移除查看评价按钮 */}
+        </div>
       </div>
 
         {/* 推荐任务区域 - 你可能感兴趣 */}
@@ -2903,7 +2904,7 @@ const TaskDetail: React.FC = () => {
               )}
             </div>
           </div>
-          </>
+        </>
         )}
         
         {/* 评价不会显示在任务上，已移除评价列表 */}
@@ -3104,7 +3105,6 @@ const TaskDetail: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
-        </div>
       </div>
     </div>
   );

@@ -75,6 +75,14 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_replace_wit
 router = APIRouter()
 
 
+@router.post("/api/csp-report")
+async def csp_report(report: dict):
+    """接收 CSP 违规报告"""
+    logger.warning(f"CSP violation: {report}")
+    # 可以发送到监控系统
+    return {"status": "ok"}
+
+
 def admin_required(current_user=Depends(get_current_admin_user)):
     return current_user
 
@@ -859,10 +867,9 @@ def update_timezone(
 
 @router.get("/tasks/{task_id}", response_model=schemas.TaskOut)
 def get_task_detail(task_id: int, db: Session = Depends(get_db)):
-    task = crud.get_task(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    """获取任务详情 - 使用服务层缓存（避免装饰器重复创建）"""
+    from app.services.task_service import TaskService
+    return TaskService.get_task_cached(task_id=task_id, db=db)
 
 
 @router.post("/tasks/{task_id}/accept", response_model=schemas.TaskOut)

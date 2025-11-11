@@ -499,14 +499,25 @@ def list_all_tasks(db: Session, skip: int = 0, limit: int = 1000):
 
 
 def get_task(db: Session, task_id: int):
+    """获取任务详情 - 优化 N+1 查询问题"""
     from app.models import Task, User
+    from sqlalchemy.orm import selectinload
 
-    task = db.query(Task).filter(Task.id == task_id).first()
+    # 使用 selectinload 预加载关联数据，避免 N+1 查询
+    task = (
+        db.query(Task)
+        .options(
+            selectinload(Task.poster),  # 预加载发布者信息
+            selectinload(Task.taker),   # 预加载接受者信息（如果存在）
+        )
+        .filter(Task.id == task_id)
+        .first()
+    )
+    
     if task:
-        # 获取发布者时区信息
-        poster = db.query(User).filter(User.id == task.poster_id).first()
-        if poster:
-            task.poster_timezone = poster.timezone if poster.timezone else "UTC"
+        # 获取发布者时区信息（已通过 selectinload 预加载，无需额外查询）
+        if task.poster:
+            task.poster_timezone = task.poster.timezone if task.poster.timezone else "UTC"
         else:
             task.poster_timezone = "UTC"
     return task

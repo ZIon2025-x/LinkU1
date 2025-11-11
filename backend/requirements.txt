@@ -36,6 +36,7 @@ requests>=2.31.0,<3.0.0
 # 其他工具
 python-dotenv>=1.0.0,<2.0.0
 itsdangerous>=2.0.0,<3.0.0
+orjson>=3.9.0,<4.0.0  # 高性能 JSON 序列化（用于 Redis 缓存）
 
 # 翻译服务
 deep-translator>=1.11.4

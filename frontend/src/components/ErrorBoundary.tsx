@@ -1,3 +1,7 @@
+/**
+ * ErrorBoundary 组件
+ * 捕获子组件的错误，防止整个应用崩溃
+ */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -8,141 +12,78 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error?: Error;
-  errorInfo?: ErrorInfo;
+  error: Error | null;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = {
+      hasError: false,
+      error: null,
+    };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    // 更新 state 使下一次渲染能够显示降级后的 UI
+    return {
+      hasError: true,
+      error,
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    this.setState({ error, errorInfo });
-    this.props.onError?.(error, errorInfo);
+    // 上报错误到监控服务
+    console.error('ErrorBoundary 捕获到错误:', error, errorInfo);
+    
+    // 调用自定义错误处理函数
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+    
+    // 可以在这里发送错误到监控服务
+    // if (window.gtag) {
+    //   window.gtag('event', 'exception', {
+    //     description: error.toString(),
+    //     fatal: false,
+    //   });
+    // }
   }
-
-  handleRetry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
-  };
 
   render() {
     if (this.state.hasError) {
+      // 自定义降级 UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
-
+      
+      // 默认错误 UI
       return (
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '400px',
-          padding: '20px',
-          background: '#f9fafb',
-          borderRadius: '8px',
-          margin: '20px'
+          padding: '40px',
+          textAlign: 'center',
+          color: '#ef4444'
         }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '16px'
-          }}>
-            ⚠️
-          </div>
-          
-          <h2 style={{
-            color: '#dc2626',
-            marginBottom: '8px',
-            fontSize: '20px',
-            fontWeight: '600'
-          }}>
-            出现了一些问题
-          </h2>
-          
-          <p style={{
-            color: '#6b7280',
-            textAlign: 'center',
-            marginBottom: '20px',
-            maxWidth: '400px'
-          }}>
-            抱歉，页面遇到了一个错误。请尝试刷新页面或联系技术支持。
+          <h2 style={{ marginBottom: '16px' }}>出错了</h2>
+          <p style={{ marginBottom: '24px', color: '#6b7280' }}>
+            {this.state.error?.message || '发生了未知错误'}
           </p>
-          
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            flexWrap: 'wrap',
-            justifyContent: 'center'
-          }}>
-            <button
-              onClick={this.handleRetry}
-              style={{
-                padding: '8px 16px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              重试
-            </button>
-            
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '8px 16px',
-                background: '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              刷新页面
-            </button>
-          </div>
-          
-          {process.env.NODE_ENV === 'development' && this.state.error && (
-            <details style={{
-              marginTop: '20px',
-              padding: '16px',
-              background: '#f3f4f6',
-              borderRadius: '6px',
-              maxWidth: '600px',
-              width: '100%'
-            }}>
-              <summary style={{
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginBottom: '8px'
-              }}>
-                错误详情 (开发模式)
-              </summary>
-              <pre style={{
-                fontSize: '12px',
-                color: '#dc2626',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                overflow: 'auto',
-                maxHeight: '200px'
-              }}>
-                {this.state.error.toString()}
-                {this.state.errorInfo?.componentStack}
-              </pre>
-            </details>
-          )}
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            style={{
+              padding: '10px 20px',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            刷新页面
+          </button>
         </div>
       );
     }
