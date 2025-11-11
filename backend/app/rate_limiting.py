@@ -242,6 +242,8 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
                 
                 # 检查速率限制
                 try:
+                    # 获取速率限制键（用于计算 Retry-After）
+                    key = rate_limiter._get_rate_limit_key(request, rate_type)
                     rate_info = rate_limiter.check_rate_limit(request, rate_type, actual_limit, actual_window)
                     
                     # 在响应头中添加速率限制信息
@@ -255,15 +257,34 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
                     
                 except HTTPException as e:
                     if e.status_code == 429:
+                        # 计算剩余等待时间（秒）
+                        current_time = int(time.time())
+                        window_start = current_time - actual_window
+                        
+                        # 获取速率限制键
+                        key = rate_limiter._get_rate_limit_key(request, rate_type)
+                        
+                        # 获取窗口内最早的请求时间
+                        if rate_limiter.redis_client:
+                            earliest_request = rate_limiter.redis_client.zrange(key, 0, 0, withscores=True)
+                            if earliest_request and len(earliest_request) > 0:
+                                earliest_time = int(earliest_request[0][1])
+                                retry_after = (earliest_time + actual_window) - current_time
+                                retry_after = max(1, retry_after)
+                            else:
+                                retry_after = actual_window
+                        else:
+                            retry_after = actual_window
+                        
                         # 返回速率限制错误响应
                         return JSONResponse(
                             status_code=429,
                             content=e.detail,
                             headers={
-                                "Retry-After": str(actual_window),
+                                "Retry-After": str(retry_after),  # 返回剩余等待时间（秒）
                                 "X-RateLimit-Limit": str(actual_limit),
                                 "X-RateLimit-Remaining": "0",
-                                "X-RateLimit-Reset": str(int(time.time()) + actual_window)
+                                "X-RateLimit-Reset": str(int(time.time()) + retry_after)
                             }
                         )
                     else:
@@ -291,6 +312,8 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
                 
                 # 检查速率限制
                 try:
+                    # 获取速率限制键（用于计算 Retry-After）
+                    key = rate_limiter._get_rate_limit_key(request, rate_type)
                     rate_info = rate_limiter.check_rate_limit(request, rate_type, actual_limit, actual_window)
                     
                     # 在响应头中添加速率限制信息
@@ -304,15 +327,47 @@ def rate_limit(rate_type: str, limit: Optional[int] = None, window: Optional[int
                     
                 except HTTPException as e:
                     if e.status_code == 429:
+                        # 计算剩余等待时间（秒）
+                        current_time = int(time.time())
+                        window_start = current_time - actual_window
+                        
+                        # 获取速率限制键
+                        key = rate_limiter._get_rate_limit_key(request, rate_type)
+                        
+                        # 获取窗口内最早的请求时间（内存模式）
+                        if not rate_limiter.redis_client and hasattr(rate_limiter, '_memory_store'):
+                            if key in rate_limiter._memory_store:
+                                req_times = rate_limiter._memory_store[key]
+                                if req_times:
+                                    earliest_time = min(req_times)
+                                    retry_after = (earliest_time + actual_window) - current_time
+                                    retry_after = max(1, retry_after)
+                                else:
+                                    retry_after = actual_window
+                            else:
+                                retry_after = actual_window
+                        else:
+                            # Redis 模式：获取最早的请求时间
+                            if rate_limiter.redis_client:
+                                earliest_request = rate_limiter.redis_client.zrange(key, 0, 0, withscores=True)
+                                if earliest_request and len(earliest_request) > 0:
+                                    earliest_time = int(earliest_request[0][1])
+                                    retry_after = (earliest_time + actual_window) - current_time
+                                    retry_after = max(1, retry_after)
+                                else:
+                                    retry_after = actual_window
+                            else:
+                                retry_after = actual_window
+                        
                         # 返回速率限制错误响应
                         return JSONResponse(
                             status_code=429,
                             content=e.detail,
                             headers={
-                                "Retry-After": str(actual_window),
+                                "Retry-After": str(retry_after),  # 返回剩余等待时间（秒）
                                 "X-RateLimit-Limit": str(actual_limit),
                                 "X-RateLimit-Remaining": "0",
-                                "X-RateLimit-Reset": str(int(time.time()) + actual_window)
+                                "X-RateLimit-Reset": str(int(time.time()) + retry_after)
                             }
                         )
                     else:

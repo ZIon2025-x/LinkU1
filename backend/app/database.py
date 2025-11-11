@@ -63,6 +63,9 @@ if ASYNC_AVAILABLE:
             "server_settings": {
                 "application_name": "linku_app",
                 "jit": "off",  # 禁用JIT以提高小查询性能
+                # P2 优化：连接级查询超时配置（毫秒）
+                # 在连接创建时一次性设置，避免每次查询都执行 SET statement_timeout
+                "statement_timeout": str(QUERY_TIMEOUT * 1000),  # 转换为毫秒
             },
         },
     )
@@ -83,6 +86,9 @@ else:
 
 # 为了向后兼容，保留同步引擎（用于数据库迁移等工具）
 # 优化同步引擎连接池配置
+# P2 优化：查询超时配置在连接级设置（一次性配置，减少额外往返）
+# 使用 connect_args 中的 options 参数在连接创建时设置 statement_timeout
+# 这比在 before_cursor_execute 中每次 SET statement_timeout 更高效
 sync_engine = create_engine(
     DATABASE_URL,
     echo=False,
@@ -93,7 +99,9 @@ sync_engine = create_engine(
     pool_recycle=POOL_RECYCLE,
     pool_pre_ping=POOL_PRE_PING,
     connect_args={
-        "options": "-c statement_timeout=30000"  # 30秒查询超时
+        # P2 优化：连接级查询超时配置（毫秒）
+        # 在连接创建时一次性设置，避免每次查询都执行 SET statement_timeout
+        "options": f"-c statement_timeout={QUERY_TIMEOUT * 1000}"  # 转换为毫秒
     }
 )
 SessionLocal = sessionmaker(

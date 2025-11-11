@@ -439,28 +439,6 @@ async def startup_event():
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
         
-        # 执行任务表索引迁移（自动迁移）
-        try:
-            from app.db_migrations import run_task_indexes_migration, verify_task_indexes
-            
-            # 执行迁移
-            migration_success = run_task_indexes_migration()
-            if migration_success:
-                logger.info("✅ 数据库索引迁移成功")
-            else:
-                logger.warning("⚠️  数据库索引迁移未完全成功，但应用将继续运行")
-            
-            # 验证索引（非阻塞，失败不影响启动）
-            try:
-                verify_task_indexes()
-            except Exception as e:
-                logger.warning(f"⚠️  索引验证失败（不影响启动）: {e}")
-                
-        except Exception as e:
-            logger.warning(f"⚠️  执行数据库迁移/验证时出错（可继续运行）: {e}")
-            import traceback
-            traceback.print_exc()
-        
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
         import traceback

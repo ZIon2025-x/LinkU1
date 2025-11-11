@@ -88,15 +88,35 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [user, task, taskId]);
 
-  // 加载任务数据函数 - 使用 useCallback 缓存
+  // AbortController 用于取消请求
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // 加载任务数据函数 - 使用 useCallback 缓存，支持取消
   const loadTaskData = useCallback(async () => {
     if (!taskId) return;
+    
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // 创建新的 AbortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     
     setLoading(true);
     setError('');
     
     try {
-      const res = await api.get(`/api/tasks/${taskId}`);
+      const res = await api.get(`/api/tasks/${taskId}`, {
+        signal: abortController.signal
+      });
+      
+      // 检查是否已取消
+      if (abortController.signal.aborted) {
+        return;
+      }
+      
       setTask(res.data);
       
       // 如果任务已完成，加载评价
@@ -104,21 +124,48 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         loadTaskReviews();
       }
     } catch (error: any) {
+      // 忽略取消错误
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       console.error('获取任务详情失败:', error);
       console.error('错误详情:', error.response?.data);
       setError(t('taskDetail.taskNotFound'));
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
     
-    // 加载用户信息
+    // 加载用户信息（也支持取消）
     try {
       const userData = await fetchCurrentUser();
-      setUser(userData);
-    } catch (error) {
-      setUser(null);
+      if (!abortController.signal.aborted) {
+        setUser(userData);
+      }
+    } catch (error: any) {
+      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+        setUser(null);
+      }
     }
   }, [taskId, t, loadTaskReviews]);
+
+  // 组件卸载或弹窗关闭时取消请求
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // 弹窗关闭时取消请求
+  useEffect(() => {
+    if (!isOpen && abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, [isOpen]);
 
   // 当弹窗打开且taskId存在时加载任务数据
   useEffect(() => {

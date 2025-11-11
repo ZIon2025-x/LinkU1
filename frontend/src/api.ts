@@ -212,6 +212,22 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
+    // 处理速率限制错误（429）
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || error.response.headers['Retry-After'];
+      const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+      
+      console.warn(`速率限制：请在 ${retryAfterSeconds} 秒后重试`);
+      
+      // 可以在这里实现自动重试逻辑（可选）
+      // 或者让调用方处理
+      return Promise.reject({
+        ...error,
+        retryAfter: retryAfterSeconds,
+        message: `请求过于频繁，请在 ${retryAfterSeconds} 秒后重试`
+      });
+    }
+    
     // 首先检查是否是CSRF token验证失败
     if ((error.response?.status === 401 || error.response?.status === 403) && 
         error.response?.data?.detail?.includes('CSRF token验证失败')) {

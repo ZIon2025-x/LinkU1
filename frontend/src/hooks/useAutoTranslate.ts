@@ -1,14 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from './useTranslation';
 import { Language } from '../contexts/LanguageContext';
-
-// 翻译缓存
-const translationCache = new Map<string, string>();
-
-// 生成缓存键
-const getCacheKey = (text: string, targetLang: string): string => {
-  return `${text}::${targetLang}`;
-};
+import { getTranslationCache, setTranslationCache } from '../utils/translationCache';
 
 // 简单的语言检测：检查是否包含中文字符
 const detectLanguage = (text: string): 'zh' | 'en' => {
@@ -61,11 +54,11 @@ export const useAutoTranslate = (
 
     // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
     const targetLang = language;
-    const cacheKey = getCacheKey(text, targetLang);
 
-    // 检查缓存
-    if (translationCache.has(cacheKey)) {
-      setTranslatedText(translationCache.get(cacheKey)!);
+    // 检查持久化缓存（sessionStorage）
+    const cached = getTranslationCache(text, targetLang, detectedLang);
+    if (cached) {
+      setTranslatedText(cached);
       return;
     }
 
@@ -74,8 +67,8 @@ export const useAutoTranslate = (
       // 传递源语言，帮助后端更准确翻译
       const translated = await translate(text, targetLang, detectedLang);
       setTranslatedText(translated);
-      // 缓存翻译结果
-      translationCache.set(cacheKey, translated);
+      // 保存到持久化缓存（sessionStorage）
+      setTranslationCache(text, translated, targetLang, detectedLang);
     } catch (error) {
       console.error('自动翻译失败:', error);
       setTranslatedText(null);
