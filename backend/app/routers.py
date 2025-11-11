@@ -1131,6 +1131,7 @@ def update_task_visibility(
 def create_review(
     task_id: int,
     review: schemas.ReviewCreate = Body(...),
+    background_tasks: BackgroundTasks = None,
     current_user=Depends(check_user_status),
     db: Session = Depends(get_db),
 ):
@@ -1144,6 +1145,29 @@ def create_review(
             status_code=400,
             detail="Cannot create review. Task may not be completed, you may not be a participant, or you may have already reviewed this task.",
         )
+    
+    # P2 优化：异步处理非关键操作（发送通知等）
+    if background_tasks:
+        def send_review_notification():
+            """后台发送评价通知（非关键操作）"""
+            try:
+                # 获取任务信息
+                task = crud.get_task(db, task_id)
+                if task and task.poster_id != current_user.id:
+                    # 通知任务发布者
+                    crud.create_notification(
+                        db,
+                        task.poster_id,
+                        "review_created",
+                        "收到新评价",
+                        f"任务 '{task.title}' 收到了新评价",
+                        current_user.id,
+                    )
+            except Exception as e:
+                logger.warning(f"发送评价通知失败: {e}")
+        
+        background_tasks.add_task(send_review_notification)
+    
     return db_review
 
 

@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import CustomerServiceRoute from './components/CustomerServiceRoute';
@@ -18,6 +19,18 @@ import AdminAuth from './components/AdminAuth';
 import ServiceAuth from './components/ServiceAuth';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
 import { getLanguageFromPath, detectBrowserLanguage, DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, Language } from './utils/i18n';
+
+// P1 优化：创建 React Query 客户端
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,  // 默认5分钟数据新鲜
+      gcTime: 10 * 60 * 1000,     // 默认10分钟垃圾回收
+      retry: 2,                    // 默认重试2次
+      refetchOnWindowFocus: false, // 窗口聚焦时不自动重新获取
+    },
+  },
+});
 
 // 懒加载组件 - 减少初始包大小，提升首屏加载速度
 const Home = lazy(() => import('./pages/Home'));
@@ -229,21 +242,23 @@ const LanguageRoutes: React.FC = () => {
 
 function App() {
   return (
-    <LanguageProvider>
-      <CookieProvider>
-        <AuthProvider>
-          <UnreadMessageProvider>
-            <Router>
-              <LanguageMetaManager />
-              <FaviconManager />
-              <ScrollToTop />
-              <LanguageRoutes />
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <CookieProvider>
+          <AuthProvider>
+            <UnreadMessageProvider>
+              <Router>
+                <LanguageMetaManager />
+                <FaviconManager />
+                <ScrollToTop />
+                <LanguageRoutes />
               <CookieManager />
-            </Router>
-          </UnreadMessageProvider>
-        </AuthProvider>
-      </CookieProvider>
-    </LanguageProvider>
+              </Router>
+            </UnreadMessageProvider>
+          </AuthProvider>
+        </CookieProvider>
+      </LanguageProvider>
+    </QueryClientProvider>
   );
 }
 

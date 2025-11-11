@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, sendMessage, getTaskApplications, approveApplication, getUserApplications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, logout, getPublicSystemSettings, fetchTasks } from '../api';
+import { prefetchTaskDetail, prefetchUserInfo } from '../utils/preloadUtils';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -391,10 +392,29 @@ const TaskDetail: React.FC = () => {
 
   // 加载任务数据
   useEffect(() => {
+    if (!id) return;
+    
     setLoading(true);
+    
+    // P1 优化：预取用户信息（在任务加载时预取）
+    prefetchUserInfo();
+    
     api.get(`/api/tasks/${id}`)
       .then(res => {
         setTask(res.data);
+        
+        // P1 优化：预取相关数据（推荐任务等）
+        if (res.data) {
+          // 预取推荐任务（如果任务详情加载成功）
+          if (res.data.task_type || res.data.location) {
+            // 预取同类型任务（示例：预取下一个任务）
+            const nextTaskId = parseInt(id || '0') + 1;
+            if (nextTaskId > 0) {
+              prefetchTaskDetail(nextTaskId);
+            }
+          }
+        }
+        
         // 如果任务已完成，加载评价
         if (res.data.status === 'completed') {
           loadTaskReviews();
@@ -2667,13 +2687,7 @@ const TaskDetail: React.FC = () => {
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <span style={{
-                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}>
-                  {language === 'zh' ? '你可能感兴趣' : 'You May Also Like'}
-                </span>
+                {language === 'zh' ? '你可能感兴趣' : 'You May Also Like'}
               </h3>
               
               <div style={{
@@ -2714,7 +2728,7 @@ const TaskDetail: React.FC = () => {
                   return (
                     <div
                       key={recommendedTask.id}
-                      onClick={() => navigate(`/task/${recommendedTask.id}`)}
+                      onClick={() => navigate(`/tasks/${recommendedTask.id}`)}
                       style={{
                         minWidth: '280px',
                         maxWidth: '280px',

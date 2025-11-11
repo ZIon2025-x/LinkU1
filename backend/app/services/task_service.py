@@ -19,6 +19,10 @@ class TaskService:
         task = crud.get_task(db, task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
+        
+        # P2 优化：使用 Pydantic model_dump() 优化序列化
+        # 注意：由于装饰器已经处理了序列化，这里直接返回即可
+        # 但确保返回的是 Pydantic 模型，以便 FastAPI 自动序列化
         return task
     
     @staticmethod

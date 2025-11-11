@@ -342,9 +342,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setApplyMessage('');
   };
   
-  // P0 优化：提交申请 - 乐观更新（立即反馈）
+  // P0 优化：提交申请 - 乐观更新（立即反馈）+ 输入验证增强
   const handleSubmitApplication = useCallback(async () => {
     if (!taskId || !task) return;
+    
+    // P0 优化：输入验证增强 - 验证申请消息长度
+    const MAX_MESSAGE_LENGTH = 1000; // 最大长度限制
+    if (applyMessage && applyMessage.length > MAX_MESSAGE_LENGTH) {
+      alert(`申请消息过长，最多允许 ${MAX_MESSAGE_LENGTH} 个字符，当前 ${applyMessage.length} 个字符`);
+      return;
+    }
     
     // 验证议价金额：如果勾选了议价，金额必须大于0
     if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
@@ -503,6 +510,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     if (reviewRating < 1 || reviewRating > 5) {
       alert(t('taskDetail.selectValidRating'));
+      return;
+    }
+    
+    // P0 优化：输入验证增强 - 验证评价内容长度
+    const MAX_REVIEW_LENGTH = 2000; // 最大长度限制
+    if (reviewComment && reviewComment.length > MAX_REVIEW_LENGTH) {
+      alert(`评价内容过长，最多允许 ${MAX_REVIEW_LENGTH} 个字符，当前 ${reviewComment.length} 个字符`);
       return;
     }
     setActionLoading(true);
@@ -1850,6 +1864,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder={t('taskDetail.reviewModal.commentPlaceholder')}
+                  maxLength={2000} // P0 优化：输入验证增强 - 最大长度限制
                   style={{
                     width: '100%',
                     minHeight: 100,
@@ -1860,6 +1875,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     resize: 'vertical'
                   }}
                 />
+                {/* P0 优化：显示字符计数 */}
+                <div style={{ fontSize: 12, color: '#666', textAlign: 'right', marginTop: 4 }}>
+                  {reviewComment.length} / 2000
+                </div>
               </div>
 
               <div style={{marginBottom: 24}}>
@@ -1991,6 +2010,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   value={applyMessage}
                   onChange={(e) => setApplyMessage(e.target.value)}
                   placeholder="请输入申请留言..."
+                  maxLength={1000} // P0 优化：输入验证增强 - 最大长度限制
                   style={{
                     width: '100%',
                     minHeight: '100px',
@@ -2010,6 +2030,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
                 />
+                {/* P0 优化：显示字符计数 */}
+                <div style={{ fontSize: 12, color: '#666', textAlign: 'right', marginTop: 4 }}>
+                  {applyMessage.length} / 1000
+                </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
@@ -2383,6 +2407,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 value={messageContent}
                 onChange={(e) => setMessageContent(e.target.value)}
                 placeholder="请输入留言内容..."
+                maxLength={1000} // P0 优化：输入验证增强 - 最大长度限制
                 style={{
                   width: '100%',
                   minHeight: '100px',
@@ -2403,6 +2428,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   e.currentTarget.style.borderColor = '#e5e7eb';
                 }}
               />
+              {/* P0 优化：显示字符计数 */}
+              <div style={{ fontSize: 12, color: '#666', textAlign: 'right', marginTop: 4 }}>
+                {messageContent.length} / 1000
+              </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
