@@ -44,6 +44,11 @@ def cache_task_detail_sync(ttl: int = 300):
                 try:
                     cached = redis_client.get(cache_key)
                     if cached:
+                        # P1 优化：防止缓存穿透 - 检查是否是空值标记
+                        if cached == b"__NULL__" or cached == "__NULL__":
+                            # 空值标记，返回 None（防止穿透）
+                            return None
+                        
                         # 使用 orjson 反序列化
                         cached_dict = orjson.loads(cached)
                         # 从 dict 重建 Pydantic model
@@ -52,25 +57,38 @@ def cache_task_detail_sync(ttl: int = 300):
                 except Exception as e:
                     logger.warning(f"缓存反序列化失败: {e}")
             
+            # P1 优化：防止缓存雪崩 - 使用随机 TTL（±10%）
+            import random
+            actual_ttl = int(ttl * (1 + random.uniform(-0.1, 0.1)))
+            
             # 从数据库查询
             result = func(*args, **kwargs)
             
             # 写入缓存 - 只缓存 Pydantic model 的 dict
-            if redis_client and result:
+            if redis_client:
                 try:
-                    # 使用 model_dump() 获取 dict，然后用 orjson 序列化
-                    if hasattr(result, 'model_dump'):
-                        cache_data = result.model_dump()
-                    elif hasattr(result, 'dict'):
-                        cache_data = result.dict()
+                    if result:
+                        # 使用 model_dump() 获取 dict，然后用 orjson 序列化
+                        if hasattr(result, 'model_dump'):
+                            cache_data = result.model_dump()
+                        elif hasattr(result, 'dict'):
+                            cache_data = result.dict()
+                        else:
+                            cache_data = result
+                        
+                        redis_client.setex(
+                            cache_key,
+                            actual_ttl,  # 使用随机 TTL 防止雪崩
+                            orjson.dumps(cache_data)
+                        )
                     else:
-                        cache_data = result
-                    
-                    redis_client.setex(
-                        cache_key,
-                        ttl,
-                        orjson.dumps(cache_data)
-                    )
+                        # P1 优化：防止缓存穿透 - 缓存空值（较短 TTL）
+                        # 空结果也缓存，避免频繁查询数据库
+                        redis_client.setex(
+                            cache_key,
+                            min(60, actual_ttl // 5),  # 空值缓存时间较短
+                            "__NULL__"
+                        )
                 except Exception as e:
                     logger.warning(f"缓存写入失败: {e}")
             

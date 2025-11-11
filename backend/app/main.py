@@ -19,6 +19,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.websockets import WebSocketState
 from fastapi.responses import JSONResponse
@@ -68,6 +69,10 @@ app.add_middleware(
     allow_methods=Config.ALLOWED_METHODS,
     allow_headers=Config.ALLOWED_HEADERS,
 )
+
+# P2 优化：添加 GZip 响应压缩中间件
+# 压缩大于 1000 字节的响应，减少带宽使用
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # 安全中间件 - 必须在CORS中间件之后
 from app.middleware.security import security_headers_middleware

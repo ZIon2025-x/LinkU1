@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
 import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -8,6 +8,14 @@ import LoginModal from './LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
+import { useDebounce } from '../hooks/useDebounce';
+import { useThrottle } from '../hooks/useThrottle';
+import {
+  MODAL_OVERLAY_STYLE,
+  LOADING_CONTAINER_STYLE,
+  ERROR_CONTAINER_STYLE,
+  CLOSE_BUTTON_STYLE
+} from './TaskDetailModal.styles';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -60,15 +68,20 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [messageNegotiatedPrice, setMessageNegotiatedPrice] = useState<number | undefined>();
   const [isMessageNegotiateChecked, setIsMessageNegotiateChecked] = useState(false);
 
-  // 加载任务评价
+  // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
+  const [isPending, startTransition] = useTransition();
+
+  // 加载任务评价 - 使用低优先级渲染
   const loadTaskReviews = useCallback(async () => {
     if (!taskId) return;
-    try {
-      const reviewsData = await getTaskReviews(taskId);
-      setReviews(reviewsData);
-    } catch (error) {
-      console.error('加载评价失败:', error);
-    }
+    // P0 优化：使用 startTransition 包装非关键操作（promise 链）
+    startTransition(() => {
+      getTaskReviews(taskId)
+        .then(setReviews)
+        .catch(error => {
+          console.error('加载评价失败:', error);
+        });
+    });
   }, [taskId]);
 
   // 加载申请者列表
@@ -91,7 +104,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   // AbortController 用于取消请求
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  // 加载任务数据函数 - 使用 useCallback 缓存，支持取消
+  // P0 优化：并行加载数据（Promise.allSettled）
   const loadTaskData = useCallback(async () => {
     if (!taskId) return;
     
@@ -108,44 +121,51 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setError('');
     
     try {
-      const res = await api.get(`/api/tasks/${taskId}`, {
-        signal: abortController.signal
-      });
+      // P0 优化：并行加载任务数据和用户信息
+      const [taskRes, userRes] = await Promise.allSettled([
+        api.get(`/api/tasks/${taskId}`, {
+          signal: abortController.signal
+        }),
+        fetchCurrentUser().catch(() => null) // 用户信息加载失败不影响任务显示
+      ]);
       
       // 检查是否已取消
       if (abortController.signal.aborted) {
         return;
       }
       
-      setTask(res.data);
+      // 处理任务数据
+      if (taskRes.status === 'fulfilled') {
+        setTask(taskRes.value.data);
+        
+        // 如果任务已完成，异步加载评价（非关键数据）
+        if (taskRes.value.data.status === 'completed') {
+          loadTaskReviews().catch(err => console.error('加载评价失败:', err));
+        }
+      } else {
+        const error = taskRes.reason;
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
+          console.error('获取任务详情失败:', error);
+          setError(t('taskDetail.taskNotFound'));
+        }
+      }
       
-      // 如果任务已完成，加载评价
-      if (res.data.status === 'completed') {
-        loadTaskReviews();
+      // 处理用户数据
+      if (userRes.status === 'fulfilled' && userRes.value && !abortController.signal.aborted) {
+        setUser(userRes.value);
+      } else if (userRes.status === 'rejected' && !abortController.signal.aborted) {
+        setUser(null);
       }
     } catch (error: any) {
       // 忽略取消错误
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
         return;
       }
-      console.error('获取任务详情失败:', error);
-      console.error('错误详情:', error.response?.data);
+      console.error('加载数据失败:', error);
       setError(t('taskDetail.taskNotFound'));
     } finally {
       if (!abortController.signal.aborted) {
         setLoading(false);
-      }
-    }
-    
-    // 加载用户信息（也支持取消）
-    try {
-      const userData = await fetchCurrentUser();
-      if (!abortController.signal.aborted) {
-        setUser(userData);
-      }
-    } catch (error: any) {
-      if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
-        setUser(null);
       }
     }
   }, [taskId, t, loadTaskReviews]);
@@ -226,8 +246,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   };
 
+  // P0 优化：使用 useMemo 缓存复杂计算
   // 检查用户等级是否满足任务等级要求
-  const canViewTask = (user: any, task: any) => {
+  const canViewTask = useMemo(() => {
     if (!task) return false;
     
     // 如果用户未登录，只能查看普通任务
@@ -251,7 +272,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     const taskLevelValue = levelHierarchy[task.task_level as keyof typeof levelHierarchy] || 1;
     
     return userLevelValue >= taskLevelValue;
-  };
+  }, [user, task]);
 
   // 检查用户是否已接受任务
   const hasAcceptedTask = (user: any, task: any) => {
@@ -264,7 +285,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setTranslatedDescription(null);
   }, [task, language]);
 
-  const handleApproveApplication = async (applicationId: number) => {
+  // P0 优化：使用 useCallback 缓存函数
+  const handleApproveApplication = useCallback(async (applicationId: number) => {
     if (!window.confirm(t('taskDetail.confirmApprove'))) {
       return;
     }
@@ -284,9 +306,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [taskId, t, loadApplications]);
 
-  const handleRejectApplication = async (applicationId: number) => {
+  const handleRejectApplication = useCallback(async (applicationId: number) => {
     if (!window.confirm(t('taskDetail.confirmRejectApplication'))) {
       return;
     }
@@ -304,7 +326,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [taskId, t, loadApplications]);
 
   const handleAcceptTask = () => {
     if (!user) {
@@ -320,17 +342,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     setApplyMessage('');
   };
   
-  // 提交申请
-  const handleSubmitApplication = async () => {
-    if (!taskId) return;
+  // P0 优化：提交申请 - 乐观更新（立即反馈）
+  const handleSubmitApplication = useCallback(async () => {
+    if (!taskId || !task) return;
     
     // 验证议价金额：如果勾选了议价，金额必须大于0
     if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
       alert('如果选择议价，请输入大于0的议价金额');
       return;
     }
-    
-    if (!task) return;
     
     const currency = task?.currency || 'GBP';
     const baseReward = task?.base_reward ?? task?.reward ?? 0;
@@ -351,9 +371,22 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       }
     }
     
+    // P0 优化：乐观更新 - 立即更新 UI
+    const previousTask = { ...task };
+    const previousHasApplied = hasApplied;
+    
+    // 1. 立即更新 UI（乐观更新）
+    setHasApplied(true);
+    setShowApplyModal(false);
+    setApplyMessage('');
+    setNegotiatedPrice(undefined);
+    setIsNegotiateChecked(false);
+    
+    // 2. 显示加载状态（但 UI 已更新）
     setActionLoading(true);
+    
     try {
-      
+      // 3. 后台执行 API 调用
       await applyForTask(
         taskId,
         applyMessage || undefined,
@@ -361,40 +394,34 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         currency
       );
       
-      alert(t('taskDetail.taskApplySuccess'));
-      
-      // 隐藏申请按钮
-      setHasApplied(true);
-      
-      // 关闭弹窗
-      setShowApplyModal(false);
-      setApplyMessage('');
-      setNegotiatedPrice(undefined);
-      setIsNegotiateChecked(false);
-      
-      // 重新获取任务信息
+      // 4. 刷新数据确保一致性
       const res = await api.get(`/api/tasks/${taskId}`);
       setTask(res.data);
+      
+      alert(t('taskDetail.taskApplySuccess'));
     } catch (error: any) {
+      // 5. 如果失败，回滚到之前的状态
+      setTask(previousTask);
+      setHasApplied(previousHasApplied);
+      
       console.error('申请任务失败:', error);
       
       // 重新获取任务信息以更新状态
       try {
         const res = await api.get(`/api/tasks/${taskId}`);
         setTask(res.data);
-        
-        // 检查是否已经申请过
-        alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
       } catch (refreshError) {
         console.error('重新获取任务信息失败:', refreshError);
-        alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
       }
+      
+      alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [taskId, task, isNegotiateChecked, negotiatedPrice, applyMessage, hasApplied, t]);
 
-  const handleCompleteTask = async () => {
+  // P0 优化：使用 useCallback 缓存函数
+  const handleCompleteTask = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -410,9 +437,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user, taskId, t]);
 
-  const handleConfirmCompletion = async () => {
+  const handleConfirmCompletion = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -428,10 +455,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user, taskId, t]);
 
-
-  const handleApproveTaker = async () => {
+  const handleApproveTaker = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -447,9 +473,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user, taskId, t]);
 
-  const handleRejectTaker = async () => {
+  const handleRejectTaker = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -468,9 +494,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user, taskId, t]);
 
-  const handleSubmitReview = async () => {
+  const handleSubmitReview = useCallback(async () => {
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -506,138 +532,64 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  };
+  }, [user, taskId, reviewRating, reviewComment, isAnonymous, task, t, loadTaskReviews, checkUserApplication, loadTaskData]);
 
-  const canReview = () => {
+  // P0 优化：使用 useMemo 缓存计算结果
+  const canReview = useMemo(() => {
     if (!user || !task) return false;
     return (task.poster_id === user.id || task.taker_id === user.id) && task.status === 'completed';
-  };
+  }, [user, task]);
 
-  const hasUserReviewed = () => {
+  const hasUserReviewed = useMemo(() => {
     if (!user || !task) {
       return false;
     }
     // 直接从 reviews 数组中查找当前用户的评价
     const userReview = reviews.find(review => review.user_id === user.id);
-    const hasReviewed = !!userReview;
-    return hasReviewed;
-  };
+    return !!userReview;
+  }, [user, task, reviews]);
 
-  // 如果弹窗未打开，不渲染任何内容
-  if (!isOpen) return null;
-
-  if (loading) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px'
-      }}>
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '16px',
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '400px',
-          width: '100%'
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
-          <div style={{ fontSize: 18, color: '#333' }}>{t('taskDetail.loading')}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !task) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px'
-      }}>
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: '16px',
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '400px',
-          width: '100%'
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 20, color: 'red' }}>❌</div>
-          <div style={{ fontSize: 18, color: 'red', marginBottom: 20 }}>{error || t('taskDetail.taskNotFound')}</div>
-          <button
-            onClick={onClose}
-            style={{
-              background: '#3b82f6',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '16px',
-              cursor: 'pointer'
-            }}
-          >
-            {t('taskDetail.close')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const isTaskPoster = user && user.id === task.poster_id;
-  const isTaskTaker = user && user.id === task.taker_id;
+  // P0 优化：使用 useMemo 缓存计算结果（必须在早期返回之前调用）
+  const isTaskPoster = useMemo(() => user && user.id === task?.poster_id, [user, task]);
+  const isTaskTaker = useMemo(() => user && user.id === task?.taker_id, [user, task]);
+  
   // 是否可以显示申请按钮（包括未登录用户）
-  const canShowApplyButton = (task.status === 'open' || task.status === 'taken') && 
-    canViewTask(user, task) &&
-    (!user || user.id !== task.poster_id) && // 未登录或不是发布者
-    !userApplication && // 如果已经申请过，不能再次申请
-    !hasApplied; // 如果已经申请过，隐藏按钮
+  const canShowApplyButton = useMemo(() => {
+    if (!task) return false;
+    return (task.status === 'open' || task.status === 'taken') && 
+      canViewTask &&
+      (!user || user.id !== task.poster_id) && // 未登录或不是发布者
+      !userApplication && // 如果已经申请过，不能再次申请
+      !hasApplied; // 如果已经申请过，隐藏按钮
+  }, [task, canViewTask, user, userApplication, hasApplied]);
 
   // 是否可以申请任务（需要登录）
-  const canAcceptTask = user && 
-    user.id !== task.poster_id && 
-    (task.status === 'open' || task.status === 'taken') && 
-    canViewTask(user, task) &&
-    !userApplication &&
-    !hasApplied;
+  const canAcceptTask = useMemo(() => {
+    if (!user || !task) return false;
+    return user.id !== task.poster_id && 
+      (task.status === 'open' || task.status === 'taken') && 
+      canViewTask &&
+      !userApplication &&
+      !hasApplied;
+  }, [user, task, canViewTask, userApplication, hasApplied]);
 
   // 判断是否应该对非相关用户隐藏真实状态（显示为open）
-  const shouldHideStatus = () => {
+  const shouldHideStatus = useMemo(() => {
     if (!task || !user) return false;
     const isPoster = task.poster_id === user.id;
     const isTaker = task.taker_id === user.id;
     const isApplicant = hasApplied || userApplication;
     
     // 如果用户不是发布者、接收者或申请者，且状态是taken，应显示为open
-    if (!isPoster && !isTaker && !isApplicant && task.status === 'taken') {
-      return true;
-    }
-    return false;
-  };
+    return !isPoster && !isTaker && !isApplicant && task.status === 'taken';
+  }, [task, user, hasApplied, userApplication]);
 
-  const getStatusText = (status: string) => {
+  // P0 优化：使用 useMemo 缓存状态文本转换
+  const getStatusText = useCallback((status: string) => {
     // 对非相关用户，taken状态显示为open
-    if (shouldHideStatus()) {
-      status = 'open';
-    }
+    const actualStatus = shouldHideStatus ? 'open' : status;
     
-    switch (status) {
+    switch (actualStatus) {
       case 'open': return t('myTasks.taskStatus.open');
       case 'taken': return t('myTasks.taskStatus.taken');
       case 'in_progress': return t('myTasks.taskStatus.in_progress');
@@ -646,9 +598,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       case 'cancelled': return t('myTasks.taskStatus.cancelled');
       default: return status;
     }
-  };
+  }, [shouldHideStatus, t]);
 
-  const getTaskLevelText = (level: string) => {
+  const getTaskLevelText = useCallback((level: string) => {
     switch (level) {
       case 'vip':
         return '⭐ VIP';
@@ -657,10 +609,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       default:
         return t('myTasks.taskLevel.normal');
     }
-  };
+  }, [t]);
 
-  // 翻译标题
-  const handleTranslateTitle = async () => {
+  // P0 优化：翻译标题 - 使用 useCallback 和 useTransition
+  const handleTranslateTitle = useCallback(async () => {
     if (!task || !task.title) {
       console.log('翻译标题: 任务或标题不存在');
       return;
@@ -675,32 +627,38 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     
     console.log('翻译标题: 开始翻译', { title: task.title, language, task });
     setIsTranslatingTitle(true);
-    try {
+    
+    // P0 优化：使用 startTransition 包装非关键操作
+    startTransition(() => {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.title);
-      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
         console.log('翻译标题: 文本语言和界面语言相同，无需翻译');
         setTranslatedTitle(null);
+        setIsTranslatingTitle(false);
         return;
       }
-      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      // 目标语言就是当前界面语言
       const targetLang = language;
       console.log('翻译标题: 调用translate函数', { title: task.title, textLang, targetLang });
-      const translated = await translate(task.title, targetLang, textLang);
-      console.log('翻译标题: 翻译成功', { original: task.title, translated });
-      setTranslatedTitle(translated);
-    } catch (error: any) {
-      console.error('翻译标题失败:', error);
-      console.error('错误详情:', error.response?.data);
-      alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
-    } finally {
-      setIsTranslatingTitle(false);
-    }
-  };
+      translate(task.title, targetLang, textLang)
+        .then(translated => {
+          console.log('翻译标题: 翻译成功', { original: task.title, translated });
+          setTranslatedTitle(translated);
+        })
+        .catch((error: any) => {
+          console.error('翻译标题失败:', error);
+          alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
+        })
+        .finally(() => {
+          setIsTranslatingTitle(false);
+        });
+    });
+  }, [task, translatedTitle, language, translate]);
 
-  // 翻译描述
-  const handleTranslateDescription = async () => {
+  // P0 优化：翻译描述 - 使用 useCallback 和 useTransition
+  const handleTranslateDescription = useCallback(async () => {
     if (!task || !task.description) {
       console.log('翻译描述: 任务或描述不存在');
       return;
@@ -715,29 +673,67 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     
     console.log('翻译描述: 开始翻译', { description: task.description.substring(0, 50), language });
     setIsTranslatingDescription(true);
-    try {
+    
+    // P0 优化：使用 startTransition 包装非关键操作
+    startTransition(() => {
       // 检测文本语言，然后翻译成当前界面语言
       const textLang = detectTextLanguage(task.description);
-      // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
+      // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
         console.log('翻译描述: 文本语言和界面语言相同，无需翻译');
         setTranslatedDescription(null);
+        setIsTranslatingDescription(false);
         return;
       }
-      // 目标语言就是当前界面语言（这样用户就能看到自己语言版本的文本）
+      // 目标语言就是当前界面语言
       const targetLang = language;
       console.log('翻译描述: 调用translate函数', { textLang, targetLang });
-      const translated = await translate(task.description, targetLang, textLang);
-      console.log('翻译描述: 翻译成功', { translated: translated.substring(0, 50) });
-      setTranslatedDescription(translated);
-    } catch (error: any) {
-      console.error('翻译描述失败:', error);
-      console.error('错误详情:', error.response?.data);
-      alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
-    } finally {
-      setIsTranslatingDescription(false);
-    }
-  };
+      translate(task.description, targetLang, textLang)
+        .then(translated => {
+          console.log('翻译描述: 翻译成功', { translated: translated.substring(0, 50) });
+          setTranslatedDescription(translated);
+        })
+        .catch((error: any) => {
+          console.error('翻译描述失败:', error);
+          alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
+        })
+        .finally(() => {
+          setIsTranslatingDescription(false);
+        });
+    });
+  }, [task, translatedDescription, language, translate]);
+
+  // 如果弹窗未打开，不渲染任何内容（必须在所有 Hooks 之后）
+  if (!isOpen) return null;
+
+  // P0 优化：使用提取的样式常量
+  if (loading) {
+    return (
+      <div style={MODAL_OVERLAY_STYLE}>
+        <div style={LOADING_CONTAINER_STYLE}>
+          <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
+          <div style={{ fontSize: 18, color: '#333' }}>{t('taskDetail.loading')}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !task) {
+    return (
+      <div style={MODAL_OVERLAY_STYLE}>
+        <div style={ERROR_CONTAINER_STYLE}>
+          <div style={{ fontSize: 48, marginBottom: 20, color: 'red' }}>❌</div>
+          <div style={{ fontSize: 18, color: 'red', marginBottom: 20 }}>{error || t('taskDetail.taskNotFound')}</div>
+          <button
+            onClick={onClose}
+            style={CLOSE_BUTTON_STYLE}
+          >
+            {t('taskDetail.close')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 简单的语言检测：检查是否包含中文字符
   const detectTextLanguage = (text: string): 'zh' | 'en' => {
@@ -787,7 +783,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   };
 
   // 如果用户等级不满足任务等级要求，显示权限不足页面
-  if (task && !canViewTask(user, task)) {
+  if (task && !canViewTask) {
     return (
       <div style={{
         position: 'fixed',
@@ -1097,15 +1093,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 borderRadius: '16px',
                 fontSize: '12px',
                 fontWeight: '600',
-                background: shouldHideStatus() ? '#d1fae5' :
+                background: shouldHideStatus ? '#d1fae5' :
                            (task.status === 'open' || task.status === 'taken') ? '#d1fae5' : 
                            task.status === 'in_progress' ? '#dbeafe' :
                            task.status === 'completed' ? '#d1fae5' : '#fee2e2',
-                color: shouldHideStatus() ? '#065f46' :
+                color: shouldHideStatus ? '#065f46' :
                        (task.status === 'open' || task.status === 'taken') ? '#065f46' : 
                        task.status === 'in_progress' ? '#1e40af' :
                        task.status === 'completed' ? '#065f46' : '#991b1b',
-                border: `1px solid ${shouldHideStatus() ? '#a7f3d0' :
+                border: `1px solid ${shouldHideStatus ? '#a7f3d0' :
                                    (task.status === 'open' || task.status === 'taken') ? '#a7f3d0' : 
                                    task.status === 'in_progress' ? '#93c5fd' :
                                    task.status === 'completed' ? '#a7f3d0' : '#fecaca'}`
@@ -1493,7 +1489,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                   {userApplication.status === 'pending' ? t('taskDetail.waitingApprovalDesc') :
                    userApplication.status === 'approved' ? 
                      (task.status === 'completed' ? 
-                       (canReview() && !hasUserReviewed() ? t('taskDetail.completedNeedReview') : t('taskDetail.taskCompletedDesc')) :
+                       (canReview && !hasUserReviewed ? t('taskDetail.completedNeedReview') : t('taskDetail.taskCompletedDesc')) :
                       task.status === 'pending_confirmation' ? 
                        (isTaskTaker ? t('taskDetail.taskCompletedDesc') : t('taskDetail.waitingConfirmationDesc')) : 
                        t('taskDetail.applicationPassedDesc')) :
@@ -1761,7 +1757,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
           )}
 
           {/* 评价按钮 */}
-          {canReview() && !hasUserReviewed() && (
+          {canReview && !hasUserReviewed && (
             <button
               onClick={() => setShowReviewModal(true)}
               style={{
@@ -2594,4 +2590,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   );
 };
 
-export default TaskDetailModal;
+// P0 优化：使用 React.memo 包装组件，减少不必要的重渲染
+export default React.memo(TaskDetailModal, (prevProps, nextProps) => {
+  // 自定义比较函数：只在关键 props 改变时重渲染
+  return (
+    prevProps.isOpen === nextProps.isOpen &&
+    prevProps.taskId === nextProps.taskId &&
+    prevProps.onClose === nextProps.onClose
+  );
+});
