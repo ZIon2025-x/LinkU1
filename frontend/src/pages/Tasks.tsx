@@ -24,6 +24,11 @@ dayjs.extend(timezone);
 
 // 添加可爱的动画样式
 const bellStyles = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
   @keyframes bellShake {
     0%, 100% { transform: rotate(0deg); }
     10%, 30%, 50%, 70%, 90% { transform: rotate(5deg); }
@@ -357,6 +362,9 @@ const Tasks: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
   const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
   const [sortBy, setSortBy] = useState('latest'); // latest, reward_asc, reward_desc, deadline_asc, deadline_desc
   const [rewardSort, setRewardSort] = useState(''); // '', 'asc', 'desc'
@@ -768,17 +776,27 @@ const Tasks: React.FC = () => {
   }, [t]);
 
   // 加载任务列表 - 使用缓存和防抖优化
-  const loadTasks = useCallback(async () => {
-    setLoading(true);
+  const loadTasks = useCallback(async (isLoadMore = false, targetPage?: number) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setPage(1); // 重置页码
+      setHasMore(true);
+    }
+    
     try {
       // 使用优化后的 fetchTasks，它已经包含了缓存和防抖
       // 使用防抖后的关键词，确保搜索更稳定
       const searchKeyword = debouncedKeyword.trim() || keyword.trim() || undefined;
+      // 如果是加载更多，使用传入的页码或当前页码+1
+      const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
+      
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
         city: city !== 'all' ? city : undefined,
         keyword: searchKeyword,
-        page: page,
+        page: currentPage,
         pageSize: pageSize
       });
       
@@ -801,23 +819,82 @@ const Tasks: React.FC = () => {
         return task;
       });
       
-      setTasks(tasksList);
+      if (isLoadMore) {
+        // 追加任务
+        setTasks(prev => [...prev, ...tasksList]);
+        // 更新页码
+        setPage(currentPage);
+      } else {
+        // 替换任务列表
+        setTasks(tasksList);
+        setPage(1);
+      }
+      
       setTotal(data.total || 0);
+      
+      // 判断是否还有更多任务
+      const totalPages = Math.ceil((data.total || 0) / pageSize);
+      setHasMore(currentPage < totalPages && tasksList.length > 0);
     } catch (error) {
-      setTasks([]);
-      setTotal(0);
+      if (!isLoadMore) {
+        setTasks([]);
+        setTotal(0);
+      }
+      setHasMore(false);
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy]);
+  
+  // 加载更多任务
+  const loadMoreTasks = useCallback(() => {
+    if (!loadingMore && !loading && hasMore) {
+      loadTasks(true);
+    }
+  }, [loadingMore, loading, hasMore, loadTasks]);
 
   useEffect(() => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
     if (cityInitialized) {
-      loadTasks();
+      loadTasks(false); // 初始加载，不是加载更多
     }
-  }, [page, type, city, debouncedKeyword, sortBy, loadTasks, cityInitialized]);
+  }, [type, city, debouncedKeyword, sortBy, cityInitialized]); // 移除page依赖，因为loadTasks内部会重置page
+  
+  // 滚动监听，实现无限滚动
+  useEffect(() => {
+    const handleScroll = () => {
+      if (loadingMore || loading || !hasMore) return;
+      
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      // 当滚动到距离底部200px时，开始加载更多
+      if (scrollTop + windowHeight >= documentHeight - 200) {
+        loadMoreTasks();
+      }
+    };
+    
+    // 使用节流优化滚动事件
+    let ticking = false;
+    const throttledHandleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', throttledHandleScroll);
+  }, [loadingMore, loading, hasMore, loadMoreTasks]);
 
   // 点击外部关闭下拉菜单
   useEffect(() => {
@@ -2604,88 +2681,52 @@ const Tasks: React.FC = () => {
             )}
           </div>
 
-          {/* 分页 */}
-          {total > pageSize && (
-            <div className="pagination" style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '12px',
-              marginTop: '32px',
-              padding: '16px',
-              background: '#fff',
-              borderRadius: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-            }}>
-              <button
-                onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                disabled={page === 1}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: page === 1 ? '#f3f4f6' : '#3b82f6',
-                  color: page === 1 ? '#9ca3af' : '#fff',
-                  cursor: page === 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                ← 上一页
-              </button>
-              
-              <div className="page-numbers" style={{
+          {/* 滚动加载提示 */}
+          <div ref={scrollContainerRef}>
+            {loadingMore && (
+              <div style={{
                 display: 'flex',
+                justifyContent: 'center',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '0 16px'
+                padding: '32px',
+                marginTop: '24px'
               }}>
-                {Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => {
-                  const pageNum = i + 1;
-                  const isActive = pageNum === page;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: 'none',
-                        borderRadius: '6px',
-                        background: isActive ? '#3b82f6' : 'transparent',
-                        color: isActive ? '#fff' : '#6b7280',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#6b7280'
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #e5e7eb',
+                    borderTopColor: '#3b82f6',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <span style={{ fontSize: '14px' }}>
+                    {language === 'zh' ? '加载更多任务...' : 'Loading more tasks...'}
+                  </span>
+                </div>
               </div>
-              
-              <button
-                onClick={() => setPage(prev => prev + 1)}
-                disabled={page >= Math.ceil(total / pageSize)}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: page >= Math.ceil(total / pageSize) ? '#f3f4f6' : '#3b82f6',
-                  color: page >= Math.ceil(total / pageSize) ? '#9ca3af' : '#fff',
-                  cursor: page >= Math.ceil(total / pageSize) ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                下一页 →
-              </button>
-            </div>
-          )}
+            )}
+            
+            {!hasMore && tasks.length > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: '32px',
+                marginTop: '24px',
+                color: '#9ca3af',
+                fontSize: '14px'
+              }}>
+                {language === 'zh' ? '没有更多任务了' : 'No more tasks'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
