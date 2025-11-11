@@ -3,6 +3,7 @@
  * 捕获子组件的错误，防止整个应用崩溃
  */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import ErrorFallback from './ErrorFallback';
 
 interface Props {
   children: ReactNode;
@@ -57,35 +58,8 @@ class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
       
-      // 默认错误 UI
-      return (
-        <div style={{
-          padding: '40px',
-          textAlign: 'center',
-          color: '#ef4444'
-        }}>
-          <h2 style={{ marginBottom: '16px' }}>出错了</h2>
-          <p style={{ marginBottom: '24px', color: '#6b7280' }}>
-            {this.state.error?.message || '发生了未知错误'}
-          </p>
-          <button
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              window.location.reload();
-            }}
-            style={{
-              padding: '10px 20px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            刷新页面
-          </button>
-        </div>
-      );
+      // 默认错误 UI - 使用统一的错误提示组件
+      return <ErrorFallback />;
     }
 
     return this.props.children;

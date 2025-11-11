@@ -2264,6 +2264,12 @@
       "messageSent": "Message sent",
       "sendMessageFailed": "Failed to send message, please try again"
     },
+    "errors": {
+      "loadingProblem": "There is a loading problem, please refresh again",
+      "pageLoadError": "Page load error",
+      "componentLoadError": "Component load failed",
+      "appInitError": "Application initialization failed"
+    },
     "noActiveChat": "No active customer service chat, cannot end conversation",
     "chatEndedThankYou": "Chat ended, thank you for using our service!",
     "chatEndedReset": "Chat ended, status has been reset",

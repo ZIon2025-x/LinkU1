@@ -10,6 +10,8 @@ import QueryPreservingRedirect from './components/QueryPreservingRedirect';
 import ScrollToTop from './components/ScrollToTop';
 import FaviconManager from './components/FaviconManager';
 import LanguageMetaManager from './components/LanguageMetaManager';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorFallback from './components/ErrorFallback';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -33,31 +35,54 @@ const queryClient = new QueryClient({
 });
 
 // 懒加载组件 - 减少初始包大小，提升首屏加载速度
-const Home = lazy(() => import('./pages/Home'));
-const PublishTask = lazy(() => import('./pages/PublishTask'));
-const Profile = lazy(() => import('./pages/Profile'));
-const MessagePage = lazy(() => import('./pages/Message'));
-const TaskDetail = lazy(() => import('./pages/TaskDetail'));
-const MyTasks = lazy(() => import('./pages/MyTasks'));
-const Tasks = lazy(() => import('./pages/Tasks'));
-const UserProfile = lazy(() => import('./pages/UserProfile'));
-const TaskExperts = lazy(() => import('./pages/TaskExperts'));
-const TaskExpertsIntro = lazy(() => import('./pages/TaskExpertsIntro'));
-const CustomerService = lazy(() => import('./pages/CustomerService'));
-const CustomerServiceLogin = lazy(() => import('./pages/CustomerServiceLogin'));
-const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const VIP = lazy(() => import('./pages/VIP'));
-const Wallet = lazy(() => import('./pages/Wallet'));
-const Settings = lazy(() => import('./pages/Settings'));
-const About = lazy(() => import('./pages/About'));
-const JoinUs = lazy(() => import('./pages/JoinUs'));
-const TermsOfService = lazy(() => import('./pages/TermsOfService'));
-const FAQ = lazy(() => import('./pages/FAQ'));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-const Partners = lazy(() => import('./pages/Partners'));
-const MerchantCooperation = lazy(() => import('./pages/MerchantCooperation'));
-const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+// 添加错误处理和重试机制，防止懒加载失败导致白屏
+const lazyWithRetry = (componentImport: () => Promise<any>) => {
+  return lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('组件加载失败:', error);
+      // 如果加载失败，等待1秒后重试一次
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        return await componentImport();
+      } catch (retryError) {
+        console.error('组件重试加载失败:', retryError);
+        // 返回一个错误组件，而不是让应用崩溃
+        // 直接返回 ErrorFallback 组件，它会在渲染时使用语言上下文
+        return {
+          default: ErrorFallback
+        };
+      }
+    }
+  });
+};
+
+const Home = lazyWithRetry(() => import('./pages/Home'));
+const PublishTask = lazyWithRetry(() => import('./pages/PublishTask'));
+const Profile = lazyWithRetry(() => import('./pages/Profile'));
+const MessagePage = lazyWithRetry(() => import('./pages/Message'));
+const TaskDetail = lazyWithRetry(() => import('./pages/TaskDetail'));
+const MyTasks = lazyWithRetry(() => import('./pages/MyTasks'));
+const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
+const UserProfile = lazyWithRetry(() => import('./pages/UserProfile'));
+const TaskExperts = lazyWithRetry(() => import('./pages/TaskExperts'));
+const TaskExpertsIntro = lazyWithRetry(() => import('./pages/TaskExpertsIntro'));
+const CustomerService = lazyWithRetry(() => import('./pages/CustomerService'));
+const CustomerServiceLogin = lazyWithRetry(() => import('./pages/CustomerServiceLogin'));
+const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
+const VIP = lazyWithRetry(() => import('./pages/VIP'));
+const Wallet = lazyWithRetry(() => import('./pages/Wallet'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const About = lazyWithRetry(() => import('./pages/About'));
+const JoinUs = lazyWithRetry(() => import('./pages/JoinUs'));
+const TermsOfService = lazyWithRetry(() => import('./pages/TermsOfService'));
+const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
+const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const Partners = lazyWithRetry(() => import('./pages/Partners'));
+const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
+const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
@@ -242,23 +267,29 @@ const LanguageRoutes: React.FC = () => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <CookieProvider>
-          <AuthProvider>
-            <UnreadMessageProvider>
-              <Router>
-                <LanguageMetaManager />
-                <FaviconManager />
-                <ScrollToTop />
-                <LanguageRoutes />
-              <CookieManager />
-              </Router>
-            </UnreadMessageProvider>
-          </AuthProvider>
-        </CookieProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <ErrorBoundary
+      fallback={<ErrorFallback />}
+    >
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <CookieProvider>
+            <AuthProvider>
+              <UnreadMessageProvider>
+                <Router>
+                  <ErrorBoundary>
+                    <LanguageMetaManager />
+                    <FaviconManager />
+                    <ScrollToTop />
+                    <LanguageRoutes />
+                    <CookieManager />
+                  </ErrorBoundary>
+                </Router>
+              </UnreadMessageProvider>
+            </AuthProvider>
+          </CookieProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

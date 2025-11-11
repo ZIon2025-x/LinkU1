@@ -2159,6 +2159,12 @@
       "messageSent": "留言已发送",
       "sendMessageFailed": "发送留言失败，请重试"
     },
+    "errors": {
+      "loadingProblem": "存在加载问题，请再次刷新",
+      "pageLoadError": "页面加载出错",
+      "componentLoadError": "组件加载失败",
+      "appInitError": "应用初始化失败"
+    },
     "endChatFailed": "结束对话失败，请稍后重试",
     "thankYouForRating": "感谢您的评价！",
     "submitRatingFailed": "提交评价失败，请稍后重试",

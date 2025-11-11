@@ -1544,19 +1544,45 @@ const MessagePage: React.FC = () => {
 
   // 获取当前用户信息
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+    
     const loadUser = async () => {
       try {
-        const userData = await fetchCurrentUser();
-        setUser(userData);
-        setLoading(false);
-    } catch (error) {
+        // 设置超时，防止请求一直挂起
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('加载用户信息超时'));
+          }, 10000); // 10秒超时
+        });
+
+        const userData = await Promise.race([
+          fetchCurrentUser(),
+          timeoutPromise
+        ]) as any;
+        
+        if (isMounted) {
+          setUser(userData);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        
         console.error('Failed to load user:', error);
         setUser(null);
         setLoading(false);
         setShowLoginModal(true);
-    }
-  };
+      }
+    };
+    
     loadUser();
+    
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [navigate]);
 
   // 初始化时区信息
