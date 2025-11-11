@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import { API_BASE_URL, WS_BASE_URL } from '../config';
 import api, { 
   fetchCurrentUser, 
@@ -266,6 +266,211 @@ const getTaskImageUrl = (imageValue: string | null | undefined, baseUrl?: string
   // 其他情况直接返回
   return imageStr;
 };
+
+// 优化的任务列表项组件
+interface TaskListItemProps {
+  task: any;
+  isActive: boolean;
+  isMobile: boolean;
+  onTaskClick: (taskId: number) => void;
+  onRemoveTask: (taskId: number) => void;
+}
+
+const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTaskClick, onRemoveTask }) => {
+  const { t } = useLanguage();
+  
+  const handleClick = useCallback(() => {
+    onTaskClick(task.id);
+  }, [task.id, onTaskClick]);
+
+  const handleRemoveClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (window.confirm(t('messages.notifications.removeCompletedTask'))) {
+      onRemoveTask(task.id);
+    }
+  }, [task.id, onRemoveTask, t]);
+
+  const taskImageUrl = useMemo(() => {
+    if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
+      return getTaskImageUrl(task.images[0], API_BASE_URL) || task.images[0];
+    }
+    return null;
+  }, [task.images]);
+
+  const taskTypeEmoji = useMemo(() => getTaskTypeEmoji(task.task_type), [task.task_type]);
+
+  const lastMessageTime = useMemo(() => {
+    if (task.last_message) {
+      return dayjs(task.last_message.created_at).format('HH:mm');
+    }
+    return null;
+  }, [task.last_message]);
+
+  const itemStyle = useMemo(() => ({
+    padding: '12px 16px',
+    borderBottom: '1px solid #e5e7eb',
+    cursor: 'pointer',
+    backgroundColor: isActive ? '#eff6ff' : 'white',
+    transition: 'background-color 0.2s'
+  }), [isActive]);
+
+  const imageStyle = useMemo(() => ({
+    width: '50px',
+    height: '50px',
+    borderRadius: '8px',
+    objectFit: 'cover' as const,
+    display: 'block' as const
+  }), []);
+
+  const placeholderStyle = useMemo(() => ({
+    width: '50px',
+    height: '50px',
+    borderRadius: '8px',
+    background: '#f3f4f6',
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    fontSize: '24px',
+    color: '#6b7280'
+  }), []);
+
+  const deleteButtonStyle = useMemo(() => ({
+    background: 'transparent',
+    border: 'none',
+    color: '#ef4444',
+    fontSize: '18px',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: '4px',
+    transition: 'all 0.2s'
+  }), []);
+
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.style.display = 'none';
+    const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+    }
+  }, []);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = '#fee2e2';
+  }, []);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.background = 'transparent';
+  }, []);
+
+  return (
+    <div onClick={handleClick} style={itemStyle}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        {/* 任务图片容器 */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
+          {taskImageUrl ? (
+            <img
+              src={taskImageUrl}
+              alt={task.title}
+              style={imageStyle}
+              onError={handleImageError}
+            />
+          ) : (
+            <div style={placeholderStyle}>
+              {taskTypeEmoji}
+            </div>
+          )}
+          {/* 占位符（仅在任务图片加载失败时显示） */}
+          <div style={{
+            ...placeholderStyle,
+            display: 'none',
+            position: 'absolute',
+            top: 0,
+            left: 0
+          }}>
+            {taskTypeEmoji}
+          </div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
+          {task.last_message && (
+            <div style={{ fontSize: '14px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {task.last_message.sender_name}: {task.last_message.content}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          {task.status === 'completed' && (
+            <button
+              onClick={handleRemoveClick}
+              style={deleteButtonStyle}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              title="从列表中移除"
+            >
+              ❌
+            </button>
+          )}
+          {task.unread_count > 0 && (
+            <div style={{
+              backgroundColor: '#ef4444',
+              color: 'white',
+              borderRadius: '10px',
+              padding: '2px 8px',
+              fontSize: '12px',
+              fontWeight: 600,
+              minWidth: '20px',
+              textAlign: 'center'
+            }}>
+              {task.unread_count}
+            </div>
+          )}
+          {lastMessageTime && (
+            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+              {lastMessageTime}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // 自定义比较函数，只在关键属性变化时重新渲染
+  // 如果返回 true，表示 props 相同，跳过重新渲染
+  // 如果返回 false，表示 props 不同，需要重新渲染
+  if (prevProps.task.id !== nextProps.task.id) return false;
+  if (prevProps.task.title !== nextProps.task.title) return false;
+  if (prevProps.task.status !== nextProps.task.status) return false;
+  if (prevProps.task.unread_count !== nextProps.task.unread_count) return false;
+  if (prevProps.task.task_type !== nextProps.task.task_type) return false;
+  if (prevProps.isActive !== nextProps.isActive) return false;
+  if (prevProps.isMobile !== nextProps.isMobile) return false;
+  
+  // 比较 last_message
+  const prevMsg = prevProps.task.last_message;
+  const nextMsg = nextProps.task.last_message;
+  if (!!prevMsg !== !!nextMsg) return false; // 一个存在一个不存在
+  if (prevMsg && nextMsg) {
+    if (prevMsg.content !== nextMsg.content) return false;
+    if (prevMsg.created_at !== nextMsg.created_at) return false;
+    if (prevMsg.sender_name !== nextMsg.sender_name) return false;
+  }
+  
+  // 比较 images（简单比较数组长度和第一个元素）
+  const prevImages = prevProps.task.images;
+  const nextImages = nextProps.task.images;
+  if (!!prevImages !== !!nextImages) return false;
+  if (Array.isArray(prevImages) && Array.isArray(nextImages)) {
+    if (prevImages.length !== nextImages.length) return false;
+    if (prevImages.length > 0 && prevImages[0] !== nextImages[0]) return false;
+  }
+  
+  return true; // 所有关键属性都相同，跳过重新渲染
+});
+
+TaskListItem.displayName = 'TaskListItem';
 
 const MessagePage: React.FC = () => {
   const { t } = useLanguage();
@@ -1157,7 +1362,7 @@ const MessagePage: React.FC = () => {
       await loadTasks();
       
       // 显示成功提示
-      showToast('success', '消息已发送');
+      showToast('success', t('messages.notifications.messageSent'));
       
     } catch (error: any) {
       console.error('发送任务消息失败:', error);
@@ -1167,7 +1372,7 @@ const MessagePage: React.FC = () => {
       setInput(messageContent); // 恢复输入内容
       
       // 显示错误提示
-      showToast('error', error.response?.data?.detail || '发送消息失败，请重试');
+      showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
     } finally {
       setIsSending(false);
     }
@@ -1178,21 +1383,21 @@ const MessagePage: React.FC = () => {
     if (!activeTaskId || !user) return;
     
     // 确认提示
-    if (!window.confirm('确定已经完成任务了吗？')) {
+    if (!window.confirm(t('messages.notifications.confirmCompleteTask'))) {
       return;
     }
     
     setActionLoading(true);
     try {
       await completeTask(activeTaskId);
-      showToast('success', '任务已标记为完成，等待发布者确认！');
+      showToast('success', t('messages.notifications.taskMarkedComplete'));
       // 重新加载任务信息
       await loadTasks();
       // 重新加载消息（包含系统消息）
       await loadTaskMessages(activeTaskId);
     } catch (error: any) {
       console.error('完成任务失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '操作失败，请重试';
+      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
     } finally {
       setActionLoading(false);
@@ -1204,21 +1409,21 @@ const MessagePage: React.FC = () => {
     if (!activeTaskId || !user) return;
     
     // 确认提示
-    if (!window.confirm('确定此任务已经完成了吗？')) {
+    if (!window.confirm(t('messages.notifications.confirmTaskCompletion'))) {
       return;
     }
     
     setActionLoading(true);
     try {
       await confirmTaskCompletion(activeTaskId);
-      showToast('success', '任务已确认完成！');
+      showToast('success', t('messages.notifications.taskConfirmedComplete'));
       // 重新加载任务信息
       await loadTasks();
       // 重新加载消息（包含系统消息）
       await loadTaskMessages(activeTaskId);
     } catch (error: any) {
       console.error('确认完成失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '操作失败，请重试';
+      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
     } finally {
       setActionLoading(false);
@@ -1228,7 +1433,7 @@ const MessagePage: React.FC = () => {
   // 评价任务
   const handleReviewTask = async () => {
     if (!activeTaskId || !user || !reviewComment.trim()) {
-      showToast('error', '请输入评价内容');
+      showToast('error', t('messages.notifications.enterReviewContent'));
       return;
     }
     
@@ -1238,7 +1443,7 @@ const MessagePage: React.FC = () => {
         rating: reviewRating,
         comment: reviewComment
       });
-      showToast('success', '评价提交成功！');
+      showToast('success', t('messages.notifications.reviewSubmitted'));
       setShowReviewModal(false);
       setReviewComment('');
       setReviewRating(5);
@@ -1249,7 +1454,7 @@ const MessagePage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('评价失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '评价失败，请重试';
+      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.reviewFailed');
       showToast('error', errorMsg);
     } finally {
       setActionLoading(false);
@@ -1284,6 +1489,37 @@ const MessagePage: React.FC = () => {
       setTaskReviews([]);
     }
   }, []);
+
+  // 优化的任务点击处理函数
+  const handleTaskClick = useCallback((taskId: number) => {
+    // 切换到任务聊天时，清理客服模式的状态
+    setIsServiceMode(false);
+    setServiceConnected(false);
+    setCurrentChat(null);
+    setCurrentChatId(null);
+    setMessages([]);
+    // 清理输入框和图片预览
+    setInput('');
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowEmojiPicker(false);
+    
+    setActiveTaskId(taskId);
+    if (isMobile) {
+      setShowMobileChat(true); // 移动端显示聊天框
+    }
+  }, [isMobile]);
+
+  // 优化的删除任务处理函数
+  const handleRemoveTask = useCallback((taskId: number) => {
+    setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+    // 如果移除的是当前激活的任务，清除激活状态
+    if (activeTaskId === taskId) {
+      setActiveTaskId(null);
+      setActiveTask(null);
+      setTaskMessages([]);
+    }
+  }, [activeTaskId]);
 
   // 当任务ID变化时，加载评价数据
   useEffect(() => {
@@ -1942,6 +2178,99 @@ const MessagePage: React.FC = () => {
             if (msg.type === 'message_sent') {
               // 这是发送确认消息，不需要显示
               return;
+            }
+            
+            // 处理任务相关事件（application_accepted, application_rejected 等）
+            if (msg.type && (
+              msg.type.startsWith('application_') || 
+              msg.type.startsWith('negotiation_') ||
+              msg.type === 'task_completed' || 
+              msg.type === 'task_confirmed'
+            )) {
+              // 如果当前正在查看相关任务，显示系统消息
+              if (msg.task_id && chatMode === 'tasks' && activeTaskId === msg.task_id) {
+                let systemMessage = '';
+                
+                switch (msg.type) {
+                  case 'application_accepted':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.applicationAccepted', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.applicationAcceptedNoTitle');
+                    break;
+                  case 'application_rejected':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.applicationRejected', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.applicationRejectedNoTitle');
+                    break;
+                  case 'application_withdrawn':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.applicationWithdrawn', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.applicationWithdrawnNoTitle');
+                    break;
+                  case 'negotiation_offer':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.negotiationOffer', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.negotiationOfferNoTitle');
+                    break;
+                  case 'negotiation_accepted':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.negotiationAccepted', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.negotiationAcceptedNoTitle');
+                    break;
+                  case 'negotiation_rejected':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.negotiationRejected', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.negotiationRejectedNoTitle');
+                    break;
+                  case 'task_completed':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.taskCompleted', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.taskCompletedNoTitle');
+                    break;
+                  case 'task_confirmed':
+                    systemMessage = msg.task_title 
+                      ? t('messages.systemMessages.taskConfirmed', { taskTitle: msg.task_title })
+                      : t('messages.systemMessages.taskConfirmedNoTitle');
+                    break;
+                  default:
+                    systemMessage = t('messages.systemMessages.taskStatusUpdated');
+                }
+                
+                // 添加系统消息到任务消息列表
+                setTaskMessages(prev => {
+                  const systemMsg = {
+                    id: Date.now(),
+                    sender_id: 'system',
+                    sender_name: '系统',
+                    sender_avatar: null,
+                    content: systemMessage,
+                    task_id: msg.task_id,
+                    created_at: new Date().toISOString(),
+                    attachments: [],
+                    isSystemMessage: true
+                  };
+                  
+                  // 检查是否已存在相同的系统消息（避免重复）
+                  const exists = prev.some(m => 
+                    m.content === systemMessage && 
+                    m.sender_id === 'system' &&
+                    Math.abs(new Date(m.created_at).getTime() - new Date(systemMsg.created_at).getTime()) < 5000
+                  );
+                  
+                  if (exists) {
+                    return prev;
+                  }
+                  
+                  return [...prev, systemMsg];
+                });
+                
+                // 重新加载任务列表以更新状态
+                loadTasks().catch(err => {
+                  console.error('重新加载任务列表失败:', err);
+                });
+                
+                return; // 事件已处理
+              }
             }
             
             // 处理任务消息（通过 task_id 字段判断）
@@ -3136,160 +3465,14 @@ const MessagePage: React.FC = () => {
                 </div>
               ) : (
                 tasks.map(task => (
-                  <div
+                  <TaskListItem
                     key={task.id}
-                    onClick={() => {
-                      // 切换到任务聊天时，清理客服模式的状态
-                      setIsServiceMode(false);
-                      setServiceConnected(false);
-                      setCurrentChat(null);
-                      setCurrentChatId(null);
-                      setMessages([]);
-                      // 清理输入框和图片预览
-                      setInput('');
-                      setImagePreview(null);
-                      setSelectedImage(null);
-                      setShowEmojiPicker(false);
-                      
-                      setActiveTaskId(task.id);
-                      if (isMobile) {
-                        setShowMobileChat(true); // 移动端显示聊天框
-                      }
-                    }}
-                    style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid #e5e7eb',
-                      cursor: 'pointer',
-                      backgroundColor: activeTaskId === task.id ? '#eff6ff' : 'white',
-                      transition: 'background-color 0.2s'
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      {/* 任务图片容器 */}
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
-                        {(task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) ? (
-                          <img
-                            src={getTaskImageUrl(task.images[0], API_BASE_URL) || task.images[0]}
-                            alt={task.title}
-                            style={{
-                              width: '50px',
-                              height: '50px',
-                              borderRadius: '8px',
-                              objectFit: 'cover',
-                              display: 'block'
-                            }}
-                            onError={(e) => {
-                              // 如果任务图片加载失败，显示任务类型emoji图标
-                              e.currentTarget.style.display = 'none';
-                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                              if (placeholder) {
-                                placeholder.style.display = 'flex';
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div style={{
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '8px',
-                            background: '#f3f4f6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '24px',
-                            color: '#6b7280'
-                          }}>
-                            {getTaskTypeEmoji(task.task_type)}
-                          </div>
-                        )}
-                        {/* 占位符（仅在任务图片加载失败时显示） */}
-                        <div style={{
-                          width: '50px',
-                          height: '50px',
-                          borderRadius: '8px',
-                          background: '#f3f4f6',
-                          display: 'none',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '24px',
-                          color: '#6b7280',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0
-                        }}>
-                          {getTaskTypeEmoji(task.task_type)}
-                        </div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
-                        {task.last_message && (
-                          <div style={{ fontSize: '14px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {task.last_message.sender_name}: {task.last_message.content}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        {task.status === 'completed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm('确定要从任务列表中移除此已完成任务吗？')) {
-                                setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
-                                // 如果移除的是当前激活的任务，清除激活状态
-                                if (activeTaskId === task.id) {
-                                  setActiveTaskId(null);
-                                  setActiveTask(null);
-                                  setTaskMessages([]);
-                                }
-                              }
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: '#ef4444',
-                              fontSize: '18px',
-                              cursor: 'pointer',
-                              padding: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderRadius: '4px',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#fee2e2';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
-                            }}
-                            title="从列表中移除"
-                          >
-                            ❌
-                          </button>
-                        )}
-                        {task.unread_count > 0 && (
-                          <div style={{
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            borderRadius: '10px',
-                            padding: '2px 8px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            minWidth: '20px',
-                            textAlign: 'center'
-                          }}>
-                            {task.unread_count}
-                          </div>
-                        )}
-                        {task.last_message && (
-                          <div style={{ fontSize: '11px', color: '#9ca3af' }}>
-                            {dayjs(task.last_message.created_at).format('HH:mm')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    task={task}
+                    isActive={activeTaskId === task.id}
+                    isMobile={isMobile}
+                    onTaskClick={handleTaskClick}
+                    onRemoveTask={handleRemoveTask}
+                  />
                 ))
               )}
             </div>
@@ -3816,13 +3999,13 @@ const MessagePage: React.FC = () => {
                                         e.stopPropagation();
                                         try {
                                           await acceptApplication(activeTaskId, app.id);
-                                          alert('已接受申请');
+                                          alert(t('messages.notifications.applicationAccepted'));
                                           await loadTaskMessages(activeTaskId);
                                           await loadApplications(activeTaskId);
                                           await loadTasks();
                                         } catch (error: any) {
                                           console.error('接受申请失败:', error);
-                                          alert(error.response?.data?.detail || '接受申请失败，请重试');
+                                          alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
                                         }
                                       }}
                                       style={{
@@ -3845,11 +4028,11 @@ const MessagePage: React.FC = () => {
                                         e.stopPropagation();
                                         try {
                                           await rejectApplication(activeTaskId, app.id);
-                                          alert('已拒绝申请');
+                                          alert(t('messages.notifications.applicationRejected'));
                                           await loadApplications(activeTaskId);
                                         } catch (error: any) {
                                           console.error('拒绝申请失败:', error);
-                                          alert(error.response?.data?.detail || '拒绝申请失败，请重试');
+                                          alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
                                         }
                                       }}
                                       style={{
@@ -4005,8 +4188,36 @@ const MessagePage: React.FC = () => {
 
                 {taskMessages.map((msg, idx) => {
                   const isOwn = msg.sender_id === user?.id;
-                  // 显示头像的条件：第一条消息，或者上一条消息的发送者不同
-                  const showAvatar = idx === 0 || (taskMessages[idx - 1] && taskMessages[idx - 1].sender_id !== msg.sender_id);
+                  const isSystemMessage = msg.sender_id === 'system' || msg.isSystemMessage;
+                  // 显示头像的条件：第一条消息，或者上一条消息的发送者不同（系统消息不显示头像）
+                  const showAvatar = !isSystemMessage && (idx === 0 || (taskMessages[idx - 1] && taskMessages[idx - 1].sender_id !== msg.sender_id));
+                  
+                  // 系统消息居中显示
+                  if (isSystemMessage) {
+                    return (
+                      <div
+                        key={msg.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          marginBottom: '12px',
+                          padding: '0 16px'
+                        }}
+                      >
+                        <div style={{
+                          padding: '6px 12px',
+                          borderRadius: '12px',
+                          backgroundColor: '#f3f4f6',
+                          color: '#6b7280',
+                          fontSize: '13px',
+                          textAlign: 'center',
+                          maxWidth: '80%'
+                        }}>
+                          {msg.content}
+                        </div>
+                      </div>
+                    );
+                  }
                   
                   return (
                     <div
@@ -4075,9 +4286,9 @@ const MessagePage: React.FC = () => {
                             e.preventDefault();
                             if (navigator.clipboard) {
                               navigator.clipboard.writeText(msg.content).then(() => {
-                                showToast('success', '消息已复制');
+                                showToast('success', t('messages.notifications.messageCopied'));
                               }).catch(() => {
-                                showToast('error', '复制失败');
+                                showToast('error', t('messages.notifications.copyFailed'));
                               });
                             }
                           }}
@@ -5844,7 +6055,7 @@ const MessagePage: React.FC = () => {
                 onClick={async () => {
                   // 验证议价金额：如果勾选了议价，金额必须大于0
                   if (isNegotiateChecked && (negotiatedPrice === undefined || negotiatedPrice === null || negotiatedPrice <= 0)) {
-                    alert('如果选择议价，请输入大于0的议价金额');
+                    alert(t('messages.notifications.enterNegotiationAmount'));
                     return;
                   }
                   
@@ -5859,9 +6070,13 @@ const MessagePage: React.FC = () => {
                   
                   // 如果议价金额小于原本金额，提示用户确认
                   if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+                    const currency = activeTask?.currency || 'GBP';
+                    const currencySymbol = currency === 'CNY' ? '¥' : '£';
                     const confirmed = window.confirm(
-                      `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
-                      `这将降低您获得的金额。是否确定要继续？`
+                      t('messages.notifications.negotiationAmountLower', {
+                        amount: `${currencySymbol}${finalNegotiatedPrice.toFixed(2)}`,
+                        baseAmount: `${currencySymbol}${baseReward.toFixed(2)}`
+                      })
                     );
                     if (!confirmed) {
                       return;
@@ -5884,10 +6099,10 @@ const MessagePage: React.FC = () => {
                     if (activeTaskId) {
                       await loadApplications(activeTaskId);
                     }
-                    alert('申请提交成功！');
+                    alert(t('messages.notifications.applicationSubmitted'));
                   } catch (error: any) {
                     console.error('申请失败:', error);
-                    alert(error.response?.data?.detail || '申请失败，请重试');
+                    alert(error.response?.data?.detail || t('messages.notifications.applicationFailed'));
                   }
                 }}
                 style={{
@@ -6082,7 +6297,7 @@ const MessagePage: React.FC = () => {
                           onClick={async () => {
                             try {
                               await acceptApplication(activeTaskId, app.id);
-                              alert('已接受申请');
+                              alert(t('messages.notifications.applicationAccepted'));
                               setShowApplicationListModal(false);
                               // 重新加载任务和申请列表
                               if (activeTaskId) {
@@ -6092,7 +6307,7 @@ const MessagePage: React.FC = () => {
                               }
                             } catch (error: any) {
                               console.error('接受申请失败:', error);
-                              alert(error.response?.data?.detail || '接受申请失败，请重试');
+                              alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
                             }
                           }}
                           style={{
@@ -6123,14 +6338,14 @@ const MessagePage: React.FC = () => {
                           onClick={async () => {
                             try {
                               await rejectApplication(activeTaskId, app.id);
-                              alert('已拒绝申请');
+                              alert(t('messages.notifications.applicationRejected'));
                               // 重新加载申请列表
                               if (activeTaskId) {
                                 await loadApplications(activeTaskId);
                               }
                             } catch (error: any) {
                               console.error('拒绝申请失败:', error);
-                              alert(error.response?.data?.detail || '拒绝申请失败，请重试');
+                              alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
                             }
                           }}
                           style={{
@@ -6925,13 +7140,13 @@ const MessagePage: React.FC = () => {
               <button
                 onClick={async () => {
                   if (!messageContent.trim()) {
-                    alert('请输入留言内容');
+                    alert(t('messages.notifications.enterMessageContent'));
                     return;
                   }
                   
                   // 验证议价金额：如果勾选了议价，金额必须大于0
                   if (isMessageNegotiateChecked && (messageNegotiatedPrice === undefined || messageNegotiatedPrice === null || messageNegotiatedPrice <= 0)) {
-                    alert('如果选择议价，请输入大于0的议价金额');
+                    alert(t('messages.notifications.enterNegotiationAmount'));
                     return;
                   }
                   
@@ -6944,9 +7159,13 @@ const MessagePage: React.FC = () => {
                   
                   // 如果议价金额小于原本金额，提示用户确认
                   if (finalNegotiatedPrice !== undefined && finalNegotiatedPrice < baseReward) {
+                    const currency = activeTask?.currency || 'GBP';
+                    const currencySymbol = currency === 'CNY' ? '¥' : '£';
                     const confirmed = window.confirm(
-                      `您输入的议价金额（£${finalNegotiatedPrice.toFixed(2)}）低于任务原本金额（£${baseReward.toFixed(2)}）。\n\n` +
-                      `这将降低您获得的金额。是否确定要继续？`
+                      t('messages.notifications.negotiationAmountLower', {
+                        amount: `${currencySymbol}${finalNegotiatedPrice.toFixed(2)}`,
+                        baseAmount: `${currencySymbol}${baseReward.toFixed(2)}`
+                      })
                     );
                     if (!confirmed) {
                       return;
@@ -6965,14 +7184,14 @@ const MessagePage: React.FC = () => {
                     setMessageNegotiatedPrice(undefined);
                     setIsMessageNegotiateChecked(false);
                     setSelectedApplication(null);
-                    showToast('success', '留言已发送');
+                    showToast('success', t('messages.notifications.messageSent'));
                     // 重新加载申请列表
                     if (activeTaskId) {
                       await loadApplications(activeTaskId);
                     }
                   } catch (error: any) {
                     console.error('发送留言失败:', error);
-                    showToast('error', error.response?.data?.detail || '发送留言失败，请重试');
+                    showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
                   }
                 }}
                 style={{
