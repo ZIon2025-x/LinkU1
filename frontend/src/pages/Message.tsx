@@ -2213,6 +2213,7 @@ const MessagePage: React.FC = () => {
               msg.type === 'task_completed' || 
               msg.type === 'task_confirmed'
             )) {
+              // 这些是系统事件，不应该被当作普通消息处理
               // 如果当前正在查看相关任务，显示系统消息
               if (msg.task_id && chatMode === 'tasks' && activeTaskId === msg.task_id) {
                 let systemMessage = '';
@@ -2289,14 +2290,14 @@ const MessagePage: React.FC = () => {
                   
                   return [...prev, systemMsg];
                 });
-                
-                // 重新加载任务列表以更新状态
-                loadTasks().catch(err => {
-                  console.error('重新加载任务列表失败:', err);
-                });
-                
-                return; // 事件已处理
               }
+              
+              // 无论是否在查看该任务，都重新加载任务列表以更新状态
+              loadTasks().catch(err => {
+                console.error('重新加载任务列表失败:', err);
+              });
+              
+              return; // 事件已处理，不再继续处理为普通消息
             }
             
             // 处理任务消息（通过 task_id 字段判断）
