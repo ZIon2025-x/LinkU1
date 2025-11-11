@@ -348,12 +348,19 @@ const Footer: React.FC = () => {
               title="微信二维码"
             >
               <img 
-                src="https://img.icons8.com/color/32/wechat.png" 
+                src="/static/wechatlogo.png" 
                 alt="微信" 
                 style={{
                   width: '20px',
                   height: '20px',
                   objectFit: 'contain'
+                }}
+                onError={(e) => {
+                  // 如果 PNG 不存在，回退到 JPG
+                  const target = e.currentTarget;
+                  if (!target.src.includes('.jpg')) {
+                    target.src = '/static/wechatlogo.jpg';
+                  }
                 }}
               />
             </button>
