@@ -3,6 +3,7 @@
 在应用启动时自动执行数据库迁移和索引验证
 """
 import logging
+import re
 from pathlib import Path
 from sqlalchemy import text
 from app.database import sync_engine
@@ -116,44 +117,49 @@ def run_coupon_points_migration():
         with open(migration_file, 'r', encoding='utf-8') as f:
             sql_script = f.read()
         
-        # 分割 SQL 语句（处理多行语句和 DO 块）
+        # 分割 SQL 语句（处理多行语句、DO 块和函数定义）
         statements = []
         current_statement = []
-        in_do_block = False
-        do_block_depth = 0
+        in_dollar_quote = False
+        dollar_quote_tag = None
         
         for line in sql_script.split('\n'):
             original_line = line
-            line = line.strip()
+            line_stripped = line.strip()
             
             # 跳过空行和注释
-            if not line or line.startswith('--'):
+            if not line_stripped or line_stripped.startswith('--'):
                 continue
             
-            # 检测 DO 块开始
-            if 'DO $$' in line.upper() or line.upper().startswith('DO $$'):
-                in_do_block = True
-                do_block_depth = 1
+            # 检测美元引号开始（$$ 或 $tag$）
+            if not in_dollar_quote:
+                # 查找 $$ 或 $tag$ 的开始
+                dollar_match = None
+                if '$$' in line_stripped:
+                    # 简单情况：$$
+                    dollar_match = '$$'
+                elif '$' in line_stripped:
+                    # 查找 $tag$ 格式
+                    match = re.search(r'\$([^$]*)\$', line_stripped)
+                    if match:
+                        dollar_match = f'${match.group(1)}$'
+                
+                if dollar_match:
+                    in_dollar_quote = True
+                    dollar_quote_tag = dollar_match
             
-            # 检测 DO 块中的嵌套 BEGIN/END
-            if in_do_block:
-                if 'BEGIN' in line.upper():
-                    do_block_depth += 1
-                elif 'END' in line.upper() and '$$' in line:
-                    do_block_depth -= 1
-                    if do_block_depth == 0:
-                        in_do_block = False
+            # 检测美元引号结束
+            if in_dollar_quote and dollar_quote_tag in line_stripped:
+                # 检查是否是结束标记（在同一行中出现了两次，或者后面跟着分号）
+                tag_count = line_stripped.count(dollar_quote_tag)
+                if tag_count >= 2 or (tag_count == 1 and line_stripped.endswith(';')):
+                    in_dollar_quote = False
+                    dollar_quote_tag = None
             
             current_statement.append(original_line)
             
-            # 如果行以分号结尾且不在 DO 块中，说明是一个完整的语句
-            if line.endswith(';') and not in_do_block:
-                statement = '\n'.join(current_statement)
-                if statement.strip():
-                    statements.append(statement)
-                current_statement = []
-            # 如果 DO 块结束
-            elif in_do_block and do_block_depth == 0:
+            # 如果行以分号结尾且不在美元引号块中，说明是一个完整的语句
+            if line_stripped.endswith(';') and not in_dollar_quote:
                 statement = '\n'.join(current_statement)
                 if statement.strip():
                     statements.append(statement)
