@@ -438,6 +438,76 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                         </p>
                       );
                     }
+                  })() : notification.type === 'application_accepted' ? (() => {
+                    try {
+                      const acceptedData = JSON.parse(notification.content);
+                      const taskTitle = acceptedData.task_title || t('notifications.unknownTask');
+                      const message = t('messages.systemMessages.applicationAccepted', { taskTitle });
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {message}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // 如果解析失败，显示原始内容
+                      return (
+                        <>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {notification.content}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </>
+                      );
+                    }
                   })() : notification.type === 'application_rejected' ? (() => {
                     try {
                       const rejectedData = JSON.parse(notification.content);

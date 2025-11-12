@@ -1727,13 +1727,87 @@ const MessagePage: React.FC = () => {
     try {
       const data = await getTaskMessages(taskId, 20, cursor || undefined);
       
+      // 处理消息：格式化系统事件消息
+      const processedMessages = (data.messages || []).map((msg: any) => {
+        // 如果消息内容是原始 JSON 格式的系统事件，格式化为用户友好的文本
+        if (msg.content && typeof msg.content === 'string' && msg.content.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(msg.content);
+            if (parsed.type && (
+              parsed.type.startsWith('application_') || 
+              parsed.type.startsWith('negotiation_') ||
+              parsed.type === 'task_completed' || 
+              parsed.type === 'task_confirmed'
+            )) {
+              let systemMessage = '';
+              
+              switch (parsed.type) {
+                case 'application_accepted':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.applicationAccepted', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.applicationAcceptedNoTitle');
+                  break;
+                case 'application_rejected':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.applicationRejected', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.applicationRejectedNoTitle');
+                  break;
+                case 'application_withdrawn':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.applicationWithdrawn', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.applicationWithdrawnNoTitle');
+                  break;
+                case 'negotiation_offer':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.negotiationOffer', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.negotiationOfferNoTitle');
+                  break;
+                case 'negotiation_accepted':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.negotiationAccepted', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.negotiationAcceptedNoTitle');
+                  break;
+                case 'negotiation_rejected':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.negotiationRejected', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.negotiationRejectedNoTitle');
+                  break;
+                case 'task_completed':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.taskCompleted', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.taskCompletedNoTitle');
+                  break;
+                case 'task_confirmed':
+                  systemMessage = parsed.task_title 
+                    ? t('messages.systemMessages.taskConfirmed', { taskTitle: parsed.task_title })
+                    : t('messages.systemMessages.taskConfirmedNoTitle');
+                  break;
+                default:
+                  systemMessage = t('messages.systemMessages.taskStatusUpdated');
+              }
+              
+              return {
+                ...msg,
+                content: systemMessage,
+                sender_id: 'system',
+                sender_name: '系统',
+                isSystemMessage: true
+              };
+            }
+          } catch (e) {
+            // 如果不是有效的 JSON，保持原样
+          }
+        }
+        return msg;
+      });
+      
       // 后端返回的消息是按 created_at DESC 排序的（最新的在前）
       // 前端需要反转，让最新的消息在底部显示
-      const reversedMessages = [...(data.messages || [])].reverse();
+      const reversedMessages = [...processedMessages].reverse();
       
       // 检测是否有新消息（非首次加载且非加载历史消息时）
-      if (!cursor && lastTaskMessageIdRef.current !== null && data.messages && data.messages.length > 0) {
-        const latestMessage = data.messages[0]; // 后端返回的最新消息
+      if (!cursor && lastTaskMessageIdRef.current !== null && processedMessages.length > 0) {
+        const latestMessage = processedMessages[0]; // 使用处理后的消息
         
         // 如果有新消息且用户不在底部，显示提示
         if (latestMessage.id !== lastTaskMessageIdRef.current && !isNearBottom) {
@@ -1836,7 +1910,27 @@ const MessagePage: React.FC = () => {
           // 只检查是否有新消息（通过获取最新消息并比较ID）
           const data = await getTaskMessages(activeTaskId, 1);
           if (data && data.messages && data.messages.length > 0) {
-            const latestMessage = data.messages[0]; // 后端返回的最新消息
+            let latestMessage = data.messages[0]; // 后端返回的最新消息
+            
+            // 检查是否是系统事件消息（原始 JSON 格式）
+            const isSystemEventRaw = latestMessage.content && typeof latestMessage.content === 'string' && 
+              latestMessage.content.trim().startsWith('{') && (
+              latestMessage.content.includes('"application_accepted"') ||
+              latestMessage.content.includes('"application_rejected"') ||
+              latestMessage.content.includes('"negotiation_') ||
+              latestMessage.content.includes('"task_completed"') ||
+              latestMessage.content.includes('"task_confirmed"')
+            );
+            
+            // 如果是系统事件消息，不触发通知，但需要更新消息列表
+            if (isSystemEventRaw) {
+              // 重新加载消息列表以获取格式化后的系统消息
+              await loadTaskMessages(activeTaskId);
+              if (latestMessage.id) {
+                lastTaskMessageIdRef.current = latestMessage.id;
+              }
+              return; // 系统事件不触发通知
+            }
             
             // 检查是否是新消息
             if (lastTaskMessageIdRef.current === null || 
@@ -1854,7 +1948,7 @@ const MessagePage: React.FC = () => {
                 }
                 
                 // 如果是接收到的消息（不是自己发送的），播放提示音
-                if (latestMessage.sender_id !== user.id) {
+                if (latestMessage.sender_id !== user.id && latestMessage.sender_id !== 'system') {
                   playMessageSound();
                   
                   // 更新未读消息数量
