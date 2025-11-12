@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone, datetime
+from datetime import timedelta, timezone as tz, datetime
 
 from sqlalchemy import (
     Column,
@@ -781,8 +781,8 @@ class Coupon(Base):
     eligibility_value = Column(Text, nullable=True)  # 资格值
     per_day_limit = Column(Integer, nullable=True)  # 每日限用次数
     vat_category = Column(String(20), nullable=True)  # VAT分类
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc), onupdate=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_coupons_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
@@ -807,13 +807,13 @@ class UserCoupon(Base):
     coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
     promotion_code_id = Column(BigInteger, ForeignKey("promotion_codes.id"), nullable=True)
     status = Column(String(20), default="unused")  # unused, used, expired
-    obtained_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    obtained_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     used_at = Column(DateTime(timezone=True), nullable=True)
     used_in_task_id = Column(BigInteger, ForeignKey("tasks.id"), nullable=True)  # 统一为BIGINT
     device_fingerprint = Column(String(64), nullable=True)
     ip_address = Column(INET, nullable=True)
     idempotency_key = Column(String(64), unique=True, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_user_coupons_user", user_id),
@@ -832,11 +832,11 @@ class CouponRedemption(Base):
     coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
     task_id = Column(BigInteger, ForeignKey("tasks.id"), nullable=True)
     status = Column(String(20), default="reserved")  # reserved, confirmed, cancelled
-    reserved_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    reserved_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     confirmed_at = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)  # 预授权过期时间
     idempotency_key = Column(String(64), unique=True, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_coupon_redemptions_user_coupon", user_coupon_id),
@@ -861,8 +861,8 @@ class PointsAccount(Base):
     currency = Column(String(3), default="GBP")
     total_earned = Column(BigInteger, default=0)  # 累计获得积分
     total_spent = Column(BigInteger, default=0)  # 累计消费积分
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc), onupdate=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_points_accounts_user", user_id),
@@ -886,7 +886,7 @@ class PointsTransaction(Base):
     expires_at = Column(DateTime(timezone=True), nullable=True)  # 过期时间
     description = Column(Text, nullable=True)
     idempotency_key = Column(String(64), unique=True, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_points_transactions_user", user_id),
@@ -927,7 +927,7 @@ class CouponUsageLog(Base):
     refunded_at = Column(DateTime(timezone=True), nullable=True)
     refund_reason = Column(Text, nullable=True)
     idempotency_key = Column(String(64), unique=True, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_coupon_usage_logs_user", user_id),
@@ -952,7 +952,7 @@ class CheckIn(Base):
     device_fingerprint = Column(String(64), nullable=True)
     ip_address = Column(INET, nullable=True)
     idempotency_key = Column(String(64), unique=True, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         UniqueConstraint("user_id", "check_in_date", name="uq_user_checkin_date"),
@@ -977,8 +977,8 @@ class CheckInReward(Base):
     coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)  # 优惠券ID
     reward_description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc), onupdate=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_check_in_rewards_days", consecutive_days),
@@ -1007,8 +1007,8 @@ class InvitationCode(Base):
     valid_until = Column(DateTime(timezone=True), nullable=False)
     is_active = Column(Boolean, default=True)
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc), onupdate=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_invitation_codes_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
@@ -1025,11 +1025,11 @@ class UserInvitationUsage(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id", ondelete="CASCADE"), nullable=False)
-    used_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    used_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     reward_received = Column(Boolean, default=False)  # 是否已发放奖励
     points_received = Column(BigInteger, nullable=True)  # 实际获得的积分
     coupon_received_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         UniqueConstraint("user_id", "invitation_code_id", name="uq_user_invitation_usage"),
@@ -1055,7 +1055,7 @@ class AdminReward(Base):
     status = Column(String(20), default="pending")  # pending, processing, completed, failed
     description = Column(Text, nullable=True)
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     completed_at = Column(DateTime(timezone=True), nullable=True)
     
     __table_args__ = (
@@ -1083,7 +1083,7 @@ class AdminRewardDetail(Base):
     coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
     status = Column(String(20), default="pending")  # pending, success, failed
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     completed_at = Column(DateTime(timezone=True), nullable=True)
     
     __table_args__ = (
@@ -1106,8 +1106,8 @@ class DeviceFingerprint(Base):
     user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
     device_info = Column(JSONB, nullable=True)  # 设备信息
     ip_address = Column(INET, nullable=True)
-    first_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    last_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    first_seen = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    last_seen = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     risk_score = Column(Integer, default=0)  # 风险评分（0-100）
     is_blocked = Column(Boolean, default=False)
     
@@ -1130,7 +1130,7 @@ class RiskControlLog(Base):
     risk_reason = Column(Text, nullable=True)
     action_blocked = Column(Boolean, default=False)
     metadata = Column(JSONB, nullable=True)  # 额外信息
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_risk_logs_user", user_id),
@@ -1159,8 +1159,8 @@ class PromotionCode(Base):
     is_active = Column(Boolean, default=True)
     target_user_type = Column(String(20), nullable=True)  # vip, super, normal, all
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc), onupdate=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_promotion_codes_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
@@ -1188,7 +1188,7 @@ class AuditLog(Base):
     device_fingerprint = Column(String(64), nullable=True)
     error_code = Column(String(50), nullable=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
         Index("ix_audit_logs_action", action_type),
