@@ -777,7 +777,7 @@ class PointsTransactionOut(BaseModel):
     source: Optional[str]
     description: Optional[str]
     batch_id: Optional[str]
-    created_at: datetime
+    created_at: datetime.datetime
 
     class Config:
         from_attributes = True
