@@ -208,6 +208,10 @@ app.include_router(async_router, prefix="/api", tags=["async"])
 from app.task_chat_routes import task_chat_router
 app.include_router(task_chat_router, prefix="/api", tags=["任务聊天"])
 
+# 添加优惠券和积分系统路由
+from app.coupon_points_routes import router as coupon_points_router
+app.include_router(coupon_points_router, tags=["优惠券和积分系统"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -426,6 +430,15 @@ async def startup_event():
         logger.info("正在创建数据库表...")
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
+        
+        # 执行优惠券和积分系统数据库迁移
+        try:
+            from app.db_migrations import run_coupon_points_migration
+            run_coupon_points_migration()
+        except Exception as e:
+            logger.warning(f"优惠券和积分系统迁移失败（可继续运行）: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 创建优化索引（使用 pg_trgm）
         try:

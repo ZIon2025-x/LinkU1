@@ -13,7 +13,12 @@ from sqlalchemy import (
     UniqueConstraint,
     DECIMAL,
     CheckConstraint,
+    BigInteger,
+    Boolean,
+    Date,
+    JSON,
 )
+from sqlalchemy.dialects.postgresql import JSONB, INET
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -743,4 +748,452 @@ class MessageReadCursor(Base):
         UniqueConstraint("task_id", "user_id", name="uq_message_read_cursors_task_user"),
         Index("ix_message_read_cursors_task_user", task_id, user_id),
         Index("ix_message_read_cursors_message", last_read_message_id),
+    )
+
+
+# ==================== 优惠券和积分系统模型 ====================
+
+class Coupon(Base):
+    """优惠券表"""
+    __tablename__ = "coupons"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    code = Column(String(50), nullable=False, index=True)  # 优惠券代码（不区分大小写唯一）
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+    type = Column(String(20), nullable=False)  # fixed_amount, percentage
+    discount_value = Column(BigInteger, nullable=True)  # 优惠金额或折扣基点
+    min_amount = Column(BigInteger, default=0)  # 最低使用金额
+    max_discount = Column(BigInteger, nullable=True)  # 最大折扣金额
+    currency = Column(String(3), default="GBP")
+    total_quantity = Column(Integer, nullable=True)  # 总发放数量（NULL表示无限制）
+    per_user_limit = Column(Integer, default=1)  # 每个用户限用次数
+    per_device_limit = Column(Integer, nullable=True)  # 每个设备限用次数
+    per_ip_limit = Column(Integer, nullable=True)  # 每个IP限用次数
+    can_combine = Column(Boolean, default=False)  # 是否可与其他优惠叠加
+    combine_limit = Column(Integer, default=1)  # 最多可叠加数量
+    apply_order = Column(Integer, default=0)  # 应用顺序
+    valid_from = Column(DateTime(timezone=True), nullable=False)  # TIMESTAMPTZ
+    valid_until = Column(DateTime(timezone=True), nullable=False)  # TIMESTAMPTZ
+    status = Column(String(20), default="active")  # active, inactive, expired
+    usage_conditions = Column(JSONB, nullable=True)  # 使用条件限制（JSON格式）
+    eligibility_type = Column(String(20), nullable=True)  # first_order, new_user, user_type, member, all
+    eligibility_value = Column(Text, nullable=True)  # 资格值
+    per_day_limit = Column(Integer, nullable=True)  # 每日限用次数
+    vat_category = Column(String(20), nullable=True)  # VAT分类
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_coupons_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
+        Index("ix_coupons_status", status),
+        Index("ix_coupons_valid", valid_from, valid_until),
+        Index("ix_coupons_conditions", usage_conditions, postgresql_using="gin"),  # GIN索引用于JSONB
+        Index("ix_coupons_combine", can_combine, apply_order),
+        CheckConstraint("valid_until > valid_from", name="chk_coupon_dates"),
+        CheckConstraint(
+            "(type = 'fixed_amount' AND discount_value > 0) OR (type = 'percentage' AND discount_value BETWEEN 1 AND 10000)",
+            name="chk_coupon_discount"
+        ),
+    )
+
+
+class UserCoupon(Base):
+    """用户优惠券表"""
+    __tablename__ = "user_coupons"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
+    promotion_code_id = Column(BigInteger, ForeignKey("promotion_codes.id"), nullable=True)
+    status = Column(String(20), default="unused")  # unused, used, expired
+    obtained_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    used_in_task_id = Column(BigInteger, ForeignKey("tasks.id"), nullable=True)  # 统一为BIGINT
+    device_fingerprint = Column(String(64), nullable=True)
+    ip_address = Column(INET, nullable=True)
+    idempotency_key = Column(String(64), unique=True, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_user_coupons_user", user_id),
+        Index("ix_user_coupons_status", status),
+        Index("ix_user_coupons_coupon", coupon_id),
+    )
+
+
+class CouponRedemption(Base):
+    """优惠券使用记录表（两阶段使用控制）"""
+    __tablename__ = "coupon_redemptions"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_coupon_id = Column(BigInteger, ForeignKey("user_coupons.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(BigInteger, ForeignKey("tasks.id"), nullable=True)
+    status = Column(String(20), default="reserved")  # reserved, confirmed, cancelled
+    reserved_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # 预授权过期时间
+    idempotency_key = Column(String(64), unique=True, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_coupon_redemptions_user_coupon", user_coupon_id),
+        Index("ix_coupon_redemptions_status", status),
+        Index("ix_coupon_redemptions_expires", expires_at),
+        # 部分唯一索引：确保同一张券同一时刻至多一条未确认的预留
+        Index("idx_coupon_redemptions_reserved_unique", user_coupon_id, unique=True, 
+              postgresql_where=(status == "reserved")),
+        # 部分唯一索引：防止同一任务重复使用同一张券
+        Index("uq_redemption_task_nonnull", user_id, coupon_id, task_id, unique=True,
+              postgresql_where=(task_id.isnot(None))),
+    )
+
+
+class PointsAccount(Base):
+    """积分账户表"""
+    __tablename__ = "points_accounts"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    balance = Column(BigInteger, default=0)  # 当前积分余额（整数，100积分=£1.00）
+    currency = Column(String(3), default="GBP")
+    total_earned = Column(BigInteger, default=0)  # 累计获得积分
+    total_spent = Column(BigInteger, default=0)  # 累计消费积分
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_points_accounts_user", user_id),
+    )
+
+
+class PointsTransaction(Base):
+    """积分交易记录表"""
+    __tablename__ = "points_transactions"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(20), nullable=False)  # earn, spend, refund, expire
+    amount = Column(BigInteger, nullable=False)  # 积分数量（正数表示增加，负数表示减少）
+    balance_after = Column(BigInteger, nullable=False)  # 交易后余额
+    currency = Column(String(3), default="GBP")
+    source = Column(String(50), nullable=True)  # 来源：task_complete_bonus, invite_bonus等
+    related_id = Column(BigInteger, nullable=True)  # 关联ID
+    related_type = Column(String(50), nullable=True)  # 关联类型：task, coupon等
+    batch_id = Column(String(50), nullable=True)  # 批次ID
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # 过期时间
+    description = Column(Text, nullable=True)
+    idempotency_key = Column(String(64), unique=True, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_points_transactions_user", user_id),
+        Index("ix_points_transactions_type", type),
+        Index("ix_points_transactions_created", created_at),
+        Index("ix_points_transactions_related", related_type, related_id),
+        CheckConstraint(
+            "(type = 'earn' AND amount > 0) OR (type = 'spend' AND amount < 0) OR (type = 'refund' AND amount > 0) OR (type = 'expire' AND amount < 0)",
+            name="chk_points_amount_sign"
+        ),
+    )
+
+
+class CouponUsageLog(Base):
+    """优惠券使用记录表"""
+    __tablename__ = "coupon_usage_logs"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_coupon_id = Column(BigInteger, ForeignKey("user_coupons.id", ondelete="CASCADE"), nullable=False)
+    redemption_id = Column(BigInteger, ForeignKey("coupon_redemptions.id"), nullable=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
+    promotion_code_id = Column(BigInteger, ForeignKey("promotion_codes.id"), nullable=True)
+    task_id = Column(BigInteger, ForeignKey("tasks.id"), nullable=True)
+    discount_amount_before_tax = Column(BigInteger, nullable=False)  # 折前优惠金额
+    discount_amount = Column(BigInteger, nullable=False)  # 实际优惠金额（含税）
+    order_amount_before_tax = Column(BigInteger, nullable=False)  # 订单原始金额（折前）
+    order_amount_incl_tax = Column(BigInteger, nullable=False)  # 订单原始金额（含税）
+    final_amount_before_tax = Column(BigInteger, nullable=False)  # 优惠后金额（折前）
+    final_amount_incl_tax = Column(BigInteger, nullable=False)  # 优惠后金额（含税）
+    vat_amount = Column(BigInteger, nullable=True)  # VAT税额
+    vat_rate = Column(DECIMAL(5, 2), nullable=True)  # VAT税率
+    vat_category = Column(String(20), nullable=True)  # VAT分类
+    rounding_method = Column(String(20), default="bankers")  # 舍入方法
+    currency = Column(String(3), default="GBP")
+    applied_coupons = Column(JSONB, nullable=True)  # 应用的优惠券列表
+    refund_status = Column(String(20), default="none")  # none, partial, full
+    refunded_at = Column(DateTime(timezone=True), nullable=True)
+    refund_reason = Column(Text, nullable=True)
+    idempotency_key = Column(String(64), unique=True, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_coupon_usage_logs_user", user_id),
+        Index("ix_coupon_usage_logs_task", task_id),
+        Index("ix_coupon_usage_logs_coupon", coupon_id),
+    )
+
+
+class CheckIn(Base):
+    """签到记录表"""
+    __tablename__ = "check_ins"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    check_in_date = Column(Date, nullable=False)  # 签到日期
+    timezone = Column(String(50), default="Europe/London")  # 时区
+    consecutive_days = Column(Integer, default=1)  # 连续签到天数
+    reward_type = Column(String(20), nullable=True)  # points, coupon
+    points_reward = Column(BigInteger, nullable=True)  # 积分奖励
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)  # 优惠券ID
+    reward_description = Column(Text, nullable=True)
+    device_fingerprint = Column(String(64), nullable=True)
+    ip_address = Column(INET, nullable=True)
+    idempotency_key = Column(String(64), unique=True, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        UniqueConstraint("user_id", "check_in_date", name="uq_user_checkin_date"),
+        Index("ix_check_ins_user", user_id),
+        Index("ix_check_ins_date", check_in_date),
+        Index("ix_check_ins_user_date", user_id, check_in_date),
+        CheckConstraint(
+            "(reward_type = 'points' AND points_reward IS NOT NULL AND coupon_id IS NULL) OR (reward_type = 'coupon' AND coupon_id IS NOT NULL AND points_reward IS NULL)",
+            name="chk_checkin_reward"
+        ),
+    )
+
+
+class CheckInReward(Base):
+    """签到奖励配置表"""
+    __tablename__ = "check_in_rewards"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    consecutive_days = Column(Integer, unique=True, nullable=False)  # 连续签到天数
+    reward_type = Column(String(20), nullable=False)  # points, coupon
+    points_reward = Column(BigInteger, nullable=True)  # 积分奖励
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)  # 优惠券ID
+    reward_description = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_check_in_rewards_days", consecutive_days),
+        Index("ix_check_in_rewards_active", is_active),
+        CheckConstraint(
+            "(reward_type = 'points' AND points_reward IS NOT NULL AND coupon_id IS NULL) OR (reward_type = 'coupon' AND coupon_id IS NOT NULL AND points_reward IS NULL)",
+            name="chk_checkin_reward_value"
+        ),
+    )
+
+
+class InvitationCode(Base):
+    """邀请码表"""
+    __tablename__ = "invitation_codes"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    code = Column(String(50), nullable=False, index=True)  # 邀请码（不区分大小写唯一）
+    name = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    reward_type = Column(String(20), nullable=False)  # points, coupon, both
+    points_reward = Column(BigInteger, default=0)  # 积分奖励数量
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
+    currency = Column(String(3), default="GBP")
+    max_uses = Column(Integer, nullable=True)  # 最大使用次数（NULL表示无限制）
+    valid_from = Column(DateTime(timezone=True), nullable=False)
+    valid_until = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_invitation_codes_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
+        Index("ix_invitation_codes_active", is_active),
+        Index("ix_invitation_codes_valid", valid_from, valid_until),
+        Index("ix_invitation_codes_created_by", created_by),
+    )
+
+
+class UserInvitationUsage(Base):
+    """用户邀请码使用记录表"""
+    __tablename__ = "user_invitation_usage"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id", ondelete="CASCADE"), nullable=False)
+    used_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    reward_received = Column(Boolean, default=False)  # 是否已发放奖励
+    points_received = Column(BigInteger, nullable=True)  # 实际获得的积分
+    coupon_received_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        UniqueConstraint("user_id", "invitation_code_id", name="uq_user_invitation_usage"),
+        Index("ix_user_invitation_usage_user", user_id),
+        Index("ix_user_invitation_usage_code", invitation_code_id),
+        Index("ix_user_invitation_usage_used_at", used_at),
+    )
+
+
+class AdminReward(Base):
+    """管理员发放记录表"""
+    __tablename__ = "admin_rewards"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    reward_type = Column(String(20), nullable=False)  # points, coupon
+    target_type = Column(String(20), nullable=False)  # user, user_type, all
+    target_value = Column(Text, nullable=True)  # 目标值（JSON格式）
+    points_value = Column(BigInteger, nullable=True)  # 积分数量
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
+    total_users = Column(Integer, default=0)  # 发放用户总数
+    success_count = Column(Integer, default=0)  # 成功发放数量
+    failed_count = Column(Integer, default=0)  # 失败数量
+    status = Column(String(20), default="pending")  # pending, processing, completed, failed
+    description = Column(Text, nullable=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    __table_args__ = (
+        Index("ix_admin_rewards_type", reward_type),
+        Index("ix_admin_rewards_target", target_type),
+        Index("ix_admin_rewards_status", status),
+        Index("ix_admin_rewards_created_by", created_by),
+        Index("ix_admin_rewards_created_at", created_at),
+        CheckConstraint(
+            "(reward_type = 'points' AND points_value IS NOT NULL AND coupon_id IS NULL) OR (reward_type = 'coupon' AND coupon_id IS NOT NULL AND points_value IS NULL)",
+            name="chk_admin_rewards_value"
+        ),
+    )
+
+
+class AdminRewardDetail(Base):
+    """管理员发放详情表"""
+    __tablename__ = "admin_reward_details"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    admin_reward_id = Column(BigInteger, ForeignKey("admin_rewards.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reward_type = Column(String(20), nullable=False)  # points, coupon
+    points_value = Column(BigInteger, nullable=True)  # 积分数量
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id"), nullable=True)
+    status = Column(String(20), default="pending")  # pending, success, failed
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    
+    __table_args__ = (
+        Index("ix_admin_reward_details_reward", admin_reward_id),
+        Index("ix_admin_reward_details_user", user_id),
+        Index("ix_admin_reward_details_status", status),
+        CheckConstraint(
+            "(reward_type = 'points' AND points_value IS NOT NULL AND coupon_id IS NULL) OR (reward_type = 'coupon' AND coupon_id IS NOT NULL AND points_value IS NULL)",
+            name="chk_admin_reward_details_value"
+        ),
+    )
+
+
+class DeviceFingerprint(Base):
+    """设备指纹表"""
+    __tablename__ = "device_fingerprints"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    fingerprint = Column(String(64), unique=True, nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    device_info = Column(JSONB, nullable=True)  # 设备信息
+    ip_address = Column(INET, nullable=True)
+    first_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    last_seen = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    risk_score = Column(Integer, default=0)  # 风险评分（0-100）
+    is_blocked = Column(Boolean, default=False)
+    
+    __table_args__ = (
+        Index("ix_device_fingerprints_fp", fingerprint),
+        Index("ix_device_fingerprints_user", user_id),
+        Index("ix_device_fingerprints_risk", risk_score),
+    )
+
+
+class RiskControlLog(Base):
+    """风控记录表"""
+    __tablename__ = "risk_control_logs"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    device_fingerprint = Column(String(64), ForeignKey("device_fingerprints.fingerprint"), nullable=True)
+    action_type = Column(String(50), nullable=False)  # checkin, coupon_claim, points_earn等
+    risk_level = Column(String(20), nullable=True)  # low, medium, high, critical
+    risk_reason = Column(Text, nullable=True)
+    action_blocked = Column(Boolean, default=False)
+    metadata = Column(JSONB, nullable=True)  # 额外信息
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_risk_logs_user", user_id),
+        Index("ix_risk_logs_device", device_fingerprint),
+        Index("ix_risk_logs_action", action_type),
+        Index("ix_risk_logs_risk", risk_level),
+        Index("ix_risk_logs_created", created_at),
+    )
+
+
+class PromotionCode(Base):
+    """推广码表（Stripe风格设计）"""
+    __tablename__ = "promotion_codes"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    code = Column(String(50), nullable=False, index=True)  # 推广码（不区分大小写唯一）
+    coupon_id = Column(BigInteger, ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    max_uses = Column(Integer, nullable=True)  # 最大使用次数
+    per_user_limit = Column(Integer, default=1)  # 每个用户限用次数
+    min_order_amount = Column(BigInteger, nullable=True)  # 最低订单金额
+    can_combine = Column(Boolean, nullable=True)  # 是否可叠加
+    valid_from = Column(DateTime(timezone=True), nullable=False)
+    valid_until = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True)
+    target_user_type = Column(String(20), nullable=True)  # vip, super, normal, all
+    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_promotion_codes_code_lower", "code"),  # 不区分大小写唯一索引（需要在数据库层面创建）
+        Index("ix_promotion_codes_coupon", coupon_id),
+        Index("ix_promotion_codes_active", is_active),
+        Index("ix_promotion_codes_valid", valid_from, valid_until),
+        CheckConstraint("valid_until > valid_from", name="chk_promo_dates"),
+    )
+
+
+class AuditLog(Base):
+    """审计日志表"""
+    __tablename__ = "audit_logs"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    action_type = Column(String(50), nullable=False)  # 操作类型
+    entity_type = Column(String(50), nullable=True)  # 实体类型
+    entity_id = Column(String(50), nullable=True)  # 实体ID
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    admin_id = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    old_value = Column(JSONB, nullable=True)  # 旧值
+    new_value = Column(JSONB, nullable=True)  # 新值
+    reason = Column(Text, nullable=True)
+    ip_address = Column(INET, nullable=True)
+    device_fingerprint = Column(String(64), nullable=True)
+    error_code = Column(String(50), nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index("ix_audit_logs_action", action_type),
+        Index("ix_audit_logs_entity", entity_type, entity_id),
+        Index("ix_audit_logs_user", user_id),
+        Index("ix_audit_logs_admin", admin_id),
+        Index("ix_audit_logs_created", created_at),
     )

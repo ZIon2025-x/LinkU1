@@ -749,3 +749,456 @@ class JobPositionList(BaseModel):
     total: int
     page: int
     size: int
+
+
+# ==================== 优惠券和积分系统 Schemas ====================
+
+# 积分相关 Schemas
+class PointsAccountOut(BaseModel):
+    balance: int  # 整数，积分数量
+    balance_display: str  # 前端显示格式（£150.00）
+    currency: str
+    total_earned: int
+    total_spent: int
+    usage_restrictions: Dict[str, Any]
+
+    class Config:
+        from_attributes = True
+
+
+class PointsTransactionOut(BaseModel):
+    id: int
+    type: str  # earn, spend, refund, expire
+    amount: int  # 整数，积分数量
+    amount_display: str  # 前端显示格式
+    balance_after: int
+    balance_after_display: str
+    currency: str
+    source: Optional[str]
+    description: Optional[str]
+    batch_id: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PointsTransactionList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[PointsTransactionOut]
+
+
+class PointsRedeemCouponRequest(BaseModel):
+    coupon_id: int
+    idempotency_key: Optional[str] = None
+
+
+class PointsRedeemProductRequest(BaseModel):
+    product_sku: str
+    idempotency_key: Optional[str] = None
+
+
+# 优惠券相关 Schemas
+class CouponUsageConditions(BaseModel):
+    locations: Optional[List[str]] = None
+    time_restrictions: Optional[Dict[str, Any]] = None
+    task_types: Optional[List[str]] = None
+    min_task_amount: Optional[int] = None
+    max_task_amount: Optional[int] = None
+    excluded_task_types: Optional[List[str]] = None
+
+
+class CouponBase(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = None
+    type: str  # fixed_amount, percentage
+    discount_value: int  # 整数，最小货币单位
+    min_amount: int = 0
+    max_discount: Optional[int] = None
+    currency: str = "GBP"
+    total_quantity: Optional[int] = None
+    per_user_limit: int = 1
+    can_combine: bool = False
+    combine_limit: int = 1
+    apply_order: int = 0
+    valid_from: datetime
+    valid_until: datetime
+    usage_conditions: Optional[Dict[str, Any]] = None
+    eligibility_type: Optional[str] = None
+    eligibility_value: Optional[str] = None
+
+
+class CouponCreate(CouponBase):
+    pass
+
+
+class CouponUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    valid_until: Optional[datetime] = None
+    status: Optional[str] = None
+    usage_conditions: Optional[Dict[str, Any]] = None
+
+
+class CouponOut(BaseModel):
+    id: int
+    code: str
+    name: str
+    type: str
+    discount_value: int
+    discount_value_display: str
+    min_amount: int
+    min_amount_display: str
+    currency: str
+    valid_until: datetime
+    usage_conditions: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CouponList(BaseModel):
+    data: List[CouponOut]
+
+
+class UserCouponOut(BaseModel):
+    id: int
+    coupon: CouponOut
+    status: str
+    obtained_at: datetime
+    valid_until: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserCouponList(BaseModel):
+    data: List[UserCouponOut]
+
+
+class CouponClaimRequest(BaseModel):
+    coupon_id: Optional[int] = None
+    promotion_code: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class CouponValidateRequest(BaseModel):
+    coupon_code: str
+    order_amount: int  # 整数，最小货币单位
+    task_location: Optional[str] = None
+    task_type: Optional[str] = None
+    task_date: Optional[datetime] = None
+
+
+class CouponValidateResponse(BaseModel):
+    valid: bool
+    discount_amount: int
+    discount_amount_display: str
+    final_amount: int
+    final_amount_display: str
+    currency: str
+    coupon_id: int
+    usage_conditions: Optional[Dict[str, Any]] = None
+
+
+class CouponUseRequest(BaseModel):
+    user_coupon_id: int
+    task_id: int
+    order_amount: int
+    task_location: Optional[str] = None
+    task_type: Optional[str] = None
+    task_date: Optional[datetime] = None
+    idempotency_key: Optional[str] = None
+
+
+class CouponUseResponse(BaseModel):
+    discount_amount: int
+    discount_amount_display: str
+    final_amount: int
+    final_amount_display: str
+    currency: str
+    usage_log_id: int
+    message: str
+
+
+# 签到相关 Schemas
+class CheckInResponse(BaseModel):
+    success: bool
+    check_in_date: date
+    consecutive_days: int
+    reward: Optional[Dict[str, Any]] = None
+    message: str
+
+
+class CheckInStatus(BaseModel):
+    today_checked: bool
+    consecutive_days: int
+    last_check_in_date: Optional[date] = None
+    next_check_in_date: Optional[date] = None
+    check_in_history: List[Dict[str, Any]]
+
+
+class CheckInRewardConfig(BaseModel):
+    consecutive_days: int
+    reward_type: str
+    points_reward: Optional[int] = None
+    points_reward_display: Optional[str] = None
+    coupon_id: Optional[int] = None
+    description: str
+
+    class Config:
+        from_attributes = True
+
+
+class CheckInRewardsResponse(BaseModel):
+    rewards: List[CheckInRewardConfig]
+
+
+# 邀请码相关 Schemas
+class InvitationCodeValidateRequest(BaseModel):
+    code: str
+
+
+class InvitationCodeValidateResponse(BaseModel):
+    valid: bool
+    code: str
+    name: Optional[str] = None
+    reward_type: str
+    points_reward: int
+    points_reward_display: str
+    coupon: Optional[Dict[str, Any]] = None
+    message: str
+
+
+# 管理员配置 Schemas
+class PointsSettings(BaseModel):
+    points_exchange_rate: float
+    points_task_complete_bonus: int
+    points_invite_reward: int
+    points_invite_task_bonus: int
+    points_expire_days: int
+
+
+class PointsSettingsUpdate(PointsSettings):
+    pass
+
+
+class CheckInSettings(BaseModel):
+    daily_base_points: int
+    daily_base_points_display: str
+    max_consecutive_days: int
+    rewards: List[CheckInRewardConfig]
+
+
+class CheckInSettingsUpdate(BaseModel):
+    daily_base_points: Optional[int] = None
+    max_consecutive_days: Optional[int] = None
+
+
+class CheckInRewardCreate(BaseModel):
+    consecutive_days: int
+    reward_type: str  # points, coupon
+    points_reward: Optional[int] = None
+    coupon_id: Optional[int] = None
+    reward_description: str
+    is_active: bool = True
+
+
+class CheckInRewardUpdate(BaseModel):
+    consecutive_days: Optional[int] = None
+    reward_type: Optional[str] = None
+    points_reward: Optional[int] = None
+    coupon_id: Optional[int] = None
+    reward_description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class CheckInRewardOut(CheckInRewardConfig):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CheckInRewardList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[CheckInRewardOut]
+
+
+# 管理员优惠券管理 Schemas
+class CouponAdminOut(CouponOut):
+    description: Optional[str] = None
+    valid_from: datetime
+    status: str
+    total_quantity: Optional[int] = None
+    used_quantity: Optional[int] = None
+    usage_conditions: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CouponAdminList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[CouponAdminOut]
+
+
+class CouponAdminDetail(CouponAdminOut):
+    statistics: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+# 邀请码管理 Schemas
+class InvitationCodeCreate(BaseModel):
+    code: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    reward_type: str  # points, coupon, both
+    points_reward: int = 0
+    coupon_id: Optional[int] = None
+    max_uses: Optional[int] = None
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool = True
+
+
+class InvitationCodeUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    max_uses: Optional[int] = None
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    points_reward: Optional[int] = None
+    coupon_id: Optional[int] = None
+
+
+class InvitationCodeOut(BaseModel):
+    id: int
+    code: str
+    name: Optional[str] = None
+    reward_type: str
+    points_reward: int
+    points_reward_display: str
+    coupon_id: Optional[int] = None
+    max_uses: Optional[int] = None
+    used_count: Optional[int] = None
+    valid_from: datetime
+    valid_until: datetime
+    is_active: bool
+    created_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InvitationCodeList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[InvitationCodeOut]
+
+
+class InvitationCodeDetail(InvitationCodeOut):
+    description: Optional[str] = None
+    coupon: Optional[Dict[str, Any]] = None
+    remaining_uses: Optional[int] = None
+    statistics: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
+# 用户详情管理 Schemas
+class UserDetailOut(BaseModel):
+    user: Dict[str, Any]
+    points_account: Dict[str, Any]
+    coupons: Dict[str, Any]
+    points_transactions: Dict[str, Any]
+    check_in_stats: Dict[str, Any]
+    invitation_usage: Optional[Dict[str, Any]] = None
+
+
+class UserPointsAdjustRequest(BaseModel):
+    action: str  # add, subtract, set
+    amount: float  # 金额（£）
+    description: str
+    reason: str
+
+
+class UserPointsAdjustResponse(BaseModel):
+    success: bool
+    user_id: str
+    action: str
+    amount: int
+    amount_display: str
+    balance_before: int
+    balance_before_display: str
+    balance_after: int
+    balance_after_display: str
+    transaction_id: int
+
+
+# 批量发放 Schemas
+class BatchRewardRequest(BaseModel):
+    target_type: str  # user, user_type, all
+    target_value: Optional[str] = None  # 用户类型或用户ID列表（JSON）
+    amount: int  # 积分数量（整数）
+    description: str
+    async: bool = True
+
+
+class BatchCouponRequest(BaseModel):
+    target_type: str
+    target_value: Optional[str] = None
+    coupon_id: int
+    description: str
+    async: bool = False
+
+
+class BatchRewardResponse(BaseModel):
+    reward_id: int
+    status: str
+    estimated_users: Optional[int] = None
+    message: str
+
+
+class BatchRewardDetail(BaseModel):
+    id: int
+    reward_type: str
+    target_type: str
+    target_value: Optional[str] = None
+    points_value: Optional[int] = None
+    points_value_display: Optional[str] = None
+    total_users: int
+    success_count: int
+    failed_count: int
+    status: str
+    description: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    progress: Optional[float] = None
+    failed_users: Optional[List[Dict[str, Any]]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BatchRewardList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[BatchRewardDetail]
