@@ -1868,19 +1868,31 @@ const MessagePage: React.FC = () => {
                     return newCount;
                   });
                   
-                  // 显示桌面通知
+                  // 显示桌面通知（跳过系统消息，系统消息不应该显示通知）
                   if ('Notification' in window && Notification.permission === 'granted') {
-                    if (document.hidden) {
-                      const notification = new Notification('新任务消息', {
-                        body: `${latestMessage.sender_name || '对方'}: ${latestMessage.content.substring(0, 50)}${latestMessage.content.length > 50 ? '...' : ''}`,
-                        icon: '/static/favicon.png',
-                        tag: 'task-message-notification',
-                        requireInteraction: false
-                      });
+                    if (document.hidden && latestMessage.sender_id !== 'system' && !latestMessage.isSystemMessage) {
+                      // 检查是否是系统事件消息（通过内容判断）
+                      const isSystemEvent = latestMessage.content && (
+                        latestMessage.content.includes('{"type":') ||
+                        latestMessage.content.includes('"application_accepted"') ||
+                        latestMessage.content.includes('"application_rejected"') ||
+                        latestMessage.content.includes('"negotiation_') ||
+                        latestMessage.content.includes('"task_completed"') ||
+                        latestMessage.content.includes('"task_confirmed"')
+                      );
                       
-                      setTimeout(() => {
-                        notification.close();
-                      }, 3000);
+                      if (!isSystemEvent) {
+                        const notification = new Notification('新任务消息', {
+                          body: `${latestMessage.sender_name || '对方'}: ${latestMessage.content.substring(0, 50)}${latestMessage.content.length > 50 ? '...' : ''}`,
+                          icon: '/static/favicon.png',
+                          tag: 'task-message-notification',
+                          requireInteraction: false
+                        });
+                        
+                        setTimeout(() => {
+                          notification.close();
+                        }, 3000);
+                      }
                     }
                   }
                   
@@ -2358,19 +2370,31 @@ const MessagePage: React.FC = () => {
                     return newCount;
                   });
                   
-                  // 显示桌面通知
+                  // 显示桌面通知（跳过系统消息，系统消息不应该显示通知）
                   if ('Notification' in window && Notification.permission === 'granted') {
-                    if (document.hidden) {
-                      const notification = new Notification('新任务消息', {
-                        body: `${taskMessage.sender_name}: ${taskMessage.content.substring(0, 50)}${taskMessage.content.length > 50 ? '...' : ''}`,
-                        icon: '/static/favicon.png',
-                        tag: 'task-message-notification',
-                        requireInteraction: false
-                      });
+                    if (document.hidden && taskMessage.sender_id !== 'system') {
+                      // 检查是否是系统事件消息（通过内容判断）
+                      const isSystemEvent = taskMessage.content && (
+                        taskMessage.content.includes('{"type":') ||
+                        taskMessage.content.includes('"application_accepted"') ||
+                        taskMessage.content.includes('"application_rejected"') ||
+                        taskMessage.content.includes('"negotiation_') ||
+                        taskMessage.content.includes('"task_completed"') ||
+                        taskMessage.content.includes('"task_confirmed"')
+                      );
                       
-                      setTimeout(() => {
-                        notification.close();
-                      }, 3000);
+                      if (!isSystemEvent) {
+                        const notification = new Notification('新任务消息', {
+                          body: `${taskMessage.sender_name}: ${taskMessage.content.substring(0, 50)}${taskMessage.content.length > 50 ? '...' : ''}`,
+                          icon: '/static/favicon.png',
+                          tag: 'task-message-notification',
+                          requireInteraction: false
+                        });
+                        
+                        setTimeout(() => {
+                          notification.close();
+                        }, 3000);
+                      }
                     }
                   }
                   
