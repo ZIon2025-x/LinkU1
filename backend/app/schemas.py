@@ -927,7 +927,7 @@ class CouponUseResponse(BaseModel):
 # 签到相关 Schemas
 class CheckInResponse(BaseModel):
     success: bool
-    check_in_date: date
+    check_in_date: datetime.date
     consecutive_days: int
     reward: Optional[Dict[str, Any]] = None
     message: str
@@ -936,8 +936,8 @@ class CheckInResponse(BaseModel):
 class CheckInStatus(BaseModel):
     today_checked: bool
     consecutive_days: int
-    last_check_in_date: Optional[date] = None
-    next_check_in_date: Optional[date] = None
+    last_check_in_date: Optional[datetime.date] = None
+    next_check_in_date: Optional[datetime.date] = None
     check_in_history: List[Dict[str, Any]]
 
 
@@ -1019,8 +1019,8 @@ class CheckInRewardUpdate(BaseModel):
 class CheckInRewardOut(CheckInRewardConfig):
     id: int
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
 
     class Config:
         from_attributes = True
@@ -1036,7 +1036,7 @@ class CheckInRewardList(BaseModel):
 # 管理员优惠券管理 Schemas
 class CouponAdminOut(CouponOut):
     description: Optional[str] = None
-    valid_from: datetime
+    valid_from: datetime.datetime
     status: str
     total_quantity: Optional[int] = None
     used_quantity: Optional[int] = None
@@ -1069,8 +1069,8 @@ class InvitationCodeCreate(BaseModel):
     points_reward: int = 0
     coupon_id: Optional[int] = None
     max_uses: Optional[int] = None
-    valid_from: datetime
-    valid_until: datetime
+    valid_from: datetime.datetime
+    valid_until: datetime.datetime
     is_active: bool = True
 
 
@@ -1095,11 +1095,11 @@ class InvitationCodeOut(BaseModel):
     coupon_id: Optional[int] = None
     max_uses: Optional[int] = None
     used_count: Optional[int] = None
-    valid_from: datetime
-    valid_until: datetime
+    valid_from: datetime.datetime
+    valid_until: datetime.datetime
     is_active: bool
     created_by: Optional[str] = None
-    created_at: datetime
+    created_at: datetime.datetime
 
     class Config:
         from_attributes = True
