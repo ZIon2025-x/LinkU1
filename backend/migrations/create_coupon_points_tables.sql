@@ -332,7 +332,7 @@ CREATE TABLE IF NOT EXISTS risk_control_logs (
     risk_level VARCHAR(20),
     risk_reason TEXT,
     action_blocked BOOLEAN DEFAULT false,
-    metadata JSONB,
+    meta_data JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

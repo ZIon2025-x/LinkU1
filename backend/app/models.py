@@ -1129,7 +1129,7 @@ class RiskControlLog(Base):
     risk_level = Column(String(20), nullable=True)  # low, medium, high, critical
     risk_reason = Column(Text, nullable=True)
     action_blocked = Column(Boolean, default=False)
-    metadata = Column(JSONB, nullable=True)  # 额外信息
+    meta_data = Column(JSONB, nullable=True)  # 额外信息（使用meta_data避免与SQLAlchemy保留字冲突）
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz.utc))
     
     __table_args__ = (
