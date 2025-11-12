@@ -549,7 +549,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: formData.password,
           name: formData.username,  // 改为 name
           phone: formData.phone,
-          inviter_id: formData.inviterId || null,  // 邀请者ID
+          inviter_id: formData.inviterId || null,  // 邀请码
           agreed_to_terms: agreedToTerms,  // 记录用户同意状态
           terms_agreed_at: new Date().toISOString()  // 记录同意时间
         });
@@ -1136,7 +1136,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 />
               </div>
 
-              {/* 邀请者ID输入框 */}
+              {/* 邀请码输入框 */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
                   display: 'block',
