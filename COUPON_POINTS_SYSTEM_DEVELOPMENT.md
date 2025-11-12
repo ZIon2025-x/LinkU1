@@ -2037,7 +2037,7 @@ Request: {
     "amount": 10000,  // 整数，最小货币单位（10000积分 = £100.00）
     "amount_display": "100.00",  // 前端显示格式（£100.00）
     "description": "VIP用户专属积分奖励",
-    "async": true  // 是否异步处理（大批量时建议异步）
+    "is_async": true  // 是否异步处理（大批量时建议异步）
 }
 Response: {
     "reward_id": 1,
@@ -2062,7 +2062,7 @@ Request: {
     "target_value": ["user001", "user002", "user003"],  // 用户ID列表
     "coupon_id": 5,
     "description": "活动期间优惠券发放",
-    "async": false
+    "is_async": false
 }
 Response: {
     "reward_id": 2,

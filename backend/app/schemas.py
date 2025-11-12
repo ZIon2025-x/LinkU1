@@ -1158,7 +1158,7 @@ class BatchRewardRequest(BaseModel):
     target_value: Optional[str] = None  # 用户类型或用户ID列表（JSON）
     amount: int  # 积分数量（整数）
     description: str
-    async: bool = True
+    is_async: bool = True  # 是否异步处理（async是Python保留字，使用is_async）
 
 
 class BatchCouponRequest(BaseModel):
@@ -1166,7 +1166,7 @@ class BatchCouponRequest(BaseModel):
     target_value: Optional[str] = None
     coupon_id: int
     description: str
-    async: bool = False
+    is_async: bool = False  # 是否异步处理（async是Python保留字，使用is_async）
 
 
 class BatchRewardResponse(BaseModel):
