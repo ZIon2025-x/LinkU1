@@ -853,7 +853,7 @@ class CouponOut(BaseModel):
     min_amount: int
     min_amount_display: str
     currency: str
-    valid_until: datetime
+    valid_until: datetime.datetime
     usage_conditions: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -868,8 +868,8 @@ class UserCouponOut(BaseModel):
     id: int
     coupon: CouponOut
     status: str
-    obtained_at: datetime
-    valid_until: datetime
+    obtained_at: datetime.datetime
+    valid_until: datetime.datetime
 
     class Config:
         from_attributes = True
