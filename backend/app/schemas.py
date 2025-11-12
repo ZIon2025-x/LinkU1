@@ -824,8 +824,8 @@ class CouponBase(BaseModel):
     can_combine: bool = False
     combine_limit: int = 1
     apply_order: int = 0
-    valid_from: datetime
-    valid_until: datetime
+    valid_from: datetime.datetime
+    valid_until: datetime.datetime
     usage_conditions: Optional[Dict[str, Any]] = None
     eligibility_type: Optional[str] = None
     eligibility_value: Optional[str] = None
@@ -838,7 +838,7 @@ class CouponCreate(CouponBase):
 class CouponUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    valid_until: Optional[datetime] = None
+    valid_until: Optional[datetime.datetime] = None
     status: Optional[str] = None
     usage_conditions: Optional[Dict[str, Any]] = None
 
@@ -890,7 +890,7 @@ class CouponValidateRequest(BaseModel):
     order_amount: int  # 整数，最小货币单位
     task_location: Optional[str] = None
     task_type: Optional[str] = None
-    task_date: Optional[datetime] = None
+    task_date: Optional[datetime.datetime] = None
 
 
 class CouponValidateResponse(BaseModel):
@@ -910,7 +910,7 @@ class CouponUseRequest(BaseModel):
     order_amount: int
     task_location: Optional[str] = None
     task_type: Optional[str] = None
-    task_date: Optional[datetime] = None
+    task_date: Optional[datetime.datetime] = None
     idempotency_key: Optional[str] = None
 
 
@@ -1079,8 +1079,8 @@ class InvitationCodeUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     max_uses: Optional[int] = None
-    valid_from: Optional[datetime] = None
-    valid_until: Optional[datetime] = None
+    valid_from: Optional[datetime.datetime] = None
+    valid_until: Optional[datetime.datetime] = None
     points_reward: Optional[int] = None
     coupon_id: Optional[int] = None
 
@@ -1188,8 +1188,8 @@ class BatchRewardDetail(BaseModel):
     failed_count: int
     status: str
     description: Optional[str] = None
-    created_at: datetime
-    completed_at: Optional[datetime] = None
+    created_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
     progress: Optional[float] = None
     failed_users: Optional[List[Dict[str, Any]]] = None
 
