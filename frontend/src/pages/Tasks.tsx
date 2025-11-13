@@ -566,43 +566,6 @@ const Tasks: React.FC = () => {
     };
   }, [showLocationDropdown, isMobile]);
 
-  // 处理金额排序变化
-  const handleRewardSortChange = useCallback((value: string) => {
-    console.log('[Tasks] 金额排序变化:', value);
-    setRewardSort(value);
-    setDeadlineSort(''); // 清除截止日期排序
-    if (value === '') {
-      console.log('[Tasks] 清除金额排序，设置为 latest');
-      setSortBy('latest');
-    } else {
-      const newSortBy = `reward_${value}`;
-      console.log('[Tasks] 设置排序为:', newSortBy);
-      setSortBy(newSortBy);
-      // 立即触发加载，确保排序生效
-      setTimeout(() => {
-        console.log('[Tasks] 触发任务重新加载，排序参数:', newSortBy);
-      }, 0);
-    }
-  }, []);
-
-  // 处理截止日期排序变化
-  const handleDeadlineSortChange = useCallback((value: string) => {
-    console.log('[Tasks] 截止日期排序变化:', value);
-    setDeadlineSort(value);
-    setRewardSort(''); // 清除金额排序
-    if (value === '') {
-      console.log('[Tasks] 清除截止时间排序，设置为 latest');
-      setSortBy('latest');
-    } else {
-      const newSortBy = `deadline_${value}`;
-      console.log('[Tasks] 设置排序为:', newSortBy);
-      setSortBy(newSortBy);
-      // 立即触发加载，确保排序生效
-      setTimeout(() => {
-        console.log('[Tasks] 触发任务重新加载，排序参数:', newSortBy);
-      }, 0);
-    }
-  }, []);
 
   // 处理任务等级变化
   const handleLevelChange = (newLevel: string) => {
@@ -813,7 +776,7 @@ const Tasks: React.FC = () => {
   }, [t]);
 
   // 加载任务列表 - 使用缓存和防抖优化
-  const loadTasks = useCallback(async (isLoadMore = false, targetPage?: number) => {
+  const loadTasks = useCallback(async (isLoadMore = false, targetPage?: number, overrideSortBy?: string) => {
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
@@ -829,9 +792,15 @@ const Tasks: React.FC = () => {
       // 如果是加载更多，使用传入的页码或当前页码+1
       const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
       
+      // 使用传入的排序值，如果没有则使用当前状态
+      const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortBy || 'latest');
+      
       // 调试：输出排序参数
-      console.log('[Tasks] 加载任务，排序参数:', sortBy);
-      console.log('[Tasks] 当前状态 - rewardSort:', rewardSort, 'deadlineSort:', deadlineSort, 'sortBy:', sortBy);
+      console.log('[Tasks] ========== 加载任务 ==========');
+      console.log('[Tasks] 排序参数:', currentSortBy);
+      console.log('[Tasks] overrideSortBy:', overrideSortBy);
+      console.log('[Tasks] sortBy 状态:', sortBy);
+      console.log('[Tasks] 当前状态 - rewardSort:', rewardSort, 'deadlineSort:', deadlineSort);
       
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
@@ -839,7 +808,7 @@ const Tasks: React.FC = () => {
         keyword: searchKeyword,
         page: currentPage,
         pageSize: pageSize,
-        sort_by: sortBy || 'latest'  // 确保总是传递一个值
+        sort_by: currentSortBy  // 使用计算后的排序值
       });
       
       console.log('[Tasks] fetchTasks 返回数据，任务数量:', data.tasks?.length || 0);
@@ -892,12 +861,60 @@ const Tasks: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy]);
+  }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy, rewardSort, deadlineSort]);
   
   // 监听 sortBy 变化，用于调试
   useEffect(() => {
     console.log('[Tasks] sortBy 状态已更新为:', sortBy);
   }, [sortBy]);
+
+  // 处理金额排序变化
+  const handleRewardSortChange = useCallback((value: string) => {
+    console.log('[Tasks] ========== 金额排序变化 ==========');
+    console.log('[Tasks] 新值:', value);
+    
+    // 更新状态
+    setRewardSort(value);
+    setDeadlineSort(''); // 清除截止日期排序
+    
+    // 计算新的排序值
+    const newSortBy = value ? `reward_${value}` : 'latest';
+    console.log('[Tasks] 设置 sortBy 为:', newSortBy);
+    
+    // 更新排序状态
+    setSortBy(newSortBy);
+    
+    // 关闭下拉菜单
+    setShowRewardDropdown(false);
+    
+    // 直接调用 loadTasks，传入新的排序值
+    console.log('[Tasks] 直接调用 loadTasks，排序参数:', newSortBy);
+    loadTasks(false, undefined, newSortBy);
+  }, [loadTasks]);
+
+  // 处理截止日期排序变化
+  const handleDeadlineSortChange = useCallback((value: string) => {
+    console.log('[Tasks] ========== 截止日期排序变化 ==========');
+    console.log('[Tasks] 新值:', value);
+    
+    // 更新状态
+    setDeadlineSort(value);
+    setRewardSort(''); // 清除金额排序
+    
+    // 计算新的排序值
+    const newSortBy = value ? `deadline_${value}` : 'latest';
+    console.log('[Tasks] 设置 sortBy 为:', newSortBy);
+    
+    // 更新排序状态
+    setSortBy(newSortBy);
+    
+    // 关闭下拉菜单
+    setShowDeadlineDropdown(false);
+    
+    // 直接调用 loadTasks，传入新的排序值
+    console.log('[Tasks] 直接调用 loadTasks，排序参数:', newSortBy);
+    loadTasks(false, undefined, newSortBy);
+  }, [loadTasks]);
   
   // 加载更多任务
   const loadMoreTasks = useCallback(() => {
@@ -2168,10 +2185,7 @@ const Tasks: React.FC = () => {
                         console.log('[Tasks] ========== 点击金额排序升序选项 ==========');
                         e.stopPropagation();
                         e.preventDefault();
-                        console.log('[Tasks] 调用 handleRewardSortChange("asc")');
                         handleRewardSortChange('asc');
-                        console.log('[Tasks] 关闭下拉菜单');
-                        setShowRewardDropdown(false);
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
@@ -2343,10 +2357,7 @@ const Tasks: React.FC = () => {
                         console.log('[Tasks] ========== 点击截止时间排序升序选项 ==========');
                         e.stopPropagation();
                         e.preventDefault();
-                        console.log('[Tasks] 调用 handleDeadlineSortChange("asc")');
                         handleDeadlineSortChange('asc');
-                        console.log('[Tasks] 关闭下拉菜单');
-                        setShowDeadlineDropdown(false);
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
@@ -2383,10 +2394,7 @@ const Tasks: React.FC = () => {
                         console.log('[Tasks] ========== 点击截止时间排序降序选项 ==========');
                         e.stopPropagation();
                         e.preventDefault();
-                        console.log('[Tasks] 调用 handleDeadlineSortChange("desc")');
                         handleDeadlineSortChange('desc');
-                        console.log('[Tasks] 关闭下拉菜单');
-                        setShowDeadlineDropdown(false);
                       }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
