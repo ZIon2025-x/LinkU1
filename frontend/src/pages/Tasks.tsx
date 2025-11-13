@@ -2093,13 +2093,18 @@ const Tasks: React.FC = () => {
                   <div 
                     className="custom-dropdown-content show" 
                     onClick={(e) => {
-                      console.log('[Tasks] ========== 点击金额排序下拉菜单容器 ==========');
-                      console.log('[Tasks] 事件对象:', e);
-                      e.stopPropagation();
+                      // 如果点击的是容器本身（不是子元素），才阻止冒泡
+                      if (e.target === e.currentTarget) {
+                        console.log('[Tasks] ========== 点击金额排序下拉菜单容器 ==========');
+                        e.stopPropagation();
+                      }
                     }}
                     onMouseDown={(e) => {
-                      console.log('[Tasks] 金额排序下拉菜单容器 onMouseDown');
-                      e.stopPropagation();
+                      // 如果点击的是容器本身（不是子元素），才阻止冒泡
+                      if (e.target === e.currentTarget) {
+                        console.log('[Tasks] 金额排序下拉菜单容器 onMouseDown');
+                        e.stopPropagation();
+                      }
                     }}
                     style={{
                       position: 'absolute',
@@ -2119,12 +2124,17 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         console.log('[Tasks] ========== 点击金额排序降序选项 ==========');
+                        e.stopPropagation();
+                        e.preventDefault();
                         console.log('[Tasks] 调用 handleRewardSortChange("desc")');
                         handleRewardSortChange('desc');
                         console.log('[Tasks] 关闭下拉菜单');
                         setShowRewardDropdown(false);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2154,12 +2164,17 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         console.log('[Tasks] ========== 点击金额排序升序选项 ==========');
+                        e.stopPropagation();
+                        e.preventDefault();
                         console.log('[Tasks] 调用 handleRewardSortChange("asc")');
                         handleRewardSortChange('asc');
                         console.log('[Tasks] 关闭下拉菜单');
                         setShowRewardDropdown(false);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2293,13 +2308,18 @@ const Tasks: React.FC = () => {
                   <div 
                     className="custom-dropdown-content show" 
                     onClick={(e) => {
-                      console.log('[Tasks] ========== 点击截止时间排序下拉菜单容器 ==========');
-                      console.log('[Tasks] 事件对象:', e);
-                      e.stopPropagation();
+                      // 如果点击的是容器本身（不是子元素），才阻止冒泡
+                      if (e.target === e.currentTarget) {
+                        console.log('[Tasks] ========== 点击截止时间排序下拉菜单容器 ==========');
+                        e.stopPropagation();
+                      }
                     }}
                     onMouseDown={(e) => {
-                      console.log('[Tasks] 截止时间排序下拉菜单容器 onMouseDown');
-                      e.stopPropagation();
+                      // 如果点击的是容器本身（不是子元素），才阻止冒泡
+                      if (e.target === e.currentTarget) {
+                        console.log('[Tasks] 截止时间排序下拉菜单容器 onMouseDown');
+                        e.stopPropagation();
+                      }
                     }}
                     style={{
                       position: 'absolute',
@@ -2319,12 +2339,17 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         console.log('[Tasks] ========== 点击截止时间排序升序选项 ==========');
+                        e.stopPropagation();
+                        e.preventDefault();
                         console.log('[Tasks] 调用 handleDeadlineSortChange("asc")');
                         handleDeadlineSortChange('asc');
                         console.log('[Tasks] 关闭下拉菜单');
                         setShowDeadlineDropdown(false);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2354,12 +2379,17 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onClick={(e) => {
                         console.log('[Tasks] ========== 点击截止时间排序降序选项 ==========');
+                        e.stopPropagation();
+                        e.preventDefault();
                         console.log('[Tasks] 调用 handleDeadlineSortChange("desc")');
                         handleDeadlineSortChange('desc');
                         console.log('[Tasks] 关闭下拉菜单');
                         setShowDeadlineDropdown(false);
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
