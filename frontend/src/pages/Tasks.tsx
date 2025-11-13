@@ -1953,15 +1953,19 @@ const Tasks: React.FC = () => {
               {/* 金额排序卡片 */}
               <div className="reward-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
                 <div
-                  onMouseDown={(e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('[Tasks] 点击金额排序按钮（onMouseDown），当前状态:', showRewardDropdown);
+                    console.log('[Tasks] 点击金额排序按钮，当前状态:', showRewardDropdown);
+                    console.log('[Tasks] 事件目标:', e.target);
+                    console.log('[Tasks] 当前元素:', e.currentTarget);
                     setShowRewardDropdown(!showRewardDropdown);
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log('[Tasks] 点击金额排序按钮（onClick），当前状态:', showRewardDropdown);
+                  onMouseDown={(e) => {
+                    console.log('[Tasks] 金额排序按钮 onMouseDown 触发');
+                  }}
+                  onMouseUp={(e) => {
+                    console.log('[Tasks] 金额排序按钮 onMouseUp 触发');
                   }}
                   style={{
                     background: rewardSort 
@@ -1984,7 +1988,9 @@ const Tasks: React.FC = () => {
                     minWidth: '140px',
                     position: 'relative',
                     zIndex: 11,
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
                   }}
                   onMouseEnter={(e) => {
                     if (!rewardSort) {
@@ -2054,9 +2060,10 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('[Tasks] 选择金额排序：降序');
                         handleRewardSortChange('desc');
                         setShowRewardDropdown(false);
                       }}
@@ -2088,9 +2095,10 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('[Tasks] 选择金额排序：升序');
                         handleRewardSortChange('asc');
                         setShowRewardDropdown(false);
                       }}
@@ -2126,15 +2134,19 @@ const Tasks: React.FC = () => {
               {/* 截止日期排序卡片 */}
               <div className="deadline-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
                 <div
-                  onMouseDown={(e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('[Tasks] 点击截止时间排序按钮（onMouseDown），当前状态:', showDeadlineDropdown);
+                    console.log('[Tasks] 点击截止时间排序按钮，当前状态:', showDeadlineDropdown);
+                    console.log('[Tasks] 事件目标:', e.target);
+                    console.log('[Tasks] 当前元素:', e.currentTarget);
                     setShowDeadlineDropdown(!showDeadlineDropdown);
                   }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    console.log('[Tasks] 点击截止时间排序按钮（onClick），当前状态:', showDeadlineDropdown);
+                  onMouseDown={(e) => {
+                    console.log('[Tasks] 截止时间排序按钮 onMouseDown 触发');
+                  }}
+                  onMouseUp={(e) => {
+                    console.log('[Tasks] 截止时间排序按钮 onMouseUp 触发');
                   }}
                   style={{
                     background: deadlineSort 
@@ -2157,7 +2169,9 @@ const Tasks: React.FC = () => {
                     minWidth: '160px',
                     position: 'relative',
                     zIndex: 11,
-                    pointerEvents: 'auto'
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none'
                   }}
                   onMouseEnter={(e) => {
                     if (!deadlineSort) {
@@ -2227,9 +2241,10 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('[Tasks] 选择截止时间排序：升序');
                         handleDeadlineSortChange('asc');
                         setShowDeadlineDropdown(false);
                       }}
@@ -2261,9 +2276,10 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log('[Tasks] 选择截止时间排序：降序');
                         handleDeadlineSortChange('desc');
                         setShowDeadlineDropdown(false);
                       }}
