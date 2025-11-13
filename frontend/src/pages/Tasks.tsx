@@ -792,6 +792,9 @@ const Tasks: React.FC = () => {
       // 如果是加载更多，使用传入的页码或当前页码+1
       const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
       
+      // 调试：输出排序参数
+      console.log('[Tasks] 加载任务，排序参数:', sortBy);
+      
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
         city: city !== 'all' ? city : undefined,

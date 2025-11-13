@@ -467,15 +467,23 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
     });
   }
   
-  // 非搜索请求，直接执行（使用缓存）
+  // 非搜索请求，如果包含排序参数，不使用缓存（确保排序立即生效）
+  // 否则使用缓存
   try {
-    const res = await cachedRequest(
-      '/api/tasks',
-      () => api.get('/api/tasks', { params }).then(r => r.data),
-      CACHE_TTL.TASKS,
-      params
-    );
-    return res;
+    if (sort_by && sort_by !== 'latest') {
+      // 有排序参数时，直接请求不使用缓存
+      const res = await api.get('/api/tasks', { params });
+      return res.data;
+    } else {
+      // 无排序参数时，使用缓存
+      const res = await cachedRequest(
+        '/api/tasks',
+        () => api.get('/api/tasks', { params }).then(r => r.data),
+        CACHE_TTL.TASKS,
+        params
+      );
+      return res;
+    }
   } catch (error) {
     console.error('fetchTasks 请求失败:', error);
     throw error;

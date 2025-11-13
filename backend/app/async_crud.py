@@ -390,21 +390,27 @@ class AsyncTaskCRUD:
             )
 
             # 排序
+            logger.info(f"[get_tasks_with_total] 排序参数: {sort_by}")
             if sort_by == "latest":
                 query = query.order_by(models.Task.created_at.desc())
             elif sort_by == "oldest":
                 query = query.order_by(models.Task.created_at.asc())
             elif sort_by == "reward_high" or sort_by == "reward_desc":
                 # 使用base_reward排序
+                logger.info("[get_tasks_with_total] 使用金额降序排序")
                 query = query.order_by(models.Task.base_reward.desc())
             elif sort_by == "reward_low" or sort_by == "reward_asc":
                 # 使用base_reward排序
+                logger.info("[get_tasks_with_total] 使用金额升序排序")
                 query = query.order_by(models.Task.base_reward.asc())
             elif sort_by == "deadline_asc":
+                logger.info("[get_tasks_with_total] 使用截止时间升序排序")
                 query = query.order_by(models.Task.deadline.asc())
             elif sort_by == "deadline_desc":
+                logger.info("[get_tasks_with_total] 使用截止时间降序排序")
                 query = query.order_by(models.Task.deadline.desc())
             else:
+                logger.info(f"[get_tasks_with_total] 未知排序参数 {sort_by}，使用默认排序")
                 query = query.order_by(models.Task.created_at.desc())
 
             result = await db.execute(
