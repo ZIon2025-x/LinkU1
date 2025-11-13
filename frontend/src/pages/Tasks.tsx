@@ -910,29 +910,40 @@ const Tasks: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('[data-location-dropdown]')) {
+      
+      // 检查位置下拉菜单
+      if (showLocationDropdown && !target.closest('[data-location-dropdown]')) {
         setShowLocationDropdown(false);
       }
-      if (!target.closest('[data-language-dropdown]')) {
+      
+      // 检查语言下拉菜单
+      if (showLanguageDropdown && !target.closest('[data-language-dropdown]')) {
         setShowLanguageDropdown(false);
       }
-      if (!target.closest('.reward-dropdown-container')) {
+      
+      // 检查金额排序下拉菜单
+      if (showRewardDropdown && !target.closest('.reward-dropdown-container')) {
         setShowRewardDropdown(false);
       }
-      if (!target.closest('.deadline-dropdown-container')) {
+      
+      // 检查截止时间排序下拉菜单
+      if (showDeadlineDropdown && !target.closest('.deadline-dropdown-container')) {
         setShowDeadlineDropdown(false);
       }
-      if (!target.closest('.level-dropdown-container')) {
+      
+      // 检查任务等级下拉菜单
+      if (showLevelDropdown && !target.closest('.level-dropdown-container')) {
         setShowLevelDropdown(false);
       }
     };
 
     if (showLocationDropdown || showLanguageDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // 使用 click 事件，在冒泡阶段处理
+      document.addEventListener('click', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [showLocationDropdown, showLanguageDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
 
@@ -1940,9 +1951,18 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 金额排序卡片 */}
-              <div className="reward-dropdown-container" style={{ position: 'relative' }}>
+              <div className="reward-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
                 <div
-                  onClick={() => setShowRewardDropdown(!showRewardDropdown)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[Tasks] 点击金额排序按钮（onMouseDown），当前状态:', showRewardDropdown);
+                    setShowRewardDropdown(!showRewardDropdown);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('[Tasks] 点击金额排序按钮（onClick），当前状态:', showRewardDropdown);
+                  }}
                   style={{
                     background: rewardSort 
                       ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' 
@@ -1961,7 +1981,10 @@ const Tasks: React.FC = () => {
                       ? '0 8px 25px rgba(240, 147, 251, 0.3)' 
                       : '0 2px 8px rgba(0, 0, 0, 0.08)',
                     transform: rewardSort ? 'translateY(-2px)' : 'translateY(0)',
-                    minWidth: '140px'
+                    minWidth: '140px',
+                    position: 'relative',
+                    zIndex: 11,
+                    pointerEvents: 'auto'
                   }}
                   onMouseEnter={(e) => {
                     if (!rewardSort) {
@@ -2101,9 +2124,18 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 截止日期排序卡片 */}
-              <div className="deadline-dropdown-container" style={{ position: 'relative' }}>
+              <div className="deadline-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
                 <div
-                  onClick={() => setShowDeadlineDropdown(!showDeadlineDropdown)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[Tasks] 点击截止时间排序按钮（onMouseDown），当前状态:', showDeadlineDropdown);
+                    setShowDeadlineDropdown(!showDeadlineDropdown);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('[Tasks] 点击截止时间排序按钮（onClick），当前状态:', showDeadlineDropdown);
+                  }}
                   style={{
                     background: deadlineSort 
                       ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' 
@@ -2122,7 +2154,10 @@ const Tasks: React.FC = () => {
                       ? '0 8px 25px rgba(79, 172, 254, 0.3)' 
                       : '0 2px 8px rgba(0, 0, 0, 0.08)',
                     transform: deadlineSort ? 'translateY(-2px)' : 'translateY(0)',
-                    minWidth: '160px'
+                    minWidth: '160px',
+                    position: 'relative',
+                    zIndex: 11,
+                    pointerEvents: 'auto'
                   }}
                   onMouseEnter={(e) => {
                     if (!deadlineSort) {
