@@ -294,6 +294,18 @@
       "noMatchingTasks": "No matching tasks found"
     },
     "systemNotice": "The system will automatically cancel tasks that exceed the deadline to ensure timeliness.",
+    "apply": {
+      "submitApplication": "Submit Application",
+      "cancel": "Cancel",
+      "wantToNegotiate": "I want to negotiate",
+      "negotiationAmount": "Negotiation Amount",
+      "negotiationAmountPlaceholder": "Please enter negotiation amount (must be greater than 0)",
+      "applicationMessagePlaceholder": "Please enter application message...",
+      "applyTask": "Apply Task",
+      "applicationMessageOptional": "Application Message (Optional)",
+      "submitting": "Submitting...",
+      "processing": "Processing..."
+    },
     "swipeToSeeMore": "Swipe to see more"
   },
   "profile": {

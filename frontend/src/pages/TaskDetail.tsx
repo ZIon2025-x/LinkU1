@@ -2150,12 +2150,12 @@ const TaskDetail: React.FC = () => {
               {actionLoading ? (
                 <>
                   <span>⏳</span>
-                  处理中...
+                  {t('tasks.apply.processing')}
                 </>
               ) : (
                 <>
                   <span>✅</span>
-                  申请任务
+                  {t('tasks.apply.applyTask')}
                 </>
               )}
           </button>
@@ -2195,7 +2195,7 @@ const TaskDetail: React.FC = () => {
             }}
             onClick={(e) => e.stopPropagation()}
             >
-              <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>申请任务</h3>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>{t('tasks.apply.applyTask')}</h3>
               
               <div style={{ marginBottom: '20px' }}>
                 <label style={{
@@ -2205,12 +2205,12 @@ const TaskDetail: React.FC = () => {
                   fontWeight: 600,
                   color: '#374151'
                 }}>
-                  申请留言（可选）
+                  {t('tasks.apply.applicationMessageOptional')}
                 </label>
                 <textarea
                   value={applyMessage}
                   onChange={(e) => setApplyMessage(e.target.value)}
-                  placeholder="请输入申请留言..."
+                  placeholder={t('tasks.apply.applicationMessagePlaceholder')}
                   style={{
                     width: '100%',
                     minHeight: '100px',
@@ -2258,7 +2258,7 @@ const TaskDetail: React.FC = () => {
                     }}
                     style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  <span>我想议价</span>
+                  <span>{t('tasks.apply.wantToNegotiate')}</span>
                 </label>
                 
                 {isNegotiateChecked && (
@@ -2270,7 +2270,7 @@ const TaskDetail: React.FC = () => {
                     fontWeight: 600,
                     color: '#374151'
                   }}>
-                    议价金额
+                    {t('tasks.apply.negotiationAmount')}
                   </label>
                   <input
                     type="number"
@@ -2279,7 +2279,7 @@ const TaskDetail: React.FC = () => {
                       const value = e.target.value ? parseFloat(e.target.value) : undefined;
                       setNegotiatedPrice(value);
                     }}
-                    placeholder="请输入议价金额（必须大于0）"
+                    placeholder={t('tasks.apply.negotiationAmountPlaceholder')}
                     min="0.01"
                     step="0.01"
                     style={{
@@ -2333,7 +2333,7 @@ const TaskDetail: React.FC = () => {
                     e.currentTarget.style.background = '#f3f4f6';
                   }}
                 >
-                  取消
+                  {t('tasks.apply.cancel')}
                 </button>
                 <button
                   onClick={handleSubmitApplication}
@@ -2365,7 +2365,7 @@ const TaskDetail: React.FC = () => {
                     }
                   }}
                 >
-                  {actionLoading ? '提交中...' : '提交申请'}
+                  {actionLoading ? t('tasks.apply.submitting') : t('tasks.apply.submitApplication')}
                 </button>
               </div>
             </div>

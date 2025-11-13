@@ -423,17 +423,19 @@ api.interceptors.response.use(
 // 防抖计时器映射
 const fetchTasksDebounceTimers = new Map<string, NodeJS.Timeout>();
 
-export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10 }: {
+export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10, sort_by }: {
   type?: string;
   city?: string;
   keyword?: string;
   page?: number;
   pageSize?: number;
+  sort_by?: string;
 }) {
   const params: Record<string, any> = {};
   if (type && type !== 'all' && type !== '全部类型') params.task_type = type;
   if (city && city !== 'all' && city !== '全部城市') params.location = city;
   if (keyword) params.keyword = keyword;
+  if (sort_by) params.sort_by = sort_by;
   params.page = page;
   params.page_size = pageSize;
   

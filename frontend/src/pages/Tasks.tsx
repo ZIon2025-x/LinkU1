@@ -797,7 +797,8 @@ const Tasks: React.FC = () => {
         city: city !== 'all' ? city : undefined,
         keyword: searchKeyword,
         page: currentPage,
-        pageSize: pageSize
+        pageSize: pageSize,
+        sort_by: sortBy
       });
       
       const tasksList = (data.tasks || []).map((task: any) => {
@@ -2799,7 +2800,7 @@ const Tasks: React.FC = () => {
               <textarea
                 value={applyMessage}
                 onChange={(e) => setApplyMessage(e.target.value)}
-                placeholder="请输入申请留言..."
+                placeholder={t('tasks.apply.applicationMessagePlaceholder')}
                 style={{
                   width: '100%',
                   minHeight: '100px',
@@ -2847,7 +2848,7 @@ const Tasks: React.FC = () => {
                   }}
                   style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                 />
-                <span>我想议价</span>
+                <span>{t('tasks.apply.wantToNegotiate')}</span>
               </label>
               
               {isNegotiateChecked && (
@@ -2859,7 +2860,7 @@ const Tasks: React.FC = () => {
                   fontWeight: 600,
                   color: '#374151'
                 }}>
-                  议价金额
+                  {t('tasks.apply.negotiationAmount')}
                 </label>
                 <input
                   type="number"
@@ -2868,7 +2869,7 @@ const Tasks: React.FC = () => {
                     const value = e.target.value ? parseFloat(e.target.value) : undefined;
                     setNegotiatedPrice(value);
                   }}
-                  placeholder="请输入议价金额（必须大于0）"
+                  placeholder={t('tasks.apply.negotiationAmountPlaceholder')}
                   min="0.01"
                   step="0.01"
                   style={{
@@ -2921,7 +2922,7 @@ const Tasks: React.FC = () => {
                   e.currentTarget.style.background = '#f3f4f6';
                 }}
               >
-                取消
+                {t('tasks.apply.cancel')}
               </button>
               <button
                 onClick={handleSubmitApplication}
@@ -2945,7 +2946,7 @@ const Tasks: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                提交申请
+                {t('tasks.apply.submitApplication')}
               </button>
             </div>
           </div>

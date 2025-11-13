@@ -290,7 +290,19 @@
       "noMatchingTasks": "没有找到符合条件的任务"
     },
     "systemNotice": "系统会自动取消超过截止日期的任务，确保任务时效性",
-    "swipeToSeeMore": "滑动查看更多"
+    "swipeToSeeMore": "滑动查看更多",
+    "apply": {
+      "submitApplication": "提交申请",
+      "cancel": "取消",
+      "wantToNegotiate": "我想议价",
+      "negotiationAmount": "议价金额",
+      "negotiationAmountPlaceholder": "请输入议价金额（必须大于0）",
+      "applicationMessagePlaceholder": "请输入申请留言...",
+      "applyTask": "申请任务",
+      "applicationMessageOptional": "申请留言（可选）",
+      "submitting": "提交中...",
+      "processing": "处理中..."
+    }
   },
   "profile": {
     "title": "个人资料",
