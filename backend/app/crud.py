@@ -593,17 +593,37 @@ def cleanup_task_files(db: Session, task_id: int):
 
     railway_env = os.getenv("RAILWAY_ENVIRONMENT")
     if railway_env:
-        image_dir = Path("/data/uploads/private_images")
-        file_dir = Path("/data/uploads/private/files")
+        # Railway环境：可能有多个图片存储路径
+        image_dirs = [
+            Path("/data/uploads/private_images"),  # image_system.py 使用的路径（消息中的图片）
+            Path("/data/uploads/private/images"),  # routers.py 使用的路径
+            Path("/data/uploads/public/images"),  # 任务发布时的公开图片
+        ]
+        file_dirs = [
+            Path("/data/uploads/private/files"),
+        ]
     else:
-        image_dir = Path("uploads/private_images")
-        file_dir = Path("uploads/private/files")
-
-    # 检查目录是否存在
-    if not image_dir.exists():
-        logger.warning(f"图片目录不存在: {image_dir}，跳过图片清理")
-    if not file_dir.exists():
-        logger.warning(f"文件目录不存在: {file_dir}，跳过文件清理")
+        # 本地开发环境
+        image_dirs = [
+            Path("uploads/private_images"),
+            Path("uploads/private/images"),
+            Path("uploads/public/images"),  # 任务发布时的公开图片
+        ]
+        file_dirs = [
+            Path("uploads/private/files"),
+        ]
+    
+    # 过滤出存在的目录
+    existing_image_dirs = [d for d in image_dirs if d.exists()]
+    existing_file_dirs = [d for d in file_dirs if d.exists()]
+    
+    if not existing_image_dirs:
+        logger.warning(f"所有图片目录都不存在: {image_dirs}，跳过图片清理")
+    if not existing_file_dirs:
+        logger.warning(f"所有文件目录都不存在: {file_dirs}，跳过文件清理")
+    
+    logger.debug(f"找到 {len(existing_image_dirs)} 个图片目录: {[str(d) for d in existing_image_dirs]}")
+    logger.debug(f"找到 {len(existing_file_dirs)} 个文件目录: {[str(d) for d in existing_file_dirs]}")
 
     image_ids_to_delete = []
     file_ids_to_delete = []
@@ -616,16 +636,26 @@ def cleanup_task_files(db: Session, task_id: int):
                 for img in images_data:
                     # 可能是 URL 或 image_id，需要提取 image_id
                     if isinstance(img, str):
-                        # 如果是 URL，尝试从 URL 中提取 image_id
-                        # URL 格式可能是: /api/private-image/{image_id}?user=...&token=...
-                        if '/api/private-image/' in img:
+                        # 如果是公开图片URL，格式: https://domain.com/uploads/images/{uuid}.{ext}
+                        # 或: /uploads/images/{uuid}.{ext}
+                        if '/uploads/images/' in img:
+                            # 提取文件名（包含扩展名）
+                            parts = img.split('/uploads/images/')
+                            if len(parts) > 1:
+                                filename = parts[1].split('?')[0].split('&')[0]
+                                if filename:
+                                    # 对于公开图片，文件名就是完整的文件名（UUID.扩展名）
+                                    image_ids_to_delete.append(filename)
+                                    logger.debug(f"从任务公开图片URL提取到文件名: {filename}")
+                        # 如果是私密图片URL，格式: /api/private-image/{image_id}?user=...&token=...
+                        elif '/api/private-image/' in img:
                             # 提取 image_id
                             parts = img.split('/api/private-image/')
                             if len(parts) > 1:
                                 image_id = parts[1].split('?')[0].split('&')[0]
                                 if image_id:
                                     image_ids_to_delete.append(image_id)
-                                    logger.debug(f"从任务图片URL提取到 image_id: {image_id}")
+                                    logger.debug(f"从任务私密图片URL提取到 image_id: {image_id}")
                         # 如果直接是 image_id（不包含 / 或 ?）
                         elif '/' not in img and '?' not in img and len(img) > 10:
                             image_ids_to_delete.append(img)
@@ -661,72 +691,198 @@ def cleanup_task_files(db: Session, task_id: int):
     unique_image_ids = list(set(image_ids_to_delete))
     unique_file_ids = list(set(file_ids_to_delete))
     
-    logger.info(f"任务 {task_id} 需要清理: {len(unique_image_ids)} 个图片ID, {len(unique_file_ids)} 个文件ID")
+    logger.info(f"任务 {task_id} 从数据库提取到: {len(unique_image_ids)} 个图片ID, {len(unique_file_ids)} 个文件ID")
     if unique_image_ids:
         logger.debug(f"图片ID列表: {unique_image_ids[:5]}{'...' if len(unique_image_ids) > 5 else ''}")
     if unique_file_ids:
         logger.debug(f"文件ID列表: {unique_file_ids[:5]}{'...' if len(unique_file_ids) > 5 else ''}")
 
-    # 4. 删除图片文件
+    # 如果从数据库中没有找到ID，尝试扫描文件系统
+    # 图片ID格式: {user_id}_{timestamp}_{random_part}
+    # 收集任务相关的所有用户ID
+    related_user_ids = set()
+    if task.poster_id:
+        related_user_ids.add(task.poster_id)
+    if task.taker_id:
+        related_user_ids.add(task.taker_id)
+    
+    # 从消息中收集所有发送者ID
+    for msg in task_messages:
+        if msg.sender_id:
+            related_user_ids.add(msg.sender_id)
+    
+    # 计算任务时间范围（用于过滤文件）
+    # 文件时间戳在任务创建前1天到完成后1天的范围内
+    from datetime import timedelta, datetime as dt
+    task_start = task.created_at
+    # 如果任务已完成，使用完成时间；否则使用当前时间
+    if task.completed_at:
+        task_end = task.completed_at
+    else:
+        # 使用当前UTC时间，转换为naive datetime
+        task_end = dt.now(timezone.utc).replace(tzinfo=None)
+    
+    # 扩展时间范围：创建前1天到完成后1天
+    scan_start = task_start - timedelta(days=1)
+    scan_end = task_end + timedelta(days=1)
+    
+    # 转换为时间戳（秒）
+    # 如果datetime是naive（没有时区），假设它是UTC时间
+    if scan_start.tzinfo is None:
+        # 将naive datetime转换为UTC aware datetime
+        scan_start = scan_start.replace(tzinfo=timezone.utc)
+    if scan_end.tzinfo is None:
+        scan_end = scan_end.replace(tzinfo=timezone.utc)
+    
+    scan_start_ts = int(scan_start.timestamp())
+    scan_end_ts = int(scan_end.timestamp())
+    
+    logger.debug(f"任务 {task_id} 相关用户: {list(related_user_ids)}")
+    logger.debug(f"任务 {task_id} 时间范围: {scan_start} 到 {scan_end} (时间戳: {scan_start_ts} 到 {scan_end_ts})")
+    
+    # 扫描文件系统查找可能属于该任务的文件
+    if existing_image_dirs and related_user_ids:
+        logger.info(f"开始扫描图片目录，查找任务 {task_id} 相关的文件...")
+        scanned_image_count = 0
+        for image_dir in existing_image_dirs:
+            logger.debug(f"扫描图片目录: {image_dir}")
+            for user_id in related_user_ids:
+                try:
+                    # 查找所有以该用户ID开头的文件
+                    # 文件名格式: {user_id}_{timestamp}_{random_part}.{ext}
+                    pattern = f"{user_id}_*"
+                    for img_path in image_dir.glob(pattern):
+                        scanned_image_count += 1
+                        try:
+                            # 从文件名提取时间戳
+                            # 文件名格式: user123_1234567890_abc12345.jpg
+                            filename = img_path.stem  # 不带扩展名的文件名
+                            parts = filename.split('_')
+                            if len(parts) >= 2:
+                                try:
+                                    file_timestamp = int(parts[1])
+                                    # 检查时间戳是否在任务时间范围内
+                                    if scan_start_ts <= file_timestamp <= scan_end_ts:
+                                        # 检查文件是否已经在删除列表中
+                                        if filename not in unique_image_ids:
+                                            unique_image_ids.append(filename)
+                                            logger.debug(f"扫描发现任务相关图片: {img_path} (时间戳: {file_timestamp})")
+                                except (ValueError, IndexError):
+                                    # 如果无法解析时间戳，跳过
+                                    pass
+                        except Exception as e:
+                            logger.debug(f"处理扫描到的文件失败 {img_path}: {e}")
+                except Exception as e:
+                    logger.debug(f"扫描用户 {user_id} 的文件失败: {e}")
+        logger.info(f"扫描完成，共检查 {scanned_image_count} 个文件")
+    
+    if existing_file_dirs and related_user_ids:
+        logger.info(f"开始扫描文件目录，查找任务 {task_id} 相关的文件...")
+        scanned_file_count = 0
+        for file_dir in existing_file_dirs:
+            logger.debug(f"扫描文件目录: {file_dir}")
+            for user_id in related_user_ids:
+                try:
+                    # 查找所有以该用户ID开头的文件
+                    pattern = f"{user_id}_*"
+                    for file_path in file_dir.glob(pattern):
+                        scanned_file_count += 1
+                        try:
+                            # 从文件名提取时间戳
+                            filename = file_path.stem
+                            parts = filename.split('_')
+                            if len(parts) >= 2:
+                                try:
+                                    file_timestamp = int(parts[1])
+                                    # 检查时间戳是否在任务时间范围内
+                                    if scan_start_ts <= file_timestamp <= scan_end_ts:
+                                        # 检查文件是否已经在删除列表中
+                                        if filename not in unique_file_ids:
+                                            unique_file_ids.append(filename)
+                                            logger.debug(f"扫描发现任务相关附件: {file_path} (时间戳: {file_timestamp})")
+                                except (ValueError, IndexError):
+                                    pass
+                        except Exception as e:
+                            logger.debug(f"处理扫描到的文件失败 {file_path}: {e}")
+                except Exception as e:
+                    logger.debug(f"扫描用户 {user_id} 的文件失败: {e}")
+        logger.info(f"扫描完成，共检查 {scanned_file_count} 个文件")
+    
+    logger.info(f"任务 {task_id} 最终需要清理: {len(unique_image_ids)} 个图片, {len(unique_file_ids)} 个附件文件")
+
+    # 4. 删除图片文件（在所有图片目录中查找）
     deleted_images = 0
-    if image_dir.exists():
+    if existing_image_dirs:
         for image_id in unique_image_ids:
-            try:
-                # 查找并删除图片（可能有不同扩展名）
-                # 注意：文件名格式是 {image_id}{extension}，例如 user123_1234567890_abc12345.jpg
-                image_pattern = f"{image_id}.*"
-                found_files = list(image_dir.glob(image_pattern))
-                
-                if not found_files:
-                    # 尝试直接匹配（不带扩展名的情况）
+            deleted_this_id = False
+            for image_dir in existing_image_dirs:
+                try:
+                    # 首先尝试直接匹配文件名（适用于公开图片，文件名是完整的 UUID.扩展名）
                     direct_path = image_dir / image_id
                     if direct_path.exists() and direct_path.is_file():
-                        found_files = [direct_path]
-                
-                if found_files:
-                    for img_path in found_files:
                         try:
-                            img_path.unlink()
+                            direct_path.unlink()
                             deleted_images += 1
-                            logger.info(f"✅ 删除任务图片: {img_path}")
+                            deleted_this_id = True
+                            logger.info(f"✅ 删除任务图片: {direct_path}")
                         except Exception as e:
-                            logger.error(f"删除图片文件失败 {img_path}: {e}")
-                else:
-                    logger.debug(f"未找到图片文件: {image_id} (目录: {image_dir}, 模式: {image_pattern})")
-            except Exception as e:
-                logger.error(f"处理图片ID失败 {image_id}: {e}")
+                            logger.error(f"删除图片文件失败 {direct_path}: {e}")
+                    
+                    # 如果直接匹配失败，尝试模式匹配（适用于私密图片，格式: {image_id}.{extension}）
+                    if not deleted_this_id:
+                        image_pattern = f"{image_id}.*"
+                        found_files = list(image_dir.glob(image_pattern))
+                        
+                        if found_files:
+                            for img_path in found_files:
+                                try:
+                                    img_path.unlink()
+                                    deleted_images += 1
+                                    deleted_this_id = True
+                                    logger.info(f"✅ 删除任务图片: {img_path}")
+                                except Exception as e:
+                                    logger.error(f"删除图片文件失败 {img_path}: {e}")
+                except Exception as e:
+                    logger.error(f"在目录 {image_dir} 中处理图片ID失败 {image_id}: {e}")
+            
+            if not deleted_this_id:
+                logger.debug(f"未找到图片文件: {image_id} (已检查所有目录: {existing_image_dirs})")
     else:
-        logger.warning(f"图片目录不存在，跳过图片清理: {image_dir}")
+        logger.warning(f"所有图片目录都不存在，跳过图片清理")
 
-    # 5. 删除附件文件
+    # 5. 删除附件文件（在所有文件目录中查找）
     deleted_files = 0
-    if file_dir.exists():
+    if existing_file_dirs:
         for file_id in unique_file_ids:
-            try:
-                # 查找并删除文件（可能有不同扩展名）
-                file_pattern = f"{file_id}.*"
-                found_files = list(file_dir.glob(file_pattern))
-                
-                if not found_files:
-                    # 尝试直接匹配（不带扩展名的情况）
-                    direct_path = file_dir / file_id
-                    if direct_path.exists() and direct_path.is_file():
-                        found_files = [direct_path]
-                
-                if found_files:
-                    for file_path in found_files:
-                        try:
-                            file_path.unlink()
-                            deleted_files += 1
-                            logger.info(f"✅ 删除任务附件文件: {file_path}")
-                        except Exception as e:
-                            logger.error(f"删除附件文件失败 {file_path}: {e}")
-                else:
-                    logger.debug(f"未找到附件文件: {file_id} (目录: {file_dir}, 模式: {file_pattern})")
-            except Exception as e:
-                logger.error(f"处理文件ID失败 {file_id}: {e}")
+            deleted_this_id = False
+            for file_dir in existing_file_dirs:
+                try:
+                    # 查找并删除文件（可能有不同扩展名）
+                    file_pattern = f"{file_id}.*"
+                    found_files = list(file_dir.glob(file_pattern))
+                    
+                    if not found_files:
+                        # 尝试直接匹配（不带扩展名的情况）
+                        direct_path = file_dir / file_id
+                        if direct_path.exists() and direct_path.is_file():
+                            found_files = [direct_path]
+                    
+                    if found_files:
+                        for file_path in found_files:
+                            try:
+                                file_path.unlink()
+                                deleted_files += 1
+                                deleted_this_id = True
+                                logger.info(f"✅ 删除任务附件文件: {file_path}")
+                            except Exception as e:
+                                logger.error(f"删除附件文件失败 {file_path}: {e}")
+                except Exception as e:
+                    logger.error(f"在目录 {file_dir} 中处理文件ID失败 {file_id}: {e}")
+            
+            if not deleted_this_id:
+                logger.debug(f"未找到附件文件: {file_id} (已检查所有目录: {existing_file_dirs})")
     else:
-        logger.warning(f"文件目录不存在，跳过文件清理: {file_dir}")
+        logger.warning(f"所有文件目录都不存在，跳过文件清理")
 
     logger.info(f"任务 {task_id} 文件清理完成: 删除 {deleted_images} 张图片, {deleted_files} 个附件文件")
 

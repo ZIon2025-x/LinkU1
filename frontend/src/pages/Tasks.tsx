@@ -2082,6 +2082,10 @@ const Tasks: React.FC = () => {
                 {showRewardDropdown && (
                   <div 
                     className="custom-dropdown-content show" 
+                    onClick={(e) => {
+                      console.log('[Tasks] 点击金额排序下拉菜单容器');
+                      e.stopPropagation();
+                    }}
                     style={{
                       position: 'absolute',
                       top: '100%',
@@ -2263,6 +2267,10 @@ const Tasks: React.FC = () => {
                 {showDeadlineDropdown && (
                   <div 
                     className="custom-dropdown-content show" 
+                    onClick={(e) => {
+                      console.log('[Tasks] 点击截止时间排序下拉菜单容器');
+                      e.stopPropagation();
+                    }}
                     style={{
                       position: 'absolute',
                       top: '100%',
