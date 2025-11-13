@@ -921,14 +921,22 @@ const Tasks: React.FC = () => {
         setShowLanguageDropdown(false);
       }
       
-      // 检查金额排序下拉菜单
-      if (showRewardDropdown && !target.closest('.reward-dropdown-container')) {
-        setShowRewardDropdown(false);
+      // 检查金额排序下拉菜单 - 使用更精确的选择器
+      if (showRewardDropdown) {
+        const rewardContainer = target.closest('.reward-dropdown-container');
+        const rewardButton = target.closest('.reward-dropdown-container > div');
+        if (!rewardContainer && !rewardButton) {
+          setShowRewardDropdown(false);
+        }
       }
       
-      // 检查截止时间排序下拉菜单
-      if (showDeadlineDropdown && !target.closest('.deadline-dropdown-container')) {
-        setShowDeadlineDropdown(false);
+      // 检查截止时间排序下拉菜单 - 使用更精确的选择器
+      if (showDeadlineDropdown) {
+        const deadlineContainer = target.closest('.deadline-dropdown-container');
+        const deadlineButton = target.closest('.deadline-dropdown-container > div');
+        if (!deadlineContainer && !deadlineButton) {
+          setShowDeadlineDropdown(false);
+        }
       }
       
       // 检查任务等级下拉菜单
@@ -938,13 +946,13 @@ const Tasks: React.FC = () => {
     };
 
     if (showLocationDropdown || showLanguageDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
-      // 使用 click 事件，在冒泡阶段处理
-      document.addEventListener('click', handleClickOutside);
-    }
+      // 使用 mousedown 事件，在 click 之前触发，避免与按钮的 onClick 冲突
+      document.addEventListener('mousedown', handleClickOutside);
 
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
   }, [showLocationDropdown, showLanguageDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
 
 
@@ -1962,7 +1970,6 @@ const Tasks: React.FC = () => {
               >
                 <div
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     console.log('[Tasks] 点击金额排序按钮，当前状态:', showRewardDropdown);
                     console.log('[Tasks] 事件目标:', e.target);
@@ -1970,8 +1977,6 @@ const Tasks: React.FC = () => {
                     setShowRewardDropdown(!showRewardDropdown);
                   }}
                   onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     console.log('[Tasks] 金额排序按钮 onMouseDown 触发');
                   }}
                   onMouseUp={(e) => {
@@ -2159,7 +2164,6 @@ const Tasks: React.FC = () => {
               >
                 <div
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     console.log('[Tasks] 点击截止时间排序按钮，当前状态:', showDeadlineDropdown);
                     console.log('[Tasks] 事件目标:', e.target);
@@ -2167,8 +2171,6 @@ const Tasks: React.FC = () => {
                     setShowDeadlineDropdown(!showDeadlineDropdown);
                   }}
                   onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     console.log('[Tasks] 截止时间排序按钮 onMouseDown 触发');
                   }}
                   onMouseUp={(e) => {
