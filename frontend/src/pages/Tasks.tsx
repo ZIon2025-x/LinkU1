@@ -2101,8 +2101,10 @@ const Tasks: React.FC = () => {
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
                       onClick={() => {
-                        console.log('[Tasks] 选择金额排序：降序');
+                        console.log('[Tasks] ========== 点击金额排序降序选项 ==========');
+                        console.log('[Tasks] 调用 handleRewardSortChange("desc")');
                         handleRewardSortChange('desc');
+                        console.log('[Tasks] 关闭下拉菜单');
                         setShowRewardDropdown(false);
                       }}
                       style={{
@@ -2134,8 +2136,10 @@ const Tasks: React.FC = () => {
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
                       onClick={() => {
-                        console.log('[Tasks] 选择金额排序：升序');
+                        console.log('[Tasks] ========== 点击金额排序升序选项 ==========');
+                        console.log('[Tasks] 调用 handleRewardSortChange("asc")');
                         handleRewardSortChange('asc');
+                        console.log('[Tasks] 关闭下拉菜单');
                         setShowRewardDropdown(false);
                       }}
                       style={{
@@ -2278,8 +2282,10 @@ const Tasks: React.FC = () => {
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
                       onClick={() => {
-                        console.log('[Tasks] 选择截止时间排序：升序');
+                        console.log('[Tasks] ========== 点击截止时间排序升序选项 ==========');
+                        console.log('[Tasks] 调用 handleDeadlineSortChange("asc")');
                         handleDeadlineSortChange('asc');
+                        console.log('[Tasks] 关闭下拉菜单');
                         setShowDeadlineDropdown(false);
                       }}
                       style={{
@@ -2311,8 +2317,10 @@ const Tasks: React.FC = () => {
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
                       onClick={() => {
-                        console.log('[Tasks] 选择截止时间排序：降序');
+                        console.log('[Tasks] ========== 点击截止时间排序降序选项 ==========');
+                        console.log('[Tasks] 调用 handleDeadlineSortChange("desc")');
                         handleDeadlineSortChange('desc');
+                        console.log('[Tasks] 关闭下拉菜单');
                         setShowDeadlineDropdown(false);
                       }}
                       style={{
