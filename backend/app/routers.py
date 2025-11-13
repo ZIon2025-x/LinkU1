@@ -213,6 +213,25 @@ async def register(
             detail=error_message
         )
 
+    # 处理邀请码（如果提供）
+    invitation_code_id = None
+    if validated_data.get('invitation_code'):
+        from app.coupon_points_crud import validate_invitation_code, get_invitation_code_by_code
+        from app.database import SessionLocal
+        
+        # 使用同步数据库验证邀请码
+        sync_db = SessionLocal()
+        try:
+            is_valid, error_msg, invitation_code = validate_invitation_code(sync_db, validated_data['invitation_code'].upper())
+            if is_valid and invitation_code:
+                invitation_code_id = invitation_code.id
+                print(f"邀请码验证成功: {invitation_code.code}, ID: {invitation_code_id}")
+            else:
+                print(f"邀请码验证失败: {error_msg}")
+                # 邀请码无效不影响注册，只记录警告
+        finally:
+            sync_db.close()
+    
     # 检查是否跳过邮件验证（开发环境）
     if Config.SKIP_EMAIL_VERIFICATION:
         print("开发环境：跳过邮件验证，直接创建用户")
@@ -234,6 +253,20 @@ async def register(
         )
         await db.commit()
         await db.refresh(new_user)
+        
+        # 处理邀请码奖励（开发环境：用户创建成功后立即发放）
+        if invitation_code_id:
+            from app.coupon_points_crud import use_invitation_code
+            from app.database import SessionLocal
+            sync_db = SessionLocal()
+            try:
+                success, error_msg = use_invitation_code(sync_db, new_user.id, invitation_code_id)
+                if success:
+                    print(f"邀请码奖励发放成功: 用户 {new_user.id}, 邀请码ID {invitation_code_id}")
+                else:
+                    print(f"邀请码奖励发放失败: {error_msg}")
+            finally:
+                sync_db.close()
         
         print(f"开发环境：用户 {new_user.email} 注册成功，无需邮箱验证")
         
@@ -322,6 +355,33 @@ def verify_email(
     
     # 用户验证成功，记录日志
     logger.info(f"用户验证成功: {user.email}, ID: {user.id}")
+    
+    # 处理邀请码奖励（如果注册时提供了邀请码）
+    # 注意：由于PendingUser没有invitation_code_id字段，我们需要通过其他方式获取
+    # 临时方案：在注册时验证邀请码，将邀请码文本存储到User的某个字段
+    # 更好的方案：在PendingUser中添加invitation_code_id字段，或使用Redis临时存储
+    # 当前实现：在注册API中已经验证了邀请码，但验证成功后无法获取
+    # 解决方案：在注册时，如果邀请码有效，将邀请码文本存储到User的某个字段（如invitation_code_text）
+    # 或者：在注册API中，将邀请码ID存储到Redis，key为email，在验证成功后从Redis获取
+    
+    # 尝试从Redis获取邀请码ID（如果注册时存储了）
+    try:
+        from app.redis_cache import redis_client
+        if redis_client:
+            invitation_code_key = f"registration_invitation_code:{user.email}"
+            invitation_code_id_str = redis_client.get(invitation_code_key)
+            if invitation_code_id_str:
+                invitation_code_id = int(invitation_code_id_str.decode())
+                from app.coupon_points_crud import use_invitation_code
+                success, error_msg = use_invitation_code(db, user.id, invitation_code_id)
+                if success:
+                    logger.info(f"邀请码奖励发放成功: 用户 {user.id}, 邀请码ID {invitation_code_id}")
+                    # 删除Redis中的临时数据
+                    redis_client.delete(invitation_code_key)
+                else:
+                    logger.warning(f"邀请码奖励发放失败: {error_msg}")
+    except Exception as e:
+        logger.error(f"处理邀请码奖励时出错: {e}", exc_info=True)
     
     # 验证成功，尝试自动登录用户（可选，失败不影响验证成功）
     try:
@@ -1337,6 +1397,64 @@ def confirm_task_completion(
     crud.update_user_statistics(db, task.poster_id)
     if task.taker_id:
         crud.update_user_statistics(db, task.taker_id)
+    
+    # 任务完成时自动发放积分奖励（平台赠送，非任务报酬）
+    if task.taker_id:
+        try:
+            from app.coupon_points_crud import (
+                get_or_create_points_account,
+                add_points_transaction
+            )
+            from app.crud import get_system_setting
+            from datetime import datetime, timezone as tz, timedelta
+            import uuid
+            
+            # 获取任务完成奖励积分（从系统设置读取）
+            task_bonus_setting = get_system_setting(db, "points_task_complete_bonus")
+            points_amount = int(task_bonus_setting.setting_value) if task_bonus_setting else 500  # 默认500积分
+            
+            if points_amount > 0:
+                # 生成批次ID（季度格式：2025Q1-COMP）
+                now = datetime.now(tz.utc)
+                quarter = (now.month - 1) // 3 + 1
+                batch_id = f"{now.year}Q{quarter}-COMP"
+                
+                # 计算过期时间（如果启用积分过期）
+                expire_days_setting = get_system_setting(db, "points_expire_days")
+                expire_days = int(expire_days_setting.setting_value) if expire_days_setting else 0
+                expires_at = None
+                if expire_days > 0:
+                    expires_at = now + timedelta(days=expire_days)
+                
+                # 生成幂等键（防止重复发放）
+                idempotency_key = f"task_complete_{task_id}_{task.taker_id}"
+                
+                # 检查是否已发放（通过幂等键）
+                from app.models import PointsTransaction
+                existing = db.query(PointsTransaction).filter(
+                    PointsTransaction.idempotency_key == idempotency_key
+                ).first()
+                
+                if not existing:
+                    # 发放积分奖励
+                    add_points_transaction(
+                        db,
+                        task.taker_id,
+                        type="earn",
+                        amount=points_amount,
+                        source="task_complete_bonus",
+                        related_id=task_id,
+                        related_type="task",
+                        description=f"完成任务 #{task_id} 获得平台赠送积分（非任务报酬）",
+                        batch_id=batch_id,
+                        expires_at=expires_at,
+                        idempotency_key=idempotency_key
+                    )
+                    
+                    logger.info(f"任务完成积分奖励已发放: 用户 {task.taker_id}, 任务 {task_id}, 积分 {points_amount}")
+        except Exception as e:
+            logger.error(f"发放任务完成积分奖励失败: {e}", exc_info=True)
+            # 积分发放失败不影响任务完成流程
 
     return task
 

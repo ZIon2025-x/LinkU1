@@ -17,6 +17,7 @@ class UserCreate(UserBase):
     agreed_to_terms: Optional[bool] = False
     terms_agreed_at: Optional[str] = None
     inviter_id: Optional[str] = None
+    invitation_code: Optional[str] = None  # 邀请码（注册时使用）
 
 
 class UserUpdate(BaseModel):
@@ -947,10 +948,20 @@ class CheckInRewardConfig(BaseModel):
     points_reward: Optional[int] = None
     points_reward_display: Optional[str] = None
     coupon_id: Optional[int] = None
-    description: str
+    reward_description: Optional[str] = None
+    is_active: Optional[bool] = True
 
     class Config:
         from_attributes = True
+
+
+class CheckInRewardConfigUpdate(BaseModel):
+    consecutive_days: Optional[int] = None
+    reward_type: Optional[str] = None
+    points_reward: Optional[int] = None
+    coupon_id: Optional[int] = None
+    reward_description: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class CheckInRewardsResponse(BaseModel):
@@ -1122,6 +1133,34 @@ class InvitationCodeDetail(InvitationCodeOut):
         from_attributes = True
 
 
+class InvitationCodeUserItem(BaseModel):
+    user_id: str
+    username: Optional[str] = None
+    email: Optional[str] = None
+    used_at: datetime.datetime
+    reward_received: bool
+    points_received: int
+    points_received_display: str
+    coupon_received: Optional[Dict[str, Any]] = None
+
+
+class InvitationCodeUsersList(BaseModel):
+    total: int
+    page: int
+    limit: int
+    data: List[InvitationCodeUserItem]
+
+
+class InvitationCodeStatistics(BaseModel):
+    code: str
+    total_users: int
+    total_points_given: int
+    total_points_given_display: str
+    total_coupons_given: int
+    usage_by_date: List[Dict[str, Any]]
+    recent_users: List[Dict[str, Any]]
+
+
 # 用户详情管理 Schemas
 class UserDetailOut(BaseModel):
     user: Dict[str, Any]
@@ -1173,7 +1212,11 @@ class BatchRewardResponse(BaseModel):
     reward_id: int
     status: str
     estimated_users: Optional[int] = None
-    message: str
+    total_users: Optional[int] = None
+    success_count: Optional[int] = None
+    failed_count: Optional[int] = None
+    message: Optional[str] = None
+    details: Optional[List[Dict[str, Any]]] = None
 
 
 class BatchRewardDetail(BaseModel):
@@ -1202,3 +1245,31 @@ class BatchRewardList(BaseModel):
     page: int
     limit: int
     data: List[BatchRewardDetail]
+
+
+# ==================== 任务支付相关 Schemas ====================
+
+class TaskPaymentRequest(BaseModel):
+    payment_method: str  # points, stripe, mixed
+    points_amount: Optional[int] = None  # 积分数量（整数，最小货币单位）
+    coupon_code: Optional[str] = None  # 优惠券代码
+    user_coupon_id: Optional[int] = None  # 用户优惠券ID（如果使用优惠券）
+    stripe_amount: Optional[int] = None  # Stripe支付金额（整数，最小货币单位）
+
+
+class TaskPaymentResponse(BaseModel):
+    payment_id: Optional[int] = None
+    fee_type: str  # application_fee
+    total_amount: int  # 平台服务费总额（整数，最小货币单位）
+    total_amount_display: str
+    points_used: Optional[int] = None
+    points_used_display: Optional[str] = None
+    coupon_discount: Optional[int] = None
+    coupon_discount_display: Optional[str] = None
+    stripe_amount: Optional[int] = None
+    stripe_amount_display: Optional[str] = None
+    currency: str
+    final_amount: int  # 最终需要支付的金额（整数，最小货币单位）
+    final_amount_display: str
+    checkout_url: Optional[str] = None
+    note: str

@@ -3,7 +3,7 @@
 """
 import logging
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -308,6 +308,238 @@ def use_coupon_api(
         "usage_log_id": usage_log.id,
         "message": "优惠券使用成功"
     }
+
+
+# ==================== 任务支付集成 API ====================
+
+@router.post("/tasks/{task_id}/payment", response_model=schemas.TaskPaymentResponse)
+def create_task_payment(
+    task_id: int,
+    payment_request: schemas.TaskPaymentRequest,
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
+):
+    """创建任务支付（支持积分和优惠券抵扣平台服务费）"""
+    from app import crud
+    from app.coupon_points_crud import (
+        get_or_create_points_account,
+        add_points_transaction,
+        validate_coupon_usage,
+        use_coupon,
+        get_coupon_by_code,
+    )
+    from app.crud import get_system_setting
+    import stripe
+    import os
+    
+    # 获取任务
+    task = crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    if task.poster_id != current_user.id:
+        raise HTTPException(status_code=403, detail="无权访问此任务")
+    
+    if task.is_paid:
+        raise HTTPException(status_code=400, detail="任务已支付")
+    
+    # 计算平台服务费（申请费）
+    # 假设平台服务费为任务金额的10%，或从系统设置读取
+    application_fee_rate_setting = get_system_setting(db, "application_fee_rate")
+    application_fee_rate = float(application_fee_rate_setting.setting_value) if application_fee_rate_setting else 0.10  # 默认10%
+    
+    # 获取任务金额（使用最终成交价或原始标价）
+    task_amount = float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0
+    task_amount_pence = int(task_amount * 100)  # 转换为最小货币单位
+    
+    # 计算平台服务费
+    application_fee_pence = int(task_amount_pence * application_fee_rate)
+    total_amount = application_fee_pence
+    
+    # 初始化变量
+    points_used = 0
+    coupon_discount = 0
+    user_coupon_id_used = None
+    coupon_usage_log = None
+    
+    # 处理积分抵扣
+    if payment_request.payment_method in ["points", "mixed"] and payment_request.points_amount:
+        points_account = get_or_create_points_account(db, current_user.id)
+        
+        if points_account.balance < payment_request.points_amount:
+            raise HTTPException(
+                status_code=400,
+                detail=f"积分不足，当前余额：{points_account.balance / 100:.2f}，需要：{payment_request.points_amount / 100:.2f}"
+            )
+        
+        # 积分只能抵扣平台服务费，不能超过服务费总额
+        points_used = min(payment_request.points_amount, total_amount)
+        total_amount -= points_used
+    
+    # 处理优惠券抵扣
+    if payment_request.coupon_code or payment_request.user_coupon_id:
+        # 如果提供了优惠券代码，先查找用户优惠券
+        if payment_request.coupon_code:
+            coupon = get_coupon_by_code(db, payment_request.coupon_code.upper())
+            if not coupon:
+                raise HTTPException(status_code=404, detail="优惠券不存在")
+            
+            # 查找用户的该优惠券
+            user_coupon = db.query(models.UserCoupon).filter(
+                and_(
+                    models.UserCoupon.user_id == current_user.id,
+                    models.UserCoupon.coupon_id == coupon.id,
+                    models.UserCoupon.status == "unused"
+                )
+            ).first()
+            
+            if not user_coupon:
+                raise HTTPException(status_code=400, detail="您没有可用的此优惠券")
+            
+            user_coupon_id_used = user_coupon.id
+        else:
+            user_coupon_id_used = payment_request.user_coupon_id
+        
+        # 验证优惠券使用条件
+        user_coupon = db.query(models.UserCoupon).filter(
+            and_(
+                models.UserCoupon.id == user_coupon_id_used,
+                models.UserCoupon.user_id == current_user.id
+            )
+        ).first()
+        
+        if not user_coupon:
+            raise HTTPException(status_code=404, detail="用户优惠券不存在")
+        
+        # 验证优惠券（针对平台服务费）
+        is_valid, error_msg, discount_amount = validate_coupon_usage(
+            db,
+            current_user.id,
+            user_coupon.coupon_id,
+            application_fee_pence,  # 优惠券针对平台服务费
+            task.location,
+            task.task_type,
+            datetime.now(timezone.utc)
+        )
+        
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg or "优惠券不可用")
+        
+        # 使用优惠券
+        coupon_usage_log, error = use_coupon(
+            db,
+            current_user.id,
+            user_coupon_id_used,
+            task_id,
+            application_fee_pence,
+            task.location,
+            task.task_type,
+            datetime.now(timezone.utc),
+            idempotency_key=f"task_payment_{task_id}_{current_user.id}"
+        )
+        
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+        
+        coupon_discount = coupon_usage_log.discount_amount
+        total_amount = max(0, total_amount - coupon_discount)
+    
+    # 计算最终需要支付的金额
+    final_amount = max(0, total_amount)
+    
+    # 如果使用积分全额抵扣，直接完成支付
+    if final_amount == 0 and points_used > 0:
+        # 扣除积分
+        points_account = get_or_create_points_account(db, current_user.id)
+        points_account.balance -= points_used
+        points_account.total_spent += points_used
+        
+        # 创建积分交易记录
+        add_points_transaction(
+            db,
+            current_user.id,
+            type="spend",
+            amount=points_used,
+            source="platform_fee",
+            description=f"任务 #{task_id} 平台服务费支付",
+            batch_id=None
+        )
+        
+        # 标记任务为已支付
+        task.is_paid = 1
+        task.escrow_amount = task_amount
+        
+        db.commit()
+        
+        return {
+            "payment_id": None,
+            "fee_type": "application_fee",
+            "total_amount": application_fee_pence,
+            "total_amount_display": f"{application_fee_pence / 100:.2f}",
+            "points_used": points_used,
+            "points_used_display": f"{points_used / 100:.2f}",
+            "coupon_discount": coupon_discount,
+            "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount else None,
+            "stripe_amount": None,
+            "stripe_amount_display": None,
+            "currency": "GBP",
+            "final_amount": 0,
+            "final_amount_display": "0.00",
+            "checkout_url": None,
+            "note": "积分仅用于抵扣申请费/平台服务费，任务奖励将按法币结算给服务者"
+        }
+    
+    # 如果需要Stripe支付
+    if final_amount > 0:
+        stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        # 创建Stripe支付会话
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "gbp",
+                        "product_data": {
+                            "name": f"任务 #{task_id} 平台服务费",
+                            "description": f"{task.title} - 平台服务费"
+                        },
+                        "unit_amount": final_amount,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="payment",
+            success_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/tasks/{task_id}/pay/success",
+            cancel_url=f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/tasks/{task_id}/pay/cancel",
+            metadata={
+                "task_id": task_id,
+                "user_id": current_user.id,
+                "points_used": str(points_used) if points_used else "",
+                "coupon_usage_log_id": str(coupon_usage_log.id) if coupon_usage_log else "",
+                "application_fee": str(application_fee_pence)
+            },
+        )
+        
+        return {
+            "payment_id": None,
+            "fee_type": "application_fee",
+            "total_amount": application_fee_pence,
+            "total_amount_display": f"{application_fee_pence / 100:.2f}",
+            "points_used": points_used,
+            "points_used_display": f"{points_used / 100:.2f}" if points_used else None,
+            "coupon_discount": coupon_discount,
+            "coupon_discount_display": f"{coupon_discount / 100:.2f}" if coupon_discount else None,
+            "stripe_amount": final_amount,
+            "stripe_amount_display": f"{final_amount / 100:.2f}",
+            "currency": "GBP",
+            "final_amount": final_amount,
+            "final_amount_display": f"{final_amount / 100:.2f}",
+            "checkout_url": session.url,
+            "note": "积分仅用于抵扣申请费/平台服务费，任务奖励将按法币结算给服务者"
+        }
+    
+    raise HTTPException(status_code=400, detail="支付金额计算错误")
 
 
 # ==================== 签到相关 API ====================

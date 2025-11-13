@@ -212,6 +212,10 @@ app.include_router(task_chat_router, prefix="/api", tags=["任务聊天"])
 from app.coupon_points_routes import router as coupon_points_router
 app.include_router(coupon_points_router, tags=["优惠券和积分系统"])
 
+# 添加管理员优惠券和积分系统路由
+from app.admin_coupon_points_routes import router as admin_coupon_points_router
+app.include_router(admin_coupon_points_router, tags=["管理员-优惠券和积分系统"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -394,10 +398,28 @@ def run_session_cleanup_task():
 
 
 
-# 启动后台任务
 @app.on_event("startup")
 async def startup_event():
     """应用启动时初始化数据库并启动后台任务"""
+    # 启动定时任务（可选：使用APScheduler或Celery）
+    # 这里使用简单的后台线程方式
+    import threading
+    import time
+    from app.scheduled_tasks import run_scheduled_tasks
+    
+    def run_tasks_periodically():
+        """每5分钟执行一次定时任务"""
+        while True:
+            try:
+                run_scheduled_tasks()
+            except Exception as e:
+                logger.error(f"定时任务执行失败: {e}", exc_info=True)
+            time.sleep(300)  # 5分钟
+    
+    # 启动后台线程
+    scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
+    scheduler_thread.start()
+    logger.info("定时任务已启动（每5分钟执行一次）")
     logger.info("应用启动中...")
     
     # ⚠️ 环境变量验证 - 高优先级修复
@@ -430,15 +452,6 @@ async def startup_event():
         logger.info("正在创建数据库表...")
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
-        
-        # 执行优惠券和积分系统数据库迁移
-        try:
-            from app.db_migrations import run_coupon_points_migration
-            run_coupon_points_migration()
-        except Exception as e:
-            logger.warning(f"优惠券和积分系统迁移失败（可继续运行）: {e}")
-            import traceback
-            traceback.print_exc()
         
         # 创建优化索引（使用 pg_trgm）
         try:
