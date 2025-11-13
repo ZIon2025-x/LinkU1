@@ -1010,18 +1010,12 @@ const Tasks: React.FC = () => {
     };
 
     if (showLocationDropdown || showLanguageDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
-      // 使用 click 事件，在 React 的 onClick 之后触发，确保菜单项的 onClick 能先执行
-      // 使用 setTimeout 延迟执行，确保 React 的事件处理先完成
-      const handleClick = (event: MouseEvent) => {
-        setTimeout(() => {
-          handleClickOutside(event);
-        }, 0);
-      };
-      
-      document.addEventListener('click', handleClick);
+      // 使用 mousedown 事件，在 click 之前触发
+      // 菜单项会在 mousedown 时阻止事件传播，所以不会关闭菜单
+      document.addEventListener('mousedown', handleClickOutside);
 
       return () => {
-        document.removeEventListener('click', handleClick);
+        document.removeEventListener('mousedown', handleClickOutside);
       };
     }
   }, [showLocationDropdown, showLanguageDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
@@ -2160,6 +2154,11 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
+                      onMouseDown={(e) => {
+                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
+                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         console.log('[Tasks] ========== 点击金额排序降序选项 (onClick) ==========');
                         e.stopPropagation();
@@ -2167,10 +2166,6 @@ const Tasks: React.FC = () => {
                         handleRewardSortChange('desc');
                         console.log('[Tasks] 关闭下拉菜单');
                         setShowRewardDropdown(false);
-                      }}
-                      onMouseDown={(e) => {
-                        // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2200,14 +2195,15 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
+                      onMouseDown={(e) => {
+                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
+                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         console.log('[Tasks] ========== 点击金额排序升序选项 (onClick) ==========');
                         e.stopPropagation();
                         handleRewardSortChange('asc');
-                      }}
-                      onMouseDown={(e) => {
-                        // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2366,14 +2362,15 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
+                      onMouseDown={(e) => {
+                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
+                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         console.log('[Tasks] ========== 点击截止时间排序升序选项 (onClick) ==========');
                         e.stopPropagation();
                         handleDeadlineSortChange('asc');
-                      }}
-                      onMouseDown={(e) => {
-                        // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2403,14 +2400,15 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
+                      onMouseDown={(e) => {
+                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
+                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         console.log('[Tasks] ========== 点击截止时间排序降序选项 (onClick) ==========');
                         e.stopPropagation();
                         handleDeadlineSortChange('desc');
-                      }}
-                      onMouseDown={(e) => {
-                        // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                        e.stopPropagation();
                       }}
                       style={{
                         padding: '12px 16px',
