@@ -1951,7 +1951,15 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 金额排序卡片 */}
-              <div className="reward-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
+              <div 
+                className="reward-dropdown-container" 
+                style={{ position: 'relative', zIndex: 10 }}
+                ref={(el) => {
+                  if (el) {
+                    console.log('[Tasks] 金额排序容器已渲染:', el);
+                  }
+                }}
+              >
                 <div
                   onClick={(e) => {
                     e.preventDefault();
@@ -1962,10 +1970,15 @@ const Tasks: React.FC = () => {
                     setShowRewardDropdown(!showRewardDropdown);
                   }}
                   onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     console.log('[Tasks] 金额排序按钮 onMouseDown 触发');
                   }}
                   onMouseUp={(e) => {
                     console.log('[Tasks] 金额排序按钮 onMouseUp 触发');
+                  }}
+                  onTouchStart={(e) => {
+                    console.log('[Tasks] 金额排序按钮 onTouchStart 触发');
                   }}
                   style={{
                     background: rewardSort 
@@ -2005,21 +2018,24 @@ const Tasks: React.FC = () => {
                     }
                   }}
                 >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: rewardSort 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : '#fef3c7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px'
-                  }}>
+                  <div 
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: rewardSort 
+                        ? 'rgba(255, 255, 255, 0.2)' 
+                        : '#fef3c7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      pointerEvents: 'none'
+                    }}
+                  >
                     💰
                   </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
                        rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
@@ -2132,7 +2148,15 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 截止日期排序卡片 */}
-              <div className="deadline-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
+              <div 
+                className="deadline-dropdown-container" 
+                style={{ position: 'relative', zIndex: 10 }}
+                ref={(el) => {
+                  if (el) {
+                    console.log('[Tasks] 截止时间排序容器已渲染:', el);
+                  }
+                }}
+              >
                 <div
                   onClick={(e) => {
                     e.preventDefault();
@@ -2143,10 +2167,15 @@ const Tasks: React.FC = () => {
                     setShowDeadlineDropdown(!showDeadlineDropdown);
                   }}
                   onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     console.log('[Tasks] 截止时间排序按钮 onMouseDown 触发');
                   }}
                   onMouseUp={(e) => {
                     console.log('[Tasks] 截止时间排序按钮 onMouseUp 触发');
+                  }}
+                  onTouchStart={(e) => {
+                    console.log('[Tasks] 截止时间排序按钮 onTouchStart 触发');
                   }}
                   style={{
                     background: deadlineSort 
@@ -2186,21 +2215,24 @@ const Tasks: React.FC = () => {
                     }
                   }}
                 >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: deadlineSort 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : '#fef3c7',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px'
-                  }}>
+                  <div 
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: deadlineSort 
+                        ? 'rgba(255, 255, 255, 0.2)' 
+                        : '#fef3c7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      pointerEvents: 'none'
+                    }}
+                  >
                     ⏰
                   </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>
                       {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
                        deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
@@ -3303,6 +3335,10 @@ const Tasks: React.FC = () => {
               height: auto !important;
               width: 100% !important;
               min-width: 0 !important;
+              pointer-events: auto !important;
+              cursor: pointer !important;
+              position: relative !important;
+              z-index: 12 !important;
             }
             
             /* Latest 按钮（非下拉容器）也变成方块 */
