@@ -470,11 +470,15 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
     });
   }
   
-  // 非搜索请求，如果包含排序参数，不使用缓存（确保排序立即生效）
-  // 否则使用缓存
+  // 排序操作应该总是绕过缓存，确保排序立即生效
+  // 对于非搜索请求，如果明确指定了排序参数（包括 'latest'），不使用缓存
+  // 这样可以确保用户切换排序时能立即看到最新结果
   try {
-    if (sort_by && sort_by !== 'latest') {
-      // 有排序参数时，直接请求不使用缓存
+    // 如果明确传入了 sort_by 参数（即使是 'latest'），也绕过缓存以确保排序立即生效
+    // 只有在没有明确排序参数时才使用缓存（这种情况应该很少）
+    if (sort_by !== undefined && sort_by !== null) {
+      // 有排序参数时，直接请求不使用缓存，确保排序立即生效
+      console.log('[api.ts] 排序请求，绕过缓存，sort_by:', sort_by);
       const res = await api.get('/api/tasks', { params });
       return res.data;
     } else {
