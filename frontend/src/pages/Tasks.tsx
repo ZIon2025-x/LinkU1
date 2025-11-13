@@ -2006,6 +2006,11 @@ const Tasks: React.FC = () => {
                 }}
               >
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
+                              rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
+                  aria-expanded={showRewardDropdown}
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log('[Tasks] ========== 点击金额排序按钮 ==========');
@@ -2015,6 +2020,14 @@ const Tasks: React.FC = () => {
                     console.log('[Tasks] 按钮元素存在:', !!e.currentTarget);
                     setShowRewardDropdown(!showRewardDropdown);
                     console.log('[Tasks] 已设置 showRewardDropdown 为:', !showRewardDropdown);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('[Tasks] 金额排序按钮键盘触发:', e.key);
+                      setShowRewardDropdown(!showRewardDropdown);
+                    }
                   }}
                   onMouseDown={(e) => {
                     console.log('[Tasks] 金额排序按钮 onMouseDown 触发');
@@ -2207,6 +2220,11 @@ const Tasks: React.FC = () => {
                 }}
               >
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
+                              deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
+                  aria-expanded={showDeadlineDropdown}
                   onClick={(e) => {
                     e.stopPropagation();
                     console.log('[Tasks] ========== 点击截止时间排序按钮 ==========');
@@ -2216,6 +2234,14 @@ const Tasks: React.FC = () => {
                     console.log('[Tasks] 按钮元素存在:', !!e.currentTarget);
                     setShowDeadlineDropdown(!showDeadlineDropdown);
                     console.log('[Tasks] 已设置 showDeadlineDropdown 为:', !showDeadlineDropdown);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('[Tasks] 截止时间排序按钮键盘触发:', e.key);
+                      setShowDeadlineDropdown(!showDeadlineDropdown);
+                    }
                   }}
                   onMouseDown={(e) => {
                     console.log('[Tasks] 截止时间排序按钮 onMouseDown 触发');
