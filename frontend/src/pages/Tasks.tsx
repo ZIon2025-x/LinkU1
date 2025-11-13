@@ -2079,7 +2079,6 @@ const Tasks: React.FC = () => {
                 {showRewardDropdown && (
                   <div 
                     className="custom-dropdown-content show" 
-                    onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
                       top: '100%',
@@ -2098,9 +2097,7 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      onClick={() => {
                         console.log('[Tasks] 选择金额排序：降序');
                         handleRewardSortChange('desc');
                         setShowRewardDropdown(false);
@@ -2133,9 +2130,7 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      onClick={() => {
                         console.log('[Tasks] 选择金额排序：升序');
                         handleRewardSortChange('asc');
                         setShowRewardDropdown(false);
@@ -2261,7 +2256,6 @@ const Tasks: React.FC = () => {
                 {showDeadlineDropdown && (
                   <div 
                     className="custom-dropdown-content show" 
-                    onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
                       top: '100%',
@@ -2280,9 +2274,7 @@ const Tasks: React.FC = () => {
                     }}>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      onClick={() => {
                         console.log('[Tasks] 选择截止时间排序：升序');
                         handleDeadlineSortChange('asc');
                         setShowDeadlineDropdown(false);
@@ -2315,9 +2307,7 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                      onClick={() => {
                         console.log('[Tasks] 选择截止时间排序：降序');
                         handleDeadlineSortChange('desc');
                         setShowDeadlineDropdown(false);
