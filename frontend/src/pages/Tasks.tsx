@@ -658,6 +658,27 @@ const Tasks: React.FC = () => {
   const { navigate } = useLocalizedNavigation();
   const navigateRaw = useRouterNavigate(); // 原始navigate用于语言切换
 
+  // 检查按钮是否被渲染（在组件挂载后）
+  useEffect(() => {
+    console.log('[Tasks] ========== 组件已挂载，检查按钮渲染 ==========');
+    setTimeout(() => {
+      const rewardContainer = document.querySelector('.reward-dropdown-container');
+      const deadlineContainer = document.querySelector('.deadline-dropdown-container');
+      console.log('[Tasks] 金额排序容器:', rewardContainer);
+      console.log('[Tasks] 截止时间排序容器:', deadlineContainer);
+      if (rewardContainer) {
+        console.log('[Tasks] 金额排序容器已找到，位置:', rewardContainer.getBoundingClientRect());
+      } else {
+        console.warn('[Tasks] ⚠️ 金额排序容器未找到！');
+      }
+      if (deadlineContainer) {
+        console.log('[Tasks] 截止时间排序容器已找到，位置:', deadlineContainer.getBoundingClientRect());
+      } else {
+        console.warn('[Tasks] ⚠️ 截止时间排序容器未找到！');
+      }
+    }, 1000); // 延迟1秒检查，确保DOM已渲染
+  }, []);
+
   // 加载用户信息和已申请任务
   useEffect(() => {
     const loadUser = async () => {
