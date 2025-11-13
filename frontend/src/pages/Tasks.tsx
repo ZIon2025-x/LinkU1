@@ -568,23 +568,29 @@ const Tasks: React.FC = () => {
 
   // 处理金额排序变化
   const handleRewardSortChange = (value: string) => {
+    console.log('[Tasks] 金额排序变化:', value);
     setRewardSort(value);
     setDeadlineSort(''); // 清除截止日期排序
     if (value === '') {
       setSortBy('latest');
     } else {
-      setSortBy(`reward_${value}`);
+      const newSortBy = `reward_${value}`;
+      console.log('[Tasks] 设置排序为:', newSortBy);
+      setSortBy(newSortBy);
     }
   };
 
   // 处理截止日期排序变化
   const handleDeadlineSortChange = (value: string) => {
+    console.log('[Tasks] 截止日期排序变化:', value);
     setDeadlineSort(value);
     setRewardSort(''); // 清除金额排序
     if (value === '') {
       setSortBy('latest');
     } else {
-      setSortBy(`deadline_${value}`);
+      const newSortBy = `deadline_${value}`;
+      console.log('[Tasks] 设置排序为:', newSortBy);
+      setSortBy(newSortBy);
     }
   };
 
@@ -2004,25 +2010,30 @@ const Tasks: React.FC = () => {
                 
                 {/* 自定义下拉菜单 */}
                 {showRewardDropdown && (
-                  <div className="custom-dropdown-content show" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                    zIndex: 1000,
-                    marginTop: '4px',
-                    overflow: 'hidden',
-                    width: 'auto',
-                    minWidth: '120px',
-                    maxWidth: '160px'
-                  }}>
+                  <div 
+                    className="custom-dropdown-content show" 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                      zIndex: 1000,
+                      marginTop: '4px',
+                      overflow: 'hidden',
+                      width: 'auto',
+                      minWidth: '120px',
+                      maxWidth: '160px'
+                    }}>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleRewardSortChange('desc');
                         setShowRewardDropdown(false);
                       }}
@@ -2054,7 +2065,9 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleRewardSortChange('asc');
                         setShowRewardDropdown(false);
                       }}
@@ -2158,25 +2171,30 @@ const Tasks: React.FC = () => {
                 
                 {/* 自定义下拉菜单 */}
                 {showDeadlineDropdown && (
-                  <div className="custom-dropdown-content show" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                    zIndex: 1000,
-                    marginTop: '4px',
-                    overflow: 'hidden',
-                    width: 'auto',
-                    minWidth: '120px',
-                    maxWidth: '160px'
-                  }}>
+                  <div 
+                    className="custom-dropdown-content show" 
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                      zIndex: 1000,
+                      marginTop: '4px',
+                      overflow: 'hidden',
+                      width: 'auto',
+                      minWidth: '120px',
+                      maxWidth: '160px'
+                    }}>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleDeadlineSortChange('asc');
                         setShowDeadlineDropdown(false);
                       }}
@@ -2208,7 +2226,9 @@ const Tasks: React.FC = () => {
                     </div>
                     <div 
                       className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         handleDeadlineSortChange('desc');
                         setShowDeadlineDropdown(false);
                       }}
