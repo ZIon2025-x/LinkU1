@@ -926,11 +926,12 @@ const Tasks: React.FC = () => {
   useEffect(() => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
+    // 注意：sortBy 变化由 handleRewardSortChange、handleDeadlineSortChange 和"最新"按钮直接处理，不在这里触发
     if (cityInitialized) {
       console.log('[Tasks] useEffect 触发 loadTasks，当前 sortBy:', sortBy);
       loadTasks(false); // 初始加载，不是加载更多
     }
-  }, [type, city, debouncedKeyword, sortBy, cityInitialized, loadTasks]); // 添加 loadTasks 依赖
+  }, [type, city, debouncedKeyword, cityInitialized, loadTasks]); // 移除 sortBy 依赖，避免与排序处理函数重复触发
   
   // 滚动监听，实现无限滚动
   useEffect(() => {
@@ -1950,9 +1951,12 @@ const Tasks: React.FC = () => {
               {/* 最新发布卡片 */}
               <div
                 onClick={() => {
+                  console.log('[Tasks] ========== 点击最新排序按钮 ==========');
                   setSortBy('latest');
                   setRewardSort('');
                   setDeadlineSort('');
+                  // 直接调用 loadTasks，传入 'latest' 排序值
+                  loadTasks(false, undefined, 'latest');
                 }}
                   style={{
                   background: sortBy === 'latest' 
