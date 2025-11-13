@@ -3,6 +3,7 @@
 """
 import logging
 from datetime import datetime, timedelta, timezone as tz
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from app import models

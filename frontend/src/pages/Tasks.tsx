@@ -1987,19 +1987,26 @@ const Tasks: React.FC = () => {
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log('[Tasks] 点击金额排序按钮，当前状态:', showRewardDropdown);
+                    console.log('[Tasks] ========== 点击金额排序按钮 ==========');
+                    console.log('[Tasks] 当前状态:', showRewardDropdown);
                     console.log('[Tasks] 事件目标:', e.target);
                     console.log('[Tasks] 当前元素:', e.currentTarget);
+                    console.log('[Tasks] 按钮元素存在:', !!e.currentTarget);
                     setShowRewardDropdown(!showRewardDropdown);
+                    console.log('[Tasks] 已设置 showRewardDropdown 为:', !showRewardDropdown);
                   }}
                   onMouseDown={(e) => {
                     console.log('[Tasks] 金额排序按钮 onMouseDown 触发');
+                    e.stopPropagation();
                   }}
                   onMouseUp={(e) => {
                     console.log('[Tasks] 金额排序按钮 onMouseUp 触发');
                   }}
                   onTouchStart={(e) => {
                     console.log('[Tasks] 金额排序按钮 onTouchStart 触发');
+                  }}
+                  onPointerDown={(e) => {
+                    console.log('[Tasks] 金额排序按钮 onPointerDown 触发');
                   }}
                   style={{
                     background: rewardSort 
@@ -2181,19 +2188,26 @@ const Tasks: React.FC = () => {
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log('[Tasks] 点击截止时间排序按钮，当前状态:', showDeadlineDropdown);
+                    console.log('[Tasks] ========== 点击截止时间排序按钮 ==========');
+                    console.log('[Tasks] 当前状态:', showDeadlineDropdown);
                     console.log('[Tasks] 事件目标:', e.target);
                     console.log('[Tasks] 当前元素:', e.currentTarget);
+                    console.log('[Tasks] 按钮元素存在:', !!e.currentTarget);
                     setShowDeadlineDropdown(!showDeadlineDropdown);
+                    console.log('[Tasks] 已设置 showDeadlineDropdown 为:', !showDeadlineDropdown);
                   }}
                   onMouseDown={(e) => {
                     console.log('[Tasks] 截止时间排序按钮 onMouseDown 触发');
+                    e.stopPropagation();
                   }}
                   onMouseUp={(e) => {
                     console.log('[Tasks] 截止时间排序按钮 onMouseUp 触发');
                   }}
                   onTouchStart={(e) => {
                     console.log('[Tasks] 截止时间排序按钮 onTouchStart 触发');
+                  }}
+                  onPointerDown={(e) => {
+                    console.log('[Tasks] 截止时间排序按钮 onPointerDown 触发');
                   }}
                   style={{
                     background: deadlineSort 
