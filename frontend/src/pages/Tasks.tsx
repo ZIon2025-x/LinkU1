@@ -2001,9 +2001,19 @@ const Tasks: React.FC = () => {
                 }}
               >
                 <div
-                  onClick={() => {
-                    console.log('[Tasks] 点击金额排序按钮');
-                    setShowRewardDropdown(!showRewardDropdown);
+                  onClick={(e) => {
+                    console.log('[Tasks] ========== 点击金额排序按钮 ==========');
+                    console.log('[Tasks] 当前 showRewardDropdown:', showRewardDropdown);
+                    console.log('[Tasks] 事件对象:', e);
+                    e.stopPropagation();
+                    const newValue = !showRewardDropdown;
+                    console.log('[Tasks] 设置 showRewardDropdown 为:', newValue);
+                    setShowRewardDropdown(newValue);
+                    console.log('[Tasks] showRewardDropdown 已更新');
+                  }}
+                  onMouseDown={(e) => {
+                    console.log('[Tasks] 金额排序按钮 onMouseDown');
+                    e.stopPropagation();
                   }}
                   style={{
                     background: rewardSort 
@@ -2083,7 +2093,12 @@ const Tasks: React.FC = () => {
                   <div 
                     className="custom-dropdown-content show" 
                     onClick={(e) => {
-                      console.log('[Tasks] 点击金额排序下拉菜单容器');
+                      console.log('[Tasks] ========== 点击金额排序下拉菜单容器 ==========');
+                      console.log('[Tasks] 事件对象:', e);
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => {
+                      console.log('[Tasks] 金额排序下拉菜单容器 onMouseDown');
                       e.stopPropagation();
                     }}
                     style={{
@@ -2186,9 +2201,19 @@ const Tasks: React.FC = () => {
                 }}
               >
                 <div
-                  onClick={() => {
-                    console.log('[Tasks] 点击截止时间排序按钮');
-                    setShowDeadlineDropdown(!showDeadlineDropdown);
+                  onClick={(e) => {
+                    console.log('[Tasks] ========== 点击截止时间排序按钮 ==========');
+                    console.log('[Tasks] 当前 showDeadlineDropdown:', showDeadlineDropdown);
+                    console.log('[Tasks] 事件对象:', e);
+                    e.stopPropagation();
+                    const newValue = !showDeadlineDropdown;
+                    console.log('[Tasks] 设置 showDeadlineDropdown 为:', newValue);
+                    setShowDeadlineDropdown(newValue);
+                    console.log('[Tasks] showDeadlineDropdown 已更新');
+                  }}
+                  onMouseDown={(e) => {
+                    console.log('[Tasks] 截止时间排序按钮 onMouseDown');
+                    e.stopPropagation();
                   }}
                   style={{
                     background: deadlineSort 
@@ -2268,7 +2293,12 @@ const Tasks: React.FC = () => {
                   <div 
                     className="custom-dropdown-content show" 
                     onClick={(e) => {
-                      console.log('[Tasks] 点击截止时间排序下拉菜单容器');
+                      console.log('[Tasks] ========== 点击截止时间排序下拉菜单容器 ==========');
+                      console.log('[Tasks] 事件对象:', e);
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => {
+                      console.log('[Tasks] 截止时间排序下拉菜单容器 onMouseDown');
                       e.stopPropagation();
                     }}
                     style={{
