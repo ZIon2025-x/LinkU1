@@ -182,10 +182,14 @@ class AsyncTaskCRUD:
             vip_price_threshold = float(settings.get("vip_price_threshold", 10.0))
             super_vip_price_threshold = float(settings.get("super_vip_price_threshold", 50.0))
             
+            # 处理价格字段：base_reward 是发布时的价格（先处理价格，用于后续判断）
+            from decimal import Decimal
+            base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
+            
             # 任务等级分配逻辑（使用base_reward判断）
             user_level = str(user.user_level) if user.user_level is not None else "normal"
-            # 获取价格用于等级判断（使用base_reward）
-            task_price = float(task.base_reward) if task.base_reward is not None else 0.0
+            # 获取价格用于等级判断（使用base_reward_value，即从task.reward转换来的值）
+            task_price = float(base_reward_value)
             if user_level == "super":
                 task_level = "vip"
             elif task_price >= super_vip_price_threshold:
@@ -208,10 +212,6 @@ class AsyncTaskCRUD:
             images_json = None
             if task.images and len(task.images) > 0:
                 images_json = json.dumps(task.images)
-            
-            # 处理价格字段：base_reward 是发布时的价格
-            from decimal import Decimal
-            base_reward_value = Decimal(str(task.reward)) if task.reward is not None else Decimal('0')
             
             db_task = models.Task(
                 title=task.title,
