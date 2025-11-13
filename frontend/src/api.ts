@@ -435,9 +435,12 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
   if (type && type !== 'all' && type !== '全部类型') params.task_type = type;
   if (city && city !== 'all' && city !== '全部城市') params.location = city;
   if (keyword) params.keyword = keyword;
-  if (sort_by) params.sort_by = sort_by;
+  // 始终传递 sort_by 参数，即使它是 'latest'
+  params.sort_by = sort_by || 'latest';
   params.page = page;
   params.page_size = pageSize;
+  
+  console.log('[api.ts] fetchTasks 请求参数:', params);
   
   // 生成缓存键
   const cacheKey = JSON.stringify(params);

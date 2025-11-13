@@ -831,6 +831,7 @@ const Tasks: React.FC = () => {
       
       // 调试：输出排序参数
       console.log('[Tasks] 加载任务，排序参数:', sortBy);
+      console.log('[Tasks] 当前状态 - rewardSort:', rewardSort, 'deadlineSort:', deadlineSort, 'sortBy:', sortBy);
       
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
@@ -838,8 +839,10 @@ const Tasks: React.FC = () => {
         keyword: searchKeyword,
         page: currentPage,
         pageSize: pageSize,
-        sort_by: sortBy
+        sort_by: sortBy || 'latest'  // 确保总是传递一个值
       });
+      
+      console.log('[Tasks] fetchTasks 返回数据，任务数量:', data.tasks?.length || 0);
       
       const tasksList = (data.tasks || []).map((task: any) => {
         // 确保 images 是数组格式
