@@ -567,32 +567,42 @@ const Tasks: React.FC = () => {
   }, [showLocationDropdown, isMobile]);
 
   // 处理金额排序变化
-  const handleRewardSortChange = (value: string) => {
+  const handleRewardSortChange = useCallback((value: string) => {
     console.log('[Tasks] 金额排序变化:', value);
     setRewardSort(value);
     setDeadlineSort(''); // 清除截止日期排序
     if (value === '') {
+      console.log('[Tasks] 清除金额排序，设置为 latest');
       setSortBy('latest');
     } else {
       const newSortBy = `reward_${value}`;
       console.log('[Tasks] 设置排序为:', newSortBy);
       setSortBy(newSortBy);
+      // 立即触发加载，确保排序生效
+      setTimeout(() => {
+        console.log('[Tasks] 触发任务重新加载，排序参数:', newSortBy);
+      }, 0);
     }
-  };
+  }, []);
 
   // 处理截止日期排序变化
-  const handleDeadlineSortChange = (value: string) => {
+  const handleDeadlineSortChange = useCallback((value: string) => {
     console.log('[Tasks] 截止日期排序变化:', value);
     setDeadlineSort(value);
     setRewardSort(''); // 清除金额排序
     if (value === '') {
+      console.log('[Tasks] 清除截止时间排序，设置为 latest');
       setSortBy('latest');
     } else {
       const newSortBy = `deadline_${value}`;
       console.log('[Tasks] 设置排序为:', newSortBy);
       setSortBy(newSortBy);
+      // 立即触发加载，确保排序生效
+      setTimeout(() => {
+        console.log('[Tasks] 触发任务重新加载，排序参数:', newSortBy);
+      }, 0);
     }
-  };
+  }, []);
 
   // 处理任务等级变化
   const handleLevelChange = (newLevel: string) => {
@@ -860,6 +870,11 @@ const Tasks: React.FC = () => {
     }
   }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy]);
   
+  // 监听 sortBy 变化，用于调试
+  useEffect(() => {
+    console.log('[Tasks] sortBy 状态已更新为:', sortBy);
+  }, [sortBy]);
+  
   // 加载更多任务
   const loadMoreTasks = useCallback(() => {
     if (!loadingMore && !loading && hasMore) {
@@ -871,9 +886,10 @@ const Tasks: React.FC = () => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
     if (cityInitialized) {
+      console.log('[Tasks] useEffect 触发 loadTasks，当前 sortBy:', sortBy);
       loadTasks(false); // 初始加载，不是加载更多
     }
-  }, [type, city, debouncedKeyword, sortBy, cityInitialized]); // 移除page依赖，因为loadTasks内部会重置page
+  }, [type, city, debouncedKeyword, sortBy, cityInitialized, loadTasks]); // 添加 loadTasks 依赖
   
   // 滚动监听，实现无限滚动
   useEffect(() => {
