@@ -367,8 +367,14 @@ const Tasks: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
   const [sortBy, setSortBy] = useState('latest'); // latest, reward_asc, reward_desc, deadline_asc, deadline_desc
+  const sortByRef = useRef('latest'); // 使用 ref 保存最新的 sortBy 值，避免闭包问题
   const [rewardSort, setRewardSort] = useState(''); // '', 'asc', 'desc'
   const [deadlineSort, setDeadlineSort] = useState(''); // '', 'asc', 'desc'
+  
+  // 同步 sortBy 到 ref
+  useEffect(() => {
+    sortByRef.current = sortBy;
+  }, [sortBy]);
   const [showRewardDropdown, setShowRewardDropdown] = useState(false);
   const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
@@ -768,8 +774,8 @@ const Tasks: React.FC = () => {
       // 如果是加载更多，使用传入的页码或当前页码+1
       const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
       
-      // 使用传入的排序值，如果没有则使用当前状态
-      const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortBy || 'latest');
+      // 使用传入的排序值，如果没有则使用 ref 中的最新值（避免闭包问题）
+      const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortByRef.current || 'latest');
       
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
@@ -828,7 +834,9 @@ const Tasks: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy, rewardSort, deadlineSort]);
+  }, [page, pageSize, type, city, debouncedKeyword, keyword]);
+  // 注意：sortBy, rewardSort, deadlineSort 不包含在依赖项中
+  // 因为排序变化通过 overrideSortBy 参数传递，不需要依赖这些状态
 
   // 处理金额排序变化
   const handleRewardSortChange = useCallback((value: string) => {
@@ -861,14 +869,21 @@ const Tasks: React.FC = () => {
     }
   }, [loadingMore, loading, hasMore, loadTasks]);
 
+  // 使用 useRef 保存 loadTasks 的引用，避免在 useEffect 中依赖它
+  const loadTasksRef = useRef(loadTasks);
+  useEffect(() => {
+    loadTasksRef.current = loadTasks;
+  }, [loadTasks]);
+
   useEffect(() => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
     // 注意：sortBy 变化由 handleRewardSortChange、handleDeadlineSortChange 和"最新"按钮直接处理，不在这里触发
     if (cityInitialized) {
-      loadTasks(false); // 初始加载，不是加载更多
+      // 使用 ref 来调用，避免依赖 loadTasks 导致循环
+      loadTasksRef.current(false); // 初始加载，不是加载更多
     }
-  }, [type, city, debouncedKeyword, cityInitialized, loadTasks]); // 移除 sortBy 依赖，避免与排序处理函数重复触发
+  }, [type, city, debouncedKeyword, cityInitialized]); // 移除 loadTasks 依赖，使用 ref 避免循环触发
   
   // 滚动监听，实现无限滚动
   useEffect(() => {
