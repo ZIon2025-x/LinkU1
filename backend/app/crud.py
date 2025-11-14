@@ -577,7 +577,14 @@ def update_task_reward(db: Session, task_id: int, poster_id: int, new_reward: fl
 
 
 def cleanup_task_files(db: Session, task_id: int):
-    """清理任务相关的所有图片和文件（不删除任务记录）"""
+    """
+    清理任务相关的所有图片和文件（仅删除文件系统中的文件，不删除数据库记录）
+    
+    注意：
+    - 只删除文件系统中的图片和附件文件
+    - 不删除数据库中的任何记录（Task、Message、MessageAttachment等）
+    - 数据库中的 image_id、blob_id 等字段保持不变
+    """
     from app.models import Message, MessageAttachment, Task
     from pathlib import Path
     import os
@@ -663,19 +670,19 @@ def cleanup_task_files(db: Session, task_id: int):
         except Exception as e:
             logger.error(f"解析任务图片 JSON 失败 {task_id}: {e}")
 
-    # 2. 查找并清理任务消息中的图片和文件
+    # 2. 从任务消息中提取图片ID（仅读取，不删除数据库记录）
     task_messages = db.query(Message).filter(Message.task_id == task_id).all()
     message_ids = []
     
     logger.debug(f"任务 {task_id} 共有 {len(task_messages)} 条消息")
     for msg in task_messages:
         message_ids.append(msg.id)
-        # 收集图片ID
+        # 收集图片ID（仅用于后续删除文件系统中的文件）
         if msg.image_id:
             image_ids_to_delete.append(msg.image_id)
             logger.debug(f"从消息 {msg.id} 获取 image_id: {msg.image_id}")
     
-    # 3. 查找并清理消息附件
+    # 3. 从消息附件中提取文件ID（仅读取，不删除数据库记录）
     if message_ids:
         attachments = db.query(MessageAttachment).filter(
             MessageAttachment.message_id.in_(message_ids)
@@ -1726,6 +1733,79 @@ def cleanup_completed_tasks_files(db: Session):
     
     logger.info(f"完成清理，共清理 {cleaned_count} 个任务的文件")
     return cleaned_count
+
+
+def cleanup_expired_tasks_files(db: Session):
+    """清理过期任务（已取消或deadline已过）的图片和文件"""
+    from app.models import Task
+    from datetime import timedelta, datetime as dt
+    from app.time_utils_v2 import TimeHandlerV2
+    from sqlalchemy import or_, and_
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # 获取当前UTC时间
+    now_utc = TimeHandlerV2.get_utc_now()
+    now_naive = now_utc.replace(tzinfo=None) if now_utc.tzinfo else now_utc
+    
+    # 查找过期任务：
+    # 1. 状态为 cancelled 的任务
+    # 2. 状态为 open 但 deadline 已过的任务
+    expired_tasks = (
+        db.query(Task)
+        .filter(
+            or_(
+                Task.status == "cancelled",
+                and_(
+                    Task.status == "open",
+                    Task.deadline.isnot(None),
+                    Task.deadline <= now_naive
+                )
+            )
+        )
+        .all()
+    )
+    
+    logger.info(f"找到 {len(expired_tasks)} 个过期任务，开始清理文件")
+    
+    cleaned_count = 0
+    for task in expired_tasks:
+        try:
+            cleanup_task_files(db, task.id)
+            cleaned_count += 1
+            logger.info(f"成功清理过期任务 {task.id} 的文件")
+        except Exception as e:
+            logger.error(f"清理过期任务 {task.id} 文件失败: {e}")
+            continue
+    
+    logger.info(f"完成清理，共清理 {cleaned_count} 个过期任务的文件")
+    return cleaned_count
+
+
+def cleanup_all_old_tasks_files(db: Session):
+    """清理所有已完成和过期任务的图片和文件"""
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("开始清理所有已完成和过期任务的文件...")
+    
+    # 清理已完成任务的文件
+    completed_count = cleanup_completed_tasks_files(db)
+    
+    # 清理过期任务的文件
+    expired_count = cleanup_expired_tasks_files(db)
+    
+    total_count = completed_count + expired_count
+    
+    logger.info(f"清理完成：已完成任务 {completed_count} 个，过期任务 {expired_count} 个，总计 {total_count} 个")
+    
+    return {
+        "completed_count": completed_count,
+        "expired_count": expired_count,
+        "total_count": total_count
+    }
 
 
 def delete_user_task(db: Session, task_id: int, user_id: str):

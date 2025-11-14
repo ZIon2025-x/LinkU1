@@ -105,9 +105,6 @@ async def get_tasks(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取任务列表（异步版本）"""
-    logger.info(f"[async_routers] 接收到的排序参数: {sort_by}")
-    logger.info(f"[async_routers] 接收到的所有参数: page={page}, page_size={page_size}, task_type={task_type}, location={location}, keyword={keyword}, sort_by={sort_by}")
-    
     # 支持page/page_size参数，向后兼容skip/limit
     if page > 1 or page_size != 20:
         skip = (page - 1) * page_size

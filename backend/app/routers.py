@@ -6154,3 +6154,23 @@ def cleanup_completed_tasks_files_api(
     except Exception as e:
         logger.error(f"清理已完成任务文件失败: {e}")
         raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
+
+
+@router.post("/admin/cleanup/all-old-tasks")
+def cleanup_all_old_tasks_files_api(
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """一键清理所有已完成和过期任务的图片和文件（管理员接口）"""
+    try:
+        result = crud.cleanup_all_old_tasks_files(db)
+        return {
+            "success": True,
+            "message": f"清理完成：已完成任务 {result['completed_count']} 个，过期任务 {result['expired_count']} 个，总计 {result['total_count']} 个",
+            "completed_count": result["completed_count"],
+            "expired_count": result["expired_count"],
+            "total_count": result["total_count"]
+        }
+    except Exception as e:
+        logger.error(f"清理任务文件失败: {e}")
+        raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")

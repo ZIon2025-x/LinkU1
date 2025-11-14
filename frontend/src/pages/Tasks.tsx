@@ -590,10 +590,6 @@ const Tasks: React.FC = () => {
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [showNotifications, setShowNotifications] = useState(false);
   
-  // 调试：打印未读数量
-  React.useEffect(() => {
-    console.log('[Tasks] 未读消息数量:', messageUnreadCount);
-  }, [messageUnreadCount]);
   
   // 系统设置状态
   const [systemSettings, setSystemSettings] = useState<any>({
@@ -621,26 +617,6 @@ const Tasks: React.FC = () => {
   const { navigate } = useLocalizedNavigation();
   const navigateRaw = useRouterNavigate(); // 原始navigate用于语言切换
 
-  // 检查按钮是否被渲染（在组件挂载后）
-  useEffect(() => {
-    console.log('[Tasks] ========== 组件已挂载，检查按钮渲染 ==========');
-    setTimeout(() => {
-      const rewardContainer = document.querySelector('.reward-dropdown-container');
-      const deadlineContainer = document.querySelector('.deadline-dropdown-container');
-      console.log('[Tasks] 金额排序容器:', rewardContainer);
-      console.log('[Tasks] 截止时间排序容器:', deadlineContainer);
-      if (rewardContainer) {
-        console.log('[Tasks] 金额排序容器已找到，位置:', rewardContainer.getBoundingClientRect());
-      } else {
-        console.warn('[Tasks] ⚠️ 金额排序容器未找到！');
-      }
-      if (deadlineContainer) {
-        console.log('[Tasks] 截止时间排序容器已找到，位置:', deadlineContainer.getBoundingClientRect());
-      } else {
-        console.warn('[Tasks] ⚠️ 截止时间排序容器未找到！');
-      }
-    }, 1000); // 延迟1秒检查，确保DOM已渲染
-  }, []);
 
   // 加载用户信息和已申请任务
   useEffect(() => {
@@ -795,13 +771,6 @@ const Tasks: React.FC = () => {
       // 使用传入的排序值，如果没有则使用当前状态
       const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortBy || 'latest');
       
-      // 调试：输出排序参数
-      console.log('[Tasks] ========== 加载任务 ==========');
-      console.log('[Tasks] 排序参数:', currentSortBy);
-      console.log('[Tasks] overrideSortBy:', overrideSortBy);
-      console.log('[Tasks] sortBy 状态:', sortBy);
-      console.log('[Tasks] 当前状态 - rewardSort:', rewardSort, 'deadlineSort:', deadlineSort);
-      
       const data = await fetchTasks({
         type: type !== 'all' ? type : undefined,
         city: city !== 'all' ? city : undefined,
@@ -810,8 +779,6 @@ const Tasks: React.FC = () => {
         pageSize: pageSize,
         sort_by: currentSortBy  // 使用计算后的排序值
       });
-      
-      console.log('[Tasks] fetchTasks 返回数据，任务数量:', data.tasks?.length || 0);
       
       const tasksList = (data.tasks || []).map((task: any) => {
         // 确保 images 是数组格式
@@ -862,57 +829,28 @@ const Tasks: React.FC = () => {
       }
     }
   }, [page, pageSize, type, city, debouncedKeyword, keyword, sortBy, rewardSort, deadlineSort]);
-  
-  // 监听 sortBy 变化，用于调试
-  useEffect(() => {
-    console.log('[Tasks] sortBy 状态已更新为:', sortBy);
-  }, [sortBy]);
 
   // 处理金额排序变化
   const handleRewardSortChange = useCallback((value: string) => {
-    console.log('[Tasks] ========== 金额排序变化 ==========');
-    console.log('[Tasks] 新值:', value);
-    
-    // 更新状态
     setRewardSort(value);
     setDeadlineSort(''); // 清除截止日期排序
     
-    // 计算新的排序值
     const newSortBy = value ? `reward_${value}` : 'latest';
-    console.log('[Tasks] 设置 sortBy 为:', newSortBy);
-    
-    // 更新排序状态
     setSortBy(newSortBy);
-    
-    // 关闭下拉菜单
     setShowRewardDropdown(false);
     
-    // 直接调用 loadTasks，传入新的排序值
-    console.log('[Tasks] 直接调用 loadTasks，排序参数:', newSortBy);
     loadTasks(false, undefined, newSortBy);
   }, [loadTasks]);
 
   // 处理截止日期排序变化
   const handleDeadlineSortChange = useCallback((value: string) => {
-    console.log('[Tasks] ========== 截止日期排序变化 ==========');
-    console.log('[Tasks] 新值:', value);
-    
-    // 更新状态
     setDeadlineSort(value);
     setRewardSort(''); // 清除金额排序
     
-    // 计算新的排序值
     const newSortBy = value ? `deadline_${value}` : 'latest';
-    console.log('[Tasks] 设置 sortBy 为:', newSortBy);
-    
-    // 更新排序状态
     setSortBy(newSortBy);
-    
-    // 关闭下拉菜单
     setShowDeadlineDropdown(false);
     
-    // 直接调用 loadTasks，传入新的排序值
-    console.log('[Tasks] 直接调用 loadTasks，排序参数:', newSortBy);
     loadTasks(false, undefined, newSortBy);
   }, [loadTasks]);
   
@@ -928,7 +866,6 @@ const Tasks: React.FC = () => {
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
     // 注意：sortBy 变化由 handleRewardSortChange、handleDeadlineSortChange 和"最新"按钮直接处理，不在这里触发
     if (cityInitialized) {
-      console.log('[Tasks] useEffect 触发 loadTasks，当前 sortBy:', sortBy);
       loadTasks(false); // 初始加载，不是加载更多
     }
   }, [type, city, debouncedKeyword, cityInitialized, loadTasks]); // 移除 sortBy 依赖，避免与排序处理函数重复触发
@@ -1966,7 +1903,6 @@ const Tasks: React.FC = () => {
               {/* 最新发布卡片 */}
               <div
                 onClick={() => {
-                  console.log('[Tasks] ========== 点击最新排序按钮 ==========');
                   setSortBy('latest');
                   setRewardSort('');
                   setDeadlineSort('');
@@ -2030,25 +1966,13 @@ const Tasks: React.FC = () => {
               <div 
                 className="reward-dropdown-container" 
                 style={{ position: 'relative', zIndex: 10 }}
-                ref={(el) => {
-                  if (el) {
-                    console.log('[Tasks] 金额排序容器已渲染:', el);
-                  }
-                }}
               >
                 <div
                   onClick={(e) => {
-                    console.log('[Tasks] ========== 点击金额排序按钮 ==========');
-                    console.log('[Tasks] 当前 showRewardDropdown:', showRewardDropdown);
-                    console.log('[Tasks] 事件对象:', e);
                     e.stopPropagation();
-                    const newValue = !showRewardDropdown;
-                    console.log('[Tasks] 设置 showRewardDropdown 为:', newValue);
-                    setShowRewardDropdown(newValue);
-                    console.log('[Tasks] showRewardDropdown 已更新');
+                    setShowRewardDropdown(!showRewardDropdown);
                   }}
                   onMouseDown={(e) => {
-                    console.log('[Tasks] 金额排序按钮 onMouseDown');
                     e.stopPropagation();
                   }}
                   style={{
@@ -2160,12 +2084,9 @@ const Tasks: React.FC = () => {
                         e.stopPropagation();
                       }}
                       onClick={(e) => {
-                        console.log('[Tasks] ========== 点击金额排序降序选项 (onClick) ==========');
                         e.stopPropagation();
-                        console.log('[Tasks] 调用 handleRewardSortChange("desc")');
+                        e.preventDefault();
                         handleRewardSortChange('desc');
-                        console.log('[Tasks] 关闭下拉菜单');
-                        setShowRewardDropdown(false);
                       }}
                       style={{
                         padding: '12px 16px',
@@ -2201,8 +2122,8 @@ const Tasks: React.FC = () => {
                         e.stopPropagation();
                       }}
                       onClick={(e) => {
-                        console.log('[Tasks] ========== 点击金额排序升序选项 (onClick) ==========');
                         e.stopPropagation();
+                        e.preventDefault();
                         handleRewardSortChange('asc');
                       }}
                       style={{
@@ -2238,25 +2159,13 @@ const Tasks: React.FC = () => {
               <div 
                 className="deadline-dropdown-container" 
                 style={{ position: 'relative', zIndex: 10 }}
-                ref={(el) => {
-                  if (el) {
-                    console.log('[Tasks] 截止时间排序容器已渲染:', el);
-                  }
-                }}
               >
                 <div
                   onClick={(e) => {
-                    console.log('[Tasks] ========== 点击截止时间排序按钮 ==========');
-                    console.log('[Tasks] 当前 showDeadlineDropdown:', showDeadlineDropdown);
-                    console.log('[Tasks] 事件对象:', e);
                     e.stopPropagation();
-                    const newValue = !showDeadlineDropdown;
-                    console.log('[Tasks] 设置 showDeadlineDropdown 为:', newValue);
-                    setShowDeadlineDropdown(newValue);
-                    console.log('[Tasks] showDeadlineDropdown 已更新');
+                    setShowDeadlineDropdown(!showDeadlineDropdown);
                   }}
                   onMouseDown={(e) => {
-                    console.log('[Tasks] 截止时间排序按钮 onMouseDown');
                     e.stopPropagation();
                   }}
                   style={{
@@ -2368,8 +2277,8 @@ const Tasks: React.FC = () => {
                         e.stopPropagation();
                       }}
                       onClick={(e) => {
-                        console.log('[Tasks] ========== 点击截止时间排序升序选项 (onClick) ==========');
                         e.stopPropagation();
+                        e.preventDefault();
                         handleDeadlineSortChange('asc');
                       }}
                       style={{
@@ -2406,8 +2315,8 @@ const Tasks: React.FC = () => {
                         e.stopPropagation();
                       }}
                       onClick={(e) => {
-                        console.log('[Tasks] ========== 点击截止时间排序降序选项 (onClick) ==========');
                         e.stopPropagation();
+                        e.preventDefault();
                         handleDeadlineSortChange('desc');
                       }}
                       style={{

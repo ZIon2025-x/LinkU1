@@ -440,8 +440,6 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
   params.page = page;
   params.page_size = pageSize;
   
-  console.log('[api.ts] fetchTasks 请求参数:', params);
-  
   // 生成缓存键
   const cacheKey = JSON.stringify(params);
   

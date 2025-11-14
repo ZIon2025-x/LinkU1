@@ -405,9 +405,70 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+
+  const handleCleanupOldTasks = async () => {
+    if (!window.confirm('确定要清理所有已完成和过期任务的图片和文件吗？此操作不可恢复！')) {
+      return;
+    }
+
+    setCleanupLoading(true);
+    try {
+      const response = await api.post('/api/admin/cleanup/all-old-tasks');
+      if (response.data.success) {
+        message.success(response.data.message);
+      } else {
+        message.error('清理失败');
+      }
+    } catch (error: any) {
+      console.error('清理失败:', error);
+      message.error(error.response?.data?.detail || '清理失败，请稍后重试');
+    } finally {
+      setCleanupLoading(false);
+    }
+  };
+
   const renderDashboard = () => (
     <div style={{ marginTop: '20px' }}>
-      <h2>数据概览</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ margin: 0 }}>数据概览</h2>
+        <button
+          onClick={handleCleanupOldTasks}
+          disabled={cleanupLoading}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: cleanupLoading ? '#ccc' : '#dc3545',
+            color: 'white',
+            cursor: cleanupLoading ? 'not-allowed' : 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {cleanupLoading ? (
+            <>
+              <span style={{
+                display: 'inline-block',
+                width: '14px',
+                height: '14px',
+                border: '2px solid #fff',
+                borderTop: '2px solid transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }}></span>
+              清理中...
+            </>
+          ) : (
+            <>
+              🗑️ 一键清理已完成和过期任务文件
+            </>
+          )}
+        </button>
+      </div>
       {stats && (
         <div style={{
           display: 'grid',
