@@ -11,12 +11,18 @@ import { TimeHandlerV2 } from '../utils/timeUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskTitle from '../components/TaskTitle';
+import TaskCard from '../components/TaskCard';
+import SortControls from '../components/SortControls';
+import CategoryIcons from '../components/CategoryIcons';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import { useTaskFilters } from '../hooks/useTaskFilters';
+import { useTaskSorting } from '../hooks/useTaskSorting';
+import { injectTasksStyles } from '../styles/Tasks.styles';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -345,18 +351,21 @@ const Tasks: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const location = useLocation();
   
+  // 注入样式（只需调用一次）
+  useEffect(() => {
+    injectTasksStyles();
+  }, []);
+  
   // 获取翻译后的任务类型名称
-  const getTaskTypeLabel = (taskType: string): string => {
+  const getTaskTypeLabel = useCallback((taskType: string): string => {
     return t(`publishTask.taskTypes.${taskType}`) || taskType;
-  };
+  }, [t]);
+  
+  // 使用筛选 hook
+  const filters = useTaskFilters(t('tasks.levels.all'));
+  
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState('all');
-  const [city, setCity] = useState('all');
-  const [cityInitialized, setCityInitialized] = useState(false); // 标记城市是否已初始化
-  const [keyword, setKeyword] = useState(''); // 实时输入值（用于显示）
-  const [debouncedKeyword, setDebouncedKeyword] = useState(''); // 防抖后的搜索关键词（用于筛选）
-  const keywordDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const locationDropdownRef = useRef<HTMLDivElement | null>(null);
   const locationButtonRef = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(1);
@@ -366,19 +375,98 @@ const Tasks: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null);
-  const [sortBy, setSortBy] = useState('latest'); // latest, reward_asc, reward_desc, deadline_asc, deadline_desc
-  const sortByRef = useRef('latest'); // 使用 ref 保存最新的 sortBy 值，避免闭包问题
-  const [rewardSort, setRewardSort] = useState(''); // '', 'asc', 'desc'
-  const [deadlineSort, setDeadlineSort] = useState(''); // '', 'asc', 'desc'
-  
-  // 同步 sortBy 到 ref
-  useEffect(() => {
-    sortByRef.current = sortBy;
-  }, [sortBy]);
-  const [showRewardDropdown, setShowRewardDropdown] = useState(false);
-  const [showDeadlineDropdown, setShowDeadlineDropdown] = useState(false);
   const [showLevelDropdown, setShowLevelDropdown] = useState(false);
-  const [taskLevel, setTaskLevel] = useState(t('tasks.levels.all'));
+  
+  // 先定义 loadTasks，但需要稍后使用 sorting hook
+  // 使用 ref 来存储 sortBy，避免循环依赖
+  const sortByRef = useRef('latest');
+  
+  // 加载任务列表 - 使用缓存和防抖优化
+  const loadTasks = useCallback(async (isLoadMore = false, targetPage?: number, overrideSortBy?: string) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setPage(1); // 重置页码
+      setHasMore(true);
+    }
+    
+    try {
+      // 使用优化后的 fetchTasks，它已经包含了缓存和防抖
+      // 使用防抖后的关键词，确保搜索更稳定
+      const searchKeyword = filters.debouncedKeyword.trim() || filters.keyword.trim() || undefined;
+      // 如果是加载更多，使用传入的页码或当前页码+1
+      const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
+      
+      // 使用传入的排序值，如果没有则使用 ref 中的最新值（避免闭包问题）
+      const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortByRef.current || 'latest');
+      
+      const data = await fetchTasks({
+        type: filters.type !== 'all' ? filters.type : undefined,
+        city: filters.city !== 'all' ? filters.city : undefined,
+        keyword: searchKeyword,
+        page: currentPage,
+        pageSize: pageSize,
+        sort_by: currentSortBy  // 使用计算后的排序值
+      });
+      
+      const tasksList = (data.tasks || []).map((task: any) => {
+        // 确保 images 是数组格式
+        if (task.images) {
+          if (typeof task.images === 'string') {
+            try {
+              task.images = JSON.parse(task.images);
+            } catch (e) {
+              task.images = [];
+            }
+          }
+          if (!Array.isArray(task.images)) {
+            task.images = [];
+          }
+        } else {
+          task.images = [];
+        }
+        return task;
+      });
+      
+      if (isLoadMore) {
+        // 追加任务
+        setTasks(prev => [...prev, ...tasksList]);
+        // 更新页码
+        setPage(currentPage);
+      } else {
+        // 替换任务列表
+        setTasks(tasksList);
+        setPage(1);
+      }
+      
+      setTotal(data.total || 0);
+      
+      // 判断是否还有更多任务
+      const totalPages = Math.ceil((data.total || 0) / pageSize);
+      setHasMore(currentPage < totalPages && tasksList.length > 0);
+    } catch (error) {
+      if (!isLoadMore) {
+        setTasks([]);
+        setTotal(0);
+      }
+      setHasMore(false);
+    } finally {
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [page, pageSize, filters.type, filters.city, filters.debouncedKeyword, filters.keyword]);
+  
+  // 使用排序 hook
+  const sorting = useTaskSorting(loadTasks);
+  
+  // 同步 sorting.sortByRef 到 sortByRef
+  useEffect(() => {
+    sortByRef.current = sorting.sortByRef.current;
+  }, [sorting.sortByRef.current]);
   const [isMobile, setIsMobile] = useState(false);
   const [userLocation, setUserLocation] = useState('London, UK'); // 用户当前位置
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
@@ -573,15 +661,16 @@ const Tasks: React.FC = () => {
   }, [showLocationDropdown, isMobile]);
 
 
-  // 处理任务等级变化
-  const handleLevelChange = (newLevel: string) => {
-    setTaskLevel(newLevel);
+  // 处理任务等级变化（使用 filters hook 的 handleLevelChange）
+  const handleLevelChangeWrapper = (newLevel: string): string => {
+    filters.handleLevelChange(newLevel);
     setShowLevelDropdown(false);
+    return newLevel;
   };
 
   // 处理城市选择变化
   const handleLocationChange = (newCity: string) => {
-    setCity(newCity); // 更新城市筛选状态
+    filters.setCity(newCity); // 更新城市筛选状态
     if (newCity !== 'all') {
       setUserLocation(newCity); // 只有非"all"时才更新用户位置显示
     }
@@ -641,20 +730,20 @@ const Tasks: React.FC = () => {
           const residenceCity = userData.residence_city ? String(userData.residence_city).trim() : null;
           
           if (residenceCity && CITIES.includes(residenceCity)) {
-            setCity(residenceCity);
+            filters.setCity(residenceCity);
             setUserLocation(residenceCity);
-            setCityInitialized(true); // 标记城市已初始化
+            filters.setCityInitialized(true); // 标记城市已初始化
           } else if (userData.location) {
             // 兼容旧的位置字段
             setUserLocation(userData.location);
-            setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
+            filters.setCityInitialized(true); // 即使没有常住城市，也标记为已初始化
           } else {
             // 用户没有设置常住城市，保持'all'，但也标记为已初始化
-            setCityInitialized(true);
+            filters.setCityInitialized(true);
           }
         } else {
           // 用户未登录，标记为已初始化（保持默认'all'）
-          setCityInitialized(true);
+          filters.setCityInitialized(true);
         }
         
         // 加载已申请的任务列表
@@ -671,7 +760,7 @@ const Tasks: React.FC = () => {
         console.error('Tasks页面加载用户信息失败:', error);
         // 如果获取用户信息失败，设置为未登录状态，但标记城市已初始化
         setUser(null);
-        setCityInitialized(true); // 即使加载失败，也标记为已初始化，避免无限等待
+        filters.setCityInitialized(true); // 即使加载失败，也标记为已初始化，避免无限等待
       }
     };
     
@@ -757,110 +846,8 @@ const Tasks: React.FC = () => {
     };
   }, [t]);
 
-  // 加载任务列表 - 使用缓存和防抖优化
-  const loadTasks = useCallback(async (isLoadMore = false, targetPage?: number, overrideSortBy?: string) => {
-    if (isLoadMore) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-      setPage(1); // 重置页码
-      setHasMore(true);
-    }
-    
-    try {
-      // 使用优化后的 fetchTasks，它已经包含了缓存和防抖
-      // 使用防抖后的关键词，确保搜索更稳定
-      const searchKeyword = debouncedKeyword.trim() || keyword.trim() || undefined;
-      // 如果是加载更多，使用传入的页码或当前页码+1
-      const currentPage = isLoadMore ? (targetPage ?? page + 1) : 1;
-      
-      // 使用传入的排序值，如果没有则使用 ref 中的最新值（避免闭包问题）
-      const currentSortBy = overrideSortBy !== undefined ? overrideSortBy : (sortByRef.current || 'latest');
-      
-      const data = await fetchTasks({
-        type: type !== 'all' ? type : undefined,
-        city: city !== 'all' ? city : undefined,
-        keyword: searchKeyword,
-        page: currentPage,
-        pageSize: pageSize,
-        sort_by: currentSortBy  // 使用计算后的排序值
-      });
-      
-      const tasksList = (data.tasks || []).map((task: any) => {
-        // 确保 images 是数组格式
-        if (task.images) {
-          if (typeof task.images === 'string') {
-            try {
-              task.images = JSON.parse(task.images);
-            } catch (e) {
-              task.images = [];
-            }
-          }
-          if (!Array.isArray(task.images)) {
-            task.images = [];
-          }
-        } else {
-          task.images = [];
-        }
-        return task;
-      });
-      
-      if (isLoadMore) {
-        // 追加任务
-        setTasks(prev => [...prev, ...tasksList]);
-        // 更新页码
-        setPage(currentPage);
-      } else {
-        // 替换任务列表
-        setTasks(tasksList);
-        setPage(1);
-      }
-      
-      setTotal(data.total || 0);
-      
-      // 判断是否还有更多任务
-      const totalPages = Math.ceil((data.total || 0) / pageSize);
-      setHasMore(currentPage < totalPages && tasksList.length > 0);
-    } catch (error) {
-      if (!isLoadMore) {
-        setTasks([]);
-        setTotal(0);
-      }
-      setHasMore(false);
-    } finally {
-      if (isLoadMore) {
-        setLoadingMore(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [page, pageSize, type, city, debouncedKeyword, keyword]);
   // 注意：sortBy, rewardSort, deadlineSort 不包含在依赖项中
   // 因为排序变化通过 overrideSortBy 参数传递，不需要依赖这些状态
-
-  // 处理金额排序变化
-  const handleRewardSortChange = useCallback((value: string) => {
-    setRewardSort(value);
-    setDeadlineSort(''); // 清除截止日期排序
-    
-    const newSortBy = value ? `reward_${value}` : 'latest';
-    setSortBy(newSortBy);
-    setShowRewardDropdown(false);
-    
-    loadTasks(false, undefined, newSortBy);
-  }, [loadTasks]);
-
-  // 处理截止日期排序变化
-  const handleDeadlineSortChange = useCallback((value: string) => {
-    setDeadlineSort(value);
-    setRewardSort(''); // 清除金额排序
-    
-    const newSortBy = value ? `deadline_${value}` : 'latest';
-    setSortBy(newSortBy);
-    setShowDeadlineDropdown(false);
-    
-    loadTasks(false, undefined, newSortBy);
-  }, [loadTasks]);
   
   // 加载更多任务
   const loadMoreTasks = useCallback(() => {
@@ -879,11 +866,11 @@ const Tasks: React.FC = () => {
     // 只有当城市已初始化后才加载任务，避免初始加载时使用错误的城市筛选
     // 使用 debouncedKeyword 触发搜索，避免频繁请求
     // 注意：sortBy 变化由 handleRewardSortChange、handleDeadlineSortChange 和"最新"按钮直接处理，不在这里触发
-    if (cityInitialized) {
+    if (filters.cityInitialized) {
       // 使用 ref 来调用，避免依赖 loadTasks 导致循环
       loadTasksRef.current(false); // 初始加载，不是加载更多
     }
-  }, [type, city, debouncedKeyword, cityInitialized]); // 移除 loadTasks 依赖，使用 ref 避免循环触发
+  }, [filters.type, filters.city, filters.debouncedKeyword, filters.cityInitialized]); // 移除 loadTasks 依赖，使用 ref 避免循环触发
   
   // 滚动监听，实现无限滚动
   useEffect(() => {
@@ -933,25 +920,25 @@ const Tasks: React.FC = () => {
       
       // 检查金额排序下拉菜单
       // 需要检查是否点击在下拉菜单容器内，包括下拉菜单项和下拉菜单内容
-      if (showRewardDropdown) {
+      if (sorting.showRewardDropdown) {
         const isInsideContainer = target.closest('.reward-dropdown-container');
         const isDropdownContent = target.closest('.custom-dropdown-content');
         const isDropdownItem = target.closest('.custom-dropdown-item');
         // 如果点击在容器外、下拉内容外、且不是菜单项，才关闭菜单
         if (!isInsideContainer && !isDropdownContent && !isDropdownItem) {
-          setShowRewardDropdown(false);
+          sorting.setShowRewardDropdown(false);
         }
       }
       
       // 检查截止时间排序下拉菜单
       // 需要检查是否点击在下拉菜单容器内，包括下拉菜单项和下拉菜单内容
-      if (showDeadlineDropdown) {
+      if (sorting.showDeadlineDropdown) {
         const isInsideContainer = target.closest('.deadline-dropdown-container');
         const isDropdownContent = target.closest('.custom-dropdown-content');
         const isDropdownItem = target.closest('.custom-dropdown-item');
         // 如果点击在容器外、下拉内容外、且不是菜单项，才关闭菜单
         if (!isInsideContainer && !isDropdownContent && !isDropdownItem) {
-          setShowDeadlineDropdown(false);
+          sorting.setShowDeadlineDropdown(false);
         }
       }
       
@@ -961,7 +948,7 @@ const Tasks: React.FC = () => {
       }
     };
 
-    if (showLocationDropdown || showLanguageDropdown || showRewardDropdown || showDeadlineDropdown || showLevelDropdown) {
+    if (showLocationDropdown || showLanguageDropdown || sorting.showRewardDropdown || sorting.showDeadlineDropdown || showLevelDropdown) {
       // 使用 mousedown 事件，在 click 之前触发
       // 菜单项会在 mousedown 时阻止事件传播，所以不会关闭菜单
       document.addEventListener('mousedown', handleClickOutside);
@@ -970,7 +957,7 @@ const Tasks: React.FC = () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
-  }, [showLocationDropdown, showLanguageDropdown, showRewardDropdown, showDeadlineDropdown, showLevelDropdown]);
+  }, [showLocationDropdown, showLanguageDropdown, sorting.showRewardDropdown, sorting.showDeadlineDropdown, showLevelDropdown]);
 
 
   // 处理通知标记为已读
@@ -1076,10 +1063,10 @@ const Tasks: React.FC = () => {
   };
 
   // 处理任务详情查看
-  const handleViewTask = (taskId: number) => {
+  const handleViewTask = useCallback((taskId: number) => {
     setSelectedTaskId(taskId);
     setShowTaskDetailModal(true);
-  };
+  }, []);
 
   // 处理联系发布者（跳转到任务聊天页面）
   const handleContactPoster = (taskId: number) => {
@@ -1103,7 +1090,7 @@ const Tasks: React.FC = () => {
   };
 
   // 获取任务等级颜色
-  const getTaskLevelColor = (taskLevel: string) => {
+  const getTaskLevelColor = useCallback((taskLevel: string) => {
     switch (taskLevel) {
       case 'super':
         return '#8b5cf6';
@@ -1113,10 +1100,10 @@ const Tasks: React.FC = () => {
       default:
         return '#95a5a6';
     }
-  };
+  }, []);
 
   // 获取任务等级标签
-  const getTaskLevelLabel = (taskLevel: string) => {
+  const getTaskLevelLabel = useCallback((taskLevel: string) => {
     switch (taskLevel) {
       case 'super':
         return t('home.superTask');
@@ -1126,54 +1113,34 @@ const Tasks: React.FC = () => {
       default:
         return t('home.normalTask');
     }
-  };
-
-  // 防抖处理搜索关键词，减少输入延迟
-  useEffect(() => {
-    // 清除之前的定时器
-    if (keywordDebounceRef.current) {
-      clearTimeout(keywordDebounceRef.current);
-    }
-    
-    // 设置新的防抖定时器，300ms后更新防抖关键词
-    keywordDebounceRef.current = setTimeout(() => {
-      setDebouncedKeyword(keyword);
-    }, 300);
-    
-    // 清理函数
-    return () => {
-      if (keywordDebounceRef.current) {
-        clearTimeout(keywordDebounceRef.current);
-      }
-    };
-  }, [keyword]);
+  }, [t]);
 
   // 使用 useMemo 优化任务筛选逻辑，避免不必要的重新计算
   const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
 
     // 按任务等级筛选
-    if (taskLevel !== t('tasks.levels.all')) {
+    if (filters.taskLevel !== t('tasks.levels.all')) {
       const levelMap: { [key: string]: string } = {
         [t('tasks.levels.normal')]: 'normal',
         [t('tasks.levels.vip')]: 'vip',
         [t('tasks.levels.super')]: 'super'
       };
       
-      const targetLevel = levelMap[taskLevel];
+      const targetLevel = levelMap[filters.taskLevel];
       if (targetLevel) {
         filtered = filtered.filter(task => task.task_level === targetLevel);
       }
     }
 
     // 按城市筛选
-    if (city !== 'all') {
-      filtered = filtered.filter(task => task.location === city);
+    if (filters.city !== 'all') {
+      filtered = filtered.filter(task => task.location === filters.city);
     }
 
     // 按类型筛选
-    if (type !== 'all') {
-      filtered = filtered.filter(task => task.task_type === type);
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(task => task.task_type === filters.type);
     }
 
     // 注意：搜索关键词已经在服务端处理，这里不需要再次过滤
@@ -1184,7 +1151,7 @@ const Tasks: React.FC = () => {
     // 客户端排序会破坏服务端的分页排序逻辑
     
     return filtered;
-  }, [tasks, taskLevel, city, type, debouncedKeyword, t]);
+  }, [tasks, filters.taskLevel, filters.city, filters.type, filters.debouncedKeyword, t]);
 
   return (
     <div style={{ 
@@ -1296,7 +1263,7 @@ const Tasks: React.FC = () => {
             >
                 <span style={{ fontSize: '16px' }}>📍</span>
                 <span style={{ fontWeight: '500' }}>
-                  {city === 'all' ? t('home.allCities') : userLocation}
+                  {filters.city === 'all' ? t('home.allCities') : userLocation}
                 </span>
               <span style={{
                 transform: showLocationDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -1567,119 +1534,11 @@ const Tasks: React.FC = () => {
             marginBottom: '20px',
             position: 'relative'
           }}>
-            <div className="category-icons" style={{
-              display: 'flex',
-              gap: '16px',
-              justifyContent: 'space-between',
-              paddingBottom: '8px',
-              flexWrap: 'wrap',
-              overflowX: 'auto',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}>
-              {TASK_TYPES.slice(0, 10).map((taskType, index) => (
-                <div
-                  key={taskType}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '10px',
-                    flex: '1',
-                    minWidth: '90px',
-                    maxWidth: '140px',
-                    cursor: 'pointer',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    const iconCircle = e.currentTarget.querySelector('.category-icon-circle') as HTMLElement;
-                    if (iconCircle) {
-                      iconCircle.style.transform = 'scale(1.1) rotate(5deg)';
-                      iconCircle.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.15)';
-                    }
-                    const glowEffect = e.currentTarget.querySelector('.icon-glow') as HTMLElement;
-                    if (glowEffect) {
-                      glowEffect.style.opacity = '1';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                    const iconCircle = e.currentTarget.querySelector('.category-icon-circle') as HTMLElement;
-                    if (iconCircle) {
-                      iconCircle.style.transform = 'scale(1) rotate(0deg)';
-                      iconCircle.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)';
-                    }
-                    const glowEffect = e.currentTarget.querySelector('.icon-glow') as HTMLElement;
-                    if (glowEffect) {
-                      glowEffect.style.opacity = '0';
-                    }
-                  }}
-                  onClick={() => setType(taskType)}
-                >
-                  <div 
-                    className="category-icon-circle"
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      background: `linear-gradient(135deg, ${['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#94a3b8', '#78716c'][index]}, ${['#dc2626', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#cbd5e1', '#57534e'][index]})`,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '28px',
-                      color: '#fff',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <div 
-                      className="icon-glow"
-                      style={{
-                        position: 'absolute',
-                        top: '-50%',
-                        left: '-50%',
-                        width: '200%',
-                        height: '200%',
-                        background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
-                        opacity: 0,
-                        transition: 'opacity 0.3s ease',
-                        pointerEvents: 'none'
-                      }}
-                    />
-                    <span style={{ position: 'relative', zIndex: 1 }}>
-                      {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][index]}
-                    </span>
-                  </div>
-                  <span style={{
-                    fontSize: '14px',
-                    color: '#374151',
-                    textAlign: 'center',
-                    fontWeight: '600',
-                    lineHeight: '1.4',
-                    transition: 'color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#1f2937';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#374151';
-                  }}
-                  >
-                    {getTaskTypeLabel(taskType)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <CategoryIcons
+              taskTypes={TASK_TYPES}
+              getTaskTypeLabel={getTaskTypeLabel}
+              onTypeClick={filters.setType}
+            />
           </div>
 
           {/* 排序按钮和搜索框行 */}
@@ -1694,675 +1553,15 @@ const Tasks: React.FC = () => {
             gap: '20px',
             flexWrap: 'wrap'
           }}>
-            {/* 排序控制区域 - 重新设计 */}
-            <div className="sort-controls" style={{
-              display: 'flex',
-              gap: '12px',
-              flex: '1',
-              minWidth: '0',
-              alignItems: 'center',
-              flexWrap: 'wrap'
-            }}>
-              {/* 任务等级下拉菜单 */}
-              <div className="level-dropdown-container" style={{ position: 'relative' }}>
-                <div
-                  onClick={() => setShowLevelDropdown(!showLevelDropdown)}
-                  style={{
-                    background: taskLevel !== t('tasks.levels.all') 
-                      ? taskLevel === t('tasks.levels.vip') 
-                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                        : taskLevel === t('tasks.levels.super')
-                        ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-                        : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
-                      : '#ffffff',
-                    color: taskLevel !== t('tasks.levels.all') ? '#ffffff' : '#374151',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '16px',
-                    padding: '12px 20px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flexShrink: 0,
-                    boxShadow: taskLevel !== t('tasks.levels.all') 
-                      ? taskLevel === t('tasks.levels.vip')
-                        ? '0 8px 25px rgba(245, 158, 11, 0.3)'
-                        : taskLevel === t('tasks.levels.super')
-                        ? '0 8px 25px rgba(139, 92, 246, 0.3)'
-                        : '0 8px 25px rgba(107, 114, 128, 0.3)'
-                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
-                    transform: taskLevel !== t('tasks.levels.all') ? 'translateY(-2px)' : 'translateY(0)',
-                    minWidth: '140px'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (taskLevel === t('tasks.levels.all')) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (taskLevel === t('tasks.levels.all')) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                    }
-                  }}
-                >
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: taskLevel !== t('tasks.levels.all') 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : '#f3f4f6',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px'
-                  }}>
-                    {taskLevel === t('tasks.levels.vip') ? '👑' : taskLevel === t('tasks.levels.super') ? '⭐' : '🎯'}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                      {taskLevel}
-                    </div>
-                  </div>
-                  <div style={{
-                    color: taskLevel !== t('tasks.levels.all') ? '#ffffff' : '#9ca3af',
-                    fontSize: '12px',
-                    transition: 'color 0.3s ease',
-                    transform: showLevelDropdown ? 'rotate(180deg)' : 'rotate(0deg)'
-                  }}>
-                    ▼
-                  </div>
-                </div>
-                
-                {/* 自定义下拉菜单 */}
-                {showLevelDropdown && (
-                  <div className="custom-dropdown-content show" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                    zIndex: 1000,
-                    marginTop: '4px',
-                    overflow: 'hidden',
-                    width: 'auto',
-                    minWidth: '120px',
-                    maxWidth: '160px'
-                  }}>
-                    <div 
-                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.all') ? 'selected' : ''}`}
-                      onClick={() => handleLevelChange(t('tasks.levels.all'))}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                        color: taskLevel === t('tasks.levels.all') ? '#ffffff' : '#374151',
-                        background: taskLevel === t('tasks.levels.all') ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        🎯
-                      </div>
-                      <span>{t('tasks.levels.all')}</span>
-                    </div>
-                    <div 
-                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.normal') ? 'selected' : ''}`}
-                      onClick={() => handleLevelChange(t('tasks.levels.normal'))}
-                      style={{
-                        padding: '12px 16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: taskLevel === t('tasks.levels.normal') ? '#ffffff' : '#374151',
-                        background: taskLevel === t('tasks.levels.normal') ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        📋
-                      </div>
-                      <span>{t('tasks.levels.normal')}</span>
-                    </div>
-                    <div 
-                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.vip') ? 'selected' : ''}`}
-                      onClick={() => handleLevelChange(t('tasks.levels.vip'))}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: taskLevel === t('tasks.levels.vip') ? '#ffffff' : '#374151',
-                        background: taskLevel === t('tasks.levels.vip') ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        👑
-                      </div>
-                      <span>{t('tasks.levels.vip')}</span>
-                    </div>
-                    <div 
-                      className={`custom-dropdown-item ${taskLevel === t('tasks.levels.super') ? 'selected' : ''}`}
-                      onClick={() => handleLevelChange(t('tasks.levels.super'))}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: taskLevel === t('tasks.levels.super') ? '#ffffff' : '#374151',
-                        background: taskLevel === t('tasks.levels.super') ? '#3b82f6' : 'transparent'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        ⭐
-                      </div>
-                      <span>{t('tasks.levels.super')}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 排序标签 */}
-              {/* 最新发布卡片 */}
-              <div
-                onClick={() => {
-                  setSortBy('latest');
-                  setRewardSort('');
-                  setDeadlineSort('');
-                  // 直接调用 loadTasks，传入 'latest' 排序值
-                  loadTasks(false, undefined, 'latest');
-                }}
-                  style={{
-                  background: sortBy === 'latest' 
-                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                    : '#ffffff',
-                  color: sortBy === 'latest' ? '#ffffff' : '#374151',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '16px',
-                  padding: '12px 20px',
-                    cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                  gap: '8px',
-                  flexShrink: 0,
-                  boxShadow: sortBy === 'latest' 
-                    ? '0 8px 25px rgba(102, 126, 234, 0.3)' 
-                    : '0 2px 8px rgba(0, 0, 0, 0.08)',
-                  transform: sortBy === 'latest' ? 'translateY(-2px)' : 'translateY(0)',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-                onMouseEnter={(e) => {
-                  if (sortBy !== 'latest') {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (sortBy !== 'latest') {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                  }
-                }}
-              >
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: sortBy === 'latest' 
-                    ? 'rgba(255, 255, 255, 0.2)' 
-                    : '#f3f4f6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px'
-                }}>
-                  🕒
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600' }}>{t('tasks.sorting.latest')}</div>
-                </div>
-              </div>
-
-              {/* 金额排序卡片 */}
-              <div 
-                className="reward-dropdown-container" 
-                style={{ position: 'relative', zIndex: 10 }}
-              >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowRewardDropdown(!showRewardDropdown);
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  style={{
-                    background: rewardSort 
-                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' 
-                      : '#ffffff',
-                    color: rewardSort ? '#ffffff' : '#374151',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '16px',
-                    padding: '12px 20px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flexShrink: 0,
-                    boxShadow: rewardSort 
-                      ? '0 8px 25px rgba(240, 147, 251, 0.3)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
-                    transform: rewardSort ? 'translateY(-2px)' : 'translateY(0)',
-                    minWidth: '140px',
-                    position: 'relative',
-                    zIndex: 11,
-                    pointerEvents: 'auto',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!rewardSort) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!rewardSort) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                    }
-                  }}
-                >
-                  <div 
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: rewardSort 
-                        ? 'rgba(255, 255, 255, 0.2)' 
-                        : '#fef3c7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    💰
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                      {rewardSort === 'desc' ? t('tasks.sorting.rewardDesc') : 
-                       rewardSort === 'asc' ? t('tasks.sorting.rewardAsc') : t('tasks.sorting.rewardSort')}
-                    </div>
-                    <div style={{
-                      color: rewardSort ? '#ffffff' : '#9ca3af',
-                      fontSize: '12px',
-                      transition: 'color 0.3s ease',
-                      transform: showRewardDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      ▼
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 自定义下拉菜单 */}
-                {showRewardDropdown && (
-                  <div 
-                    className="custom-dropdown-content show" 
-                    onClick={(e) => {
-                      // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e) => {
-                      // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                      e.stopPropagation();
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                      zIndex: 1000,
-                      marginTop: '4px',
-                      overflow: 'hidden',
-                      width: 'auto',
-                      minWidth: '120px',
-                      maxWidth: '160px'
-                    }}>
-                    <div 
-                      className={`custom-dropdown-item ${rewardSort === 'desc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
-                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
-                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleRewardSortChange('desc');
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: rewardSort === 'desc' ? '#ffffff' : '#374151',
-                        background: rewardSort === 'desc' ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        💰
-                      </div>
-                      <span>{t('tasks.sorting.rewardDesc')}</span>
-                    </div>
-                    <div 
-                      className={`custom-dropdown-item ${rewardSort === 'asc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
-                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
-                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleRewardSortChange('asc');
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: rewardSort === 'asc' ? '#ffffff' : '#374151',
-                        background: rewardSort === 'asc' ? '#3b82f6' : 'transparent'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        💰
-                      </div>
-                      <span>{t('tasks.sorting.rewardAsc')}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* 截止日期排序卡片 */}
-              <div 
-                className="deadline-dropdown-container" 
-                style={{ position: 'relative', zIndex: 10 }}
-              >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeadlineDropdown(!showDeadlineDropdown);
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  style={{
-                    background: deadlineSort 
-                      ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' 
-                      : '#ffffff',
-                    color: deadlineSort ? '#ffffff' : '#374151',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '16px',
-                    padding: '12px 20px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flexShrink: 0,
-                    boxShadow: deadlineSort 
-                      ? '0 8px 25px rgba(79, 172, 254, 0.3)' 
-                      : '0 2px 8px rgba(0, 0, 0, 0.08)',
-                    transform: deadlineSort ? 'translateY(-2px)' : 'translateY(0)',
-                    minWidth: '160px',
-                    position: 'relative',
-                    zIndex: 11,
-                    pointerEvents: 'auto',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!deadlineSort) {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!deadlineSort) {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                    }
-                  }}
-                >
-                  <div 
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: deadlineSort 
-                        ? 'rgba(255, 255, 255, 0.2)' 
-                        : '#fef3c7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
-                      pointerEvents: 'none'
-                    }}
-                  >
-                    ⏰
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', pointerEvents: 'none' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600' }}>
-                      {deadlineSort === 'asc' ? t('tasks.sorting.deadlineAsc') : 
-                       deadlineSort === 'desc' ? t('tasks.sorting.deadlineDesc') : t('tasks.sorting.deadlineSort')}
-                    </div>
-                    <div style={{
-                      color: deadlineSort ? '#ffffff' : '#9ca3af',
-                      fontSize: '12px',
-                      transition: 'color 0.3s ease',
-                      transform: showDeadlineDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      ▼
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 自定义下拉菜单 */}
-                {showDeadlineDropdown && (
-                  <div 
-                    className="custom-dropdown-content show" 
-                    onClick={(e) => {
-                      // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e) => {
-                      // 阻止事件冒泡，防止 handleClickOutside 关闭菜单
-                      e.stopPropagation();
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      background: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                      zIndex: 1000,
-                      marginTop: '4px',
-                      overflow: 'hidden',
-                      width: 'auto',
-                      minWidth: '120px',
-                      maxWidth: '160px'
-                    }}>
-                    <div 
-                      className={`custom-dropdown-item ${deadlineSort === 'asc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
-                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
-                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleDeadlineSortChange('asc');
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: deadlineSort === 'asc' ? '#ffffff' : '#374151',
-                        background: deadlineSort === 'asc' ? '#3b82f6' : 'transparent',
-                        borderBottom: '1px solid #f3f4f6'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        ⏰
-                      </div>
-                      <span>{t('tasks.sorting.deadlineAsc')}</span>
-                    </div>
-                    <div 
-                      className={`custom-dropdown-item ${deadlineSort === 'desc' ? 'selected' : ''}`}
-                      onMouseDown={(e) => {
-                        // 在 mousedown 时立即阻止事件传播，防止 handleClickOutside 关闭菜单
-                        // 注意：不使用 preventDefault，避免阻止 onClick 事件
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleDeadlineSortChange('desc');
-                      }}
-                      style={{
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: deadlineSort === 'desc' ? '#ffffff' : '#374151',
-                        background: deadlineSort === 'desc' ? '#3b82f6' : 'transparent'
-                      }}
-                    >
-                      <div className="icon" style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        ⏰
-                      </div>
-                      <span>{t('tasks.sorting.deadlineDesc')}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* 排序控制区域 - 使用 SortControls 组件 */}
+            <SortControls
+              loadTasks={loadTasks}
+              taskLevel={filters.taskLevel}
+              showLevelDropdown={showLevelDropdown}
+              setShowLevelDropdown={setShowLevelDropdown}
+              handleLevelChange={handleLevelChangeWrapper}
+              t={t}
+            />
 
             {/* 搜索框区域 */}
             <div className="search-section" style={{
@@ -2380,8 +1579,8 @@ const Tasks: React.FC = () => {
                 <input
                   type="text"
                   placeholder={t('tasks.search.placeholder')}
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+                  value={filters.keyword}
+                  onChange={(e) => filters.setKeyword(e.target.value)}
                   style={{ 
                     width: '100%',
                     padding: '8px 12px 8px 35px',
@@ -2451,7 +1650,7 @@ const Tasks: React.FC = () => {
               fontWeight: '500'
             }}>
               {t('tasks.search.found')} <span style={{ color: '#3b82f6', fontWeight: '600' }}>{total}</span> {t('tasks.search.tasks')}
-              {debouncedKeyword && (
+              {filters.debouncedKeyword && (
                 <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
                   ({t('tasks.search.total')} {tasks.length} {t('tasks.search.tasks')})
                 </span>
@@ -2495,314 +1694,20 @@ const Tasks: React.FC = () => {
               </div>
             ) : (
               filteredTasks.map(task => (
-                <div
+                <TaskCard
                   key={task.id}
-                  className="task-card"
-                  style={{
-                    background: '#fff',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                    boxShadow: task.task_level === 'vip' ? '0 4px 15px rgba(245, 158, 11, 0.2)' : 
-                               task.task_level === 'super' ? '0 4px 20px rgba(139, 92, 246, 0.3)' : 
-                               '0 2px 8px rgba(0,0,0,0.05)',
-                    border: task.task_level === 'vip' ? '2px solid #f59e0b' : 
-                           task.task_level === 'super' ? '2px solid #8b5cf6' : 
-                           '1px solid #e5e7eb',
-                    animation: task.task_level === 'vip' ? 'vipGlow 4s infinite' : 
-                              task.task_level === 'super' ? 'superPulse 3s infinite' : 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    if (task.task_level === 'vip') {
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.4)';
-                    } else if (task.task_level === 'super') {
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.5)';
-                    } else {
-                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    if (task.task_level === 'vip') {
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.2)';
-                    } else if (task.task_level === 'super') {
-                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(139, 92, 246, 0.3)';
-                    } else {
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                    }
-                  }}
-                  onClick={() => handleViewTask(task.id)}
-                >
-                  {/* 任务图片区域 */}
-                  <div style={{
-                    aspectRatio: isMobile ? '9 / 16' : '16 / 9',
-                    width: '100%',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    background: `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {/* 任务类型图标占位符 - 仅在没有图片时显示 */}
-                    {(!task.images || !Array.isArray(task.images) || task.images.length === 0 || !task.images[0]) && (
-                      <div 
-                        className={`task-icon-placeholder-${task.id}`}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          zIndex: 0,
-                          pointerEvents: 'none'
-                        }}>
-                        <div style={{
-                          fontSize: isMobile ? '48px' : '64px',
-                          opacity: 0.6,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 如果有任务图片，显示图片 */}
-                    {task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0] && (
-                      <img
-                        key={`task-img-${task.id}-${String(task.images[0])}`}
-                        src={String(task.images[0])}
-                        alt={task.title}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          zIndex: 1,
-                          backgroundColor: 'transparent',
-                          display: 'block'
-                        }}
-                        loading="lazy"
-                        onLoad={(e) => {
-                          // 图片加载成功，确保占位符图标隐藏
-                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                          if (placeholder) {
-                            placeholder.style.display = 'none';
-                          }
-                        }}
-                        onError={(e) => {
-                          // 图片加载失败，隐藏图片并显示占位符图标
-                          e.currentTarget.style.display = 'none';
-                          const placeholder = e.currentTarget.parentElement?.querySelector(`.task-icon-placeholder-${task.id}`) as HTMLElement;
-                          if (!placeholder) {
-                            // 如果占位符不存在，创建一个
-                            const placeholderDiv = document.createElement('div');
-                            placeholderDiv.className = `task-icon-placeholder-${task.id}`;
-                            placeholderDiv.style.cssText = `
-                              position: absolute;
-                              top: 0;
-                              left: 0;
-                              width: 100%;
-                              height: 100%;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                              z-index: 0;
-                              pointer-events: none;
-                            `;
-                            placeholderDiv.innerHTML = `
-                              <div style="font-size: ${isMobile ? '48px' : '64px'}; opacity: 0.6; display: flex; align-items: center; justify-content: center;">
-                                ${['🏠', '🎓', '🛍️', '🏃', '🔧', '🤝', '🚗', '🐕', '🛒', '📦'][TASK_TYPES.indexOf(task.task_type) % 10]}
-                              </div>
-                            `;
-                            e.currentTarget.parentElement?.appendChild(placeholderDiv);
-                          } else {
-                            placeholder.style.display = 'flex';
-                          }
-                        }}
-                      />
-                    )}
-                    
-                    {/* 图片遮罩层，确保文字清晰可读 - 放在图片之上 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]
-                        ? 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.5) 100%)'
-                        : 'transparent',
-                      zIndex: 2,
-                      pointerEvents: 'none'
-                    }} />
-
-                    {/* 地点 - 左上角 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: isMobile ? '8px' : '12px',
-                      left: isMobile ? '8px' : '12px',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#fff',
-                      padding: isMobile ? '4px 8px' : '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: isMobile ? '10px' : '12px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      zIndex: 3,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
-                    }}>
-                      <span>{task.location === 'Online' ? '🌐' : '📍'}</span>
-                      <span style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>{task.location}</span>
-                    </div>
-
-                    {/* 任务类型 - 右上角 */}
-                    <div style={{
-                      position: 'absolute',
-                      top: isMobile ? '8px' : '12px',
-                      right: isMobile ? '8px' : '12px',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#fff',
-                      padding: isMobile ? '4px 8px' : '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: isMobile ? '10px' : '12px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      zIndex: 3,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
-                    }}>
-                      <span>🏷️</span>
-                      <span style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>{getTaskTypeLabel(task.task_type)}</span>
-                    </div>
-
-                    {/* 金额 - 右下角 */}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: isMobile ? '8px' : '12px',
-                      right: isMobile ? '8px' : '12px',
-                      background: 'rgba(5, 150, 105, 0.9)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#fff',
-                      padding: isMobile ? '6px 10px' : '8px 14px',
-                      borderRadius: '20px',
-                      fontSize: isMobile ? '14px' : '18px',
-                      fontWeight: '700',
-                      zIndex: 3,
-                      boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)'
-                    }}>
-                      £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
-                    </div>
-
-                    {/* 截止时间 - 左下角 */}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: isMobile ? '8px' : '12px',
-                      left: isMobile ? '8px' : '12px',
-                      background: 'rgba(0, 0, 0, 0.6)',
-                      backdropFilter: 'blur(4px)',
-                      color: isExpired(task.deadline) ? '#fca5a5' : 
-                             isExpiringSoon(task.deadline) ? '#fde68a' : '#fff',
-                      padding: isMobile ? '4px 8px' : '6px 12px',
-                      borderRadius: '20px',
-                      fontSize: isMobile ? '9px' : '11px',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      zIndex: 3,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                      maxWidth: isMobile ? 'calc(50% - 16px)' : 'auto'
-                    }}>
-                      <span>⏰</span>
-                      <span style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>
-                        {isExpired(task.deadline) ? t('home.taskExpired') : 
-                         isExpiringSoon(task.deadline) ? t('home.taskExpiringSoon') : getRemainTime(task.deadline, t)}
-                      </span>
-                    </div>
-
-                    {/* 任务等级标签 - 右上角，在任务类型下方 */}
-                    {task.task_level && task.task_level !== 'normal' && (
-                      <div style={{
-                        position: 'absolute',
-                        top: isMobile ? '42px' : '48px',
-                        right: isMobile ? '8px' : '12px',
-                        background: getTaskLevelColor(task.task_level),
-                        color: '#fff',
-                        padding: isMobile ? '3px 8px' : '4px 10px',
-                        borderRadius: '16px',
-                        fontSize: isMobile ? '9px' : '11px',
-                        fontWeight: '700',
-                        zIndex: 3,
-                        boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 
-                                  task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 
-                                  '0 2px 6px rgba(0,0,0,0.2)'
-                      }}>
-                        {getTaskLevelLabel(task.task_level)}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* 任务标题 - 放在图片下面 */}
-                  <div style={{
-                    padding: '12px',
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    color: '#1f2937',
-                    whiteSpace: isMobile ? 'nowrap' : 'normal',
-                    overflow: 'hidden',
-                    textOverflow: isMobile ? 'ellipsis' : 'ellipsis',
-                    lineHeight: '1.4',
-                    background: 'transparent',
-                    display: isMobile ? 'block' : '-webkit-box',
-                    WebkitLineClamp: isMobile ? 1 : 2,
-                    WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
-                  }}>
-                    <TaskTitle
-                      title={task.title}
-                      language={language}
-                      style={{
-                        fontSize: 'inherit',
-                        fontWeight: 'inherit',
-                        color: 'inherit',
-                        whiteSpace: isMobile ? 'nowrap' : 'normal',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: isMobile ? 'block' : '-webkit-box',
-                        WebkitLineClamp: isMobile ? 1 : 2,
-                        WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
-                      }}
-                    />
-                  </div>
-                </div>
+                  task={task}
+                  isMobile={isMobile}
+                  language={language}
+                  onViewTask={handleViewTask}
+                  getTaskTypeLabel={getTaskTypeLabel}
+                  getRemainTime={getRemainTime}
+                  isExpired={isExpired}
+                  isExpiringSoon={isExpiringSoon}
+                  getTaskLevelColor={getTaskLevelColor}
+                  getTaskLevelLabel={getTaskLevelLabel}
+                  t={t}
+                />
               ))
             )}
           </div>
