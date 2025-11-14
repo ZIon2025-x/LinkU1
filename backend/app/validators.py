@@ -168,6 +168,7 @@ class UserValidator(BaseValidator):
     phone: Optional[str] = Field(None, max_length=20)
     agreed_to_terms: Optional[bool] = Field(False)
     terms_agreed_at: Optional[str] = Field(None)
+    invitation_code: Optional[str] = Field(None, max_length=50)  # 邀请码字段
     
     @validator('name')
     def validate_name(cls, v):

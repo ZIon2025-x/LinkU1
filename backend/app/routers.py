@@ -151,6 +151,9 @@ async def register(
     # 使用验证器验证输入数据
     try:
         validated_data = validate_input(user.dict(), UserValidator)
+        # 确保邀请码字段被保留（即使验证器可能没有包含它）
+        if hasattr(user, 'invitation_code') and user.invitation_code:
+            validated_data['invitation_code'] = user.invitation_code
     except HTTPException as e:
         raise e
     

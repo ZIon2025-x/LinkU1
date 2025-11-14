@@ -196,7 +196,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const currentValue = e.target.value; // 确保获取最新值
+    let currentValue = e.target.value; // 确保获取最新值
+    
+    // 邀请码自动转换为大写（不区分大小写，但统一显示为大写）
+    if (name === 'invitationCode') {
+      currentValue = currentValue.toUpperCase();
+    }
     
     setFormData(prev => ({
       ...prev,

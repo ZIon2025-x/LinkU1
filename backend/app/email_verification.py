@@ -54,10 +54,11 @@ class EmailVerificationManager:
             invitation_code_id = None
             invitation_code_text = None
             inviter_id = None
-            if hasattr(user_data, 'invitation_code') and user_data.invitation_code:
+            invitation_code = getattr(user_data, 'invitation_code', None)
+            if invitation_code and invitation_code.strip():
                 from app.coupon_points_crud import process_invitation_input
                 inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
-                    db, user_data.invitation_code
+                    db, invitation_code.strip()
                 )
                 if inviter_id:
                     logger.info(f"邀请人ID验证成功: {inviter_id}")
@@ -87,11 +88,16 @@ class EmailVerificationManager:
         invitation_code_id = None
         invitation_code_text = None
         inviter_id = None
-        if hasattr(user_data, 'invitation_code') and user_data.invitation_code:
+        invitation_code = getattr(user_data, 'invitation_code', None)
+        logger.info(f"[DEBUG] 创建待验证用户 - 原始邀请码输入: {invitation_code}, 类型: {type(invitation_code)}")
+        if invitation_code and invitation_code.strip():
             from app.coupon_points_crud import process_invitation_input
+            cleaned_code = invitation_code.strip()
+            logger.info(f"[DEBUG] 处理邀请码输入: '{cleaned_code}'")
             inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
-                db, user_data.invitation_code
+                db, cleaned_code
             )
+            logger.info(f"[DEBUG] 处理结果 - inviter_id: {inviter_id}, invitation_code_id: {invitation_code_id}, invitation_code_text: {invitation_code_text}, error_msg: {error_msg}")
             if inviter_id:
                 logger.info(f"邀请人ID验证成功: {inviter_id}")
             elif invitation_code_id:
@@ -99,6 +105,8 @@ class EmailVerificationManager:
             elif error_msg:
                 logger.warning(f"邀请码/用户ID验证失败: {error_msg}")
                 # 邀请码/用户ID无效不影响注册，只记录警告
+        else:
+            logger.info(f"[DEBUG] 未提供邀请码或邀请码为空")
         
         # 创建新的待验证用户
         logger.info(f"创建待验证用户: email={user_data.email}, inviter_id={inviter_id}, invitation_code_id={invitation_code_id}, invitation_code_text={invitation_code_text}")
@@ -122,7 +130,7 @@ class EmailVerificationManager:
         db.commit()
         db.refresh(pending_user)
         
-        logger.info(f"创建待验证用户成功: email={user_data.email}, invitation_code_id={pending_user.invitation_code_id}")
+        logger.info(f"创建待验证用户成功: email={user_data.email}, inviter_id={pending_user.inviter_id}, invitation_code_id={pending_user.invitation_code_id}, invitation_code_text={pending_user.invitation_code_text}")
         return pending_user
     
     @staticmethod
