@@ -2015,7 +2015,7 @@ async def send_application_message(
                     detail="服务暂时不可用"
                 )
         
-        # 创建系统通知
+        # 创建或更新系统通知
         from app.models import get_uk_time_naive
         current_time = get_uk_time_naive()
         
@@ -2033,16 +2033,38 @@ async def send_application_message(
             notification_content["token_accept"] = token_accept
             notification_content["token_reject"] = token_reject
         
-        new_notification = models.Notification(
-            user_id=application.applicant_id,
-            type=notification_type,
-            title="新的留言" if notification_type == "application_message" else "新的议价提议",
-            content=json.dumps(notification_content),
-            related_id=application_id,
-            created_at=current_time
+        # 检查是否已存在相同的通知（基于唯一约束）
+        existing_notification_query = select(models.Notification).where(
+            and_(
+                models.Notification.user_id == application.applicant_id,
+                models.Notification.type == notification_type,
+                models.Notification.related_id == application_id
+            )
         )
-        db.add(new_notification)
-        await db.flush()
+        existing_notification_result = await db.execute(existing_notification_query)
+        existing_notification = existing_notification_result.scalar_one_or_none()
+        
+        if existing_notification:
+            # 更新现有通知
+            existing_notification.title = "新的留言" if notification_type == "application_message" else "新的议价提议"
+            existing_notification.content = json.dumps(notification_content)
+            existing_notification.created_at = current_time
+            existing_notification.read_at = None  # 重置已读状态
+            existing_notification.is_read = 0  # 重置已读状态
+            new_notification = existing_notification
+            await db.flush()
+        else:
+            # 创建新通知
+            new_notification = models.Notification(
+                user_id=application.applicant_id,
+                type=notification_type,
+                title="新的留言" if notification_type == "application_message" else "新的议价提议",
+                content=json.dumps(notification_content),
+                related_id=application_id,
+                created_at=current_time
+            )
+            db.add(new_notification)
+            await db.flush()
         
         # 如果包含议价，更新token payload添加notification_id
         if request.negotiated_price is not None and token_accept:
