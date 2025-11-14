@@ -300,7 +300,7 @@ def send_admin_verification_code(
     # 发送验证码邮件
     admin_email = AdminVerificationManager.get_admin_email()
     # 获取管理员语言偏好（默认英文）
-    language = getattr(admin_user, 'language_preference', 'en') if admin_user else 'en'
+    language = getattr(admin, 'language_preference', 'en') if admin else 'en'
     if language and isinstance(language, str):
         language = language.strip().lower()
         if language not in ['zh', 'en']:
@@ -312,7 +312,8 @@ def send_admin_verification_code(
         background_tasks, 
         admin_email, 
         verification_code, 
-        str(admin.name)
+        str(admin.name),
+        language
     )
     
     logger.info(f"[ADMIN_AUTH] 验证码已发送到管理员邮箱: {admin_email}")
