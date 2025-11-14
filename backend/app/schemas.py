@@ -16,7 +16,6 @@ class UserCreate(UserBase):
     avatar: Optional[str] = ""
     agreed_to_terms: Optional[bool] = False
     terms_agreed_at: Optional[str] = None
-    inviter_id: Optional[str] = None
     invitation_code: Optional[str] = None  # 邀请码（注册时使用）
 
 

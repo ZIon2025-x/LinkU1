@@ -462,3 +462,50 @@ BEGIN
     END IF;
 END $$;
 
+-- 添加 users 表的 inviter_id 字段（如果不存在）
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'inviter_id'
+    ) THEN
+        ALTER TABLE users ADD COLUMN inviter_id VARCHAR(8) REFERENCES users(id);
+        CREATE INDEX IF NOT EXISTS idx_users_inviter_id ON users(inviter_id);
+    END IF;
+END $$;
+
+-- 添加 pending_users 表的 inviter_id 字段（如果不存在）
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'pending_users' AND column_name = 'inviter_id'
+    ) THEN
+        ALTER TABLE pending_users ADD COLUMN inviter_id VARCHAR(8) REFERENCES users(id);
+        CREATE INDEX IF NOT EXISTS idx_pending_users_inviter_id ON pending_users(inviter_id);
+    END IF;
+END $$;
+
+-- 添加 pending_users 表的 invitation_code_id 字段（如果不存在）
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'pending_users' AND column_name = 'invitation_code_id'
+    ) THEN
+        ALTER TABLE pending_users ADD COLUMN invitation_code_id BIGINT REFERENCES invitation_codes(id);
+        CREATE INDEX IF NOT EXISTS idx_pending_users_invitation_code_id ON pending_users(invitation_code_id);
+    END IF;
+END $$;
+
+-- 添加 pending_users 表的 invitation_code_text 字段（如果不存在）
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'pending_users' AND column_name = 'invitation_code_text'
+    ) THEN
+        ALTER TABLE pending_users ADD COLUMN invitation_code_text VARCHAR(50);
+    END IF;
+END $$;
+

@@ -510,6 +510,46 @@ def check_in(
 
 # ==================== 邀请码相关 CRUD ====================
 
+def is_user_id_format(code: str) -> bool:
+    """判断输入是否是用户ID格式（8位纯数字）"""
+    return code.isdigit() and len(code) == 8
+
+
+def process_invitation_input(
+    db: Session, 
+    code: str
+) -> tuple[Optional[str], Optional[int], Optional[str], Optional[str]]:
+    """
+    处理邀请码或用户ID输入
+    
+    返回: (inviter_id, invitation_code_id, invitation_code_text, error_msg)
+    - 如果输入是8位纯数字：查找用户，返回 (user_id, None, None, None) 或 (None, None, None, error_msg)
+    - 如果输入不是纯数字：查找邀请码，返回 (None, invitation_code_id, invitation_code_text, None) 或 (None, None, None, error_msg)
+    """
+    code = code.strip()
+    
+    # 判断是否是用户ID格式（8位纯数字）
+    if is_user_id_format(code):
+        # 查找用户
+        user = db.query(models.User).filter(models.User.id == code).first()
+        if user:
+            return code, None, None, None  # 返回用户ID
+        else:
+            return None, None, None, f"用户ID {code} 不存在"
+    else:
+        # 查找邀请码
+        invitation_code = get_invitation_code_by_code(db, code)
+        if invitation_code:
+            # 验证邀请码有效性
+            is_valid, error_msg, validated_code = validate_invitation_code(db, code)
+            if is_valid and validated_code:
+                return None, validated_code.id, validated_code.code, None
+            else:
+                return None, None, None, error_msg or "邀请码无效"
+        else:
+            return None, None, None, "邀请码不存在"
+
+
 def get_invitation_code_by_code(db: Session, code: str) -> Optional[models.InvitationCode]:
     """通过代码获取邀请码（不区分大小写）"""
     return db.query(models.InvitationCode).filter(

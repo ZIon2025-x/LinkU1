@@ -162,7 +162,7 @@ async def register(
         )
     
     # 调试信息
-    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}, inviter_id={validated_data.get('inviter_id', 'None')}")
+    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}, invitation_code={validated_data.get('invitation_code', 'None')}")
     
     # 检查邮箱是否已被注册（正式用户）
     db_user = await async_user_crud.get_user_by_email(db, validated_data['email'])
@@ -213,22 +213,27 @@ async def register(
             detail=error_message
         )
 
-    # 处理邀请码（如果提供）
+    # 处理邀请码或用户ID（如果提供）
     invitation_code_id = None
+    inviter_id = None
+    invitation_code_text = None
     if validated_data.get('invitation_code'):
-        from app.coupon_points_crud import validate_invitation_code, get_invitation_code_by_code
+        from app.coupon_points_crud import process_invitation_input
         from app.database import SessionLocal
         
-        # 使用同步数据库验证邀请码
+        # 使用同步数据库处理邀请码或用户ID
         sync_db = SessionLocal()
         try:
-            is_valid, error_msg, invitation_code = validate_invitation_code(sync_db, validated_data['invitation_code'].upper())
-            if is_valid and invitation_code:
-                invitation_code_id = invitation_code.id
-                print(f"邀请码验证成功: {invitation_code.code}, ID: {invitation_code_id}")
-            else:
-                print(f"邀请码验证失败: {error_msg}")
-                # 邀请码无效不影响注册，只记录警告
+            inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
+                sync_db, validated_data['invitation_code']
+            )
+            if inviter_id:
+                print(f"邀请人ID验证成功: {inviter_id}")
+            elif invitation_code_id:
+                print(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
+            elif error_msg:
+                print(f"邀请码/用户ID验证失败: {error_msg}")
+                # 邀请码/用户ID无效不影响注册，只记录警告
         finally:
             sync_db.close()
     
@@ -240,7 +245,7 @@ async def register(
         user_data = schemas.UserCreate(**validated_data)
         new_user = await async_user_crud.create_user(db, user_data)
         
-        # 更新用户状态为已验证和激活
+        # 更新用户状态为已验证和激活，并设置邀请信息
         from sqlalchemy import update
         await db.execute(
             update(User)
@@ -248,7 +253,10 @@ async def register(
             .values(
                 is_verified=1,
                 is_active=1,
-                user_level="normal"
+                user_level="normal",
+                inviter_id=inviter_id,
+                invitation_code_id=invitation_code_id,
+                invitation_code_text=invitation_code_text
             )
         )
         await db.commit()

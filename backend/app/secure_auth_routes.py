@@ -1078,14 +1078,15 @@ def login_with_phone_verification_code(
                     avatar="",
                     agreed_to_terms=1,
                     terms_agreed_at=datetime.utcnow(),
-                    inviter_id=None,
+                    is_verified=1,  # 验证码登录创建的用户已验证
+                    is_active=1,    # 激活
                 )
                 db.add(db_user)
                 db.commit()
                 db.refresh(db_user)
                 
                 user = db_user
-                logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email=None")
+                logger.info(f"新用户已创建（手机号登录）: id={user_id}, phone={phone_digits}, name={username}, email=None, is_verified=1")
             except Exception as e:
                 db.rollback()
                 logger.error(f"创建新用户失败: {e}")
@@ -1266,14 +1267,15 @@ def login_with_verification_code(
                     avatar="",
                     agreed_to_terms=1,
                     terms_agreed_at=datetime.utcnow(),
-                    inviter_id=None,
+                    is_verified=1,  # 验证码登录创建的用户已验证
+                    is_active=1,    # 激活
                 )
                 db.add(db_user)
                 db.commit()
                 db.refresh(db_user)
                 
                 user = db_user
-                logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}")
+                logger.info(f"新用户已创建: id={user_id}, email={email}, name={username}, is_verified=1")
             except Exception as e:
                 db.rollback()
                 logger.error(f"创建新用户失败: {e}")

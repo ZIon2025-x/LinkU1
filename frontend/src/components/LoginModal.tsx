@@ -33,7 +33,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     confirmPassword: '',
     username: '',
     phone: '',
-    inviterId: ''
+    invitationCode: ''
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -549,7 +549,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           password: formData.password,
           name: formData.username,  // 改为 name
           phone: formData.phone,
-          inviter_id: formData.inviterId || null,  // 邀请码
+          invitation_code: formData.invitationCode || null,  // 邀请码
           agreed_to_terms: agreedToTerms,  // 记录用户同意状态
           terms_agreed_at: new Date().toISOString()  // 记录同意时间
         });
@@ -576,7 +576,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           confirmPassword: '',
           username: '',
           phone: '',
-          inviterId: ''
+          invitationCode: ''
         });
       }
     } catch (err: any) {
@@ -1149,8 +1149,8 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  name="inviterId"
-                  value={formData.inviterId}
+                  name="invitationCode"
+                  value={formData.invitationCode}
                   onChange={handleInputChange}
                   placeholder={t('auth.inviterIdPlaceholder')}
                   style={{

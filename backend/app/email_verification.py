@@ -50,6 +50,23 @@ class EmailVerificationManager:
         ).first()
         
         if existing_pending:
+            # 处理邀请码或用户ID（如果提供）
+            invitation_code_id = None
+            invitation_code_text = None
+            inviter_id = None
+            if hasattr(user_data, 'invitation_code') and user_data.invitation_code:
+                from app.coupon_points_crud import process_invitation_input
+                inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
+                    db, user_data.invitation_code
+                )
+                if inviter_id:
+                    logger.info(f"邀请人ID验证成功: {inviter_id}")
+                elif invitation_code_id:
+                    logger.info(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
+                elif error_msg:
+                    logger.warning(f"邀请码/用户ID验证失败: {error_msg}")
+                    # 邀请码/用户ID无效不影响注册，只记录警告
+            
             # 更新现有待验证用户
             existing_pending.name = user_data.name
             existing_pending.hashed_password = get_password_hash(user_data.password)
@@ -59,32 +76,32 @@ class EmailVerificationManager:
             existing_pending.expires_at = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
             existing_pending.agreed_to_terms = 1 if user_data.agreed_to_terms else 0
             existing_pending.terms_agreed_at = terms_agreed_at
-            existing_pending.inviter_id = user_data.inviter_id if user_data.inviter_id else None
+            existing_pending.inviter_id = inviter_id
+            existing_pending.invitation_code_id = invitation_code_id
+            existing_pending.invitation_code_text = invitation_code_text
             db.commit()
             db.refresh(existing_pending)
             return existing_pending
         
-        # 处理邀请码（如果提供）
+        # 处理邀请码或用户ID（如果提供）
         invitation_code_id = None
+        invitation_code_text = None
+        inviter_id = None
         if hasattr(user_data, 'invitation_code') and user_data.invitation_code:
-            from app.coupon_points_crud import validate_invitation_code
-            is_valid, error_msg, invitation_code = validate_invitation_code(db, user_data.invitation_code.upper())
-            if is_valid and invitation_code:
-                invitation_code_id = invitation_code.id
-                logger.info(f"邀请码验证成功: {invitation_code.code}, ID: {invitation_code_id}")
-            else:
-                logger.warning(f"邀请码验证失败: {error_msg}")
-                # 邀请码无效不影响注册，只记录警告
+            from app.coupon_points_crud import process_invitation_input
+            inviter_id, invitation_code_id, invitation_code_text, error_msg = process_invitation_input(
+                db, user_data.invitation_code
+            )
+            if inviter_id:
+                logger.info(f"邀请人ID验证成功: {inviter_id}")
+            elif invitation_code_id:
+                logger.info(f"邀请码验证成功: {invitation_code_text}, ID: {invitation_code_id}")
+            elif error_msg:
+                logger.warning(f"邀请码/用户ID验证失败: {error_msg}")
+                # 邀请码/用户ID无效不影响注册，只记录警告
         
         # 创建新的待验证用户
-        inviter_id_value = user_data.inviter_id if user_data.inviter_id else None
-        logger.info(f"创建待验证用户: email={user_data.email}, inviter_id={inviter_id_value}, invitation_code_id={invitation_code_id}")
-        
-        # 将邀请码ID存储到inviter_id字段（临时方案，或者可以添加新字段）
-        # 注意：这里我们使用一个技巧，将邀请码ID存储到inviter_id字段（如果inviter_id为空）
-        # 更好的方案是在PendingUser中添加invitation_code_id字段，但需要数据库迁移
-        # 临时方案：如果inviter_id为空且有邀请码，将邀请码ID转换为字符串存储（需要特殊标记）
-        # 或者：在User模型中添加invitation_code_text字段存储邀请码文本
+        logger.info(f"创建待验证用户: email={user_data.email}, inviter_id={inviter_id}, invitation_code_id={invitation_code_id}, invitation_code_text={invitation_code_text}")
         
         pending_user = models.PendingUser(
             name=user_data.name,
@@ -96,19 +113,16 @@ class EmailVerificationManager:
             expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
             agreed_to_terms=1 if user_data.agreed_to_terms else 0,
             terms_agreed_at=terms_agreed_at,
-            inviter_id=inviter_id_value
+            inviter_id=inviter_id,
+            invitation_code_id=invitation_code_id,
+            invitation_code_text=invitation_code_text
         )
-        
-        # 将邀请码ID存储到pending_user的某个字段（临时存储在inviter_id，如果inviter_id为空）
-        # 更好的方案是添加invitation_code_id字段，但需要数据库迁移
-        # 这里我们使用一个临时方案：将邀请码ID存储到phone字段的注释中（不推荐）
-        # 或者：在创建用户后立即处理邀请码
         
         db.add(pending_user)
         db.commit()
         db.refresh(pending_user)
         
-        logger.info(f"创建待验证用户成功: email={user_data.email}, inviter_id={pending_user.inviter_id}")
+        logger.info(f"创建待验证用户成功: email={user_data.email}, invitation_code_id={pending_user.invitation_code_id}")
         return pending_user
     
     @staticmethod
@@ -173,7 +187,9 @@ class EmailVerificationManager:
                     created_at=datetime.utcnow(),
                     agreed_to_terms=pending_user.agreed_to_terms,
                     terms_agreed_at=pending_user.terms_agreed_at,
-                    inviter_id=pending_user.inviter_id
+                    inviter_id=pending_user.inviter_id,
+                    invitation_code_id=pending_user.invitation_code_id,
+                    invitation_code_text=pending_user.invitation_code_text
                 )
                 
                 db.add(user)
@@ -184,15 +200,16 @@ class EmailVerificationManager:
                 db.commit()
                 db.refresh(user)
                 
-                logger.info(f"用户验证成功并创建: {user.email}, ID: {user.id}")
+                logger.info(f"用户验证成功并创建: {user.email}, ID: {user.id}, inviter_id={user.inviter_id}, invitation_code_id={user.invitation_code_id}, invitation_code_text={user.invitation_code_text}")
                 
                 # 处理邀请码奖励（如果注册时提供了邀请码）
-                # 注意：这里需要从某个地方获取邀请码ID
-                # 临时方案：在注册时验证邀请码，将邀请码ID存储到PendingUser的某个字段
-                # 更好的方案：在PendingUser中添加invitation_code_id字段
-                # 当前实现：在注册API中已经验证了邀请码，但需要将ID传递到verify_user
-                # 由于PendingUser没有invitation_code_id字段，我们暂时跳过这里的处理
-                # 可以在注册API中处理（开发环境）或使用其他方式传递邀请码ID
+                if pending_user.invitation_code_id:
+                    from app.coupon_points_crud import use_invitation_code
+                    success, error_msg = use_invitation_code(db, user.id, pending_user.invitation_code_id)
+                    if success:
+                        logger.info(f"邀请码奖励发放成功: 用户 {user.id}, 邀请码ID {pending_user.invitation_code_id}")
+                    else:
+                        logger.warning(f"邀请码奖励发放失败: {error_msg}")
                 
                 return user
                 
@@ -305,7 +322,7 @@ class EmailVerificationManager:
         db.commit()
         
         # 发送验证邮件
-        send_verification_email(background_tasks, email, new_token)
+        send_verification_email_with_token(background_tasks, email, new_token)
         
         logger.info(f"重新发送验证邮件: {email}")
         return True

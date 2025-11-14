@@ -86,7 +86,6 @@ class AsyncUserCRUD:
                 timezone="Europe/London",
                 agreed_to_terms=1 if user.agreed_to_terms else 0,
                 terms_agreed_at=terms_agreed_at,
-                inviter_id=user.inviter_id,
             )
             db.add(db_user)
             await db.commit()

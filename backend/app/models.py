@@ -175,8 +175,10 @@ class User(Base):
     language_preference = Column(String(10), default="en")  # 语言偏好：zh（中文）或 en（英文）
     agreed_to_terms = Column(Integer, default=0)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
-    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请者ID
     name_updated_at = Column(DateTime, nullable=True)  # 上次修改名字的时间
+    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
+    invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
+    invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"
@@ -524,7 +526,9 @@ class PendingUser(Base):
     expires_at = Column(DateTime, nullable=False)
     agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
-    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请者ID
+    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
+    invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
+    invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     
     # 索引
     __table_args__ = (

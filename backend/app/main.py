@@ -470,6 +470,31 @@ async def startup_event():
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
         
+        # 执行数据库迁移（自动迁移）- 生产环境和开发环境都启用
+        auto_migrate_enabled = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
+        if auto_migrate_enabled:
+            logger.info(f"🚀 开始执行自动数据库迁移... (环境: {environment})")
+            try:
+                from app.db_migrations import (
+                    run_coupon_points_migration,
+                    run_task_indexes_migration
+                )
+                
+                # 执行优惠券和积分系统迁移
+                run_coupon_points_migration()
+                
+                # 执行任务表索引迁移
+                run_task_indexes_migration()
+                
+                logger.info(f"✅ 自动数据库迁移完成！ (环境: {environment})")
+            except Exception as e:
+                logger.error(f"❌ 自动迁移失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 迁移失败不影响应用启动，但会记录错误
+        else:
+            logger.info(f"ℹ️  自动迁移已禁用（AUTO_MIGRATE=false）(环境: {environment})")
+        
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
         import traceback
