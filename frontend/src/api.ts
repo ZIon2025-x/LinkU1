@@ -1518,4 +1518,60 @@ export const translateBatch = async (
   return res.data;
 };
 
+// ==================== 邀请码管理 API ====================
+
+// 创建邀请码
+export const createInvitationCode = async (data: {
+  code: string;
+  name?: string;
+  description?: string;
+  reward_type: 'points' | 'coupon' | 'both';
+  points_reward?: number;
+  coupon_id?: number;
+  max_uses?: number;
+  valid_from: string;
+  valid_until: string;
+  is_active?: boolean;
+}) => {
+  const res = await api.post('/api/admin/invitation-codes', data);
+  return res.data;
+};
+
+// 获取邀请码列表
+export const getInvitationCodes = async (params?: {
+  page?: number;
+  limit?: number;
+  status?: 'active' | 'inactive';
+}) => {
+  const res = await api.get('/api/admin/invitation-codes', { params });
+  return res.data;
+};
+
+// 获取邀请码详情
+export const getInvitationCodeDetail = async (invitationId: number) => {
+  const res = await api.get(`/api/admin/invitation-codes/${invitationId}`);
+  return res.data;
+};
+
+// 更新邀请码
+export const updateInvitationCode = async (invitationId: number, data: {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+  max_uses?: number;
+  valid_from?: string;
+  valid_until?: string;
+  points_reward?: number;
+  coupon_id?: number;
+}) => {
+  const res = await api.put(`/api/admin/invitation-codes/${invitationId}`, data);
+  return res.data;
+};
+
+// 删除邀请码
+export const deleteInvitationCode = async (invitationId: number) => {
+  const res = await api.delete(`/api/admin/invitation-codes/${invitationId}`);
+  return res.data;
+};
+
 export default api; 

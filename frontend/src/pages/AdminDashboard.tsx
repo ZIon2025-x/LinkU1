@@ -18,7 +18,12 @@ import api, {
   createTaskExpert,
   updateTaskExpert,
   deleteTaskExpert,
-  adminLogout
+  adminLogout,
+  createInvitationCode,
+  getInvitationCodes,
+  getInvitationCodeDetail,
+  updateInvitationCode,
+  deleteInvitationCode
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -45,6 +50,9 @@ interface DashboardStats {
 interface User {
   id: string;  // 现在ID是字符串类型
   name: string;
+  inviter_id?: string;  // 邀请人ID
+  invitation_code_text?: string;  // 邀请码文本
+  invitation_code_id?: number;  // 邀请码ID
   email: string;
   user_level: string;
   is_active: number;
@@ -170,6 +178,26 @@ const AdminDashboard: React.FC = () => {
   const [showCustomerServiceManagement, setShowCustomerServiceManagement] = useState(false);
   const [showSystemSettings, setShowSystemSettings] = useState(false);
 
+  // 邀请码管理相关状态
+  const [invitationCodes, setInvitationCodes] = useState<any[]>([]);
+  const [invitationCodesPage, setInvitationCodesPage] = useState(1);
+  const [invitationCodesTotal, setInvitationCodesTotal] = useState(0);
+  const [invitationCodesStatusFilter, setInvitationCodesStatusFilter] = useState<string | undefined>(undefined);
+  const [showInvitationCodeModal, setShowInvitationCodeModal] = useState(false);
+  const [invitationCodeForm, setInvitationCodeForm] = useState({
+    id: undefined as number | undefined,
+    code: '',
+    name: '',
+    description: '',
+    reward_type: 'points' as 'points' | 'coupon' | 'both',
+    points_reward: 0,
+    coupon_id: undefined as number | undefined,
+    max_uses: undefined as number | undefined,
+    valid_from: '',
+    valid_until: '',
+    is_active: true
+  });
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -196,6 +224,14 @@ const AdminDashboard: React.FC = () => {
         const expertsData = await getTaskExperts({ page: currentPage, size: 20 });
         setTaskExperts(expertsData.task_experts || []);
         setTotalPages(Math.ceil((expertsData.total || 0) / 20));
+      } else if (activeTab === 'invitation-codes') {
+        const codesData = await getInvitationCodes({
+          page: invitationCodesPage,
+          limit: 20,
+          status: invitationCodesStatusFilter as 'active' | 'inactive' | undefined
+        });
+        setInvitationCodes(codesData.data || []);
+        setInvitationCodesTotal(codesData.total || 0);
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -217,7 +253,7 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, currentPage, searchTerm]);
+  }, [activeTab, currentPage, searchTerm, invitationCodesPage, invitationCodesStatusFilter]);
 
   useEffect(() => {
     loadDashboardData();
@@ -581,20 +617,6 @@ const AdminDashboard: React.FC = () => {
         border: '1px solid #bbdefb'
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          {/* 标签行 */}
-          <thead>
-            <tr>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>用户ID</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>用户名</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>邮箱地址</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>用户等级</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>账户状态</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>任务数量</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>平均评分</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>注册日期</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', background: '#e3f2fd', fontWeight: 600, fontSize: '12px', color: '#1565c0', borderBottom: '1px solid #bbdefb' }}>管理操作</th>
-            </tr>
-          </thead>
           {/* 表头行 */}
           <thead>
             <tr>
@@ -605,6 +627,8 @@ const AdminDashboard: React.FC = () => {
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>状态</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>任务数</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>评分</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>邀请码</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>邀请人</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>注册时间</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>操作</th>
             </tr>
@@ -651,6 +675,47 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{user.task_count}</td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{user.avg_rating.toFixed(1)}</td>
+                  <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>
+                    {user.invitation_code_text ? (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        background: '#e3f2fd',
+                        color: '#1565c0',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        fontFamily: 'monospace'
+                      }}>
+                        {user.invitation_code_text}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>
+                    {user.inviter_id ? (
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        background: '#fff3e0',
+                        color: '#e65100',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        fontFamily: 'monospace',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        setSearchTerm(user.inviter_id || '');
+                        setActiveTab('users');
+                      }}
+                      title="点击查看邀请人信息"
+                      >
+                        {user.inviter_id}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+                    )}
+                  </td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{dayjs(user.created_at).format('YYYY-MM-DD')}</td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>
                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -708,7 +773,7 @@ const AdminDashboard: React.FC = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={9} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                <td colSpan={11} style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                   {loading ? '加载中...' : '暂无用户数据'}
                 </td>
               </tr>
@@ -2047,6 +2112,608 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 邀请码管理相关函数
+  const handleCreateInvitationCode = async () => {
+    if (!invitationCodeForm.code || !invitationCodeForm.valid_from || !invitationCodeForm.valid_until) {
+      message.warning('请填写邀请码、有效期开始时间和结束时间');
+      return;
+    }
+
+    if (invitationCodeForm.reward_type === 'points' && invitationCodeForm.points_reward <= 0) {
+      message.warning('积分奖励必须大于0');
+      return;
+    }
+
+    if (invitationCodeForm.reward_type === 'coupon' && !invitationCodeForm.coupon_id) {
+      message.warning('请选择优惠券');
+      return;
+    }
+
+    if (invitationCodeForm.reward_type === 'both') {
+      if (invitationCodeForm.points_reward <= 0 || !invitationCodeForm.coupon_id) {
+        message.warning('积分奖励必须大于0且必须选择优惠券');
+        return;
+      }
+    }
+
+    try {
+      await createInvitationCode({
+        code: invitationCodeForm.code,
+        name: invitationCodeForm.name || undefined,
+        description: invitationCodeForm.description || undefined,
+        reward_type: invitationCodeForm.reward_type,
+        points_reward: invitationCodeForm.points_reward || undefined,
+        coupon_id: invitationCodeForm.coupon_id || undefined,
+        max_uses: invitationCodeForm.max_uses || undefined,
+        valid_from: invitationCodeForm.valid_from,
+        valid_until: invitationCodeForm.valid_until,
+        is_active: invitationCodeForm.is_active
+      });
+      message.success('邀请码创建成功！');
+      setShowInvitationCodeModal(false);
+      setInvitationCodeForm({
+        id: undefined,
+        code: '',
+        name: '',
+        description: '',
+        reward_type: 'points',
+        points_reward: 0,
+        coupon_id: undefined,
+        max_uses: undefined,
+        valid_from: '',
+        valid_until: '',
+        is_active: true
+      });
+      loadDashboardData();
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '创建失败');
+    }
+  };
+
+  const handleUpdateInvitationCode = async () => {
+    if (!invitationCodeForm.id) return;
+
+    try {
+      await updateInvitationCode(invitationCodeForm.id, {
+        name: invitationCodeForm.name || undefined,
+        description: invitationCodeForm.description || undefined,
+        is_active: invitationCodeForm.is_active,
+        max_uses: invitationCodeForm.max_uses || undefined,
+        valid_from: invitationCodeForm.valid_from || undefined,
+        valid_until: invitationCodeForm.valid_until || undefined,
+        points_reward: invitationCodeForm.points_reward || undefined,
+        coupon_id: invitationCodeForm.coupon_id || undefined
+      });
+      message.success('邀请码更新成功！');
+      setShowInvitationCodeModal(false);
+      setInvitationCodeForm({
+        id: undefined,
+        code: '',
+        name: '',
+        description: '',
+        reward_type: 'points',
+        points_reward: 0,
+        coupon_id: undefined,
+        max_uses: undefined,
+        valid_from: '',
+        valid_until: '',
+        is_active: true
+      });
+      loadDashboardData();
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '更新失败');
+    }
+  };
+
+  const handleDeleteInvitationCode = async (id: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个邀请码吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteInvitationCode(id);
+          message.success('邀请码删除成功！');
+          loadDashboardData();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || '删除失败');
+        }
+      }
+    });
+  };
+
+  const handleEditInvitationCode = async (id: number) => {
+    try {
+      const detail = await getInvitationCodeDetail(id);
+      setInvitationCodeForm({
+        id: detail.id,
+        code: detail.code,
+        name: detail.name || '',
+        description: detail.description || '',
+        reward_type: detail.reward_type as 'points' | 'coupon' | 'both',
+        points_reward: detail.points_reward || 0,
+        coupon_id: detail.coupon_id || undefined,
+        max_uses: detail.max_uses || undefined,
+        valid_from: detail.valid_from ? new Date(detail.valid_from).toISOString().slice(0, 16) : '',
+        valid_until: detail.valid_until ? new Date(detail.valid_until).toISOString().slice(0, 16) : '',
+        is_active: detail.is_active
+      });
+      setShowInvitationCodeModal(true);
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '获取详情失败');
+    }
+  };
+
+  const renderInvitationCodes = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>邀请码管理</h2>
+        <button
+          onClick={() => {
+            setInvitationCodeForm({
+              id: undefined,
+              code: '',
+              name: '',
+              description: '',
+              reward_type: 'points',
+              points_reward: 0,
+              coupon_id: undefined,
+              max_uses: undefined,
+              valid_from: '',
+              valid_until: '',
+              is_active: true
+            });
+            setShowInvitationCodeModal(true);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#28a745',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          创建邀请码
+        </button>
+      </div>
+
+      {/* 筛选器 */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <label style={{ fontWeight: 'bold' }}>状态筛选：</label>
+        <select
+          value={invitationCodesStatusFilter || ''}
+          onChange={(e) => {
+            setInvitationCodesStatusFilter(e.target.value || undefined);
+            setInvitationCodesPage(1);
+            setTimeout(() => loadDashboardData(), 100);
+          }}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            fontSize: '14px'
+          }}
+        >
+          <option value="">全部</option>
+          <option value="active">启用</option>
+          <option value="inactive">禁用</option>
+        </select>
+      </div>
+
+      {/* 邀请码列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa' }}>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>邀请码</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>名称</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>奖励类型</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>积分奖励</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>使用次数</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>有效期</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invitationCodes.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                  暂无邀请码数据
+                </td>
+              </tr>
+            ) : (
+              invitationCodes.map((code: any) => (
+                <tr key={code.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{code.code}</td>
+                  <td style={{ padding: '12px' }}>{code.name || '-'}</td>
+                  <td style={{ padding: '12px' }}>
+                    {code.reward_type === 'points' ? '积分' : 
+                     code.reward_type === 'coupon' ? '优惠券' : '积分+优惠券'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {code.points_reward_display || '0.00'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {code.used_count || 0} / {code.max_uses || '∞'}
+                  </td>
+                  <td style={{ padding: '12px', fontSize: '12px' }}>
+                    {new Date(code.valid_from).toLocaleString('zh-CN')} ~<br/>
+                    {new Date(code.valid_until).toLocaleString('zh-CN')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: code.is_active ? '#d4edda' : '#f8d7da',
+                      color: code.is_active ? '#155724' : '#721c24',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {code.is_active ? '启用' : '禁用'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleEditInvitationCode(code.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleDeleteInvitationCode(code.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #dc3545',
+                          background: 'white',
+                          color: '#dc3545',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 分页 */}
+      {invitationCodesTotal > 20 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+          <button
+            onClick={() => {
+              if (invitationCodesPage > 1) {
+                setInvitationCodesPage(invitationCodesPage - 1);
+                setTimeout(() => loadDashboardData(), 100);
+              }
+            }}
+            disabled={invitationCodesPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: invitationCodesPage === 1 ? '#f5f5f5' : 'white',
+              color: invitationCodesPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: invitationCodesPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
+            第 {invitationCodesPage} 页，共 {Math.ceil(invitationCodesTotal / 20)} 页
+          </span>
+          <button
+            onClick={() => {
+              if (invitationCodesPage < Math.ceil(invitationCodesTotal / 20)) {
+                setInvitationCodesPage(invitationCodesPage + 1);
+                setTimeout(() => loadDashboardData(), 100);
+              }
+            }}
+            disabled={invitationCodesPage >= Math.ceil(invitationCodesTotal / 20)}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: invitationCodesPage >= Math.ceil(invitationCodesTotal / 20) ? '#f5f5f5' : 'white',
+              color: invitationCodesPage >= Math.ceil(invitationCodesTotal / 20) ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: invitationCodesPage >= Math.ceil(invitationCodesTotal / 20) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+
+      {/* 创建/编辑邀请码模态框 */}
+      {showInvitationCodeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            minWidth: '500px',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+              {invitationCodeForm.id ? '编辑邀请码' : '创建邀请码'}
+            </h3>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                邀请码 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={invitationCodeForm.code}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, code: e.target.value.toUpperCase()})}
+                disabled={!!invitationCodeForm.id}
+                placeholder="请输入邀请码（自动转为大写）"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>名称</label>
+              <input
+                type="text"
+                value={invitationCodeForm.name}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, name: e.target.value})}
+                placeholder="请输入邀请码名称（可选）"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>描述</label>
+              <textarea
+                value={invitationCodeForm.description}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, description: e.target.value})}
+                placeholder="请输入邀请码描述（可选）"
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                奖励类型 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <select
+                value={invitationCodeForm.reward_type}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, reward_type: e.target.value as 'points' | 'coupon' | 'both'})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              >
+                <option value="points">积分</option>
+                <option value="coupon">优惠券</option>
+                <option value="both">积分+优惠券</option>
+              </select>
+            </div>
+
+            {(invitationCodeForm.reward_type === 'points' || invitationCodeForm.reward_type === 'both') && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  积分奖励（分）<span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  value={invitationCodeForm.points_reward}
+                  onChange={(e) => setInvitationCodeForm({...invitationCodeForm, points_reward: parseInt(e.target.value) || 0})}
+                  placeholder="请输入积分奖励（以分为单位，如100表示1.00）"
+                  min="0"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '5px'
+                  }}
+                />
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                  提示：100分 = 1.00，例如输入1000表示10.00
+                </small>
+              </div>
+            )}
+
+            {(invitationCodeForm.reward_type === 'coupon' || invitationCodeForm.reward_type === 'both') && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  优惠券ID <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  value={invitationCodeForm.coupon_id || ''}
+                  onChange={(e) => setInvitationCodeForm({...invitationCodeForm, coupon_id: e.target.value ? parseInt(e.target.value) : undefined})}
+                  placeholder="请输入优惠券ID"
+                  min="1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '5px'
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>最大使用次数</label>
+              <input
+                type="number"
+                value={invitationCodeForm.max_uses || ''}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, max_uses: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="留空表示无限制"
+                min="1"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                有效期开始时间 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={invitationCodeForm.valid_from}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, valid_from: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                有效期结束时间 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={invitationCodeForm.valid_until}
+                onChange={(e) => setInvitationCodeForm({...invitationCodeForm, valid_until: e.target.value})}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={invitationCodeForm.is_active}
+                  onChange={(e) => setInvitationCodeForm({...invitationCodeForm, is_active: e.target.checked})}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 'bold' }}>启用</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowInvitationCodeModal(false);
+                  setInvitationCodeForm({
+                    id: undefined,
+                    code: '',
+                    name: '',
+                    description: '',
+                    reward_type: 'points',
+                    points_reward: 0,
+                    coupon_id: undefined,
+                    max_uses: undefined,
+                    valid_from: '',
+                    valid_until: '',
+                    is_active: true
+                  });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={invitationCodeForm.id ? handleUpdateInvitationCode : handleCreateInvitationCode}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {invitationCodeForm.id ? '更新' : '创建'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{
@@ -2269,6 +2936,21 @@ const AdminDashboard: React.FC = () => {
         >
           发送通知
         </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'invitation-codes' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'invitation-codes' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+          onClick={() => setActiveTab('invitation-codes')}
+        >
+          邀请码管理
+        </button>
       </div>
 
       <div>
@@ -2340,6 +3022,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'personnel' && renderPersonnelManagement()}
             {activeTab === 'task-experts' && renderTaskExperts()}
             {activeTab === 'notifications' && renderNotifications()}
+            {activeTab === 'invitation-codes' && renderInvitationCodes()}
           </>
         )}
       </div>
