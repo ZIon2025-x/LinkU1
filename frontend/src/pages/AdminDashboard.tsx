@@ -2137,6 +2137,22 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
+      // 将本地时间转换为ISO格式（带时区）
+      const validFromDate = new Date(invitationCodeForm.valid_from);
+      const validUntilDate = new Date(invitationCodeForm.valid_until);
+      
+      if (isNaN(validFromDate.getTime())) {
+        message.error('有效期开始时间格式不正确');
+        return;
+      }
+      if (isNaN(validUntilDate.getTime())) {
+        message.error('有效期结束时间格式不正确');
+        return;
+      }
+      
+      const validFromISO = validFromDate.toISOString();
+      const validUntilISO = validUntilDate.toISOString();
+      
       await createInvitationCode({
         code: invitationCodeForm.code,
         name: invitationCodeForm.name || undefined,
@@ -2145,8 +2161,8 @@ const AdminDashboard: React.FC = () => {
         points_reward: invitationCodeForm.points_reward || undefined,
         coupon_id: invitationCodeForm.coupon_id || undefined,
         max_uses: invitationCodeForm.max_uses || undefined,
-        valid_from: invitationCodeForm.valid_from,
-        valid_until: invitationCodeForm.valid_until,
+        valid_from: validFromISO,
+        valid_until: validUntilISO,
         is_active: invitationCodeForm.is_active
       });
       message.success('邀请码创建成功！');
@@ -2166,7 +2182,9 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || '创建失败');
+      console.error('创建邀请码失败:', error);
+      const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+      message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     }
   };
 
@@ -2174,13 +2192,17 @@ const AdminDashboard: React.FC = () => {
     if (!invitationCodeForm.id) return;
 
     try {
+      // 将本地时间转换为ISO格式（带时区）
+      const validFromISO = invitationCodeForm.valid_from ? new Date(invitationCodeForm.valid_from).toISOString() : undefined;
+      const validUntilISO = invitationCodeForm.valid_until ? new Date(invitationCodeForm.valid_until).toISOString() : undefined;
+      
       await updateInvitationCode(invitationCodeForm.id, {
         name: invitationCodeForm.name || undefined,
         description: invitationCodeForm.description || undefined,
         is_active: invitationCodeForm.is_active,
         max_uses: invitationCodeForm.max_uses || undefined,
-        valid_from: invitationCodeForm.valid_from || undefined,
-        valid_until: invitationCodeForm.valid_until || undefined,
+        valid_from: validFromISO,
+        valid_until: validUntilISO,
         points_reward: invitationCodeForm.points_reward || undefined,
         coupon_id: invitationCodeForm.coupon_id || undefined
       });
