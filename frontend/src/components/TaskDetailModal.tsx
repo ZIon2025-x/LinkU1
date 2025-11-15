@@ -1180,6 +1180,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.rewardLabel')}</div>
             <div style={{ fontSize: '20px', fontWeight: '700', color: '#059669' }}>
               {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+              {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+                <span style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#8b5cf6',
+                  marginLeft: '8px'
+                }}>
+                  +{task.points_reward.toLocaleString()}积分
+                </span>
+              )}
             </div>
             {task.agreed_reward && task.agreed_reward !== task.base_reward && (
               <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
@@ -1371,6 +1381,16 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               color: '#059669'
             }}>
               {(task.agreed_reward ?? task.base_reward ?? task.reward ?? 0).toFixed(2)} {task.currency || 'CNY'}
+              {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+                <span style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#8b5cf6',
+                  marginLeft: '8px'
+                }}>
+                  +{task.points_reward.toLocaleString()}积分
+                </span>
+              )}
             </span>
             {task.agreed_reward && task.agreed_reward !== task.base_reward && (
               <span style={{

@@ -2111,25 +2111,19 @@ const TaskDetail: React.FC = () => {
                     fontSize: '24px',
                     fontWeight: '700',
                     color: '#059669'
-                  }}>£{moneyReward.toFixed(2)}</span>
-                  {/* 积分奖励标签 */}
-                  {hasPoints && (
-                    <span style={{
-                      background: 'rgba(139, 92, 246, 0.1)',
-                      color: '#8b5cf6',
-                      padding: '4px 12px',
-                      borderRadius: '16px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <span>⭐</span>
-                      <span>+{pointsReward.toLocaleString()} 积分</span>
-                    </span>
-                  )}
+                  }}>
+                    £{moneyReward.toFixed(2)}
+                    {hasPoints && (
+                      <span style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: '#8b5cf6',
+                        marginLeft: '8px'
+                      }}>
+                        +{pointsReward.toLocaleString()}积分
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
               

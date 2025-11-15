@@ -291,21 +291,18 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                   position: 'relative'
                 }}>
                   £{moneyReward.toFixed(2)}
-                  {/* 积分奖励标签 - 右上角 */}
+                  {/* 积分奖励文本 - 右上角 */}
                   {hasPoints && (
                     <span style={{
                       position: 'absolute',
-                      top: '-6px',
-                      right: '-6px',
-                      background: 'rgba(139, 92, 246, 0.95)',
+                      top: '-8px',
+                      right: '0',
                       color: '#fff',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
                       fontSize: isMobile ? '9px' : '11px',
                       fontWeight: '600',
                       whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 6px rgba(139, 92, 246, 0.5)',
-                      border: '2px solid #fff'
+                      textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      lineHeight: '1'
                     }}>
                       +{pointsReward.toLocaleString()}积分
                     </span>
