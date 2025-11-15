@@ -20,6 +20,7 @@ import api, {
   deleteTaskExpert,
   getTaskExpertApplications,
   reviewTaskExpertApplication,
+  createExpertFromApplication,
   adminLogout,
   createInvitationCode,
   getInvitationCodes,
@@ -139,6 +140,9 @@ const AdminDashboard: React.FC = () => {
   // 任务达人相关状态
   const [taskExperts, setTaskExperts] = useState<any[]>([]);
   const [showTaskExpertModal, setShowTaskExpertModal] = useState(false);
+  const [showCreateExpertModal, setShowCreateExpertModal] = useState(false); // 创建任务达人弹窗（从申请中选择）
+  const [approvedApplications, setApprovedApplications] = useState<any[]>([]); // 已批准的申请列表
+  const [loadingApprovedApplications, setLoadingApprovedApplications] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [taskExpertSubTab, setTaskExpertSubTab] = useState<'list' | 'applications'>('list'); // 任务达人管理内部标签切换
   
@@ -1348,49 +1352,43 @@ const AdminDashboard: React.FC = () => {
         <>
           <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button
-          onClick={() => {
-            setTaskExpertForm({
-              id: undefined,
-              name: '',
-              avatar: '',
-              user_level: 'normal',
-              bio: '',
-              bio_en: '',
-              avg_rating: 0,
-              completed_tasks: 0,
-              total_tasks: 0,
-              completion_rate: 0,
-              expertise_areas: [],
-              expertise_areas_en: [],
-              featured_skills: [],
-              featured_skills_en: [],
-              achievements: [],
-              achievements_en: [],
-              response_time: '',
-              response_time_en: '',
-              success_rate: 0,
-              is_verified: 0,
-              is_active: 1,
-              is_featured: 1,
-              display_order: 0,
-              category: 'programming',
-              location: 'Online'
-            });
-            setShowTaskExpertModal(true);
-          }}
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: '#28a745',
-            color: 'white',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          + 添加任务达人
-        </button>
-      </div>
+              onClick={async () => {
+                // 加载已批准的申请列表
+                setLoadingApprovedApplications(true);
+                try {
+                  const data = await getTaskExpertApplications({ status: 'approved', limit: 100, offset: 0 });
+                  const apps = Array.isArray(data) ? data : (data.items || []);
+                  // 过滤掉已经是任务达人的用户
+                  const filteredApps = [];
+                  for (const app of apps) {
+                    // 检查该用户是否已经是任务达人
+                    const isExpert = taskExperts.some(expert => expert.id === app.user_id);
+                    if (!isExpert) {
+                      filteredApps.push(app);
+                    }
+                  }
+                  setApprovedApplications(filteredApps);
+                  setShowCreateExpertModal(true);
+                } catch (err: any) {
+                  message.error('加载已批准申请失败');
+                  console.error(err);
+                } finally {
+                  setLoadingApprovedApplications(false);
+                }
+              }}
+              style={{
+                padding: '10px 20px',
+                border: 'none',
+                background: '#28a745',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              + 创建任务达人
+            </button>
+          </div>
 
       <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2367,6 +2365,130 @@ const AdminDashboard: React.FC = () => {
                 }}
               >
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 创建任务达人弹窗（从已批准申请中选择） */}
+      {showCreateExpertModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowCreateExpertModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>
+              创建任务达人（从已批准申请中选择）
+            </h3>
+            
+            {loadingApprovedApplications ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+            ) : approvedApplications.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                暂无已批准且未创建任务达人的申请
+              </div>
+            ) : (
+              <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                      <th style={{ padding: '12px', textAlign: 'left' }}>用户</th>
+                      <th style={{ padding: '12px', textAlign: 'left' }}>申请说明</th>
+                      <th style={{ padding: '12px', textAlign: 'left' }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {approvedApplications.map((app) => (
+                      <tr key={app.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                        <td style={{ padding: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{app.user_name || app.user_id}</div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>ID: {app.user_id}</div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', maxWidth: '200px' }}>
+                          <div style={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap',
+                            fontSize: '14px'
+                          }}>
+                            {app.application_message || '-'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await createExpertFromApplication(app.id);
+                                message.success('任务达人创建成功');
+                                setShowCreateExpertModal(false);
+                                loadDashboardData(); // 刷新任务达人列表
+                                loadExpertApplications(); // 刷新申请列表
+                              } catch (err: any) {
+                                const errorMsg = err.response?.data?.detail || '创建任务达人失败';
+                                message.error(errorMsg);
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              border: 'none',
+                              background: '#28a745',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 600
+                            }}
+                          >
+                            创建
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowCreateExpertModal(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                关闭
               </button>
             </div>
           </div>
