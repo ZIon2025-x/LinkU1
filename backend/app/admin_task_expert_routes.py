@@ -116,9 +116,9 @@ async def review_expert_application(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """管理员审核任务达人申请"""
+    logger.info(f"开始审核申请 {application_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
+    
     try:
-        logger.info(f"开始审核申请 {application_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
-        
         # 1. 获取申请记录（使用FOR UPDATE锁，防止并发）
         application_result = await db.execute(
             select(models.TaskExpertApplication)
@@ -195,20 +195,11 @@ async def review_expert_application(
                 logger.error(f"Failed to send approval notification: {e}")
             
             # 返回响应（简化，避免序列化错误）
-            try:
-                expert_dict = schemas.TaskExpertOut.model_validate(new_expert).model_dump()
-            except Exception as e:
-                logger.warning(f"序列化 TaskExpert 失败，使用简化响应: {e}")
-                expert_dict = {
-                    "id": new_expert.id,
-                    "status": new_expert.status,
-                }
-            
             logger.info(f"申请 {application_id} 已批准，任务达人 {new_expert.id} 已创建")
             return {
                 "message": "申请已批准，任务达人已创建",
                 "application_id": application_id,
-                "expert": expert_dict,
+                "expert_id": new_expert.id,
             }
         
         elif review_data.action == "reject":
@@ -236,12 +227,15 @@ async def review_expert_application(
             logger.error(f"无效的操作: {review_data.action}")
             raise HTTPException(status_code=400, detail=f"无效的操作: {review_data.action}")
     
-    except HTTPException:
-        # 重新抛出HTTP异常
-        raise
+    except HTTPException as he:
+        # 重新抛出HTTP异常（不rollback，因为可能已经commit了）
+        raise he
     except Exception as e:
         logger.error(f"审核申请 {application_id} 时发生错误: {e}", exc_info=True)
-        await db.rollback()
+        try:
+            await db.rollback()
+        except Exception as rollback_error:
+            logger.error(f"回滚失败: {rollback_error}")
         raise HTTPException(status_code=500, detail=f"审核失败: {str(e)}")
 
 
