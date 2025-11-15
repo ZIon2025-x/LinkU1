@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getSystemSettings, updateSystemSettings } from '../api';
+import { getSystemSettings, updateSystemSettings, getPointsSettings, updatePointsSettings, getCheckinSettings, updateCheckinSettings } from '../api';
 
 interface SystemSettingsType {
   vip_enabled: boolean;
@@ -42,9 +42,20 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // 积分设置状态
+  const [pointsSettings, setPointsSettings] = useState({
+    points_task_complete_bonus: 0
+  });
+  const [checkinSettings, setCheckinSettings] = useState({
+    daily_base_points: 0
+  });
+  const [pointsLoading, setPointsLoading] = useState(false);
+  const [pointsSaving, setPointsSaving] = useState(false);
 
   useEffect(() => {
     loadSettings();
+    loadPointsSettings();
   }, []);
 
   const loadSettings = async () => {
@@ -57,6 +68,46 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setError('加载系统设置失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPointsSettings = async () => {
+    setPointsLoading(true);
+    try {
+      const [pointsData, checkinData] = await Promise.all([
+        getPointsSettings(),
+        getCheckinSettings()
+      ]);
+      setPointsSettings({
+        points_task_complete_bonus: pointsData.points_task_complete_bonus || 0
+      });
+      setCheckinSettings({
+        daily_base_points: checkinData.daily_base_points || 0
+      });
+    } catch (error) {
+      console.error('加载积分设置失败:', error);
+    } finally {
+      setPointsLoading(false);
+    }
+  };
+
+  const handleSavePointsSettings = async () => {
+    setPointsSaving(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      await Promise.all([
+        updatePointsSettings(pointsSettings),
+        updateCheckinSettings(checkinSettings)
+      ]);
+      setSuccess('积分设置保存成功！');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('保存积分设置失败:', error);
+      setError('保存积分设置失败');
+    } finally {
+      setPointsSaving(false);
     }
   };
 
@@ -617,6 +668,101 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     step="0.01"
                   />
                   <span style={{ marginLeft: '10px', color: '#666' }}>（0-1之间）</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 积分设置 */}
+            <div style={{ marginBottom: '30px' }}>
+              <h3 style={{ color: '#28a745', marginBottom: '20px', fontSize: '18px' }}>
+                ⭐ 积分设置
+              </h3>
+              
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {/* 任务完成奖励积分 */}
+                <div style={{
+                  padding: '15px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>任务完成奖励积分（默认值）</div>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                    所有任务完成时的默认奖励积分（0表示不奖励）。管理员可以为指定任务单独调整积分。
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="number"
+                      value={pointsSettings.points_task_complete_bonus}
+                      onChange={(e) => setPointsSettings(prev => ({
+                        ...prev,
+                        points_task_complete_bonus: parseInt(e.target.value) || 0
+                      }))}
+                      style={{
+                        width: '150px',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                      min="0"
+                      step="100"
+                    />
+                    <span style={{ color: '#666' }}>积分（100积分 = £1.00）</span>
+                  </div>
+                </div>
+
+                {/* 签到基础积分 */}
+                <div style={{
+                  padding: '15px',
+                  background: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>签到基础积分</div>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                    用户每日签到获得的基础积分奖励。
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="number"
+                      value={checkinSettings.daily_base_points}
+                      onChange={(e) => setCheckinSettings(prev => ({
+                        ...prev,
+                        daily_base_points: parseInt(e.target.value) || 0
+                      }))}
+                      style={{
+                        width: '150px',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                      min="0"
+                      step="100"
+                    />
+                    <span style={{ color: '#666' }}>积分（100积分 = £1.00）</span>
+                  </div>
+                </div>
+
+                {/* 保存按钮 */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={handleSavePointsSettings}
+                    disabled={pointsSaving}
+                    style={{
+                      padding: '8px 20px',
+                      border: 'none',
+                      background: pointsSaving ? '#6c757d' : '#28a745',
+                      color: 'white',
+                      borderRadius: '5px',
+                      cursor: pointsSaving ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {pointsSaving ? '保存中...' : '保存积分设置'}
+                  </button>
                 </div>
               </div>
             </div>

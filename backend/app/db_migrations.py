@@ -1,210 +1,190 @@
 """
-数据库迁移模块
-在应用启动时自动执行数据库迁移和索引验证
+数据库自动迁移工具
+在应用启动时自动执行迁移脚本
 """
+import os
 import logging
-import re
 from pathlib import Path
 from sqlalchemy import text
-from app.database import sync_engine
+from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
+# 迁移文件列表（按执行顺序）
+MIGRATION_FILES = [
+    "add_points_reward_to_tasks.sql",
+]
 
-def run_task_indexes_migration():
-    """执行任务表索引迁移"""
+def run_migration(engine: Engine, migration_file: str) -> bool:
+    """
+    执行单个迁移文件
+    
+    Args:
+        engine: SQLAlchemy引擎
+        migration_file: 迁移文件名
+        
+    Returns:
+        bool: 是否执行成功
+    """
     try:
-        logger.info("开始执行任务表索引迁移...")
+        # 获取迁移文件路径
+        migrations_dir = Path(__file__).parent.parent / "migrations"
+        migration_path = migrations_dir / migration_file
         
-        # 读取迁移脚本
-        migration_file = Path(__file__).parent.parent / "migrations" / "add_task_indexes.sql"
-        
-        if not migration_file.exists():
-            logger.warning(f"迁移文件不存在: {migration_file}")
+        if not migration_path.exists():
+            logger.warning(f"迁移文件不存在: {migration_path}")
             return False
         
-        with open(migration_file, 'r', encoding='utf-8') as f:
-            sql_script = f.read()
+        # 读取SQL文件
+        with open(migration_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
         
-        # 分割 SQL 语句（按分号分割，但保留注释）
+        # 分割SQL语句（按分号分割，但保留注释）
+        # 移除注释和空行，只执行实际的SQL语句
         statements = []
-        current_statement = []
+        current_statement = ""
         
-        for line in sql_script.split('\n'):
+        for line in sql_content.split('\n'):
             line = line.strip()
-            # 跳过空行和注释
+            # 跳过注释和空行
             if not line or line.startswith('--'):
                 continue
             
-            current_statement.append(line)
+            current_statement += line + '\n'
             
             # 如果行以分号结尾，说明是一个完整的语句
             if line.endswith(';'):
-                statement = ' '.join(current_statement)
-                if statement.strip():
-                    statements.append(statement)
-                current_statement = []
+                statements.append(current_statement.strip())
+                current_statement = ""
         
-        # 执行所有 SQL 语句
-        with sync_engine.connect() as conn:
-            for i, statement in enumerate(statements, 1):
-                try:
-                    # 跳过 SELECT 查询（验证语句）
-                    if statement.strip().upper().startswith('SELECT'):
-                        logger.debug(f"跳过验证查询: {statement[:50]}...")
-                        continue
-                    
-                    logger.debug(f"执行迁移语句 {i}/{len(statements)}: {statement[:50]}...")
-                    conn.execute(text(statement))
-                    conn.commit()
-                except Exception as e:
-                    # 如果是索引已存在的错误，可以忽略
-                    if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
-                        logger.info(f"索引已存在，跳过: {statement[:50]}...")
-                    else:
-                        logger.warning(f"执行迁移语句失败: {e}")
-                        logger.debug(f"失败的语句: {statement}")
+        # 执行所有SQL语句
+        with engine.connect() as conn:
+            for statement in statements:
+                if statement:
+                    try:
+                        conn.execute(text(statement))
+                        logger.info(f"✅ 执行SQL语句成功: {statement[:50]}...")
+                    except Exception as e:
+                        # 如果是"已存在"的错误，可以忽略
+                        error_msg = str(e).lower()
+                        if 'already exists' in error_msg or 'duplicate' in error_msg:
+                            logger.info(f"ℹ️  跳过已存在的对象: {statement[:50]}...")
+                        else:
+                            logger.error(f"❌ 执行SQL语句失败: {e}")
+                            logger.error(f"   语句: {statement[:100]}...")
+                            raise
+            
+            # 提交事务
+            conn.commit()
         
-        logger.info("✅ 任务表索引迁移完成")
+        logger.info(f"✅ 迁移文件执行成功: {migration_file}")
         return True
         
     except Exception as e:
-        logger.error(f"❌ 执行任务表索引迁移失败: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"❌ 执行迁移文件失败 {migration_file}: {e}", exc_info=True)
         return False
 
 
-def verify_task_indexes():
-    """验证任务表索引"""
+def run_all_migrations(engine: Engine) -> bool:
+    """
+    执行所有迁移文件
+    
+    Args:
+        engine: SQLAlchemy引擎
+        
+    Returns:
+        bool: 是否全部执行成功
+    """
+    logger.info("🔄 开始执行数据库迁移...")
+    
+    success_count = 0
+    failed_count = 0
+    
+    for migration_file in MIGRATION_FILES:
+        logger.info(f"📝 执行迁移: {migration_file}")
+        if run_migration(engine, migration_file):
+            success_count += 1
+        else:
+            failed_count += 1
+    
+    if failed_count == 0:
+        logger.info(f"✅ 所有迁移执行成功！共 {success_count} 个迁移文件")
+        return True
+    else:
+        logger.error(f"❌ 迁移执行完成，成功: {success_count}, 失败: {failed_count}")
+        return False
+
+
+def check_migration_needed(engine: Engine) -> bool:
+    """
+    检查是否需要执行迁移
+    
+    Args:
+        engine: SQLAlchemy引擎
+        
+    Returns:
+        bool: 是否需要迁移
+    """
     try:
-        logger.info("开始验证任务表索引...")
-        
-        # 导入验证函数（从 scripts 目录）
-        import sys
-        from pathlib import Path
-        scripts_path = Path(__file__).parent.parent / "scripts"
-        if str(scripts_path) not in sys.path:
-            sys.path.insert(0, str(scripts_path))
-        
-        from verify_indexes import verify_indexes
-        
-        # 调用验证函数（它会输出到日志）
-        verify_indexes()
-        
-        logger.info("✅ 任务表索引验证完成")
-        return True
-        
+        with engine.connect() as conn:
+            # 检查 tasks 表是否存在
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.tables 
+                    WHERE table_name = 'tasks'
+                )
+            """))
+            tasks_table_exists = result.scalar()
+            
+            if not tasks_table_exists:
+                logger.info("tasks 表不存在，将在创建表后执行迁移")
+                return True
+            
+            # 检查 tasks 表是否有 points_reward 字段
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'tasks' AND column_name = 'points_reward'
+                )
+            """))
+            has_field = result.scalar()
+            
+            # 检查 system_settings 表是否存在
+            result = conn.execute(text("""
+                SELECT EXISTS (
+                    SELECT 1 
+                    FROM information_schema.tables 
+                    WHERE table_name = 'system_settings'
+                )
+            """))
+            settings_table_exists = result.scalar()
+            
+            if not settings_table_exists:
+                logger.info("system_settings 表不存在，将在创建表后执行迁移")
+                return True
+            
+            # 检查系统设置是否存在
+            result = conn.execute(text("""
+                SELECT COUNT(*) 
+                FROM system_settings 
+                WHERE setting_key IN ('points_task_complete_bonus', 'checkin_daily_base_points')
+            """))
+            settings_count = result.scalar()
+            
+            has_settings = settings_count >= 2
+            
+            # 如果字段和设置都存在，则不需要迁移
+            needs_migration = not (has_field and has_settings)
+            
+            if not needs_migration:
+                logger.info("✅ 数据库迁移检查：已是最新版本")
+            else:
+                logger.info(f"🔄 数据库迁移检查：需要迁移 (字段存在: {has_field}, 设置存在: {has_settings})")
+            
+            return needs_migration
+            
     except Exception as e:
-        logger.warning(f"⚠️  索引验证失败（不影响启动）: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def run_coupon_points_migration():
-    """执行优惠券和积分系统数据库迁移"""
-    try:
-        logger.info("🚀 开始执行优惠券和积分系统数据库迁移...")
-        
-        # 读取迁移脚本
-        migration_file = Path(__file__).parent.parent / "migrations" / "create_coupon_points_tables.sql"
-        
-        if not migration_file.exists():
-            logger.warning(f"⚠️  迁移文件不存在: {migration_file}")
-            return False
-        
-        with open(migration_file, 'r', encoding='utf-8') as f:
-            sql_script = f.read()
-        
-        # 分割 SQL 语句（处理多行语句、DO 块和函数定义）
-        statements = []
-        current_statement = []
-        in_dollar_quote = False
-        dollar_quote_tag = None
-        
-        for line in sql_script.split('\n'):
-            original_line = line
-            line_stripped = line.strip()
-            
-            # 跳过空行和注释
-            if not line_stripped or line_stripped.startswith('--'):
-                continue
-            
-            # 检测美元引号开始（$$ 或 $tag$）
-            if not in_dollar_quote:
-                # 查找 $$ 或 $tag$ 的开始
-                dollar_match = None
-                if '$$' in line_stripped:
-                    # 简单情况：$$
-                    dollar_match = '$$'
-                elif '$' in line_stripped:
-                    # 查找 $tag$ 格式
-                    match = re.search(r'\$([^$]*)\$', line_stripped)
-                    if match:
-                        dollar_match = f'${match.group(1)}$'
-                
-                if dollar_match:
-                    in_dollar_quote = True
-                    dollar_quote_tag = dollar_match
-            
-            # 检测美元引号结束
-            if in_dollar_quote and dollar_quote_tag in line_stripped:
-                # 检查是否是结束标记（在同一行中出现了两次，或者后面跟着分号）
-                tag_count = line_stripped.count(dollar_quote_tag)
-                if tag_count >= 2 or (tag_count == 1 and line_stripped.endswith(';')):
-                    in_dollar_quote = False
-                    dollar_quote_tag = None
-            
-            current_statement.append(original_line)
-            
-            # 如果行以分号结尾且不在美元引号块中，说明是一个完整的语句
-            if line_stripped.endswith(';') and not in_dollar_quote:
-                statement = '\n'.join(current_statement)
-                if statement.strip():
-                    statements.append(statement)
-                current_statement = []
-        
-        # 执行所有 SQL 语句
-        executed_count = 0
-        skipped_count = 0
-        error_count = 0
-        
-        with sync_engine.connect() as conn:
-            for i, statement in enumerate(statements, 1):
-                try:
-                    # 跳过 SELECT 查询（验证语句）
-                    statement_upper = statement.strip().upper()
-                    if statement_upper.startswith('SELECT'):
-                        logger.debug(f"跳过验证查询 {i}/{len(statements)}: {statement[:50]}...")
-                        skipped_count += 1
-                        continue
-                    
-                    logger.debug(f"执行迁移语句 {i}/{len(statements)}: {statement[:80]}...")
-                    conn.execute(text(statement))
-                    conn.commit()
-                    executed_count += 1
-                except Exception as e:
-                    error_msg = str(e).lower()
-                    # 如果是已存在的错误，可以忽略（幂等性）
-                    if any(keyword in error_msg for keyword in [
-                        "already exists", "duplicate", "relation", 
-                        "constraint", "index", "trigger", "view"
-                    ]):
-                        logger.info(f"ℹ️  对象已存在，跳过: {statement[:50]}...")
-                        skipped_count += 1
-                    else:
-                        logger.warning(f"⚠️  执行迁移语句失败: {e}")
-                        logger.debug(f"失败的语句: {statement[:200]}")
-                        error_count += 1
-                        # 对于非关键错误，继续执行
-        
-        logger.info(f"✅ 优惠券和积分系统迁移完成！")
-        logger.info(f"   执行: {executed_count}, 跳过: {skipped_count}, 错误: {error_count}")
+        logger.warning(f"检查迁移状态失败: {e}，将尝试执行迁移")
         return True
-        
-    except Exception as e:
-        logger.error(f"❌ 执行优惠券和积分系统迁移失败: {e}")
-        import traceback
-        traceback.print_exc()
-        return False

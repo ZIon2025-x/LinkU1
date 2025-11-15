@@ -1008,6 +1008,10 @@ class CheckInSettingsUpdate(BaseModel):
     max_consecutive_days: Optional[int] = None
 
 
+class TaskPointsRewardUpdate(BaseModel):
+    points_reward: Optional[int] = None  # 任务完成奖励积分（None表示使用系统默认值）
+
+
 class CheckInRewardCreate(BaseModel):
     consecutive_days: int
     reward_type: str  # points, coupon

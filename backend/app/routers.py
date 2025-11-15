@@ -1420,9 +1420,15 @@ def confirm_task_completion(
             from datetime import datetime, timezone as tz, timedelta
             import uuid
             
-            # 获取任务完成奖励积分（从系统设置读取）
-            task_bonus_setting = get_system_setting(db, "points_task_complete_bonus")
-            points_amount = int(task_bonus_setting.setting_value) if task_bonus_setting else 500  # 默认500积分
+            # 获取任务完成奖励积分（优先使用任务级别的积分，否则使用系统设置，默认0）
+            points_amount = 0
+            if hasattr(task, 'points_reward') and task.points_reward is not None:
+                # 使用任务级别的积分设置
+                points_amount = int(task.points_reward)
+            else:
+                # 使用系统设置（默认0）
+                task_bonus_setting = get_system_setting(db, "points_task_complete_bonus")
+                points_amount = int(task_bonus_setting.setting_value) if task_bonus_setting else 0  # 默认0积分
             
             if points_amount > 0:
                 # 生成批次ID（季度格式：2025Q1-COMP）

@@ -1310,6 +1310,38 @@ export const getPublicSystemSettings = async () => {
   return res.data;
 };
 
+// 积分设置相关API
+export const getPointsSettings = async () => {
+  const res = await api.get('/api/admin/settings/points');
+  return res.data;
+};
+
+export const updatePointsSettings = async (settings: {
+  points_task_complete_bonus: number;
+}) => {
+  const res = await api.put('/api/admin/settings/points', settings);
+  return res.data;
+};
+
+// 签到设置相关API
+export const getCheckinSettings = async () => {
+  const res = await api.get('/api/admin/checkin/settings');
+  return res.data;
+};
+
+export const updateCheckinSettings = async (settings: {
+  daily_base_points: number;
+}) => {
+  const res = await api.put('/api/admin/checkin/settings', settings);
+  return res.data;
+};
+
+// 任务积分调整API
+export const updateTaskPointsReward = async (taskId: number, pointsReward: number | null) => {
+  const res = await api.put(`/api/admin/tasks/${taskId}/points-reward`, { points_reward: pointsReward });
+  return res.data;
+};
+
 // 检查客服可用性
 export const checkCustomerServiceAvailability = async () => {
   const res = await api.get('/api/customer-service/check-availability');

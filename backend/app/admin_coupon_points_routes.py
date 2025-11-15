@@ -1554,7 +1554,7 @@ def get_points_settings(
     points_exchange_rate = float(exchange_rate_setting.setting_value) if exchange_rate_setting else 100.0
     
     task_bonus_setting = get_system_setting(db, "points_task_complete_bonus")
-    points_task_complete_bonus = int(task_bonus_setting.setting_value) if task_bonus_setting else 500
+    points_task_complete_bonus = int(task_bonus_setting.setting_value) if task_bonus_setting else 0  # 默认0积分
     
     invite_reward_setting = get_system_setting(db, "points_invite_reward")
     points_invite_reward = int(invite_reward_setting.setting_value) if invite_reward_setting else 5000
@@ -1606,7 +1606,7 @@ def get_checkin_settings(
     
     # 获取每日基础积分
     daily_base_points_setting = get_system_setting(db, "checkin_daily_base_points")
-    daily_base_points = int(daily_base_points_setting.setting_value) if daily_base_points_setting else 500
+    daily_base_points = int(daily_base_points_setting.setting_value) if daily_base_points_setting else 0  # 默认0积分
     
     # 获取最大连续签到天数
     max_consecutive_days_setting = get_system_setting(db, "checkin_max_consecutive_days")
@@ -1888,5 +1888,35 @@ def delete_checkin_reward(
     return {
         "success": True,
         "message": "签到奖励规则删除成功"
+    }
+
+
+# ==================== 任务积分调整 API ====================
+
+@router.put("/tasks/{task_id}/points-reward")
+def update_task_points_reward(
+    task_id: int,
+    request: schemas.TaskPointsRewardUpdate,
+    current_admin: models.AdminUser = Depends(get_current_admin_secure_sync),
+    db: Session = Depends(get_db)
+):
+    """调整任务完成奖励积分（管理员）"""
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="任务不存在"
+        )
+    
+    # 更新任务积分奖励
+    task.points_reward = request.points_reward
+    db.commit()
+    db.refresh(task)
+    
+    return {
+        "success": True,
+        "message": "任务积分奖励已更新",
+        "task_id": task_id,
+        "points_reward": task.points_reward
     }
 

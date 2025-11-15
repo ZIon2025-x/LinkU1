@@ -5,7 +5,8 @@ import {
   updateAdminTask, 
   deleteAdminTask,
   batchUpdateAdminTasks,
-  batchDeleteAdminTasks
+  batchDeleteAdminTasks,
+  updateTaskPointsReward
 } from '../api';
 import dayjs from 'dayjs';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -39,6 +40,7 @@ interface Task {
   is_paid: number;
   is_confirmed: number;
   task_level: string;
+  points_reward?: number | null;  // 任务完成奖励积分
 }
 
 interface TaskManagementProps {
@@ -635,6 +637,14 @@ const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, 
               <strong>任务等级：</strong>
               <div style={{ marginTop: '5px' }}>{task.task_level}</div>
             </div>
+            <div>
+              <strong>完成奖励积分：</strong>
+              <div style={{ marginTop: '5px', color: '#28a745', fontWeight: 'bold' }}>
+                {task.points_reward !== null && task.points_reward !== undefined 
+                  ? `${task.points_reward} 积分` 
+                  : '使用系统默认值'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -657,10 +667,26 @@ const TaskEditModal: React.FC<{
     status: task.status,
     task_level: task.task_level
   });
+  const [pointsReward, setPointsReward] = useState<string>(task.points_reward?.toString() || '');
+  const [pointsRewardSaving, setPointsRewardSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    await onSave(formData);
+    
+    // 单独保存积分奖励
+    if (pointsRewardSaving) return;
+    
+    try {
+      setPointsRewardSaving(true);
+      const pointsValue = pointsReward.trim() === '' ? null : parseInt(pointsReward) || null;
+      await updateTaskPointsReward(task.id, pointsValue);
+    } catch (error) {
+      console.error('更新任务积分失败:', error);
+      alert('更新任务积分失败');
+    } finally {
+      setPointsRewardSaving(false);
+    }
   };
 
   return (
@@ -795,10 +821,43 @@ const TaskEditModal: React.FC<{
                   onChange={(e) => setFormData(prev => ({ ...prev, task_level: e.target.value }))}
                   style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
                 >
-                  <option value="low">低</option>
-                  <option value="medium">中</option>
-                  <option value="high">高</option>
+                  <option value="normal">普通</option>
+                  <option value="vip">VIP</option>
+                  <option value="super">超级VIP</option>
                 </select>
+              </div>
+            </div>
+            
+            {/* 积分奖励设置 */}
+            <div style={{
+              padding: '15px',
+              background: '#f8f9fa',
+              borderRadius: '6px',
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#28a745' }}>
+                ⭐ 任务完成奖励积分
+              </div>
+              <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>
+                设置此任务完成时的奖励积分。留空或0表示使用系统默认值（{task.points_reward === null || task.points_reward === undefined ? '系统默认' : `${task.points_reward}积分`}）
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="number"
+                  value={pointsReward}
+                  onChange={(e) => setPointsReward(e.target.value)}
+                  placeholder="留空使用系统默认值"
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                  min="0"
+                  step="100"
+                />
+                <span style={{ color: '#666', fontSize: '13px' }}>积分</span>
               </div>
             </div>
           </div>

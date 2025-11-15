@@ -452,10 +452,10 @@ def check_in(
     # 获取基础积分奖励（从系统设置）
     try:
         from app.crud import get_system_setting
-        daily_base_points_str = get_system_setting(db, "checkin_daily_base_points", "500")
-        daily_base_points = int(daily_base_points_str) if daily_base_points_str else 500
+        daily_base_points_setting = get_system_setting(db, "checkin_daily_base_points")
+        daily_base_points = int(daily_base_points_setting.setting_value) if daily_base_points_setting else 0  # 默认0积分
     except:
-        daily_base_points = 500  # 默认值
+        daily_base_points = 0  # 默认值
     
     # 创建签到记录
     check_in = models.CheckIn(
