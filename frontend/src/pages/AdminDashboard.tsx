@@ -614,31 +614,70 @@ const AdminDashboard: React.FC = () => {
         borderRadius: '8px',
         overflow: 'hidden',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        border: '1px solid #bbdefb'
+        border: '1px solid #bbdefb',
+        overflowX: 'auto'
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
           {/* 表头行 */}
           <thead>
             <tr>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>ID</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>用户名</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>邮箱</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>等级</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>状态</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>任务数</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>评分</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>邀请码</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>邀请人</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>注册时间</th>
-              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600 }}>操作</th>
+              <th style={{ 
+                padding: '12px', 
+                textAlign: 'left', 
+                borderBottom: '1px solid #eee', 
+                background: '#f8f9fa', 
+                fontWeight: 600,
+                position: 'sticky',
+                left: 0,
+                zIndex: 10,
+                minWidth: '100px'
+              }}>ID</th>
+              <th style={{ 
+                padding: '12px', 
+                textAlign: 'left', 
+                borderBottom: '1px solid #eee', 
+                background: '#f8f9fa', 
+                fontWeight: 600,
+                position: 'sticky',
+                left: '100px',
+                zIndex: 10,
+                minWidth: '150px'
+              }}>用户名</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '200px' }}>邮箱</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '120px' }}>等级</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '100px' }}>状态</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '80px' }}>任务数</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '80px' }}>评分</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '120px' }}>邀请码</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '120px' }}>邀请人</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '120px' }}>注册时间</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee', background: '#f8f9fa', fontWeight: 600, minWidth: '200px' }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {users && users.length > 0 ? (
               users.map(user => (
                 <tr key={user.id}>
-                  <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{user.id}</td>
-                  <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{user.name}</td>
+                  <td style={{ 
+                    padding: '12px', 
+                    textAlign: 'left', 
+                    borderBottom: '1px solid #eee',
+                    background: 'white',
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 5,
+                    minWidth: '100px'
+                  }}>{user.id}</td>
+                  <td style={{ 
+                    padding: '12px', 
+                    textAlign: 'left', 
+                    borderBottom: '1px solid #eee',
+                    background: 'white',
+                    position: 'sticky',
+                    left: '100px',
+                    zIndex: 5,
+                    minWidth: '150px'
+                  }}>{user.name}</td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>{user.email}</td>
                   <td style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>
                     <select
