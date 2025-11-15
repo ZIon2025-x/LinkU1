@@ -473,7 +473,7 @@ const TaskExpertsIntro: React.FC = () => {
         onClose={() => setShowExpertApplicationModal(false)}
         onSuccess={() => {
           setShowExpertApplicationModal(false);
-          message.success('申请已提交，等待管理员审核');
+          // 成功消息已在组件内部显示，这里不需要重复显示
         }}
       />
 

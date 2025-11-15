@@ -140,6 +140,7 @@ const AdminDashboard: React.FC = () => {
   const [taskExperts, setTaskExperts] = useState<any[]>([]);
   const [showTaskExpertModal, setShowTaskExpertModal] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [taskExpertSubTab, setTaskExpertSubTab] = useState<'list' | 'applications'>('list'); // 任务达人管理内部标签切换
   
   // 任务达人申请审核相关状态
   const [expertApplications, setExpertApplications] = useState<any[]>([]);
@@ -230,13 +231,16 @@ const AdminDashboard: React.FC = () => {
         
         setTotalPages(Math.ceil((csData.total || 0) / 20));
       } else if (activeTab === 'task-experts') {
-        // 加载任务达人数据
-        const expertsData = await getTaskExperts({ page: currentPage, size: 20 });
-        setTaskExperts(expertsData.task_experts || []);
-        setTotalPages(Math.ceil((expertsData.total || 0) / 20));
-      } else if (activeTab === 'expert-applications') {
-        // 加载任务达人申请数据
-        loadExpertApplications();
+        // 根据子标签加载数据
+        if (taskExpertSubTab === 'list') {
+          // 加载任务达人数据
+          const expertsData = await getTaskExperts({ page: currentPage, size: 20 });
+          setTaskExperts(expertsData.task_experts || []);
+          setTotalPages(Math.ceil((expertsData.total || 0) / 20));
+        } else if (taskExpertSubTab === 'applications') {
+          // 加载任务达人申请数据
+          loadExpertApplications();
+        }
       } else if (activeTab === 'invitation-codes') {
         const codesData = await getInvitationCodes({
           page: invitationCodesPage,
@@ -1294,8 +1298,56 @@ const AdminDashboard: React.FC = () => {
   const renderTaskExperts = () => (
     <div>
       <h2>任务达人管理</h2>
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      
+      {/* 内部标签切换 */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0' }}>
         <button
+          onClick={() => {
+            setTaskExpertSubTab('list');
+            setCurrentPage(1);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'transparent',
+            color: taskExpertSubTab === 'list' ? '#007bff' : '#666',
+            borderBottom: taskExpertSubTab === 'list' ? '2px solid #007bff' : '2px solid transparent',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: taskExpertSubTab === 'list' ? 600 : 400,
+            marginBottom: '-2px',
+            transition: 'all 0.2s'
+          }}
+        >
+          任务达人列表
+        </button>
+        <button
+          onClick={() => {
+            setTaskExpertSubTab('applications');
+            loadExpertApplications();
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'transparent',
+            color: taskExpertSubTab === 'applications' ? '#007bff' : '#666',
+            borderBottom: taskExpertSubTab === 'applications' ? '2px solid #007bff' : '2px solid transparent',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: taskExpertSubTab === 'applications' ? 600 : 400,
+            marginBottom: '-2px',
+            transition: 'all 0.2s'
+          }}
+        >
+          申请审核
+        </button>
+      </div>
+
+      {/* 任务达人列表 */}
+      {taskExpertSubTab === 'list' && (
+        <>
+          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button
           onClick={() => {
             setTaskExpertForm({
               id: undefined,
@@ -2071,31 +2123,30 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
-  );
+        </>
+      )}
 
-  // 渲染任务达人申请审核页面
-  const renderExpertApplications = () => (
-    <div>
-      <h2>任务达人申请审核</h2>
-      <div style={{ marginBottom: '20px' }}>
-        <button
-          onClick={loadExpertApplications}
-          style={{
-            padding: '8px 16px',
-            background: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          刷新列表
-        </button>
-      </div>
+      {/* 申请审核 */}
+      {taskExpertSubTab === 'applications' && (
+        <>
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={loadExpertApplications}
+              style={{
+                padding: '8px 16px',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              刷新列表
+            </button>
+          </div>
 
-      {loadingApplications ? (
+          {loadingApplications ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
       ) : expertApplications.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
@@ -2215,8 +2266,10 @@ const AdminDashboard: React.FC = () => {
           </table>
         </div>
       )}
+        </>
+      )}
 
-      {/* 审核弹窗 */}
+      {/* 审核弹窗 - 移到任务达人管理内部 */}
       {showReviewModal && selectedApplication && (
         <div
           style={{
@@ -3263,25 +3316,12 @@ const AdminDashboard: React.FC = () => {
             fontWeight: '500',
             marginRight: '10px'
           }}
-          onClick={() => setActiveTab('task-experts')}
+          onClick={() => {
+            setActiveTab('task-experts');
+            setTaskExpertSubTab('list'); // 默认显示列表
+          }}
         >
           任务达人
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'expert-applications' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'expert-applications' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => setActiveTab('expert-applications')}
-        >
-          任务达人申请审核
         </button>
         <button 
           style={{
@@ -3383,7 +3423,6 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'personnel' && renderPersonnelManagement()}
             {activeTab === 'task-experts' && renderTaskExperts()}
-            {activeTab === 'expert-applications' && renderExpertApplications()}
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
           </>
