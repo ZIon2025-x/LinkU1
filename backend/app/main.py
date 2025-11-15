@@ -134,32 +134,7 @@ async def custom_cors_middleware(request: Request, call_next):
     add_security_headers(response)
     return response
 
-@app.middleware("http")
-async def debug_cookie_middleware(request: Request, call_next):
-    """调试Cookie中间件 - 帮助诊断移动端认证问题"""
-    # 只对特定路径进行调试
-    if request.url.path in ["/api/users/profile/me", "/api/secure-auth/refresh", "/api/secure-auth/login"]:
-        logger.info(f"[DEBUG] Cookie调试 - URL: {request.url}")
-        logger.info(f"[DEBUG] Cookie调试 - Headers: {dict(request.headers)}")
-        logger.info(f"[DEBUG] Cookie调试 - Cookies: {dict(request.cookies)}")
-        
-        # 检查移动端User-Agent
-        user_agent = request.headers.get("user-agent", "")
-        is_mobile = any(keyword in user_agent.lower() for keyword in [
-            'mobile', 'iphone', 'ipad', 'android', 'blackberry', 
-            'windows phone', 'opera mini', 'iemobile'
-        ])
-        logger.info(f"[DEBUG] 移动端检测: {is_mobile}")
-        
-        # 检查X-Session-ID头
-        session_header = request.headers.get("X-Session-ID")
-        if session_header:
-            logger.info(f"[DEBUG] 找到X-Session-ID头: {session_header[:8]}...")
-        else:
-            logger.info("[DEBUG] 未找到X-Session-ID头")
-    
-    response = await call_next(request)
-    return response
+# DEBUG 中间件已移除 - 性能优化
 
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])

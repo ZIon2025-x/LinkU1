@@ -679,22 +679,19 @@ def fix_avatar_null(db: Session = Depends(get_db)):
     try:
         # 查找所有avatar为NULL的用户
         users_with_null_avatar = db.query(models.User).filter(models.User.avatar.is_(None)).all()
-        logger.info(f"[DEBUG] 找到 {len(users_with_null_avatar)} 个avatar为NULL的用户")
         
         # 为这些用户设置默认头像
         for user in users_with_null_avatar:
             user.avatar = "/static/avatar1.png"
-            logger.info(f"[DEBUG] 为用户 {user.id} 设置默认头像")
         
         db.commit()
-        logger.info(f"[DEBUG] 已修复 {len(users_with_null_avatar)} 个用户的头像字段")
         
         return {
             "message": f"已修复 {len(users_with_null_avatar)} 个用户的头像字段",
             "fixed_count": len(users_with_null_avatar)
         }
     except Exception as e:
-        logger.error(f"[DEBUG] 修复头像字段失败: {e}")
+        logger.error(f"修复头像字段失败: {e}")
         return {"error": str(e)}
 
 @router.get("/debug/check-user-avatar/{user_id}")
@@ -715,7 +712,7 @@ def check_user_avatar(user_id: str, db: Session = Depends(get_db)):
                 "user_found": False
             }
     except Exception as e:
-        logger.error(f"[DEBUG] 检查用户头像失败: {e}")
+        logger.error(f"检查用户头像失败: {e}")
         return {"error": str(e)}
 
 @router.get("/debug/test-reviews/{user_id}")
@@ -950,18 +947,13 @@ def accept_task(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    print(f"[DEBUG] accept_task - 开始处理接收任务请求，任务ID: {task_id}")
-    print(f"[DEBUG] accept_task - 当前用户: {current_user.id if current_user else 'None'}")
+    # 接收任务处理中（已移除DEBUG日志以提升性能）
     
     # 如果current_user为None，说明认证失败
     if not current_user:
-        print("[DEBUG] accept_task - 认证失败，current_user为None")
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     try:
-        print(
-            f"DEBUG: accept_task called for task_id={task_id}, user_id={current_user.id}"
-        )
 
         # 检查用户是否为客服账号
         if False:  # 普通用户不再有客服权限
@@ -969,19 +961,15 @@ def accept_task(
 
         db_task = crud.get_task(db, task_id)
         if not db_task:
-            print(f"DEBUG: Task {task_id} not found")
             raise HTTPException(status_code=404, detail="Task not found")
 
-        print(f"DEBUG: Task {task_id} found, status={db_task.status}")
 
         if db_task.status != "open":
-            print(f"DEBUG: Task {task_id} status is {db_task.status}, not open")
             raise HTTPException(
                 status_code=400, detail="Task is not available for acceptance"
             )
 
         if db_task.poster_id == current_user.id:
-            print(f"DEBUG: User {current_user.id} trying to accept own task")
             raise HTTPException(
                 status_code=400, detail="You cannot accept your own task"
             )
@@ -996,9 +984,6 @@ def accept_task(
         task_level_value = level_hierarchy.get(task_level, 1)
 
         if user_level_value < task_level_value:
-            print(
-                f"DEBUG: User {current_user.id} level {user_level} insufficient for task level {task_level}"
-            )
             if task_level == "vip":
                 raise HTTPException(
                     status_code=403,
@@ -1029,16 +1014,12 @@ def accept_task(
             deadline_uk = db_task.deadline.astimezone(uk_tz)
 
         if deadline_uk < current_time:
-            print(f"DEBUG: Task {task_id} deadline has passed")
             raise HTTPException(status_code=400, detail="Task deadline has passed")
 
-        print(f"DEBUG: Calling crud.accept_task for task {task_id}")
         updated_task = crud.accept_task(db, task_id, current_user.id)
         if not updated_task:
-            print(f"DEBUG: crud.accept_task returned None for task {task_id}")
             raise HTTPException(status_code=400, detail="Failed to accept task")
 
-        print(f"DEBUG: Task {task_id} accepted successfully")
 
         # 发送通知给任务发布者
         if background_tasks:
@@ -1059,7 +1040,6 @@ def accept_task(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"DEBUG: Unexpected error in accept_task: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
@@ -1256,10 +1236,8 @@ def get_user_received_reviews(user_id: str, db: Session = Depends(get_db)):
 @router.get("/{user_id}/reviews")
 def get_user_reviews(user_id: str, db: Session = Depends(get_db)):
     """获取用户收到的评价（用于个人主页显示）"""
-    logger.info(f"[DEBUG] get_user_reviews called with user_id: {user_id}")
     try:
         reviews = crud.get_user_reviews_with_reviewer_info(db, user_id)
-        logger.info(f"[DEBUG] get_user_reviews returning {len(reviews)} reviews")
         return reviews
     except Exception as e:
         import traceback
@@ -1969,7 +1947,6 @@ def update_avatar(
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    logger.info(f"[DEBUG] 头像更新请求 - 用户ID: {current_user.id}, 新头像: {data.avatar}")
     
     try:
         # 直接更新数据库，简单直接
@@ -1977,20 +1954,18 @@ def update_avatar(
             "avatar": data.avatar
         })
         db.commit()
-        logger.info(f"[DEBUG] 头像更新成功: {data.avatar}")
         
         # 清除用户缓存
         try:
             from app.redis_cache import invalidate_user_cache
             invalidate_user_cache(current_user.id)
-            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
         except Exception as e:
-            logger.warning(f"[DEBUG] 清除缓存失败: {e}")
+            pass  # 静默处理缓存清除失败
         
         return {"avatar": data.avatar}
         
     except Exception as e:
-        logger.error(f"[DEBUG] 头像更新失败: {e}")
+        logger.error(f"头像更新失败: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail="头像更新失败")
 
@@ -2013,10 +1988,7 @@ def update_profile(
     db: Session = Depends(get_db),
 ):
     """更新用户个人资料（名字、常住城市、语言偏好等）"""
-    logger.info(f"[DEBUG] update_profile - 收到请求: {data}")
-    logger.info(f"[DEBUG] update_profile - 当前用户: {current_user.id}")
-    logger.info(f"[DEBUG] update_profile - 请求头: {dict(request.headers)}")
-    logger.info(f"[DEBUG] update_profile - Cookies: {dict(request.cookies)}")
+    # 更新个人资料处理中（已移除DEBUG日志以提升性能）
     try:
         from datetime import datetime, timedelta
         from app.validators import StringValidator
@@ -2091,14 +2063,12 @@ def update_profile(
                 update_data["residence_city"] = None
             else:
                 update_data["residence_city"] = data.residence_city
-            logger.info(f"[DEBUG] 更新常住城市: {data.residence_city} -> {update_data.get('residence_city')}")
         
         if data.language_preference is not None:
             # 验证语言偏好只能是 'zh' 或 'en'
             if data.language_preference not in ['zh', 'en']:
                 raise HTTPException(status_code=400, detail="语言偏好只能是 'zh' 或 'en'")
             update_data["language_preference"] = data.language_preference
-            logger.info(f"[DEBUG] 更新语言偏好: {data.language_preference}")
         
         # 处理邮箱更新
         if data.email is not None:
@@ -2134,14 +2104,12 @@ def update_profile(
                     raise HTTPException(status_code=400, detail="验证码错误或已过期，请重新发送")
                 
                 update_data["email"] = new_email
-                logger.info(f"[DEBUG] 更新邮箱: {current_user.email} -> {new_email}")
             elif new_email == current_user.email:
                 # 邮箱没变化，不需要更新
                 pass
             elif new_email is None and current_user.email:
                 # 清空邮箱（解绑），不需要验证码
                 update_data["email"] = None
-                logger.info(f"[DEBUG] 清空邮箱: {current_user.email} -> None")
         
         # 处理手机号更新
         if data.phone is not None:
@@ -2177,20 +2145,17 @@ def update_profile(
                     raise HTTPException(status_code=400, detail="验证码错误或已过期，请重新发送")
                 
                 update_data["phone"] = new_phone
-                logger.info(f"[DEBUG] 更新手机号: {current_user.phone} -> {new_phone}")
             elif new_phone == current_user.phone:
                 # 手机号没变化，不需要更新
                 pass
             elif new_phone is None and current_user.phone:
                 # 清空手机号（解绑），不需要验证码
                 update_data["phone"] = None
-                logger.info(f"[DEBUG] 清空手机号: {current_user.phone} -> None")
         
         # 如果没有要更新的字段，返回错误（但名字不变时不更新名字字段是正常的）
         if not update_data:
             raise HTTPException(status_code=400, detail="没有提供要更新的字段")
         
-        logger.info(f"[DEBUG] 更新个人资料 - 用户: {current_user.id}, 更新字段: {list(update_data.keys())}")
         
         # 更新数据库
         db.query(models.User).filter(models.User.id == current_user.id).update(update_data)
@@ -2200,16 +2165,15 @@ def update_profile(
         try:
             from app.redis_cache import invalidate_user_cache
             invalidate_user_cache(current_user.id)
-            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
         except Exception as e:
-            logger.warning(f"[DEBUG] 清除缓存失败: {e}")
+            pass  # 静默处理缓存清除失败
         
         return {"message": "个人资料更新成功", **update_data}
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[DEBUG] 个人资料更新失败: {e}")
+        logger.error(f"个人资料更新失败: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"个人资料更新失败: {str(e)}")
 
@@ -2292,11 +2256,7 @@ def send_message_api(
         # 验证图片ID格式
         if not image_id or len(image_id) < 10:
             raise HTTPException(status_code=400, detail="无效的图片ID")
-        
-        print(f"🔍 [DEBUG] 检测到图片消息，image_id: {image_id}")
-    else:
-        print(f"🔍 [DEBUG] 普通消息: {msg.content[:50]}...")
-
+    
     # 保存消息
     message = crud.send_message(db, current_user.id, msg.receiver_id, msg.content, image_id=image_id)
 
@@ -2425,7 +2385,6 @@ def mark_chat_messages_read_api(
     try:
         from app.models import Message
         
-        print(f"🔍 [DEBUG] 标记已读API调用 - 当前用户: {current_user.id}, 联系人: {contact_id}")
         
         # 获取与指定联系人的所有未读消息
         unread_messages = (
@@ -2438,22 +2397,18 @@ def mark_chat_messages_read_api(
             .all()
         )
         
-        print(f"📊 [DEBUG] 找到 {len(unread_messages)} 条未读消息")
         
         # 标记所有未读消息为已读
         for msg in unread_messages:
-            print(f"📝 [DEBUG] 标记消息 {msg.id} 为已读")
             msg.is_read = 1
         
         db.commit()
-        print(f"✅ [DEBUG] 成功标记 {len(unread_messages)} 条消息为已读")
         
         return {
             "message": f"已标记与用户 {contact_id} 的 {len(unread_messages)} 条消息为已读",
             "marked_count": len(unread_messages)
         }
     except Exception as e:
-        print(f"❌ [DEBUG] 标记已读失败: {str(e)}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"标记消息为已读失败: {str(e)}")
 

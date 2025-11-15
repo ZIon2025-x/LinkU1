@@ -188,31 +188,41 @@ const MyTasks: React.FC = () => {
       setTasks(tasksData);
       setTotalTasks(tasksData.length);
       
+      // 性能优化：并行加载评价和申请信息，不阻塞主任务列表显示
       const completedTasks = tasksData.filter((task: Task) => task.status === 'completed');
-      for (const task of completedTasks) {
-        await loadTaskReviews(task.id);
-      }
+      const postedOpenTasks = user ? tasksData.filter((task: Task) => 
+        task.poster_id === user.id && task.status === 'open'
+      ) : [];
       
-      // 为发布者的open任务加载申请信息
-      if (user) {
-        const postedOpenTasks = tasksData.filter((task: Task) => 
-          task.poster_id === user.id && task.status === 'open'
-        );
-        
+      // 并行加载所有非关键数据
+      Promise.all([
+        // 并行加载所有已完成任务的评价
+        ...completedTasks.map(task => 
+          loadTaskReviews(task.id).catch(() => {}) // 静默处理错误
+        ),
+        // 并行加载所有open任务的申请信息
+        ...postedOpenTasks.map(async (task: Task) => {
+          try {
+            const apps = await getTaskApplications(task.id);
+            return { taskId: task.id, applications: apps.applications || apps || [] };
+          } catch (error) {
+            return { taskId: task.id, applications: [] };
+          }
+        })
+      ]).then(results => {
+        // 处理申请信息结果
         const applicationsMap: {[key: number]: any[]} = {};
-        await Promise.all(
-          postedOpenTasks.map(async (task: Task) => {
-            try {
-              const apps = await getTaskApplications(task.id);
-              applicationsMap[task.id] = apps.applications || apps || [];
-            } catch (error) {
-              console.error(`加载任务 ${task.id} 的申请失败:`, error);
-              applicationsMap[task.id] = [];
-            }
-          })
-        );
-        setTaskApplicationsMap(applicationsMap);
-      }
+        results.forEach(result => {
+          if (result && 'taskId' in result) {
+            applicationsMap[result.taskId] = result.applications;
+          }
+        });
+        if (Object.keys(applicationsMap).length > 0) {
+          setTaskApplicationsMap(applicationsMap);
+        }
+      }).catch(() => {
+        // 静默处理错误
+      });
     } catch (error) {
       console.error('获取任务失败:', error);
     } finally {

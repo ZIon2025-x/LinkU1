@@ -53,15 +53,12 @@ def authenticate_with_session(request: Request, db: Session = Depends(get_sync_d
     """使用会话认证获取用户"""
     from app.secure_auth import validate_session
     
-    print(f"[DEBUG] authenticate_with_session - URL: {request.url}")
-    print(f"[DEBUG] authenticate_with_session - Cookies: {dict(request.cookies)}")
+    # 会话认证中（已移除DEBUG日志以提升性能）
     
     session = validate_session(request)
     if session:
-        print(f"[DEBUG] 会话验证成功，用户ID: {session.user_id}")
         user = crud.get_user_by_id(db, session.user_id)
         if user:
-            print(f"[DEBUG] 用户查询成功: {user.id}")
             # 检查用户状态
             if hasattr(user, "is_suspended") and user.is_suspended:
                 client_ip = get_client_ip(request)

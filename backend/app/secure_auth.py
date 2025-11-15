@@ -32,9 +32,9 @@ try:
     from app.redis_cache import get_redis_client
     redis_client = get_redis_client()
     USE_REDIS = redis_client is not None
-    logger.info(f"[DEBUG] Redis连接状态 - USE_REDIS: {USE_REDIS}, redis_client: {redis_client is not None}")
+    # Redis连接状态已初始化
 except Exception as e:
-    logger.error(f"[DEBUG] Redis连接异常: {e}")
+    logger.error(f"Redis连接异常: {e}")
     USE_REDIS = False
     redis_client = None
 
@@ -267,13 +267,10 @@ class SecureAuthManager:
     @staticmethod
     def get_session(session_id: str, update_activity: bool = True) -> Optional[SessionInfo]:
         """获取会话信息"""
-        logger.info(f"[DEBUG] get_session - session_id: {session_id[:8]}...")
         if USE_REDIS and redis_client:
             # 从 Redis 获取会话
             data = safe_redis_get(f"session:{session_id}")
-            logger.info(f"[DEBUG] get_session - Redis data: {data}")
             if not data:
-                logger.info(f"[DEBUG] get_session - 未找到Redis数据")
                 return None
             session = SessionInfo(
                 user_id=data["user_id"],
@@ -560,9 +557,7 @@ def is_fingerprint_similar(original: str, current: str, threshold: float = 0.7) 
 
 def validate_session(request: Request) -> Optional[SessionInfo]:
     """验证会话"""
-    logger.info(f"[DEBUG] validate_session - URL: {request.url}")
-    logger.info(f"[DEBUG] validate_session - Cookies: {dict(request.cookies)}")
-    logger.info(f"[DEBUG] validate_session - Headers: {dict(request.headers)}")
+    # 会话验证中（已移除DEBUG日志以提升性能）
     
     # 1. 尝试主要Cookie名称
     session_id = request.cookies.get("session_id")
@@ -571,28 +566,22 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     if not session_id:
         session_id = request.headers.get("X-Session-ID")
         if session_id:
-            logger.info(f"[DEBUG] 从X-Session-ID头获取session_id: {session_id[:8]}...")
     
     # 3. 如果还是没有，尝试从Authorization头获取（仅用于移动端JWT认证）
     if not session_id:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             # 这是JWT token，不是session_id，应该通过JWT认证处理
-            logger.info(f"[DEBUG] 检测到Authorization头，但这是JWT token，不是session_id")
             # 不将JWT token当作session_id处理
     
     if not session_id:
-        logger.info("[DEBUG] 未找到session_id")
         return None
     
-    logger.info(f"[DEBUG] 找到session_id: {session_id[:8]}...")
     
     session = SecureAuthManager.get_session(session_id, update_activity=True)  # 更新活动时间（内部有5分钟防抖机制）
     if not session:
-        logger.info(f"[DEBUG] 会话验证失败: {session_id[:8]}...")
         return None
     
-    logger.info(f"[DEBUG] 会话验证成功: {session_id[:8]}..., 用户: {session.user_id}")
     
     # 验证设备指纹（用于检测会话劫持）
     current_fingerprint = get_device_fingerprint(request)
