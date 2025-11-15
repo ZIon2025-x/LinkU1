@@ -151,6 +151,9 @@ async def review_expert_application(
                 bio=None,  # 可选
                 avatar=None,  # 可选，使用用户默认头像
                 status="active",
+                rating=0.00,  # 初始评分为0
+                total_services=0,  # 初始服务数为0
+                completed_tasks=0,  # 初始完成任务数为0
                 approved_by=current_admin.id,  # 批准的管理员ID
                 approved_at=models.get_utc_time(),
             )
@@ -166,9 +169,15 @@ async def review_expert_application(
             
             await db.commit()
             await db.refresh(new_expert)
-        except IntegrityError:
+            logger.info(f"成功创建任务达人: {new_expert.id}, 状态: {new_expert.status}")
+        except IntegrityError as e:
             await db.rollback()
+            logger.error(f"创建任务达人失败（完整性错误）: {e}")
             raise HTTPException(status_code=409, detail="该用户已经是任务达人（并发冲突）")
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"创建任务达人失败: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"创建任务达人失败: {str(e)}")
         
         # 6. 发送通知给用户
         from app.task_notifications import send_expert_application_approved_notification
@@ -181,10 +190,20 @@ async def review_expert_application(
         except Exception as e:
             logger.error(f"Failed to send approval notification: {e}")
         
+        # 返回响应（简化，避免序列化错误）
+        try:
+            expert_dict = schemas.TaskExpertOut.model_validate(new_expert).model_dump()
+        except Exception as e:
+            logger.warning(f"序列化 TaskExpert 失败，使用简化响应: {e}")
+            expert_dict = {
+                "id": new_expert.id,
+                "status": new_expert.status,
+            }
+        
         return {
             "message": "申请已批准，任务达人已创建",
             "application_id": application_id,
-            "expert": schemas.TaskExpertOut.model_validate(new_expert).model_dump(),
+            "expert": expert_dict,
         }
     
     elif review_data.action == "reject":
