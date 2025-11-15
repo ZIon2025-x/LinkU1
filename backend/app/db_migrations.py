@@ -14,6 +14,139 @@ from sqlalchemy.engine import Engine
 logger = logging.getLogger(__name__)
 
 
+def split_sql_statements(sql_content: str) -> List[str]:
+    """
+    智能分割 SQL 语句，正确处理：
+    - 函数定义 (CREATE FUNCTION ... $$ ... $$)
+    - DO 块 (DO $$ BEGIN ... END $$;)
+    - 美元引号字符串 ($$ ... $$ 或 $tag$ ... $tag$)
+    - 单引号字符串中的分号
+    - 注释
+    """
+    statements = []
+    current_statement = []
+    in_dollar_quote = False
+    dollar_quote_tag = None
+    in_single_quote = False
+    in_double_quote = False
+    in_line_comment = False
+    in_block_comment = False
+    i = 0
+    
+    while i < len(sql_content):
+        char = sql_content[i]
+        next_char = sql_content[i + 1] if i + 1 < len(sql_content) else None
+        
+        # 处理块注释
+        if not in_dollar_quote and not in_single_quote and not in_double_quote:
+            if char == '/' and next_char == '*':
+                in_block_comment = True
+                current_statement.append(char)
+                if next_char:
+                    current_statement.append(next_char)
+                    i += 1
+                i += 1
+                continue
+            elif in_block_comment and char == '*' and next_char == '/':
+                in_block_comment = False
+                current_statement.append(char)
+                if next_char:
+                    current_statement.append(next_char)
+                    i += 1
+                i += 1
+                continue
+            elif in_block_comment:
+                current_statement.append(char)
+                i += 1
+                continue
+        
+        # 处理行注释
+        if not in_dollar_quote and not in_single_quote and not in_double_quote and not in_block_comment:
+            if char == '-' and next_char == '-':
+                in_line_comment = True
+                current_statement.append(char)
+                if next_char:
+                    current_statement.append(next_char)
+                    i += 1
+                i += 1
+                continue
+            elif in_line_comment and char == '\n':
+                in_line_comment = False
+                current_statement.append(char)
+                i += 1
+                continue
+            elif in_line_comment:
+                current_statement.append(char)
+                i += 1
+                continue
+        
+        # 处理单引号字符串
+        if not in_dollar_quote and not in_double_quote and not in_block_comment and not in_line_comment:
+            if char == "'" and (i == 0 or sql_content[i-1] != '\\'):
+                in_single_quote = not in_single_quote
+                current_statement.append(char)
+                i += 1
+                continue
+        
+        # 处理双引号字符串
+        if not in_dollar_quote and not in_single_quote and not in_block_comment and not in_line_comment:
+            if char == '"' and (i == 0 or sql_content[i-1] != '\\'):
+                in_double_quote = not in_double_quote
+                current_statement.append(char)
+                i += 1
+                continue
+        
+        # 处理美元引号
+        if not in_single_quote and not in_double_quote and not in_block_comment and not in_line_comment:
+            if char == '$':
+                # 查找美元引号标签（可能是 $$ 或 $tag$）
+                tag_start = i
+                tag_end = i + 1
+                # 查找第一个 $ 后的标签内容
+                while tag_end < len(sql_content) and sql_content[tag_end] != '$':
+                    tag_end += 1
+                if tag_end < len(sql_content):
+                    tag_end += 1  # 包含结束的 $
+                    dollar_quote_tag = sql_content[tag_start:tag_end]
+                    
+                    if not in_dollar_quote:
+                        # 进入美元引号
+                        in_dollar_quote = True
+                        current_statement.append(dollar_quote_tag)
+                        i = tag_end
+                        continue
+                    else:
+                        # 检查是否是匹配的结束标签
+                        if sql_content[tag_start:tag_end] == dollar_quote_tag:
+                            # 退出美元引号
+                            in_dollar_quote = False
+                            current_statement.append(dollar_quote_tag)
+                            dollar_quote_tag = None
+                            i = tag_end
+                            continue
+        
+        # 添加字符到当前语句
+        current_statement.append(char)
+        
+        # 如果不在引号、注释或美元引号内，检查是否是语句结束
+        if not in_dollar_quote and not in_single_quote and not in_double_quote and not in_block_comment and not in_line_comment:
+            if char == ';':
+                statement_text = ''.join(current_statement).strip()
+                if statement_text and not statement_text.startswith('--') and not statement_text.startswith('/*'):
+                    statements.append(statement_text)
+                current_statement = []
+        
+        i += 1
+    
+    # 处理最后一个语句（如果没有以分号结尾）
+    if current_statement:
+        statement_text = ''.join(current_statement).strip()
+        if statement_text and not statement_text.startswith('--') and not statement_text.startswith('/*'):
+            statements.append(statement_text)
+    
+    return statements
+
+
 def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int]:
     """
     执行 SQL 文件
@@ -32,36 +165,8 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
         with open(sql_file_path, 'r', encoding='utf-8') as f:
             sql_content = f.read()
         
-        # 分割 SQL 语句（按分号分割，但保留在字符串中的分号）
-        # 使用更简单的方法：按分号分割，然后过滤空语句和注释
-        statements = []
-        
-        # 先移除单行注释
-        lines = sql_content.split('\n')
-        cleaned_lines = []
-        for line in lines:
-            # 移除行内注释（但保留字符串中的内容）
-            if '--' in line:
-                # 简单处理：如果不在引号内，移除注释部分
-                comment_pos = line.find('--')
-                if comment_pos >= 0:
-                    # 检查引号
-                    before_comment = line[:comment_pos]
-                    quote_count = before_comment.count("'") + before_comment.count('"')
-                    if quote_count % 2 == 0:  # 偶数个引号，说明不在字符串内
-                        line = line[:comment_pos].rstrip()
-            cleaned_lines.append(line)
-        
-        cleaned_content = '\n'.join(cleaned_lines)
-        
-        # 按分号分割
-        raw_statements = cleaned_content.split(';')
-        
-        for stmt in raw_statements:
-            stmt = stmt.strip()
-            # 跳过空语句和注释块
-            if stmt and not stmt.startswith('/*') and not stmt.startswith('--'):
-                statements.append(stmt)
+        # 智能分割 SQL 语句，正确处理函数定义和 DO 块
+        statements = split_sql_statements(sql_content)
         
         # 执行每个语句
         with engine.connect() as conn:
