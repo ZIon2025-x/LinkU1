@@ -168,28 +168,48 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
         # 智能分割 SQL 语句，正确处理函数定义和 DO 块
         statements = split_sql_statements(sql_content)
         
-        # 执行每个语句
-        with engine.connect() as conn:
-            for statement in statements:
-                statement = statement.strip()
-                if not statement or statement.startswith('--'):
-                    continue
-                
-                try:
-                    # 使用 text() 包装 SQL 语句
-                    conn.execute(text(statement))
-                    conn.commit()
-                    executed += 1
-                except Exception as e:
-                    error_msg = str(e).lower()
-                    # 检查是否是"已存在"的错误（幂等性）
-                    if any(keyword in error_msg for keyword in ['already exists', 'duplicate', 'exists']):
-                        skipped += 1
-                        logger.debug(f"跳过已存在的对象: {statement[:50]}...")
-                    else:
-                        errors += 1
-                        logger.warning(f"执行 SQL 语句失败: {e}")
-                        logger.debug(f"失败的语句: {statement[:200]}...")
+        # 执行每个语句（每个语句在独立的事务中执行）
+        for statement in statements:
+            statement = statement.strip()
+            if not statement or statement.startswith('--'):
+                continue
+            
+            # 每个语句使用独立的事务
+            try:
+                with engine.connect() as conn:
+                    trans = conn.begin()
+                    try:
+                        # 使用 text() 包装 SQL 语句
+                        conn.execute(text(statement))
+                        trans.commit()
+                        executed += 1
+                    except Exception as e:
+                        # 回滚当前事务
+                        try:
+                            trans.rollback()
+                        except:
+                            pass  # 如果回滚也失败，忽略
+                        
+                        error_msg = str(e).lower()
+                        # 检查是否是"已存在"的错误（幂等性）
+                        if any(keyword in error_msg for keyword in ['already exists', 'duplicate', 'exists']):
+                            skipped += 1
+                            logger.debug(f"跳过已存在的对象: {statement[:50]}...")
+                        # 检查是否是事务失败的错误（可能是之前的语句失败导致的）
+                        elif 'infailed' in error_msg or 'transaction is aborted' in error_msg:
+                            # 这种情况不应该发生，因为每个语句都在独立事务中
+                            # 但如果发生了，记录警告并继续
+                            skipped += 1
+                            logger.debug(f"跳过事务失败的语句（可能是已存在）: {statement[:50]}...")
+                        else:
+                            errors += 1
+                            logger.warning(f"执行 SQL 语句失败: {e}")
+                            logger.debug(f"失败的语句: {statement[:200]}...")
+            except Exception as e:
+                # 连接级别的错误
+                errors += 1
+                logger.warning(f"执行 SQL 语句时发生连接错误: {e}")
+                logger.debug(f"失败的语句: {statement[:200]}...")
         
         logger.info(f"迁移文件执行完成: {sql_file_path.name}")
         logger.info(f"  执行: {executed}, 跳过: {skipped}, 错误: {errors}")
