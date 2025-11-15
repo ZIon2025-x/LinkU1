@@ -256,7 +256,6 @@ const Settings: React.FC = () => {
         return;
       }
       
-      console.log('[DEBUG] 发送更新请求:', updatePayload);
       
       // 使用 api.patch 而不是 fetch，这样能自动处理 Cookie 和 CSRF token
       await api.patch('/api/users/profile', updatePayload);

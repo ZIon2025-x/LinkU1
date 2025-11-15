@@ -77,7 +77,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         // 用户未登录或获取失败（401是预期的），静默处理
         // 只在非401错误时记录（比如网络错误）
         if (error.response?.status !== 401) {
-          console.debug('无法获取用户语言偏好:', error);
+          // 静默处理错误
         }
       }
     };

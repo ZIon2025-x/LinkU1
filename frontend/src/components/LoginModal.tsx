@@ -362,7 +362,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           localStorage.setItem('language', userData.language_preference);
         }
       } catch (error) {
-        console.warn('获取用户资料失败:', error);
+        // 静默处理错误
       }
       
       if (res.data.is_new_user) {
@@ -426,7 +426,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
           localStorage.setItem('language', userData.language_preference);
         }
       } catch (error) {
-        console.warn('获取用户资料失败:', error);
+        // 静默处理错误
       }
       
       if (res.data.is_new_user) {
@@ -519,7 +519,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
             localStorage.setItem('language', userData.language_preference);
           }
         } catch (error) {
-          console.warn('获取用户资料失败:', error);
+          // 静默处理错误
         }
         
         // 添加短暂延迟确保认证信息设置完成

@@ -165,7 +165,7 @@ async def register(
         )
     
     # 调试信息
-    print(f"注册请求数据: name={validated_data['name']}, email={validated_data['email']}, phone={validated_data.get('phone', 'None')}, invitation_code={validated_data.get('invitation_code', 'None')}")
+    # 注册请求处理中（已移除敏感信息日志）
     
     # 检查邮箱是否已被注册（正式用户）
     db_user = await async_user_crud.get_user_by_email(db, validated_data['email'])
@@ -279,7 +279,7 @@ async def register(
             finally:
                 sync_db.close()
         
-        print(f"开发环境：用户 {new_user.email} 注册成功，无需邮箱验证")
+        # 开发环境：用户注册成功，无需邮箱验证
         
         return {
             "message": "注册成功！（开发环境：已跳过邮箱验证）",
@@ -365,7 +365,7 @@ def verify_email(
         )
     
     # 用户验证成功，记录日志
-    logger.info(f"用户验证成功: {user.email}, ID: {user.id}")
+    logger.info(f"用户验证成功: ID: {user.id}")
     
     # 处理邀请码奖励（如果注册时提供了邀请码）
     # 注意：由于PendingUser没有invitation_code_id字段，我们需要通过其他方式获取
@@ -444,7 +444,7 @@ def verify_email(
             response.headers["X-Auth-Status"] = "authenticated"
             response.headers["X-Mobile-Auth"] = "true"
         
-        logger.info(f"邮箱验证成功后自动登录成功: {user.email}, ID: {user.id}")
+        logger.info(f"邮箱验证成功后自动登录成功: ID: {user.id}")
         
     except Exception as auth_error:
         logger.warning(f"自动登录失败（不影响验证成功）: {auth_error}")
@@ -1583,7 +1583,6 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 def get_my_profile(
     request: Request, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
-    print("Authorization header:", request.headers.get("authorization"))
 
     # 安全地创建用户对象，避免SQLAlchemy内部属性
     try:
@@ -1591,18 +1590,14 @@ def get_my_profile(
         from app.redis_cache import invalidate_user_cache
         try:
             invalidate_user_cache(current_user.id)
-            logger.info(f"[DEBUG] 已清除用户 {current_user.id} 的缓存")
         except Exception as e:
-            logger.warning(f"[DEBUG] 清除用户缓存失败: {e}")
+            pass  # 静默处理缓存清除失败
         
         # 直接从数据库查询最新数据
         from app import crud
         fresh_user = crud.get_user_by_id(db, current_user.id)
         if fresh_user:
             current_user = fresh_user
-            logger.info(f"[DEBUG] 从数据库获取最新用户数据，头像: {fresh_user.avatar}")
-            logger.info(f"[DEBUG] task_count: {getattr(fresh_user, 'task_count', None)}")
-            logger.info(f"[DEBUG] completed_task_count: {getattr(fresh_user, 'completed_task_count', None)}")
         
         # 计算平均评分
         from app.models import Review
@@ -1643,11 +1638,8 @@ def get_my_profile(
             "name_updated_at": getattr(current_user, 'name_updated_at', None)
         }
         
-        print(f"[DEBUG] get_my_profile 返回数据: task_count={formatted_user['task_count']}, completed_task_count={formatted_user['completed_task_count']}")
-        
         return formatted_user
     except Exception as e:
-        print(f"Error in get_my_profile: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
@@ -1730,21 +1722,27 @@ def user_profile(
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
+    # 安全：只返回公开信息，敏感信息（email, phone）仅自己可见
+    user_data = {
+        "id": user.id,  # 数据库已经存储格式化ID
+        "name": user.name,
+        "created_at": user.created_at,
+        "is_verified": user.is_verified,
+        "user_level": user.user_level,
+        "avatar": user.avatar,
+        "avg_rating": avg_rating,
+        "days_since_joined": days_since_joined,
+        "task_count": user.task_count,
+        "completed_task_count": user.completed_task_count,
+    }
+    
+    # 只有查看自己的资料时才返回敏感信息
+    if current_user.id == user_id:
+        user_data["email"] = user.email
+        user_data["phone"] = user.phone
+    
     return {
-        "user": {
-            "id": user.id,  # 数据库已经存储格式化ID
-            "name": user.name,
-            "email": user.email,
-            "phone": user.phone,
-            "created_at": user.created_at,
-            "is_verified": user.is_verified,
-            "user_level": user.user_level,
-            "avatar": user.avatar,
-            "avg_rating": avg_rating,
-            "days_since_joined": days_since_joined,
-            "task_count": user.task_count,
-            "completed_task_count": user.completed_task_count,
-        },
+        "user": user_data,
         "stats": {
             "total_tasks": total_tasks,
             "posted_tasks": len(posted_tasks),

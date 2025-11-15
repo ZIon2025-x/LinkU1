@@ -958,8 +958,6 @@ const TaskDetail: React.FC = () => {
           const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
           const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${displayReward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
           
-          console.log('触发原生分享:', { title: shareTitle, text: shareText, url: shareUrl });
-          
           // 使用setTimeout确保在下一个事件循环中执行，这样可以保持用户交互的上下文
           setTimeout(() => {
             navigator.share({
@@ -968,13 +966,11 @@ const TaskDetail: React.FC = () => {
               url: shareUrl
             }).catch((error) => {
               // 用户取消分享或出错时不做任何处理
-              console.log('分享已取消或出错:', error);
             });
           }, 100);
         } else {
           // 如果不支持Web Share API，使用传统的复制链接方式
           const shareUrl = window.location.origin + window.location.pathname;
-          console.log('不支持Web Share API，使用复制链接方式:', shareUrl);
           
           navigator.clipboard.writeText(shareUrl).then(() => {
             alert('链接已复制到剪贴板！');

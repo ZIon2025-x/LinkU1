@@ -27,7 +27,7 @@ export class TimeHandlerV2 {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone;
     } catch (error) {
-      console.warn('无法检测用户时区，使用默认值:', error);
+      // 静默处理错误
       return 'Europe/London'; // 默认英国时区
     }
   }

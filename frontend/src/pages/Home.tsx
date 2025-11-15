@@ -255,10 +255,6 @@ const Home: React.FC = () => {
   // Message unread count from context
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
-  // 调试：打印未读数量
-  React.useEffect(() => {
-    console.log('[Home] 未读消息数量:', messageUnreadCount);
-  }, [messageUnreadCount]);
   
   // System settings state
   const [systemSettings, setSystemSettings] = useState<any>({

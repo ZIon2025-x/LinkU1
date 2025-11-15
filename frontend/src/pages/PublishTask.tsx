@@ -72,7 +72,7 @@ const PublishTask: React.FC = () => {
         }
       } catch (error) {
         // 用户未登录，忽略
-        console.debug('用户未登录或获取用户数据失败:', error);
+        // 静默处理错误
       }
     };
 

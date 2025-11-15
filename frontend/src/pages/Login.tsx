@@ -195,7 +195,7 @@ const Login: React.FC = () => {
           localStorage.setItem('language', userData.language_preference);
         }
       } catch (error) {
-        console.warn('获取用户资料失败:', error);
+        // 静默处理错误
       }
       
       // 添加短暂延迟确保认证信息设置完成
@@ -258,7 +258,7 @@ const Login: React.FC = () => {
           localStorage.setItem('language', userData.language_preference);
         }
       } catch (error) {
-        console.warn('获取用户资料失败:', error);
+        // 静默处理错误
       }
       
       // 添加短暂延迟确保认证信息设置完成
@@ -318,7 +318,7 @@ const Login: React.FC = () => {
           // 语言会在页面刷新后通过LanguageContext自动应用
         }
       } catch (error) {
-        console.warn('获取用户资料失败:', error);
+        // 静默处理错误
       }
       
       // 添加短暂延迟确保认证信息设置完成
