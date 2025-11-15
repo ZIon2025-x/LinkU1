@@ -10,6 +10,7 @@ import Footer from '../components/Footer';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
+import TaskExpertApplicationModal from '../components/TaskExpertApplicationModal';
 
 const TaskExpertsIntro: React.FC = () => {
   const { t } = useLanguage();
@@ -26,6 +27,9 @@ const TaskExpertsIntro: React.FC = () => {
   // 登录弹窗状态
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 任务达人申请弹窗状态
+  const [showExpertApplicationModal, setShowExpertApplicationModal] = useState(false);
   
   // 加载用户信息和系统设置
   useEffect(() => {
@@ -410,7 +414,11 @@ const TaskExpertsIntro: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                message.warning(t('taskExpertsIntro.notQualified'));
+                if (!user) {
+                  setShowLoginModal(true);
+                  return;
+                }
+                setShowExpertApplicationModal(true);
               }}
               style={{
                 background: '#fff',
@@ -456,6 +464,16 @@ const TaskExpertsIntro: React.FC = () => {
         }}
         onHideForgotPassword={() => {
           setShowForgotPasswordModal(false);
+        }}
+      />
+      
+      {/* 任务达人申请弹窗 */}
+      <TaskExpertApplicationModal
+        isOpen={showExpertApplicationModal}
+        onClose={() => setShowExpertApplicationModal(false)}
+        onSuccess={() => {
+          setShowExpertApplicationModal(false);
+          message.success('申请已提交，等待管理员审核');
         }}
       />
 

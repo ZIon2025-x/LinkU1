@@ -191,6 +191,16 @@ app.include_router(coupon_points_router, tags=["优惠券和积分系统"])
 from app.admin_coupon_points_routes import router as admin_coupon_points_router
 app.include_router(admin_coupon_points_router, tags=["管理员-优惠券和积分系统"])
 
+# 任务达人功能路由
+from app.task_expert_routes import task_expert_router
+app.include_router(task_expert_router)
+
+from app.user_service_application_routes import user_service_application_router
+app.include_router(user_service_application_router)
+
+from app.admin_task_expert_routes import admin_task_expert_router
+app.include_router(admin_task_expert_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -427,6 +437,15 @@ async def startup_event():
         logger.info("正在创建数据库表...")
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
+        
+        # 执行数据库迁移脚本（包括任务达人功能迁移）
+        try:
+            from app.db_migrations import run_migration_sync
+            run_migration_sync(sync_engine)
+        except Exception as e:
+            logger.warning(f"执行数据库迁移时出错（可继续运行）: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 创建优化索引（使用 pg_trgm）
         try:

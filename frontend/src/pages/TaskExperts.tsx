@@ -11,6 +11,7 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
+import ServiceDetailModal from '../components/ServiceDetailModal';
 
 interface TaskExpert {
   id: string;
@@ -76,6 +77,10 @@ const TaskExperts: React.FC = () => {
   // 登录弹窗状态
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 服务详情弹窗状态
+  const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
 
   // 模拟数据 - 实际项目中应该从API获取
   const mockExperts: TaskExpert[] = [
@@ -346,10 +351,31 @@ const TaskExperts: React.FC = () => {
     navigate(`/user/${expertId}`);
   };
 
-  const handleRequestService = (expertId: string, e: React.MouseEvent) => {
+  const handleRequestService = async (expertId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡，避免触发卡片的点击事件
-    // 跳转到任务发布页面，可以通过URL参数传递任务达人ID
-    navigate(`/publish-task?expert_id=${expertId}`);
+    
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+    
+    // 获取任务达人的服务列表
+    try {
+      const { getTaskExpertServices } = await import('../api');
+      const services = await getTaskExpertServices(expertId, 'active');
+      
+      if (services && services.length > 0) {
+        // 如果有多个服务，可以显示服务列表让用户选择
+        // 这里简化处理：直接显示第一个服务
+        setSelectedServiceId(services[0].id);
+        setShowServiceDetailModal(true);
+      } else {
+        message.info('该任务达人暂无可用服务');
+      }
+    } catch (err: any) {
+      message.error('加载服务列表失败');
+      console.error('Failed to load services:', err);
+    }
   };
 
 
@@ -1082,6 +1108,20 @@ const TaskExperts: React.FC = () => {
         }}
         onHideForgotPassword={() => {
           setShowForgotPasswordModal(false);
+        }}
+      />
+      
+      {/* 服务详情弹窗 */}
+      <ServiceDetailModal
+        isOpen={showServiceDetailModal}
+        onClose={() => {
+          setShowServiceDetailModal(false);
+          setSelectedServiceId(null);
+        }}
+        serviceId={selectedServiceId}
+        onApplySuccess={() => {
+          // 申请成功后可以刷新或更新状态
+          message.success('服务申请已提交');
         }}
       />
     </div>

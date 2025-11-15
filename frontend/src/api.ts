@@ -1513,6 +1513,126 @@ export const getPublicTaskExperts = async (category?: string) => {
   return res.data;
 };
 
+// ==================== 任务达人功能 API ====================
+
+// 任务达人申请相关
+export const applyToBeTaskExpert = async (applicationMessage?: string) => {
+  const res = await api.post('/api/task-experts/apply', { application_message: applicationMessage });
+  return res.data;
+};
+
+export const getMyTaskExpertApplication = async () => {
+  const res = await api.get('/api/task-experts/my-application');
+  return res.data;
+};
+
+// 任务达人信息
+export const getTaskExpert = async (expertId: string) => {
+  const res = await api.get(`/api/task-experts/${expertId}`);
+  return res.data;
+};
+
+export const updateTaskExpertProfile = async (expertData: { expert_name?: string; bio?: string; avatar?: string }) => {
+  const res = await api.put('/api/task-experts/me', expertData);
+  return res.data;
+};
+
+// 服务菜单管理
+export const createTaskExpertService = async (serviceData: {
+  service_name: string;
+  description: string;
+  images?: string[];
+  base_price: number;
+  currency?: string;
+  display_order?: number;
+}) => {
+  const res = await api.post('/api/task-experts/me/services', serviceData);
+  return res.data;
+};
+
+export const getMyTaskExpertServices = async (params?: { status?: string; limit?: number; offset?: number }) => {
+  const res = await api.get('/api/task-experts/me/services', { params });
+  return res.data;
+};
+
+export const updateTaskExpertService = async (serviceId: number, serviceData: {
+  service_name?: string;
+  description?: string;
+  images?: string[];
+  base_price?: number;
+  currency?: string;
+  status?: string;
+  display_order?: number;
+}) => {
+  const res = await api.put(`/api/task-experts/me/services/${serviceId}`, serviceData);
+  return res.data;
+};
+
+export const deleteTaskExpertService = async (serviceId: number) => {
+  const res = await api.delete(`/api/task-experts/me/services/${serviceId}`);
+  return res.data;
+};
+
+export const getTaskExpertServices = async (expertId: string, status?: string) => {
+  const params = status ? { status } : {};
+  const res = await api.get(`/api/task-experts/${expertId}/services`, { params });
+  return res.data;
+};
+
+export const getTaskExpertServiceDetail = async (serviceId: number) => {
+  const res = await api.get(`/api/task-experts/services/${serviceId}`);
+  return res.data;
+};
+
+// 服务申请相关
+export const applyForService = async (serviceId: number, applicationData: {
+  application_message?: string;
+  negotiated_price?: number;
+  currency?: string;
+}) => {
+  const res = await api.post(`/api/task-experts/services/${serviceId}/apply`, applicationData);
+  return res.data;
+};
+
+export const getMyServiceApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
+  const res = await api.get('/api/users/me/service-applications', { params });
+  return res.data;
+};
+
+export const respondToCounterOffer = async (applicationId: number, accept: boolean) => {
+  const res = await api.post(`/api/users/me/service-applications/${applicationId}/respond-counter-offer`, { accept });
+  return res.data;
+};
+
+export const cancelServiceApplication = async (applicationId: number) => {
+  const res = await api.post(`/api/users/me/service-applications/${applicationId}/cancel`);
+  return res.data;
+};
+
+// 任务达人申请管理
+export const getMyTaskExpertApplications = async (params?: { status?: string; service_id?: number; limit?: number; offset?: number }) => {
+  const res = await api.get('/api/task-experts/me/applications', { params });
+  return res.data;
+};
+
+export const counterOfferServiceApplication = async (applicationId: number, counterData: {
+  counter_price: number;
+  message?: string;
+}) => {
+  const res = await api.post(`/api/task-experts/applications/${applicationId}/counter-offer`, counterData);
+  return res.data;
+};
+
+export const approveServiceApplication = async (applicationId: number) => {
+  const res = await api.post(`/api/task-experts/applications/${applicationId}/approve`);
+  return res.data;
+};
+
+export const rejectServiceApplication = async (applicationId: number, rejectReason?: string) => {
+  const res = await api.post(`/api/task-experts/applications/${applicationId}/reject`, { reject_reason: rejectReason });
+  return res.data;
+};
+
 // 翻译API - 翻译单个文本
 export const translateText = async (
   text: string,

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getUserProfile, fetchCurrentUser } from '../api';
+import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { message } from 'antd';
+import ServiceDetailModal from '../components/ServiceDetailModal';
 
 interface UserProfileType {
   user: {
@@ -53,6 +55,11 @@ const UserProfile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [taskExpert, setTaskExpert] = useState<any>(null);
+  const [expertServices, setExpertServices] = useState<any[]>([]);
+  const [loadingExpert, setLoadingExpert] = useState(false);
+  const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
 
   useEffect(() => {
     // 直接获取用户信息，HttpOnly Cookie会自动发送
@@ -62,6 +69,7 @@ const UserProfile: React.FC = () => {
   useEffect(() => {
     if (userId) {
       loadUserProfile();
+      loadTaskExpertInfo();
     }
   }, [userId]);
 
@@ -155,6 +163,35 @@ const UserProfile: React.FC = () => {
 
   const handleViewTask = (taskId: string) => {
     navigate(`/tasks/${taskId}`);
+  };
+
+  const loadTaskExpertInfo = async () => {
+    if (!userId) return;
+    
+    setLoadingExpert(true);
+    try {
+      // 尝试获取任务达人信息
+      const expertData = await getTaskExpert(userId);
+      setTaskExpert(expertData);
+      
+      // 获取任务达人的服务列表
+      const services = await getTaskExpertServices(userId, 'active');
+      setExpertServices(services || []);
+    } catch (err: any) {
+      // 如果不是任务达人，忽略错误
+      if (err.response?.status !== 404) {
+        console.error('Failed to load task expert info:', err);
+      }
+      setTaskExpert(null);
+      setExpertServices([]);
+    } finally {
+      setLoadingExpert(false);
+    }
+  };
+
+  const handleServiceClick = (serviceId: number) => {
+    setSelectedServiceId(serviceId);
+    setShowServiceDetailModal(true);
   };
 
   if (loading) {
@@ -315,7 +352,80 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* 聊天功能已移除 - 用户应通过任务申请流程联系 */}
+            {/* 任务达人信息 */}
+            {taskExpert && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{
+                  padding: '16px 24px',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
+                  borderRadius: 16,
+                  border: '2px solid rgba(102, 126, 234, 0.3)',
+                  marginBottom: 16
+                }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#667eea', marginBottom: 8 }}>
+                    👑 任务达人
+                  </div>
+                  {taskExpert.bio && (
+                    <div style={{ fontSize: 14, color: '#666', lineHeight: 1.6 }}>
+                      {taskExpert.bio}
+                    </div>
+                  )}
+                </div>
+                
+                {/* 服务列表 */}
+                {expertServices.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 600, color: '#333', marginBottom: 16 }}>
+                      服务菜单
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {expertServices.map((service) => (
+                        <div
+                          key={service.id}
+                          onClick={() => handleServiceClick(service.id)}
+                          style={{
+                            padding: '16px',
+                            background: '#fff',
+                            borderRadius: 12,
+                            border: '1px solid #e2e8f0',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#667eea';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 16, fontWeight: 600, color: '#333', marginBottom: 4 }}>
+                                {service.service_name}
+                              </div>
+                              <div style={{ fontSize: 14, color: '#666' }}>
+                                {service.description?.substring(0, 100)}
+                                {service.description && service.description.length > 100 ? '...' : ''}
+                              </div>
+                            </div>
+                            <div style={{ marginLeft: 16, textAlign: 'right' }}>
+                              <div style={{ fontSize: 18, fontWeight: 700, color: '#667eea' }}>
+                                {service.currency} {service.base_price.toFixed(2)}
+                              </div>
+                              <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                                {service.application_count} 申请
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -751,6 +861,20 @@ const UserProfile: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* 服务详情弹窗 */}
+      <ServiceDetailModal
+        isOpen={showServiceDetailModal}
+        onClose={() => {
+          setShowServiceDetailModal(false);
+          setSelectedServiceId(null);
+        }}
+        serviceId={selectedServiceId}
+        onApplySuccess={() => {
+          // 重新加载服务列表
+          loadTaskExpertInfo();
+        }}
+      />
     </div>
   );
 };

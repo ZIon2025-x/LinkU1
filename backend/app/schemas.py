@@ -1,7 +1,9 @@
 import datetime
 from typing import List, Literal, Optional, Dict, Any
+from decimal import Decimal
 
 from pydantic import BaseModel, Field, validator, model_validator
+from pydantic import condecimal
 
 
 class UserBase(BaseModel):
@@ -1277,3 +1279,145 @@ class TaskPaymentResponse(BaseModel):
     final_amount_display: str
     checkout_url: Optional[str] = None
     note: str
+
+
+# ==================== 任务达人功能 Schema ====================
+
+class TaskExpertApplicationCreate(BaseModel):
+    application_message: Optional[str] = None
+
+
+class TaskExpertApplicationOut(BaseModel):
+    id: int
+    user_id: str
+    application_message: Optional[str]
+    status: str
+    reviewed_by: Optional[str]
+    reviewed_at: Optional[datetime.datetime]
+    review_comment: Optional[str]
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class TaskExpertApplicationReview(BaseModel):
+    """管理员审核申请请求"""
+    action: Literal["approve", "reject"]
+    review_comment: Optional[str] = None
+
+
+class TaskExpertCreate(BaseModel):
+    expert_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class TaskExpertUpdate(BaseModel):
+    expert_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class TaskExpertOut(BaseModel):
+    id: str
+    expert_name: Optional[str]
+    bio: Optional[str]
+    avatar: Optional[str]
+    status: str
+    rating: float
+    total_services: int
+    completed_tasks: int
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class TaskExpertServiceCreate(BaseModel):
+    service_name: str
+    description: str
+    images: Optional[List[str]] = None
+    base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
+    currency: Literal["GBP"] = "GBP"  # 统一为Literal类型
+    display_order: int = 0
+
+
+class TaskExpertServiceUpdate(BaseModel):
+    service_name: Optional[str] = None
+    description: Optional[str] = None
+    images: Optional[List[str]] = None
+    base_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 使用condecimal与DB的DECIMAL一致，避免精度丢失
+    currency: Optional[Literal["GBP"]] = None  # 统一为Literal类型
+    status: Optional[str] = None
+    display_order: Optional[int] = None
+
+
+class TaskExpertServiceOut(BaseModel):
+    id: int
+    expert_id: str
+    service_name: str
+    description: str
+    images: Optional[List[str]]
+    base_price: float
+    currency: Literal["GBP"]  # 统一为Literal类型
+    status: str
+    display_order: int
+    view_count: int
+    application_count: int
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ServiceApplicationOut(BaseModel):
+    id: int
+    service_id: int
+    applicant_id: str
+    expert_id: str
+    application_message: Optional[str]
+    negotiated_price: Optional[float]  # 输出时保持float，输入时使用condecimal
+    expert_counter_price: Optional[float]
+    currency: Literal["GBP"]  # 统一为Literal类型
+    status: str
+    final_price: Optional[float]
+    task_id: Optional[int]
+    created_at: datetime.datetime
+    approved_at: Optional[datetime.datetime]
+    price_agreed_at: Optional[datetime.datetime]
+    
+    class Config:
+        from_attributes = True
+
+
+class ServiceApplicationCreate(BaseModel):
+    service_id: int
+    application_message: Optional[str] = None
+    negotiated_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 修复：添加校验，必须大于0
+    currency: Literal["GBP"] = "GBP"
+
+
+class CounterOfferRequest(BaseModel):
+    """任务达人再次议价请求"""
+    counter_price: condecimal(gt=0, max_digits=12, decimal_places=2) = Field(..., description="任务达人提出的议价价格")
+    message: Optional[str] = None  # 可选说明
+
+
+class AcceptCounterOfferRequest(BaseModel):
+    """用户同意任务达人议价请求"""
+    accept: bool = Field(..., description="是否同意议价")
+
+
+class ServiceApplicationRejectRequest(BaseModel):
+    """任务达人拒绝申请请求"""
+    reject_reason: Optional[str] = None
+
+
+class PaginatedResponse(BaseModel):
+    """分页响应基类"""
+    total: int
+    items: List[Any]
+    limit: int
+    offset: int
+    has_more: bool

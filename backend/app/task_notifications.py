@@ -6,6 +6,7 @@
 from typing import Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app import crud, models
 from app.email_utils import send_email
 from app.config import Config
@@ -18,6 +19,7 @@ from app.email_templates import (
     get_task_rejection_email
 )
 import logging
+import json
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)
@@ -242,3 +244,367 @@ def send_task_rejection_notification(
         
     except Exception as e:
         logger.error(f"发送任务拒绝通知失败: {e}")
+
+
+# ==================== 任务达人功能通知（异步版本）====================
+
+async def send_expert_application_notification(
+    db: AsyncSession,
+    user_id: str,
+):
+    """用户申请成为任务达人，发送通知给管理员"""
+    try:
+        from app import async_crud
+        
+        # 获取所有管理员（简化处理：发送给所有活跃管理员）
+        from sqlalchemy import select
+        admin_result = await db.execute(
+            select(models.AdminUser).where(models.AdminUser.is_active == True)
+        )
+        admins = admin_result.scalars().all()
+        
+        # 获取申请用户信息
+        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
+        if not user:
+            return
+        
+        # 为每个管理员创建通知
+        for admin in admins:
+            notification_content = json.dumps({
+                "type": "expert_application",
+                "user_id": user_id,
+                "user_name": user.name or f"用户{user_id}",
+            }, ensure_ascii=False)
+            
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=admin.id,
+                notification_type="expert_application",
+                title="新任务达人申请",
+                content=notification_content,
+                related_id=user_id,
+            )
+        
+        logger.info(f"任务达人申请通知已发送给管理员，申请用户: {user_id}")
+        
+    except Exception as e:
+        logger.error(f"发送任务达人申请通知失败: {e}")
+
+
+async def send_expert_application_approved_notification(
+    db: AsyncSession,
+    user_id: str,
+    expert_id: str,
+):
+    """管理员批准任务达人申请，发送通知给用户"""
+    try:
+        from app import async_crud
+        
+        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
+        if not user:
+            return
+        
+        notification_content = json.dumps({
+            "type": "expert_application_approved",
+            "expert_id": expert_id,
+            "message": "您的任务达人申请已通过审核",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=user_id,
+            notification_type="expert_application_approved",
+            title="任务达人申请已通过",
+            content=notification_content,
+            related_id=expert_id,
+        )
+        
+        logger.info(f"任务达人申请批准通知已发送给用户: {user_id}")
+        
+    except Exception as e:
+        logger.error(f"发送任务达人申请批准通知失败: {e}")
+
+
+async def send_expert_application_rejected_notification(
+    db: AsyncSession,
+    user_id: str,
+    review_comment: Optional[str] = None,
+):
+    """管理员拒绝任务达人申请，发送通知给用户"""
+    try:
+        from app import async_crud
+        
+        user = await async_crud.async_user_crud.get_user_by_id(db, user_id)
+        if not user:
+            return
+        
+        notification_content = json.dumps({
+            "type": "expert_application_rejected",
+            "review_comment": review_comment or "",
+            "message": "您的任务达人申请未通过审核",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=user_id,
+            notification_type="expert_application_rejected",
+            title="任务达人申请未通过",
+            content=notification_content,
+            related_id=user_id,
+        )
+        
+        logger.info(f"任务达人申请拒绝通知已发送给用户: {user_id}")
+        
+    except Exception as e:
+        logger.error(f"发送任务达人申请拒绝通知失败: {e}")
+
+
+async def send_service_application_notification(
+    db: AsyncSession,
+    expert_id: str,
+    applicant_id: str,
+    service_id: int,
+    service_name: str,
+    negotiated_price: Optional[Decimal] = None,
+):
+    """用户申请服务，发送通知给任务达人"""
+    try:
+        from app import async_crud
+        
+        # 获取申请用户信息
+        applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
+        if not applicant:
+            return
+        
+        notification_content = json.dumps({
+            "type": "service_application",
+            "service_id": service_id,
+            "service_name": service_name,
+            "applicant_id": applicant_id,
+            "applicant_name": applicant.name or f"用户{applicant_id}",
+            "negotiated_price": float(negotiated_price) if negotiated_price else None,
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="service_application",
+            title="新服务申请",
+            content=notification_content,
+            related_id=str(service_id),
+        )
+        
+        logger.info(f"服务申请通知已发送给任务达人: {expert_id}, 服务: {service_name}")
+        
+    except Exception as e:
+        logger.error(f"发送服务申请通知失败: {e}")
+
+
+async def send_counter_offer_notification(
+    db: AsyncSession,
+    applicant_id: str,
+    expert_id: str,
+    counter_price: Decimal,
+    message: Optional[str] = None,
+):
+    """任务达人再次议价，发送通知给申请用户"""
+    try:
+        from app import async_crud
+        
+        notification_content = json.dumps({
+            "type": "counter_offer",
+            "expert_id": expert_id,
+            "counter_price": float(counter_price),
+            "message": message or "",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=applicant_id,
+            notification_type="counter_offer",
+            title="任务达人提出新价格",
+            content=notification_content,
+            related_id=expert_id,
+        )
+        
+        logger.info(f"议价通知已发送给申请用户: {applicant_id}")
+        
+    except Exception as e:
+        logger.error(f"发送议价通知失败: {e}")
+
+
+async def send_counter_offer_accepted_notification(
+    db: AsyncSession,
+    expert_id: str,
+    applicant_id: str,
+    counter_price: Decimal,
+):
+    """用户同意任务达人的议价，发送通知给任务达人"""
+    try:
+        from app import async_crud
+        
+        applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
+        if not applicant:
+            return
+        
+        notification_content = json.dumps({
+            "type": "counter_offer_accepted",
+            "applicant_id": applicant_id,
+            "applicant_name": applicant.name or f"用户{applicant_id}",
+            "counter_price": float(counter_price),
+            "message": "用户已同意您的议价，可以创建任务了",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="counter_offer_accepted",
+            title="用户已同意议价",
+            content=notification_content,
+            related_id=applicant_id,
+        )
+        
+        logger.info(f"议价同意通知已发送给任务达人: {expert_id}")
+        
+    except Exception as e:
+        logger.error(f"发送议价同意通知失败: {e}")
+
+
+async def send_counter_offer_rejected_notification(
+    db: AsyncSession,
+    expert_id: str,
+    applicant_id: str,
+):
+    """用户拒绝任务达人的议价，发送通知给任务达人"""
+    try:
+        from app import async_crud
+        
+        applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
+        if not applicant:
+            return
+        
+        notification_content = json.dumps({
+            "type": "counter_offer_rejected",
+            "applicant_id": applicant_id,
+            "applicant_name": applicant.name or f"用户{applicant_id}",
+            "message": "用户拒绝了您的议价",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="counter_offer_rejected",
+            title="用户拒绝了议价",
+            content=notification_content,
+            related_id=applicant_id,
+        )
+        
+        logger.info(f"议价拒绝通知已发送给任务达人: {expert_id}")
+        
+    except Exception as e:
+        logger.error(f"发送议价拒绝通知失败: {e}")
+
+
+async def send_service_application_approved_notification(
+    db: AsyncSession,
+    applicant_id: str,
+    expert_id: str,
+    task_id: int,
+    service_name: str,
+):
+    """任务达人同意服务申请（创建任务），发送通知给申请用户"""
+    try:
+        from app import async_crud
+        
+        notification_content = json.dumps({
+            "type": "service_application_approved",
+            "task_id": task_id,
+            "service_name": service_name,
+            "expert_id": expert_id,
+            "message": f"您的服务申请已通过，任务已创建",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=applicant_id,
+            notification_type="service_application_approved",
+            title="服务申请已通过",
+            content=notification_content,
+            related_id=str(task_id),
+        )
+        
+        logger.info(f"服务申请批准通知已发送给申请用户: {applicant_id}, 任务ID: {task_id}")
+        
+    except Exception as e:
+        logger.error(f"发送服务申请批准通知失败: {e}")
+
+
+async def send_service_application_rejected_notification(
+    db: AsyncSession,
+    applicant_id: str,
+    expert_id: str,
+    service_id: int,
+    reject_reason: Optional[str] = None,
+):
+    """任务达人拒绝服务申请，发送通知给申请用户"""
+    try:
+        from app import async_crud
+        
+        notification_content = json.dumps({
+            "type": "service_application_rejected",
+            "service_id": service_id,
+            "expert_id": expert_id,
+            "reject_reason": reject_reason or "",
+            "message": "您的服务申请已被拒绝",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=applicant_id,
+            notification_type="service_application_rejected",
+            title="服务申请被拒绝",
+            content=notification_content,
+            related_id=str(service_id),
+        )
+        
+        logger.info(f"服务申请拒绝通知已发送给申请用户: {applicant_id}")
+        
+    except Exception as e:
+        logger.error(f"发送服务申请拒绝通知失败: {e}")
+
+
+async def send_service_application_cancelled_notification(
+    db: AsyncSession,
+    expert_id: str,
+    applicant_id: str,
+    service_id: int,
+):
+    """用户取消服务申请，发送通知给任务达人"""
+    try:
+        from app import async_crud
+        
+        applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
+        if not applicant:
+            return
+        
+        notification_content = json.dumps({
+            "type": "service_application_cancelled",
+            "service_id": service_id,
+            "applicant_id": applicant_id,
+            "applicant_name": applicant.name or f"用户{applicant_id}",
+            "message": "用户取消了服务申请",
+        }, ensure_ascii=False)
+        
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="service_application_cancelled",
+            title="服务申请已取消",
+            content=notification_content,
+            related_id=str(service_id),
+        )
+        
+        logger.info(f"服务申请取消通知已发送给任务达人: {expert_id}")
+        
+    except Exception as e:
+        logger.error(f"发送服务申请取消通知失败: {e}")

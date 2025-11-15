@@ -17,6 +17,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     JSON,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, INET
 from sqlalchemy.ext.asyncio import AsyncAttrs
@@ -1201,4 +1202,139 @@ class AuditLog(Base):
         Index("ix_audit_logs_user", user_id),
         Index("ix_audit_logs_admin", admin_id),
         Index("ix_audit_logs_created", created_at),
+    )
+
+
+# ==================== 任务达人功能模型 ====================
+
+def get_utc_time():
+    """获取当前UTC时间（用于数据库存储）"""
+    return datetime.now(tz.utc)
+
+
+class TaskExpertApplication(Base):
+    """任务达人申请表"""
+    __tablename__ = "task_expert_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    application_message = Column(Text, nullable=True)
+    status = Column(String(20), default="pending")  # pending, approved, rejected
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    review_comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    user = relationship("User", backref="expert_applications")  # 修复：改为复数，表示一对多关系
+    reviewer = relationship("AdminUser", backref="reviewed_expert_applications")
+    
+    __table_args__ = (
+        Index("ix_task_expert_applications_user_id", user_id),
+        Index("ix_task_expert_applications_status", status),
+        Index("ix_task_expert_applications_reviewed_by", reviewed_by),
+        # 注意：部分唯一索引需要在数据库层面通过SQL创建
+        # CREATE UNIQUE INDEX uq_expert_app_pending ON task_expert_applications (user_id, status) WHERE status = 'pending';
+    )
+
+
+class TaskExpert(Base):
+    """任务达人表
+    
+    重要说明：
+    - id 字段与用户在 users 表中的 id 相同
+    - 通过外键约束确保数据一致性
+    - 管理员批准申请时，使用申请中的 user_id 作为任务达人的 id
+    """
+    __tablename__ = "task_experts"
+    
+    id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)  # 与用户ID相同
+    expert_name = Column(String(100), nullable=True)
+    bio = Column(Text, nullable=True)
+    avatar = Column(Text, nullable=True)  # 与DDL统一为TEXT，支持长CDN URL
+    status = Column(String(20), default="active")  # active, inactive, suspended
+    rating = Column(DECIMAL(3, 2), default=0.00)  # 0.00-5.00（CHECK约束在DDL中定义）
+    total_services = Column(Integer, default=0)
+    completed_tasks = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    approved_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # 关系
+    user = relationship("User", backref="expert_profile", foreign_keys=[id])
+    approver = relationship("AdminUser", backref="approved_experts")
+    services = relationship("TaskExpertService", back_populates="expert", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("ix_task_experts_status", status),
+        Index("ix_task_experts_rating", rating),
+    )
+
+
+class TaskExpertService(Base):
+    """任务达人服务菜单表"""
+    __tablename__ = "task_expert_services"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    service_name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    images = Column(JSONB, nullable=True)  # JSON数组（使用PostgreSQL JSONB类型）
+    base_price = Column(DECIMAL(12, 2), nullable=False)
+    currency = Column(String(3), default="GBP")
+    status = Column(String(20), default="active")  # active, inactive
+    display_order = Column(Integer, default=0)
+    view_count = Column(Integer, default=0)
+    application_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    expert = relationship("TaskExpert", back_populates="services")
+    applications = relationship("ServiceApplication", back_populates="service", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("ix_task_expert_services_expert_id", expert_id),
+        Index("ix_task_expert_services_status", status),
+        Index("ix_task_expert_services_expert_status", expert_id, status),
+    )
+
+
+class ServiceApplication(Base):
+    """服务申请表"""
+    __tablename__ = "service_applications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
+    applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    application_message = Column(Text, nullable=True)
+    negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 用户提出的议价价格
+    expert_counter_price = Column(DECIMAL(12, 2), nullable=True)  # 任务达人提出的再次议价价格
+    currency = Column(String(3), default="GBP")
+    status = Column(String(20), default="pending")  # pending, negotiating, price_agreed, approved, rejected, cancelled
+    final_price = Column(DECIMAL(12, 2), nullable=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_at = Column(DateTime(timezone=True), nullable=True)
+    price_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 价格达成一致的时间
+    
+    # 关系
+    service = relationship("TaskExpertService", back_populates="applications")
+    applicant = relationship("User", foreign_keys=[applicant_id], backref="service_applications")
+    expert = relationship("TaskExpert", foreign_keys=[expert_id])
+    task = relationship("Task", backref="service_application")
+    
+    __table_args__ = (
+        Index("ix_service_applications_service_id", service_id),
+        Index("ix_service_applications_applicant_id", applicant_id),
+        Index("ix_service_applications_expert_id", expert_id),
+        Index("ix_service_applications_status", status),
+        Index("ix_service_applications_task_id", task_id),
+        # 注意：部分唯一索引需要在数据库层面通过SQL创建
+        # CREATE UNIQUE INDEX uq_service_app_pending_combo ON service_applications (service_id, applicant_id, status) WHERE status IN ('pending', 'negotiating', 'price_agreed');
     )
