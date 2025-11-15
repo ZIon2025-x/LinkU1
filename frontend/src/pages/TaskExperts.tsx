@@ -346,6 +346,12 @@ const TaskExperts: React.FC = () => {
     navigate(`/user/${expertId}`);
   };
 
+  const handleRequestService = (expertId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // 阻止事件冒泡，避免触发卡片的点击事件
+    // 跳转到任务发布页面，可以通过URL参数传递任务达人ID
+    navigate(`/publish-task?expert_id=${expertId}`);
+  };
+
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -980,7 +986,10 @@ const TaskExperts: React.FC = () => {
                   gap: '12px'
                 }}>
                   <button
-                    onClick={() => handleExpertClick(expert.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExpertClick(expert.id);
+                    }}
                     style={{
                       flex: 1,
                       padding: '12px 16px',
@@ -1004,7 +1013,32 @@ const TaskExperts: React.FC = () => {
                   >
                     {t('taskExperts.viewProfile')}
                   </button>
-                  {/* 联系功能已移除 - 应通过任务申请流程联系专家 */}
+                  <button
+                    onClick={(e) => handleRequestService(expert.id, e)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#fff',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
+                    }}
+                  >
+                    {t('taskExperts.requestService')}
+                  </button>
                 </div>
               </div>
             </div>
