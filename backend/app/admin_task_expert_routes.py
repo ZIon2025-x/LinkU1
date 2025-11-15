@@ -326,7 +326,7 @@ async def create_featured_expert_from_application(
             response_time_en=None,
             success_rate=0.0,
             is_verified=0,
-            is_active=1,  # 默认启用
+            is_active=0,  # 默认禁用，需要管理员完善信息后手动启用
             is_featured=1,  # 默认精选
             display_order=0,
             category=None,
