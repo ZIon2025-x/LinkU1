@@ -116,116 +116,133 @@ async def review_expert_application(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """管理员审核任务达人申请"""
-    # 1. 获取申请记录（使用FOR UPDATE锁，防止并发）
-    application = await db.execute(
-        select(models.TaskExpertApplication)
-        .where(models.TaskExpertApplication.id == application_id)
-        .where(models.TaskExpertApplication.status == "pending")
-        .with_for_update()  # 并发安全：行级锁
-    )
-    application = application.scalar_one_or_none()
-    
-    if not application:
-        raise HTTPException(status_code=404, detail="申请不存在或已处理")
-    
-    if review_data.action == "approve":
-        # 2. 验证用户是否存在
-        from app import async_crud
-        user = await async_crud.async_user_crud.get_user_by_id(db, application.user_id)
+    try:
+        logger.info(f"开始审核申请 {application_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
         
-        if not user:
-            raise HTTPException(status_code=404, detail="用户不存在")
-        
-        # 3. 验证用户是否已经是任务达人（主键约束自然防重）
-        existing_expert = await db.execute(
-            select(models.TaskExpert).where(models.TaskExpert.id == application.user_id)
+        # 1. 获取申请记录（使用FOR UPDATE锁，防止并发）
+        application_result = await db.execute(
+            select(models.TaskExpertApplication)
+            .where(models.TaskExpertApplication.id == application_id)
+            .where(models.TaskExpertApplication.status == "pending")
+            .with_for_update()  # 并发安全：行级锁
         )
-        if existing_expert.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="该用户已经是任务达人")
+        application = application_result.scalar_one_or_none()
         
-        # 4. 创建任务达人记录（ID使用用户的ID）
-        try:
-            new_expert = models.TaskExpert(
-                id=application.user_id,  # 重要：使用用户的ID作为任务达人的ID
-                expert_name=None,  # 可选，默认为NULL
-                bio=None,  # 可选
-                avatar=None,  # 可选，使用用户默认头像
-                status="active",
-                rating=0.00,  # 初始评分为0
-                total_services=0,  # 初始服务数为0
-                completed_tasks=0,  # 初始完成任务数为0
-                approved_by=current_admin.id,  # 批准的管理员ID
-                approved_at=models.get_utc_time(),
+        if not application:
+            logger.warning(f"申请不存在或已处理: {application_id}")
+            raise HTTPException(status_code=404, detail="申请不存在或已处理")
+        
+        if review_data.action == "approve":
+            # 2. 验证用户是否存在
+            from app import async_crud
+            user = await async_crud.async_user_crud.get_user_by_id(db, application.user_id)
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="用户不存在")
+            
+            # 3. 验证用户是否已经是任务达人（主键约束自然防重）
+            existing_expert = await db.execute(
+                select(models.TaskExpert).where(models.TaskExpert.id == application.user_id)
             )
+            if existing_expert.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="该用户已经是任务达人")
             
-            db.add(new_expert)
+            # 4. 创建任务达人记录（ID使用用户的ID）
+            try:
+                new_expert = models.TaskExpert(
+                    id=application.user_id,  # 重要：使用用户的ID作为任务达人的ID
+                    expert_name=None,  # 可选，默认为NULL
+                    bio=None,  # 可选
+                    avatar=None,  # 可选，使用用户默认头像
+                    status="active",
+                    rating=0.00,  # 初始评分为0
+                    total_services=0,  # 初始服务数为0
+                    completed_tasks=0,  # 初始完成任务数为0
+                    approved_by=current_admin.id,  # 批准的管理员ID
+                    approved_at=models.get_utc_time(),
+                )
+                
+                db.add(new_expert)
+                
+                # 5. 更新申请记录
+                application.status = "approved"
+                application.reviewed_by = current_admin.id
+                application.reviewed_at = models.get_utc_time()
+                application.review_comment = review_data.review_comment
+                application.updated_at = models.get_utc_time()
+                
+                await db.commit()
+                await db.refresh(new_expert)
+                logger.info(f"成功创建任务达人: {new_expert.id}, 状态: {new_expert.status}")
+            except IntegrityError as e:
+                await db.rollback()
+                logger.error(f"创建任务达人失败（完整性错误）: {e}")
+                raise HTTPException(status_code=409, detail="该用户已经是任务达人（并发冲突）")
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"创建任务达人失败: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"创建任务达人失败: {str(e)}")
             
-            # 5. 更新申请记录
-            application.status = "approved"
+            # 6. 发送通知给用户
+            from app.task_notifications import send_expert_application_approved_notification
+            try:
+                await send_expert_application_approved_notification(
+                    db=db,
+                    user_id=application.user_id,
+                    expert_id=new_expert.id
+                )
+            except Exception as e:
+                logger.error(f"Failed to send approval notification: {e}")
+            
+            # 返回响应（简化，避免序列化错误）
+            try:
+                expert_dict = schemas.TaskExpertOut.model_validate(new_expert).model_dump()
+            except Exception as e:
+                logger.warning(f"序列化 TaskExpert 失败，使用简化响应: {e}")
+                expert_dict = {
+                    "id": new_expert.id,
+                    "status": new_expert.status,
+                }
+            
+            logger.info(f"申请 {application_id} 已批准，任务达人 {new_expert.id} 已创建")
+            return {
+                "message": "申请已批准，任务达人已创建",
+                "application_id": application_id,
+                "expert": expert_dict,
+            }
+        
+        elif review_data.action == "reject":
+            # 拒绝申请
+            application.status = "rejected"
             application.reviewed_by = current_admin.id
             application.reviewed_at = models.get_utc_time()
             application.review_comment = review_data.review_comment
             application.updated_at = models.get_utc_time()
             
             await db.commit()
-            await db.refresh(new_expert)
-            logger.info(f"成功创建任务达人: {new_expert.id}, 状态: {new_expert.status}")
-        except IntegrityError as e:
-            await db.rollback()
-            logger.error(f"创建任务达人失败（完整性错误）: {e}")
-            raise HTTPException(status_code=409, detail="该用户已经是任务达人（并发冲突）")
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"创建任务达人失败: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"创建任务达人失败: {str(e)}")
-        
-        # 6. 发送通知给用户
-        from app.task_notifications import send_expert_application_approved_notification
-        try:
-            await send_expert_application_approved_notification(
-                db=db,
-                user_id=application.user_id,
-                expert_id=new_expert.id
-            )
-        except Exception as e:
-            logger.error(f"Failed to send approval notification: {e}")
-        
-        # 返回响应（简化，避免序列化错误）
-        try:
-            expert_dict = schemas.TaskExpertOut.model_validate(new_expert).model_dump()
-        except Exception as e:
-            logger.warning(f"序列化 TaskExpert 失败，使用简化响应: {e}")
-            expert_dict = {
-                "id": new_expert.id,
-                "status": new_expert.status,
+            
+            # 发送通知给用户
+            from app.task_notifications import send_expert_application_rejected_notification
+            try:
+                await send_expert_application_rejected_notification(db, application.user_id, review_data.review_comment)
+            except Exception as e:
+                logger.error(f"Failed to send rejection notification: {e}")
+            
+            logger.info(f"申请 {application_id} 已拒绝")
+            return {
+                "message": "申请已拒绝"
             }
-        
-        return {
-            "message": "申请已批准，任务达人已创建",
-            "application_id": application_id,
-            "expert": expert_dict,
-        }
+        else:
+            logger.error(f"无效的操作: {review_data.action}")
+            raise HTTPException(status_code=400, detail=f"无效的操作: {review_data.action}")
     
-    elif review_data.action == "reject":
-        # 拒绝申请
-        application.status = "rejected"
-        application.reviewed_by = current_admin.id
-        application.reviewed_at = models.get_utc_time()
-        application.review_comment = review_data.review_comment
-        application.updated_at = models.get_utc_time()
-        
-        await db.commit()
-        
-        # 发送通知给用户
-        from app.task_notifications import send_expert_application_rejected_notification
-        try:
-            await send_expert_application_rejected_notification(db, application.user_id, review_data.review_comment)
-        except Exception as e:
-            logger.error(f"Failed to send rejection notification: {e}")
-        
-        return {
-            "message": "申请已拒绝"
-        }
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        logger.error(f"审核申请 {application_id} 时发生错误: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"审核失败: {str(e)}")
 
 
 @admin_task_expert_router.post("/task-expert-applications/{application_id}/create-featured-expert")

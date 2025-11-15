@@ -304,17 +304,21 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      await reviewTaskExpertApplication(selectedApplication.id, {
+      const result = await reviewTaskExpertApplication(selectedApplication.id, {
         action: reviewAction,
         review_comment: reviewComment || undefined,
       });
+      console.log('审核结果:', result);
       message.success(reviewAction === 'approve' ? '申请已批准' : '申请已拒绝');
       setShowReviewModal(false);
       setSelectedApplication(null);
       setReviewComment('');
       loadExpertApplications();
     } catch (err: any) {
-      message.error(err.response?.data?.detail || '审核失败');
+      console.error('审核失败错误详情:', err);
+      console.error('错误响应:', err.response);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || '审核失败';
+      message.error(errorMessage);
     }
   };
 
