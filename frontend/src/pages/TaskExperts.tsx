@@ -301,8 +301,34 @@ const TaskExperts: React.FC = () => {
       // 从API获取任务达人列表
       const expertsData = await getPublicTaskExperts(selectedCategory !== 'all' ? selectedCategory : undefined);
       
-      // 转换数据格式
-      let expertsList = Array.isArray(expertsData) ? expertsData : (expertsData.items || []);
+      // 转换数据格式 - 后端返回 { task_experts: [...] }
+      let expertsList: any[] = [];
+      if (Array.isArray(expertsData)) {
+        expertsList = expertsData;
+      } else if (expertsData.task_experts) {
+        expertsList = expertsData.task_experts;
+      } else if (expertsData.items) {
+        expertsList = expertsData.items;
+      }
+      
+      // 确保所有必需字段都有默认值
+      expertsList = expertsList.map((expert: any) => ({
+        ...expert,
+        expertise_areas: expert.expertise_areas || [],
+        featured_skills: expert.featured_skills || [],
+        achievements: expert.achievements || [],
+        bio: expert.bio || '',
+        join_date: expert.join_date || expert.created_at || new Date().toISOString(),
+        last_active: expert.last_active || expert.updated_at || new Date().toISOString(),
+        avg_rating: expert.avg_rating || 0,
+        completed_tasks: expert.completed_tasks || 0,
+        total_tasks: expert.total_tasks || 0,
+        completion_rate: expert.completion_rate || 0,
+        response_time: expert.response_time || '',
+        success_rate: expert.success_rate || 0,
+        is_verified: expert.is_verified || false,
+        location: expert.location || 'Online',
+      }));
       
       // 应用城市筛选
       if (selectedCity !== 'all') {
@@ -313,19 +339,21 @@ const TaskExperts: React.FC = () => {
       expertsList.sort((a: any, b: any) => {
         switch (sortBy) {
           case 'rating':
-            return (b.rating || 0) - (a.rating || 0);
+            return (b.avg_rating || 0) - (a.avg_rating || 0);
           case 'tasks':
             return (b.completed_tasks || 0) - (a.completed_tasks || 0);
-          case 'latest':
-            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          case 'recent':
+            return new Date(b.last_active || 0).getTime() - new Date(a.last_active || 0).getTime();
           default:
             return 0;
         }
       });
       
+      console.log('加载的任务达人列表:', expertsList);
       setExperts(expertsList);
     } catch (err: any) {
       console.error('加载任务达人列表失败:', err);
+      console.error('错误详情:', err.response?.data);
       message.error('加载任务达人列表失败');
       // 失败时使用空数组
       setExperts([]);
