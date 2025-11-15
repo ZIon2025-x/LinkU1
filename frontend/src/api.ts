@@ -1615,6 +1615,17 @@ export const getMyTaskExpertApplications = async (params?: { status?: string; se
   return res.data;
 };
 
+// 管理员 - 任务达人申请审核
+export const getTaskExpertApplications = async (params?: { status?: string; limit?: number; offset?: number }) => {
+  const res = await api.get('/api/admin/task-expert-applications', { params });
+  return res.data;
+};
+
+export const reviewTaskExpertApplication = async (applicationId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
+  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/review`, data);
+  return res.data;
+};
+
 export const counterOfferServiceApplication = async (applicationId: number, counterData: {
   counter_price: number;
   message?: string;

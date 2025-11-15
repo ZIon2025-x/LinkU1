@@ -4,7 +4,7 @@ import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout } from '../api';
+import api, { fetchCurrentUser, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getPublicTaskExperts, getTaskExpert } from '../api';
 import LoginModal from '../components/LoginModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
@@ -67,6 +67,7 @@ const TaskExperts: React.FC = () => {
   
   // 用户和通知相关状态
   const [user, setUser] = useState<any>(null);
+  const [isTaskExpert, setIsTaskExpert] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -228,8 +229,22 @@ const TaskExperts: React.FC = () => {
         if (userData && userData.residence_city && CITIES.includes(userData.residence_city)) {
           setSelectedCity(userData.residence_city);
         }
+        
+        // 检查用户是否是任务达人
+        if (userData && userData.id) {
+          try {
+            await getTaskExpert(userData.id);
+            setIsTaskExpert(true);
+          } catch (error: any) {
+            // 如果不是任务达人（404错误），设置为false
+            setIsTaskExpert(false);
+          }
+        } else {
+          setIsTaskExpert(false);
+        }
       } catch (error: any) {
         setUser(null);
+        setIsTaskExpert(false);
       }
     };
     
@@ -277,12 +292,47 @@ const TaskExperts: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    // 模拟API调用
-    setTimeout(() => {
-      setExperts(mockExperts);
+    loadExperts();
+  }, [selectedCategory, selectedCity, sortBy]);
+
+  const loadExperts = async () => {
+    setLoading(true);
+    try {
+      // 从API获取任务达人列表
+      const expertsData = await getPublicTaskExperts(selectedCategory !== 'all' ? selectedCategory : undefined);
+      
+      // 转换数据格式
+      let expertsList = Array.isArray(expertsData) ? expertsData : (expertsData.items || []);
+      
+      // 应用城市筛选
+      if (selectedCity !== 'all') {
+        expertsList = expertsList.filter((expert: any) => expert.location === selectedCity);
+      }
+      
+      // 应用排序
+      expertsList.sort((a: any, b: any) => {
+        switch (sortBy) {
+          case 'rating':
+            return (b.rating || 0) - (a.rating || 0);
+          case 'tasks':
+            return (b.completed_tasks || 0) - (a.completed_tasks || 0);
+          case 'latest':
+            return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+          default:
+            return 0;
+        }
+      });
+      
+      setExperts(expertsList);
+    } catch (err: any) {
+      console.error('加载任务达人列表失败:', err);
+      message.error('加载任务达人列表失败');
+      // 失败时使用空数组
+      setExperts([]);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
   // 处理单个通知标记为已读
   const handleMarkAsRead = async (id: number) => {
@@ -615,6 +665,41 @@ const TaskExperts: React.FC = () => {
           }}>
             {t('taskExperts.subtitle')}
           </p>
+          
+          {/* 任务达人管理按钮 - 只有任务达人才能看到 */}
+          {isTaskExpert && user && (
+            <div style={{ marginTop: '24px' }}>
+              <button
+                onClick={() => navigate('/task-experts/me/dashboard')}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50px',
+                  padding: '12px 32px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(59, 130, 246, 0.4)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(59, 130, 246, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.4)';
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>⚙️</span>
+                进入管理后台
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 筛选和排序 */}

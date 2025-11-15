@@ -148,6 +148,48 @@ async def get_my_application(
 
 # ==================== 任务达人管理接口 ====================
 
+@task_expert_router.get("", response_model=List[schemas.TaskExpertOut])
+async def get_experts_list(
+    status_filter: Optional[str] = Query("active", alias="status"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务达人列表（公开接口）"""
+    query = select(models.TaskExpert).where(
+        models.TaskExpert.status == status_filter
+    )
+    
+    # 获取总数
+    count_query = select(func.count(models.TaskExpert.id)).where(
+        models.TaskExpert.status == status_filter
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+    
+    # 分页查询
+    query = query.order_by(
+        models.TaskExpert.created_at.desc()
+    ).offset(offset).limit(limit)
+    
+    result = await db.execute(query)
+    experts = result.scalars().all()
+    
+    # 加载关联的用户信息
+    items = []
+    for expert in experts:
+        expert_dict = schemas.TaskExpertOut.model_validate(expert).model_dump()
+        # 加载用户信息以获取名称和头像
+        from app import async_crud
+        user = await async_crud.async_user_crud.get_user_by_id(db, expert.id)
+        if user:
+            expert_dict["user_name"] = user.name
+            expert_dict["user_avatar"] = user.avatar
+        items.append(expert_dict)
+    
+    return items
+
+
 @task_expert_router.get("/{expert_id}", response_model=schemas.TaskExpertOut)
 async def get_expert(
     expert_id: str,

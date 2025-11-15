@@ -18,6 +18,8 @@ import api, {
   createTaskExpert,
   updateTaskExpert,
   deleteTaskExpert,
+  getTaskExpertApplications,
+  reviewTaskExpertApplication,
   adminLogout,
   createInvitationCode,
   getInvitationCodes,
@@ -138,6 +140,14 @@ const AdminDashboard: React.FC = () => {
   const [taskExperts, setTaskExperts] = useState<any[]>([]);
   const [showTaskExpertModal, setShowTaskExpertModal] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
+  // 任务达人申请审核相关状态
+  const [expertApplications, setExpertApplications] = useState<any[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
+  const [reviewComment, setReviewComment] = useState('');
   const [taskExpertForm, setTaskExpertForm] = useState<any>({
     id: undefined,
     name: '',
@@ -224,6 +234,9 @@ const AdminDashboard: React.FC = () => {
         const expertsData = await getTaskExperts({ page: currentPage, size: 20 });
         setTaskExperts(expertsData.task_experts || []);
         setTotalPages(Math.ceil((expertsData.total || 0) / 20));
+      } else if (activeTab === 'expert-applications') {
+        // 加载任务达人申请数据
+        loadExpertApplications();
       } else if (activeTab === 'invitation-codes') {
         const codesData = await getInvitationCodes({
           page: invitationCodesPage,
@@ -258,6 +271,44 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // 加载任务达人申请列表
+  const loadExpertApplications = async () => {
+    setLoadingApplications(true);
+    try {
+      const data = await getTaskExpertApplications({ limit: 50, offset: 0 });
+      setExpertApplications(Array.isArray(data) ? data : (data.items || []));
+    } catch (err: any) {
+      message.error('加载申请列表失败');
+      console.error(err);
+    } finally {
+      setLoadingApplications(false);
+    }
+  };
+
+  // 审核任务达人申请
+  const handleReviewApplication = async () => {
+    if (!selectedApplication) return;
+    
+    if (reviewAction === 'reject' && !reviewComment.trim()) {
+      message.warning('拒绝申请时请填写审核意见');
+      return;
+    }
+
+    try {
+      await reviewTaskExpertApplication(selectedApplication.id, {
+        action: reviewAction,
+        review_comment: reviewComment || undefined,
+      });
+      message.success(reviewAction === 'approve' ? '申请已批准' : '申请已拒绝');
+      setShowReviewModal(false);
+      setSelectedApplication(null);
+      setReviewComment('');
+      loadExpertApplications();
+    } catch (err: any) {
+      message.error(err.response?.data?.detail || '审核失败');
+    }
+  };
 
   const handleCreateCustomerService = async () => {
     if (!newCustomerService.name || !newCustomerService.email || !newCustomerService.password) {
@@ -1400,6 +1451,7 @@ const AdminDashboard: React.FC = () => {
             alignItems: 'center',
             zIndex: 1000
           }}
+          onClick={() => setShowTaskExpertModal(false)}
         >
           <div 
             style={{
@@ -1482,20 +1534,16 @@ const AdminDashboard: React.FC = () => {
                 }}>
                   {taskExpertForm.avatar ? (
                     <img
-                      key={taskExpertForm.avatar} // 添加key强制重新渲染
+                      key={taskExpertForm.avatar}
                       src={taskExpertForm.avatar}
                       alt="头像预览"
                       onError={(e) => {
                         console.error('头像加载失败:', taskExpertForm.avatar);
-                        // 如果加载失败，显示占位符
                         const img = e.currentTarget;
                         const parent = img.parentElement;
                         if (parent) {
                           parent.innerHTML = '<span style="font-size: 10px; color: #ff4d4f;">加载失败</span>';
                         }
-                      }}
-                      onLoad={() => {
-                        // 头像加载成功
                       }}
                       style={{
                         width: '100%',
@@ -1517,14 +1565,12 @@ const AdminDashboard: React.FC = () => {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        // 检查文件大小（限制5MB）
                         if (file.size > 5 * 1024 * 1024) {
                           message.warning('图片文件过大，请选择小于5MB的图片');
                           e.target.value = '';
                           return;
                         }
                         
-                        // 检查文件类型
                         if (!file.type.startsWith('image/')) {
                           message.warning('请选择图片文件');
                           e.target.value = '';
@@ -1533,7 +1579,6 @@ const AdminDashboard: React.FC = () => {
                         
                         setUploadingAvatar(true);
                         try {
-                          // 上传图片到服务器
                           const formData = new FormData();
                           formData.append('image', file);
                           
@@ -1544,7 +1589,6 @@ const AdminDashboard: React.FC = () => {
                           });
                           
                           if (response.data.success && response.data.url) {
-                            // 使用服务器返回的URL
                             setTaskExpertForm({...taskExpertForm, avatar: response.data.url});
                           } else {
                             message.error('图片上传失败，请重试');
@@ -1554,7 +1598,6 @@ const AdminDashboard: React.FC = () => {
                           message.error(error.response?.data?.detail || '图片上传失败，请重试');
                         } finally {
                           setUploadingAvatar(false);
-                          // 重置文件输入框
                           e.target.value = '';
                         }
                       }
@@ -2020,6 +2063,254 @@ const AdminDashboard: React.FC = () => {
                   color: '#666',
                   borderRadius: '4px',
                   cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // 渲染任务达人申请审核页面
+  const renderExpertApplications = () => (
+    <div>
+      <h2>任务达人申请审核</h2>
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={loadExpertApplications}
+          style={{
+            padding: '8px 16px',
+            background: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          刷新列表
+        </button>
+      </div>
+
+      {loadingApplications ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+      ) : expertApplications.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+          暂无待审核的申请
+        </div>
+      ) : (
+        <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                <th style={{ padding: '12px', textAlign: 'left' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>用户</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>申请说明</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>申请时间</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expertApplications.map((app) => (
+                <tr key={app.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{app.id}</td>
+                  <td style={{ padding: '12px' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{app.user_name || app.user_id}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>ID: {app.user_id}</div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px', maxWidth: '300px' }}>
+                    <div style={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      fontSize: '14px'
+                    }}>
+                      {app.application_message || '-'}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      background: app.status === 'pending' ? '#fff3cd' : 
+                                  app.status === 'approved' ? '#d4edda' : '#f8d7da',
+                      color: app.status === 'pending' ? '#856404' :
+                             app.status === 'approved' ? '#155724' : '#721c24'
+                    }}>
+                      {app.status === 'pending' ? '待审核' :
+                       app.status === 'approved' ? '已批准' :
+                       app.status === 'rejected' ? '已拒绝' : app.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>
+                    {new Date(app.created_at).toLocaleString('zh-CN')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    {app.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedApplication(app);
+                            setReviewAction('approve');
+                            setReviewComment('');
+                            setShowReviewModal(true);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            marginRight: '8px',
+                            border: 'none',
+                            background: '#28a745',
+                            color: 'white',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}
+                        >
+                          批准
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedApplication(app);
+                            setReviewAction('reject');
+                            setReviewComment('');
+                            setShowReviewModal(true);
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            border: 'none',
+                            background: '#dc3545',
+                            color: 'white',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 600
+                          }}
+                        >
+                          拒绝
+                        </button>
+                      </>
+                    )}
+                    {app.status === 'approved' && app.review_comment && (
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        审核意见: {app.review_comment}
+                      </div>
+                    )}
+                    {app.status === 'rejected' && app.review_comment && (
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        拒绝原因: {app.review_comment}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 审核弹窗 */}
+      {showReviewModal && selectedApplication && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowReviewModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>
+              {reviewAction === 'approve' ? '批准申请' : '拒绝申请'}
+            </h3>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                用户: {selectedApplication.user_name || selectedApplication.user_id}
+              </div>
+              {selectedApplication.application_message && (
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                  申请说明: {selectedApplication.application_message}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                审核意见 {reviewAction === 'reject' && '*'}
+              </label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder={reviewAction === 'approve' ? '可选填写审核意见' : '请填写拒绝原因'}
+                style={{
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleReviewApplication}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: reviewAction === 'approve' ? '#28a745' : '#dc3545',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                确认{reviewAction === 'approve' ? '批准' : '拒绝'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setSelectedApplication(null);
+                  setReviewComment('');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
                 }}
               >
                 取消
@@ -2980,6 +3271,22 @@ const AdminDashboard: React.FC = () => {
           style={{
             padding: '10px 20px',
             border: 'none',
+            background: activeTab === 'expert-applications' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'expert-applications' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginRight: '10px'
+          }}
+          onClick={() => setActiveTab('expert-applications')}
+        >
+          任务达人申请审核
+        </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
             background: activeTab === 'notifications' ? '#007bff' : '#f0f0f0',
             color: activeTab === 'notifications' ? 'white' : 'black',
             cursor: 'pointer',
@@ -3076,6 +3383,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'personnel' && renderPersonnelManagement()}
             {activeTab === 'task-experts' && renderTaskExperts()}
+            {activeTab === 'expert-applications' && renderExpertApplications()}
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
           </>

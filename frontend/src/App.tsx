@@ -68,6 +68,8 @@ const Tasks = lazyWithRetry(() => import('./pages/Tasks'));
 const UserProfile = lazyWithRetry(() => import('./pages/UserProfile'));
 const TaskExperts = lazyWithRetry(() => import('./pages/TaskExperts'));
 const TaskExpertsIntro = lazyWithRetry(() => import('./pages/TaskExpertsIntro'));
+const TaskExpertDashboard = lazyWithRetry(() => import('./pages/TaskExpertDashboard'));
+const MyServiceApplications = lazyWithRetry(() => import('./pages/MyServiceApplications'));
 const CustomerService = lazyWithRetry(() => import('./pages/CustomerService'));
 const CustomerServiceLogin = lazyWithRetry(() => import('./pages/CustomerServiceLogin'));
 const AdminLogin = lazyWithRetry(() => import('./pages/AdminLogin'));
@@ -188,6 +190,16 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/user/:userId`} element={<UserProfile />} />
           <Route path={`/${lang}/task-experts`} element={<TaskExperts />} />
           <Route path={`/${lang}/task-experts/intro`} element={<TaskExpertsIntro />} />
+          <Route path={`/${lang}/task-experts/me/dashboard`} element={
+            <ProtectedRoute>
+              <TaskExpertDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/users/me/service-applications`} element={
+            <ProtectedRoute>
+              <MyServiceApplications />
+            </ProtectedRoute>
+          } />
           <Route path={`/${lang}/vip`} element={<VIP />} />
           <Route path={`/${lang}/wallet`} element={
             <ProtectedRoute>
@@ -252,6 +264,8 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/user/:userId" element={<UserProfileRedirect />} />
       <Route path="/task-experts" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts`} replace />} />
       <Route path="/task-experts/intro" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts/intro`} replace />} />
+      <Route path="/task-experts/me/dashboard" element={<Navigate to={`/${DEFAULT_LANGUAGE}/task-experts/me/dashboard`} replace />} />
+      <Route path="/users/me/service-applications" element={<Navigate to={`/${DEFAULT_LANGUAGE}/users/me/service-applications`} replace />} />
       <Route path="/vip" element={<Navigate to={`/${DEFAULT_LANGUAGE}/vip`} replace />} />
       <Route path="/wallet" element={<Navigate to={`/${DEFAULT_LANGUAGE}/wallet`} replace />} />
       <Route path="/settings" element={<Navigate to={`/${DEFAULT_LANGUAGE}/settings`} replace />} />
