@@ -270,34 +270,4 @@ async def create_expert_from_application(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="该用户已经是任务达人（并发冲突）")
-    
-    elif review_data.action == "reject":
-        # 拒绝申请
-        application.status = "rejected"
-        application.reviewed_by = current_admin.id
-        application.reviewed_at = models.get_utc_time()
-        application.review_comment = review_data.review_comment
-        application.updated_at = models.get_utc_time()
-        
-        await db.commit()
-        
-        # 发送通知给用户
-        from app.task_notifications import send_expert_application_rejected_notification
-        try:
-            await send_expert_application_rejected_notification(
-                db=db,
-                user_id=application.user_id,
-                review_comment=review_data.review_comment
-            )
-        except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
-        
-        return {
-            "message": "申请已拒绝",
-            "application_id": application_id,
-            "status": "rejected",
-        }
-    
-    else:
-        raise HTTPException(status_code=400, detail="无效的操作类型")
 
