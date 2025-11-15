@@ -153,13 +153,18 @@ const Wallet: React.FC = () => {
               background: 'rgba(255,255,255,0.2)',
               border: 'none',
               color: '#fff',
-              padding: '8px 16px',
+              padding: '8px 12px',
               borderRadius: '20px',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '18px',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            ← 返回首页
+            ←
           </button>
           <h1 style={{ 
             position: 'absolute',
