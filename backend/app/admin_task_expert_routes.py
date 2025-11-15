@@ -209,15 +209,16 @@ async def review_expert_application(
         }
 
 
-@admin_task_expert_router.post("/task-expert-applications/{application_id}/create-expert")
-async def create_expert_from_application(
+@admin_task_expert_router.post("/task-expert-applications/{application_id}/create-featured-expert")
+async def create_featured_expert_from_application(
     application_id: int,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
-    根据已批准的申请创建任务达人记录
-    用于在批准申请后手动创建任务达人（如果批准时未自动创建）
+    根据已批准的申请创建特色任务达人记录（FeaturedTaskExpert）
+    用于在前端任务达人页面展示
+    注意：TaskExpert 应该在批准申请时自动创建，这里只创建 FeaturedTaskExpert
     """
     # 1. 获取申请记录
     application_result = await db.execute(
@@ -229,7 +230,7 @@ async def create_expert_from_application(
         raise HTTPException(status_code=404, detail="申请不存在")
     
     if application.status != "approved":
-        raise HTTPException(status_code=400, detail="只能为已批准的申请创建任务达人")
+        raise HTTPException(status_code=400, detail="只能为已批准的申请创建特色任务达人")
     
     # 2. 验证用户是否存在
     from app import async_crud
@@ -238,36 +239,87 @@ async def create_expert_from_application(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     
-    # 3. 检查是否已经是任务达人
-    existing_expert = await db.execute(
+    # 3. 检查用户是否已经是 TaskExpert（批准申请时应该已经创建）
+    task_expert_result = await db.execute(
         select(models.TaskExpert).where(models.TaskExpert.id == application.user_id)
     )
-    if existing_expert.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="该用户已经是任务达人")
+    task_expert = task_expert_result.scalar_one_or_none()
     
-    # 4. 创建任务达人记录（ID使用用户的ID）
+    if not task_expert:
+        raise HTTPException(status_code=400, detail="该用户还不是任务达人，请先批准申请")
+    
+    # 4. 检查是否已经存在 FeaturedTaskExpert（避免重复创建）
+    from sqlalchemy import text
+    existing_featured_result = await db.execute(
+        text("SELECT id FROM featured_task_experts WHERE user_id = :user_id"),
+        {"user_id": application.user_id}
+    )
+    existing_featured = existing_featured_result.fetchone()
+    
+    if existing_featured:
+        raise HTTPException(status_code=400, detail="该用户已经是特色任务达人")
+    
+    # 5. 创建特色任务达人记录（FeaturedTaskExpert）
+    # 使用同步数据库会话（因为 FeaturedTaskExpert 是同步模型）
+    from app.database import SessionLocal
+    
+    sync_db = None
     try:
-        new_expert = models.TaskExpert(
-            id=application.user_id,  # 重要：使用用户的ID作为任务达人的ID
-            expert_name=None,  # 可选，默认为NULL
-            bio=None,  # 可选
-            avatar=None,  # 可选，使用用户默认头像
-            status="active",
-            approved_by=current_admin.id,  # 批准的管理员ID
-            approved_at=models.get_utc_time(),
+        # 创建同步数据库会话
+        sync_db = SessionLocal()
+        
+        import json
+        new_featured_expert = models.FeaturedTaskExpert(
+            user_id=application.user_id,  # 关联到用户ID
+            name=user.name or f"用户{application.user_id}",  # 使用用户名
+            avatar=user.avatar or "",  # 使用用户头像
+            user_level="normal",  # 默认等级
+            bio=application.application_message or None,  # 使用申请说明作为简介
+            bio_en=None,
+            avg_rating=0.0,
+            completed_tasks=0,
+            total_tasks=0,
+            completion_rate=0.0,
+            expertise_areas=None,
+            expertise_areas_en=None,
+            featured_skills=None,
+            featured_skills_en=None,
+            achievements=None,
+            achievements_en=None,
+            response_time=None,
+            response_time_en=None,
+            success_rate=0.0,
+            is_verified=0,
+            is_active=1,  # 默认启用
+            is_featured=1,  # 默认精选
+            display_order=0,
+            category=None,
+            location=None,
+            created_by=current_admin.id
         )
         
-        db.add(new_expert)
-        await db.commit()
-        await db.refresh(new_expert)
+        sync_db.add(new_featured_expert)
+        sync_db.commit()
+        sync_db.refresh(new_featured_expert)
         
-        logger.info(f"管理员 {current_admin.id} 为申请 {application_id} 创建了任务达人 {new_expert.id}")
+        logger.info(f"管理员 {current_admin.id} 为申请 {application_id} 创建了特色任务达人 {new_featured_expert.id}")
         
         return {
-            "message": "任务达人创建成功",
-            "expert_id": new_expert.id
+            "message": "特色任务达人创建成功",
+            "featured_expert_id": new_featured_expert.id,
+            "user_id": application.user_id
         }
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(status_code=409, detail="该用户已经是任务达人（并发冲突）")
+    except IntegrityError as e:
+        if sync_db:
+            sync_db.rollback()
+        logger.error(f"创建特色任务达人失败: {e}")
+        raise HTTPException(status_code=409, detail="该用户已经是特色任务达人（并发冲突）")
+    except Exception as e:
+        if sync_db:
+            sync_db.rollback()
+        logger.error(f"创建特色任务达人失败: {e}")
+        raise HTTPException(status_code=500, detail=f"创建特色任务达人失败: {str(e)}")
+    finally:
+        if sync_db:
+            sync_db.close()
 

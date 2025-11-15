@@ -1358,12 +1358,12 @@ const AdminDashboard: React.FC = () => {
                 try {
                   const data = await getTaskExpertApplications({ status: 'approved', limit: 100, offset: 0 });
                   const apps = Array.isArray(data) ? data : (data.items || []);
-                  // 过滤掉已经是任务达人的用户
+                  // 过滤掉已经是特色任务达人的用户（FeaturedTaskExpert）
                   const filteredApps = [];
                   for (const app of apps) {
-                    // 检查该用户是否已经是任务达人
-                    const isExpert = taskExperts.some(expert => expert.id === app.user_id);
-                    if (!isExpert) {
+                    // 检查该用户是否已经是特色任务达人（检查 user_id 字段）
+                    const isFeaturedExpert = taskExperts.some(expert => expert.user_id === app.user_id);
+                    if (!isFeaturedExpert) {
                       filteredApps.push(app);
                     }
                   }

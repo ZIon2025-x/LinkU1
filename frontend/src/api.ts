@@ -1628,7 +1628,7 @@ export const reviewTaskExpertApplication = async (applicationId: number, data: {
 
 // 根据已批准的申请创建任务达人
 export const createExpertFromApplication = async (applicationId: number) => {
-  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/create-expert`);
+  const res = await api.post(`/api/admin/task-expert-applications/${applicationId}/create-featured-expert`);
   return res.data;
 };
 
