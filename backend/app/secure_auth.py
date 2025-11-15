@@ -565,7 +565,6 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
     # 2. 如果Cookie中没有，尝试从请求头获取（仅作为最后的备用方案）
     if not session_id:
         session_id = request.headers.get("X-Session-ID")
-        if session_id:
     
     # 3. 如果还是没有，尝试从Authorization头获取（仅用于移动端JWT认证）
     if not session_id:
@@ -573,6 +572,7 @@ def validate_session(request: Request) -> Optional[SessionInfo]:
         if auth_header.startswith("Bearer "):
             # 这是JWT token，不是session_id，应该通过JWT认证处理
             # 不将JWT token当作session_id处理
+            pass
     
     if not session_id:
         return None

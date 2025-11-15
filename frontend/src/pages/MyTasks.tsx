@@ -197,7 +197,7 @@ const MyTasks: React.FC = () => {
       // 并行加载所有非关键数据
       Promise.all([
         // 并行加载所有已完成任务的评价
-        ...completedTasks.map(task => 
+        ...completedTasks.map((task: Task) => 
           loadTaskReviews(task.id).catch(() => {}) // 静默处理错误
         ),
         // 并行加载所有open任务的申请信息
