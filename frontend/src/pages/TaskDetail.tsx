@@ -1552,7 +1552,6 @@ const TaskDetail: React.FC = () => {
       const textLang = detectTextLanguage(task.title);
       // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
       if (textLang === language) {
-        console.log('翻译标题: 文本语言和界面语言相同，无需翻译');
         setTranslatedTitle(null);
         return;
       }
@@ -1584,7 +1583,6 @@ const TaskDetail: React.FC = () => {
       const textLang = detectTextLanguage(task.description);
       // 如果文本语言和界面语言相同，不需要翻译（这不应该发生，因为按钮应该只在needsTranslation时显示）
       if (textLang === language) {
-        console.log('翻译描述: 文本语言和界面语言相同，无需翻译');
         setTranslatedDescription(null);
         return;
       }

@@ -628,18 +628,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   // P0 优化：翻译标题 - 使用 useCallback 和 useTransition
   const handleTranslateTitle = useCallback(async () => {
     if (!task || !task.title) {
-      console.log('翻译标题: 任务或标题不存在');
       return;
     }
     
     // 如果已有翻译，重置为原文
     if (translatedTitle) {
-      console.log('翻译标题: 重置为原文');
       setTranslatedTitle(null);
       return;
     }
     
-    console.log('翻译标题: 开始翻译', { title: task.title, language, task });
     setIsTranslatingTitle(true);
     
     // P0 优化：使用 startTransition 包装非关键操作
@@ -648,21 +645,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       const textLang = detectTextLanguage(task.title);
       // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
-        console.log('翻译标题: 文本语言和界面语言相同，无需翻译');
         setTranslatedTitle(null);
         setIsTranslatingTitle(false);
         return;
       }
       // 目标语言就是当前界面语言
       const targetLang = language;
-      console.log('翻译标题: 调用translate函数', { title: task.title, textLang, targetLang });
       translate(task.title, targetLang, textLang)
         .then(translated => {
-          console.log('翻译标题: 翻译成功', { original: task.title, translated });
           setTranslatedTitle(translated);
         })
         .catch((error: any) => {
-          console.error('翻译标题失败:', error);
           alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
         })
         .finally(() => {
@@ -674,18 +667,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   // P0 优化：翻译描述 - 使用 useCallback 和 useTransition
   const handleTranslateDescription = useCallback(async () => {
     if (!task || !task.description) {
-      console.log('翻译描述: 任务或描述不存在');
       return;
     }
     
     // 如果已有翻译，重置为原文
     if (translatedDescription) {
-      console.log('翻译描述: 重置为原文');
       setTranslatedDescription(null);
       return;
     }
     
-    console.log('翻译描述: 开始翻译', { description: task.description.substring(0, 50), language });
     setIsTranslatingDescription(true);
     
     // P0 优化：使用 startTransition 包装非关键操作
@@ -694,21 +684,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       const textLang = detectTextLanguage(task.description);
       // 如果文本语言和界面语言相同，不需要翻译
       if (textLang === language) {
-        console.log('翻译描述: 文本语言和界面语言相同，无需翻译');
         setTranslatedDescription(null);
         setIsTranslatingDescription(false);
         return;
       }
       // 目标语言就是当前界面语言
       const targetLang = language;
-      console.log('翻译描述: 调用translate函数', { textLang, targetLang });
       translate(task.description, targetLang, textLang)
         .then(translated => {
-          console.log('翻译描述: 翻译成功', { translated: translated.substring(0, 50) });
           setTranslatedDescription(translated);
         })
         .catch((error: any) => {
-          console.error('翻译描述失败:', error);
           alert('翻译失败: ' + (error.response?.data?.detail || error.message || '未知错误'));
         })
         .finally(() => {
@@ -935,7 +921,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       return;
                     }
                     // 如果出错，继续执行跳转逻辑
-                    console.log('分享失败，跳转到详情页:', error);
                   }
                 }
                 

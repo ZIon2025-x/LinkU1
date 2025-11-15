@@ -21,10 +21,6 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   const { navigate } = useLocalizedNavigation();
   const { t } = useLanguage();
   
-  // 调试：打印未读数量
-  React.useEffect(() => {
-    console.log('[HamburgerMenu] 未读消息数量:', unreadCount, '用户:', user?.id, '是否显示红点:', unreadCount > 0);
-  }, [unreadCount, user]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);

@@ -1400,12 +1400,6 @@ const AdminDashboard: React.FC = () => {
             alignItems: 'center',
             zIndex: 1000
           }}
-          onClick={(e) => {
-            // 点击背景遮罩层关闭弹窗
-            if (e.target === e.currentTarget) {
-              setShowTaskExpertModal(false);
-            }
-          }}
         >
           <div 
             style={{
@@ -1501,7 +1495,7 @@ const AdminDashboard: React.FC = () => {
                         }
                       }}
                       onLoad={() => {
-                        console.log('头像加载成功:', taskExpertForm.avatar);
+                        // 头像加载成功
                       }}
                       style={{
                         width: '100%',

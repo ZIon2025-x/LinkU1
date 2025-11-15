@@ -476,7 +476,6 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
     // 只有在没有明确排序参数时才使用缓存（这种情况应该很少）
     if (sort_by !== undefined && sort_by !== null) {
       // 有排序参数时，直接请求不使用缓存，确保排序立即生效
-      console.log('[api.ts] 排序请求，绕过缓存，sort_by:', sort_by);
       const res = await api.get('/api/tasks', { params });
       return res.data;
     } else {
@@ -1520,18 +1519,14 @@ export const translateText = async (
   targetLanguage: string,
   sourceLanguage?: string
 ) => {
-  console.log('翻译API调用:', { text: text.substring(0, 50), targetLanguage, sourceLanguage });
   try {
     const res = await api.post('/api/translate', {
       text,
       target_language: targetLanguage,
       ...(sourceLanguage && { source_language: sourceLanguage })
     });
-    console.log('翻译API响应:', res.data);
     return res.data;
   } catch (error: any) {
-    console.error('翻译API错误:', error);
-    console.error('错误详情:', error.response?.data);
     throw error;
   }
 };

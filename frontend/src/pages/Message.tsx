@@ -674,7 +674,6 @@ const MessagePage: React.FC = () => {
     if (taskIdParam) {
       const taskId = parseInt(taskIdParam, 10);
       if (!isNaN(taskId) && taskId !== activeTaskId) {
-        console.log('从URL参数加载任务:', taskId);
         setActiveTaskId(taskId);
       }
     }
@@ -1601,24 +1600,12 @@ const MessagePage: React.FC = () => {
   // 加载任务列表
   const loadTasks = useCallback(async () => {
     if (!user) {
-      console.log('loadTasks: 用户未登录，跳过加载');
       return;
     }
     
-    console.log('loadTasks: 开始加载任务列表，用户ID:', user.id);
     setTasksLoading(true);
     try {
       const data = await getTaskChatList(50, 0);
-      console.log('loadTasks: 获取到任务列表数据:', data);
-      // 调试：打印第一个任务的图片信息
-      if (data && data.tasks && data.tasks.length > 0) {
-        console.log('loadTasks: 第一个任务的图片信息:', {
-          taskId: data.tasks[0].id,
-          images: data.tasks[0].images,
-          imagesType: typeof data.tasks[0].images,
-          isArray: Array.isArray(data.tasks[0].images)
-        });
-      }
       if (data && data.tasks) {
         // 过滤掉已取消的任务和已完成超过3天的任务
         const now = new Date();
@@ -1639,17 +1626,13 @@ const MessagePage: React.FC = () => {
           return true;
         });
         setTasks(activeTasks);
-        console.log('loadTasks: 任务列表已更新，任务数量:', activeTasks.length, '(已过滤已取消和已完成超过3天的任务)');
       } else {
-        console.warn('loadTasks: 返回数据格式异常:', data);
         setTasks([]);
       }
     } catch (error: any) {
-      console.error('加载任务列表失败:', error);
-      console.error('错误详情:', error.response?.data || error.message);
       // 如果是认证错误，不显示错误，让用户重新登录
       if (error.response?.status === 401 || error.response?.status === 403) {
-        console.warn('loadTasks: 认证失败，可能需要重新登录');
+        // 静默处理认证错误
       }
       setTasks([]);
     } finally {
@@ -1938,7 +1921,6 @@ const MessagePage: React.FC = () => {
               
               // 如果最后一条消息ID不同，说明有新消息，重新加载所有消息
               if (latestMessage.id !== lastTaskMessageIdRef.current) {
-                console.log('检测到新任务消息，重新加载消息列表');
                 await loadTaskMessages(activeTaskId);
                 lastTaskMessageIdRef.current = latestMessage.id;
                 
@@ -2032,12 +2014,10 @@ const MessagePage: React.FC = () => {
       }
       
       lastLoadedTasksRef.current = currentKey;
-      console.log('useEffect: 触发任务列表加载，chatMode:', chatMode, 'user:', user?.id);
       loadTasks();
     } else {
       // 不在任务模式，重置ref
       lastLoadedTasksRef.current = null;
-      console.log('useEffect: 跳过任务列表加载，chatMode:', chatMode, 'user:', user?.id);
     }
   }, [chatMode, user?.id, loadTasks]);
 
@@ -2048,7 +2028,6 @@ const MessagePage: React.FC = () => {
     if (user && chatMode === 'tasks' && !hasAttemptedLoadRef.current) {
       // 如果任务列表为空且不在加载中，则加载（只尝试一次）
       if (tasks.length === 0 && !tasksLoading) {
-        console.log('useEffect: 用户登录后备用加载任务列表，用户ID:', user.id, '当前任务数:', tasks.length);
         hasAttemptedLoadRef.current = true;
         const timer = setTimeout(() => {
           loadTasks();
@@ -2736,7 +2715,6 @@ const MessagePage: React.FC = () => {
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {
-    console.log('[scrollToBottom] 开始滚动到底部');
     const messagesContainer = messagesContainerRef.current;
     if (messagesContainer) {
       // 立即滚动到底部
@@ -6857,7 +6835,6 @@ const MessagePage: React.FC = () => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('[滚动按钮] 点击事件触发');
             scrollToBottom();
           }}
           style={{
