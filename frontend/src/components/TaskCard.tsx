@@ -295,8 +295,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
                   {hasPoints && (
                     <span style={{
                       position: 'absolute',
-                      top: '-8px',
-                      right: '0',
+                      top: '-4px',
+                      right: '2px',
                       color: '#fff',
                       fontSize: isMobile ? '9px' : '11px',
                       fontWeight: '600',

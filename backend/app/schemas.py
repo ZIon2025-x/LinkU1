@@ -298,6 +298,7 @@ class TaskOut(TaskBase):
     created_at: datetime.datetime
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
+    points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
 
     @validator('images', pre=True)
     def parse_images(cls, v):
