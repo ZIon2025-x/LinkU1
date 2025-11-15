@@ -232,23 +232,92 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
           }}>{getTaskTypeLabel(task.task_type)}</span>
         </div>
 
-        {/* 金额 - 右下角 */}
-        <div style={{
-          position: 'absolute',
-          bottom: isMobile ? '8px' : '12px',
-          right: isMobile ? '8px' : '12px',
-          background: 'rgba(5, 150, 105, 0.9)',
-          backdropFilter: 'blur(4px)',
-          color: '#fff',
-          padding: isMobile ? '6px 10px' : '8px 14px',
-          borderRadius: '20px',
-          fontSize: isMobile ? '14px' : '18px',
-          fontWeight: '700',
-          zIndex: 3,
-          boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)'
-        }}>
-          £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
-        </div>
+        {/* 金额/积分 - 右下角 */}
+        {(() => {
+          const moneyReward = (task.base_reward ?? task.reward) || 0;
+          const pointsReward = task.points_reward && task.points_reward > 0 ? task.points_reward : 0;
+          const hasMoney = moneyReward > 0;
+          const hasPoints = pointsReward > 0;
+          
+          // 如果只有积分奖励（没有金额或金额为0）
+          if (!hasMoney && hasPoints) {
+            return (
+              <div style={{
+                position: 'absolute',
+                bottom: isMobile ? '8px' : '12px',
+                right: isMobile ? '8px' : '12px',
+                background: 'rgba(139, 92, 246, 0.9)',
+                backdropFilter: 'blur(4px)',
+                color: '#fff',
+                padding: isMobile ? '6px 10px' : '8px 14px',
+                borderRadius: '20px',
+                fontSize: isMobile ? '14px' : '18px',
+                fontWeight: '700',
+                zIndex: 3,
+                boxShadow: '0 2px 12px rgba(139, 92, 246, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>⭐</span>
+                <span>{pointsReward.toLocaleString()} 积分</span>
+              </div>
+            );
+          }
+          
+          // 如果有金额奖励
+          if (hasMoney) {
+            return (
+              <div style={{
+                position: 'absolute',
+                bottom: isMobile ? '8px' : '12px',
+                right: isMobile ? '8px' : '12px',
+                zIndex: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: '4px'
+              }}>
+                {/* 金额显示 */}
+                <div style={{
+                  background: 'rgba(5, 150, 105, 0.9)',
+                  backdropFilter: 'blur(4px)',
+                  color: '#fff',
+                  padding: isMobile ? '6px 10px' : '8px 14px',
+                  borderRadius: '20px',
+                  fontSize: isMobile ? '14px' : '18px',
+                  fontWeight: '700',
+                  boxShadow: '0 2px 12px rgba(5, 150, 105, 0.4)',
+                  position: 'relative'
+                }}>
+                  £{moneyReward.toFixed(2)}
+                  {/* 积分奖励标签 - 右上角 */}
+                  {hasPoints && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      background: 'rgba(139, 92, 246, 0.95)',
+                      color: '#fff',
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      fontSize: isMobile ? '9px' : '11px',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 6px rgba(139, 92, 246, 0.5)',
+                      border: '2px solid #fff'
+                    }}>
+                      +{pointsReward.toLocaleString()}积分
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          
+          // 如果都没有，不显示
+          return null;
+        })()}
 
         {/* 截止时间 - 左下角 */}
         <div style={{

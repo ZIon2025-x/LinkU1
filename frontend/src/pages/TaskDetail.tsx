@@ -2073,27 +2073,89 @@ const TaskDetail: React.FC = () => {
           }}>{translatedDescription || task.description}</div>
         </div>
         
-        {/* 金额显示区域 */}
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '24px',
-            position: 'relative',
-            zIndex: 1
-          }}>
-            <div style={{ fontSize: '20px' }}>💰</div>
-            <span style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1e293b'
-            }}>金额：</span>
-            <span style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#059669'
-            }}>£{((task.agreed_reward ?? task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
-          </div>
+        {/* 金额/积分显示区域 */}
+        {(() => {
+          const moneyReward = (task.agreed_reward ?? task.base_reward ?? task.reward) || 0;
+          const pointsReward = task.points_reward && task.points_reward > 0 ? task.points_reward : 0;
+          const hasMoney = moneyReward > 0;
+          const hasPoints = pointsReward > 0;
+          
+          // 如果都没有，不显示
+          if (!hasMoney && !hasPoints) {
+            return null;
+          }
+          
+          return (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              marginBottom: '24px',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              {/* 金额显示 */}
+              {hasMoney && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '20px' }}>💰</div>
+                  <span style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#1e293b'
+                  }}>金额：</span>
+                  <span style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#059669'
+                  }}>£{moneyReward.toFixed(2)}</span>
+                  {/* 积分奖励标签 */}
+                  {hasPoints && (
+                    <span style={{
+                      background: 'rgba(139, 92, 246, 0.1)',
+                      color: '#8b5cf6',
+                      padding: '4px 12px',
+                      borderRadius: '16px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span>⭐</span>
+                      <span>+{pointsReward.toLocaleString()} 积分</span>
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              {/* 如果只有积分奖励（没有金额） */}
+              {!hasMoney && hasPoints && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '20px' }}>⭐</div>
+                  <span style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#1e293b'
+                  }}>积分奖励：</span>
+                  <span style={{
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#8b5cf6'
+                  }}>{pointsReward.toLocaleString()} 积分</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         
         
         {/* 操作按钮区域 */}

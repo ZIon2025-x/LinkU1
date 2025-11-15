@@ -637,14 +637,14 @@ const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, 
               <strong>任务等级：</strong>
               <div style={{ marginTop: '5px' }}>{task.task_level}</div>
             </div>
-            <div>
-              <strong>完成奖励积分：</strong>
-              <div style={{ marginTop: '5px', color: '#28a745', fontWeight: 'bold' }}>
-                {task.points_reward !== null && task.points_reward !== undefined 
-                  ? `${task.points_reward} 积分` 
-                  : '使用系统默认值'}
+            {task.points_reward !== null && task.points_reward !== undefined && task.points_reward > 0 && (
+              <div>
+                <strong>完成奖励积分：</strong>
+                <div style={{ marginTop: '5px', color: '#28a745', fontWeight: 'bold' }}>
+                  {task.points_reward.toLocaleString()} 积分
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -453,20 +453,6 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 执行数据库迁移
-        try:
-            from app.db_migrations import run_all_migrations, check_migration_needed
-            
-            if check_migration_needed(sync_engine):
-                logger.info("检测到需要执行数据库迁移...")
-                run_all_migrations(sync_engine)
-            else:
-                logger.info("✅ 数据库已是最新版本，无需迁移")
-        except Exception as e:
-            logger.warning(f"执行数据库迁移时出错（可继续运行）: {e}")
-            import traceback
-            traceback.print_exc()
-        
         # 创建优化索引（使用 pg_trgm）
         try:
             database_url = os.getenv("DATABASE_URL")
