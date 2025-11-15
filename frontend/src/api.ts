@@ -1574,4 +1574,21 @@ export const deleteInvitationCode = async (invitationId: number) => {
   return res.data;
 };
 
+// ==================== 积分系统 API ====================
+
+// 获取积分账户信息
+export const getPointsAccount = async () => {
+  const res = await api.get('/api/points/account');
+  return res.data;
+};
+
+// 获取积分交易记录
+export const getPointsTransactions = async (params?: {
+  page?: number;
+  limit?: number;
+}) => {
+  const res = await api.get('/api/points/transactions', { params });
+  return res.data;
+};
+
 export default api; 
