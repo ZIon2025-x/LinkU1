@@ -5,6 +5,7 @@
 
 import logging
 from typing import List, Optional
+from datetime import datetime, timezone
 
 from fastapi import (
     APIRouter,
@@ -116,10 +117,26 @@ async def review_expert_application(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """管理员审核任务达人申请"""
-    logger.info(f"开始审核申请 {application_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
-    
     try:
+        logger.info(f"开始审核申请 {application_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
+        
         # 1. 获取申请记录（使用FOR UPDATE锁，防止并发）
+        # 先检查申请是否存在（不限制状态），用于更好的错误提示
+        check_result = await db.execute(
+            select(models.TaskExpertApplication)
+            .where(models.TaskExpertApplication.id == application_id)
+        )
+        check_app = check_result.scalar_one_or_none()
+        
+        if not check_app:
+            logger.warning(f"申请不存在: {application_id}")
+            raise HTTPException(status_code=404, detail="申请不存在")
+        
+        if check_app.status != "pending":
+            logger.warning(f"申请已处理: {application_id}, 当前状态: {check_app.status}")
+            raise HTTPException(status_code=400, detail=f"申请已处理，当前状态: {check_app.status}")
+        
+        # 使用FOR UPDATE锁获取pending状态的申请
         application_result = await db.execute(
             select(models.TaskExpertApplication)
             .where(models.TaskExpertApplication.id == application_id)
@@ -129,8 +146,10 @@ async def review_expert_application(
         application = application_result.scalar_one_or_none()
         
         if not application:
-            logger.warning(f"申请不存在或已处理: {application_id}")
-            raise HTTPException(status_code=404, detail="申请不存在或已处理")
+            # 这种情况理论上不应该发生，因为上面已经检查过了
+            # 但如果在两次查询之间状态被其他请求修改了，这里会捕获
+            logger.warning(f"申请状态在查询间已变更: {application_id}")
+            raise HTTPException(status_code=400, detail="申请状态已变更，请刷新页面重试")
         
         if review_data.action == "approve":
             # 2. 验证用户是否存在
@@ -194,12 +213,26 @@ async def review_expert_application(
             except Exception as e:
                 logger.error(f"Failed to send approval notification: {e}")
             
-            # 返回响应（简化，避免序列化错误）
+            # 返回响应（手动构建，避免序列化错误）
             logger.info(f"申请 {application_id} 已批准，任务达人 {new_expert.id} 已创建")
+            
+            # 手动构建响应，确保类型正确
+            expert_dict = {
+                "id": str(new_expert.id),
+                "expert_name": new_expert.expert_name,
+                "bio": new_expert.bio,
+                "avatar": new_expert.avatar,
+                "status": new_expert.status,
+                "rating": float(new_expert.rating) if new_expert.rating is not None else 0.0,
+                "total_services": int(new_expert.total_services) if new_expert.total_services is not None else 0,
+                "completed_tasks": int(new_expert.completed_tasks) if new_expert.completed_tasks is not None else 0,
+                "created_at": new_expert.created_at.isoformat() if new_expert.created_at else datetime.now(timezone.utc).isoformat(),
+            }
+            
             return {
                 "message": "申请已批准，任务达人已创建",
                 "application_id": application_id,
-                "expert_id": new_expert.id,
+                "expert": expert_dict,
             }
         
         elif review_data.action == "reject":
@@ -227,15 +260,12 @@ async def review_expert_application(
             logger.error(f"无效的操作: {review_data.action}")
             raise HTTPException(status_code=400, detail=f"无效的操作: {review_data.action}")
     
-    except HTTPException as he:
-        # 重新抛出HTTP异常（不rollback，因为可能已经commit了）
-        raise he
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
     except Exception as e:
         logger.error(f"审核申请 {application_id} 时发生错误: {e}", exc_info=True)
-        try:
-            await db.rollback()
-        except Exception as rollback_error:
-            logger.error(f"回滚失败: {rollback_error}")
+        await db.rollback()
         raise HTTPException(status_code=500, detail=f"审核失败: {str(e)}")
 
 
