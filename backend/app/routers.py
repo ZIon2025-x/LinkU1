@@ -5912,7 +5912,7 @@ def get_public_task_experts(
         return {
             "task_experts": [
                 {
-                    "id": str(expert.id),
+                    "id": expert.user_id or str(expert.id),  # 优先使用 user_id，如果没有则使用 featured_task_expert.id
                     "name": expert.name,
                     "avatar": expert.avatar,
                     "user_level": expert.user_level,
@@ -5930,6 +5930,7 @@ def get_public_task_experts(
                     "location": expert.location,  # 添加城市字段
                 }
                 for expert in experts
+                if expert.user_id  # 只返回有 user_id 的记录，确保可以查询 TaskExpert
             ]
         }
     except Exception as e:
