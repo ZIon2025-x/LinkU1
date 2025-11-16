@@ -627,7 +627,7 @@ async def send_expert_profile_update_notification(
                 notification_type="expert_profile_update_request",
                 title="任务达人信息修改请求",
                 content=notification_content,
-                related_id=str(request_id)
+                related_id=request_id  # request_id 已经是整数
             )
         
         logger.info(f"信息修改请求通知已发送给所有管理员，请求ID: {request_id}")
@@ -652,7 +652,7 @@ async def send_expert_profile_update_approved_notification(
             notification_type="expert_profile_update_approved",
             title="信息修改已批准",
             content=notification_content,
-            related_id=str(request_id)
+            related_id=request_id  # request_id 已经是整数
         )
         
         logger.info(f"信息修改批准通知已发送给任务达人 {expert_id}")
@@ -681,7 +681,7 @@ async def send_expert_profile_update_rejected_notification(
             notification_type="expert_profile_update_rejected",
             title="信息修改已拒绝",
             content=notification_content,
-            related_id=str(request_id)
+            related_id=request_id  # request_id 已经是整数
         )
         
         logger.info(f"信息修改拒绝通知已发送给任务达人 {expert_id}")

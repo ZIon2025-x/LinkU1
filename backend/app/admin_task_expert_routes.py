@@ -494,6 +494,9 @@ async def review_profile_update_request(
             raise HTTPException(status_code=404, detail="任务达人不存在")
         
         if review_data.action == "approve":
+            # 在 commit() 之前保存 expert_id，避免后续访问 ORM 对象时触发延迟加载
+            expert_id_value = update_request.expert_id
+            
             # 3. 批准：更新任务达人信息
             if update_request.new_expert_name is not None:
                 expert.expert_name = update_request.new_expert_name
@@ -507,7 +510,7 @@ async def review_profile_update_request(
             from sqlalchemy import text
             featured_expert_result = await db.execute(
                 text("SELECT id FROM featured_task_experts WHERE user_id = :user_id"),
-                {"user_id": update_request.expert_id}
+                {"user_id": expert_id_value}
             )
             featured_expert_row = featured_expert_result.fetchone()
             
@@ -517,7 +520,7 @@ async def review_profile_update_request(
                 sync_db = SessionLocal()
                 try:
                     featured_expert = sync_db.query(models.FeaturedTaskExpert).filter(
-                        models.FeaturedTaskExpert.user_id == update_request.expert_id
+                        models.FeaturedTaskExpert.user_id == expert_id_value
                     ).first()
                     if featured_expert:
                         if update_request.new_expert_name is not None:
@@ -543,7 +546,7 @@ async def review_profile_update_request(
             # 6. 发送通知给任务达人
             from app.task_notifications import send_expert_profile_update_approved_notification
             try:
-                await send_expert_profile_update_approved_notification(db, update_request.expert_id, request_id)
+                await send_expert_profile_update_approved_notification(db, expert_id_value, request_id)
             except Exception as e:
                 logger.error(f"发送通知失败: {e}")
             
@@ -551,10 +554,13 @@ async def review_profile_update_request(
             return {
                 "message": "修改请求已批准",
                 "request_id": request_id,
-                "expert_id": update_request.expert_id
+                "expert_id": expert_id_value
             }
         
         elif review_data.action == "reject":
+            # 在 commit() 之前保存 expert_id，避免后续访问 ORM 对象时触发延迟加载
+            expert_id_value = update_request.expert_id
+            
             # 拒绝：只更新请求状态
             update_request.status = "rejected"
             update_request.reviewed_by = current_admin.id
@@ -567,7 +573,7 @@ async def review_profile_update_request(
             # 发送通知给任务达人
             from app.task_notifications import send_expert_profile_update_rejected_notification
             try:
-                await send_expert_profile_update_rejected_notification(db, update_request.expert_id, request_id, review_data.review_comment)
+                await send_expert_profile_update_rejected_notification(db, expert_id_value, request_id, review_data.review_comment)
             except Exception as e:
                 logger.error(f"发送通知失败: {e}")
             
