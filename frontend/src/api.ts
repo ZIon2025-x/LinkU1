@@ -494,9 +494,21 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
   }
 }
 
+/**
+ * 获取当前用户信息（带缓存）
+ * 使用cachedRequest包装，减少重复请求
+ */
 export async function fetchCurrentUser() {
-  const res = await api.get('/api/users/profile/me');
-  return res.data;
+  return cachedRequest(
+    '/api/users/profile/me',
+    async () => {
+      const res = await api.get('/api/users/profile/me');
+      return res.data;
+    },
+    CACHE_TTL.USER_INFO, // 5分钟缓存
+    undefined,
+    DEFAULT_DEBOUNCE_MS // 300ms防抖
+  );
 }
 
 export async function sendMessage(data: {

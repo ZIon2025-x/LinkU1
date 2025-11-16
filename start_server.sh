@@ -23,4 +23,4 @@ python -c "import app.main; print('导入成功')" || exit 1
 # 启动服务
 echo "=== 启动服务 ==="
 echo "端口: $PORT"
-exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log

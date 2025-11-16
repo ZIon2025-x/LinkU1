@@ -9,4 +9,4 @@ export PORT=${PORT:-8000}
 echo "Using port: $PORT"
 
 # 启动应用
-exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+exec python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log

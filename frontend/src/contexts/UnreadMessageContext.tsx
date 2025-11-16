@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api, { fetchCurrentUser } from '../api';
+import WebSocketManager from '../utils/WebSocketManager';
+import { WS_BASE_URL } from '../config';
 
 interface UnreadMessageContextType {
   unreadCount: number;
@@ -24,8 +26,7 @@ interface UnreadMessageProviderProps {
 export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [user, setUser] = useState<any>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // 检查当前是否在管理员或客服页面
   const isAdminOrServicePage = () => {
@@ -91,81 +92,46 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     }
   }, [user, refreshUnreadCount]);
 
-  // WebSocket实时更新
+  // 初始化WebSocket管理器
+  useEffect(() => {
+    WebSocketManager.initialize(WS_BASE_URL);
+  }, []);
+
+  // WebSocket实时更新（使用全局管理器）
   useEffect(() => {
     if (!user || isAdminOrServicePage()) {
-      // 关闭WebSocket连接（用户未登录或在管理员/客服页面）
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      // 断开WebSocket连接（用户未登录或在管理员/客服页面）
+      WebSocketManager.disconnect();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
       return;
     }
 
-    const connectWebSocket = () => {
-      try {
-        const { WS_BASE_URL } = require('../config');
-        const wsUrl = `${WS_BASE_URL}/ws/chat/${user.id}`;
-        const ws = new WebSocket(wsUrl);
-        
-        ws.onopen = () => {
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = null;
-          }
-        };
-        
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            
-            // 处理心跳消息
-            if (msg.type === 'heartbeat') {
-              return;
-            }
-            
-            // 如果收到新消息，立即刷新未读数量
-            if (msg.type === 'message_sent' || (msg.from && msg.content)) {
-              // 延迟一点刷新，确保后端已更新
-              setTimeout(() => {
-                refreshUnreadCount();
-              }, 500);
-            }
-          } catch (error) {
-            // 静默处理解析错误
-          }
-        };
-        
-        ws.onerror = (error) => {
-          // 静默处理错误
-        };
-        
-        ws.onclose = (event) => {
-          // 只在异常关闭时重连
-          if (event.code !== 1000 && user) {
-            reconnectTimeoutRef.current = setTimeout(() => {
-              connectWebSocket();
-            }, 5000);
-          }
-        };
-        
-        wsRef.current = ws;
-      } catch (error) {
-        // 静默处理错误
-      }
-    };
+    // 连接到WebSocket
+    WebSocketManager.connect(user.id);
 
-    connectWebSocket();
+    // 订阅消息
+    const unsubscribe = WebSocketManager.subscribe((msg) => {
+      // 如果收到新消息，立即刷新未读数量
+      if (msg.type === 'message_sent' || (msg.from && msg.content)) {
+        // 延迟一点刷新，确保后端已更新
+        setTimeout(() => {
+          refreshUnreadCount();
+        }, 500);
+      }
+    });
+
+    unsubscribeRef.current = unsubscribe;
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
+      // 注意：不断开连接，因为可能其他组件也在使用
+      // WebSocketManager会在所有订阅者都取消时自动管理连接
     };
   }, [user, refreshUnreadCount]);
 
