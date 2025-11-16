@@ -75,11 +75,11 @@ def cache_task_detail_sync(ttl: int = 300):
                             cache_data = result.dict()
                         else:
                             # 检查是否是 SQLAlchemy 模型对象
-                            from sqlalchemy.inspect import inspect as sqlalchemy_inspect
                             try:
+                                from sqlalchemy import inspect as sqlalchemy_inspect
                                 # 尝试使用 SQLAlchemy 的 inspect 获取列值
                                 mapper = sqlalchemy_inspect(result.__class__)
-                                if mapper:
+                                if mapper and hasattr(mapper, 'columns'):
                                     # 是 SQLAlchemy 模型，转换为字典
                                     cache_data = {
                                         col.key: getattr(result, col.key)
@@ -88,8 +88,8 @@ def cache_task_detail_sync(ttl: int = 300):
                                 else:
                                     # 不是 SQLAlchemy 模型，尝试使用 __dict__
                                     cache_data = result.__dict__ if hasattr(result, '__dict__') else result
-                            except Exception:
-                                # 如果 inspect 失败，尝试使用 __dict__
+                            except (ImportError, AttributeError, Exception):
+                                # 如果 inspect 失败或不可用，尝试使用 __dict__
                                 cache_data = result.__dict__ if hasattr(result, '__dict__') else result
                         
                         redis_client.setex(
@@ -171,11 +171,11 @@ def cache_task_detail_async(ttl: int = 300):
                         cache_data = result.dict()
                     else:
                         # 检查是否是 SQLAlchemy 模型对象
-                        from sqlalchemy.inspect import inspect as sqlalchemy_inspect
                         try:
+                            from sqlalchemy import inspect as sqlalchemy_inspect
                             # 尝试使用 SQLAlchemy 的 inspect 获取列值
                             mapper = sqlalchemy_inspect(result.__class__)
-                            if mapper:
+                            if mapper and hasattr(mapper, 'columns'):
                                 # 是 SQLAlchemy 模型，转换为字典
                                 cache_data = {
                                     col.key: getattr(result, col.key)
@@ -184,8 +184,8 @@ def cache_task_detail_async(ttl: int = 300):
                             else:
                                 # 不是 SQLAlchemy 模型，尝试使用 __dict__
                                 cache_data = result.__dict__ if hasattr(result, '__dict__') else result
-                        except Exception:
-                            # 如果 inspect 失败，尝试使用 __dict__
+                        except (ImportError, AttributeError, Exception):
+                            # 如果 inspect 失败或不可用，尝试使用 __dict__
                             cache_data = result.__dict__ if hasattr(result, '__dict__') else result
                     
                     # 重新创建客户端用于写入
