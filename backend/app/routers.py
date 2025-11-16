@@ -1616,9 +1616,18 @@ def get_my_profile(
             "name_updated_at": getattr(current_user, 'name_updated_at', None)
         }
         
-        # ⚠️ 生成ETag（用于HTTP协商缓存）
+        # ⚠️ 处理datetime对象，使其可JSON序列化（用于ETag生成和响应）
+        from datetime import datetime as dt
+        serializable_user = {}
+        for key, value in formatted_user.items():
+            if isinstance(value, dt):
+                serializable_user[key] = value.isoformat() if value else None
+            else:
+                serializable_user[key] = value
+        
+        # ⚠️ 生成ETag（用于HTTP协商缓存）- 必须使用已序列化的数据
         import hashlib
-        user_json = json.dumps(formatted_user, sort_keys=True)
+        user_json = json.dumps(serializable_user, sort_keys=True)
         etag = hashlib.md5(user_json.encode()).hexdigest()
         
         # 检查If-None-Match
@@ -1635,15 +1644,7 @@ def get_my_profile(
             )
         
         # ⚠️ 使用JSONResponse返回，设置响应头
-        # 注意：JSONResponse会自动序列化字典，但需要确保所有值都是JSON可序列化的
-        # 处理datetime对象（created_at和name_updated_at可能是datetime对象）
-        from datetime import datetime as dt
-        serializable_user = {}
-        for key, value in formatted_user.items():
-            if isinstance(value, dt):
-                serializable_user[key] = value.isoformat() if value else None
-            else:
-                serializable_user[key] = value
+        # 注意：serializable_user已经处理了datetime对象，可以直接使用
         
         return JSONResponse(
             content=serializable_user,
