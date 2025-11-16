@@ -213,18 +213,90 @@ async def update_expert_profile(
     current_expert: models.TaskExpert = Depends(get_current_expert),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """任务达人更新个人信息"""
-    if expert_data.expert_name is not None:
-        current_expert.expert_name = expert_data.expert_name
-    if expert_data.bio is not None:
-        current_expert.bio = expert_data.bio
-    if expert_data.avatar is not None:
-        current_expert.avatar = expert_data.avatar
-    current_expert.updated_at = models.get_utc_time()
+    """任务达人更新个人信息（已废弃，请使用 submit_profile_update_request）"""
+    # 为了向后兼容，保留此接口，但实际应该使用 submit_profile_update_request
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="此接口已废弃，请使用 POST /api/task-experts/me/profile-update-request 提交修改请求"
+    )
+
+
+@task_expert_router.post("/me/profile-update-request", response_model=schemas.TaskExpertProfileUpdateRequestOut)
+async def submit_profile_update_request(
+    update_data: schemas.TaskExpertProfileUpdateRequestCreate,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """任务达人提交信息修改请求（需要管理员审核）"""
+    from sqlalchemy.exc import IntegrityError
     
-    await db.commit()
-    await db.refresh(current_expert)
-    return current_expert
+    # 检查是否至少有一个字段需要修改
+    if not any([update_data.expert_name, update_data.bio, update_data.avatar]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="至少需要修改一个字段（名字、简介或头像）"
+        )
+    
+    # 检查是否已有待审核的修改请求
+    existing_request = await db.execute(
+        select(models.TaskExpertProfileUpdateRequest)
+        .where(
+            models.TaskExpertProfileUpdateRequest.expert_id == current_expert.id,
+            models.TaskExpertProfileUpdateRequest.status == "pending"
+        )
+    )
+    if existing_request.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="您已有一个待审核的修改请求，请等待审核完成后再提交新的请求"
+        )
+    
+    # 创建修改请求
+    new_request = models.TaskExpertProfileUpdateRequest(
+        expert_id=current_expert.id,
+        new_expert_name=update_data.expert_name,
+        new_bio=update_data.bio,
+        new_avatar=update_data.avatar,
+        status="pending"
+    )
+    
+    db.add(new_request)
+    
+    try:
+        await db.commit()
+        await db.refresh(new_request)
+        
+        # 发送通知给管理员
+        from app.task_notifications import send_expert_profile_update_notification
+        try:
+            await send_expert_profile_update_notification(db, current_expert.id, new_request.id)
+        except Exception as e:
+            logger.error(f"发送通知失败: {e}")
+        
+        return new_request
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="提交失败，可能存在并发冲突，请重试"
+        )
+
+
+@task_expert_router.get("/me/profile-update-request", response_model=Optional[schemas.TaskExpertProfileUpdateRequestOut])
+async def get_my_profile_update_request(
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取当前任务达人的待审核修改请求"""
+    request = await db.execute(
+        select(models.TaskExpertProfileUpdateRequest)
+        .where(
+            models.TaskExpertProfileUpdateRequest.expert_id == current_expert.id,
+            models.TaskExpertProfileUpdateRequest.status == "pending"
+        )
+        .order_by(models.TaskExpertProfileUpdateRequest.created_at.desc())
+    )
+    return request.scalar_one_or_none()
 
 
 # ==================== 服务菜单管理接口 ====================

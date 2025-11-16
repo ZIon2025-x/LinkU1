@@ -21,6 +21,8 @@ import api, {
   getTaskExpertApplications,
   reviewTaskExpertApplication,
   createExpertFromApplication,
+  getProfileUpdateRequests,
+  reviewProfileUpdateRequest,
   adminLogout,
   createInvitationCode,
   getInvitationCodes,
@@ -144,7 +146,7 @@ const AdminDashboard: React.FC = () => {
   const [approvedApplications, setApprovedApplications] = useState<any[]>([]); // 已批准的申请列表
   const [loadingApprovedApplications, setLoadingApprovedApplications] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [taskExpertSubTab, setTaskExpertSubTab] = useState<'list' | 'applications'>('list'); // 任务达人管理内部标签切换
+  const [taskExpertSubTab, setTaskExpertSubTab] = useState<'list' | 'applications' | 'profile-updates'>('list'); // 任务达人管理内部标签切换
   
   // 任务达人申请审核相关状态
   const [expertApplications, setExpertApplications] = useState<any[]>([]);
@@ -153,6 +155,14 @@ const AdminDashboard: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve');
   const [reviewComment, setReviewComment] = useState('');
+  
+  // 信息修改请求审核相关状态
+  const [profileUpdateRequests, setProfileUpdateRequests] = useState<any[]>([]);
+  const [loadingProfileUpdates, setLoadingProfileUpdates] = useState(false);
+  const [selectedProfileUpdate, setSelectedProfileUpdate] = useState<any>(null);
+  const [showProfileUpdateReviewModal, setShowProfileUpdateReviewModal] = useState(false);
+  const [profileUpdateReviewAction, setProfileUpdateReviewAction] = useState<'approve' | 'reject'>('approve');
+  const [profileUpdateReviewComment, setProfileUpdateReviewComment] = useState('');
   const [taskExpertForm, setTaskExpertForm] = useState<any>({
     id: undefined,
     name: '',
@@ -294,6 +304,45 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // 加载信息修改请求
+  const loadProfileUpdateRequests = async () => {
+    setLoadingProfileUpdates(true);
+    try {
+      const data = await getProfileUpdateRequests({ status: 'pending', limit: 50, offset: 0 });
+      setProfileUpdateRequests(Array.isArray(data) ? data : (data.items || []));
+    } catch (err: any) {
+      message.error('加载信息修改请求列表失败');
+      console.error(err);
+    } finally {
+      setLoadingProfileUpdates(false);
+    }
+  };
+  
+  // 审核信息修改请求
+  const handleReviewProfileUpdate = async () => {
+    if (!selectedProfileUpdate) return;
+    
+    if (profileUpdateReviewAction === 'reject' && !profileUpdateReviewComment.trim()) {
+      message.warning('拒绝请求时请填写审核意见');
+      return;
+    }
+    
+    try {
+      await reviewProfileUpdateRequest(selectedProfileUpdate.id, {
+        action: profileUpdateReviewAction,
+        review_comment: profileUpdateReviewComment || undefined,
+      });
+      message.success(profileUpdateReviewAction === 'approve' ? '已批准修改请求' : '已拒绝修改请求');
+      setShowProfileUpdateReviewModal(false);
+      setSelectedProfileUpdate(null);
+      setProfileUpdateReviewComment('');
+      loadProfileUpdateRequests();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || '审核失败';
+      message.error(errorMessage);
+    }
+  };
+  
   // 审核任务达人申请
   const handleReviewApplication = async () => {
     if (!selectedApplication) return;
@@ -1349,6 +1398,26 @@ const AdminDashboard: React.FC = () => {
         >
           申请审核
         </button>
+        <button
+          onClick={() => {
+            setTaskExpertSubTab('profile-updates');
+            loadProfileUpdateRequests();
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: 'transparent',
+            color: taskExpertSubTab === 'profile-updates' ? '#007bff' : '#666',
+            borderBottom: taskExpertSubTab === 'profile-updates' ? '2px solid #007bff' : '2px solid transparent',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: taskExpertSubTab === 'profile-updates' ? 600 : 400,
+            marginBottom: '-2px',
+            transition: 'all 0.2s'
+          }}
+        >
+          信息修改审核
+        </button>
       </div>
 
       {/* 任务达人列表 */}
@@ -2154,6 +2223,139 @@ const AdminDashboard: React.FC = () => {
         </>
       )}
 
+      {/* 信息修改请求审核 */}
+      {taskExpertSubTab === 'profile-updates' && (
+        <>
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={loadProfileUpdateRequests}
+              style={{
+                padding: '8px 16px',
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              刷新列表
+            </button>
+          </div>
+
+          {loadingProfileUpdates ? (
+            <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+          ) : profileUpdateRequests.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              暂无待审核的信息修改请求
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
+                <thead>
+                  <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>任务达人ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>当前信息</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>修改后信息</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>提交时间</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profileUpdateRequests.map((request) => (
+                    <tr key={request.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                      <td style={{ padding: '12px', fontSize: '14px' }}>{request.expert_id}</td>
+                      <td style={{ padding: '12px', fontSize: '14px' }}>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>名字:</strong> {request.expert?.expert_name || '-'}
+                        </div>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>简介:</strong> {request.expert?.bio ? (request.expert.bio.length > 50 ? request.expert.bio.substring(0, 50) + '...' : request.expert.bio) : '-'}
+                        </div>
+                        <div>
+                          <strong>头像:</strong> {request.expert?.avatar ? (
+                            <img src={request.expert.avatar} alt="当前头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                          ) : '-'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '14px' }}>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>名字:</strong> {request.new_expert_name || '-'}
+                        </div>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>简介:</strong> {request.new_bio ? (request.new_bio.length > 50 ? request.new_bio.substring(0, 50) + '...' : request.new_bio) : '-'}
+                        </div>
+                        <div>
+                          <strong>头像:</strong> {request.new_avatar ? (
+                            <img src={request.new_avatar} alt="新头像" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                          ) : '-'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '14px' }}>
+                        {new Date(request.created_at).toLocaleString('zh-CN')}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {request.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedProfileUpdate(request);
+                                setProfileUpdateReviewAction('approve');
+                                setProfileUpdateReviewComment('');
+                                setShowProfileUpdateReviewModal(true);
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                marginRight: '8px',
+                                border: 'none',
+                                background: '#28a745',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}
+                            >
+                              批准
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedProfileUpdate(request);
+                                setProfileUpdateReviewAction('reject');
+                                setProfileUpdateReviewComment('');
+                                setShowProfileUpdateReviewModal(true);
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                background: '#dc3545',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}
+                            >
+                              拒绝
+                            </button>
+                          </>
+                        )}
+                        {request.status === 'approved' && (
+                          <span style={{ color: '#28a745', fontSize: '12px' }}>已批准</span>
+                        )}
+                        {request.status === 'rejected' && (
+                          <span style={{ color: '#dc3545', fontSize: '12px' }}>已拒绝</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
       {/* 审核弹窗 - 移到任务达人管理内部 */}
       {showReviewModal && selectedApplication && (
         <div
@@ -2252,6 +2454,120 @@ const AdminDashboard: React.FC = () => {
                 }}
               >
                 取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 信息修改请求审核弹窗 */}
+      {showProfileUpdateReviewModal && selectedProfileUpdate && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowProfileUpdateReviewModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>
+              {profileUpdateReviewAction === 'approve' ? '批准信息修改' : '拒绝信息修改'}
+            </h3>
+            
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
+              <div style={{ marginBottom: '8px' }}>
+                <strong>任务达人ID:</strong> {selectedProfileUpdate.expert_id}
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <strong>修改内容:</strong>
+                <div style={{ marginLeft: '16px', marginTop: '4px' }}>
+                  {selectedProfileUpdate.new_expert_name && (
+                    <div>名字: {selectedProfileUpdate.new_expert_name}</div>
+                  )}
+                  {selectedProfileUpdate.new_bio && (
+                    <div>简介: {selectedProfileUpdate.new_bio}</div>
+                  )}
+                  {selectedProfileUpdate.new_avatar && (
+                    <div>
+                      头像: <img src={selectedProfileUpdate.new_avatar} alt="新头像" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', marginLeft: '8px' }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                审核意见 {profileUpdateReviewAction === 'reject' && <span style={{ color: 'red' }}>*</span>}
+              </label>
+              <textarea
+                value={profileUpdateReviewComment}
+                onChange={(e) => setProfileUpdateReviewComment(e.target.value)}
+                placeholder={profileUpdateReviewAction === 'approve' ? '可选：填写审核意见' : '请填写拒绝原因'}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  minHeight: '80px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowProfileUpdateReviewModal(false);
+                  setSelectedProfileUpdate(null);
+                  setProfileUpdateReviewComment('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReviewProfileUpdate}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: profileUpdateReviewAction === 'approve' ? '#28a745' : '#dc3545',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600
+                }}
+              >
+                {profileUpdateReviewAction === 'approve' ? '批准' : '拒绝'}
               </button>
             </div>
           </div>

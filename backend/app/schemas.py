@@ -1319,6 +1319,37 @@ class TaskExpertUpdate(BaseModel):
     avatar: Optional[str] = None
 
 
+class TaskExpertProfileUpdateRequestCreate(BaseModel):
+    """任务达人提交信息修改请求"""
+    expert_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class TaskExpertProfileUpdateRequestOut(BaseModel):
+    """任务达人信息修改请求输出"""
+    id: int
+    expert_id: str
+    new_expert_name: Optional[str]
+    new_bio: Optional[str]
+    new_avatar: Optional[str]
+    status: str
+    reviewed_by: Optional[str]
+    reviewed_at: Optional[datetime.datetime]
+    review_comment: Optional[str]
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class TaskExpertProfileUpdateRequestReview(BaseModel):
+    """管理员审核信息修改请求"""
+    action: Literal["approve", "reject"]
+    review_comment: Optional[str] = None
+
+
 class TaskExpertOut(BaseModel):
     id: str
     expert_name: Optional[str]

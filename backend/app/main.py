@@ -449,11 +449,15 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 注意：数据库迁移脚本需要手动执行，不在启动时自动执行
-        # 迁移脚本位置：backend/migrations/
-        # 1. create_coupon_points_tables.sql
-        # 2. add_task_indexes.sql
-        # 3. create_task_expert_tables.sql
+        # 执行自动数据库迁移
+        try:
+            from app.db_migrations import run_migration_sync
+            logger.info("开始执行自动数据库迁移...")
+            run_migration_sync(sync_engine)
+            logger.info("自动数据库迁移完成！")
+        except Exception as e:
+            logger.error(f"自动数据库迁移失败: {e}", exc_info=True)
+            # 迁移失败不阻止应用启动
         
         # 创建优化索引（使用 pg_trgm）
         try:

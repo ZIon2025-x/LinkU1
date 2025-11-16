@@ -403,3 +403,190 @@ async def create_featured_expert_from_application(
         if sync_db:
             sync_db.close()
 
+
+@admin_task_expert_router.get("/task-expert-profile-update-requests", response_model=schemas.PaginatedResponse)
+async def get_profile_update_requests(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员获取任务达人信息修改请求列表"""
+    from sqlalchemy.orm import selectinload
+    
+    query = select(models.TaskExpertProfileUpdateRequest).options(
+        selectinload(models.TaskExpertProfileUpdateRequest.expert)
+    )
+    
+    if status_filter:
+        query = query.where(models.TaskExpertProfileUpdateRequest.status == status_filter)
+    
+    # 获取总数
+    count_query = select(func.count(models.TaskExpertProfileUpdateRequest.id))
+    if status_filter:
+        count_query = count_query.where(models.TaskExpertProfileUpdateRequest.status == status_filter)
+    
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+    
+    # 分页查询
+    query = query.order_by(
+        models.TaskExpertProfileUpdateRequest.created_at.desc()
+    ).offset(offset).limit(limit)
+    
+    result = await db.execute(query)
+    requests = result.scalars().all()
+    
+    # 构建响应数据，包含专家信息
+    items = []
+    for r in requests:
+        item = schemas.TaskExpertProfileUpdateRequestOut.model_validate(r).model_dump()
+        # 添加专家信息
+        if r.expert:
+            item['expert'] = {
+                'expert_name': r.expert.expert_name,
+                'bio': r.expert.bio,
+                'avatar': r.expert.avatar,
+            }
+        items.append(item)
+    
+    return {
+        "total": total,
+        "items": items,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total,
+    }
+
+
+@admin_task_expert_router.post("/task-expert-profile-update-requests/{request_id}/review")
+async def review_profile_update_request(
+    request_id: int,
+    review_data: schemas.TaskExpertProfileUpdateRequestReview,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员审核任务达人信息修改请求"""
+    try:
+        logger.info(f"开始审核信息修改请求 {request_id}, 操作: {review_data.action}, 管理员: {current_admin.id}")
+        
+        # 1. 获取修改请求（使用FOR UPDATE锁，防止并发）
+        request_result = await db.execute(
+            select(models.TaskExpertProfileUpdateRequest)
+            .where(models.TaskExpertProfileUpdateRequest.id == request_id)
+            .where(models.TaskExpertProfileUpdateRequest.status == "pending")
+            .with_for_update()  # 并发安全：行级锁
+        )
+        update_request = request_result.scalar_one_or_none()
+        
+        if not update_request:
+            logger.warning(f"修改请求不存在或已处理: {request_id}")
+            raise HTTPException(status_code=404, detail="修改请求不存在或已处理")
+        
+        # 2. 获取任务达人记录
+        expert_result = await db.execute(
+            select(models.TaskExpert).where(models.TaskExpert.id == update_request.expert_id)
+        )
+        expert = expert_result.scalar_one_or_none()
+        
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        if review_data.action == "approve":
+            # 3. 批准：更新任务达人信息
+            if update_request.new_expert_name is not None:
+                expert.expert_name = update_request.new_expert_name
+            if update_request.new_bio is not None:
+                expert.bio = update_request.new_bio
+            if update_request.new_avatar is not None:
+                expert.avatar = update_request.new_avatar
+            expert.updated_at = models.get_utc_time()
+            
+            # 4. 同步更新 FeaturedTaskExpert（如果存在）
+            from sqlalchemy import text
+            featured_expert_result = await db.execute(
+                text("SELECT id FROM featured_task_experts WHERE user_id = :user_id"),
+                {"user_id": update_request.expert_id}
+            )
+            featured_expert_row = featured_expert_result.fetchone()
+            
+            if featured_expert_row:
+                # 使用同步数据库会话更新 FeaturedTaskExpert
+                from app.database import SessionLocal
+                sync_db = SessionLocal()
+                try:
+                    featured_expert = sync_db.query(models.FeaturedTaskExpert).filter(
+                        models.FeaturedTaskExpert.user_id == update_request.expert_id
+                    ).first()
+                    if featured_expert:
+                        if update_request.new_expert_name is not None:
+                            featured_expert.name = update_request.new_expert_name
+                        if update_request.new_bio is not None:
+                            featured_expert.bio = update_request.new_bio
+                        if update_request.new_avatar is not None:
+                            featured_expert.avatar = update_request.new_avatar
+                        sync_db.commit()
+                        sync_db.refresh(featured_expert)
+                finally:
+                    sync_db.close()
+            
+            # 5. 更新修改请求状态
+            update_request.status = "approved"
+            update_request.reviewed_by = current_admin.id
+            update_request.reviewed_at = models.get_utc_time()
+            update_request.review_comment = review_data.review_comment
+            update_request.updated_at = models.get_utc_time()
+            
+            await db.commit()
+            
+            # 6. 发送通知给任务达人
+            from app.task_notifications import send_expert_profile_update_approved_notification
+            try:
+                await send_expert_profile_update_approved_notification(db, update_request.expert_id, request_id)
+            except Exception as e:
+                logger.error(f"发送通知失败: {e}")
+            
+            logger.info(f"信息修改请求 {request_id} 已批准")
+            return {
+                "message": "修改请求已批准",
+                "request_id": request_id,
+                "expert_id": update_request.expert_id
+            }
+        
+        elif review_data.action == "reject":
+            # 拒绝：只更新请求状态
+            update_request.status = "rejected"
+            update_request.reviewed_by = current_admin.id
+            update_request.reviewed_at = models.get_utc_time()
+            update_request.review_comment = review_data.review_comment
+            update_request.updated_at = models.get_utc_time()
+            
+            await db.commit()
+            
+            # 发送通知给任务达人
+            from app.task_notifications import send_expert_profile_update_rejected_notification
+            try:
+                await send_expert_profile_update_rejected_notification(db, update_request.expert_id, request_id, review_data.review_comment)
+            except Exception as e:
+                logger.error(f"发送通知失败: {e}")
+            
+            logger.info(f"信息修改请求 {request_id} 已拒绝")
+            return {
+                "message": "修改请求已拒绝",
+                "request_id": request_id
+            }
+        else:
+            logger.error(f"无效的操作: {review_data.action}")
+            raise HTTPException(status_code=400, detail=f"无效的操作: {review_data.action}")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"审核信息修改请求 {request_id} 时发生错误: {e}", exc_info=True)
+        try:
+            await db.rollback()
+        except Exception as rollback_error:
+            logger.warning(f"Rollback 失败: {rollback_error}")
+        raise HTTPException(status_code=500, detail="审核失败，请稍后重试")
+

@@ -247,7 +247,8 @@ def run_migrations(engine: Engine) -> bool:
     migration_files = [
         "create_coupon_points_tables.sql",
         "add_task_indexes.sql",
-        "create_task_expert_tables.sql",  # 新增：任务达人功能迁移
+        "create_task_expert_tables.sql",  # 任务达人功能迁移
+        "create_task_expert_profile_update_requests_table.sql",  # 任务达人信息修改审核表迁移
     ]
     
     total_executed = 0

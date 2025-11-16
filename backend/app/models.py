@@ -1266,10 +1266,42 @@ class TaskExpert(Base):
     user = relationship("User", backref="expert_profile", foreign_keys=[id])
     approver = relationship("AdminUser", backref="approved_experts")
     services = relationship("TaskExpertService", back_populates="expert", cascade="all, delete-orphan")
+    profile_update_requests = relationship("TaskExpertProfileUpdateRequest", back_populates="expert", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_task_experts_status", status),
         Index("ix_task_experts_rating", rating),
+    )
+
+
+class TaskExpertProfileUpdateRequest(Base):
+    """任务达人信息修改审核申请表"""
+    __tablename__ = "task_expert_profile_update_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    # 待修改的字段
+    new_expert_name = Column(String(100), nullable=True)  # 新的名字
+    new_bio = Column(Text, nullable=True)  # 新的简介
+    new_avatar = Column(Text, nullable=True)  # 新的头像
+    # 审核相关
+    status = Column(String(20), default="pending")  # pending, approved, rejected
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    review_comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    expert = relationship("TaskExpert", back_populates="profile_update_requests")
+    reviewer = relationship("AdminUser", backref="reviewed_profile_update_requests")
+    
+    __table_args__ = (
+        Index("ix_profile_update_requests_expert_id", expert_id),
+        Index("ix_profile_update_requests_status", status),
+        Index("ix_profile_update_requests_reviewed_by", reviewed_by),
+        # 部分唯一索引：确保一个任务达人只能有一个待审核的修改请求
+        # CREATE UNIQUE INDEX uq_profile_update_pending ON task_expert_profile_update_requests (expert_id, status) WHERE status = 'pending';
     )
 
 

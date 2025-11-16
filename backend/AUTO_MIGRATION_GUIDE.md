@@ -31,6 +31,10 @@
    - 创建服务申请表
    - 创建相关索引和约束
 
+4. **任务达人信息修改审核表迁移** (`migrations/create_task_expert_profile_update_requests_table.sql`)
+   - 创建任务达人信息修改审核申请表
+   - 创建相关索引和约束
+
 ## 配置
 
 ### 环境变量
@@ -99,6 +103,7 @@ alembic upgrade head
 2. 执行优惠券和积分系统迁移
 3. 执行任务表索引迁移
 4. 执行任务达人功能迁移
+5. 执行任务达人信息修改审核表迁移
 
 ## 日志输出
 
@@ -175,5 +180,6 @@ alembic upgrade head
 - `backend/migrations/create_coupon_points_tables.sql` - 优惠券系统迁移脚本
 - `backend/migrations/add_task_indexes.sql` - 任务索引迁移脚本
 - `backend/migrations/create_task_expert_tables.sql` - 任务达人功能迁移脚本
+- `backend/migrations/create_task_expert_profile_update_requests_table.sql` - 任务达人信息修改审核表迁移脚本
 - `migrate_railway.py` - Railway 手动迁移脚本
 

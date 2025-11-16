@@ -21,6 +21,8 @@ import {
   approveServiceApplication,
   rejectServiceApplication,
   counterOfferServiceApplication,
+  submitProfileUpdateRequest,
+  getMyProfileUpdateRequest,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -81,10 +83,30 @@ const TaskExpertDashboard: React.FC = () => {
   
   // 登录弹窗
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // 信息修改相关
+  const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({ expert_name: '', bio: '', avatar: '' });
+  const [pendingRequest, setPendingRequest] = useState<any>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
 
   useEffect(() => {
     loadData();
+    loadPendingRequest();
   }, []);
+  
+  const loadPendingRequest = async () => {
+    try {
+      const request = await getMyProfileUpdateRequest();
+      setPendingRequest(request);
+    } catch (err: any) {
+      // 如果没有待审核请求，忽略错误
+      if (err.response?.status !== 404) {
+        console.error('加载待审核请求失败:', err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'services') {
@@ -239,6 +261,78 @@ const TaskExpertDashboard: React.FC = () => {
     };
     return colorMap[status] || '#6b7280';
   };
+  
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        message.error('头像文件大小不能超过5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        message.error('请选择图片文件');
+        return;
+      }
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleUploadAvatar = async (): Promise<string | null> => {
+    if (!avatarFile) {
+      return profileForm.avatar || null;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', avatarFile);
+      const res = await api.post('/api/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data.url;
+    } catch (err: any) {
+      message.error('上传头像失败');
+      return null;
+    }
+  };
+  
+  const handleSubmitProfileUpdate = async () => {
+    if (!profileForm.expert_name && !profileForm.bio && !avatarFile && !profileForm.avatar) {
+      message.warning('请至少修改一个字段');
+      return;
+    }
+    
+    if (pendingRequest) {
+      message.warning('您已有一个待审核的修改请求，请等待审核完成后再提交新的请求');
+      return;
+    }
+    
+    try {
+      let avatarUrl: string | null = profileForm.avatar || null;
+      if (avatarFile) {
+        avatarUrl = await handleUploadAvatar();
+        if (!avatarUrl) {
+          return;
+        }
+      }
+      
+      await submitProfileUpdateRequest({
+        expert_name: profileForm.expert_name || undefined,
+        bio: profileForm.bio || undefined,
+        avatar: avatarUrl || undefined,
+      });
+      
+      message.success('修改请求已提交，等待管理员审核');
+      setShowProfileEditModal(false);
+      loadPendingRequest();
+    } catch (err: any) {
+      message.error(err.response?.data?.detail || '提交修改请求失败');
+    }
+  };
 
   if (loading) {
     return (
@@ -274,11 +368,42 @@ const TaskExpertDashboard: React.FC = () => {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* 头部 */}
         <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#1a202c' }}>
-            任务达人管理后台
-          </h1>
-          <div style={{ marginTop: '12px', color: '#718096' }}>
-            欢迎回来，{expert.expert_name || user?.name || '任务达人'}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#1a202c' }}>
+                任务达人管理后台
+              </h1>
+              <div style={{ marginTop: '12px', color: '#718096' }}>
+                欢迎回来，{expert.expert_name || user?.name || '任务达人'}
+              </div>
+              {pendingRequest && (
+                <div style={{ marginTop: '12px', padding: '8px 12px', background: '#fef3c7', borderRadius: '6px', color: '#92400e', fontSize: '14px' }}>
+                  您有一个待审核的信息修改请求，请等待管理员审核
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setProfileForm({
+                  expert_name: expert.expert_name || '',
+                  bio: expert.bio || '',
+                  avatar: expert.avatar || '',
+                });
+                setAvatarPreview(expert.avatar || '');
+                setShowProfileEditModal(true);
+              }}
+              style={{
+                padding: '10px 20px',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              编辑资料
+            </button>
           </div>
         </div>
 
@@ -712,6 +837,149 @@ const TaskExpertDashboard: React.FC = () => {
           loadData();
         }}
       />
+      
+      {/* 编辑资料弹窗 */}
+      {showProfileEditModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowProfileEditModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>编辑资料</h2>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                名字
+              </label>
+              <input
+                type="text"
+                value={profileForm.expert_name}
+                onChange={(e) => setProfileForm({ ...profileForm, expert_name: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                }}
+                placeholder="请输入您的名字"
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                简介
+              </label>
+              <textarea
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  minHeight: '100px',
+                  resize: 'vertical',
+                }}
+                placeholder="请输入您的简介"
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                头像
+              </label>
+              {avatarPreview && (
+                <div style={{ marginBottom: '12px' }}>
+                  <img
+                    src={avatarPreview}
+                    alt="头像预览"
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      objectFit: 'cover',
+                      borderRadius: '50%',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                }}
+              />
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                支持 JPG、PNG 格式，文件大小不超过 5MB
+              </div>
+            </div>
+            <div style={{ marginTop: '20px', padding: '12px', background: '#fef3c7', borderRadius: '6px', fontSize: '14px', color: '#92400e' }}>
+              注意：修改信息需要管理员审核，审核通过后才会生效
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={() => setShowProfileEditModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmitProfileUpdate}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+              >
+                提交审核
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

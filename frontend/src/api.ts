@@ -1650,6 +1650,28 @@ export const rejectServiceApplication = async (applicationId: number, rejectReas
   return res.data;
 };
 
+// 任务达人信息修改请求
+export const submitProfileUpdateRequest = async (data: { expert_name?: string; bio?: string; avatar?: string }) => {
+  const res = await api.post('/api/task-experts/me/profile-update-request', data);
+  return res.data;
+};
+
+export const getMyProfileUpdateRequest = async () => {
+  const res = await api.get('/api/task-experts/me/profile-update-request');
+  return res.data;
+};
+
+// 管理员 - 任务达人信息修改请求审核
+export const getProfileUpdateRequests = async (params?: { status?: string; limit?: number; offset?: number }) => {
+  const res = await api.get('/api/admin/task-expert-profile-update-requests', { params });
+  return res.data;
+};
+
+export const reviewProfileUpdateRequest = async (requestId: number, data: { action: 'approve' | 'reject'; review_comment?: string }) => {
+  const res = await api.post(`/api/admin/task-expert-profile-update-requests/${requestId}/review`, data);
+  return res.data;
+};
+
 // 翻译API - 翻译单个文本
 export const translateText = async (
   text: string,
