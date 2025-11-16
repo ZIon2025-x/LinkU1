@@ -916,7 +916,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             margin: '0 0 8px 0',
                             fontSize: '13px',
                             color: '#333',
-                            lineHeight: '1.4'
+                            lineHeight: '1.6',
+                            whiteSpace: 'pre-line'  // 保留换行符，自动换行
                           }}>
                             {notification.content}
                           </p>
@@ -991,7 +992,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             margin: '0 0 8px 0',
                             fontSize: '13px',
                             color: '#333',
-                            lineHeight: '1.4'
+                            lineHeight: '1.6',
+                            whiteSpace: 'pre-line'  // 保留换行符，自动换行
                           }}>
                             {notification.content}
                           </p>

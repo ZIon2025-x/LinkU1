@@ -530,11 +530,21 @@ async def send_service_application_rejected_notification(
     try:
         from app import async_crud
         
-        # ⚠️ 直接使用文本内容，不存储 JSON
+        # 查询任务达人信息和服务信息
+        expert = await db.get(models.TaskExpert, expert_id)
+        service = await db.get(models.TaskExpertService, service_id)
+        
+        # 获取任务达人名字（如果没有则使用默认值）
+        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
+        
+        # 获取服务名称（如果没有则使用默认值）
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
+        # 构建通知内容，包含任务达人名字和服务名称
         if reject_reason and reject_reason.strip():
-            content = f"您的服务申请已被拒绝。拒绝原因：{reject_reason}"
+            content = f"您的服务申请已被拒绝。\n任务达人：{expert_name}\n服务名称：{service_name}\n拒绝原因：{reject_reason}"
         else:
-            content = "您的服务申请已被拒绝"
+            content = f"您的服务申请已被拒绝。\n任务达人：{expert_name}\n服务名称：{service_name}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,

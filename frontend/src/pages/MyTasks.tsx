@@ -561,7 +561,11 @@ const MyTasks: React.FC = () => {
   // 根据标签页过滤数据
   const getFilteredData = () => {
     if (activeTab === 'pending') {
-      return applications.filter(app => app.status === 'pending');
+      // 过滤掉任务已取消的申请记录
+      return applications.filter(app => 
+        app.status === 'pending' && 
+        app.task_status !== 'cancelled'
+      );
     }
     return tasks.filter(task => {
       if (activeTab === 'posted') return task.poster_id === user?.id && task.status !== 'cancelled';
@@ -890,7 +894,7 @@ const MyTasks: React.FC = () => {
               { key: 'all', label: t('myTasks.tabs.all'), count: tasks.length, icon: '📋' },
               { key: 'posted', label: t('myTasks.tabs.posted'), count: tasks.filter(t => t.poster_id === user?.id && t.status !== 'cancelled').length, icon: '📤' },
               { key: 'taken', label: t('myTasks.tabs.taken'), count: tasks.filter(t => t.taker_id === user?.id && t.status !== 'cancelled').length, icon: '📥' },
-              { key: 'pending', label: t('myTasks.tabs.pending'), count: applications.filter(app => app.status === 'pending').length, icon: '⏳' },
+              { key: 'pending', label: t('myTasks.tabs.pending'), count: applications.filter(app => app.status === 'pending' && app.task_status !== 'cancelled').length, icon: '⏳' },
               { key: 'completed', label: t('myTasks.tabs.completed'), count: tasks.filter(t => t.status === 'completed').length, icon: '✅' },
               { key: 'cancelled', label: t('myTasks.tabs.cancelled'), count: tasks.filter(t => t.status === 'cancelled').length, icon: '❌' }
             ].map(tab => (

@@ -1796,10 +1796,11 @@ def delete_task_safely(db: Session, task_id: int):
 
 
 def cancel_expired_tasks(db: Session):
-    """自动取消已过期的未接受任务 - 使用UTC时间进行比较"""
+    """自动取消已过期的未接受任务 - 使用UTC时间进行比较，并同步更新参与者状态"""
     from datetime import datetime, timedelta, timezone
     from app.time_utils_v2 import TimeHandlerV2
     import logging
+    from sqlalchemy import text
 
     from app.models import Task, User
 
@@ -1842,6 +1843,38 @@ def cancel_expired_tasks(db: Session):
                 # 将任务状态更新为已取消
                 task.status = "cancelled"
 
+                # 同步更新所有参与者的状态为 cancelled
+                # 先查询需要更新的参与者（用于后续通知）
+                participant_user_ids = []
+                try:
+                    # 先查询需要更新的参与者
+                    query_participants_sql = text("""
+                        SELECT DISTINCT user_id 
+                        FROM task_participants 
+                        WHERE task_id = :task_id 
+                          AND status NOT IN ('cancelled', 'completed')
+                    """)
+                    participants_result = db.execute(query_participants_sql, {"task_id": task.id})
+                    participant_user_ids = [row[0] for row in participants_result.fetchall()]
+                    
+                    # 更新 task_participants 表中所有非 cancelled 状态的参与者
+                    if participant_user_ids:
+                        update_participants_sql = text("""
+                            UPDATE task_participants 
+                            SET status = 'cancelled',
+                                cancelled_at = CURRENT_TIMESTAMP,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE task_id = :task_id 
+                              AND status NOT IN ('cancelled', 'completed')
+                        """)
+                        result = db.execute(update_participants_sql, {"task_id": task.id})
+                        participants_updated = result.rowcount
+                        if participants_updated > 0:
+                            logger.info(f"任务 {task.id} 已同步更新 {participants_updated} 个参与者状态为 cancelled")
+                except Exception as e:
+                    # 如果 task_participants 表不存在或查询失败，记录警告但继续处理
+                    logger.warning(f"更新任务 {task.id} 的参与者状态时出错（可能表不存在）: {e}")
+
                 # 记录任务历史
                 add_task_history(
                     db,
@@ -1861,6 +1894,22 @@ def cancel_expired_tasks(db: Session):
                     task.id,
                     auto_commit=False,
                 )
+
+                # 通知所有参与者
+                for user_id in participant_user_ids:
+                    if user_id != task.poster_id:  # 避免重复通知发布者
+                        try:
+                            create_notification(
+                                db,
+                                user_id,
+                                "task_cancelled",
+                                "任务自动取消",
+                                f'您申请的任务"{task.title}"因超过截止日期已自动取消',
+                                task.id,
+                                auto_commit=False,
+                            )
+                        except Exception as e:
+                            logger.warning(f"通知参与者 {user_id} 任务 {task.id} 取消时出错: {e}")
 
                 cancelled_count += 1
                 logger.info(f"任务 {task.id} 已成功取消")

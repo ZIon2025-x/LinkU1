@@ -479,7 +479,9 @@ async def get_user_applications(
                     "status": app.status,
                     "message": app.message,
                     "created_at": app.created_at.isoformat(),
-                    "task_poster_id": task.poster_id
+                    "task_poster_id": task.poster_id,
+                    "task_status": task.status,  # 添加任务状态，用于前端过滤已取消的任务
+                    "task_deadline": task.deadline.isoformat() if task.deadline else None  # 添加任务截止日期
                 })
         
         return result
