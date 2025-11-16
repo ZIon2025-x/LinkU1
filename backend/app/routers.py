@@ -1569,14 +1569,7 @@ def get_my_profile(
 
     # 安全地创建用户对象，避免SQLAlchemy内部属性
     try:
-        # 普通用户 - 强制从数据库重新查询以获取最新数据
-        from app.redis_cache import invalidate_user_cache
-        try:
-            invalidate_user_cache(current_user.id)
-        except Exception as e:
-            pass  # 静默处理缓存清除失败
-        
-        # 直接从数据库查询最新数据
+        # 普通用户 - 尝试从缓存获取，如果缓存未命中则从数据库查询
         from app import crud
         fresh_user = crud.get_user_by_id(db, current_user.id)
         if fresh_user:

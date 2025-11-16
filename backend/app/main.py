@@ -290,12 +290,12 @@ async def heartbeat_loop(websocket: WebSocket, user_id: str):
                     logger.error(f"Failed to send heartbeat to user {user_id}: {e}")
                     break
             else:
-                logger.info(
+                logger.debug(
                     f"WebSocket disconnected for user {user_id}, stopping heartbeat"
                 )
                 break
     except asyncio.CancelledError:
-        logger.info(f"Heartbeat task cancelled for user {user_id}")
+        logger.debug(f"Heartbeat task cancelled for user {user_id}")
     except Exception as e:
         logger.error(f"Heartbeat error for user {user_id}: {e}")
 
@@ -505,19 +505,19 @@ async def websocket_chat(
     # 检查用户session_id cookie
     if "session_id" in cookies:
         session_id = cookies["session_id"]
-        logger.info(f"Found user session_id in cookies for user {user_id}")
+        logger.debug(f"Found user session_id in cookies for user {user_id}")
     
     # 检查客服service_session_id cookie
     elif "service_session_id" in cookies:
         session_id = cookies["service_session_id"]
         is_service_auth = True
-        logger.info(f"Found service_session_id in cookies for user {user_id}")
+        logger.debug(f"Found service_session_id in cookies for user {user_id}")
     
     # 如果Cookie中没有session_id，尝试从查询参数获取（向后兼容）
     if not session_id:
         session_id = websocket.query_params.get("session_id")
         if session_id:
-            logger.info(f"Found session_id in query params for user {user_id}")
+            logger.debug(f"Found session_id in query params for user {user_id}")
     
     if not session_id:
         await websocket.close(code=1008, reason="Missing session_id")
@@ -540,7 +540,7 @@ async def websocket_chat(
                 await websocket.close(code=1008, reason="Service ID mismatch")
                 return
             
-            logger.info(f"WebSocket service authentication successful for user {user_id}")
+            logger.debug(f"WebSocket service authentication successful for user {user_id}")
         else:
             # 用户认证
             from app.secure_auth import SecureAuthManager
@@ -557,15 +557,26 @@ async def websocket_chat(
                 await websocket.close(code=1008, reason="User ID mismatch")
                 return
 
-            logger.info(f"WebSocket user authentication successful for user {user_id}")
+            logger.debug(f"WebSocket user authentication successful for user {user_id}")
     except Exception as e:
         logger.error(f"WebSocket authentication failed for user {user_id}: {e}")
         await websocket.close(code=1008, reason="Invalid session")
         return
 
+    # 检查是否已有连接，如果有则关闭旧连接
+    if user_id in active_connections:
+        old_websocket = active_connections[user_id]
+        try:
+            await old_websocket.close(code=1001, reason="New connection established")
+            logger.debug(f"Closed existing WebSocket connection for user {user_id}")
+        except Exception as e:
+            logger.debug(f"Error closing old WebSocket for user {user_id}: {e}")
+        finally:
+            active_connections.pop(user_id, None)
+    
     await websocket.accept()
     active_connections[user_id] = websocket
-    logger.info(f"WebSocket connection established for user {user_id}")
+    logger.debug(f"WebSocket connection established for user {user_id} (total: {len(active_connections)})")
 
     # 启动心跳任务
     import asyncio
@@ -575,7 +586,7 @@ async def websocket_chat(
     try:
         while True:
             data = await websocket.receive_text()
-            logger.info(f"Received message from user {user_id}: {data}")
+            logger.debug(f"Received message from user {user_id}: {data[:100]}...")  # 只记录前100字符
 
             try:
                 # 检查数据是否为有效的JSON
@@ -586,7 +597,7 @@ async def websocket_chat(
                     continue
 
                 msg = json.loads(data)
-                logger.info(f"Parsed message: {msg}")
+                logger.debug(f"Parsed message type: {msg.get('type', 'unknown')} from user {user_id}")
 
                 # 验证消息格式
                 if not isinstance(msg, dict):
@@ -910,7 +921,7 @@ async def websocket_chat(
                 if receiver_ws:
                     try:
                         await receiver_ws.send_text(json.dumps(message_response))
-                        logger.info(f"Message sent to receiver {msg['receiver_id']}")
+                        logger.debug(f"Message sent to receiver {msg['receiver_id']}")
                     except Exception as e:
                         logger.error(
                             f"Failed to send message to receiver {msg['receiver_id']}: {e}"
@@ -929,13 +940,13 @@ async def websocket_chat(
                         "status": "success",
                     }
                     await websocket.send_text(json.dumps(confirmation_response))
-                    logger.info(f"Confirmation sent to sender {user_id}")
+                    logger.debug(f"Confirmation sent to sender {user_id}")
                 except Exception as e:
                     logger.error(
                         f"Failed to send confirmation to sender {user_id}: {e}"
                     )
 
-                logger.info(f"Message processed for sender {user_id}")
+                logger.debug(f"Message processed for sender {user_id}")
 
             except json.JSONDecodeError as e:
                 logger.error(f"JSON decode error: {e}, data: {data}")
@@ -949,7 +960,7 @@ async def websocket_chat(
                 )
 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for user {user_id}")
+        logger.debug(f"WebSocket disconnected for user {user_id}")
         active_connections.pop(user_id, None)
         heartbeat_task.cancel()
     except Exception as e:

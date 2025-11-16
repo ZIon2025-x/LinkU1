@@ -179,7 +179,9 @@ class RedisCache:
         for pattern in patterns:
             total_deleted += self.delete_pattern(pattern)
         
-        logger.info(f"清除用户 {user_id} 的缓存，共删除 {total_deleted} 个键")
+        # 只在删除键数大于0时记录日志，减少日志噪音
+        if total_deleted > 0:
+            logger.debug(f"清除用户 {user_id} 的缓存，共删除 {total_deleted} 个键")
         return total_deleted
 
 # 全局Redis缓存实例
