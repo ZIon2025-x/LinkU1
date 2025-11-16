@@ -371,21 +371,19 @@ async def send_service_application_notification(
         if not applicant:
             return
         
-        notification_content = json.dumps({
-            "type": "service_application",
-            "service_id": service_id,
-            "service_name": service_name,
-            "applicant_id": applicant_id,
-            "applicant_name": applicant.name or f"用户{applicant_id}",
-            "negotiated_price": float(negotiated_price) if negotiated_price else None,
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        applicant_name = applicant.name or f"用户{applicant_id}"
+        if negotiated_price:
+            content = f"用户 {applicant_name} 申请了服务「{service_name}」，议价金额：£{float(negotiated_price):.2f}"
+        else:
+            content = f"用户 {applicant_name} 申请了服务「{service_name}」"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=expert_id,
             notification_type="service_application",
             title="新服务申请",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
         
@@ -545,20 +543,18 @@ async def send_service_application_rejected_notification(
     try:
         from app import async_crud
         
-        notification_content = json.dumps({
-            "type": "service_application_rejected",
-            "service_id": service_id,
-            "expert_id": expert_id,
-            "reject_reason": reject_reason or "",
-            "message": "您的服务申请已被拒绝",
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        if reject_reason and reject_reason.strip():
+            content = f"您的服务申请已被拒绝。拒绝原因：{reject_reason}"
+        else:
+            content = "您的服务申请已被拒绝"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=applicant_id,
             notification_type="service_application_rejected",
             title="服务申请被拒绝",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
         
