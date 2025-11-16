@@ -107,7 +107,7 @@ def update_user_statistics(db: Session, user_id: str):
             task_expert.completed_tasks = completed_tasks
             task_expert.rating = Decimal(str(avg_rating)).quantize(Decimal('0.01'))  # 保留2位小数
             task_expert.expert_name = user.name  # 同步用户名（如果用户修改了名字）
-            # 注意：bio 的计算在每天的后台任务中执行，不在这里更新
+            # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
             db.commit()
             db.refresh(task_expert)
@@ -124,7 +124,7 @@ def update_user_statistics(db: Session, user_id: str):
             featured_expert.completion_rate = completion_rate
             featured_expert.name = user.name  # 同步用户名（如果用户修改了名字）
             featured_expert.avatar = user.avatar or ""  # 同步用户头像
-            # 注意：bio 的计算在每天的后台任务中执行，不在这里更新
+            # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
             db.commit()
             db.refresh(featured_expert)
@@ -133,10 +133,15 @@ def update_user_statistics(db: Session, user_id: str):
 
 
 def update_task_expert_bio(db: Session, user_id: str):
-    """计算并更新任务达人的 bio 和相关统计字段（基于平均响应时间等）"""
+    """计算并更新任务达人的响应时间和相关统计字段
+    
+    注意：
+    - bio 是简介，不应该在这里更新（应该由用户或管理员手动填写）
+    - response_time 和 response_time_en 才是响应时间，需要计算
+    """
     from app.models import Review, Task
     
-    # 1. 计算平均响应时间（用于 bio 和 response_time）
+    # 1. 计算平均响应时间（用于 response_time 和 response_time_en）
     avg_response_time_seconds = None
     read_messages = (
         db.query(models.Message, models.MessageRead)
@@ -164,33 +169,7 @@ def update_task_expert_bio(db: Session, user_id: str):
         if response_times:
             avg_response_time_seconds = sum(response_times) / len(response_times)
     
-    # 2. 格式化响应时间为文本（用于 bio）
-    def format_response_time(seconds):
-        """将秒数格式化为可读的文本"""
-        if seconds is None:
-            return "暂无响应时间数据"
-        
-        if seconds < 60:
-            return f"平均响应时间：{int(seconds)}秒"
-        elif seconds < 3600:
-            minutes = int(seconds / 60)
-            return f"平均响应时间：{minutes}分钟"
-        elif seconds < 86400:
-            hours = int(seconds / 3600)
-            minutes = int((seconds % 3600) / 60)
-            if minutes > 0:
-                return f"平均响应时间：{hours}小时{minutes}分钟"
-            else:
-                return f"平均响应时间：{hours}小时"
-        else:
-            days = int(seconds / 86400)
-            hours = int((seconds % 86400) / 3600)
-            if hours > 0:
-                return f"平均响应时间：{days}天{hours}小时"
-            else:
-                return f"平均响应时间：{days}天"
-    
-    # 3. 格式化响应时间为简短文本（用于 response_time 字段）
+    # 2. 格式化响应时间为简短文本（用于 response_time 和 response_time_en 字段）
     def format_response_time_short(seconds, lang='zh'):
         """将秒数格式化为简短文本（如：2小时内）
         
@@ -213,11 +192,10 @@ def update_task_expert_bio(db: Session, user_id: str):
             days = int(seconds / 86400)
             return f"{days}天内" if lang == 'zh' else f"Within {days} days"
     
-    calculated_bio = format_response_time(avg_response_time_seconds)
     response_time_zh = format_response_time_short(avg_response_time_seconds, 'zh')
     response_time_en = format_response_time_short(avg_response_time_seconds, 'en')
     
-    # 4. 计算任务统计数据
+    # 3. 计算任务统计数据
     posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
     taken_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
     total_tasks = posted_tasks + taken_tasks
@@ -234,13 +212,13 @@ def update_task_expert_bio(db: Session, user_id: str):
     
     completion_rate = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
     
-    # 5. 计算平均评分
+    # 4. 计算平均评分
     avg_rating_result = (
         db.query(func.avg(Review.rating)).filter(Review.user_id == user_id).scalar()
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
     
-    # 6. 计算成功率（已完成任务中评价>=3星的任务数 / 全部任务数 * 100）
+    # 5. 计算成功率（已完成任务中评价>=3星的任务数 / 全部任务数 * 100）
     # 使用 JOIN 查询已完成任务中，有评价且评价>=3星的任务数量
     from sqlalchemy import distinct
     successful_tasks_count = (
@@ -257,19 +235,13 @@ def update_task_expert_bio(db: Session, user_id: str):
     # 成功率 = (评价>=3星的已完成任务数 / 全部任务数) * 100
     success_rate = (successful_tasks_count / total_tasks * 100.0) if total_tasks > 0 else 0.0
     
-    # 7. 更新 TaskExpert 的 bio
-    task_expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == user_id).first()
-    if task_expert:
-        task_expert.bio = calculated_bio
-        db.commit()
-        db.refresh(task_expert)
-    
-    # 8. 更新 FeaturedTaskExpert 的所有计算字段
+    # 6. 更新 FeaturedTaskExpert 的响应时间和统计字段
+    # 注意：bio 是简介，不应该在这里更新，应该由用户或管理员手动填写
     featured_expert = db.query(models.FeaturedTaskExpert).filter(
         models.FeaturedTaskExpert.user_id == user_id
     ).first()
     if featured_expert:
-        featured_expert.bio = calculated_bio
+        # 只更新响应时间和统计字段，不更新 bio（bio 是简介，应该手动填写）
         featured_expert.response_time = response_time_zh
         featured_expert.response_time_en = response_time_en
         featured_expert.avg_rating = avg_rating
@@ -280,11 +252,19 @@ def update_task_expert_bio(db: Session, user_id: str):
         db.commit()
         db.refresh(featured_expert)
     
-    return calculated_bio
+    # 注意：TaskExpert 模型没有 response_time 字段，只有 bio 字段
+    # bio 是简介，不应该在这里更新
+    
+    return response_time_zh
 
 
 def update_all_task_experts_bio():
-    """更新所有任务达人的 bio（每天执行一次）"""
+    """更新所有任务达人的响应时间和统计字段（每天执行一次）
+    
+    注意：
+    - bio 是简介，不应该在这里更新（应该由用户或管理员手动填写）
+    - response_time 和 response_time_en 才是响应时间，需要计算
+    """
     from app.database import SessionLocal
     from app.models import TaskExpert
     import logging
