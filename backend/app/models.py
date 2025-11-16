@@ -402,7 +402,7 @@ class StaffNotification(Base):
         String(20), default="info"
     )  # 提醒类型：info, warning, error, success
     is_read = Column(Integer, default=0)  # 是否已读：1=已读, 0=未读
-    created_at = Column(DateTime, default=get_uk_time)  # 创建时间
+    created_at = Column(DateTime, default=get_uk_time_naive)  # 创建时间（使用不带时区的 datetime）
     read_at = Column(DateTime, nullable=True)  # 阅读时间
 
 

@@ -620,6 +620,10 @@ async def send_expert_profile_update_notification(
         admin_users = admin_result.scalars().all()
         
         # 使用 StaffNotification 表发送通知给管理员
+        # 确保使用不带时区的 datetime（数据库字段是 TIMESTAMP WITHOUT TIME ZONE）
+        from datetime import datetime
+        current_time = datetime.now()  # 使用不带时区的本地时间
+        
         for admin in admin_users:
             staff_notification = models.StaffNotification(
                 recipient_id=admin.id,
@@ -627,7 +631,8 @@ async def send_expert_profile_update_notification(
                 title="任务达人信息修改请求",
                 content=notification_content,
                 notification_type="info",
-                is_read=0
+                is_read=0,
+                created_at=current_time  # 显式设置不带时区的 datetime
             )
             db.add(staff_notification)
         
