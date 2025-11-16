@@ -553,46 +553,6 @@ async def startup_event():
     session_cleanup_thread = threading.Thread(target=run_session_cleanup_task, daemon=True)
     session_cleanup_thread.start()
     
-    # 执行图片结构迁移（如果尚未完成）
-    try:
-        logger.info("检查图片结构迁移状态...")
-        from pathlib import Path
-        
-        # 检查迁移标记文件
-        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
-        if RAILWAY_ENVIRONMENT:
-            migration_marker = Path("/data/uploads/.image_migration_complete")
-        else:
-            migration_marker = Path("uploads/.image_migration_complete")
-        
-        if not migration_marker.exists():
-            logger.info("开始执行图片结构自动迁移...")
-            try:
-                # 导入迁移模块
-                import sys
-                backend_dir = Path(__file__).parent.parent
-                sys.path.insert(0, str(backend_dir))
-                
-                from migrate_image_structure import ImageStructureMigrator
-                
-                # 执行迁移（非试运行模式）
-                migrator = ImageStructureMigrator(dry_run=False)
-                migrator.migrate_all()
-                
-                # 创建标记文件，表示迁移已完成
-                migration_marker.parent.mkdir(parents=True, exist_ok=True)
-                migration_marker.touch()
-                logger.info("✅ 图片结构迁移完成！")
-                
-            except Exception as e:
-                logger.error(f"图片结构迁移失败: {e}", exc_info=True)
-                logger.warning("应用将继续启动，但图片可能仍在旧结构中")
-        else:
-            logger.info("✅ 图片结构迁移已完成（跳过）")
-    except Exception as e:
-        logger.warning(f"检查图片结构迁移状态时出错: {e}")
-        # 不阻止应用启动
-    
     # 启动定期清理任务
     logger.info("启动定期清理任务")
     try:

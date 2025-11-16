@@ -1544,37 +1544,50 @@ def cancel_expired_tasks(db: Session):
                 # 将任务状态更新为已取消
                 task.status = "cancelled"
 
-                # 同步更新所有参与者的状态为 cancelled
-                # 先查询需要更新的参与者（用于后续通知）
-                participant_user_ids = []
+                # 同步更新所有申请者的状态为 rejected（任务取消时，申请应该被拒绝）
+                # 先查询需要更新的申请者（用于后续通知）
+                applicant_user_ids = []
                 try:
-                    # 先查询需要更新的参与者
-                    query_participants_sql = text("""
-                        SELECT DISTINCT user_id 
-                        FROM task_participants 
-                        WHERE task_id = :task_id 
-                          AND status NOT IN ('cancelled', 'completed')
-                    """)
-                    participants_result = db.execute(query_participants_sql, {"task_id": task.id})
-                    participant_user_ids = [row[0] for row in participants_result.fetchall()]
-                    
-                    # 更新 task_participants 表中所有非 cancelled 状态的参与者
-                    if participant_user_ids:
-                        update_participants_sql = text("""
-                            UPDATE task_participants 
-                            SET status = 'cancelled',
-                                cancelled_at = CURRENT_TIMESTAMP,
-                                updated_at = CURRENT_TIMESTAMP
+                    # 使用 savepoint 来隔离可能失败的操作
+                    # 这样即使 task_applications 表查询失败，也不会影响主事务
+                    savepoint = db.begin_nested()
+                    try:
+                        # 先查询需要更新的申请者（状态为 pending 或 approved 的申请）
+                        query_applicants_sql = text("""
+                            SELECT DISTINCT applicant_id 
+                            FROM task_applications 
                             WHERE task_id = :task_id 
-                              AND status NOT IN ('cancelled', 'completed')
+                              AND status NOT IN ('rejected')
                         """)
-                        result = db.execute(update_participants_sql, {"task_id": task.id})
-                        participants_updated = result.rowcount
-                        if participants_updated > 0:
-                            logger.info(f"任务 {task.id} 已同步更新 {participants_updated} 个参与者状态为 cancelled")
+                        applicants_result = db.execute(query_applicants_sql, {"task_id": task.id})
+                        applicant_user_ids = [row[0] for row in applicants_result.fetchall()]
+                        
+                        # 更新 task_applications 表中所有非 rejected 状态的申请
+                        if applicant_user_ids:
+                            update_applicants_sql = text("""
+                                UPDATE task_applications 
+                                SET status = 'rejected'
+                                WHERE task_id = :task_id 
+                                  AND status NOT IN ('rejected')
+                            """)
+                            result = db.execute(update_applicants_sql, {"task_id": task.id})
+                            applicants_updated = result.rowcount
+                            if applicants_updated > 0:
+                                logger.info(f"任务 {task.id} 已同步更新 {applicants_updated} 个申请状态为 rejected")
+                        
+                        # 提交 savepoint
+                        savepoint.commit()
+                    except Exception as e:
+                        # 回滚 savepoint，不影响主事务
+                        savepoint.rollback()
+                        # 如果 task_applications 表查询失败，记录警告但继续处理
+                        logger.warning(f"更新任务 {task.id} 的申请状态时出错（可能表不存在）: {e}")
                 except Exception as e:
-                    # 如果 task_participants 表不存在或查询失败，记录警告但继续处理
-                    logger.warning(f"更新任务 {task.id} 的参与者状态时出错（可能表不存在）: {e}")
+                    # 外层异常处理（savepoint 创建失败等）
+                    logger.warning(f"更新任务 {task.id} 的申请状态时出错: {e}")
+                
+                # 使用申请者列表作为参与者列表（用于通知）
+                participant_user_ids = applicant_user_ids
 
                 # 记录任务历史
                 add_task_history(
