@@ -133,10 +133,10 @@ def update_user_statistics(db: Session, user_id: str):
 
 
 def update_task_expert_bio(db: Session, user_id: str):
-    """计算并更新任务达人的 bio（基于平均响应时间）"""
-    # 计算平均响应时间（用于 bio）
-    # 查询该用户作为接收者的已读消息，计算从发送到已读的平均时间
+    """计算并更新任务达人的 bio 和相关统计字段（基于平均响应时间等）"""
+    from app.models import Review, Task
     
+    # 1. 计算平均响应时间（用于 bio 和 response_time）
     avg_response_time_seconds = None
     read_messages = (
         db.query(models.Message, models.MessageRead)
@@ -164,7 +164,7 @@ def update_task_expert_bio(db: Session, user_id: str):
         if response_times:
             avg_response_time_seconds = sum(response_times) / len(response_times)
     
-    # 格式化响应时间为文本
+    # 2. 格式化响应时间为文本（用于 bio）
     def format_response_time(seconds):
         """将秒数格式化为可读的文本"""
         if seconds is None:
@@ -190,21 +190,93 @@ def update_task_expert_bio(db: Session, user_id: str):
             else:
                 return f"平均响应时间：{days}天"
     
-    calculated_bio = format_response_time(avg_response_time_seconds)
+    # 3. 格式化响应时间为简短文本（用于 response_time 字段）
+    def format_response_time_short(seconds, lang='zh'):
+        """将秒数格式化为简短文本（如：2小时内）
+        
+        Args:
+            seconds: 响应时间（秒）
+            lang: 'zh' 或 'en'
+        """
+        if seconds is None:
+            return None
+        
+        if seconds < 3600:  # 小于1小时
+            minutes = int(seconds / 60)
+            if minutes == 0:
+                return "1小时内" if lang == 'zh' else "Within 1 hour"
+            return f"{minutes}分钟内" if lang == 'zh' else f"Within {minutes} minutes"
+        elif seconds < 86400:  # 小于1天
+            hours = int(seconds / 3600)
+            return f"{hours}小时内" if lang == 'zh' else f"Within {hours} hours"
+        else:  # 大于等于1天
+            days = int(seconds / 86400)
+            return f"{days}天内" if lang == 'zh' else f"Within {days} days"
     
-    # 更新 TaskExpert 的 bio
+    calculated_bio = format_response_time(avg_response_time_seconds)
+    response_time_zh = format_response_time_short(avg_response_time_seconds, 'zh')
+    response_time_en = format_response_time_short(avg_response_time_seconds, 'en')
+    
+    # 4. 计算任务统计数据
+    posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
+    taken_tasks = db.query(Task).filter(Task.taker_id == user_id).count()
+    total_tasks = posted_tasks + taken_tasks
+    
+    completed_taken_tasks = db.query(Task).filter(
+        Task.taker_id == user_id, 
+        Task.status == "completed"
+    ).count()
+    completed_posted_tasks = db.query(Task).filter(
+        Task.poster_id == user_id,
+        Task.status == "completed"
+    ).count()
+    completed_tasks = completed_taken_tasks + completed_posted_tasks
+    
+    completion_rate = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
+    
+    # 5. 计算平均评分
+    avg_rating_result = (
+        db.query(func.avg(Review.rating)).filter(Review.user_id == user_id).scalar()
+    )
+    avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
+    
+    # 6. 计算成功率（已完成任务中评价>=3星的任务数 / 全部任务数 * 100）
+    # 使用 JOIN 查询已完成任务中，有评价且评价>=3星的任务数量
+    from sqlalchemy import distinct
+    successful_tasks_count = (
+        db.query(distinct(Task.id))
+        .join(Review, Task.id == Review.task_id)
+        .filter(
+            Task.status == "completed",
+            (Task.poster_id == user_id) | (Task.taker_id == user_id),
+            Review.rating >= 3.0
+        )
+        .count()
+    )
+    
+    # 成功率 = (评价>=3星的已完成任务数 / 全部任务数) * 100
+    success_rate = (successful_tasks_count / total_tasks * 100.0) if total_tasks > 0 else 0.0
+    
+    # 7. 更新 TaskExpert 的 bio
     task_expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == user_id).first()
     if task_expert:
         task_expert.bio = calculated_bio
         db.commit()
         db.refresh(task_expert)
     
-    # 更新 FeaturedTaskExpert 的 bio
+    # 8. 更新 FeaturedTaskExpert 的所有计算字段
     featured_expert = db.query(models.FeaturedTaskExpert).filter(
         models.FeaturedTaskExpert.user_id == user_id
     ).first()
     if featured_expert:
         featured_expert.bio = calculated_bio
+        featured_expert.response_time = response_time_zh
+        featured_expert.response_time_en = response_time_en
+        featured_expert.avg_rating = avg_rating
+        featured_expert.completed_tasks = completed_tasks
+        featured_expert.total_tasks = total_tasks
+        featured_expert.completion_rate = completion_rate
+        featured_expert.success_rate = success_rate
         db.commit()
         db.refresh(featured_expert)
     
