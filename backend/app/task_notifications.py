@@ -603,3 +603,88 @@ async def send_service_application_cancelled_notification(
         
     except Exception as e:
         logger.error(f"发送服务申请取消通知失败: {e}")
+
+
+async def send_expert_profile_update_notification(
+    db: AsyncSession,
+    expert_id: str,
+    request_id: int
+):
+    """发送任务达人信息修改请求通知给管理员"""
+    try:
+        notification_content = f"任务达人 {expert_id} 提交了信息修改请求，请及时审核"
+        
+        # 获取所有管理员
+        from sqlalchemy import select
+        admin_result = await db.execute(select(models.AdminUser))
+        admin_users = admin_result.scalars().all()
+        
+        from app import async_crud
+        for admin in admin_users:
+            await async_crud.async_notification_crud.create_notification(
+                db=db,
+                user_id=admin.id,
+                notification_type="expert_profile_update_request",
+                title="任务达人信息修改请求",
+                content=notification_content,
+                related_id=str(request_id)
+            )
+        
+        logger.info(f"信息修改请求通知已发送给所有管理员，请求ID: {request_id}")
+        
+    except Exception as e:
+        logger.error(f"发送信息修改请求通知失败: {e}")
+
+
+async def send_expert_profile_update_approved_notification(
+    db: AsyncSession,
+    expert_id: str,
+    request_id: int
+):
+    """发送信息修改请求批准通知给任务达人"""
+    try:
+        notification_content = "您的信息修改请求已通过审核，信息已更新"
+        
+        from app import async_crud
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="expert_profile_update_approved",
+            title="信息修改已批准",
+            content=notification_content,
+            related_id=str(request_id)
+        )
+        
+        logger.info(f"信息修改批准通知已发送给任务达人 {expert_id}")
+        
+    except Exception as e:
+        logger.error(f"发送信息修改批准通知失败: {e}")
+
+
+async def send_expert_profile_update_rejected_notification(
+    db: AsyncSession,
+    expert_id: str,
+    request_id: int,
+    review_comment: Optional[str] = None
+):
+    """发送信息修改请求拒绝通知给任务达人"""
+    try:
+        if review_comment:
+            notification_content = f"您的信息修改请求已被拒绝。拒绝原因：{review_comment}"
+        else:
+            notification_content = "您的信息修改请求已被拒绝"
+        
+        from app import async_crud
+        await async_crud.async_notification_crud.create_notification(
+            db=db,
+            user_id=expert_id,
+            notification_type="expert_profile_update_rejected",
+            title="信息修改已拒绝",
+            content=notification_content,
+            related_id=str(request_id)
+        )
+        
+        logger.info(f"信息修改拒绝通知已发送给任务达人 {expert_id}")
+        
+    except Exception as e:
+        logger.error(f"发送信息修改拒绝通知失败: {e}")
