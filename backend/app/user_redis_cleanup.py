@@ -286,7 +286,12 @@ class UserRedisCleanup:
             return {}
     
     def _get_redis_data(self, key: str) -> Dict[str, Any]:
-        """安全获取Redis数据，支持pickle和JSON两种格式"""
+        """安全获取Redis数据，支持多种格式：
+        - pickle格式（redis_cache.py使用）
+        - JSON格式（json.dumps）
+        - orjson格式（orjson.dumps，兼容JSON）
+        - 特殊字符串标记（如"__NULL__"、"1"等，返回None表示无法解析为字典）
+        """
         try:
             data = self.redis_client.get(key)
             if not data:
@@ -309,10 +314,10 @@ class UserRedisCleanup:
                 logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是pickle格式但非字典类型: {type(parsed_data)}")
                 return None
             except (pickle.PickleError, TypeError, AttributeError):
-                # pickle解析失败，继续尝试JSON
+                # pickle解析失败，继续尝试其他格式
                 pass
             
-            # 方法2: 尝试使用JSON解析（某些地方可能直接写入JSON）
+            # 方法2: 尝试解码为字符串并检查特殊标记
             try:
                 # 尝试解码为字符串
                 try:
@@ -326,11 +331,32 @@ class UserRedisCleanup:
                     logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值为空，跳过解析")
                     return None
                 
+                # 检查是否是特殊标记字符串（如"__NULL__"、"1"等）
+                # 这些不是字典数据，返回None表示无法解析为字典
+                if data_str in ["__NULL__", "1", "0", "true", "false", "True", "False"]:
+                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是特殊标记字符串: {data_str}")
+                    return None
+                
+                # 方法3: 尝试使用JSON解析（包括orjson格式，因为orjson兼容标准JSON）
                 import json
-                parsed_data = json.loads(data_str)
+                try:
+                    parsed_data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    # 标准JSON解析失败，尝试orjson（更宽松）
+                    try:
+                        import orjson
+                        parsed_data = orjson.loads(data)
+                    except Exception:
+                        # orjson也失败，记录警告
+                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据既不是pickle也不是JSON格式，可能是其他格式或已损坏")
+                        return None
                 
                 # 如果解析得到的是字符串，再次尝试解析（处理双重编码的情况）
                 if isinstance(parsed_data, str):
+                    # 检查是否是特殊标记
+                    if parsed_data in ["__NULL__", "1", "0", "true", "false", "True", "False"]:
+                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是特殊标记字符串: {parsed_data}")
+                        return None
                     try:
                         parsed_data = json.loads(parsed_data)
                     except json.JSONDecodeError:
@@ -343,10 +369,6 @@ class UserRedisCleanup:
                     return None
                 
                 return parsed_data
-            except json.JSONDecodeError:
-                # JSON解析也失败，记录警告
-                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据既不是pickle也不是JSON格式，可能是其他格式或已损坏")
-                return None
             except UnicodeDecodeError:
                 logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据无法解码为字符串")
                 return None
