@@ -770,6 +770,7 @@ async def counter_offer_service_application(
             applicant_id=application.applicant_id,
             expert_id=application.expert_id,
             counter_price=counter_offer.counter_price,
+            service_id=application.service_id,
             message=counter_offer.message
         )
     except Exception as e:

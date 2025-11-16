@@ -157,7 +157,8 @@ async def respond_to_counter_offer(
                 db=db,
                 expert_id=application.expert_id,
                 applicant_id=application.applicant_id,
-                counter_price=application.expert_counter_price
+                counter_price=application.expert_counter_price,
+                service_id=application.service_id
             )
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
@@ -183,7 +184,8 @@ async def respond_to_counter_offer(
             await send_counter_offer_rejected_notification(
                 db=db,
                 expert_id=application.expert_id,
-                applicant_id=application.applicant_id
+                applicant_id=application.applicant_id,
+                service_id=application.service_id
             )
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")

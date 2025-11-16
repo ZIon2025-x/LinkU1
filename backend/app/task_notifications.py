@@ -398,17 +398,25 @@ async def send_counter_offer_notification(
     applicant_id: str,
     expert_id: str,
     counter_price: Decimal,
+    service_id: int,
     message: Optional[str] = None,
 ):
     """任务达人再次议价，发送通知给申请用户"""
     try:
         from app import async_crud
         
+        # 查询任务达人信息和服务信息
+        expert = await db.get(models.TaskExpert, expert_id)
+        service = await db.get(models.TaskExpertService, service_id)
+        
+        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
         if message and message.strip():
-            content = f"任务达人提出新价格：£{float(counter_price):.2f}。留言：{message}"
+            content = f"任务达人提出新价格。\n任务达人：{expert_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}\n留言：{message}"
         else:
-            content = f"任务达人提出新价格：£{float(counter_price):.2f}"
+            content = f"任务达人提出新价格。\n任务达人：{expert_name}\n服务名称：{service_name}\n新价格：£{float(counter_price):.2f}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -416,7 +424,7 @@ async def send_counter_offer_notification(
             notification_type="counter_offer",
             title="任务达人提出新价格",
             content=content,  # 直接使用文本，不存储 JSON
-            related_id=expert_id,
+            related_id=str(service_id),
         )
         
         logger.info(f"议价通知已发送给申请用户: {applicant_id}")
@@ -430,6 +438,7 @@ async def send_counter_offer_accepted_notification(
     expert_id: str,
     applicant_id: str,
     counter_price: Decimal,
+    service_id: int,
 ):
     """用户同意任务达人的议价，发送通知给任务达人"""
     try:
@@ -439,9 +448,13 @@ async def send_counter_offer_accepted_notification(
         if not applicant:
             return
         
+        # 查询服务信息
+        service = await db.get(models.TaskExpertService, service_id)
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
         applicant_name = applicant.name or f"用户{applicant_id}"
-        content = f"{applicant_name} 已同意您的议价：£{float(counter_price):.2f}，可以创建任务了"
+        content = f"{applicant_name} 已同意您的议价。\n服务名称：{service_name}\n议价金额：£{float(counter_price):.2f}\n可以创建任务了"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -449,7 +462,7 @@ async def send_counter_offer_accepted_notification(
             notification_type="counter_offer_accepted",
             title="用户已同意议价",
             content=content,  # 直接使用文本，不存储 JSON
-            related_id=applicant_id,
+            related_id=str(service_id),
         )
         
         logger.info(f"议价同意通知已发送给任务达人: {expert_id}")
@@ -462,6 +475,7 @@ async def send_counter_offer_rejected_notification(
     db: AsyncSession,
     expert_id: str,
     applicant_id: str,
+    service_id: int,
 ):
     """用户拒绝任务达人的议价，发送通知给任务达人"""
     try:
@@ -471,9 +485,13 @@ async def send_counter_offer_rejected_notification(
         if not applicant:
             return
         
+        # 查询服务信息
+        service = await db.get(models.TaskExpertService, service_id)
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
         applicant_name = applicant.name or f"用户{applicant_id}"
-        content = f"{applicant_name} 拒绝了您的议价"
+        content = f"{applicant_name} 拒绝了您的议价。\n服务名称：{service_name}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -481,7 +499,7 @@ async def send_counter_offer_rejected_notification(
             notification_type="counter_offer_rejected",
             title="用户拒绝了议价",
             content=content,  # 直接使用文本，不存储 JSON
-            related_id=applicant_id,
+            related_id=str(service_id),
         )
         
         logger.info(f"议价拒绝通知已发送给任务达人: {expert_id}")
@@ -501,8 +519,12 @@ async def send_service_application_approved_notification(
     try:
         from app import async_crud
         
+        # 查询任务达人信息
+        expert = await db.get(models.TaskExpert, expert_id)
+        expert_name = expert.expert_name if expert and expert.expert_name else f"任务达人{expert_id}"
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
-        notification_content = f"您的服务申请「{service_name}」已通过，任务已创建"
+        notification_content = f"您的服务申请已通过，任务已创建。\n任务达人：{expert_name}\n服务名称：{service_name}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
@@ -575,20 +597,20 @@ async def send_service_application_cancelled_notification(
         if not applicant:
             return
         
-        notification_content = json.dumps({
-            "type": "service_application_cancelled",
-            "service_id": service_id,
-            "applicant_id": applicant_id,
-            "applicant_name": applicant.name or f"用户{applicant_id}",
-            "message": "用户取消了服务申请",
-        }, ensure_ascii=False)
+        # 查询服务信息
+        service = await db.get(models.TaskExpertService, service_id)
+        service_name = service.service_name if service and service.service_name else f"服务#{service_id}"
+        
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        applicant_name = applicant.name or f"用户{applicant_id}"
+        content = f"{applicant_name} 取消了服务申请。\n服务名称：{service_name}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=expert_id,
             notification_type="service_application_cancelled",
             title="服务申请已取消",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
         
