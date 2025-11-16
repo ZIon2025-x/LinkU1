@@ -445,40 +445,8 @@ async def delete_service(
     return {"message": "服务已删除"}
 
 
-@task_expert_router.get("/{expert_id}/services")
-async def get_expert_services(
-    expert_id: str,
-    status_filter: Optional[str] = Query("active", alias="status"),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """获取任务达人的公开服务列表"""
-    expert = await db.execute(
-        select(models.TaskExpert).where(models.TaskExpert.id == expert_id)
-    )
-    expert = expert.scalar_one_or_none()
-    if not expert:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
-        )
-    
-    query = select(models.TaskExpertService).where(
-        models.TaskExpertService.expert_id == expert_id,
-        models.TaskExpertService.status == status_filter
-    ).order_by(
-        models.TaskExpertService.display_order,
-        models.TaskExpertService.created_at.desc()
-    )
-    
-    result = await db.execute(query)
-    services = result.scalars().all()
-    
-    return {
-        "expert_id": expert_id,
-        "expert_name": expert.expert_name or expert.user.name if hasattr(expert, "user") else None,
-        "services": [schemas.TaskExpertServiceOut.model_validate(s).model_dump() for s in services],
-    }
-
-
+# 注意：更具体的路由必须放在通用路由之前
+# 否则 FastAPI 可能会将 /services/123 匹配到 /{expert_id}/services
 @task_expert_router.get("/services/{service_id}", response_model=schemas.TaskExpertServiceOut)
 async def get_service_detail(
     service_id: int,
@@ -506,6 +474,51 @@ async def get_service_detail(
     await db.refresh(service)
     
     return service
+
+
+# 获取任务达人的公开服务列表（放在 /services/{service_id} 之后，避免路由冲突）
+@task_expert_router.get("/{expert_id}/services")
+async def get_expert_services(
+    expert_id: str,
+    status_filter: Optional[str] = Query("active", alias="status"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务达人的公开服务列表"""
+    try:
+        expert = await db.execute(
+            select(models.TaskExpert).where(models.TaskExpert.id == expert_id)
+        )
+        expert = expert.scalar_one_or_none()
+        if not expert:
+            logger.warning(f"任务达人不存在: {expert_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="任务达人不存在"
+            )
+        
+        query = select(models.TaskExpertService).where(
+            models.TaskExpertService.expert_id == expert_id,
+            models.TaskExpertService.status == status_filter
+        ).order_by(
+            models.TaskExpertService.display_order,
+            models.TaskExpertService.created_at.desc()
+        )
+        
+        result = await db.execute(query)
+        services = result.scalars().all()
+        
+        return {
+            "expert_id": expert_id,
+            "expert_name": expert.expert_name or (expert.user.name if hasattr(expert, "user") and expert.user else None),
+            "services": [schemas.TaskExpertServiceOut.model_validate(s).model_dump() for s in services],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务达人服务列表失败: {expert_id}, 错误: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取服务列表失败"
+        )
 
 
 # ==================== 服务申请相关接口 ====================

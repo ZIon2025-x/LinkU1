@@ -440,7 +440,10 @@ const TaskExperts: React.FC = () => {
     // 获取任务达人的服务列表
     try {
       const { getTaskExpertServices } = await import('../api');
-      const services = await getTaskExpertServices(expertId, 'active');
+      const response = await getTaskExpertServices(expertId, 'active');
+      
+      // 后端返回的数据结构是 { expert_id, expert_name, services: [...] }
+      const services = response?.services || [];
       
       if (services && services.length > 0) {
         // 如果有多个服务，可以显示服务列表让用户选择
