@@ -893,8 +893,18 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
       
+      // 构建上传URL，根据当前聊天类型添加 task_id 或 chat_id
+      let uploadUrl = `${API_BASE_URL}/api/upload/file`;
+      if (activeTaskId) {
+        // 任务聊天：传递 task_id
+        uploadUrl += `?task_id=${activeTaskId}`;
+      } else if (currentChat?.chat_id) {
+        // 客服聊天：传递 chat_id
+        uploadUrl += `?chat_id=${currentChat.chat_id}`;
+      }
+      
       // 上传文件到服务器
-      const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/file`, {
+      const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         credentials: 'include',  // 使用Cookie认证
         body: formData

@@ -101,7 +101,7 @@ def delete_service_images(expert_id: str, service_id: int, image_urls: Optional[
 
 
 def delete_task_images(task_id: int, include_private: bool = True):
-    """删除任务相关的所有图片（公开和私密）"""
+    """删除任务相关的所有图片和文件（公开和私密）"""
     try:
         deleted_count = 0
         
@@ -156,13 +156,37 @@ def delete_task_images(task_id: int, include_private: bool = True):
                         logger.info(f"删除空的任务私密图片文件夹: {private_task_dir}")
                 except Exception as e:
                     logger.debug(f"删除任务私密图片文件夹失败: {private_task_dir}: {e}")
+            
+            # 3. 删除私密文件（任务聊天文件）
+            if RAILWAY_ENVIRONMENT:
+                private_task_file_dir = Path("/data/uploads/private_files/tasks") / str(task_id)
+            else:
+                private_task_file_dir = Path("uploads/private_files/tasks") / str(task_id)
+            
+            if private_task_file_dir.exists():
+                for file_path in private_task_file_dir.iterdir():
+                    if file_path.is_file():
+                        try:
+                            file_path.unlink()
+                            deleted_count += 1
+                            logger.info(f"删除任务 {task_id} 的私密文件: {file_path.name}")
+                        except Exception as e:
+                            logger.warning(f"删除私密文件失败 {file_path}: {e}")
+                
+                # 如果文件夹为空，删除它
+                try:
+                    if not any(private_task_file_dir.iterdir()):
+                        private_task_file_dir.rmdir()
+                        logger.info(f"删除空的任务私密文件文件夹: {private_task_file_dir}")
+                except Exception as e:
+                    logger.debug(f"删除任务私密文件文件夹失败: {private_task_file_dir}: {e}")
         
         if deleted_count > 0:
-            logger.info(f"任务 {task_id} 已删除 {deleted_count} 张图片")
+            logger.info(f"任务 {task_id} 已删除 {deleted_count} 个文件")
         
         return deleted_count
     except Exception as e:
-        logger.error(f"删除任务图片失败 {task_id}: {e}")
+        logger.error(f"删除任务文件失败 {task_id}: {e}")
         return 0
 
 
@@ -174,14 +198,38 @@ def delete_chat_images_and_files(chat_id: str):
         # 检测部署环境
         RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
         
-        # 删除私密图片（客服聊天图片）
+        # 1. 删除私密图片（客服聊天图片）
         if RAILWAY_ENVIRONMENT:
-            chat_dir = Path("/data/uploads/private_images/chats") / chat_id
+            chat_image_dir = Path("/data/uploads/private_images/chats") / chat_id
         else:
-            chat_dir = Path("uploads/private_images/chats") / chat_id
+            chat_image_dir = Path("uploads/private_images/chats") / chat_id
         
-        if chat_dir.exists():
-            for file_path in chat_dir.iterdir():
+        if chat_image_dir.exists():
+            for file_path in chat_image_dir.iterdir():
+                if file_path.is_file():
+                    try:
+                        file_path.unlink()
+                        deleted_count += 1
+                        logger.info(f"删除聊天 {chat_id} 的图片: {file_path.name}")
+                    except Exception as e:
+                        logger.warning(f"删除聊天图片失败 {file_path}: {e}")
+            
+            # 如果文件夹为空，删除它
+            try:
+                if not any(chat_image_dir.iterdir()):
+                    chat_image_dir.rmdir()
+                    logger.info(f"删除空的聊天图片文件夹: {chat_image_dir}")
+            except Exception as e:
+                logger.debug(f"删除聊天图片文件夹失败: {chat_image_dir}: {e}")
+        
+        # 2. 删除私密文件（客服聊天文件）
+        if RAILWAY_ENVIRONMENT:
+            chat_file_dir = Path("/data/uploads/private_files/chats") / chat_id
+        else:
+            chat_file_dir = Path("uploads/private_files/chats") / chat_id
+        
+        if chat_file_dir.exists():
+            for file_path in chat_file_dir.iterdir():
                 if file_path.is_file():
                     try:
                         file_path.unlink()
@@ -192,11 +240,11 @@ def delete_chat_images_and_files(chat_id: str):
             
             # 如果文件夹为空，删除它
             try:
-                if not any(chat_dir.iterdir()):
-                    chat_dir.rmdir()
-                    logger.info(f"删除空的聊天文件夹: {chat_dir}")
+                if not any(chat_file_dir.iterdir()):
+                    chat_file_dir.rmdir()
+                    logger.info(f"删除空的聊天文件文件夹: {chat_file_dir}")
             except Exception as e:
-                logger.debug(f"删除聊天文件夹失败: {chat_dir}: {e}")
+                logger.debug(f"删除聊天文件文件夹失败: {chat_file_dir}: {e}")
         
         if deleted_count > 0:
             logger.info(f"聊天 {chat_id} 已删除 {deleted_count} 个文件")

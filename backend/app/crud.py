@@ -1763,7 +1763,7 @@ def cleanup_expired_tasks_files(db: Session):
 
 
 def cleanup_all_old_tasks_files(db: Session):
-    """清理所有已完成和过期任务的图片和文件"""
+    """清理所有已完成和过期任务的图片和文件（超过3天）"""
     import logging
     
     logger = logging.getLogger(__name__)
@@ -1783,6 +1783,56 @@ def cleanup_all_old_tasks_files(db: Session):
     return {
         "completed_count": completed_count,
         "expired_count": expired_count,
+        "total_count": total_count
+    }
+
+
+def cleanup_all_completed_and_cancelled_tasks_files(db: Session):
+    """清理所有已完成或已取消的任务的图片和文件（不检查时间限制，管理员手动清理）"""
+    from app.models import Task
+    from sqlalchemy import or_
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("开始清理所有已完成或已取消任务的文件（不检查时间限制）...")
+    
+    # 查找所有已完成或已取消的任务
+    tasks_to_clean = (
+        db.query(Task)
+        .filter(
+            or_(
+                Task.status == "completed",
+                Task.status == "cancelled"
+            )
+        )
+        .all()
+    )
+    
+    logger.info(f"找到 {len(tasks_to_clean)} 个已完成或已取消的任务，开始清理文件（公开和私密）")
+    
+    completed_count = 0
+    cancelled_count = 0
+    
+    for task in tasks_to_clean:
+        try:
+            cleanup_task_files(db, task.id)
+            if task.status == "completed":
+                completed_count += 1
+            elif task.status == "cancelled":
+                cancelled_count += 1
+            logger.info(f"成功清理任务 {task.id} 的文件（状态：{task.status}）")
+        except Exception as e:
+            logger.error(f"清理任务 {task.id} 文件失败: {e}")
+            continue
+    
+    total_count = completed_count + cancelled_count
+    
+    logger.info(f"清理完成：已完成任务 {completed_count} 个，已取消任务 {cancelled_count} 个，总计 {total_count} 个")
+    
+    return {
+        "completed_count": completed_count,
+        "cancelled_count": cancelled_count,
         "total_count": total_count
     }
 

@@ -277,32 +277,64 @@ class PrivateImageSystem:
             if not self.verify_access_token(access_token, image_id, user_id):
                 raise HTTPException(status_code=403, detail="无权访问此图片")
             
-            # 查找图片文件（在任务文件夹、聊天文件夹和根目录中查找）
-            image_files = []
+            # 优化：先从数据库查询消息，获取task_id或chat_id，直接定位文件夹
+            file_path = None
             
-            # 先查找任务文件夹
-            task_dirs = list(self.base_dir.glob("tasks/*"))
-            for task_dir in task_dirs:
-                task_files = list(task_dir.glob(f"{image_id}.*"))
-                if task_files:
-                    image_files.extend(task_files)
+            # 1. 先查询任务消息表（Message）
+            from app.models import Message
+            task_message = db.query(Message).filter(Message.image_id == image_id).first()
+            if task_message and task_message.task_id:
+                # 任务聊天图片：直接定位到任务文件夹
+                task_dir = self.base_dir / "tasks" / str(task_message.task_id)
+                for ext in self.allowed_extensions:
+                    potential_file = task_dir / f"{image_id}{ext}"
+                    if potential_file.exists() and potential_file.is_file():
+                        file_path = potential_file
+                        break
             
-            # 再查找聊天文件夹
-            chat_dirs = list(self.base_dir.glob("chats/*"))
-            for chat_dir in chat_dirs:
-                chat_files = list(chat_dir.glob(f"{image_id}.*"))
-                if chat_files:
-                    image_files.extend(chat_files)
+            # 2. 如果没找到，查询客服消息表（CustomerServiceMessage）
+            if not file_path:
+                from app.models import CustomerServiceMessage
+                cs_message = db.query(CustomerServiceMessage).filter(
+                    CustomerServiceMessage.image_id == image_id
+                ).first()
+                if cs_message and cs_message.chat_id:
+                    # 客服聊天图片：直接定位到聊天文件夹
+                    chat_dir = self.base_dir / "chats" / cs_message.chat_id
+                    for ext in self.allowed_extensions:
+                        potential_file = chat_dir / f"{image_id}{ext}"
+                        if potential_file.exists() and potential_file.is_file():
+                            file_path = potential_file
+                            break
             
-            # 最后查找根目录（向后兼容）
-            root_files = list(self.base_dir.glob(f"{image_id}.*"))
-            if root_files:
-                image_files.extend(root_files)
+            # 3. 如果数据库查询失败或文件不存在，回退到全局搜索（向后兼容）
+            if not file_path:
+                image_files = []
+                
+                # 先查找任务文件夹
+                task_dirs = list(self.base_dir.glob("tasks/*"))
+                for task_dir in task_dirs:
+                    task_files = list(task_dir.glob(f"{image_id}.*"))
+                    if task_files:
+                        image_files.extend(task_files)
+                
+                # 再查找聊天文件夹
+                chat_dirs = list(self.base_dir.glob("chats/*"))
+                for chat_dir in chat_dirs:
+                    chat_files = list(chat_dir.glob(f"{image_id}.*"))
+                    if chat_files:
+                        image_files.extend(chat_files)
+                
+                # 最后查找根目录（向后兼容）
+                root_files = list(self.base_dir.glob(f"{image_id}.*"))
+                if root_files:
+                    image_files.extend(root_files)
+                
+                if image_files:
+                    file_path = image_files[0]
             
-            if not image_files:
+            if not file_path or not file_path.exists() or not file_path.is_file():
                 raise HTTPException(status_code=404, detail="图片不存在")
-            
-            file_path = image_files[0]
             
             # 确定MIME类型
             extension = file_path.suffix.lower()

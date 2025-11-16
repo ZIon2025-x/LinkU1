@@ -17,6 +17,7 @@ class CleanupTasks:
         self.running = False
         self.cleanup_interval = 3600  # 1小时清理一次
         self.last_completed_tasks_cleanup_date = None  # 上次清理已完成任务的日期
+        self.last_expired_tasks_cleanup_date = None  # 上次清理过期任务的日期
     
     async def start_cleanup_tasks(self):
         """启动清理任务"""
@@ -165,7 +166,7 @@ class CleanupTasks:
         try:
             # 检查今天是否已经清理过
             today = datetime.utcnow().date()
-            if self.last_completed_tasks_cleanup_date == today:
+            if self.last_expired_tasks_cleanup_date == today:
                 # 今天已经清理过，跳过
                 return
             
@@ -179,6 +180,8 @@ class CleanupTasks:
                 cleaned_count = cleanup_expired_tasks_files(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期任务的文件")
+                # 更新最后清理日期
+                self.last_expired_tasks_cleanup_date = today
             finally:
                 db.close()
                 

@@ -5375,55 +5375,45 @@ def generate_image_url(
 
 @router.post("/upload/file")
 async def upload_file(
-    file: UploadFile = File(...), current_user: models.User = Depends(get_current_user_secure_sync_csrf)
+    file: UploadFile = File(...),
+    task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
+    chat_id: Optional[str] = Query(None, description="聊天ID（客服聊天时提供）"),
+    current_user: models.User = Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db)
 ):
     """
     上传文件
+    支持按任务ID或聊天ID分类存储
+    - task_id: 任务聊天时提供，文件会存储在 tasks/{task_id}/ 文件夹
+    - chat_id: 客服聊天时提供，文件会存储在 chats/{chat_id}/ 文件夹
     """
     try:
-        # 检查文件扩展名
-        file_extension = Path(file.filename).suffix.lower()
-        if file_extension in DANGEROUS_EXTENSIONS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"不允许上传此类型的文件。危险文件类型: {', '.join(DANGEROUS_EXTENSIONS)}",
-            )
-
-        # 检查文件大小
+        # 读取文件内容
         content = await file.read()
-        if len(content) > MAX_FILE_SIZE_LARGE:
-            raise HTTPException(
-                status_code=400,
-                detail=f"文件过大。最大允许大小: {MAX_FILE_SIZE_LARGE // (1024*1024)}MB",
-            )
-
-        # 生成唯一文件名
-        file_id = str(uuid.uuid4())
-        filename = f"{file_id}{file_extension}"
-        file_path = PRIVATE_FILE_DIR / filename
-
-        # 保存文件到私有目录
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
-
-        # 生成签名URL
+        
+        # 使用新的私密文件系统上传
+        from app.file_system import private_file_system
+        result = private_file_system.upload_file(content, file.filename, current_user.id, db, task_id=task_id, chat_id=chat_id)
+        
+        # 生成签名URL（使用新的文件ID）
         from app.signed_url import signed_url_manager
+        # 构建文件路径（用于签名URL，保持向后兼容）
+        file_path_for_url = f"files/{result['filename']}"
         file_url = signed_url_manager.generate_signed_url(
-            file_path=f"files/{filename}",
+            file_path=file_path_for_url,
             user_id=current_user.id,
             expiry_minutes=15,  # 15分钟过期
             one_time=False  # 可以多次使用
         )
-
-        logger.info(f"用户 {current_user.id} 上传文件: {filename}")
-
+        
         return JSONResponse(
             content={
                 "success": True,
                 "url": file_url,
-                "filename": filename,
-                "size": len(content),
-                "original_name": file.filename,
+                "file_id": result["file_id"],
+                "filename": result["filename"],
+                "size": result["size"],
+                "original_name": result["original_filename"],
             }
         )
 
@@ -5484,14 +5474,54 @@ async def get_private_file(
             raise HTTPException(status_code=403, detail="签名验证失败")
         
         # 构建文件路径
+        # 支持新旧两种路径格式：
+        # 旧格式：files/{filename} (向后兼容)
+        # 新格式：files/{filename} (但实际文件可能在新结构 private_files/tasks/{task_id}/ 或 private_files/chats/{chat_id}/)
+        file_path_str = parsed_params["file_path"]
+        
+        # 从文件路径中提取文件名（去掉 "files/" 前缀）
+        if file_path_str.startswith("files/"):
+            filename = file_path_str[6:]  # 去掉 "files/" 前缀
+        else:
+            filename = file_path_str
+        
+        # 提取文件ID（去掉扩展名）
+        file_id = Path(filename).stem
+        
+        # 尝试在新文件系统中查找（通过数据库查询优化）
+        file_path = None
+        try:
+            # 使用文件系统查找文件（会从数据库查询优化路径）
+            from app.file_system import private_file_system
+            db = next(get_db())
+            try:
+                file_response = private_file_system.get_file(file_id, parsed_params["user_id"], db)
+                # 如果找到了，直接返回
+                return file_response
+            except HTTPException as e:
+                if e.status_code == 404:
+                    # 文件不在新系统中，尝试旧路径
+                    pass
+                else:
+                    raise
+            finally:
+                db.close()
+        except Exception as e:
+            logger.debug(f"从新文件系统查找文件失败，尝试旧路径: {e}")
+        
+        # 回退到旧路径（向后兼容）
         if RAILWAY_ENVIRONMENT and not USE_CLOUD_STORAGE:
             base_private_dir = Path("/data/uploads/private")
         else:
             base_private_dir = Path("uploads/private")
         
-        file_path = base_private_dir / parsed_params["file_path"]
+        file_path = base_private_dir / file_path_str
         
         if not file_path.exists():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        # 检查是否是文件而不是目录
+        if not file_path.is_file():
             raise HTTPException(status_code=404, detail="文件不存在")
         
         # 返回文件
@@ -6299,14 +6329,19 @@ def cleanup_all_old_tasks_files_api(
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """一键清理所有已完成和过期任务的图片和文件（管理员接口）"""
+    """一键清理所有已完成或已取消任务的图片和文件（管理员接口，不检查时间限制）
+    清理内容包括：
+    - 公开图片（任务相关图片）
+    - 私密图片（任务聊天图片）
+    - 私密文件（任务聊天文件）
+    """
     try:
-        result = crud.cleanup_all_old_tasks_files(db)
+        result = crud.cleanup_all_completed_and_cancelled_tasks_files(db)
         return {
             "success": True,
-            "message": f"清理完成：已完成任务 {result['completed_count']} 个，过期任务 {result['expired_count']} 个，总计 {result['total_count']} 个",
+            "message": f"清理完成：已完成任务 {result['completed_count']} 个，已取消任务 {result['cancelled_count']} 个，总计 {result['total_count']} 个任务的所有图片和文件已清理",
             "completed_count": result["completed_count"],
-            "expired_count": result["expired_count"],
+            "cancelled_count": result["cancelled_count"],
             "total_count": result["total_count"]
         }
     except Exception as e:

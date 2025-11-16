@@ -556,7 +556,7 @@ const AdminDashboard: React.FC = () => {
   const [cleanupLoading, setCleanupLoading] = useState(false);
 
   const handleCleanupOldTasks = async () => {
-    if (!window.confirm('确定要清理所有已完成和过期任务的图片和文件吗？此操作不可恢复！')) {
+    if (!window.confirm('确定要清理所有已完成或已取消任务的所有图片和文件吗？\n\n清理内容包括：\n- 公开图片（任务相关图片）\n- 私密图片（任务聊天图片）\n- 私密文件（任务聊天文件）\n\n注意：将清理所有已完成或已取消的任务，不检查时间限制！\n此操作不可恢复！')) {
       return;
     }
 
