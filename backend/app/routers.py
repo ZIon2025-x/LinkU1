@@ -1617,13 +1617,32 @@ def get_my_profile(
         }
         
         # ⚠️ 处理datetime对象，使其可JSON序列化（用于ETag生成和响应）
-        from datetime import datetime as dt
+        # 注意：SQLAlchemy的DateTime可能返回timezone-aware或naive的datetime对象
+        from datetime import datetime as dt, date
+        import json
+        
+        def serialize_value(value):
+            """递归序列化值，处理datetime和date对象"""
+            if value is None:
+                return None
+            # 处理datetime对象（包括timezone-aware和naive）
+            if isinstance(value, dt):
+                return value.isoformat()
+            # 处理date对象（但不是datetime）
+            if isinstance(value, date) and not isinstance(value, dt):
+                return value.isoformat()
+            # 处理其他可能不可序列化的类型
+            try:
+                # 快速测试：尝试序列化单个值
+                json.dumps(value)
+                return value
+            except (TypeError, ValueError):
+                # 如果无法序列化，转换为字符串（兜底方案）
+                return str(value)
+        
         serializable_user = {}
         for key, value in formatted_user.items():
-            if isinstance(value, dt):
-                serializable_user[key] = value.isoformat() if value else None
-            else:
-                serializable_user[key] = value
+            serializable_user[key] = serialize_value(value)
         
         # ⚠️ 生成ETag（用于HTTP协商缓存）- 必须使用已序列化的数据
         import hashlib
