@@ -64,19 +64,16 @@ def split_sql_statements(sql_content: str) -> List[str]:
         if not in_dollar_quote and not in_single_quote and not in_double_quote and not in_block_comment:
             if char == '-' and next_char == '-':
                 in_line_comment = True
-                current_statement.append(char)
-                if next_char:
-                    current_statement.append(next_char)
-                    i += 1
-                i += 1
+                # 不将注释内容添加到 current_statement，直接跳过
+                i += 2
                 continue
             elif in_line_comment and char == '\n':
                 in_line_comment = False
-                current_statement.append(char)
+                # 注释结束，不添加换行符到 current_statement
                 i += 1
                 continue
             elif in_line_comment:
-                current_statement.append(char)
+                # 跳过注释内容
                 i += 1
                 continue
         
@@ -172,7 +169,16 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
         logger.debug(f"迁移文件 {sql_file_path.name} 分割后得到 {len(statements)} 个语句")
         if len(statements) == 0:
             logger.warning(f"警告：迁移文件 {sql_file_path.name} 没有识别到任何 SQL 语句")
-            logger.debug(f"文件内容预览: {sql_content[:500]}")
+            logger.warning(f"文件内容预览（前500字符）: {repr(sql_content[:500])}")
+            logger.warning(f"文件总长度: {len(sql_content)} 字符")
+            # 尝试手动查找 ALTER TABLE 语句
+            if 'ALTER TABLE' in sql_content.upper():
+                logger.warning(f"文件中包含 ALTER TABLE，但未被识别为语句")
+                # 尝试简单的按分号分割
+                simple_split = [s.strip() for s in sql_content.split(';') if s.strip() and not s.strip().startswith('--')]
+                logger.warning(f"简单分割后得到 {len(simple_split)} 个语句片段")
+                for idx, stmt in enumerate(simple_split[:3]):  # 只显示前3个
+                    logger.warning(f"  片段 {idx+1}: {stmt[:100]}...")
         
         # 执行每个语句（每个语句在独立的事务中执行）
         for statement in statements:
