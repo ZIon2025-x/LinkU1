@@ -1403,17 +1403,31 @@ def delete_task_safely(db: Session, task_id: int):
     taker_id = task.taker_id
 
     try:
-        # 1. 删除相关的任务申请（必须在删除任务之前）
-        from app.models import TaskApplication
+        # 1. 删除议价响应日志（必须在删除任务申请之前）
+        # 先获取所有相关的申请ID
+        from app.models import TaskApplication, NegotiationResponseLog
+        application_ids = [
+            app.id for app in db.query(TaskApplication.id)
+            .filter(TaskApplication.task_id == task_id)
+            .all()
+        ]
+        
+        # 删除所有相关的议价响应日志
+        if application_ids:
+            db.query(NegotiationResponseLog).filter(
+                NegotiationResponseLog.application_id.in_(application_ids)
+            ).delete(synchronize_session=False)
+        
+        # 2. 删除相关的任务申请（必须在删除任务之前）
         db.query(TaskApplication).filter(TaskApplication.task_id == task_id).delete(synchronize_session=False)
 
-        # 2. 删除相关的通知
+        # 3. 删除相关的通知
         db.query(Notification).filter(Notification.related_id == task_id).delete()
 
-        # 3. 删除相关的评价
+        # 4. 删除相关的评价
         db.query(Review).filter(Review.task_id == task_id).delete()
 
-        # 4. 删除相关的任务历史
+        # 5. 删除相关的任务历史
         db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
 
         # 5. 查找并删除任务相关的消息、图片和文件
