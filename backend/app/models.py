@@ -642,9 +642,10 @@ class FeaturedTaskExpert(Base):
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
     
     # 索引
-    # 注意：id 已经是主键，会自动创建索引，不需要单独创建
-    # user_id 现在与 id 相同，也不需要单独索引
+    # 注意：id 已经是主键，会自动创建索引
+    # user_id 有唯一约束，会自动创建唯一索引，但为了明确性和查询优化，也显式添加索引
     __table_args__ = (
+        Index("ix_featured_task_experts_user_id", user_id),  # user_id 索引，用于优化查询
         Index("ix_task_experts_category", category),
         Index("ix_task_experts_is_active", is_active),
         Index("ix_task_experts_is_featured", is_featured),

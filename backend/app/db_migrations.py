@@ -250,6 +250,7 @@ def run_migrations(engine: Engine) -> bool:
         "create_task_expert_tables.sql",  # 任务达人功能迁移
         "create_task_expert_profile_update_requests_table.sql",  # 任务达人信息修改审核表迁移
         "update_featured_task_experts_id_to_user_id.sql",  # 修改 featured_task_experts 表的 id 为 user_id
+        "sync_featured_task_experts_id_user_id.sql",  # 确保 featured_task_experts 表的 id 和 user_id 同步
     ]
     
     total_executed = 0

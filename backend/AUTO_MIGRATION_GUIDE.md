@@ -35,6 +35,11 @@
    - 创建任务达人信息修改审核申请表
    - 创建相关索引和约束
 
+5. **修改 featured_task_experts 表 id 字段迁移** (`migrations/update_featured_task_experts_id_to_user_id.sql`)
+   - 将 `featured_task_experts.id` 从 INTEGER 改为 VARCHAR(8)（使用用户ID）
+   - 确保 `id` 和 `user_id` 一致
+   - 更新相关约束和索引
+
 ## 配置
 
 ### 环境变量
@@ -104,6 +109,7 @@ alembic upgrade head
 3. 执行任务表索引迁移
 4. 执行任务达人功能迁移
 5. 执行任务达人信息修改审核表迁移
+6. 执行修改 featured_task_experts 表 id 字段迁移
 
 ## 日志输出
 

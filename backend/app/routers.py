@@ -5840,6 +5840,21 @@ def update_task_expert(
             if field in expert_data and isinstance(expert_data[field], list):
                 expert_data[field] = json.dumps(expert_data[field])
         
+        # 如果 user_id 被修改，确保 id 也同步更新
+        if 'user_id' in expert_data and expert_data['user_id'] != expert.user_id:
+            expert_data['id'] = expert_data['user_id']
+            logger.info(f"检测到 user_id 更改，同步更新 id: {expert_data['user_id']}")
+        
+        # 确保 id 和 user_id 始终一致
+        if 'id' in expert_data and 'user_id' in expert_data:
+            if expert_data['id'] != expert_data['user_id']:
+                expert_data['id'] = expert_data['user_id']
+                logger.info(f"检测到 id 和 user_id 不一致，将 id 同步为 user_id: {expert_data['user_id']}")
+        elif 'user_id' in expert_data:
+            expert_data['id'] = expert_data['user_id']
+        elif 'id' in expert_data:
+            expert_data['user_id'] = expert_data['id']
+        
         # 更新字段
         for key, value in expert_data.items():
             if hasattr(expert, key):

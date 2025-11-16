@@ -1,0 +1,60 @@
+-- 确保 featured_task_experts 表的 id 和 user_id 字段保持同步
+-- 添加触发器和索引
+
+-- 步骤1: 添加 user_id 字段的索引（如果不存在）
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes 
+        WHERE tablename = 'featured_task_experts' 
+        AND indexname = 'ix_featured_task_experts_user_id'
+    ) THEN
+        CREATE INDEX ix_featured_task_experts_user_id ON featured_task_experts(user_id);
+        RAISE NOTICE '已创建 user_id 字段的索引';
+    ELSE
+        RAISE NOTICE 'user_id 字段的索引已存在，跳过';
+    END IF;
+END $$;
+
+-- 步骤2: 创建或替换触发器函数，确保 id 和 user_id 始终保持一致
+CREATE OR REPLACE FUNCTION sync_featured_task_experts_id_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 在 INSERT 时，如果 id 和 user_id 不一致，将 id 设置为 user_id
+    IF NEW.id IS DISTINCT FROM NEW.user_id THEN
+        NEW.id := NEW.user_id;
+        RAISE NOTICE '触发器：已将 id 同步为 user_id (%)', NEW.user_id;
+    END IF;
+    
+    -- 在 UPDATE 时，如果 user_id 被修改，同步更新 id
+    IF TG_OP = 'UPDATE' AND NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+        NEW.id := NEW.user_id;
+        RAISE NOTICE '触发器：user_id 已更改，已将 id 同步为新的 user_id (%)', NEW.user_id;
+    ELSIF TG_OP = 'UPDATE' AND NEW.id IS DISTINCT FROM NEW.user_id THEN
+        -- 如果 id 和 user_id 不一致，将 id 设置为 user_id
+        NEW.id := NEW.user_id;
+        RAISE NOTICE '触发器：已将 id 同步为 user_id (%)', NEW.user_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 步骤3: 删除旧的触发器（如果存在）
+DROP TRIGGER IF EXISTS trigger_sync_featured_task_experts_id_user_id ON featured_task_experts;
+
+-- 步骤4: 创建触发器
+CREATE TRIGGER trigger_sync_featured_task_experts_id_user_id
+    BEFORE INSERT OR UPDATE ON featured_task_experts
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_featured_task_experts_id_user_id();
+
+-- 步骤5: 修复现有数据中 id 和 user_id 不一致的记录
+UPDATE featured_task_experts 
+SET id = user_id 
+WHERE id IS DISTINCT FROM user_id;
+
+-- 完成
+COMMENT ON FUNCTION sync_featured_task_experts_id_user_id() IS '确保 featured_task_experts 表的 id 和 user_id 字段始终保持一致';
+COMMENT ON INDEX ix_featured_task_experts_user_id IS 'featured_task_experts 表 user_id 字段的索引，用于优化查询性能';
+
