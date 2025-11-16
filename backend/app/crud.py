@@ -1403,16 +1403,20 @@ def delete_task_safely(db: Session, task_id: int):
     taker_id = task.taker_id
 
     try:
-        # 1. 删除相关的通知
+        # 1. 删除相关的任务申请（必须在删除任务之前）
+        from app.models import TaskApplication
+        db.query(TaskApplication).filter(TaskApplication.task_id == task_id).delete(synchronize_session=False)
+
+        # 2. 删除相关的通知
         db.query(Notification).filter(Notification.related_id == task_id).delete()
 
-        # 2. 删除相关的评价
+        # 3. 删除相关的评价
         db.query(Review).filter(Review.task_id == task_id).delete()
 
-        # 3. 删除相关的任务历史
+        # 4. 删除相关的任务历史
         db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
 
-        # 4. 查找并删除任务相关的消息、图片和文件
+        # 5. 查找并删除任务相关的消息、图片和文件
         # 获取与任务相关的所有消息
         task_messages = db.query(Message).filter(Message.task_id == task_id).all()
         
@@ -1497,12 +1501,12 @@ def delete_task_safely(db: Session, task_id: int):
         # 删除消息记录（现在可以安全删除了，因为所有外键引用都已删除）
         db.query(Message).filter(Message.task_id == task_id).delete()
 
-        # 5. 最后删除任务本身
+        # 6. 最后删除任务本身（现在所有外键引用都已删除）
         db.delete(task)
 
         db.commit()
 
-        # 6. 更新相关用户的统计信息
+        # 7. 更新相关用户的统计信息
         update_user_statistics(db, poster_id)
         if taker_id:
             update_user_statistics(db, taker_id)
@@ -1746,10 +1750,10 @@ def cleanup_completed_tasks_files(db: Session):
 
 def cleanup_expired_tasks_files(db: Session):
     """清理过期任务（已取消或deadline已过超过3天）的图片和文件"""
-    from app.models import Task
+    from app.models import Task, TaskHistory
     from datetime import timedelta, datetime as dt
     from app.time_utils_v2 import TimeHandlerV2
-    from sqlalchemy import or_, and_
+    from sqlalchemy import or_, and_, func
     import logging
     
     logger = logging.getLogger(__name__)
@@ -1760,24 +1764,47 @@ def cleanup_expired_tasks_files(db: Session):
     three_days_ago = now_naive - timedelta(days=3)
     
     # 查找过期任务（已取消超过3天，或deadline已过超过3天）：
-    expired_tasks = (
+    # 注意：Task 模型没有 updated_at 字段
+    # 对于已取消的任务，使用 TaskHistory 中的取消时间，如果没有则使用 created_at
+    expired_tasks = []
+    
+    # 1. 查找已取消超过3天的任务
+    # 先查找所有已取消的任务
+    cancelled_tasks = db.query(Task).filter(Task.status == "cancelled").all()
+    
+    for task in cancelled_tasks:
+        # 尝试从 TaskHistory 获取取消时间
+        cancel_history = (
+            db.query(TaskHistory)
+            .filter(
+                TaskHistory.task_id == task.id,
+                TaskHistory.action == "cancelled"
+            )
+            .order_by(TaskHistory.timestamp.desc())
+            .first()
+        )
+        
+        # 使用取消时间或创建时间作为判断依据
+        cancel_time = cancel_history.timestamp if cancel_history else task.created_at
+        if cancel_time and cancel_time <= three_days_ago:
+            expired_tasks.append(task)
+    
+    # 2. 查找deadline已过超过3天的open任务
+    deadline_expired_tasks = (
         db.query(Task)
         .filter(
-            or_(
-                and_(
-                    Task.status == "cancelled",
-                    Task.updated_at.isnot(None),
-                    Task.updated_at <= three_days_ago
-                ),
-                and_(
-                    Task.status == "open",
-                    Task.deadline.isnot(None),
-                    Task.deadline <= three_days_ago
-                )
-            )
+            Task.status == "open",
+            Task.deadline.isnot(None),
+            Task.deadline <= three_days_ago
         )
         .all()
     )
+    
+    # 合并结果（去重）
+    task_ids = {task.id for task in expired_tasks}
+    for task in deadline_expired_tasks:
+        if task.id not in task_ids:
+            expired_tasks.append(task)
     
     logger.info(f"找到 {len(expired_tasks)} 个过期超过3天的任务，开始清理文件")
     
