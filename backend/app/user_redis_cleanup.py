@@ -57,10 +57,14 @@ class UserRedisCleanup:
                     # 检查是否是会话数据
                     if key_str.startswith("session:"):
                         data = self._get_redis_data(key_str)
-                        if data and self._is_session_expired(data):
+                        # 如果数据无法解析或已过期，删除
+                        if data is None or self._is_session_expired(data):
                             self.redis_client.delete(key_str)
                             cleaned_count += 1
-                            logger.info(f"[USER_REDIS_CLEANUP] 删除过期会话: {key_str}")
+                            if data is None:
+                                logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的会话数据: {key_str}")
+                            else:
+                                logger.info(f"[USER_REDIS_CLEANUP] 删除过期会话: {key_str}")
                     
                     # 检查是否是用户会话列表
                     elif key_str.startswith("user_sessions:"):
@@ -107,10 +111,14 @@ class UserRedisCleanup:
                     # 检查是否是refresh token数据
                     if key_str.startswith("refresh_token:") or key_str.startswith("service_refresh_token:"):
                         data = self._get_redis_data(key_str)
-                        if data and self._is_refresh_token_expired(data):
+                        # 如果数据无法解析或已过期，删除
+                        if data is None or self._is_refresh_token_expired(data):
                             self.redis_client.delete(key_str)
                             cleaned_count += 1
-                            logger.info(f"[USER_REDIS_CLEANUP] 删除过期refresh token: {key_str}")
+                            if data is None:
+                                logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的refresh token数据: {key_str}")
+                            else:
+                                logger.info(f"[USER_REDIS_CLEANUP] 删除过期refresh token: {key_str}")
                     
                     # 检查是否是用户refresh token列表
                     elif key_str.startswith("user_refresh_tokens:"):
@@ -159,9 +167,19 @@ class UserRedisCleanup:
                 for key in keys:
                     key_str = key.decode() if isinstance(key, bytes) else key
                     
-                    # 检查缓存是否过期
+                    # 尝试获取数据
                     data = self._get_redis_data(key_str)
-                    if data and self._is_cache_expired(data):
+                    
+                    if data is None:
+                        # 数据无法解析（可能是损坏的或格式不正确的数据），直接删除
+                        try:
+                            self.redis_client.delete(key_str)
+                            cleaned_count += 1
+                            logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的缓存数据: {key_str}")
+                        except Exception as e:
+                            logger.warning(f"[USER_REDIS_CLEANUP] 删除损坏的缓存数据失败 {key_str}: {e}")
+                    elif self._is_cache_expired(data):
+                        # 数据可以解析但已过期，删除
                         self.redis_client.delete(key_str)
                         cleaned_count += 1
                         logger.info(f"[USER_REDIS_CLEANUP] 删除过期缓存: {key_str}")
@@ -225,7 +243,8 @@ class UserRedisCleanup:
             for key in session_keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 data = self._get_redis_data(key_str)
-                if data and self._is_session_expired(data):
+                # 如果数据无法解析，也计入过期（需要清理）
+                if data is None or self._is_session_expired(data):
                     stats['expired_sessions'] += 1
             
             # 统计用户会话列表
@@ -239,7 +258,8 @@ class UserRedisCleanup:
             for key in refresh_token_keys:
                 key_str = key.decode() if isinstance(key, bytes) else key
                 data = self._get_redis_data(key_str)
-                if data and self._is_refresh_token_expired(data):
+                # 如果数据无法解析，也计入过期（需要清理）
+                if data is None or self._is_refresh_token_expired(data):
                     stats['expired_refresh_tokens'] += 1
             
             # 统计用户refresh token列表
@@ -255,7 +275,8 @@ class UserRedisCleanup:
                 for key in cache_keys:
                     key_str = key.decode() if isinstance(key, bytes) else key
                     data = self._get_redis_data(key_str)
-                    if data and self._is_cache_expired(data):
+                    # 如果数据无法解析，也计入过期（需要清理）
+                    if data is None or self._is_cache_expired(data):
                         stats['expired_cache'] += 1
             
             return stats
@@ -265,72 +286,73 @@ class UserRedisCleanup:
             return {}
     
     def _get_redis_data(self, key: str) -> Dict[str, Any]:
-        """安全获取Redis数据"""
+        """安全获取Redis数据，支持pickle和JSON两种格式"""
         try:
             data = self.redis_client.get(key)
             if not data:
                 return None
             
-            # 尝试解码bytes数据
-            if isinstance(data, bytes):
+            # 确保数据是bytes类型
+            if not isinstance(data, bytes):
+                data = bytes(data) if data else None
+                if not data:
+                    return None
+            
+            # 方法1: 尝试使用pickle反序列化（redis_cache.py使用的格式）
+            try:
+                import pickle
+                parsed_data = pickle.loads(data)
+                # 如果成功解析且是字典类型，直接返回
+                if isinstance(parsed_data, dict):
+                    return parsed_data
+                # 如果是其他类型，记录日志但不报错
+                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是pickle格式但非字典类型: {type(parsed_data)}")
+                return None
+            except (pickle.PickleError, TypeError, AttributeError):
+                # pickle解析失败，继续尝试JSON
+                pass
+            
+            # 方法2: 尝试使用JSON解析（某些地方可能直接写入JSON）
+            try:
+                # 尝试解码为字符串
                 try:
-                    # 首先尝试utf-8
-                    data = data.decode('utf-8')
+                    data_str = data.decode('utf-8')
                 except UnicodeDecodeError:
                     # 如果utf-8失败，尝试latin-1（兼容所有字节值）
-                    data = data.decode('latin-1')
-            
-            # 检查数据是否为空字符串或只包含空白字符
-            if not data or not data.strip():
-                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值为空，跳过解析")
-                return None
-            
-            # 尝试解析JSON
-            import json
-            try:
-                parsed_data = json.loads(data)
-            except json.JSONDecodeError as e:
-                # 如果解析失败，检查是否是双重编码的JSON字符串
-                if isinstance(data, str) and data.startswith('"') and data.endswith('"'):
+                    data_str = data.decode('latin-1')
+                
+                # 检查数据是否为空字符串或只包含空白字符
+                if not data_str or not data_str.strip():
+                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值为空，跳过解析")
+                    return None
+                
+                import json
+                parsed_data = json.loads(data_str)
+                
+                # 如果解析得到的是字符串，再次尝试解析（处理双重编码的情况）
+                if isinstance(parsed_data, str):
                     try:
-                        # 尝试先解析外层引号
-                        unquoted = json.loads(data)
-                        if isinstance(unquoted, str):
-                            # 再次解析内层JSON
-                            parsed_data = json.loads(unquoted)
-                        else:
-                            # 如果外层解析后不是字符串，说明数据格式有问题
-                            logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据格式异常（非JSON）: {data[:100]}")
-                            return None
+                        parsed_data = json.loads(parsed_data)
                     except json.JSONDecodeError:
-                        # 双重解析也失败，记录警告并返回None
-                        logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据不是有效的JSON格式: {data[:100]}")
+                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是字符串而非JSON对象")
                         return None
-                else:
-                    # 不是双重编码，直接记录警告
-                    logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据不是有效的JSON格式: {data[:100]}")
+                
+                # 确保返回的是字典类型
+                if not isinstance(parsed_data, dict):
+                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值不是字典类型: {type(parsed_data)}")
                     return None
-            
-            # 如果解析得到的是字符串，再次尝试解析（处理双重编码的情况）
-            if isinstance(parsed_data, str):
-                try:
-                    parsed_data = json.loads(parsed_data)
-                except json.JSONDecodeError:
-                    # 如果再次解析失败，说明外层字符串不是JSON，返回原始字符串
-                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是字符串而非JSON对象")
-                    return None
-            
-            # 确保返回的是字典类型
-            if not isinstance(parsed_data, dict):
-                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值不是字典类型: {type(parsed_data)}")
+                
+                return parsed_data
+            except json.JSONDecodeError:
+                # JSON解析也失败，记录警告
+                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据既不是pickle也不是JSON格式，可能是其他格式或已损坏")
+                return None
+            except UnicodeDecodeError:
+                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据无法解码为字符串")
                 return None
             
-            return parsed_data
-        except (UnicodeDecodeError, json.JSONDecodeError) as e:
-            logger.debug(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
-            return None
         except Exception as e:
-            logger.error(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
+            logger.debug(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
             return None
     
     def _is_session_expired(self, data: Dict[str, Any]) -> bool:
