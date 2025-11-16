@@ -218,7 +218,7 @@ def update_task_expert_bio(db: Session, user_id: str):
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
     
-    # 5. 计算成功率（已完成任务中评价>=3星的任务数 / 全部任务数 * 100）
+    # 5. 计算成功率（已完成任务中评价>=3星的任务数 / 已完成任务数 * 100）
     # 使用 JOIN 查询已完成任务中，有评价且评价>=3星的任务数量
     from sqlalchemy import distinct
     successful_tasks_count = (
@@ -232,8 +232,8 @@ def update_task_expert_bio(db: Session, user_id: str):
         .count()
     )
     
-    # 成功率 = (评价>=3星的已完成任务数 / 全部任务数) * 100
-    success_rate = (successful_tasks_count / total_tasks * 100.0) if total_tasks > 0 else 0.0
+    # 成功率 = (评价>=3星的已完成任务数 / 已完成任务数) * 100
+    success_rate = (successful_tasks_count / completed_tasks * 100.0) if completed_tasks > 0 else 0.0
     
     # 6. 更新 FeaturedTaskExpert 的响应时间和统计字段
     # 注意：bio 是简介，不应该在这里更新，应该由用户或管理员手动填写
