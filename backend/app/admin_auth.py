@@ -421,22 +421,21 @@ def create_admin_session(admin_id: str, request: Request) -> str:
 
 def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
     """验证管理员会话（最高安全等级）"""
-    logger.info(f"[ADMIN_AUTH] validate_admin_session - URL: {request.url}")
-    logger.info(f"[ADMIN_AUTH] validate_admin_session - Cookies: {dict(request.cookies)}")
+    logger.debug(f"[ADMIN_AUTH] validate_admin_session - URL: {request.url}")
     
     # 获取管理员会话Cookie
     admin_session_id = request.cookies.get("admin_session_id")
     
     if not admin_session_id:
-        logger.info("[ADMIN_AUTH] 未找到admin_session_id")
+        logger.debug("[ADMIN_AUTH] 未找到admin_session_id")
         return None
     
-    logger.info(f"[ADMIN_AUTH] 找到admin_session_id: {admin_session_id[:8]}...")
+    logger.debug(f"[ADMIN_AUTH] 找到admin_session_id: {admin_session_id[:8]}...")
     
     # 验证会话
     session = AdminAuthManager.get_session(admin_session_id, update_activity=False)
     if not session:
-        logger.info(f"[ADMIN_AUTH] 管理员会话验证失败: {admin_session_id[:8]}...")
+        logger.debug(f"[ADMIN_AUTH] 管理员会话验证失败: {admin_session_id[:8]}...")
         return None
     
     # 验证会话是否仍然活跃
@@ -456,12 +455,12 @@ def validate_admin_session(request: Request) -> Optional[AdminSessionInfo]:
     from app.security import get_client_ip
     current_ip = get_client_ip(request)
     if session.ip_address != current_ip:
-        logger.warning(f"[ADMIN_AUTH] IP地址不匹配: 会话IP={session.ip_address}, 当前IP={current_ip}")
+        logger.debug(f"[ADMIN_AUTH] IP地址不匹配: 会话IP={session.ip_address}, 当前IP={current_ip}")
         # 可以选择是否强制登出
         # AdminAuthManager.delete_session(admin_session_id)
         # return None
     
-    logger.info(f"[ADMIN_AUTH] 管理员会话验证成功: {admin_session_id[:8]}..., 管理员: {session.admin_id}")
+    logger.debug(f"[ADMIN_AUTH] 管理员会话验证成功: {admin_session_id[:8]}..., 管理员: {session.admin_id}")
     return session
 
 def create_admin_session_cookie(response: Response, session_id: str) -> Response:
@@ -498,8 +497,8 @@ def create_admin_session_cookie(response: Response, session_id: str) -> Response
         domain=cookie_domain  # 根据环境设置
     )
     
-    logger.info(f"[ADMIN_AUTH] 设置管理员Cookie - session_id: {session_id[:8]}..., secure: {Config.COOKIE_SECURE}, samesite: {samesite_value}, domain: {cookie_domain}")
-    logger.info(f"[ADMIN_AUTH] 管理员Cookie设置完成 - admin_session_id 和 admin_authenticated")
+    logger.debug(f"[ADMIN_AUTH] 设置管理员Cookie - session_id: {session_id[:8]}..., secure: {Config.COOKIE_SECURE}, samesite: {samesite_value}, domain: {cookie_domain}")
+    logger.debug(f"[ADMIN_AUTH] 管理员Cookie设置完成 - admin_session_id 和 admin_authenticated")
     
     return response
 
@@ -545,7 +544,7 @@ def create_admin_refresh_token(admin_id: str, ip_address: str = "", device_finge
             })
         )
     
-    logger.info(f"[ADMIN_AUTH] 创建管理员refresh token: {admin_id}, IP: {ip_address}, 设备: {device_fingerprint}")
+    logger.debug(f"[ADMIN_AUTH] 创建管理员refresh token: {admin_id}, IP: {ip_address}, 设备: {device_fingerprint}")
     return refresh_token
 
 

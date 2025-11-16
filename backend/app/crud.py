@@ -89,7 +89,8 @@ def update_user_statistics(db: Session, user_id: str):
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
     # 计算完成率（用于 FeaturedTaskExpert）
-    completion_rate = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
+    # 完成率 = (完成的接受任务数 / 接受过的任务数) × 100%
+    completion_rate = (completed_taken_tasks / taken_tasks * 100.0) if taken_tasks > 0 else 0.0
 
     # 更新用户记录
     user = db.query(models.User).filter(models.User.id == user_id).first()
@@ -211,7 +212,8 @@ def update_task_expert_bio(db: Session, user_id: str):
     ).count()
     completed_tasks = completed_taken_tasks + completed_posted_tasks
     
-    completion_rate = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
+    # 计算完成率 = (完成的接受任务数 / 接受过的任务数) × 100%
+    completion_rate = (completed_taken_tasks / taken_tasks * 100.0) if taken_tasks > 0 else 0.0
     
     # 4. 计算平均评分
     avg_rating_result = (

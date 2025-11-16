@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 
 def get_current_admin(request: Request, db: Session = Depends(get_sync_db)) -> models.AdminUser:
     """获取当前管理员（独立认证）"""
-    logger.info(f"[ADMIN_AUTH] get_current_admin - URL: {request.url}")
+    logger.debug(f"[ADMIN_AUTH] get_current_admin - URL: {request.url}")
     
     # 验证管理员会话
     admin_session = validate_admin_session(request)
     if not admin_session:
-        logger.info("[ADMIN_AUTH] 管理员会话验证失败")
+        logger.debug("[ADMIN_AUTH] 管理员会话验证失败")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="管理员认证失败，请重新登录"
@@ -47,7 +47,7 @@ def get_current_admin(request: Request, db: Session = Depends(get_sync_db)) -> m
             detail="管理员账户已被禁用"
         )
     
-    logger.info(f"[ADMIN_AUTH] 管理员认证成功: {admin.id}")
+    logger.debug(f"[ADMIN_AUTH] 管理员认证成功: {admin.id}")
     return admin
 
 def get_current_admin_optional(request: Request, db: Session = Depends(get_sync_db)) -> Optional[models.AdminUser]:
