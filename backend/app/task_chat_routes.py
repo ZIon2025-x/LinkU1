@@ -1169,18 +1169,14 @@ async def accept_application(
             from app.models import get_uk_time_naive
             notification_time = get_uk_time_naive()
             
-            notification_content = {
-                "type": "application_accepted",
-                "task_id": task_id,
-                "task_title": task.title,
-                "application_id": application_id
-            }
+            # ⚠️ 直接使用文本内容，不存储 JSON
+            content = f"您的任务申请已被接受：{task.title}"
             
             new_notification = models.Notification(
                 user_id=application.applicant_id,
                 type="application_accepted",
                 title="您的申请已被接受",
-                content=json.dumps(notification_content),
+                content=content,  # 直接使用文本，不存储 JSON
                 related_id=application_id,
                 created_at=notification_time
             )
@@ -1277,18 +1273,14 @@ async def reject_application(
             from app.models import get_uk_time_naive
             notification_time = get_uk_time_naive()
             
-            notification_content = {
-                "type": "application_rejected",
-                "task_id": task_id,
-                "task_title": task.title,
-                "application_id": application_id
-            }
+            # ⚠️ 直接使用文本内容，不存储 JSON
+            content = f"您的任务申请已被拒绝：{task.title}"
             
             new_notification = models.Notification(
                 user_id=application.applicant_id,
                 type="application_rejected",
                 title="您的申请已被拒绝",
-                content=json.dumps(notification_content),
+                content=content,  # 直接使用文本，不存储 JSON
                 related_id=application_id,
                 created_at=notification_time
             )
@@ -1397,11 +1389,14 @@ async def withdraw_application(
                 "application_id": application_id
             }
             
+            # ⚠️ 直接使用文本内容，不存储 JSON
+            content = f"有申请者撤回了对任务「{task.title}」的申请"
+            
             new_notification = models.Notification(
                 user_id=task.poster_id,
                 type="application_withdrawn",
                 title="有申请者撤回了申请",
-                content=json.dumps(notification_content),
+                content=content,  # 直接使用文本，不存储 JSON
                 related_id=application_id,
                 created_at=current_time
             )

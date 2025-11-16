@@ -49,7 +49,9 @@ def send_task_application_notification(
     try:
         print(f"DEBUG: 开始发送任务申请通知，任务ID: {task.id}, 发布者ID: {task.poster_id}, 申请者: {applicant.name}")
         
-        # 构建通知内容（JSON格式，包含议价信息）
+        # ⚠️ 注意：task_application 通知需要保留 JSON 格式，因为前端需要解析显示详细信息
+        # 但为了统一，我们也可以改为文本，前端会回退到显示原始内容
+        # 这里保留 JSON 格式以支持前端的详细显示逻辑
         import json
         notification_content_dict = {
             "type": "task_application",
@@ -269,19 +271,17 @@ async def send_expert_application_notification(
             return
         
         # 为每个管理员创建通知
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        user_name = user.name or f"用户{user_id}"
+        content = f"用户 {user_name} 申请成为任务达人"
+        
         for admin in admins:
-            notification_content = json.dumps({
-                "type": "expert_application",
-                "user_id": user_id,
-                "user_name": user.name or f"用户{user_id}",
-            }, ensure_ascii=False)
-            
             await async_crud.async_notification_crud.create_notification(
                 db=db,
                 user_id=admin.id,
                 notification_type="expert_application",
                 title="新任务达人申请",
-                content=notification_content,
+                content=content,  # 直接使用文本，不存储 JSON
                 related_id=user_id,
             )
         
@@ -404,19 +404,18 @@ async def send_counter_offer_notification(
     try:
         from app import async_crud
         
-        notification_content = json.dumps({
-            "type": "counter_offer",
-            "expert_id": expert_id,
-            "counter_price": float(counter_price),
-            "message": message or "",
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        if message and message.strip():
+            content = f"任务达人提出新价格：£{float(counter_price):.2f}。留言：{message}"
+        else:
+            content = f"任务达人提出新价格：£{float(counter_price):.2f}"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=applicant_id,
             notification_type="counter_offer",
             title="任务达人提出新价格",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=expert_id,
         )
         
