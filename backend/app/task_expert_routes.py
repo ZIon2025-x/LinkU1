@@ -456,7 +456,6 @@ async def get_service_detail(
     service = await db.execute(
         select(models.TaskExpertService)
         .where(models.TaskExpertService.id == service_id)
-        .options(select(models.TaskExpert).where(models.TaskExpert.id == models.TaskExpertService.expert_id))
     )
     service = service.scalar_one_or_none()
     if not service:
