@@ -280,17 +280,54 @@ class UserRedisCleanup:
                     # 如果utf-8失败，尝试latin-1（兼容所有字节值）
                     data = data.decode('latin-1')
             
+            # 检查数据是否为空字符串或只包含空白字符
+            if not data or not data.strip():
+                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值为空，跳过解析")
+                return None
+            
             # 尝试解析JSON
             import json
-            parsed_data = json.loads(data)
+            try:
+                parsed_data = json.loads(data)
+            except json.JSONDecodeError as e:
+                # 如果解析失败，检查是否是双重编码的JSON字符串
+                if isinstance(data, str) and data.startswith('"') and data.endswith('"'):
+                    try:
+                        # 尝试先解析外层引号
+                        unquoted = json.loads(data)
+                        if isinstance(unquoted, str):
+                            # 再次解析内层JSON
+                            parsed_data = json.loads(unquoted)
+                        else:
+                            # 如果外层解析后不是字符串，说明数据格式有问题
+                            logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据格式异常（非JSON）: {data[:100]}")
+                            return None
+                    except json.JSONDecodeError:
+                        # 双重解析也失败，记录警告并返回None
+                        logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据不是有效的JSON格式: {data[:100]}")
+                        return None
+                else:
+                    # 不是双重编码，直接记录警告
+                    logger.warning(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据不是有效的JSON格式: {data[:100]}")
+                    return None
             
-            # 如果解码得到的是字符串，再次尝试解析
+            # 如果解析得到的是字符串，再次尝试解析（处理双重编码的情况）
             if isinstance(parsed_data, str):
-                parsed_data = json.loads(parsed_data)
+                try:
+                    parsed_data = json.loads(parsed_data)
+                except json.JSONDecodeError:
+                    # 如果再次解析失败，说明外层字符串不是JSON，返回原始字符串
+                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是字符串而非JSON对象")
+                    return None
+            
+            # 确保返回的是字典类型
+            if not isinstance(parsed_data, dict):
+                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值不是字典类型: {type(parsed_data)}")
+                return None
             
             return parsed_data
         except (UnicodeDecodeError, json.JSONDecodeError) as e:
-            logger.error(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
+            logger.debug(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
             return None
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")

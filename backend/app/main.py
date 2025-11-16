@@ -449,15 +449,8 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 执行自动数据库迁移
-        try:
-            from app.db_migrations import run_migration_sync
-            logger.info("开始执行自动数据库迁移...")
-            run_migration_sync(sync_engine)
-            logger.info("自动数据库迁移完成！")
-        except Exception as e:
-            logger.error(f"自动数据库迁移失败: {e}", exc_info=True)
-            # 迁移失败不阻止应用启动
+        # 自动数据库迁移已禁用（迁移脚本已执行完成并删除）
+        # 如需执行迁移，请手动运行迁移脚本或使用 Alembic
         
         # 创建优化索引（使用 pg_trgm）
         try:

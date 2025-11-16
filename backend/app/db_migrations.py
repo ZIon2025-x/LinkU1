@@ -253,10 +253,10 @@ def run_migrations(engine: Engine) -> bool:
     
     返回: 是否成功
     """
-    # 检查是否启用自动迁移
-    auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
+    # 检查是否启用自动迁移（默认禁用，迁移脚本已执行完成）
+    auto_migrate = os.getenv("AUTO_MIGRATE", "false").lower() == "true"
     if not auto_migrate:
-        logger.info("自动迁移已禁用 (AUTO_MIGRATE=false)")
+        logger.info("自动迁移已禁用（迁移脚本已执行完成，如需迁移请手动执行）")
         return True
     
     logger.info("🚀 开始执行自动数据库迁移...")
