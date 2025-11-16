@@ -1562,12 +1562,11 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/profile/me", response_model=schemas.UserOut)
+@router.get("/profile/me")
 def get_my_profile(
     request: Request, 
     current_user=Depends(get_current_user_secure_sync_csrf), 
-    db: Session = Depends(get_db),
-    response: Response = None
+    db: Session = Depends(get_db)
 ):
 
     # 安全地创建用户对象，避免SQLAlchemy内部属性
@@ -1635,13 +1634,16 @@ def get_my_profile(
                 }
             )
         
-        # 设置响应头
-        if response:
-            response.headers["ETag"] = etag
-            response.headers["Cache-Control"] = "private, max-age=300"  # 5分钟，配合Vary避免CDN误缓存
-            response.headers["Vary"] = "Cookie"  # 避免中间层误缓存
-        
-        return formatted_user
+        # ⚠️ 使用JSONResponse返回，设置响应头
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            content=formatted_user,
+            headers={
+                "ETag": etag,
+                "Cache-Control": "private, max-age=300",  # 5分钟，配合Vary避免CDN误缓存
+                "Vary": "Cookie"  # 避免中间层误缓存
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
