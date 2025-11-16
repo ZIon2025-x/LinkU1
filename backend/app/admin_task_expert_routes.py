@@ -381,6 +381,14 @@ async def create_featured_expert_from_application(
         
         sync_db.add(new_featured_expert)
         sync_db.commit()
+        
+        # ⚠️ 创建后立即更新统计数据（包括完成率）
+        try:
+            from app import crud
+            crud.update_user_statistics(sync_db, application.user_id)
+            logger.info(f"已更新特色任务达人 {application.user_id} 的统计数据")
+        except Exception as e:
+            logger.warning(f"更新特色任务达人统计数据失败: {e}，但不影响创建流程")
         sync_db.refresh(new_featured_expert)
         
         logger.info(f"管理员 {current_admin.id} 为申请 {application_id} 创建了特色任务达人 {new_featured_expert.id}")

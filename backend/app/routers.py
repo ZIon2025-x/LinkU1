@@ -5986,28 +5986,49 @@ def get_public_task_experts(
         
         experts = query.all()
         
+        # ⚠️ 如果完成率为0，尝试实时计算（可能是数据未更新）
+        from app.models import Task
+        result_experts = []
+        for expert in experts:
+            completion_rate = expert.completion_rate
+            # 如果完成率为0，尝试实时计算
+            if completion_rate == 0.0:
+                taken_tasks = db.query(Task).filter(Task.taker_id == expert.id).count()
+                completed_taken_tasks = db.query(Task).filter(
+                    Task.taker_id == expert.id,
+                    Task.status == "completed"
+                ).count()
+                if taken_tasks > 0:
+                    completion_rate = (completed_taken_tasks / taken_tasks) * 100.0
+                    # 更新数据库中的值（异步，不阻塞返回）
+                    try:
+                        expert.completion_rate = completion_rate
+                        db.commit()
+                    except Exception as e:
+                        logger.warning(f"更新任务达人 {expert.id} 完成率失败: {e}")
+                        db.rollback()
+            
+            result_experts.append({
+                "id": expert.id,  # id 现在就是 user_id
+                "name": expert.name,
+                "avatar": expert.avatar,
+                "user_level": expert.user_level,
+                "avg_rating": expert.avg_rating,
+                "completed_tasks": expert.completed_tasks,
+                "total_tasks": expert.total_tasks,
+                "completion_rate": round(completion_rate, 1),
+                "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+                "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+                "achievements": json.loads(expert.achievements) if expert.achievements else [],
+                "is_verified": bool(expert.is_verified),
+                "bio": expert.bio,
+                "response_time": expert.response_time,
+                "success_rate": expert.success_rate,
+                "location": expert.location,  # 添加城市字段
+            })
+        
         return {
-            "task_experts": [
-                {
-                    "id": expert.id,  # id 现在就是 user_id
-                    "name": expert.name,
-                    "avatar": expert.avatar,
-                    "user_level": expert.user_level,
-                    "avg_rating": expert.avg_rating,
-                    "completed_tasks": expert.completed_tasks,
-                    "total_tasks": expert.total_tasks,
-                    "completion_rate": expert.completion_rate,
-                    "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
-                    "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
-                    "achievements": json.loads(expert.achievements) if expert.achievements else [],
-                    "is_verified": bool(expert.is_verified),
-                    "bio": expert.bio,
-                    "response_time": expert.response_time,
-                    "success_rate": expert.success_rate,
-                    "location": expert.location,  # 添加城市字段
-                }
-                for expert in experts
-            ]
+            "task_experts": result_experts
         }
     except Exception as e:
         logger.error(f"获取任务达人列表失败: {e}")
