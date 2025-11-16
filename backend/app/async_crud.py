@@ -797,12 +797,21 @@ class AsyncNotificationCRUD:
     ) -> models.Notification:
         """创建通知"""
         try:
+            # ⚠️ 将related_id从字符串转换为整数（数据库字段是Integer类型）
+            related_id_int = None
+            if related_id is not None:
+                try:
+                    related_id_int = int(related_id)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid related_id format: {related_id}, setting to None")
+                    related_id_int = None
+            
             db_notification = models.Notification(
                 user_id=user_id,
                 type=notification_type,
                 title=title,
                 content=content,
-                related_id=related_id,
+                related_id=related_id_int,
             )
             db.add(db_notification)
             await db.commit()

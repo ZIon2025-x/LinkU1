@@ -606,7 +606,15 @@ async def apply_for_service(
         )
         
         await db.commit()
+        # ⚠️ 在异步上下文中，需要重新查询对象以确保所有属性都被正确加载
+        # 避免 MissingGreenlet 错误（惰性加载的关系属性）
         await db.refresh(new_application)
+        # 重新查询以确保所有属性都被加载
+        refreshed_application = await db.execute(
+            select(models.ServiceApplication)
+            .where(models.ServiceApplication.id == new_application.id)
+        )
+        new_application = refreshed_application.scalar_one()
     except IntegrityError:
         await db.rollback()
         # 部分唯一索引冲突：并发情况下可能同时创建申请
@@ -628,6 +636,27 @@ async def apply_for_service(
         )
     except Exception as e:
         logger.error(f"Failed to send notification: {e}")
+    
+    # ⚠️ 确保所有属性都被访问，避免惰性加载问题
+    # 访问所有可能被响应模型使用的属性
+    _ = (
+        new_application.id,
+        new_application.service_id,
+        new_application.applicant_id,
+        new_application.expert_id,
+        new_application.application_message,
+        new_application.negotiated_price,
+        new_application.expert_counter_price,
+        new_application.currency,
+        new_application.status,
+        new_application.final_price,
+        new_application.task_id,
+        new_application.deadline,
+        new_application.is_flexible,
+        new_application.created_at,
+        new_application.approved_at,
+        new_application.price_agreed_at,
+    )
     
     return new_application
 
