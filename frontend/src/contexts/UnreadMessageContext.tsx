@@ -27,8 +27,22 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 获取用户信息
+  // 检查当前是否在管理员或客服页面
+  const isAdminOrServicePage = () => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname;
+    // 检查是否是管理员页面或客服页面
+    return path.includes('/admin') || path.includes('/customer-service') || path.includes('/service');
+  };
+
+  // 获取用户信息（只在非管理员/客服页面时调用）
   useEffect(() => {
+    // 如果是管理员或客服页面，不调用用户接口
+    if (isAdminOrServicePage()) {
+      setUser(null);
+      return;
+    }
+
     const loadUser = async () => {
       try {
         const userData = await fetchCurrentUser();
@@ -39,8 +53,12 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     };
     loadUser();
     
-    // 定期检查用户登录状态
-    const interval = setInterval(loadUser, 60000); // 每分钟检查一次
+    // 定期检查用户登录状态（只在非管理员/客服页面时）
+    const interval = setInterval(() => {
+      if (!isAdminOrServicePage()) {
+        loadUser();
+      }
+    }, 60000); // 每分钟检查一次
     return () => clearInterval(interval);
   }, []);
 
@@ -75,8 +93,8 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
 
   // WebSocket实时更新
   useEffect(() => {
-    if (!user) {
-      // 关闭WebSocket连接
+    if (!user || isAdminOrServicePage()) {
+      // 关闭WebSocket连接（用户未登录或在管理员/客服页面）
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
@@ -153,10 +171,10 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
 
   // 定期更新（每10秒，作为WebSocket的备用）
   useEffect(() => {
-    if (!user) return;
+    if (!user || isAdminOrServicePage()) return;
 
     const interval = setInterval(() => {
-      if (!document.hidden) {
+      if (!document.hidden && !isAdminOrServicePage()) {
         refreshUnreadCount();
       }
     }, 10000); // 每10秒更新一次
@@ -166,10 +184,10 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
 
   // 页面可见性变化时更新
   useEffect(() => {
-    if (!user) return;
+    if (!user || isAdminOrServicePage()) return;
 
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (!document.hidden && !isAdminOrServicePage()) {
         refreshUnreadCount();
       }
     };
