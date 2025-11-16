@@ -77,20 +77,61 @@ def cache_task_detail_sync(ttl: int = 300):
                             # 检查是否是 SQLAlchemy 模型对象
                             try:
                                 from sqlalchemy import inspect as sqlalchemy_inspect
+                                from decimal import Decimal
+                                from datetime import datetime, date
+                                
                                 # 尝试使用 SQLAlchemy 的 inspect 获取列值
                                 mapper = sqlalchemy_inspect(result.__class__)
                                 if mapper and hasattr(mapper, 'columns'):
-                                    # 是 SQLAlchemy 模型，转换为字典
-                                    cache_data = {
-                                        col.key: getattr(result, col.key)
-                                        for col in mapper.columns
-                                    }
+                                    # 是 SQLAlchemy 模型，转换为字典，并处理特殊类型
+                                    cache_data = {}
+                                    for col in mapper.columns:
+                                        value = getattr(result, col.key)
+                                        # 处理 Decimal 类型
+                                        if isinstance(value, Decimal):
+                                            cache_data[col.key] = float(value)
+                                        # 处理 datetime 类型
+                                        elif isinstance(value, datetime):
+                                            cache_data[col.key] = value.isoformat()
+                                        # 处理 date 类型
+                                        elif isinstance(value, date) and not isinstance(value, datetime):
+                                            cache_data[col.key] = value.isoformat()
+                                        else:
+                                            cache_data[col.key] = value
                                 else:
-                                    # 不是 SQLAlchemy 模型，尝试使用 __dict__
-                                    cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                                    # 不是 SQLAlchemy 模型，尝试使用 __dict__，并处理特殊类型
+                                    cache_data = {}
+                                    if hasattr(result, '__dict__'):
+                                        from decimal import Decimal
+                                        from datetime import datetime, date
+                                        for key, value in result.__dict__.items():
+                                            if isinstance(value, Decimal):
+                                                cache_data[key] = float(value)
+                                            elif isinstance(value, datetime):
+                                                cache_data[key] = value.isoformat()
+                                            elif isinstance(value, date) and not isinstance(value, datetime):
+                                                cache_data[key] = value.isoformat()
+                                            else:
+                                                cache_data[key] = value
+                                    else:
+                                        cache_data = result
                             except (ImportError, AttributeError, Exception):
-                                # 如果 inspect 失败或不可用，尝试使用 __dict__
-                                cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                                # 如果 inspect 失败或不可用，尝试使用 __dict__，并处理特殊类型
+                                if hasattr(result, '__dict__'):
+                                    from decimal import Decimal
+                                    from datetime import datetime, date
+                                    cache_data = {}
+                                    for key, value in result.__dict__.items():
+                                        if isinstance(value, Decimal):
+                                            cache_data[key] = float(value)
+                                        elif isinstance(value, datetime):
+                                            cache_data[key] = value.isoformat()
+                                        elif isinstance(value, date) and not isinstance(value, datetime):
+                                            cache_data[key] = value.isoformat()
+                                        else:
+                                            cache_data[key] = value
+                                else:
+                                    cache_data = result
                         
                         redis_client.setex(
                             cache_key,
@@ -173,20 +214,61 @@ def cache_task_detail_async(ttl: int = 300):
                         # 检查是否是 SQLAlchemy 模型对象
                         try:
                             from sqlalchemy import inspect as sqlalchemy_inspect
+                            from decimal import Decimal
+                            from datetime import datetime, date
+                            
                             # 尝试使用 SQLAlchemy 的 inspect 获取列值
                             mapper = sqlalchemy_inspect(result.__class__)
                             if mapper and hasattr(mapper, 'columns'):
-                                # 是 SQLAlchemy 模型，转换为字典
-                                cache_data = {
-                                    col.key: getattr(result, col.key)
-                                    for col in mapper.columns
-                                }
+                                # 是 SQLAlchemy 模型，转换为字典，并处理特殊类型
+                                cache_data = {}
+                                for col in mapper.columns:
+                                    value = getattr(result, col.key)
+                                    # 处理 Decimal 类型
+                                    if isinstance(value, Decimal):
+                                        cache_data[col.key] = float(value)
+                                    # 处理 datetime 类型
+                                    elif isinstance(value, datetime):
+                                        cache_data[col.key] = value.isoformat()
+                                    # 处理 date 类型
+                                    elif isinstance(value, date) and not isinstance(value, datetime):
+                                        cache_data[col.key] = value.isoformat()
+                                    else:
+                                        cache_data[col.key] = value
                             else:
-                                # 不是 SQLAlchemy 模型，尝试使用 __dict__
-                                cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                                # 不是 SQLAlchemy 模型，尝试使用 __dict__，并处理特殊类型
+                                cache_data = {}
+                                if hasattr(result, '__dict__'):
+                                    from decimal import Decimal
+                                    from datetime import datetime, date
+                                    for key, value in result.__dict__.items():
+                                        if isinstance(value, Decimal):
+                                            cache_data[key] = float(value)
+                                        elif isinstance(value, datetime):
+                                            cache_data[key] = value.isoformat()
+                                        elif isinstance(value, date) and not isinstance(value, datetime):
+                                            cache_data[key] = value.isoformat()
+                                        else:
+                                            cache_data[key] = value
+                                else:
+                                    cache_data = result
                         except (ImportError, AttributeError, Exception):
-                            # 如果 inspect 失败或不可用，尝试使用 __dict__
-                            cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                            # 如果 inspect 失败或不可用，尝试使用 __dict__，并处理特殊类型
+                            if hasattr(result, '__dict__'):
+                                from decimal import Decimal
+                                from datetime import datetime, date
+                                cache_data = {}
+                                for key, value in result.__dict__.items():
+                                    if isinstance(value, Decimal):
+                                        cache_data[key] = float(value)
+                                    elif isinstance(value, datetime):
+                                        cache_data[key] = value.isoformat()
+                                    elif isinstance(value, date) and not isinstance(value, datetime):
+                                        cache_data[key] = value.isoformat()
+                                    else:
+                                        cache_data[key] = value
+                            else:
+                                cache_data = result
                     
                     # 重新创建客户端用于写入
                     redis_client = aioredis.from_url(redis_url, decode_responses=False)
