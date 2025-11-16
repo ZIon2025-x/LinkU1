@@ -610,7 +610,7 @@ async def send_expert_profile_update_notification(
     expert_id: str,
     request_id: int
 ):
-    """发送任务达人信息修改请求通知给管理员"""
+    """发送任务达人信息修改请求通知给管理员（使用 StaffNotification 表）"""
     try:
         notification_content = f"任务达人 {expert_id} 提交了信息修改请求，请及时审核"
         
@@ -619,16 +619,19 @@ async def send_expert_profile_update_notification(
         admin_result = await db.execute(select(models.AdminUser))
         admin_users = admin_result.scalars().all()
         
-        from app import async_crud
+        # 使用 StaffNotification 表发送通知给管理员
         for admin in admin_users:
-            await async_crud.async_notification_crud.create_notification(
-                db=db,
-                user_id=admin.id,
-                notification_type="expert_profile_update_request",
+            staff_notification = models.StaffNotification(
+                recipient_id=admin.id,
+                recipient_type="admin",
                 title="任务达人信息修改请求",
                 content=notification_content,
-                related_id=request_id  # request_id 已经是整数
+                notification_type="info",
+                is_read=0
             )
+            db.add(staff_notification)
+        
+        await db.commit()
         
         logger.info(f"信息修改请求通知已发送给所有管理员，请求ID: {request_id}")
         

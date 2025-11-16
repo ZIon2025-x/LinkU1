@@ -184,7 +184,7 @@ const AdminDashboard: React.FC = () => {
     response_time_en: '',
     success_rate: 0,
     is_verified: 0,
-    is_active: 1,
+    is_active: 0,  // 默认已禁用，需要管理员手动启用
     is_featured: 1,
     display_order: 0,
     category: 'programming',
@@ -1505,7 +1505,12 @@ const AdminDashboard: React.FC = () => {
                   <td style={{ padding: '12px' }}>
                     <button
                       onClick={() => {
-                        setTaskExpertForm(expert);
+                        // 确保 is_active 和 is_featured 正确传递（数字类型）
+                        setTaskExpertForm({
+                          ...expert,
+                          is_active: expert.is_active ?? 0,
+                          is_featured: expert.is_featured ?? 0
+                        });
                         setShowTaskExpertModal(true);
                       }}
                       style={{
@@ -1999,7 +2004,7 @@ const AdminDashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>状态</label>
                 <select
-                  value={taskExpertForm.is_active}
+                  value={String(taskExpertForm.is_active ?? 0)}
                   onChange={(e) => setTaskExpertForm({...taskExpertForm, is_active: e.target.value === '1' ? 1 : 0})}
                   style={{
                     width: '100%',
@@ -2015,7 +2020,7 @@ const AdminDashboard: React.FC = () => {
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>是否精选</label>
                 <select
-                  value={taskExpertForm.is_featured}
+                  value={String(taskExpertForm.is_featured ?? 0)}
                   onChange={(e) => setTaskExpertForm({...taskExpertForm, is_featured: e.target.value === '1' ? 1 : 0})}
                   style={{
                     width: '100%',

@@ -264,16 +264,23 @@ async def submit_profile_update_request(
     
     try:
         await db.commit()
-        await db.refresh(new_request)
+        
+        # 在 commit() 之后，需要重新查询对象以避免 greenlet_spawn 错误
+        # 或者手动构建响应数据
+        request_result = await db.execute(
+            select(models.TaskExpertProfileUpdateRequest)
+            .where(models.TaskExpertProfileUpdateRequest.id == new_request.id)
+        )
+        refreshed_request = request_result.scalar_one()
         
         # 发送通知给管理员
         from app.task_notifications import send_expert_profile_update_notification
         try:
-            await send_expert_profile_update_notification(db, current_expert.id, new_request.id)
+            await send_expert_profile_update_notification(db, current_expert.id, refreshed_request.id)
         except Exception as e:
             logger.error(f"发送通知失败: {e}")
         
-        return new_request
+        return refreshed_request
     except IntegrityError:
         await db.rollback()
         raise HTTPException(

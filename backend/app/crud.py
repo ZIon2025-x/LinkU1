@@ -106,7 +106,7 @@ def update_user_statistics(db: Session, user_id: str):
         if task_expert:
             task_expert.completed_tasks = completed_tasks
             task_expert.rating = Decimal(str(avg_rating)).quantize(Decimal('0.01'))  # 保留2位小数
-            task_expert.expert_name = user.name  # 同步用户名（如果用户修改了名字）
+            # 注意：expert_name 只在创建时使用 user.name，后续不自动同步，允许手动修改
             # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
             db.commit()
@@ -122,7 +122,7 @@ def update_user_statistics(db: Session, user_id: str):
             featured_expert.completed_tasks = completed_tasks
             featured_expert.total_tasks = total_tasks
             featured_expert.completion_rate = completion_rate
-            featured_expert.name = user.name  # 同步用户名（如果用户修改了名字）
+            # 注意：name 只在创建时使用 user.name，后续不自动同步，允许手动修改
             featured_expert.avatar = user.avatar or ""  # 同步用户头像
             # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
