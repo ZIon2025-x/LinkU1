@@ -475,10 +475,14 @@ const MyTasks: React.FC = () => {
   };
 
   const getStatusText = (task: Task) => {
-    // 如果是发布者的open任务且有pending申请，显示"申请中"
-    if (task.status === 'open' && user && task.poster_id === user.id) {
+    // ⚠️ 如果是发布者的open任务且有pending申请，显示"申请中"
+    // 注意：只有在任务状态为'open'且没有taker_id时才应该显示"申请中"
+    if (task.status === 'open' && user && task.poster_id === user.id && !task.taker_id) {
       const taskApps = taskApplicationsMap[task.id] || [];
-      const hasPendingApplications = taskApps.some((app: any) => app.status === 'pending');
+      // 检查是否有pending状态的申请（排除已拒绝和已批准的申请）
+      const hasPendingApplications = taskApps.some((app: any) => 
+        app && app.status === 'pending'
+      );
       if (hasPendingApplications) {
         return t('myTasks.taskStatus.pending_applications');
       }
@@ -496,10 +500,14 @@ const MyTasks: React.FC = () => {
   };
 
   const getStatusColor = (task: Task) => {
-    // 如果是发布者的open任务且有pending申请，使用"申请中"的颜色
-    if (task.status === 'open' && user && task.poster_id === user.id) {
+    // ⚠️ 如果是发布者的open任务且有pending申请，使用"申请中"的颜色
+    // 注意：只有在任务状态为'open'且没有taker_id时才应该显示"申请中"的颜色
+    if (task.status === 'open' && user && task.poster_id === user.id && !task.taker_id) {
       const taskApps = taskApplicationsMap[task.id] || [];
-      const hasPendingApplications = taskApps.some((app: any) => app.status === 'pending');
+      // 检查是否有pending状态的申请（排除已拒绝和已批准的申请）
+      const hasPendingApplications = taskApps.some((app: any) => 
+        app && app.status === 'pending'
+      );
       if (hasPendingApplications) {
         return '#f59e0b'; // 使用与taken相同的颜色
       }
