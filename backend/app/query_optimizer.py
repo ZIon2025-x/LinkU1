@@ -42,7 +42,10 @@ class QueryOptimizer:
                 )
             )
             .filter(
-                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+                or_(
+                    models.Task.deadline > now_utc,  # 有截止日期且未过期
+                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                )
             )
         )
         
@@ -111,7 +114,10 @@ class QueryOptimizer:
                 models.Task.status == "taken"
             )
         ).filter(
-            models.Task.deadline > now_utc  # 使用UTC时间进行比较
+            or_(
+                models.Task.deadline > now_utc,  # 有截止日期且未过期
+                models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+            )
         )
         
         # 应用过滤条件
@@ -262,7 +268,10 @@ class AsyncQueryOptimizer:
                 )
             )
             .filter(
-                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+                or_(
+                    models.Task.deadline > now_utc,  # 有截止日期且未过期
+                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                )
             )
         )
         

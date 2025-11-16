@@ -476,6 +476,24 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     else:
         task_level = "normal"
     
+    # 处理灵活时间和截止日期的一致性
+    is_flexible = getattr(task, "is_flexible", 0) or 0
+    deadline = None
+    
+    if is_flexible == 1:
+        # 灵活模式：deadline 必须为 None
+        deadline = None
+    elif task.deadline is not None:
+        # 非灵活模式：使用提供的 deadline
+        deadline = task.deadline
+        is_flexible = 0  # 有截止日期，确保 is_flexible=0
+    else:
+        # 如果没有提供 deadline 且不是灵活模式，设置默认值（7天后）
+        from datetime import timedelta
+        from app.models import get_uk_time_naive
+        deadline = task.deadline if task.deadline else (get_uk_time_naive() + timedelta(days=7))
+        is_flexible = 0
+    
     # 处理图片字段：将列表转为JSON字符串
     import json
     images_json = None
@@ -485,7 +503,8 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     db_task = Task(
         title=task.title,
         description=task.description,
-        deadline=task.deadline,
+        deadline=deadline,
+        is_flexible=is_flexible,  # 设置灵活时间标识
         reward=task.reward,  # 与base_reward同步
         base_reward=base_reward_value,  # 原始标价（发布时的价格）
         agreed_reward=None,  # 初始为空，如果有议价才会设置
@@ -637,10 +656,16 @@ def count_tasks(
     # 构建基础查询 - 需要手动过滤过期任务
     query = db.query(Task).filter(Task.status == "open")
     
-    # 手动过滤过期任务
+    # 手动过滤过期任务（包括灵活模式任务，deadline 为 NULL）
     open_tasks = query.all()
     valid_tasks = []
     for task in open_tasks:
+        # 灵活模式任务（deadline 为 NULL）始终有效
+        if task.deadline is None:
+            valid_tasks.append(task)
+            continue
+        
+        # 有截止日期的任务，检查是否过期
         if task.deadline.tzinfo is None:
             task_deadline_utc = task.deadline.replace(tzinfo=timezone.utc)
         else:

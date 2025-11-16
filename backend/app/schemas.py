@@ -277,7 +277,8 @@ TASK_TYPES = [
 class TaskBase(BaseModel):
     title: str
     description: str
-    deadline: datetime.datetime
+    deadline: Optional[datetime.datetime] = None  # 允许为 NULL，支持灵活模式任务
+    is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
     reward: float
     base_reward: Optional[float] = None  # 原始标价
     agreed_reward: Optional[float] = None  # 最终成交价
@@ -301,6 +302,7 @@ class TaskOut(TaskBase):
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
+    is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -1414,6 +1416,8 @@ class ServiceApplicationOut(BaseModel):
     status: str
     final_price: Optional[float]
     task_id: Optional[int]
+    deadline: Optional[datetime.datetime]  # 任务截至日期
+    is_flexible: Optional[int]  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
     created_at: datetime.datetime
     approved_at: Optional[datetime.datetime]
     price_agreed_at: Optional[datetime.datetime]
@@ -1423,10 +1427,12 @@ class ServiceApplicationOut(BaseModel):
 
 
 class ServiceApplicationCreate(BaseModel):
-    service_id: int
+    # 注意：service_id 从路径参数获取，不需要在请求体中
     application_message: Optional[str] = None
     negotiated_price: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None  # 修复：添加校验，必须大于0
     currency: Literal["GBP"] = "GBP"
+    deadline: Optional[datetime.datetime] = None  # 任务截至日期（如果is_flexible为False）
+    is_flexible: Optional[int] = 0  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
 
 
 class CounterOfferRequest(BaseModel):

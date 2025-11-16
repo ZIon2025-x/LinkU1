@@ -251,6 +251,9 @@ def run_migrations(engine: Engine) -> bool:
         "create_task_expert_profile_update_requests_table.sql",  # 任务达人信息修改审核表迁移
         "update_featured_task_experts_id_to_user_id.sql",  # 修改 featured_task_experts 表的 id 为 user_id
         "sync_featured_task_experts_id_user_id.sql",  # 确保 featured_task_experts 表的 id 和 user_id 同步
+        "add_service_application_deadline_fields.sql",  # 为服务申请添加截至日期和灵活选项字段
+        "allow_task_deadline_null.sql",  # 允许 tasks 表的 deadline 字段为 NULL（支持灵活模式任务）
+        "add_task_is_flexible_field.sql",  # 在 tasks 表中添加 is_flexible 字段
     ]
     
     total_executed = 0

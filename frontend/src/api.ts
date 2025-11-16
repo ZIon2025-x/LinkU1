@@ -1589,6 +1589,8 @@ export const applyForService = async (serviceId: number, applicationData: {
   application_message?: string;
   negotiated_price?: number;
   currency?: string;
+  deadline?: string;  // ISO 格式的日期时间字符串
+  is_flexible?: number;  // 1=灵活，无截至日期；0=有截至日期
 }) => {
   const res = await api.post(`/api/task-experts/services/${serviceId}/apply`, applicationData);
   return res.data;

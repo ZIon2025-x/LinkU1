@@ -572,7 +572,19 @@ async def apply_for_service(
                 detail=f"议价价格不能低于基础价格的50%（最低{min_price}）"
             )
     
-    # 6. 创建申请记录
+    # 6. 校验截至日期
+    if application_data.is_flexible == 1:
+        # 灵活模式，不需要截至日期
+        deadline = None
+    elif application_data.deadline is None:
+        raise HTTPException(status_code=400, detail="非灵活模式必须提供截至日期")
+    else:
+        # 验证截至日期不能早于当前时间
+        if application_data.deadline < models.get_utc_time():
+            raise HTTPException(status_code=400, detail="截至日期不能早于当前时间")
+        deadline = application_data.deadline
+    
+    # 7. 创建申请记录
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
@@ -580,11 +592,13 @@ async def apply_for_service(
         application_message=application_data.application_message,
         negotiated_price=application_data.negotiated_price,
         currency=application_data.currency,
+        deadline=deadline,
+        is_flexible=application_data.is_flexible or 0,
         status="pending",
     )
     db.add(new_application)
     
-    # 7. 更新服务统计：申请时+1（原子更新，避免并发丢失）
+    # 8. 更新服务统计：申请时+1（原子更新，避免并发丢失）
     try:
         await db.execute(
             update(models.TaskExpertService)
@@ -602,7 +616,7 @@ async def apply_for_service(
             detail="您已申请过此服务，请等待处理（并发冲突）"
         )
     
-    # 8. 发送通知给任务达人
+    # 9. 发送通知给任务达人
     from app.task_notifications import send_service_application_notification
     try:
         await send_service_application_notification(
@@ -790,22 +804,51 @@ async def approve_service_application(
         # 使用服务基础价格
         price = float(service.base_price)
     
-    # 5. 创建任务
-    # 设置截止日期（默认7天后）
-    deadline = models.get_utc_time() + timedelta(days=7)
+    # 5. 获取任务达人的位置信息
+    # 优先从 FeaturedTaskExpert 获取 location，如果没有则从 User 的 residence_city 获取
+    location = None
+    featured_expert = await db.get(models.FeaturedTaskExpert, application.expert_id)
+    if featured_expert and featured_expert.location:
+        location = featured_expert.location.strip() if featured_expert.location else None
     
-    # 处理图片（JSONB类型，直接使用list）
+    # 如果 FeaturedTaskExpert 没有 location，从 User 表获取 residence_city
+    if not location:
+        from app import async_crud
+        expert_user = await async_crud.async_user_crud.get_user_by_id(db, application.expert_id)
+        if expert_user and expert_user.residence_city:
+            location = expert_user.residence_city.strip() if expert_user.residence_city else None
+    
+    # 如果仍然没有 location，使用默认值 "线上"
+    if not location:
+        location = "线上"
+    # 如果 location 是 "Online" 或 "线上"（不区分大小写），统一为 "线上"
+    elif location.lower() in ["online", "线上"]:
+        location = "线上"
+    
+    # 6. 确定任务的截止日期
+    # 如果申请是灵活的，则没有截止日期；否则使用申请中的截止日期
+    if application.is_flexible == 1:
+        task_deadline = None
+    elif application.deadline:
+        task_deadline = application.deadline
+    else:
+        # 如果没有设置截止日期且不是灵活模式，默认7天后
+        task_deadline = models.get_utc_time() + timedelta(days=7)
+    
+    # 7. 处理图片（JSONB类型，直接使用list）
     images_list = service.images if service.images else None
     
+    # 8. 创建任务
     new_task = models.Task(
         title=service.service_name,
         description=service.description,
-        deadline=deadline,
+        deadline=task_deadline,
+        is_flexible=application.is_flexible or 0,  # 设置灵活时间标识
         reward=price,
         base_reward=service.base_price,
         agreed_reward=price,
         currency=application.currency or service.currency,
-        location="线上",  # 任务达人服务默认线上
+        location=location,  # 使用任务达人的位置
         task_type="其他",
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
@@ -817,7 +860,7 @@ async def approve_service_application(
     db.add(new_task)
     await db.flush()  # 获取任务ID
     
-    # 6. 更新申请记录
+    # 9. 更新申请记录
     application.status = "approved"
     application.final_price = price
     application.task_id = new_task.id

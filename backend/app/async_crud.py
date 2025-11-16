@@ -198,13 +198,29 @@ class AsyncTaskCRUD:
             else:
                 task_level = "normal"
             
-            # 确保deadline是timezone-naive的datetime（数据库期望的是TIMESTAMP WITHOUT TIME ZONE）
-            from datetime import timezone
-            if task.deadline.tzinfo is not None:
-                # 如果deadline有时区信息，转换为UTC然后移除时区信息
-                deadline = task.deadline.astimezone(timezone.utc).replace(tzinfo=None)
+            # 处理灵活时间和截止日期的一致性
+            is_flexible = getattr(task, "is_flexible", 0) or 0
+            deadline = None
+            
+            if is_flexible == 1:
+                # 灵活模式：deadline 必须为 None
+                deadline = None
+            elif task.deadline is not None:
+                # 非灵活模式：确保 deadline 是 timezone-naive 的 datetime
+                from datetime import timezone
+                if task.deadline.tzinfo is not None:
+                    # 如果deadline有时区信息，转换为UTC然后移除时区信息
+                    deadline = task.deadline.astimezone(timezone.utc).replace(tzinfo=None)
+                else:
+                    deadline = task.deadline
+                is_flexible = 0  # 有截止日期，确保 is_flexible=0
             else:
-                deadline = task.deadline
+                # 如果没有提供 deadline 且不是灵活模式，需要设置一个默认值
+                # 这里可以根据业务需求设置默认值，或者抛出错误
+                from datetime import timedelta
+                from app.models import get_utc_time
+                deadline = get_utc_time() + timedelta(days=7)
+                is_flexible = 0
             
             # 处理图片字段：将列表转为JSON字符串
             import json
@@ -222,6 +238,7 @@ class AsyncTaskCRUD:
                 agreed_reward=None,  # 初始为空，如果有议价才会设置
                 currency=getattr(task, "currency", "GBP") or "GBP",  # 货币类型
                 deadline=deadline,
+                is_flexible=is_flexible,  # 设置灵活时间标识
                 poster_id=poster_id,
                 status="open",
                 task_level=task_level,
@@ -355,7 +372,10 @@ class AsyncTaskCRUD:
                     models.Task.status == "taken"
                 )
             ).where(
-                models.Task.deadline > now_utc  # 使用UTC时间进行比较
+                or_(
+                    models.Task.deadline > now_utc,  # 有截止日期且未过期
+                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                )
             )
 
             if task_type and task_type not in ['全部类型', '全部']:

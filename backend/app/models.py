@@ -195,7 +195,8 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
-    deadline = Column(DateTime, nullable=False)
+    deadline = Column(DateTime, nullable=True)  # 允许为 NULL，支持灵活模式任务（无截止日期）
+    is_flexible = Column(Integer, default=0)  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
     reward = Column(Float, nullable=False)  # 价格字段（与base_reward同步）
     base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
     agreed_reward = Column(DECIMAL(12, 2), nullable=True)  # 最终成交价（如果有议价）
@@ -1351,6 +1352,8 @@ class ServiceApplication(Base):
     status = Column(String(20), default="pending")  # pending, negotiating, price_agreed, approved, rejected, cancelled
     final_price = Column(DECIMAL(12, 2), nullable=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    deadline = Column(DateTime(timezone=True), nullable=True)  # 任务截至日期（如果is_flexible为False）
+    is_flexible = Column(Integer, default=0)  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     approved_at = Column(DateTime(timezone=True), nullable=True)

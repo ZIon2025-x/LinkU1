@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.deps import get_db
 from app.models import Task
@@ -25,10 +26,13 @@ def generate_sitemap(db: Session = Depends(get_db)):
         # 获取当前UTC时间
         now_utc = TimeHandlerV2.get_utc_now()
         
-        # 获取所有开放且未过期的任务
+        # 获取所有开放且未过期的任务（包括灵活模式任务，deadline 为 NULL）
         tasks = db.query(Task).filter(
             Task.status == "open",
-            Task.deadline > now_utc
+            or_(
+                Task.deadline > now_utc,  # 有截止日期且未过期
+                Task.deadline.is_(None)  # 灵活模式（无截止日期）
+            )
         ).order_by(Task.created_at.desc()).all()
         
         # 构建sitemap XML

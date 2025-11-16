@@ -49,6 +49,8 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   const [applyMessage, setApplyMessage] = useState('');
   const [negotiatedPrice, setNegotiatedPrice] = useState<number | undefined>();
   const [isNegotiateChecked, setIsNegotiateChecked] = useState(false);
+  const [isFlexible, setIsFlexible] = useState(false);
+  const [deadline, setDeadline] = useState<string>('');
   const [applying, setApplying] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -69,6 +71,8 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       setApplyMessage('');
       setNegotiatedPrice(undefined);
       setIsNegotiateChecked(false);
+      setIsFlexible(false);
+      setDeadline('');
     }
   }, [isOpen, expertId]);
 
@@ -132,12 +136,33 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
   const handleSubmitApplication = async () => {
     if (!selectedServiceForApply || !user) return;
     
+    // 验证截至日期
+    if (!isFlexible && !deadline) {
+      message.error('请选择截至日期或选择灵活模式');
+      return;
+    }
+
     setApplying(true);
     try {
+      // 格式化截至日期
+      let deadlineDate: string | undefined = undefined;
+      if (!isFlexible && deadline) {
+        // 将日期时间字符串转换为 ISO 格式
+        const date = new Date(deadline);
+        if (isNaN(date.getTime())) {
+          message.error('截至日期格式不正确');
+          setApplying(false);
+          return;
+        }
+        deadlineDate = date.toISOString();
+      }
+
       await applyForService(selectedServiceForApply.id, {
         application_message: applyMessage || undefined,
         negotiated_price: isNegotiateChecked && negotiatedPrice ? negotiatedPrice : undefined,
         currency: selectedServiceForApply.currency || 'GBP',
+        deadline: deadlineDate,
+        is_flexible: isFlexible ? 1 : 0,
       });
       
       message.success('申请已提交，等待任务达人处理');
@@ -145,6 +170,8 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       setApplyMessage('');
       setNegotiatedPrice(undefined);
       setIsNegotiateChecked(false);
+      setIsFlexible(false);
+      setDeadline('');
       setSelectedServiceForApply(null);
       
       // 重新加载服务列表以更新申请数量
@@ -492,11 +519,62 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
               )}
             </div>
 
+            {/* 截至日期或灵活选项 */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
+                <input
+                  type="checkbox"
+                  checked={isFlexible}
+                  onChange={(e) => {
+                    setIsFlexible(e.target.checked);
+                    if (e.target.checked) {
+                      setDeadline('');
+                    }
+                  }}
+                />
+                <span style={{ color: '#2d3748', fontWeight: 500 }}>灵活（无截至日期）</span>
+              </label>
+              
+              {!isFlexible && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#2d3748', fontWeight: 500 }}>
+                    任务截至日期
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                      boxSizing: 'border-box',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  />
+                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#718096' }}>
+                    请选择任务的截至日期和时间
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 提交按钮 */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleSubmitApplication}
-                disabled={applying || (isNegotiateChecked && (!negotiatedPrice || negotiatedPrice < selectedServiceForApply.base_price * 0.5))}
+                disabled={applying || (isNegotiateChecked && (!negotiatedPrice || negotiatedPrice < selectedServiceForApply.base_price * 0.5)) || (!isFlexible && !deadline)}
                 style={{
                   flex: 1,
                   padding: '12px',
