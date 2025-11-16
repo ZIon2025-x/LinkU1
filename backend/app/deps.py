@@ -143,6 +143,13 @@ async def get_current_user_secure(
 def check_user_status(current_user=Depends(authenticate_with_session)):
     import datetime
 
+    # ⚠️ 检查current_user是否为None（认证失败的情况）
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Authentication required"
+        )
+    
     now = datetime.datetime.utcnow()
     if current_user.is_banned:
         raise HTTPException(status_code=403, detail="User is banned.")
