@@ -12,6 +12,7 @@ import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
 import ServiceDetailModal from '../components/ServiceDetailModal';
+import ServiceListModal from '../components/ServiceListModal';
 
 interface TaskExpert {
   id: string;
@@ -78,6 +79,11 @@ const TaskExperts: React.FC = () => {
   // 登录弹窗状态
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  
+  // 服务列表弹窗状态
+  const [showServiceListModal, setShowServiceListModal] = useState(false);
+  const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
+  const [selectedExpertName, setSelectedExpertName] = useState<string | null>(null);
   
   // 服务详情弹窗状态
   const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
@@ -429,7 +435,7 @@ const TaskExperts: React.FC = () => {
     navigate(`/user/${expertId}`);
   };
 
-  const handleRequestService = async (expertId: string, e: React.MouseEvent) => {
+  const handleRequestService = async (expertId: string, expertName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡，避免触发卡片的点击事件
     
     if (!user) {
@@ -437,26 +443,10 @@ const TaskExperts: React.FC = () => {
       return;
     }
     
-    // 获取任务达人的服务列表
-    try {
-      const { getTaskExpertServices } = await import('../api');
-      const response = await getTaskExpertServices(expertId, 'active');
-      
-      // 后端返回的数据结构是 { expert_id, expert_name, services: [...] }
-      const services = response?.services || [];
-      
-      if (services && services.length > 0) {
-        // 如果有多个服务，可以显示服务列表让用户选择
-        // 这里简化处理：直接显示第一个服务
-        setSelectedServiceId(services[0].id);
-        setShowServiceDetailModal(true);
-      } else {
-        message.info('该任务达人暂无可用服务');
-      }
-    } catch (err: any) {
-      message.error('加载服务列表失败');
-      console.error('Failed to load services:', err);
-    }
+    // 打开服务列表弹窗
+    setSelectedExpertId(expertId);
+    setSelectedExpertName(expertName);
+    setShowServiceListModal(true);
   };
 
 
@@ -1156,7 +1146,7 @@ const TaskExperts: React.FC = () => {
                     {t('taskExperts.viewProfile')}
                   </button>
                   <button
-                    onClick={(e) => handleRequestService(expert.id, e)}
+                    onClick={(e) => handleRequestService(expert.id, expert.name, e)}
                     style={{
                       flex: 1,
                       padding: '12px 16px',
@@ -1227,6 +1217,18 @@ const TaskExperts: React.FC = () => {
         }}
       />
       
+      {/* 服务列表弹窗 */}
+      <ServiceListModal
+        isOpen={showServiceListModal}
+        onClose={() => {
+          setShowServiceListModal(false);
+          setSelectedExpertId(null);
+          setSelectedExpertName(null);
+        }}
+        expertId={selectedExpertId || ''}
+        expertName={selectedExpertName || undefined}
+      />
+
       {/* 服务详情弹窗 */}
       <ServiceDetailModal
         isOpen={showServiceDetailModal}
