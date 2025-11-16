@@ -2353,20 +2353,25 @@ def create_customer_service_by_admin(db: Session, cs_data: dict):
     # 创建用户账号
     from app.security import get_password_hash
     hashed_password = get_password_hash(cs_data["password"])
+    # ⚠️ User模型没有is_customer_service、is_admin、is_super_admin字段
+    # 客服是单独的CustomerService模型，管理员是AdminUser模型
+    # 这里只创建普通User记录，客服记录在CustomerService表中创建
     user = models.User(
         name=cs_data["name"],
         email=cs_data["email"],
         hashed_password=hashed_password,
-        is_customer_service=1,
-        is_admin=0,
-        is_super_admin=0,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     # 创建客服记录
-    cs = models.CustomerService(name=cs_data["name"], is_online=0)
+    cs = models.CustomerService(
+        name=cs_data["name"],
+        email=cs_data["email"],
+        hashed_password=hashed_password,
+        is_online=0
+    )
     db.add(cs)
     db.commit()
     db.refresh(cs)
@@ -2383,12 +2388,22 @@ def delete_customer_service_by_admin(db: Session, cs_id: int):
         .first()
     )
     if cs:
-        # 找到对应的用户账号
+        # ⚠️ User模型没有is_customer_service字段
+        # 通过邮箱或名称找到对应的用户账号（如果存在）
+        # 注意：客服和用户是分开的模型，可能没有对应的User记录
         user = (
             db.query(models.User)
-            .filter(models.User.name == cs.name, models.User.is_customer_service == 1)
+            .filter(models.User.email == cs.email)
             .first()
         )
+        
+        # 如果通过邮箱找不到，尝试通过名称（但名称可能不唯一）
+        if not user:
+            user = (
+                db.query(models.User)
+                .filter(models.User.name == cs.name)
+                .first()
+            )
 
         if user:
             db.delete(user)
@@ -2434,7 +2449,12 @@ def send_admin_notification(
     notifications = []
 
     if not user_ids:  # 发送给所有用户
-        users = db.query(models.User).filter(models.User.is_customer_service == 0).all()
+        # ⚠️ User模型没有is_customer_service字段，客服是单独的CustomerService模型
+        # 使用ID格式判断：客服ID格式为CS+4位数字，用户ID为8位数字
+        from app.id_generator import is_customer_service_id
+        all_users = db.query(models.User).all()
+        # 过滤掉客服用户（客服ID格式：CS+4位数字）
+        users = [user for user in all_users if not is_customer_service_id(user.id)]
         user_ids = [user.id for user in users]
 
     for user_id in user_ids:

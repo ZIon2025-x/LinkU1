@@ -1635,9 +1635,18 @@ def get_my_profile(
             )
         
         # ⚠️ 使用JSONResponse返回，设置响应头
-        from fastapi.responses import JSONResponse
+        # 注意：JSONResponse会自动序列化字典，但需要确保所有值都是JSON可序列化的
+        # 处理datetime对象（created_at和name_updated_at可能是datetime对象）
+        from datetime import datetime as dt
+        serializable_user = {}
+        for key, value in formatted_user.items():
+            if isinstance(value, dt):
+                serializable_user[key] = value.isoformat() if value else None
+            else:
+                serializable_user[key] = value
+        
         return JSONResponse(
-            content=formatted_user,
+            content=serializable_user,
             headers={
                 "ETag": etag,
                 "Cache-Control": "private, max-age=300",  # 5分钟，配合Vary避免CDN误缓存
@@ -1645,6 +1654,7 @@ def get_my_profile(
             }
         )
     except Exception as e:
+        logger.error(f"Error in get_my_profile for user {current_user.id if hasattr(current_user, 'id') else 'unknown'}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 

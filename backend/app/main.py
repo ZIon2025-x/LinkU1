@@ -610,18 +610,28 @@ async def websocket_chat(
         return
 
     # ⚠️ 原子替换：使用用户级锁确保原子操作
-    async with connection_locks[user_id]:
-        # 先登记新连接为当前连接（原子操作）
-        old_websocket = active_connections.get(user_id)
-        active_connections[user_id] = websocket
-        
-        # 接受新连接
-        await websocket.accept()
-        logger.debug(f"WebSocket connection established for user {user_id}")
-        
-        # 异步关闭旧连接（不影响新连接）
-        if old_websocket:
-            asyncio.create_task(close_old_connection(old_websocket, user_id))
+    try:
+        async with connection_locks[user_id]:
+            # 先登记新连接为当前连接（原子操作）
+            old_websocket = active_connections.get(user_id)
+            active_connections[user_id] = websocket
+            
+            # 接受新连接
+            await websocket.accept()
+            logger.info(f"WebSocket connection established for user {user_id} (total: {len(active_connections)})")
+            
+            # 异步关闭旧连接（不影响新连接）
+            if old_websocket:
+                logger.debug(f"Closing old WebSocket connection for user {user_id}")
+                asyncio.create_task(close_old_connection(old_websocket, user_id))
+    except Exception as e:
+        logger.error(f"Error during WebSocket connection setup for user {user_id}: {e}", exc_info=True)
+        active_connections.pop(user_id, None)
+        try:
+            await websocket.close(code=1011, reason="Connection setup failed")
+        except:
+            pass
+        return
     
     # ⚠️ 注意：心跳已在业务循环中统一处理（方案B），不再单独启动心跳任务
     # 心跳逻辑已整合到主消息循环中，避免与业务receive竞争
@@ -1045,7 +1055,7 @@ async def websocket_chat(
         logger.debug(f"WebSocket disconnected for user {user_id}")
         active_connections.pop(user_id, None)
     except Exception as e:
-        logger.error(f"WebSocket error for user {user_id}: {e}")
+        logger.error(f"WebSocket error for user {user_id}: {e}", exc_info=True)
         active_connections.pop(user_id, None)
         try:
             await websocket.close()
