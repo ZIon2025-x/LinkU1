@@ -439,9 +439,30 @@ async def delete_service(
             status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
         )
     
+    # 保存服务图片URL，用于后续删除
+    service_images = service.images if hasattr(service, 'images') and service.images else []
+    expert_id = current_expert.id
+    
     await db.delete(service)
     current_expert.total_services = max(0, current_expert.total_services - 1)
     await db.commit()
+    
+    # 删除服务的所有图片
+    if service_images:
+        from app.image_cleanup import delete_service_images
+        try:
+            # 如果images是JSONB类型，可能需要解析
+            import json
+            if isinstance(service_images, str):
+                image_urls = json.loads(service_images)
+            elif isinstance(service_images, list):
+                image_urls = service_images
+            else:
+                image_urls = []
+            
+            delete_service_images(expert_id, service_id, image_urls)
+        except Exception as e:
+            logger.warning(f"删除服务图片失败: {e}")
     
     return {"message": "服务已删除"}
 

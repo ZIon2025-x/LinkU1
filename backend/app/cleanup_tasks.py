@@ -48,8 +48,12 @@ class CleanupTasks:
             # 清理过期缓存
             await self._cleanup_expired_cache()
             
-            # 清理已完成任务的文件（每天检查一次）
+            # 清理已完成和过期任务的文件（每天检查一次）
             await self._cleanup_completed_tasks_files()
+            await self._cleanup_expired_tasks_files()
+            
+            # 清理未使用的临时图片（每天检查一次）
+            await self._cleanup_unused_temp_images()
             
             logger.info("清理任务完成")
             
@@ -155,6 +159,92 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理已完成任务文件失败: {e}")
+    
+    async def _cleanup_expired_tasks_files(self):
+        """清理过期任务（已取消或deadline已过超过3天）的文件（每天检查一次）"""
+        try:
+            # 检查今天是否已经清理过
+            today = datetime.utcnow().date()
+            if self.last_completed_tasks_cleanup_date == today:
+                # 今天已经清理过，跳过
+                return
+            
+            from app.deps import get_sync_db
+            from app.crud import cleanup_expired_tasks_files
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用清理函数
+                cleaned_count = cleanup_expired_tasks_files(db)
+                if cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 个过期任务的文件")
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"清理过期任务文件失败: {e}")
+    
+    async def _cleanup_unused_temp_images(self):
+        """清理未使用的临时图片（超过24小时未使用的临时图片）"""
+        try:
+            from pathlib import Path
+            import os
+            from datetime import datetime, timedelta
+            
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_public_dir = Path("/data/uploads/public/images")
+            else:
+                base_public_dir = Path("uploads/public/images")
+            
+            temp_base_dir = base_public_dir / "public"
+            
+            # 如果临时文件夹不存在，直接返回
+            if not temp_base_dir.exists():
+                return
+            
+            # 计算24小时前的时间
+            cutoff_time = datetime.now() - timedelta(hours=24)
+            cleaned_count = 0
+            
+            # 遍历所有临时文件夹（temp_*）
+            for temp_dir in temp_base_dir.iterdir():
+                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                    try:
+                        # 检查文件夹中的文件
+                        for file_path in temp_dir.iterdir():
+                            if file_path.is_file():
+                                # 获取文件的修改时间
+                                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                                
+                                # 如果文件超过24小时未修改，删除它
+                                if file_mtime < cutoff_time:
+                                    try:
+                                        file_path.unlink()
+                                        cleaned_count += 1
+                                        logger.info(f"删除未使用的临时图片: {file_path}")
+                                    except Exception as e:
+                                        logger.warning(f"删除临时图片失败 {file_path}: {e}")
+                        
+                        # 如果文件夹为空，尝试删除它
+                        try:
+                            if not any(temp_dir.iterdir()):
+                                temp_dir.rmdir()
+                                logger.info(f"删除空的临时文件夹: {temp_dir}")
+                        except Exception as e:
+                            logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                            
+                    except Exception as e:
+                        logger.warning(f"处理临时文件夹失败 {temp_dir}: {e}")
+                        continue
+            
+            if cleaned_count > 0:
+                logger.info(f"清理了 {cleaned_count} 个未使用的临时图片")
+                
+        except Exception as e:
+            logger.error(f"清理未使用临时图片失败: {e}")
     
     def stop_cleanup_tasks(self):
         """停止清理任务"""

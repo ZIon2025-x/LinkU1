@@ -507,6 +507,9 @@ async def review_profile_update_request(
             expert_id_value = update_request.expert_id
             
             # 3. 批准：更新任务达人信息
+            # 保存旧头像URL，用于后续删除
+            old_avatar_url = expert.avatar if update_request.new_avatar is not None else None
+            
             if update_request.new_expert_name is not None:
                 expert.expert_name = update_request.new_expert_name
             if update_request.new_bio is not None:
@@ -514,6 +517,14 @@ async def review_profile_update_request(
             if update_request.new_avatar is not None:
                 expert.avatar = update_request.new_avatar
             expert.updated_at = models.get_utc_time()
+            
+            # 如果更换了头像，删除旧头像
+            if old_avatar_url and old_avatar_url != update_request.new_avatar:
+                from app.image_cleanup import delete_expert_avatar
+                try:
+                    delete_expert_avatar(expert_id_value, old_avatar_url)
+                except Exception as e:
+                    logger.warning(f"删除旧头像失败: {e}")
             
             # 4. 同步更新 FeaturedTaskExpert（如果存在）
             # 注意：user_id 就是 id，所以直接使用 id 查询

@@ -1710,7 +1710,13 @@ const AdminDashboard: React.FC = () => {
                           const formData = new FormData();
                           formData.append('image', file);
                           
-                          const response = await api.post('/api/upload/public-image', formData, {
+                          // 任务达人头像上传：传递expert_id作为resource_id
+                          const expertId = taskExpertForm.id;
+                          const uploadUrl = expertId 
+                            ? `/api/upload/public-image?category=expert_avatar&resource_id=${expertId}`
+                            : '/api/upload/public-image?category=expert_avatar';
+                          
+                          const response = await api.post(uploadUrl, formData, {
                             headers: {
                               'Content-Type': 'multipart/form-data',
                             },

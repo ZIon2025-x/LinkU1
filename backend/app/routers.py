@@ -4963,12 +4963,17 @@ MAX_FILE_SIZE_LARGE = 10 * 1024 * 1024  # 10MB
 
 @router.post("/upload/image")
 async def upload_image(
-    image: UploadFile = File(...), 
+    image: UploadFile = File(...),
+    task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
+    chat_id: Optional[str] = Query(None, description="聊天ID（客服聊天时提供）"),
     current_user: models.User = Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db)
 ):
     """
     上传私密图片文件
+    支持按任务ID或聊天ID分类存储
+    - task_id: 任务聊天时提供，图片会存储在 tasks/{task_id}/ 文件夹
+    - chat_id: 客服聊天时提供，图片会存储在 chats/{chat_id}/ 文件夹
     """
     try:
         # 读取文件内容
@@ -4976,7 +4981,7 @@ async def upload_image(
         
         # 使用新的私密图片系统上传
         from app.image_system import private_image_system
-        result = private_image_system.upload_image(content, image.filename, current_user.id, db)
+        result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id)
         
         return JSONResponse(content=result)
 
@@ -4990,13 +4995,25 @@ async def upload_image(
 @router.post("/upload/public-image")
 async def upload_public_image(
     request: Request,
-    image: UploadFile = File(...), 
+    image: UploadFile = File(...),
+    category: str = Query("public", description="图片类型：expert_avatar（任务达人头像）、service_image（服务图片）、public（任务相关图片）"),
+    resource_id: str = Query(None, description="资源ID：expert_avatar时传expert_id，service_image时传expert_id，public时传task_id（任务ID，发布新任务时可省略）"),
     db: Session = Depends(get_db),
 ):
     """
     上传公开图片文件（所有人可访问）
     用于头像等需要公开访问的图片
     支持管理员和普通用户上传
+    
+    参数:
+    - category: 图片类型
+      - expert_avatar: 任务达人头像
+      - service_image: 服务图片
+      - public: 其他公开图片（默认）
+    - resource_id: 资源ID，用于创建子文件夹
+      - expert_avatar: 任务达人ID（expert_id）
+      - service_image: 任务达人ID（expert_id），不是service_id
+      - public: 任务ID（task_id），用于任务相关的图片
     """
     try:
         # 尝试获取管理员或用户ID
@@ -5023,6 +5040,29 @@ async def upload_public_image(
         
         if not user_id:
             raise HTTPException(status_code=401, detail="认证失败，请先登录")
+        
+        # 验证 category 参数
+        valid_categories = ["expert_avatar", "service_image", "public"]
+        if category not in valid_categories:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的图片类型。允许的类型: {', '.join(valid_categories)}"
+            )
+        
+        # 根据 category 确定 resource_id（如果未提供）
+        if not resource_id:
+            if category == "expert_avatar":
+                # 任务达人头像：使用当前用户ID（任务达人ID等于用户ID）
+                resource_id = user_id
+            elif category == "service_image":
+                # 服务图片：使用当前用户ID（任务达人ID等于用户ID）
+                # 因为服务图片属于任务达人，应该按任务达人ID分类
+                resource_id = user_id
+            else:  # public
+                # 用户上传的图片都是任务相关的，需要提供task_id
+                # 如果没有提供task_id，使用临时标识（用于发布新任务时）
+                resource_id = f"temp_{user_id}"
+        
         # 读取文件内容
         content = await image.read()
         
@@ -5043,15 +5083,38 @@ async def upload_public_image(
         
         # 检测部署环境
         if RAILWAY_ENVIRONMENT:
-            public_image_dir = Path("/data/uploads/public/images")
+            base_public_dir = Path("/data/uploads/public/images")
         else:
-            public_image_dir = Path("uploads/public/images")
+            base_public_dir = Path("uploads/public/images")
+        
+        # 根据 category 确定子目录和文件命名前缀
+        if category == "expert_avatar":
+            sub_dir = "expert_avatars"
+            filename_prefix = "expert_avatar_"
+            # 创建按任务达人ID的子文件夹
+            resource_subdir = resource_id
+        elif category == "service_image":
+            sub_dir = "service_images"
+            filename_prefix = "service_image_"
+            # 创建按任务达人ID的子文件夹（不是service_id）
+            resource_subdir = resource_id
+        else:  # public
+            sub_dir = "public"
+            filename_prefix = "public_"
+            # 创建按任务ID的子文件夹（用户上传的图片都是任务相关的）
+            resource_subdir = str(resource_id)
+        
+        # 构建完整的保存目录：/data/uploads/public/images/{sub_dir}/{resource_id}/
+        if sub_dir:
+            public_image_dir = base_public_dir / sub_dir / resource_subdir
+        else:
+            public_image_dir = base_public_dir / resource_subdir
         
         # 确保目录存在
         public_image_dir.mkdir(parents=True, exist_ok=True)
         
-        # 生成唯一文件名（使用UUID避免文件名冲突）
-        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        # 生成唯一文件名（使用前缀+UUID，便于后续清理）
+        unique_filename = f"{filename_prefix}{uuid.uuid4()}{file_extension}"
         file_path = public_image_dir / unique_filename
         
         # 保存文件
@@ -5063,15 +5126,22 @@ async def upload_public_image(
         from app.config import Config
         # 使用前端域名，Vercel会将/uploads/请求代理到后端API服务器
         base_url = Config.FRONTEND_URL.rstrip('/')
-        image_url = f"{base_url}/uploads/images/{unique_filename}"
         
-        logger.info(f"{user_type} {user_id} 上传公开图片: {unique_filename}")
+        # 构建URL路径（包含子目录和资源ID）
+        if sub_dir:
+            image_url = f"{base_url}/uploads/images/{sub_dir}/{resource_subdir}/{unique_filename}"
+        else:
+            image_url = f"{base_url}/uploads/images/{resource_subdir}/{unique_filename}"
+        
+        logger.info(f"{user_type} {user_id} 上传公开图片 [{category}] 资源ID: {resource_id}, 文件名: {unique_filename}")
         
         return JSONResponse(content={
             "success": True,
             "url": image_url,
             "filename": unique_filename,
             "size": len(content),
+            "category": category,
+            "resource_id": resource_id,
             "message": "图片上传成功"
         })
         
@@ -5911,6 +5981,9 @@ def update_task_expert(
         elif 'id' in expert_data:
             expert_data['user_id'] = expert_data['id']
         
+        # 保存旧头像URL，用于后续删除
+        old_avatar_url = expert.avatar if 'avatar' in expert_data and expert_data['avatar'] else None
+        
         # 更新字段
         for key, value in expert_data.items():
             if hasattr(expert, key):
@@ -5919,6 +5992,14 @@ def update_task_expert(
         expert.updated_at = datetime.now()
         db.commit()
         db.refresh(expert)
+        
+        # 如果更换了头像，删除旧头像
+        if old_avatar_url and 'avatar' in expert_data and old_avatar_url != expert_data['avatar']:
+            from app.image_cleanup import delete_expert_avatar
+            try:
+                delete_expert_avatar(expert_id, old_avatar_url)
+            except Exception as e:
+                logger.warning(f"删除旧头像失败: {e}")
         
         logger.info(f"更新任务达人成功: {expert_id}")
         

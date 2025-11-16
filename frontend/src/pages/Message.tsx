@@ -771,8 +771,18 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('image', selectedImage);
       
+      // 根据聊天类型构建上传URL
+      let uploadUrl = '/api/upload/image';
+      if (activeTaskId) {
+        // 任务聊天：传递task_id
+        uploadUrl = `/api/upload/image?task_id=${activeTaskId}`;
+      } else if (isServiceMode && currentChat?.chat_id) {
+        // 客服聊天：传递chat_id
+        uploadUrl = `/api/upload/image?chat_id=${currentChat.chat_id}`;
+      }
+      
       // 上传图片到服务器（使用api.post自动处理CSRF token）
-      const uploadResponse = await api.post('/api/upload/image', formData, {
+      const uploadResponse = await api.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -957,8 +967,18 @@ const MessagePage: React.FC = () => {
       const formData = new FormData();
       formData.append('image', selectedImage);
       
+      // 根据聊天类型构建上传URL
+      let uploadUrl = '/api/upload/image';
+      if (activeTaskId) {
+        // 任务聊天：传递task_id
+        uploadUrl = `/api/upload/image?task_id=${activeTaskId}`;
+      } else if (isServiceMode && currentChat?.chat_id) {
+        // 客服聊天：传递chat_id
+        uploadUrl = `/api/upload/image?chat_id=${currentChat.chat_id}`;
+      }
+      
       // 上传图片到服务器（使用api.post自动处理CSRF token）
-      const uploadResponse = await api.post('/api/upload/image', formData, {
+      const uploadResponse = await api.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

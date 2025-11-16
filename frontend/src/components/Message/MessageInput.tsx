@@ -9,6 +9,8 @@ interface MessageInputProps {
   uploadingImage: boolean;
   disabled?: boolean;
   placeholder?: string;
+  taskId?: number | null;  // 任务ID（任务聊天时提供）
+  chatId?: string | null;  // 聊天ID（客服聊天时提供）
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -18,7 +20,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onSendImage,
   uploadingImage,
   disabled = false,
-  placeholder = "输入消息..."
+  placeholder = "输入消息...",
+  taskId,
+  chatId
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,7 +31,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
       const formData = new FormData();
       formData.append('image', file);
       
-      const response = await api.post('/api/upload/image', formData, {
+      // 根据聊天类型构建上传URL
+      let uploadUrl = '/api/upload/image';
+      if (taskId) {
+        // 任务聊天：传递task_id
+        uploadUrl = `/api/upload/image?task_id=${taskId}`;
+      } else if (chatId) {
+        // 客服聊天：传递chat_id
+        uploadUrl = `/api/upload/image?chat_id=${chatId}`;
+      }
+      
+      const response = await api.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -43,7 +57,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       console.error('图片上传错误:', error);
       alert('图片上传失败，请重试');
     }
-  }, [onSendImage]);
+  }, [onSendImage, taskId, chatId]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

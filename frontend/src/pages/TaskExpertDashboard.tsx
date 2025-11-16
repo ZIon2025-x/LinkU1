@@ -302,8 +302,15 @@ const TaskExpertDashboard: React.FC = () => {
     
     try {
       const formData = new FormData();
-      formData.append('file', avatarFile);
-      const res = await api.post('/api/upload/image', formData, {
+      formData.append('image', avatarFile);
+      
+      // 任务达人头像上传：传递expert_id（即user.id）作为resource_id
+      const expertId = user?.id || expert?.id;
+      const uploadUrl = expertId 
+        ? `/api/upload/public-image?category=expert_avatar&resource_id=${expertId}`
+        : '/api/upload/public-image?category=expert_avatar';
+      
+      const res = await api.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return res.data.url;
@@ -1015,6 +1022,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
   });
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     if (service) {
@@ -1028,6 +1036,19 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       });
     }
   }, [service]);
+
+  // 加载当前用户信息（用于获取expert_id）
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setCurrentUser(userData);
+      } catch (err) {
+        console.error('加载用户信息失败:', err);
+      }
+    };
+    loadUser();
+  }, []);
 
   const handleSubmit = async () => {
     if (!formData.service_name || !formData.description || formData.base_price <= 0) {
@@ -1273,7 +1294,15 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                       const formDataUpload = new FormData();
                       formDataUpload.append('image', file);
                       
-                      const response = await api.post('/api/upload/public-image', formDataUpload, {
+                      // 服务图片上传：传递expert_id（任务达人ID）作为resource_id
+                      // 因为服务图片属于任务达人，应该按任务达人ID分类
+                      // 任务达人ID等于用户ID
+                      const expertId = currentUser?.id;
+                      const uploadUrl = expertId 
+                        ? `/api/upload/public-image?category=service_image&resource_id=${expertId}`
+                        : '/api/upload/public-image?category=service_image';
+                      
+                      const response = await api.post(uploadUrl, formDataUpload, {
                         headers: {
                           'Content-Type': 'multipart/form-data',
                         },

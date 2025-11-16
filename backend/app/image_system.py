@@ -100,10 +100,24 @@ class PrivateImageSystem:
         
         return False
     
-    def save_image(self, content: bytes, image_id: str, extension: str) -> Path:
-        """保存图片到私有目录"""
+    def save_image(self, content: bytes, image_id: str, extension: str, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Path:
+        """保存图片到私有目录，按任务ID或聊天ID分类"""
         filename = f"{image_id}{extension}"
-        file_path = self.base_dir / filename
+        
+        # 根据是否有task_id或chat_id创建子文件夹
+        if task_id:
+            # 任务聊天：按任务ID分类
+            task_dir = self.base_dir / "tasks" / str(task_id)
+            task_dir.mkdir(parents=True, exist_ok=True)
+            file_path = task_dir / filename
+        elif chat_id:
+            # 客服聊天：按聊天ID分类
+            chat_dir = self.base_dir / "chats" / chat_id
+            chat_dir.mkdir(parents=True, exist_ok=True)
+            file_path = chat_dir / filename
+        else:
+            # 没有分类信息，保存在根目录（向后兼容）
+            file_path = self.base_dir / filename
         
         with open(file_path, "wb") as f:
             f.write(content)
@@ -221,8 +235,8 @@ class PrivateImageSystem:
             participants.append(message.receiver_id)
         return participants
     
-    def upload_image(self, content: bytes, filename: str, user_id: str, db: Session) -> Dict[str, Any]:
-        """上传图片"""
+    def upload_image(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Dict[str, Any]:
+        """上传图片，支持按任务ID或聊天ID分类"""
         try:
             # 验证图片
             self.validate_image(content, filename)
@@ -231,10 +245,16 @@ class PrivateImageSystem:
             image_id = self.generate_image_id(user_id, filename)
             extension = self.get_file_extension(filename)
             
-            # 保存图片
-            file_path = self.save_image(content, image_id, extension)
+            # 保存图片（按任务ID或聊天ID分类）
+            file_path = self.save_image(content, image_id, extension, task_id, chat_id)
             
-            logger.info(f"用户 {user_id} 上传图片: {image_id}")
+            location_info = ""
+            if task_id:
+                location_info = f"任务ID: {task_id}"
+            elif chat_id:
+                location_info = f"聊天ID: {chat_id}"
+            
+            logger.info(f"用户 {user_id} 上传图片: {image_id} ({location_info})")
             
             return {
                 "success": True,
@@ -257,8 +277,28 @@ class PrivateImageSystem:
             if not self.verify_access_token(access_token, image_id, user_id):
                 raise HTTPException(status_code=403, detail="无权访问此图片")
             
-            # 查找图片文件
-            image_files = list(self.base_dir.glob(f"{image_id}.*"))
+            # 查找图片文件（在任务文件夹、聊天文件夹和根目录中查找）
+            image_files = []
+            
+            # 先查找任务文件夹
+            task_dirs = list(self.base_dir.glob("tasks/*"))
+            for task_dir in task_dirs:
+                task_files = list(task_dir.glob(f"{image_id}.*"))
+                if task_files:
+                    image_files.extend(task_files)
+            
+            # 再查找聊天文件夹
+            chat_dirs = list(self.base_dir.glob("chats/*"))
+            for chat_dir in chat_dirs:
+                chat_files = list(chat_dir.glob(f"{image_id}.*"))
+                if chat_files:
+                    image_files.extend(chat_files)
+            
+            # 最后查找根目录（向后兼容）
+            root_files = list(self.base_dir.glob(f"{image_id}.*"))
+            if root_files:
+                image_files.extend(root_files)
+            
             if not image_files:
                 raise HTTPException(status_code=404, detail="图片不存在")
             
