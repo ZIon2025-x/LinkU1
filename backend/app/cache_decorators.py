@@ -74,7 +74,23 @@ def cache_task_detail_sync(ttl: int = 300):
                         elif hasattr(result, 'dict'):
                             cache_data = result.dict()
                         else:
-                            cache_data = result
+                            # 检查是否是 SQLAlchemy 模型对象
+                            from sqlalchemy.inspect import inspect as sqlalchemy_inspect
+                            try:
+                                # 尝试使用 SQLAlchemy 的 inspect 获取列值
+                                mapper = sqlalchemy_inspect(result.__class__)
+                                if mapper:
+                                    # 是 SQLAlchemy 模型，转换为字典
+                                    cache_data = {
+                                        col.key: getattr(result, col.key)
+                                        for col in mapper.columns
+                                    }
+                                else:
+                                    # 不是 SQLAlchemy 模型，尝试使用 __dict__
+                                    cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                            except Exception:
+                                # 如果 inspect 失败，尝试使用 __dict__
+                                cache_data = result.__dict__ if hasattr(result, '__dict__') else result
                         
                         redis_client.setex(
                             cache_key,
@@ -154,7 +170,23 @@ def cache_task_detail_async(ttl: int = 300):
                     elif hasattr(result, 'dict'):
                         cache_data = result.dict()
                     else:
-                        cache_data = result
+                        # 检查是否是 SQLAlchemy 模型对象
+                        from sqlalchemy.inspect import inspect as sqlalchemy_inspect
+                        try:
+                            # 尝试使用 SQLAlchemy 的 inspect 获取列值
+                            mapper = sqlalchemy_inspect(result.__class__)
+                            if mapper:
+                                # 是 SQLAlchemy 模型，转换为字典
+                                cache_data = {
+                                    col.key: getattr(result, col.key)
+                                    for col in mapper.columns
+                                }
+                            else:
+                                # 不是 SQLAlchemy 模型，尝试使用 __dict__
+                                cache_data = result.__dict__ if hasattr(result, '__dict__') else result
+                        except Exception:
+                            # 如果 inspect 失败，尝试使用 __dict__
+                            cache_data = result.__dict__ if hasattr(result, '__dict__') else result
                     
                     # 重新创建客户端用于写入
                     redis_client = aioredis.from_url(redis_url, decode_responses=False)
