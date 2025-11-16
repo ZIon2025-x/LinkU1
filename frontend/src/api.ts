@@ -741,6 +741,12 @@ export async function negotiateApplication(
 }
 
 // 处理再次议价（同意/拒绝）
+// 通过 notification_id 获取议价 token
+export async function getNegotiationTokens(notificationId: number) {
+  const res = await api.get(`/api/notifications/${notificationId}/negotiation-tokens`);
+  return res.data;
+}
+
 export async function respondNegotiation(
   taskId: number,
   applicationId: number,

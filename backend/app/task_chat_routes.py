@@ -1548,29 +1548,26 @@ async def negotiate_application(
         from app.models import get_uk_time_naive
         current_time = get_uk_time_naive()
         
-        notification_content = {
-            "type": "negotiation_offer",
-            "task_id": task_id,  # 添加task_id以便前端使用
-            "task_title": task.title,
-            "negotiated_price": float(request.negotiated_price),
-            "currency": task.currency or "GBP",
-            "message": request.message,
-            "token_accept": token_accept,
-            "token_reject": token_reject
-        }
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        # token 将通过 API 端点通过 notification_id 获取
+        content_parts = [f"任务「{task.title}」的发布者提出议价"]
+        if request.message:
+            content_parts.append(f"留言：{request.message}")
+        content_parts.append(f"议价金额：£{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
+        content = "\n".join(content_parts)
         
         new_notification = models.Notification(
             user_id=application.applicant_id,
             type="negotiation_offer",
             title="新的议价提议",
-            content=json.dumps(notification_content),
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=application_id,
             created_at=current_time
         )
         db.add(new_notification)
         await db.flush()
         
-        # 获取通知ID后，更新token payload添加notification_id
+        # 获取通知ID后，更新token payload添加notification_id，并存储token映射
         notification_id = new_notification.id
         
         # 更新Redis中的token，添加notification_id
@@ -1589,6 +1586,18 @@ async def negotiate_application(
                 f"negotiation_token:{token_reject}",
                 300,  # 5分钟
                 json.dumps(token_data_reject)
+            )
+            
+            # ⚠️ 额外存储 notification_id -> tokens 映射，方便前端通过 notification_id 获取 token
+            redis_client.setex(
+                f"negotiation_tokens_by_notification:{notification_id}",
+                300,  # 5分钟
+                json.dumps({
+                    "token_accept": token_accept,
+                    "token_reject": token_reject,
+                    "task_id": task_id,
+                    "application_id": application_id
+                })
             )
         
         await db.commit()
@@ -1609,6 +1618,80 @@ async def negotiate_application(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"发起再次议价失败: {str(e)}"
+        )
+
+
+@task_chat_router.get("/notifications/{notification_id}/negotiation-tokens")
+async def get_negotiation_tokens(
+    notification_id: int,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    通过 notification_id 获取议价 token（用于前端获取 token 而不需要解析 JSON）
+    """
+    try:
+        # 验证通知是否存在且属于当前用户
+        notification_query = select(models.Notification).where(
+            and_(
+                models.Notification.id == notification_id,
+                models.Notification.user_id == current_user.id,
+                models.Notification.type == "negotiation_offer"
+            )
+        )
+        notification_result = await db.execute(notification_query)
+        notification = notification_result.scalar_one_or_none()
+        
+        if not notification:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="通知不存在或无权限访问"
+            )
+        
+        # 从 Redis 获取 token
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if not redis_client:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="服务暂时不可用"
+            )
+        
+        token_key = f"negotiation_tokens_by_notification:{notification_id}"
+        token_data_str = redis_client.get(token_key)
+        
+        if not token_data_str:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Token已过期或不存在"
+            )
+        
+        if isinstance(token_data_str, bytes):
+            token_data_str = token_data_str.decode('utf-8')
+        
+        try:
+            token_data = json.loads(token_data_str)
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Token数据格式错误"
+            )
+        
+        return {
+            "token_accept": token_data.get("token_accept"),
+            "token_reject": token_data.get("token_reject"),
+            "task_id": token_data.get("task_id"),
+            "application_id": token_data.get("application_id")
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取议价token失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取议价token失败: {str(e)}"
         )
 
 
@@ -2010,21 +2093,14 @@ async def send_application_message(
         from app.models import get_uk_time_naive
         current_time = get_uk_time_naive()
         
-        # ⚠️ negotiation_offer 需要保留 JSON（因为前端需要 token），application_message 改为文本
+        # ⚠️ 所有通知都使用文本格式，token 通过 notification_id 从 Redis 获取
         if notification_type == "negotiation_offer":
-            # 议价通知需要 JSON 格式（包含 token）
-            notification_content = {
-                "type": notification_type,
-                "task_id": task_id,
-                "task_title": task.title,
-                "message": request.message,
-                "application_id": application_id,
-                "negotiated_price": float(request.negotiated_price),
-                "currency": task.currency or "GBP",
-                "token_accept": token_accept,
-                "token_reject": token_reject
-            }
-            content = json.dumps(notification_content)
+            # 议价通知使用文本格式
+            content_parts = [f"任务「{task.title}」的发布者提出议价"]
+            if request.message:
+                content_parts.append(f"留言：{request.message}")
+            content_parts.append(f"议价金额：£{float(request.negotiated_price):.2f} {task.currency or 'GBP'}")
+            content = "\n".join(content_parts)
         else:
             # application_message 使用文本格式
             if request.message:
@@ -2090,6 +2166,18 @@ async def send_application_message(
                         300,
                         json.dumps(token_data_reject)
                     )
+                
+                # ⚠️ 额外存储 notification_id -> tokens 映射，方便前端通过 notification_id 获取 token
+                redis_client.setex(
+                    f"negotiation_tokens_by_notification:{notification_id}",
+                    300,  # 5分钟
+                    json.dumps({
+                        "token_accept": token_accept,
+                        "token_reject": token_reject,
+                        "task_id": task_id,
+                        "application_id": application_id
+                    })
+                )
         
         await db.commit()
         

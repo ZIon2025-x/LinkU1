@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TimeHandlerV2 } from '../utils/timeUtils';
-import { respondNegotiation, replyApplicationMessage } from '../api';
+import { respondNegotiation, replyApplicationMessage, getNegotiationTokens } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Notification {
@@ -77,6 +77,238 @@ interface NotificationPanelProps {
   onMarkAsRead: (id: number) => void;
   onMarkAllRead: () => void;
 }
+
+// 议价通知组件（单独组件以便使用 hooks）
+const NegotiationOfferNotification: React.FC<{
+  notification: Notification;
+  onMarkAsRead: (id: number) => void;
+  setSelectedNotification: (n: Notification) => void;
+  setReplyContent: (s: string) => void;
+  setShowReplyModal: (b: boolean) => void;
+}> = ({ notification, onMarkAsRead, setSelectedNotification, setReplyContent, setShowReplyModal }) => {
+  const [tokens, setTokens] = useState<{token_accept?: string, token_reject?: string, task_id?: number} | null>(null);
+  const [loadingTokens, setLoadingTokens] = useState(false);
+  
+  useEffect(() => {
+    // 尝试解析 JSON（旧数据）
+    try {
+      const negotiationData: NegotiationContent = JSON.parse(notification.content);
+      // 如果是旧格式，直接使用 JSON 中的数据
+      if (negotiationData.token_accept && negotiationData.token_reject) {
+        setTokens({
+          token_accept: negotiationData.token_accept,
+          token_reject: negotiationData.token_reject,
+          task_id: negotiationData.task_id
+        });
+        return;
+      }
+    } catch (e) {
+      // 解析失败，说明是新格式的文本，需要通过 API 获取 token
+    }
+    
+    // 新格式：通过 API 获取 token
+    if (!tokens && !loadingTokens) {
+      setLoadingTokens(true);
+      getNegotiationTokens(notification.id)
+        .then(data => {
+          setTokens({
+            token_accept: data.token_accept,
+            token_reject: data.token_reject,
+            task_id: data.task_id
+          });
+        })
+        .catch(err => {
+          console.error('获取议价token失败:', err);
+          // 如果获取失败，可能是旧数据，尝试解析 JSON
+          try {
+            const negotiationData: NegotiationContent = JSON.parse(notification.content);
+            if (negotiationData.token_accept && negotiationData.token_reject) {
+              setTokens({
+                token_accept: negotiationData.token_accept,
+                token_reject: negotiationData.token_reject,
+                task_id: negotiationData.task_id
+              });
+            }
+          } catch (e) {
+            // 忽略错误
+          }
+        })
+        .finally(() => setLoadingTokens(false));
+    }
+  }, [notification.id, notification.content]);
+  
+  // 尝试解析 JSON 获取任务标题等信息（用于旧数据）
+  let taskTitle = '';
+  let message = '';
+  let priceInfo = '';
+  try {
+    const negotiationData: NegotiationContent = JSON.parse(notification.content);
+    taskTitle = negotiationData.task_title || '';
+    message = negotiationData.message || '';
+    if (negotiationData.negotiated_price) {
+      priceInfo = `£${negotiationData.negotiated_price.toFixed(2)} ${negotiationData.currency || 'GBP'}`;
+    }
+  } catch (e) {
+    // 新格式：直接显示文本内容
+    const lines = notification.content.split('\n');
+    taskTitle = lines[0] || notification.content;
+    message = lines.find(l => l.includes('留言：'))?.replace('留言：', '') || '';
+    priceInfo = lines.find(l => l.includes('议价金额：'))?.replace('议价金额：', '') || '';
+  }
+  
+  return (
+    <div>
+      <p style={{
+        margin: '0 0 8px 0',
+        fontSize: '13px',
+        color: '#333',
+        lineHeight: '1.4'
+      }}>
+        {taskTitle || notification.content}
+        {message && (
+          <>
+            <br />
+            {message}
+          </>
+        )}
+        {priceInfo && (
+          <>
+            <br />
+            议价金额: <strong style={{ color: '#059669' }}>{priceInfo}</strong>
+          </>
+        )}
+      </p>
+      
+      {notification.is_read === 0 && tokens && (
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginTop: '8px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={async () => {
+              try {
+                if (!notification.related_id || !tokens.token_accept || !tokens.task_id) {
+                  alert('通知数据不完整');
+                  return;
+                }
+                await respondNegotiation(
+                  tokens.task_id,
+                  notification.related_id!,
+                  'accept',
+                  tokens.token_accept
+                );
+                alert('已同意议价');
+                onMarkAsRead(notification.id);
+              } catch (error: any) {
+                console.error('同意议价失败:', error);
+                alert(error.response?.data?.detail || '操作失败，请重试');
+              }
+            }}
+            style={{
+              flex: 1,
+              minWidth: '60px',
+              padding: '8px 12px',
+              border: 'none',
+              background: '#10b981',
+              color: 'white',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#059669';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#10b981';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            同意
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                if (!notification.related_id || !tokens.token_reject || !tokens.task_id) {
+                  alert('通知数据不完整');
+                  return;
+                }
+                await respondNegotiation(
+                  tokens.task_id,
+                  notification.related_id!,
+                  'reject',
+                  tokens.token_reject
+                );
+                alert('已拒绝议价');
+                onMarkAsRead(notification.id);
+              } catch (error: any) {
+                console.error('拒绝议价失败:', error);
+                alert(error.response?.data?.detail || '操作失败，请重试');
+              }
+            }}
+            style={{
+              flex: 1,
+              minWidth: '60px',
+              padding: '8px 12px',
+              border: 'none',
+              background: '#ef4444',
+              color: 'white',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dc2626';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ef4444';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            拒绝
+          </button>
+          <button
+            onClick={() => {
+              setSelectedNotification(notification);
+              setReplyContent('');
+              setShowReplyModal(true);
+            }}
+            style={{
+              flex: 1,
+              minWidth: '60px',
+              padding: '8px 12px',
+              border: 'none',
+              background: '#3b82f6',
+              color: 'white',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#2563eb';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#3b82f6';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            留言
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({
   isOpen,
@@ -277,185 +509,15 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   </div>
                   
                   {/* 议价通知特殊处理 */}
-                  {notification.type === 'negotiation_offer' ? (() => {
-                    try {
-                      const negotiationData: NegotiationContent = JSON.parse(notification.content);
-                      return (
-                        <div>
-                          <p style={{
-                            margin: '0 0 8px 0',
-                            fontSize: '13px',
-                            color: '#333',
-                            lineHeight: '1.4'
-                          }}>
-                            <strong>{negotiationData.task_title}</strong>
-                            <br />
-                            {negotiationData.message && (
-                              <>
-                                {negotiationData.message}
-                                <br />
-                              </>
-                            )}
-                            议价金额: <strong style={{ color: '#059669' }}>
-                              {negotiationData.negotiated_price.toFixed(2)} {negotiationData.currency}
-                            </strong>
-                          </p>
-                          
-                          {notification.is_read === 0 && (
-                            <div style={{
-                              display: 'flex',
-                              gap: '8px',
-                              marginTop: '8px',
-                              flexWrap: 'wrap'
-                            }}>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    if (!notification.related_id) {
-                                      alert('通知数据不完整');
-                                      return;
-                                    }
-                                    // related_id是application_id，需要从content中获取task_id
-                                    const taskId = negotiationData.task_id || (notification as any).task_id;
-                                    if (!taskId) {
-                                      // 如果content中没有task_id，尝试从API获取
-                                      alert('通知数据不完整，缺少任务ID。请从任务详情页进行操作。');
-                                      return;
-                                    }
-                                    await respondNegotiation(
-                                      taskId,
-                                      notification.related_id!,
-                                      'accept',
-                                      negotiationData.token_accept
-                                    );
-                                    alert('已同意议价');
-                                    onMarkAsRead(notification.id);
-                                  } catch (error: any) {
-                                    console.error('同意议价失败:', error);
-                                    alert(error.response?.data?.detail || '操作失败，请重试');
-                                  }
-                                }}
-                                style={{
-                                  flex: 1,
-                                  minWidth: '60px',
-                                  padding: '8px 12px',
-                                  border: 'none',
-                                  background: '#10b981',
-                                  color: 'white',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#059669';
-                                  e.currentTarget.style.transform = 'translateY(-1px)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = '#10b981';
-                                  e.currentTarget.style.transform = 'translateY(0)';
-                                }}
-                              >
-                                同意
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    if (!notification.related_id) {
-                                      alert('通知数据不完整');
-                                      return;
-                                    }
-                                    const taskId = negotiationData.task_id || (notification as any).task_id;
-                                    if (!taskId) {
-                                      alert('通知数据不完整，缺少任务ID。请从任务详情页进行操作。');
-                                      return;
-                                    }
-                                    await respondNegotiation(
-                                      taskId,
-                                      notification.related_id!,
-                                      'reject',
-                                      negotiationData.token_reject
-                                    );
-                                    alert('已拒绝议价');
-                                    onMarkAsRead(notification.id);
-                                  } catch (error: any) {
-                                    console.error('拒绝议价失败:', error);
-                                    alert(error.response?.data?.detail || '操作失败，请重试');
-                                  }
-                                }}
-                                style={{
-                                  flex: 1,
-                                  minWidth: '60px',
-                                  padding: '8px 12px',
-                                  border: 'none',
-                                  background: '#ef4444',
-                                  color: 'white',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#dc2626';
-                                  e.currentTarget.style.transform = 'translateY(-1px)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = '#ef4444';
-                                  e.currentTarget.style.transform = 'translateY(0)';
-                                }}
-                              >
-                                拒绝
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedNotification(notification);
-                                  setReplyContent('');
-                                  setShowReplyModal(true);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  minWidth: '60px',
-                                  padding: '8px 12px',
-                                  border: 'none',
-                                  background: '#3b82f6',
-                                  color: 'white',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#2563eb';
-                                  e.currentTarget.style.transform = 'translateY(-1px)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = '#3b82f6';
-                                  e.currentTarget.style.transform = 'translateY(0)';
-                                }}
-                              >
-                                留言
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    } catch (error) {
-                      // 如果解析失败，显示原始内容
-                      return (
-                        <p style={{
-                          margin: '0 0 8px 0',
-                          fontSize: '13px',
-                          color: '#333',
-                          lineHeight: '1.4'
-                        }}>
-                          {notification.content}
-                        </p>
-                      );
-                    }
-                  })() : notification.type === 'application_accepted' ? (() => {
+                  {notification.type === 'negotiation_offer' ? (
+                    <NegotiationOfferNotification
+                      notification={notification}
+                      onMarkAsRead={onMarkAsRead}
+                      setSelectedNotification={setSelectedNotification}
+                      setReplyContent={setReplyContent}
+                      setShowReplyModal={setShowReplyModal}
+                    />
+                  ) : notification.type === 'application_accepted' ? (() => {
                     try {
                       const acceptedData = JSON.parse(notification.content);
                       const taskTitle = acceptedData.task_title || t('notifications.unknownTask');
