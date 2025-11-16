@@ -454,6 +454,12 @@ class UserRedisCleanup:
                         # ⚠️ 立即迁移为JSON格式（仅在确认解析成功后）
                         self._migrate_to_json(key, parsed_data)
                         return parsed_data
+                    else:
+                        # ⚠️ 如果解析出来的是对象（如 SQLAlchemy User 对象），而不是字典
+                        # 这是旧格式的数据，应该删除而不是迁移
+                        # 因为新系统使用 JSON 格式存储字典数据
+                        logger.info(f"[USER_REDIS_CLEANUP] 检测到旧格式对象数据（非字典）: {key}, 类型: {type(parsed_data).__name__}, 将删除")
+                        return None  # 返回 None 会触发删除逻辑
                 except (pickle.UnpicklingError, TypeError, Exception) as e:
                     logger.warning(f"[USER_REDIS_CLEANUP] Pickle解析失败 {key}: {e}")
                     # ⚠️ 失败不写回，避免把损坏数据"定格"
