@@ -494,7 +494,8 @@ class AsyncTaskCRUD:
                 return None
             
             # 等级匹配检查
-            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3}
+            # expert 等级是达人任务，通常已有指定接收者，不参与等级检查
+            level_hierarchy = {'normal': 1, 'vip': 2, 'super': 3, 'expert': 0}
             # 从 SQLAlchemy 对象中获取实际值
             user_level_actual = getattr(user, 'user_level', None)
             task_level_actual = getattr(task, 'task_level', None)
@@ -504,7 +505,10 @@ class AsyncTaskCRUD:
             user_level_value = level_hierarchy.get(user_level_str, 1)
             task_level_value = level_hierarchy.get(task_level_str, 1)
             
-            if user_level_value < task_level_value:
+            # expert 任务跳过等级检查（因为已有指定接收者）
+            if task_level_str == "expert":
+                pass  # expert 任务不检查用户等级
+            elif user_level_value < task_level_value:
                 print(f"DEBUG: 用户等级 {user.user_level} 不足以申请 {task.task_level} 任务")
                 return None
             

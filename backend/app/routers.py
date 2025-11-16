@@ -980,11 +980,15 @@ def accept_task(
         task_level = db_task.task_level
 
         # 权限检查：用户等级必须大于等于任务等级
-        level_hierarchy = {"normal": 1, "vip": 2, "super": 3}
+        # expert 等级是达人任务，通常已有指定接收者，不参与等级检查
+        level_hierarchy = {"normal": 1, "vip": 2, "super": 3, "expert": 0}
         user_level_value = level_hierarchy.get(user_level, 1)
         task_level_value = level_hierarchy.get(task_level, 1)
 
-        if user_level_value < task_level_value:
+        # expert 任务跳过等级检查（因为已有指定接收者）
+        if task_level == "expert":
+            pass  # expert 任务不检查用户等级
+        elif user_level_value < task_level_value:
             if task_level == "vip":
                 raise HTTPException(
                     status_code=403,

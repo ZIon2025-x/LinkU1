@@ -838,7 +838,7 @@ async def approve_service_application(
     # 7. 处理图片（JSONB类型，直接使用list）
     images_list = service.images if service.images else None
     
-    # 8. 创建任务
+    # 8. 创建任务（任务达人服务创建的任务等级为 expert）
     new_task = models.Task(
         title=service.service_name,
         description=service.description,
@@ -850,6 +850,7 @@ async def approve_service_application(
         currency=application.currency or service.currency,
         location=location,  # 使用任务达人的位置
         task_type="其他",
+        task_level="expert",  # 任务达人服务创建的任务等级为 expert
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
         status="in_progress",

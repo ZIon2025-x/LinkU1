@@ -31,7 +31,7 @@ export interface Task {
   poster_id: string;
   taker_id?: string;
   status: 'open' | 'taken' | 'in_progress' | 'pending_confirmation' | 'completed' | 'cancelled';
-  task_level: 'normal' | 'vip' | 'super';
+  task_level: 'normal' | 'vip' | 'super' | 'expert';
   created_at: string;
   accepted_at?: string;
   completed_at?: string;

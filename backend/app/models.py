@@ -206,7 +206,7 @@ class Task(Base):
     poster_id = Column(String(8), ForeignKey("users.id"))
     taker_id = Column(String(8), ForeignKey("users.id"), nullable=True)
     status = Column(String(20), default="open")
-    task_level = Column(String(20), default="normal")  # normal, vip, super
+    task_level = Column(String(20), default="normal")  # normal, vip, super, expert（达人任务）
     created_at = Column(DateTime, default=get_uk_time_naive)
     accepted_at = Column(DateTime, nullable=True)  # 任务接受时间
     completed_at = Column(DateTime, nullable=True)  # 任务完成时间

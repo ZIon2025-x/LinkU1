@@ -297,7 +297,7 @@ class TaskOut(TaskBase):
     poster_id: str  # 现在ID是字符串类型
     taker_id: Optional[str]  # 现在ID是字符串类型
     status: str
-    task_level: str = "normal"  # normal, vip, super
+    task_level: str = "normal"  # normal, vip, super, expert（达人任务）
     created_at: datetime.datetime
     is_public: Optional[int] = 1  # 1=public, 0=private (仅自己可见)
     images: Optional[List[str]] = None  # 图片URL列表
