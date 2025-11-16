@@ -316,7 +316,7 @@ async def send_expert_application_approved_notification(
             notification_type="expert_application_approved",
             title="任务达人申请已通过",
             content=notification_content,
-            related_id=expert_id,
+            related_id=None,  # expert_id 是字符串类型，不能存储在 Integer 字段中，相关信息已在 content 中
         )
         
         logger.info(f"任务达人申请批准通知已发送给用户: {user_id}")

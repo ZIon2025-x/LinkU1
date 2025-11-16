@@ -170,9 +170,10 @@ async def review_expert_application(
             # 4. 创建任务达人记录（ID使用用户的ID）
             new_expert = None
             commit_success = False
+            expert_id_value = application.user_id  # 在 commit 之前保存 ID，避免后续访问对象属性
             try:
                 new_expert = models.TaskExpert(
-                    id=application.user_id,  # 重要：使用用户的ID作为任务达人的ID
+                    id=expert_id_value,  # 重要：使用用户的ID作为任务达人的ID
                     expert_name=None,  # 可选，默认为NULL
                     bio=None,  # 可选
                     avatar=None,  # 可选，使用用户默认头像
@@ -195,12 +196,8 @@ async def review_expert_application(
                 
                 await db.commit()
                 commit_success = True
-                try:
-                    await db.refresh(new_expert)
-                    logger.info(f"成功创建任务达人: {new_expert.id}, 状态: {new_expert.status}")
-                except Exception as e:
-                    logger.warning(f"刷新 new_expert 失败，但数据已创建: {e}")
-                    # 继续执行，因为数据已经成功创建
+                # 注意：不要在 commit 后访问 new_expert 的属性，因为可能触发延迟加载
+                logger.info(f"成功创建任务达人: {expert_id_value}, 状态: active")
             except IntegrityError as e:
                 await db.rollback()
                 logger.error(f"创建任务达人失败（完整性错误）: {e}")
@@ -217,71 +214,35 @@ async def review_expert_application(
                 await send_expert_application_approved_notification(
                     db=db,
                     user_id=application.user_id,
-                    expert_id=new_expert.id
+                    expert_id=expert_id_value  # 使用保存的 ID 值，而不是访问对象属性
                 )
             except Exception as e:
                 logger.error(f"Failed to send approval notification: {e}")
             
             # 返回响应（手动构建，避免序列化错误）
             # 如果 commit 成功，无论如何都要返回成功响应
-            if commit_success and new_expert:
-                logger.info(f"申请 {application_id} 已批准，任务达人 {new_expert.id} 已创建")
+            if commit_success:
+                logger.info(f"申请 {application_id} 已批准，任务达人 {expert_id_value} 已创建")
                 
-                # 安全转换 id (确保是字符串) - 在 try 块外定义，确保作用域
-                expert_id_str = ""
-                try:
-                    if new_expert.id is not None:
-                        expert_id_str = str(new_expert.id)
-                    else:
-                        logger.error(f"new_expert.id 是 None!")
-                        expert_id_str = ""
-                except Exception as e:
-                    logger.error(f"转换 expert_id 失败: {e}", exc_info=True)
-                    expert_id_str = ""
+                # 使用已保存的 expert_id_value，避免访问对象属性
+                expert_id_str = str(expert_id_value) if expert_id_value else ""
                 
                 # 手动构建响应，确保类型正确
-                # 使用 try-except 确保即使序列化失败也能返回成功响应
+                # 注意：不要访问 new_expert 的属性，因为可能触发延迟加载
+                # 使用默认值，因为这是新创建的对象
                 try:
+                    # 使用当前时间作为 created_at
+                    created_at_str = datetime.now(timezone.utc).isoformat()
                     
-                    # 安全转换 rating (DECIMAL -> float)
-                    rating_value = 0.0
-                    if new_expert.rating is not None:
-                        try:
-                            if isinstance(new_expert.rating, Decimal):
-                                rating_value = float(new_expert.rating)
-                            elif isinstance(new_expert.rating, (int, float)):
-                                rating_value = float(new_expert.rating)
-                            else:
-                                rating_value = float(str(new_expert.rating))
-                        except (ValueError, TypeError, AttributeError) as e:
-                            logger.warning(f"转换 rating 失败: {new_expert.rating}, 类型: {type(new_expert.rating)}, 错误: {e}")
-                            rating_value = 0.0
-                    
-                    # 安全转换 created_at (datetime -> ISO string)
-                    created_at_str = ""
-                    if new_expert.created_at:
-                        try:
-                            if new_expert.created_at.tzinfo is None:
-                                # 如果是 naive datetime，假设是 UTC
-                                created_at_str = new_expert.created_at.replace(tzinfo=timezone.utc).isoformat()
-                            else:
-                                created_at_str = new_expert.created_at.isoformat()
-                        except Exception as e:
-                            logger.warning(f"转换 created_at 失败: {new_expert.created_at}, 错误: {e}")
-                            created_at_str = datetime.now(timezone.utc).isoformat()
-                    else:
-                        created_at_str = datetime.now(timezone.utc).isoformat()
-                    
-                    # 安全处理可能为 None 的字段
                     expert_dict = {
                         "id": expert_id_str,
-                        "expert_name": new_expert.expert_name if new_expert.expert_name is not None else None,
-                        "bio": new_expert.bio if new_expert.bio is not None else None,
-                        "avatar": new_expert.avatar if new_expert.avatar is not None else None,
-                        "status": str(new_expert.status) if new_expert.status is not None else "active",
-                        "rating": rating_value,
-                        "total_services": int(new_expert.total_services) if new_expert.total_services is not None else 0,
-                        "completed_tasks": int(new_expert.completed_tasks) if new_expert.completed_tasks is not None else 0,
+                        "expert_name": None,  # 新创建的对象，这些字段都是 None
+                        "bio": None,
+                        "avatar": None,
+                        "status": "active",  # 我们设置的状态
+                        "rating": 0.0,  # 初始值
+                        "total_services": 0,  # 初始值
+                        "completed_tasks": 0,  # 初始值
                         "created_at": created_at_str,
                     }
                     
@@ -291,38 +252,23 @@ async def review_expert_application(
                 except Exception as e:
                     logger.error(f"构建 expert_dict 失败，使用简化响应: {e}", exc_info=True)
                     # 即使序列化失败，也返回成功响应（数据已经创建）
-                    try:
-                        expert_dict = {
-                            "id": str(new_expert.id) if new_expert.id is not None else "",
-                            "status": str(new_expert.status) if new_expert.status is not None else "active",
-                        }
-                    except Exception as e2:
-                        logger.error(f"构建简化 expert_dict 也失败: {e2}", exc_info=True)
-                        expert_dict = {
-                            "id": "",
-                            "status": "active",
-                        }
+                    expert_dict = {
+                        "id": expert_id_str,
+                        "status": "active",
+                    }
                 
                 # 确保返回成功响应（数据已经成功创建）
-                try:
-                    response = {
-                        "message": "申请已批准，任务达人已创建",
-                        "application_id": application_id,
-                        "expert_id": expert_id_str if expert_id_str else (str(new_expert.id) if new_expert.id is not None else ""),
-                        "expert": expert_dict,
-                    }
-                    logger.info(f"准备返回响应: {response}")
-                    return response
-                except Exception as e:
-                    logger.error(f"构建最终响应失败: {e}", exc_info=True)
-                    # 最后的降级策略：返回最简单的成功响应
-                    return {
-                        "message": "申请已批准，任务达人已创建",
-                        "application_id": application_id,
-                        "expert_id": str(new_expert.id) if new_expert.id is not None else "",
-                    }
+                response = {
+                    "message": "申请已批准，任务达人已创建",
+                    "application_id": application_id,
+                    "expert_id": expert_id_str,
+                    "expert": expert_dict,
+                }
+                logger.info(f"准备返回响应: {response}")
+                return response
             else:
-                # 这种情况理论上不应该发生
+                # 如果 commit 失败，抛出异常
+                logger.error(f"commit_success={commit_success}, expert_id_value={expert_id_value}")
                 raise HTTPException(status_code=500, detail="创建任务达人失败：未知错误")
         
         elif review_data.action == "reject":
