@@ -31,11 +31,12 @@ BEGIN
     END IF;
 END $$;
 
--- 步骤2: 创建或替换触发器函数，确保 id 和 user_id 始终保持一致
--- 只有在 user_id 列存在时才创建触发器
+-- 步骤2: 创建或替换触发器函数和触发器，确保 id 和 user_id 始终保持一致
+-- 只有在 user_id 列存在时才创建
 DO $$
 DECLARE
     user_id_exists BOOLEAN;
+    function_sql TEXT;
 BEGIN
     -- 检查 user_id 列是否存在
     SELECT EXISTS (
@@ -44,33 +45,39 @@ BEGIN
     ) INTO user_id_exists;
     
     IF NOT user_id_exists THEN
-        RAISE NOTICE 'user_id 列不存在，跳过触发器创建';
+        RAISE NOTICE 'user_id 列不存在，跳过触发器函数和触发器创建';
         RETURN;
     END IF;
     
-    -- 创建或替换触发器函数
+    RAISE NOTICE 'user_id 列存在，将创建触发器函数和触发器';
+    
+    -- 使用动态 SQL 创建函数（避免 $$ 分隔符冲突）
+    function_sql := '
     CREATE OR REPLACE FUNCTION sync_featured_task_experts_id_user_id()
-    RETURNS TRIGGER AS $$
+    RETURNS TRIGGER AS $function$
     BEGIN
         -- 在 INSERT 时，如果 id 和 user_id 不一致，将 id 设置为 user_id
         IF NEW.id IS DISTINCT FROM NEW.user_id THEN
             NEW.id := NEW.user_id;
-            RAISE NOTICE '触发器：已将 id 同步为 user_id (%)', NEW.user_id;
+            RAISE NOTICE ''触发器：已将 id 同步为 user_id (%)'', NEW.user_id;
         END IF;
         
         -- 在 UPDATE 时，如果 user_id 被修改，同步更新 id
-        IF TG_OP = 'UPDATE' AND NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+        IF TG_OP = ''UPDATE'' AND NEW.user_id IS DISTINCT FROM OLD.user_id THEN
             NEW.id := NEW.user_id;
-            RAISE NOTICE '触发器：user_id 已更改，已将 id 同步为新的 user_id (%)', NEW.user_id;
-        ELSIF TG_OP = 'UPDATE' AND NEW.id IS DISTINCT FROM NEW.user_id THEN
+            RAISE NOTICE ''触发器：user_id 已更改，已将 id 同步为新的 user_id (%)'', NEW.user_id;
+        ELSIF TG_OP = ''UPDATE'' AND NEW.id IS DISTINCT FROM NEW.user_id THEN
             -- 如果 id 和 user_id 不一致，将 id 设置为 user_id
             NEW.id := NEW.user_id;
-            RAISE NOTICE '触发器：已将 id 同步为 user_id (%)', NEW.user_id;
+            RAISE NOTICE ''触发器：已将 id 同步为 user_id (%)'', NEW.user_id;
         END IF;
         
         RETURN NEW;
     END;
-    $$ LANGUAGE plpgsql;
+    $function$ LANGUAGE plpgsql;';
+    
+    EXECUTE function_sql;
+    RAISE NOTICE '已创建触发器函数';
     
     -- 删除旧的触发器（如果存在）
     DROP TRIGGER IF EXISTS trigger_sync_featured_task_experts_id_user_id ON featured_task_experts;
