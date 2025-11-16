@@ -3,6 +3,13 @@
  * 确保整个应用只有一个WebSocket连接
  */
 
+import { 
+  WS_CLOSE_CODE_NORMAL,
+  WS_CLOSE_CODE_HEARTBEAT_TIMEOUT,
+  WS_CLOSE_REASON_NEW_CONNECTION,
+  WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+} from '../constants/websocket';
+
 type MessageHandler = (message: any) => void;
 
 class WebSocketManager {
@@ -12,8 +19,8 @@ class WebSocketManager {
   private messageHandlers: Set<MessageHandler> = new Set();
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private wsBaseUrl: string = '';
 
   private constructor() {
@@ -38,8 +45,23 @@ class WebSocketManager {
    * 连接到WebSocket服务器
    */
   public connect(userId: string): void {
-    // 如果已经连接到同一个用户，不需要重新连接
-    if (this.ws && this.userId === userId && this.ws.readyState === WebSocket.OPEN) {
+    // ⚠️ 先清理旧的定时器，防止多条计时器并发
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    // 如果已经连接到同一个用户且连接正常，不需要重新连接
+    if (this.ws && 
+        this.userId === userId && 
+        this.ws.readyState === WebSocket.OPEN) {
+      console.debug('WebSocket already connected to user', userId);
+      return;
+    }
+
+    // 如果正在连接中，等待完成
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      console.debug('WebSocket connection in progress, waiting...');
       return;
     }
 
@@ -84,8 +106,16 @@ class WebSocketManager {
         try {
           const msg = JSON.parse(event.data);
           
-          // 处理心跳消息
-          if (msg.type === 'heartbeat') {
+          // ⚠️ 处理心跳消息（ping/pong）
+          if (msg.type === 'ping') {
+            // 响应pong
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+              this.ws.send(JSON.stringify({ type: 'pong' }));
+            }
+            return;
+          }
+          
+          if (msg.type === 'pong' || msg.type === 'heartbeat') {
             return;
           }
 
@@ -109,12 +139,51 @@ class WebSocketManager {
       this.ws.onclose = (event) => {
         this.cleanup();
 
-        // 只在异常关闭时重连
-        if (event.code !== 1000 && this.userId && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // ⚠️ 先清理旧的定时器，防止多定时器并存
+        if (this.reconnectTimeout) {
+          clearTimeout(this.reconnectTimeout);
+          this.reconnectTimeout = null;
+        }
+        
+        // ⚠️ 检查是否是"新连接替换"场景（协议契约）
+        // 统一：只在 code===1000 && reason===NEW_CONNECTION 时不重连
+        const isNewConnectionReplacement = event.code === WS_CLOSE_CODE_NORMAL && 
+          event.reason === WS_CLOSE_REASON_NEW_CONNECTION;
+        
+        // 如果是新连接替换，不触发重连
+        if (isNewConnectionReplacement) {
+          console.debug('WebSocket closed due to new connection replacement, no reconnect');
+          return;
+        }
+        
+        // 检查是否是心跳超时（需要重连）
+        const isHeartbeatTimeout = event.code === WS_CLOSE_CODE_HEARTBEAT_TIMEOUT;
+        
+        // 只在异常关闭或心跳超时时重连（排除正常关闭且不是新连接替换的情况）
+        if ((event.code !== WS_CLOSE_CODE_NORMAL || isHeartbeatTimeout) && 
+            this.userId && 
+            this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
+          
+          // 指数回退 + 抖动（jitter），避免同步风暴
+          const baseDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+          const jitter = Math.random() * 1000; // 0-1秒随机抖动
+          const delay = baseDelay + jitter;
+          
+          // ⚠️ 检查窗口可见性和网络状态
+          if (document.hidden || !navigator.onLine) {
+            // 窗口隐藏或离线，延迟重连
+            this.reconnectTimeout = setTimeout(() => {
+              if (!document.hidden && navigator.onLine) {
+                this.doConnect();
+              }
+            }, delay);
+            return;
+          }
+          
           this.reconnectTimeout = setTimeout(() => {
             this.doConnect();
-          }, 5000);
+          }, delay);
         }
       };
     } catch (error) {
@@ -155,18 +224,12 @@ class WebSocketManager {
   }
 
   /**
-   * 启动心跳
+   * 启动心跳（已由服务端统一处理，前端只需响应pong）
+   * ⚠️ 注意：心跳已由服务端统一处理，前端只需在收到ping时响应pong
    */
   private startHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-
-    this.heartbeatInterval = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 30000); // 每30秒发送一次心跳
+    // 心跳已由服务端统一处理，前端只需响应pong（在onmessage中处理）
+    // 不再需要前端主动发送心跳
   }
 
   /**

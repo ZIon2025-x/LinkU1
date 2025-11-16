@@ -1564,7 +1564,10 @@ def get_task_history(task_id: int, db: Session = Depends(get_db)):
 
 @router.get("/profile/me", response_model=schemas.UserOut)
 def get_my_profile(
-    request: Request, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+    request: Request, 
+    current_user=Depends(get_current_user_secure_sync_csrf), 
+    db: Session = Depends(get_db),
+    response: Response = None
 ):
 
     # 安全地创建用户对象，避免SQLAlchemy内部属性
@@ -1613,6 +1616,30 @@ def get_my_profile(
             "language_preference": language_preference,
             "name_updated_at": getattr(current_user, 'name_updated_at', None)
         }
+        
+        # ⚠️ 生成ETag（用于HTTP协商缓存）
+        import hashlib
+        user_json = json.dumps(formatted_user, sort_keys=True)
+        etag = hashlib.md5(user_json.encode()).hexdigest()
+        
+        # 检查If-None-Match
+        if_none_match = request.headers.get("If-None-Match")
+        if if_none_match == etag:
+            # ⚠️ 统一：304必须直接return Response对象，不return None
+            return Response(
+                status_code=304, 
+                headers={
+                    "ETag": etag,
+                    "Cache-Control": "private, max-age=300",
+                    "Vary": "Cookie"
+                }
+            )
+        
+        # 设置响应头
+        if response:
+            response.headers["ETag"] = etag
+            response.headers["Cache-Control"] = "private, max-age=300"  # 5分钟，配合Vary避免CDN误缓存
+            response.headers["Vary"] = "Cookie"  # 避免中间层误缓存
         
         return formatted_user
     except Exception as e:

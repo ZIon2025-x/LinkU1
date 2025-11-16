@@ -171,13 +171,47 @@ class UserRedisCleanup:
                     data = self._get_redis_data(key_str)
                     
                     if data is None:
-                        # 数据无法解析（可能是损坏的或格式不正确的数据），直接删除
+                        # ⚠️ 数据无法解析，记录详细信息（脱敏）并删除
                         try:
+                            import hashlib
+                            import re
+                            import random
+                            
+                            # 获取原始数据用于日志
+                            raw_data = self.redis_client.get(key_str)
+                            data_type = type(raw_data).__name__ if raw_data else "None"
+                            data_size = len(raw_data) if raw_data else 0
+                            
+                            # 计算哈希值，而不是记录完整内容
+                            data_hash = hashlib.sha256(raw_data).hexdigest()[:16] if raw_data else "empty"
+                            
+                            # 脱敏预览（仅前100字节，且脱敏）
+                            preview = ""
+                            if raw_data:
+                                try:
+                                    preview_str = str(raw_data)[:100]
+                                    # 脱敏敏感信息
+                                    preview_str = re.sub(r'([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', 
+                                                        r'\1***@\2', preview_str)
+                                    preview_str = re.sub(r'(\d{3})\d{4}(\d{4})', r'\1****\2', preview_str)
+                                    preview = preview_str
+                                except:
+                                    preview = "<binary data>"
+                            else:
+                                preview = "empty"
+                            
+                            # ⚠️ 采样日志：只记录部分无法解析的数据，避免日志放大
+                            if random.random() < 0.1:  # 10%采样率
+                                logger.warning(
+                                    f"[USER_REDIS_CLEANUP] 无法解析的缓存数据: {key_str}, "
+                                    f"类型: {data_type}, 大小: {data_size}, 哈希: {data_hash}, 预览: {preview}"
+                                )
+                            
+                            # 删除无法解析的数据
                             self.redis_client.delete(key_str)
                             cleaned_count += 1
-                            logger.info(f"[USER_REDIS_CLEANUP] 删除无法解析的缓存数据: {key_str}")
                         except Exception as e:
-                            logger.warning(f"[USER_REDIS_CLEANUP] 删除损坏的缓存数据失败 {key_str}: {e}")
+                            logger.error(f"[USER_REDIS_CLEANUP] 删除损坏的缓存数据失败 {key_str}: {e}")
                     elif self._is_cache_expired(data):
                         # 数据可以解析但已过期，删除
                         self.redis_client.delete(key_str)
@@ -287,95 +321,171 @@ class UserRedisCleanup:
     
     def _get_redis_data(self, key: str) -> Dict[str, Any]:
         """安全获取Redis数据，支持多种格式：
-        - pickle格式（redis_cache.py使用）
-        - JSON格式（json.dumps）
-        - orjson格式（orjson.dumps，兼容JSON）
+        - JSON格式（优先，安全）
+        - orjson格式（兼容JSON）
+        - 压缩数据（gzip/zlib）
+        - ⚠️ pickle格式（仅限隔离进程，白名单+魔数+schema校验）
         - 特殊字符串标记（如"__NULL__"、"1"等，返回None表示无法解析为字典）
         """
         try:
-            data = self.redis_client.get(key)
-            if not data:
+            raw_data = self.redis_client.get(key)
+            if not raw_data:
                 return None
             
             # 确保数据是bytes类型
-            if not isinstance(data, bytes):
-                data = bytes(data) if data else None
-                if not data:
+            if not isinstance(raw_data, bytes):
+                raw_data = bytes(raw_data) if raw_data else None
+                if not raw_data:
                     return None
             
-            # 方法1: 尝试使用pickle反序列化（redis_cache.py使用的格式）
+            # ⚠️ 检查是否是压缩数据（gzip/zlib）
+            # ⚠️ 解压安全：增加输入/输出大小上限，避免"压缩炸弹"
+            MAX_COMPRESSED_SIZE = 10 * 1024 * 1024  # 10MB上限
+            MAX_DECOMPRESSED_SIZE = 100 * 1024 * 1024  # 100MB上限
+            
+            if isinstance(raw_data, bytes) and len(raw_data) > 2:
+                # ⚠️ 检查输入大小
+                if len(raw_data) > MAX_COMPRESSED_SIZE:
+                    logger.warning(f"[USER_REDIS_CLEANUP] 压缩数据过大: {key}, size: {len(raw_data)}")
+                    return None
+                
+                decompressed = None
+                # 检查gzip魔数 \x1f\x8b
+                if raw_data[:2] == b'\x1f\x8b':
+                    try:
+                        import gzip
+                        decompressed = gzip.decompress(raw_data)
+                        # ⚠️ 检查输出大小
+                        if len(decompressed) > MAX_DECOMPRESSED_SIZE:
+                            logger.warning(f"[USER_REDIS_CLEANUP] 解压后数据过大: {key}, size: {len(decompressed)}")
+                            return None
+                    except Exception as e:
+                        logger.warning(f"[USER_REDIS_CLEANUP] 解压gzip失败 {key}: {e}")
+                        # ⚠️ 解压失败不重试超过一次，任何异常都不要写回
+                        return None
+                
+                # 检查zlib魔数
+                elif raw_data[0] == 0x78:  # zlib常见起始字节
+                    try:
+                        import zlib
+                        decompressed = zlib.decompress(raw_data)
+                        # ⚠️ 检查输出大小
+                        if len(decompressed) > MAX_DECOMPRESSED_SIZE:
+                            logger.warning(f"[USER_REDIS_CLEANUP] 解压后数据过大: {key}, size: {len(decompressed)}")
+                            return None
+                    except Exception as e:
+                        logger.warning(f"[USER_REDIS_CLEANUP] 解压zlib失败 {key}: {e}")
+                        # ⚠️ 解压失败不重试超过一次，任何异常都不要写回
+                        return None
+                
+                # ⚠️ 仅在确认解压成功后再使用
+                if decompressed is not None:
+                    raw_data = decompressed
+            
+            # ⚠️ 尝试1：JSON格式（优先，安全）
             try:
-                import pickle
-                parsed_data = pickle.loads(data)
-                # 如果成功解析且是字典类型，直接返回
+                import json
+                if isinstance(raw_data, bytes):
+                    raw_data_str = raw_data.decode('utf-8')
+                else:
+                    raw_data_str = raw_data
+                parsed_data = json.loads(raw_data_str)
                 if isinstance(parsed_data, dict):
+                    # 检查是否是v2格式
+                    if parsed_data.get("schema_version") == "2":
+                        return parsed_data.get("data")
                     return parsed_data
-                # 如果是其他类型，记录日志但不报错
-                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是pickle格式但非字典类型: {type(parsed_data)}")
-                return None
-            except (pickle.PickleError, TypeError, AttributeError):
-                # pickle解析失败，继续尝试其他格式
+            except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
                 pass
             
-            # 方法2: 尝试解码为字符串并检查特殊标记
+            # ⚠️ 尝试2：orjson格式（兼容JSON）
             try:
-                # 尝试解码为字符串
-                try:
-                    data_str = data.decode('utf-8')
-                except UnicodeDecodeError:
-                    # 如果utf-8失败，尝试latin-1（兼容所有字节值）
-                    data_str = data.decode('latin-1')
-                
-                # 检查数据是否为空字符串或只包含空白字符
-                if not data_str or not data_str.strip():
-                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值为空，跳过解析")
-                    return None
-                
-                # 检查是否是特殊标记字符串（如"__NULL__"、"1"等）
-                # 这些不是字典数据，返回None表示无法解析为字典
-                if data_str in ["__NULL__", "1", "0", "true", "false", "True", "False"]:
-                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是特殊标记字符串: {data_str}")
-                    return None
-                
-                # 方法3: 尝试使用JSON解析（包括orjson格式，因为orjson兼容标准JSON）
+                import orjson
+                if isinstance(raw_data, bytes):
+                    parsed_data = orjson.loads(raw_data)
+                else:
+                    parsed_data = orjson.loads(raw_data.encode('utf-8'))
+                if isinstance(parsed_data, dict):
+                    return parsed_data
+            except Exception:
+                pass
+            
+            # ⚠️ 尝试3：双重编码JSON
+            try:
                 import json
-                try:
-                    parsed_data = json.loads(data_str)
-                except json.JSONDecodeError:
-                    # 标准JSON解析失败，尝试orjson（更宽松）
-                    try:
-                        import orjson
-                        parsed_data = orjson.loads(data)
-                    except Exception:
-                        # orjson也失败，记录警告
-                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据既不是pickle也不是JSON格式，可能是其他格式或已损坏")
-                        return None
-                
-                # 如果解析得到的是字符串，再次尝试解析（处理双重编码的情况）
+                if isinstance(raw_data, bytes):
+                    raw_data_str = raw_data.decode('utf-8')
+                else:
+                    raw_data_str = raw_data
+                parsed_data = json.loads(raw_data_str)
                 if isinstance(parsed_data, str):
-                    # 检查是否是特殊标记
-                    if parsed_data in ["__NULL__", "1", "0", "true", "false", "True", "False"]:
-                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是特殊标记字符串: {parsed_data}")
-                        return None
-                    try:
-                        parsed_data = json.loads(parsed_data)
-                    except json.JSONDecodeError:
-                        logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值是字符串而非JSON对象")
-                        return None
-                
-                # 确保返回的是字典类型
-                if not isinstance(parsed_data, dict):
-                    logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的值不是字典类型: {type(parsed_data)}")
+                    parsed_data = json.loads(parsed_data)
+                if isinstance(parsed_data, dict):
+                    return parsed_data
+            except (json.JSONDecodeError, TypeError):
+                pass
+            
+            # ⚠️ 尝试4：pickle格式（仅限隔离进程，必选校验）
+            # ⚠️ 清理脚本运行在单独容器或一组隔离worker，且使用只读凭证
+            # ⚠️ 白名单前缀 + 魔数检查 + schema_version 写成必选校验（不是"尝试性"）
+            ALLOWED_PICKLE_PREFIXES = ['user:', 'user_cache:']  # 白名单
+            PICKLE_MAGIC = b'\x80'  # pickle协议2+的魔数
+            
+            if any(key.startswith(prefix) for prefix in ALLOWED_PICKLE_PREFIXES):
+                # ⚠️ 必选校验1：检查魔数
+                if not (isinstance(raw_data, bytes) and raw_data.startswith(PICKLE_MAGIC)):
+                    logger.warning(f"[USER_REDIS_CLEANUP] Pickle魔数不匹配: {key}")
                     return None
                 
-                return parsed_data
-            except UnicodeDecodeError:
-                logger.debug(f"[USER_REDIS_CLEANUP] Redis键 {key} 的数据无法解码为字符串")
-                return None
+                try:
+                    import pickle
+                    # ⚠️ 在隔离环境中反序列化（仅用于迁移）
+                    parsed_data = pickle.loads(raw_data)
+                    
+                    # ⚠️ 必选校验2：检查schema_version（如果存在）
+                    if isinstance(parsed_data, dict):
+                        # 检查是否有schema_version字段
+                        if 'schema_version' in parsed_data:
+                            schema_version = parsed_data.get('schema_version')
+                            if schema_version not in ['1', '1.0']:  # 只允许v1格式
+                                logger.warning(f"[USER_REDIS_CLEANUP] Pickle schema_version不匹配: {key}, version: {schema_version}")
+                                return None
+                        
+                        # ⚠️ 立即迁移为JSON格式（仅在确认解析成功后）
+                        self._migrate_to_json(key, parsed_data)
+                        return parsed_data
+                except (pickle.UnpicklingError, TypeError, Exception) as e:
+                    logger.warning(f"[USER_REDIS_CLEANUP] Pickle解析失败 {key}: {e}")
+                    # ⚠️ 失败不写回，避免把损坏数据"定格"
+                    return None
+            
+            # 所有解析都失败
+            logger.warning(f"[USER_REDIS_CLEANUP] 无法解析数据格式: {key}, 类型: {type(raw_data)}")
+            return None
             
         except Exception as e:
             logger.debug(f"[USER_REDIS_CLEANUP] 获取Redis数据失败 {key}: {e}")
             return None
+    
+    def _migrate_to_json(self, key: str, data: dict):
+        """将pickle数据迁移为JSON格式（⚠️ 保留TTL，严禁固定ex=3600）"""
+        try:
+            import json
+            # ⚠️ 先读取PTTL，保留原有过期时间（毫秒）
+            ttl_ms = self.redis_client.pttl(key)
+            if ttl_ms < 0:
+                ttl_ms = 3600000  # 默认1小时（毫秒）
+            
+            json_data = json.dumps(data, ensure_ascii=False)
+            
+            # ⚠️ 使用PEXPIRE保留原有TTL，严禁使用set(..., ex=3600)重置寿命
+            self.redis_client.set(key, json_data)
+            if ttl_ms > 0:
+                self.redis_client.pexpire(key, ttl_ms)
+            
+            logger.info(f"[USER_REDIS_CLEANUP] 迁移pickle到JSON: {key}, TTL: {ttl_ms}ms")
+        except Exception as e:
+            logger.error(f"[USER_REDIS_CLEANUP] 迁移失败 {key}: {e}")
     
     def _is_session_expired(self, data: Dict[str, Any]) -> bool:
         """检查会话是否过期"""

@@ -4,6 +4,7 @@ import logging
 import os
 import threading
 import time
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -269,35 +270,80 @@ else:
     app.mount("/uploads", StaticFiles(directory="uploads/public"), name="uploads")
 
 active_connections = {}
+# 用户级连接锁，确保原子替换
+connection_locks = defaultdict(asyncio.Lock)
+
+
+async def close_old_connection(old_websocket: WebSocket, user_id: str):
+    """异步关闭旧连接，使用正常关闭码和固定reason"""
+    try:
+        from app.constants import WS_CLOSE_CODE_NORMAL, WS_CLOSE_REASON_NEW_CONNECTION
+        # 使用1000（正常关闭）配合固定reason，作为协议契约
+        await old_websocket.close(
+            code=WS_CLOSE_CODE_NORMAL, 
+            reason=WS_CLOSE_REASON_NEW_CONNECTION  # 固定文案，不要随意修改
+        )
+        logger.debug(f"Closed existing WebSocket connection for user {user_id}")
+    except Exception as e:
+        logger.debug(f"Error closing old WebSocket for user {user_id}: {e}")
 
 
 async def heartbeat_loop(websocket: WebSocket, user_id: str):
-    """心跳循环，保持WebSocket连接活跃"""
+    """心跳循环，使用业务循环统一处理（方案B）"""
+    ping_interval = 20  # 20秒发送一次ping
+    max_missing_pongs = 3  # 连续3次未收到pong才断开
+    missing_pongs = 0
+    last_ping_time = time.time()
+    
     try:
         while True:
-            await asyncio.sleep(30)  # 每30秒发送一次心跳
-            if websocket.client_state == WebSocketState.CONNECTED:
+            # 检查是否需要发送ping
+            current_time = time.time()
+            if current_time - last_ping_time >= ping_interval:
                 try:
-                    uk_tz = pytz.timezone("Europe/London")
-                    uk_time = datetime.now(uk_tz)  # 英国时间
-                    await websocket.send_text(
-                        json.dumps(
-                            {"type": "heartbeat", "timestamp": uk_time.isoformat()}
-                        )
-                    )
-                    logger.debug(f"Heartbeat sent to user {user_id}")
+                    # 使用业务帧发送ping（仅在框架不支持websocket.ping()时）
+                    await websocket.send_json({"type": "ping"})
+                    last_ping_time = current_time
                 except Exception as e:
-                    logger.error(f"Failed to send heartbeat to user {user_id}: {e}")
+                    logger.error(f"Failed to send ping to user {user_id}: {e}")
                     break
-            else:
-                logger.debug(
-                    f"WebSocket disconnected for user {user_id}, stopping heartbeat"
+            
+            # 统一接收消息（心跳和业务消息都在这里处理，避免竞争）
+            try:
+                data = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=5.0
                 )
+                
+                msg = json.loads(data)
+                
+                # 处理pong响应
+                if msg.get("type") == "pong":
+                    missing_pongs = 0
+                    continue
+                
+                # 处理业务消息（转发给主循环）
+                # 注意：这里只处理心跳，业务消息由主循环处理
+                # 如果收到非pong消息，说明是业务消息，需要特殊处理
+                
+            except asyncio.TimeoutError:
+                # 超时检查pong
+                missing_pongs += 1
+                if missing_pongs >= max_missing_pongs:
+                    # ⚠️ 使用非1000的关闭码（4001），前端需要重连
+                    from app.constants import WS_CLOSE_CODE_HEARTBEAT_TIMEOUT, WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+                    await websocket.close(
+                        code=WS_CLOSE_CODE_HEARTBEAT_TIMEOUT,
+                        reason=WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+                    )
+                    break
+            except Exception as e:
+                logger.error(f"Heartbeat error for user {user_id}: {e}")
                 break
     except asyncio.CancelledError:
-        logger.debug(f"Heartbeat task cancelled for user {user_id}")
+        logger.debug(f"Heartbeat cancelled for user {user_id}")
     except Exception as e:
-        logger.error(f"Heartbeat error for user {user_id}: {e}")
+        logger.error(f"Heartbeat loop error for user {user_id}: {e}")
 
 
 # 后台任务：自动取消过期任务
@@ -563,29 +609,60 @@ async def websocket_chat(
         await websocket.close(code=1008, reason="Invalid session")
         return
 
-    # 检查是否已有连接，如果有则关闭旧连接
-    if user_id in active_connections:
-        old_websocket = active_connections[user_id]
-        try:
-            await old_websocket.close(code=1001, reason="New connection established")
-            logger.debug(f"Closed existing WebSocket connection for user {user_id}")
-        except Exception as e:
-            logger.debug(f"Error closing old WebSocket for user {user_id}: {e}")
-        finally:
-            active_connections.pop(user_id, None)
+    # ⚠️ 原子替换：使用用户级锁确保原子操作
+    async with connection_locks[user_id]:
+        # 先登记新连接为当前连接（原子操作）
+        old_websocket = active_connections.get(user_id)
+        active_connections[user_id] = websocket
+        
+        # 接受新连接
+        await websocket.accept()
+        logger.debug(f"WebSocket connection established for user {user_id}")
+        
+        # 异步关闭旧连接（不影响新连接）
+        if old_websocket:
+            asyncio.create_task(close_old_connection(old_websocket, user_id))
     
-    await websocket.accept()
-    active_connections[user_id] = websocket
-    logger.debug(f"WebSocket connection established for user {user_id} (total: {len(active_connections)})")
-
-    # 启动心跳任务
-    import asyncio
-
-    heartbeat_task = asyncio.create_task(heartbeat_loop(websocket, user_id))
+    # ⚠️ 注意：心跳已在业务循环中统一处理（方案B），不再单独启动心跳任务
+    # 心跳逻辑已整合到主消息循环中，避免与业务receive竞争
+    
+    # 心跳相关变量
+    last_ping_time = time.time()
+    ping_interval = 20  # 20秒发送一次ping
+    missing_pongs = 0
+    max_missing_pongs = 3
 
     try:
+        # 主消息循环（统一处理心跳和业务消息）
         while True:
-            data = await websocket.receive_text()
+            # ⚠️ 检查是否需要发送ping（心跳与业务消息统一处理）
+            current_time = time.time()
+            if current_time - last_ping_time >= ping_interval:
+                try:
+                    await websocket.send_json({"type": "ping"})
+                    last_ping_time = current_time
+                except Exception as e:
+                    logger.error(f"Failed to send ping to user {user_id}: {e}")
+            
+            # 统一接收消息（心跳和业务消息都在这里处理，避免竞争）
+            try:
+                data = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=5.0
+                )
+            except asyncio.TimeoutError:
+                # 超时检查pong
+                missing_pongs += 1
+                if missing_pongs >= max_missing_pongs:
+                    # ⚠️ 使用非1000的关闭码（4001），前端需要重连
+                    from app.constants import WS_CLOSE_CODE_HEARTBEAT_TIMEOUT, WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+                    await websocket.close(
+                        code=WS_CLOSE_CODE_HEARTBEAT_TIMEOUT,
+                        reason=WS_CLOSE_REASON_HEARTBEAT_TIMEOUT
+                    )
+                    break
+                continue
+            
             logger.debug(f"Received message from user {user_id}: {data[:100]}...")  # 只记录前100字符
 
             try:
@@ -598,6 +675,11 @@ async def websocket_chat(
 
                 msg = json.loads(data)
                 logger.debug(f"Parsed message type: {msg.get('type', 'unknown')} from user {user_id}")
+                
+                # ⚠️ 处理pong响应（心跳）
+                if msg.get("type") == "pong":
+                    missing_pongs = 0
+                    continue
 
                 # 验证消息格式
                 if not isinstance(msg, dict):
@@ -962,15 +1044,17 @@ async def websocket_chat(
     except WebSocketDisconnect:
         logger.debug(f"WebSocket disconnected for user {user_id}")
         active_connections.pop(user_id, None)
-        heartbeat_task.cancel()
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
         active_connections.pop(user_id, None)
-        heartbeat_task.cancel()
         try:
             await websocket.close()
         except:
             pass
+    finally:
+        # ⚠️ 连接关闭后清理连接锁，防止泄漏
+        if user_id not in active_connections and user_id in connection_locks:
+            connection_locks.pop(user_id, None)
 
 
 @app.get("/")

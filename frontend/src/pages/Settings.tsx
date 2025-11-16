@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
-import api from '../api';
+import api, { fetchCurrentUser } from '../api';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -132,13 +132,9 @@ const Settings: React.FC = () => {
         console.error('加载用户偏好失败:', error);
       }
       
-      // 加载用户资料（使用 api.get 而不是 fetch，确保 Cookie 正确发送）
-      // 添加时间戳参数避免缓存问题
+      // ⚠️ 使用fetchCurrentUser，利用缓存机制（不再使用时间戳参数绕过缓存）
       try {
-        const userResponse = await api.get('/api/users/profile/me', {
-          params: { _t: Date.now() } // 添加时间戳避免缓存
-        });
-        const userData = userResponse.data;
+        const userData = await fetchCurrentUser();
         // 格式化头像 URL
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);
@@ -263,12 +259,9 @@ const Settings: React.FC = () => {
       // 保存任务偏好设置（使用 api.put，自动处理 Cookie 和 CSRF token）
       await api.put('/api/user-preferences', formData.preferences);
       
-      // 重新加载用户数据以获取最新的数据（包括 residence_city 和 language_preference）
+      // ⚠️ 重新加载用户数据以获取最新的数据（使用fetchCurrentUser，利用缓存机制）
       try {
-        const userResponse = await api.get('/api/users/profile/me', {
-          params: { _t: Date.now() } // 添加时间戳避免缓存
-        });
-        const userData = userResponse.data;
+        const userData = await fetchCurrentUser();
         // 格式化头像 URL
         if (userData.avatar) {
           userData.avatar = formatAvatarUrl(userData.avatar);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import api from '../api';
+import { fetchCurrentUser } from '../api';
 import LoginModal from './LoginModal';
 
 interface ProtectedRouteProps {
@@ -15,7 +15,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   useEffect(() => {
     let isMounted = true;
-    let timeoutId: NodeJS.Timeout;
+    // ⚠️ 使用ReturnType<typeof setTimeout>，避免浏览器环境类型不匹配
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     
     const checkAuth = async () => {
       try {
@@ -26,18 +27,46 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           }, 10000); // 10秒超时
         });
 
-        // 直接尝试获取用户信息，HttpOnly Cookie会自动发送
+        // ⚠️ 使用fetchCurrentUser，利用缓存机制
         const response = await Promise.race([
-          api.get('/api/users/profile/me'),
+          fetchCurrentUser().finally(() => {
+            // ⚠️ 请求完成时清理定时器
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+          }),
           timeoutPromise
         ]) as any;
         
+        // ⚠️ 清理定时器
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        
+        // ⚠️ isMounted守卫，避免在卸载组件上setState
         if (isMounted) {
           setIsAuthenticated(true);
           setLoading(false);
         }
       } catch (error: any) {
+        // ⚠️ 清理定时器
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        
         if (!isMounted) return;
+        
+        // 超时后的UX处理
+        if (error.message === '认证检查超时') {
+          // 选项1：显示骨架屏，允许用户继续使用（如果之前已认证）
+          // 选项2：跳转登录页
+          // 选项3：显示离线模式提示
+          console.warn('Auth check timeout, using cached state');
+          // 这里可以根据业务需求选择策略
+        }
         
         // 认证失败，用户未登录（401是预期的，不需要显示错误）
         // 只在非401错误时才记录（比如网络错误）

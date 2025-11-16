@@ -54,43 +54,47 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
     };
     loadUser();
     
-    // 定期检查用户登录状态（只在非管理员/客服页面时）
+    // ⚠️ 定期检查用户登录状态（只在非管理员/客服页面时）
+    // ⚠️ 优化：从60秒改为5分钟，减少Profile请求频率
     const interval = setInterval(() => {
-      if (!isAdminOrServicePage()) {
+      if (!isAdminOrServicePage() && !document.hidden) {
         loadUser();
       }
-    }, 60000); // 每分钟检查一次
+    }, 300000); // 每5分钟检查一次（300000毫秒）
     return () => clearInterval(interval);
   }, []);
 
+  // ⚠️ 未读数刷新解耦：不再强依赖完整Profile对象
+  // 服务器用鉴权主体推断userId，前端无需传参
   const refreshUnreadCount = useCallback(async () => {
-    if (!user) {
+    // 尝试从user对象或localStorage获取userId
+    const userId = user?.id || localStorage.getItem('userId');
+    if (!userId) {
       setUnreadCount(0);
       return;
     }
     
     try {
+      // ⚠️ 服务器用鉴权主体推断userId，前端无需传参
+      // 即使user缓存陈旧，也能刷新未读数
       const response = await api.get('/api/users/messages/unread/count');
       const count = response.data.unread_count || 0;
       setUnreadCount(count);
     } catch (error) {
       // 静默处理错误
     }
-  }, [user]);
+  }, []); // ⚠️ 不再依赖user对象，即使user缓存陈旧也能刷新
 
   // 更新未读数量（允许外部直接设置）
   const updateUnreadCount = useCallback((count: number) => {
     setUnreadCount(count);
   }, []);
 
-  // 初始加载
+  // 初始加载（不再强依赖user对象）
   useEffect(() => {
-    if (user) {
-      refreshUnreadCount();
-    } else {
-      setUnreadCount(0);
-    }
-  }, [user, refreshUnreadCount]);
+    // ⚠️ 不再强依赖user对象，直接刷新未读数
+    refreshUnreadCount();
+  }, [refreshUnreadCount]);
 
   // 初始化WebSocket管理器
   useEffect(() => {
