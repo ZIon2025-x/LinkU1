@@ -304,19 +304,14 @@ async def send_expert_application_approved_notification(
         if not user:
             return
         
-        notification_content = json.dumps({
-            "type": "expert_application_approved",
-            "expert_id": expert_id,
-            "message": "您的任务达人申请已通过审核",
-        }, ensure_ascii=False)
-        
+        # 直接使用简单文本作为通知内容，前端直接显示
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=user_id,
             notification_type="expert_application_approved",
             title="任务达人申请已通过",
-            content=notification_content,
-            related_id=None,  # expert_id 是字符串类型，不能存储在 Integer 字段中，相关信息已在 content 中
+            content="您的任务达人申请已通过审核",  # 直接使用文本，不存储 JSON
+            related_id=None,  # expert_id 是字符串类型，不能存储在 Integer 字段中
         )
         
         logger.info(f"任务达人申请批准通知已发送给用户: {user_id}")
@@ -338,19 +333,19 @@ async def send_expert_application_rejected_notification(
         if not user:
             return
         
-        notification_content = json.dumps({
-            "type": "expert_application_rejected",
-            "review_comment": review_comment or "",
-            "message": "您的任务达人申请未通过审核",
-        }, ensure_ascii=False)
+        # 构建通知内容：如果有拒绝原因，包含在消息中
+        message = "您的任务达人申请未通过审核"
+        if review_comment:
+            message += f"。原因：{review_comment}"
         
+        # 直接使用简单文本作为通知内容，前端直接显示
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=user_id,
             notification_type="expert_application_rejected",
             title="任务达人申请未通过",
-            content=notification_content,
-            related_id=user_id,
+            content=message,  # 直接使用文本，不存储 JSON
+            related_id=None,  # user_id 是字符串类型，不能存储在 Integer 字段中
         )
         
         logger.info(f"任务达人申请拒绝通知已发送给用户: {user_id}")

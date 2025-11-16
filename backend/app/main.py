@@ -350,7 +350,10 @@ def update_all_users_statistics():
 
 def run_background_task():
     """运行后台任务循环"""
+    import datetime
     task_counter = 0
+    last_bio_update_date = None  # 记录上次更新 bio 的日期
+    
     while True:
         try:
             # 取消过期任务（每分钟执行）
@@ -359,6 +362,14 @@ def run_background_task():
             # 更新所有用户统计信息（每10分钟执行一次）
             if task_counter % 10 == 0:
                 update_all_users_statistics()
+
+            # 更新所有任务达人的 bio（每天执行一次）
+            current_date = datetime.date.today()
+            if last_bio_update_date != current_date:
+                logger.info("开始更新所有任务达人的 bio...")
+                crud.update_all_task_experts_bio()
+                last_bio_update_date = current_date
+                logger.info("任务达人 bio 更新完成")
 
             task_counter += 1
             # 每1分钟检查一次

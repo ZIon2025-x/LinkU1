@@ -61,8 +61,10 @@ def get_all_users(db: Session):
 
 
 def update_user_statistics(db: Session, user_id: str):
-    """自动更新用户的统计信息：task_count, completed_task_count 和 avg_rating"""
+    """自动更新用户的统计信息：task_count, completed_task_count 和 avg_rating
+    同时同步更新对应的 TaskExpert 和 FeaturedTaskExpert 数据（如果存在）"""
     from app.models import Review, Task
+    from decimal import Decimal
 
     # 计算用户的总任务数（发布的任务 + 接受的任务）
     posted_tasks = db.query(Task).filter(Task.poster_id == user_id).count()
@@ -86,6 +88,9 @@ def update_user_statistics(db: Session, user_id: str):
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
+    # 计算完成率（用于 FeaturedTaskExpert）
+    completion_rate = (completed_tasks / total_tasks * 100.0) if total_tasks > 0 else 0.0
+
     # 更新用户记录
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
@@ -94,8 +99,149 @@ def update_user_statistics(db: Session, user_id: str):
         user.avg_rating = avg_rating
         db.commit()
         db.refresh(user)
+        
+        # 同步更新 TaskExpert 数据（如果该用户是任务达人）
+        # 因为任务达人就是用户，数据应该保持同步
+        task_expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == user_id).first()
+        if task_expert:
+            task_expert.completed_tasks = completed_tasks
+            task_expert.rating = Decimal(str(avg_rating)).quantize(Decimal('0.01'))  # 保留2位小数
+            task_expert.expert_name = user.name  # 同步用户名（如果用户修改了名字）
+            # 注意：bio 的计算在每天的后台任务中执行，不在这里更新
+            
+            db.commit()
+            db.refresh(task_expert)
+        
+        # 同步更新 FeaturedTaskExpert 数据（如果该用户是特色任务达人）
+        # 因为特色任务达人也是用户，数据应该保持同步
+        featured_expert = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.user_id == user_id
+        ).first()
+        if featured_expert:
+            featured_expert.avg_rating = avg_rating
+            featured_expert.completed_tasks = completed_tasks
+            featured_expert.total_tasks = total_tasks
+            featured_expert.completion_rate = completion_rate
+            featured_expert.name = user.name  # 同步用户名（如果用户修改了名字）
+            featured_expert.avatar = user.avatar or ""  # 同步用户头像
+            # 注意：bio 的计算在每天的后台任务中执行，不在这里更新
+            
+            db.commit()
+            db.refresh(featured_expert)
 
     return {"task_count": total_tasks, "completed_task_count": completed_tasks, "avg_rating": avg_rating}
+
+
+def update_task_expert_bio(db: Session, user_id: str):
+    """计算并更新任务达人的 bio（基于平均响应时间）"""
+    # 计算平均响应时间（用于 bio）
+    # 查询该用户作为接收者的已读消息，计算从发送到已读的平均时间
+    
+    avg_response_time_seconds = None
+    read_messages = (
+        db.query(models.Message, models.MessageRead)
+        .join(
+            models.MessageRead,
+            models.MessageRead.message_id == models.Message.id
+        )
+        .filter(
+            models.Message.receiver_id == user_id,
+            models.Message.sender_id != user_id,  # 排除自己发送的消息
+            models.MessageRead.user_id == user_id
+        )
+        .all()
+    )
+    
+    if read_messages:
+        response_times = []
+        for message, message_read in read_messages:
+            if message.created_at and message_read.read_at:
+                # 计算响应时间（秒）
+                response_time = (message_read.read_at - message.created_at).total_seconds()
+                if response_time > 0:  # 只计算有效的响应时间
+                    response_times.append(response_time)
+        
+        if response_times:
+            avg_response_time_seconds = sum(response_times) / len(response_times)
+    
+    # 格式化响应时间为文本
+    def format_response_time(seconds):
+        """将秒数格式化为可读的文本"""
+        if seconds is None:
+            return "暂无响应时间数据"
+        
+        if seconds < 60:
+            return f"平均响应时间：{int(seconds)}秒"
+        elif seconds < 3600:
+            minutes = int(seconds / 60)
+            return f"平均响应时间：{minutes}分钟"
+        elif seconds < 86400:
+            hours = int(seconds / 3600)
+            minutes = int((seconds % 3600) / 60)
+            if minutes > 0:
+                return f"平均响应时间：{hours}小时{minutes}分钟"
+            else:
+                return f"平均响应时间：{hours}小时"
+        else:
+            days = int(seconds / 86400)
+            hours = int((seconds % 86400) / 3600)
+            if hours > 0:
+                return f"平均响应时间：{days}天{hours}小时"
+            else:
+                return f"平均响应时间：{days}天"
+    
+    calculated_bio = format_response_time(avg_response_time_seconds)
+    
+    # 更新 TaskExpert 的 bio
+    task_expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == user_id).first()
+    if task_expert:
+        task_expert.bio = calculated_bio
+        db.commit()
+        db.refresh(task_expert)
+    
+    # 更新 FeaturedTaskExpert 的 bio
+    featured_expert = db.query(models.FeaturedTaskExpert).filter(
+        models.FeaturedTaskExpert.user_id == user_id
+    ).first()
+    if featured_expert:
+        featured_expert.bio = calculated_bio
+        db.commit()
+        db.refresh(featured_expert)
+    
+    return calculated_bio
+
+
+def update_all_task_experts_bio():
+    """更新所有任务达人的 bio（每天执行一次）"""
+    from app.database import SessionLocal
+    from app.models import TaskExpert
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    db = None
+    try:
+        db = SessionLocal()
+        # 获取所有任务达人
+        task_experts = db.query(TaskExpert).all()
+        updated_count = 0
+        
+        for expert in task_experts:
+            try:
+                update_task_expert_bio(db, expert.id)
+                updated_count += 1
+            except Exception as e:
+                logger.error(f"更新任务达人 {expert.id} 的 bio 时出错: {e}")
+                continue
+        
+        if updated_count > 0:
+            logger.info(f"成功更新 {updated_count} 个任务达人的 bio")
+    
+    except Exception as e:
+        logger.error(f"更新任务达人 bio 时出错: {e}")
+    finally:
+        if db:
+            db.close()
 
 
 def create_user(db: Session, user: schemas.UserCreate):

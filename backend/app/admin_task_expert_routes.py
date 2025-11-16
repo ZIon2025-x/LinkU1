@@ -168,19 +168,21 @@ async def review_expert_application(
                 raise HTTPException(status_code=400, detail="该用户已经是任务达人")
             
             # 4. 创建任务达人记录（ID使用用户的ID）
-            new_expert = None
             commit_success = False
             expert_id_value = application.user_id  # 在 commit 之前保存 ID，避免后续访问对象属性
+            user_name = user.name  # 在 commit 之前保存用户名，避免后续访问对象属性（达人名字就是用户名）
+            user_avg_rating = float(user.avg_rating) if user.avg_rating is not None else 0.0  # 使用用户的平均评分
+            user_completed_tasks = int(user.completed_task_count) if user.completed_task_count is not None else 0  # 使用用户已完成任务数量
             try:
                 new_expert = models.TaskExpert(
                     id=expert_id_value,  # 重要：使用用户的ID作为任务达人的ID
-                    expert_name=None,  # 可选，默认为NULL
+                    expert_name=user_name,  # 达人名字就是用户名
                     bio=None,  # 可选
                     avatar=None,  # 可选，使用用户默认头像
                     status="active",
-                    rating=0.00,  # 初始评分为0
+                    rating=Decimal(str(user_avg_rating)).quantize(Decimal('0.01')),  # 使用用户的平均评分，保留2位小数
                     total_services=0,  # 初始服务数为0
-                    completed_tasks=0,  # 初始完成任务数为0
+                    completed_tasks=user_completed_tasks,  # 使用用户已完成任务数量
                     approved_by=current_admin.id,  # 批准的管理员ID
                     approved_at=models.get_utc_time(),
                 )
@@ -224,48 +226,25 @@ async def review_expert_application(
             if commit_success:
                 logger.info(f"申请 {application_id} 已批准，任务达人 {expert_id_value} 已创建")
                 
-                # 使用已保存的 expert_id_value，避免访问对象属性
-                expert_id_str = str(expert_id_value) if expert_id_value else ""
+                # 手动构建响应（使用已知的默认值，不访问 new_expert 属性避免延迟加载）
+                expert_dict = {
+                    "id": expert_id_value,  # user_id 已经是字符串类型
+                    "expert_name": user_name,  # 达人名字就是用户名
+                    "bio": None,
+                    "avatar": None,
+                    "status": "active",
+                    "rating": user_avg_rating,  # 使用用户的平均评分
+                    "total_services": 0,
+                    "completed_tasks": user_completed_tasks,  # 使用用户已完成任务数量
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
                 
-                # 手动构建响应，确保类型正确
-                # 注意：不要访问 new_expert 的属性，因为可能触发延迟加载
-                # 使用默认值，因为这是新创建的对象
-                try:
-                    # 使用当前时间作为 created_at
-                    created_at_str = datetime.now(timezone.utc).isoformat()
-                    
-                    expert_dict = {
-                        "id": expert_id_str,
-                        "expert_name": None,  # 新创建的对象，这些字段都是 None
-                        "bio": None,
-                        "avatar": None,
-                        "status": "active",  # 我们设置的状态
-                        "rating": 0.0,  # 初始值
-                        "total_services": 0,  # 初始值
-                        "completed_tasks": 0,  # 初始值
-                        "created_at": created_at_str,
-                    }
-                    
-                    # 记录构建的字典，用于调试
-                    logger.info(f"构建的 expert_dict: {expert_dict}")
-                    
-                except Exception as e:
-                    logger.error(f"构建 expert_dict 失败，使用简化响应: {e}", exc_info=True)
-                    # 即使序列化失败，也返回成功响应（数据已经创建）
-                    expert_dict = {
-                        "id": expert_id_str,
-                        "status": "active",
-                    }
-                
-                # 确保返回成功响应（数据已经成功创建）
-                response = {
+                return {
                     "message": "申请已批准，任务达人已创建",
                     "application_id": application_id,
-                    "expert_id": expert_id_str,
+                    "expert_id": expert_id_value,
                     "expert": expert_dict,
                 }
-                logger.info(f"准备返回响应: {response}")
-                return response
             else:
                 # 如果 commit 失败，抛出异常
                 logger.error(f"commit_success={commit_success}, expert_id_value={expert_id_value}")
