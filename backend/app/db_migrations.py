@@ -168,11 +168,20 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
         # 智能分割 SQL 语句，正确处理函数定义和 DO 块
         statements = split_sql_statements(sql_content)
         
+        # 调试：记录分割后的语句数量
+        logger.debug(f"迁移文件 {sql_file_path.name} 分割后得到 {len(statements)} 个语句")
+        if len(statements) == 0:
+            logger.warning(f"警告：迁移文件 {sql_file_path.name} 没有识别到任何 SQL 语句")
+            logger.debug(f"文件内容预览: {sql_content[:500]}")
+        
         # 执行每个语句（每个语句在独立的事务中执行）
         for statement in statements:
             statement = statement.strip()
             if not statement or statement.startswith('--'):
                 continue
+            
+            # 记录要执行的语句（用于调试）
+            logger.debug(f"准备执行 SQL 语句: {statement[:100]}...")
             
             # 每个语句使用独立的事务
             try:
@@ -183,6 +192,7 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
                         conn.execute(text(statement))
                         trans.commit()
                         executed += 1
+                        logger.debug(f"SQL 语句执行成功: {statement[:50]}...")
                     except Exception as e:
                         # 回滚当前事务
                         try:
@@ -192,9 +202,19 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
                         
                         error_msg = str(e).lower()
                         # 检查是否是"已存在"的错误（幂等性）
-                        if any(keyword in error_msg for keyword in ['already exists', 'duplicate', 'exists']):
+                        # 包括列已存在、表已存在、索引已存在等情况
+                        if any(keyword in error_msg for keyword in ['already exists', 'duplicate', 'duplicate key']):
                             skipped += 1
                             logger.debug(f"跳过已存在的对象: {statement[:50]}...")
+                        # 检查是否是"列已存在"的错误（更具体的匹配）
+                        elif ('column' in error_msg and 'already exists' in error_msg) or 'duplicate column' in error_msg:
+                            skipped += 1
+                            logger.debug(f"列已存在，跳过: {statement[:50]}...")
+                        # 检查是否是语法错误（可能是 IF NOT EXISTS 不支持）
+                        elif 'syntax error' in error_msg or 'unexpected' in error_msg:
+                            errors += 1
+                            logger.warning(f"SQL 语法错误（可能是 PostgreSQL 版本不支持某些语法）: {e}")
+                            logger.warning(f"失败的语句: {statement[:200]}...")
                         # 检查是否是事务失败的错误（可能是之前的语句失败导致的）
                         elif 'infailed' in error_msg or 'transaction is aborted' in error_msg:
                             # 这种情况不应该发生，因为每个语句都在独立事务中
@@ -204,12 +224,12 @@ def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int
                         else:
                             errors += 1
                             logger.warning(f"执行 SQL 语句失败: {e}")
-                            logger.debug(f"失败的语句: {statement[:200]}...")
+                            logger.warning(f"失败的语句: {statement[:200]}...")
             except Exception as e:
                 # 连接级别的错误
                 errors += 1
                 logger.warning(f"执行 SQL 语句时发生连接错误: {e}")
-                logger.debug(f"失败的语句: {statement[:200]}...")
+                logger.warning(f"失败的语句: {statement[:200]}...")
         
         logger.info(f"迁移文件执行完成: {sql_file_path.name}")
         logger.info(f"  执行: {executed}, 跳过: {skipped}, 错误: {errors}")

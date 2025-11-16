@@ -1,9 +1,7 @@
 -- 在 tasks 表中添加 is_flexible 字段
 -- 用于标识任务是否是灵活时间模式（1=灵活，无截止日期；0=有截止日期）
 
--- 添加 is_flexible 字段（使用 IF NOT EXISTS，PostgreSQL 9.5+ 支持）
-ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_flexible INTEGER DEFAULT 0;
-
--- 添加注释说明
-COMMENT ON COLUMN tasks.is_flexible IS '是否灵活时间（1=灵活，无截止日期；0=有截止日期）。如果 is_flexible=1，则 deadline 应该为 NULL。';
+-- 添加 is_flexible 字段
+-- 如果字段已存在，会报错但会被错误处理逻辑捕获并跳过
+ALTER TABLE tasks ADD COLUMN is_flexible INTEGER DEFAULT 0;
 
