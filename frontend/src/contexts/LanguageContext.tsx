@@ -143,26 +143,41 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   // 翻译函数
   const t = (key: string, params?: Record<string, any>): string => {
     const keys = key.split('.');
+    
+    // 尝试从当前语言获取翻译
     let value: any = translations[language];
+    let found = true;
     
     for (const k of keys) {
       if (value && typeof value === 'object' && k in value) {
         value = value[k];
       } else {
-        // 如果找不到翻译，尝试使用英文作为后备
-        value = translations.en;
-        for (const fallbackKey of keys) {
-          if (value && typeof value === 'object' && fallbackKey in value) {
-            value = value[fallbackKey];
-          } else {
-            return key; // 如果连英文都找不到，返回原始key
-          }
-        }
+        found = false;
         break;
       }
     }
     
-    let result = typeof value === 'string' ? value : key;
+    // 如果当前语言找不到，尝试使用英文作为后备
+    if (!found || typeof value !== 'string') {
+      value = translations.en;
+      found = true;
+      
+      for (const k of keys) {
+        if (value && typeof value === 'object' && k in value) {
+          value = value[k];
+        } else {
+          found = false;
+          break;
+        }
+      }
+    }
+    
+    // 如果都找不到，返回原始key
+    if (!found || typeof value !== 'string') {
+      return key;
+    }
+    
+    let result = value;
     
     // 如果有参数，进行插值替换
     if (params && typeof result === 'string') {

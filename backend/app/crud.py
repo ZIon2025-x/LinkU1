@@ -1426,6 +1426,26 @@ def delete_task_safely(db: Session, task_id: int):
             if msg.image_id:
                 image_ids.append(msg.image_id)
         
+        # 在删除消息之前，先删除相关的已读记录和游标记录
+        if message_ids:
+            # 删除 MessageRead 表中的已读记录（外键引用 messages.id）
+            from app.models import MessageRead
+            db.query(MessageRead).filter(
+                MessageRead.message_id.in_(message_ids)
+            ).delete(synchronize_session=False)
+            
+            # 删除 MessageReadCursor 表中的游标记录
+            # 注意：需要删除 task_id 相关的记录，以及 last_read_message_id 在要删除的消息ID列表中的记录
+            from app.models import MessageReadCursor
+            db.query(MessageReadCursor).filter(
+                MessageReadCursor.task_id == task_id
+            ).delete(synchronize_session=False)
+            
+            # 同时删除其他任务中引用这些消息的游标（以防万一）
+            db.query(MessageReadCursor).filter(
+                MessageReadCursor.last_read_message_id.in_(message_ids)
+            ).delete(synchronize_session=False)
+        
         # 获取消息附件（文件）
         if message_ids:
             attachments = db.query(MessageAttachment).filter(
@@ -1474,7 +1494,7 @@ def delete_task_safely(db: Session, task_id: int):
             except Exception as e:
                 logger.error(f"删除图片失败 {image_id}: {e}")
         
-        # 删除消息记录
+        # 删除消息记录（现在可以安全删除了，因为所有外键引用都已删除）
         db.query(Message).filter(Message.task_id == task_id).delete()
 
         # 5. 最后删除任务本身
