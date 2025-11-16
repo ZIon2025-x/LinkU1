@@ -605,8 +605,8 @@ class FeaturedTaskExpert(Base):
     """精选任务达人模型"""
     __tablename__ = "featured_task_experts"
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id"), unique=True, nullable=True)  # 关联到实际用户
+    id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)  # 使用用户ID作为主键
+    user_id = Column(String(8), ForeignKey("users.id"), unique=True, nullable=False)  # 关联到实际用户（与id相同）
     name = Column(String(50), nullable=False)  # 显示名称
     avatar = Column(String(200), default="")  # 头像URL
     user_level = Column(String(20), default="normal")  # normal, vip, super
@@ -642,8 +642,9 @@ class FeaturedTaskExpert(Base):
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
     
     # 索引
+    # 注意：id 已经是主键，会自动创建索引，不需要单独创建
+    # user_id 现在与 id 相同，也不需要单独索引
     __table_args__ = (
-        Index("ix_task_experts_user_id", user_id),
         Index("ix_task_experts_category", category),
         Index("ix_task_experts_is_active", is_active),
         Index("ix_task_experts_is_featured", is_featured),

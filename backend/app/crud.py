@@ -114,8 +114,9 @@ def update_user_statistics(db: Session, user_id: str):
         
         # 同步更新 FeaturedTaskExpert 数据（如果该用户是特色任务达人）
         # 因为特色任务达人也是用户，数据应该保持同步
+        # 注意：FeaturedTaskExpert.id 现在就是 user_id
         featured_expert = db.query(models.FeaturedTaskExpert).filter(
-            models.FeaturedTaskExpert.user_id == user_id
+            models.FeaturedTaskExpert.id == user_id
         ).first()
         if featured_expert:
             featured_expert.avg_rating = avg_rating
@@ -237,8 +238,9 @@ def update_task_expert_bio(db: Session, user_id: str):
     
     # 6. 更新 FeaturedTaskExpert 的响应时间和统计字段
     # 注意：bio 是简介，不应该在这里更新，应该由用户或管理员手动填写
+    # 注意：FeaturedTaskExpert.id 现在就是 user_id
     featured_expert = db.query(models.FeaturedTaskExpert).filter(
-        models.FeaturedTaskExpert.user_id == user_id
+        models.FeaturedTaskExpert.id == user_id
     ).first()
     if featured_expert:
         # 只更新响应时间和统计字段，不更新 bio（bio 是简介，应该手动填写）

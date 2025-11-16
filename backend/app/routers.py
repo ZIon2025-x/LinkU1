@@ -5784,6 +5784,12 @@ def create_task_expert(
     db: Session = Depends(get_db),
 ):
     """创建任务达人（管理员）"""
+    # 确保 expert_data 包含 user_id，并且 id 和 user_id 相同
+    if 'user_id' not in expert_data:
+        raise HTTPException(status_code=400, detail="必须提供 user_id")
+    
+    # 设置 id 为 user_id
+    expert_data['id'] = expert_data['user_id']
     try:
         # 将数组字段转换为 JSON
         for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
@@ -5815,7 +5821,7 @@ def create_task_expert(
 
 @router.put("/admin/task-expert/{expert_id}")
 def update_task_expert(
-    expert_id: int,
+    expert_id: str,  # 改为字符串类型
     expert_data: dict,
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
@@ -5859,7 +5865,7 @@ def update_task_expert(
 
 @router.delete("/admin/task-expert/{expert_id}")
 def delete_task_expert(
-    expert_id: int,
+    expert_id: str,  # 改为字符串类型
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -5912,7 +5918,7 @@ def get_public_task_experts(
         return {
             "task_experts": [
                 {
-                    "id": expert.user_id or str(expert.id),  # 优先使用 user_id，如果没有则使用 featured_task_expert.id
+                    "id": expert.id,  # id 现在就是 user_id
                     "name": expert.name,
                     "avatar": expert.avatar,
                     "user_level": expert.user_level,
@@ -5930,7 +5936,6 @@ def get_public_task_experts(
                     "location": expert.location,  # 添加城市字段
                 }
                 for expert in experts
-                if expert.user_id  # 只返回有 user_id 的记录，确保可以查询 TaskExpert
             ]
         }
     except Exception as e:

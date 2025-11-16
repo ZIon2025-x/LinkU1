@@ -331,7 +331,7 @@ async def create_featured_expert_from_application(
     # 4. 检查是否已经存在 FeaturedTaskExpert（避免重复创建）
     from sqlalchemy import text
     existing_featured_result = await db.execute(
-        text("SELECT id FROM featured_task_experts WHERE user_id = :user_id"),
+        text("SELECT id FROM featured_task_experts WHERE id = :user_id"),
         {"user_id": application.user_id}
     )
     existing_featured = existing_featured_result.fetchone()
@@ -350,7 +350,8 @@ async def create_featured_expert_from_application(
         
         import json
         new_featured_expert = models.FeaturedTaskExpert(
-            user_id=application.user_id,  # 关联到用户ID
+            id=application.user_id,  # 使用用户ID作为主键
+            user_id=application.user_id,  # 关联到用户ID（与id相同）
             name=user.name or f"用户{application.user_id}",  # 使用用户名
             avatar=user.avatar or "",  # 使用用户头像
             user_level="normal",  # 默认等级
