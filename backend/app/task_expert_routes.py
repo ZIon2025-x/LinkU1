@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
     Query,
@@ -926,13 +927,14 @@ async def reject_service_application(
     reject_data: schemas.ServiceApplicationRejectRequest,
     current_expert: models.TaskExpert = Depends(get_current_expert),
     db: AsyncSession = Depends(get_async_db_dependency),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """任务达人拒绝申请"""
+    # ⚠️ 性能优化：移除 with_for_update()，拒绝操作不需要锁定
     application = await db.execute(
         select(models.ServiceApplication)
         .where(models.ServiceApplication.id == application_id)
         .where(models.ServiceApplication.expert_id == current_expert.id)
-        .with_for_update()
     )
     application = application.scalar_one_or_none()
     
@@ -942,24 +944,41 @@ async def reject_service_application(
     if application.status != "pending":
         raise HTTPException(status_code=400, detail="只能拒绝待处理的申请")
     
+    # 保存通知所需的数据（在更新状态前）
+    applicant_id = application.applicant_id
+    expert_id = application.expert_id
+    service_id = application.service_id
+    reject_reason = reject_data.reject_reason
+    
     application.status = "rejected"
     application.rejected_at = models.get_utc_time()
     application.updated_at = models.get_utc_time()
     
     await db.commit()
     
-    # 发送通知给申请用户
+    # ⚠️ 性能优化：将通知发送改为后台任务，不阻塞响应
+    # 使用 asyncio.create_task 在后台异步执行，不等待完成
     from app.task_notifications import send_service_application_rejected_notification
-    try:
-        await send_service_application_rejected_notification(
-            db=db,
-            applicant_id=application.applicant_id,
-            expert_id=application.expert_id,
-            service_id=application.service_id,
-            reject_reason=reject_data.reject_reason
-        )
-    except Exception as e:
-        logger.error(f"Failed to send notification: {e}")
+    import asyncio
+    
+    async def send_notification_background():
+        """后台发送通知（不阻塞主响应）"""
+        # 创建新的数据库会话用于后台任务
+        from app.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as async_db:
+            try:
+                await send_service_application_rejected_notification(
+                    db=async_db,
+                    applicant_id=applicant_id,
+                    expert_id=expert_id,
+                    service_id=service_id,
+                    reject_reason=reject_reason
+                )
+            except Exception as e:
+                logger.error(f"Failed to send notification in background: {e}")
+    
+    # 在后台执行通知发送，不阻塞响应
+    asyncio.create_task(send_notification_background())
     
     return {
         "message": "申请已拒绝",

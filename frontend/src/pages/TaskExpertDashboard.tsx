@@ -203,11 +203,24 @@ const TaskExpertDashboard: React.FC = () => {
   };
 
   const handleRejectApplication = async (applicationId: number, reason?: string) => {
+    // ⚠️ 性能优化：乐观更新 UI，不等待重新加载
+    const originalApplications = [...applications];
+    setApplications(prev => prev.map(app => 
+      app.id === applicationId ? { ...app, status: 'rejected' } : app
+    ));
+    
     try {
       await rejectServiceApplication(applicationId, reason);
       message.success('申请已拒绝');
-      loadApplications();
+      // ⚠️ 后台刷新，不阻塞 UI
+      loadApplications().catch(err => {
+        console.error('刷新申请列表失败:', err);
+        // 如果刷新失败，恢复原状态
+        setApplications(originalApplications);
+      });
     } catch (err: any) {
+      // 如果失败，恢复原状态
+      setApplications(originalApplications);
       message.error(err.response?.data?.detail || '拒绝申请失败');
     }
   };
