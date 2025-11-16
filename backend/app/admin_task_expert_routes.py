@@ -508,32 +508,24 @@ async def review_profile_update_request(
             expert.updated_at = models.get_utc_time()
             
             # 4. 同步更新 FeaturedTaskExpert（如果存在）
-            from sqlalchemy import text
-            featured_expert_result = await db.execute(
-                text("SELECT id FROM featured_task_experts WHERE user_id = :user_id"),
-                {"user_id": expert_id_value}
-            )
-            featured_expert_row = featured_expert_result.fetchone()
-            
-            if featured_expert_row:
-                # 使用同步数据库会话更新 FeaturedTaskExpert
-                from app.database import SessionLocal
-                sync_db = SessionLocal()
-                try:
-                    featured_expert = sync_db.query(models.FeaturedTaskExpert).filter(
-                        models.FeaturedTaskExpert.user_id == expert_id_value
-                    ).first()
-                    if featured_expert:
-                        if update_request.new_expert_name is not None:
-                            featured_expert.name = update_request.new_expert_name
-                        if update_request.new_bio is not None:
-                            featured_expert.bio = update_request.new_bio
-                        if update_request.new_avatar is not None:
-                            featured_expert.avatar = update_request.new_avatar
-                        sync_db.commit()
-                        sync_db.refresh(featured_expert)
-                finally:
-                    sync_db.close()
+            # 注意：user_id 就是 id，所以直接使用 id 查询
+            from app.database import SessionLocal
+            sync_db = SessionLocal()
+            try:
+                featured_expert = sync_db.query(models.FeaturedTaskExpert).filter(
+                    models.FeaturedTaskExpert.id == expert_id_value
+                ).first()
+                if featured_expert:
+                    if update_request.new_expert_name is not None:
+                        featured_expert.name = update_request.new_expert_name
+                    if update_request.new_bio is not None:
+                        featured_expert.bio = update_request.new_bio
+                    if update_request.new_avatar is not None:
+                        featured_expert.avatar = update_request.new_avatar
+                    sync_db.commit()
+                    sync_db.refresh(featured_expert)
+            finally:
+                sync_db.close()
             
             # 5. 更新修改请求状态
             update_request.status = "approved"

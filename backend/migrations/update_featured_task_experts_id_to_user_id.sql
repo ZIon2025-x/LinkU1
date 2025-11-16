@@ -35,11 +35,6 @@ BEGIN
         RETURN;
     END IF;
     
-    IF NOT user_id_exists THEN
-        RAISE NOTICE 'user_id 列不存在，无法迁移，跳过';
-        RETURN;
-    END IF;
-    
     -- 获取 id 列的类型
     SELECT data_type INTO id_type
     FROM information_schema.columns
@@ -48,22 +43,37 @@ BEGIN
     IF id_type = 'integer' THEN
         RAISE NOTICE '检测到 id 列为 INTEGER 类型，开始迁移...';
     ELSIF id_type = 'character varying' OR id_type = 'varchar' THEN
-        RAISE NOTICE 'id 列已经是 VARCHAR 类型，可能已迁移过，跳过';
-        RETURN;
+        RAISE NOTICE 'id 列已经是 VARCHAR 类型，可能已迁移过';
+        -- 即使已迁移，如果 user_id 列不存在，也需要添加它
+        IF NOT user_id_exists THEN
+            RAISE NOTICE '但 user_id 列不存在，将添加 user_id 列';
+        END IF;
     ELSE
         RAISE NOTICE 'id 列类型为 %，跳过迁移', id_type;
         RETURN;
     END IF;
 END $$;
 
--- 步骤3: 删除所有 user_id 为 NULL 的记录（这些记录无法迁移）
-DELETE FROM featured_task_experts WHERE user_id IS NULL;
+-- 步骤3: 如果 user_id 列存在，删除所有 user_id 为 NULL 的记录（这些记录无法迁移）
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'featured_task_experts' AND column_name = 'user_id'
+    ) THEN
+        DELETE FROM featured_task_experts WHERE user_id IS NULL;
+        RAISE NOTICE '已删除 user_id 为 NULL 的记录';
+    END IF;
+END $$;
 
--- 步骤4: 删除外键约束和索引（如果存在）
+-- 步骤4: 删除外键约束（如果存在）
 ALTER TABLE featured_task_experts 
     DROP CONSTRAINT IF EXISTS featured_task_experts_pkey CASCADE,
-    DROP CONSTRAINT IF EXISTS featured_task_experts_user_id_fkey CASCADE,
-    DROP INDEX IF EXISTS ix_task_experts_user_id;
+    DROP CONSTRAINT IF EXISTS featured_task_experts_user_id_fkey CASCADE;
+
+-- 步骤4.1: 删除索引（如果存在）- 必须单独执行，不能在 ALTER TABLE 中使用
+DROP INDEX IF EXISTS ix_task_experts_user_id;
+DROP INDEX IF EXISTS ix_featured_task_experts_user_id;
 
 -- 步骤5: 删除旧的 INTEGER 类型的 id 列
 DO $$
@@ -154,6 +164,22 @@ BEGIN
     END IF;
 END $$;
 
--- 完成
-COMMENT ON COLUMN featured_task_experts.id IS '主键，使用用户ID';
-COMMENT ON COLUMN featured_task_experts.user_id IS '用户ID（与id相同，保留字段以保持兼容性）';
+-- 完成：添加注释（如果列存在）
+DO $$
+BEGIN
+    -- 添加 id 列的注释
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'featured_task_experts' AND column_name = 'id'
+    ) THEN
+        COMMENT ON COLUMN featured_task_experts.id IS '主键，使用用户ID';
+    END IF;
+    
+    -- 添加 user_id 列的注释（如果列存在）
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'featured_task_experts' AND column_name = 'user_id'
+    ) THEN
+        COMMENT ON COLUMN featured_task_experts.user_id IS '用户ID（与id相同，保留字段以保持兼容性）';
+    END IF;
+END $$;
