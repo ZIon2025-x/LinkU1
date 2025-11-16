@@ -199,6 +199,25 @@ def get_current_any_role(request: Request, db: Session = Depends(get_sync_db)) -
         detail="认证失败，请重新登录"
     )
 
+def get_current_admin_or_service(request: Request, db: Session = Depends(get_sync_db)) -> Union[models.AdminUser, models.CustomerService]:
+    """获取当前管理员或客服（用于员工通知等需要管理员或客服权限的接口）"""
+    # 先尝试管理员认证
+    try:
+        return get_current_admin(request, db)
+    except HTTPException:
+        pass
+    
+    # 再尝试客服认证
+    try:
+        return get_current_service(request, db)
+    except HTTPException:
+        pass
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="需要管理员或客服权限"
+    )
+
 # ==================== 权限检查 ====================
 
 def require_admin_role(current_user: models.AdminUser = Depends(get_current_admin)) -> models.AdminUser:

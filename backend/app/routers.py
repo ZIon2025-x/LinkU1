@@ -53,6 +53,7 @@ from app.deps import (
 from app.separate_auth_deps import (
     get_current_admin,
     get_current_service,
+    get_current_admin_or_service,
     get_current_user,
     get_current_admin_optional,
     get_current_service_optional,
@@ -4156,23 +4157,20 @@ def send_staff_notification(
 
 @router.get("/staff/notifications")
 def get_staff_notifications(
-    current_user=Depends(get_current_service),
+    current_user=Depends(get_current_admin_or_service),
     db: Session = Depends(get_db),
 ):
     """获取员工提醒列表（所有提醒，已读+未读，限制5条最新）"""
-    # 确定用户类型
-    if (
-        hasattr(current_user, "email")
-        and hasattr(current_user, "name")
-        and not hasattr(current_user, "username")
-    ):
-        # 客服用户：有email和name，但没有username
+    # 确定用户类型（current_user 可能是 AdminUser 或 CustomerService）
+    if isinstance(current_user, models.AdminUser):
+        recipient_type = "admin"
+        recipient_id = current_user.id
+    elif isinstance(current_user, models.CustomerService):
         recipient_type = "customer_service"
         recipient_id = current_user.id
     else:
-        # 管理员用户
-        recipient_type = "admin"
-        recipient_id = current_user.id
+        # 不应该到达这里，但为了安全起见
+        raise HTTPException(status_code=403, detail="无效的用户类型")
 
     # 获取所有未读提醒 + 5条最新已读提醒
     notifications = crud.get_staff_notifications(db, recipient_id, recipient_type)
@@ -4190,23 +4188,20 @@ def get_staff_notifications(
 
 @router.get("/staff/notifications/unread")
 def get_unread_staff_notifications(
-    current_user=Depends(get_current_service),
+    current_user=Depends(get_current_admin_or_service),
     db: Session = Depends(get_db),
 ):
     """获取未读员工提醒"""
-    # 确定用户类型
-    if (
-        hasattr(current_user, "email")
-        and hasattr(current_user, "name")
-        and not hasattr(current_user, "username")
-    ):
-        # 客服用户：有email和name，但没有username
+    # 确定用户类型（current_user 可能是 AdminUser 或 CustomerService）
+    if isinstance(current_user, models.AdminUser):
+        recipient_type = "admin"
+        recipient_id = current_user.id
+    elif isinstance(current_user, models.CustomerService):
         recipient_type = "customer_service"
         recipient_id = current_user.id
     else:
-        # 管理员用户
-        recipient_type = "admin"
-        recipient_id = current_user.id
+        # 不应该到达这里，但为了安全起见
+        raise HTTPException(status_code=403, detail="无效的用户类型")
 
     notifications = crud.get_unread_staff_notifications(
         db, recipient_id, recipient_type
@@ -4219,23 +4214,20 @@ def get_unread_staff_notifications(
 @router.post("/staff/notifications/{notification_id}/read")
 def mark_staff_notification_read(
     notification_id: int,
-    current_user=Depends(get_current_service),
+    current_user=Depends(get_current_admin_or_service),
     db: Session = Depends(get_db),
 ):
     """标记员工提醒为已读"""
-    # 确定用户类型
-    if (
-        hasattr(current_user, "email")
-        and hasattr(current_user, "name")
-        and not hasattr(current_user, "username")
-    ):
-        # 客服用户：有email和name，但没有username
+    # 确定用户类型（current_user 可能是 AdminUser 或 CustomerService）
+    if isinstance(current_user, models.AdminUser):
+        recipient_type = "admin"
+        recipient_id = current_user.id
+    elif isinstance(current_user, models.CustomerService):
         recipient_type = "customer_service"
         recipient_id = current_user.id
     else:
-        # 管理员用户
-        recipient_type = "admin"
-        recipient_id = current_user.id
+        # 不应该到达这里，但为了安全起见
+        raise HTTPException(status_code=403, detail="无效的用户类型")
 
     notification = crud.mark_staff_notification_read(
         db, notification_id, recipient_id, recipient_type
@@ -4248,23 +4240,20 @@ def mark_staff_notification_read(
 
 @router.post("/staff/notifications/read-all")
 def mark_all_staff_notifications_read(
-    current_user=Depends(get_current_service),
+    current_user=Depends(get_current_admin_or_service),
     db: Session = Depends(get_db),
 ):
     """标记所有员工提醒为已读"""
-    # 确定用户类型
-    if (
-        hasattr(current_user, "email")
-        and hasattr(current_user, "name")
-        and not hasattr(current_user, "username")
-    ):
-        # 客服用户：有email和name，但没有username
+    # 确定用户类型（current_user 可能是 AdminUser 或 CustomerService）
+    if isinstance(current_user, models.AdminUser):
+        recipient_type = "admin"
+        recipient_id = current_user.id
+    elif isinstance(current_user, models.CustomerService):
         recipient_type = "customer_service"
         recipient_id = current_user.id
     else:
-        # 管理员用户
-        recipient_type = "admin"
-        recipient_id = current_user.id
+        # 不应该到达这里，但为了安全起见
+        raise HTTPException(status_code=403, detail="无效的用户类型")
 
     count = crud.mark_all_staff_notifications_read(db, recipient_id, recipient_type)
 
