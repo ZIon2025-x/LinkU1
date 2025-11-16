@@ -1807,18 +1807,14 @@ async def respond_negotiation(
             
             # 发送通知给发布者
             try:
-                notification_content = {
-                    "type": "application_accepted",
-                    "task_id": task_id,
-                    "task_title": task.title,
-                    "application_id": application_id
-                }
+                # ⚠️ 直接使用文本内容，不存储 JSON
+                content = f"申请者已接受您对任务「{task.title}」的议价"
                 
                 new_notification = models.Notification(
                     user_id=task.poster_id,
                     type="application_accepted",
                     title="申请者已接受您的议价",
-                    content=json.dumps(notification_content),
+                    content=content,  # 直接使用文本，不存储 JSON
                     related_id=application_id,
                     created_at=current_time
                 )
@@ -2014,19 +2010,27 @@ async def send_application_message(
         from app.models import get_uk_time_naive
         current_time = get_uk_time_naive()
         
-        notification_content = {
-            "type": notification_type,
-            "task_id": task_id,
-            "task_title": task.title,
-            "message": request.message,
-            "application_id": application_id
-        }
-        
-        if request.negotiated_price is not None:
-            notification_content["negotiated_price"] = float(request.negotiated_price)
-            notification_content["currency"] = task.currency or "GBP"
-            notification_content["token_accept"] = token_accept
-            notification_content["token_reject"] = token_reject
+        # ⚠️ negotiation_offer 需要保留 JSON（因为前端需要 token），application_message 改为文本
+        if notification_type == "negotiation_offer":
+            # 议价通知需要 JSON 格式（包含 token）
+            notification_content = {
+                "type": notification_type,
+                "task_id": task_id,
+                "task_title": task.title,
+                "message": request.message,
+                "application_id": application_id,
+                "negotiated_price": float(request.negotiated_price),
+                "currency": task.currency or "GBP",
+                "token_accept": token_accept,
+                "token_reject": token_reject
+            }
+            content = json.dumps(notification_content)
+        else:
+            # application_message 使用文本格式
+            if request.message:
+                content = f"任务「{task.title}」的发布者给您留言：{request.message}"
+            else:
+                content = f"任务「{task.title}」的发布者给您留言"
         
         # 检查是否已存在相同的通知（基于唯一约束）
         existing_notification_query = select(models.Notification).where(
@@ -2042,7 +2046,7 @@ async def send_application_message(
         if existing_notification:
             # 更新现有通知
             existing_notification.title = "新的留言" if notification_type == "application_message" else "新的议价提议"
-            existing_notification.content = json.dumps(notification_content)
+            existing_notification.content = content
             existing_notification.created_at = current_time
             existing_notification.read_at = None  # 重置已读状态
             existing_notification.is_read = 0  # 重置已读状态
@@ -2054,7 +2058,7 @@ async def send_application_message(
                 user_id=application.applicant_id,
                 type=notification_type,
                 title="新的留言" if notification_type == "application_message" else "新的议价提议",
-                content=json.dumps(notification_content),
+                content=content,
                 related_id=application_id,
                 created_at=current_time
             )
@@ -2194,20 +2198,14 @@ async def reply_application_message(
         from app.models import get_uk_time_naive
         current_time = get_uk_time_naive()
         
-        reply_content = {
-            "type": "application_message_reply",
-            "task_id": task_id,
-            "task_title": task.title,
-            "message": request.message,
-            "application_id": application_id,
-            "original_notification_id": request.notification_id
-        }
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        content = f"申请者回复了您对任务「{task.title}」的留言：{request.message}"
         
         reply_notification = models.Notification(
             user_id=task.poster_id,
             type="application_message_reply",
             title="申请者回复了您的留言",
-            content=json.dumps(reply_content),
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=request.notification_id,  # 关联到原始通知
             created_at=current_time
         )

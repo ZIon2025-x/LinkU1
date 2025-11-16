@@ -49,21 +49,21 @@ def send_task_application_notification(
     try:
         print(f"DEBUG: 开始发送任务申请通知，任务ID: {task.id}, 发布者ID: {task.poster_id}, 申请者: {applicant.name}")
         
-        # ⚠️ 注意：task_application 通知需要保留 JSON 格式，因为前端需要解析显示详细信息
-        # 但为了统一，我们也可以改为文本，前端会回退到显示原始内容
-        # 这里保留 JSON 格式以支持前端的详细显示逻辑
-        import json
-        notification_content_dict = {
-            "type": "task_application",
-            "task_id": task.id,
-            "task_title": task.title,
-            "application_id": application_id,
-            "applicant_name": applicant.name or f"用户{applicant.id}",
-            "message": application_message,
-            "negotiated_price": negotiated_price,
-            "currency": currency
-        }
-        notification_content = json.dumps(notification_content_dict, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        applicant_name = applicant.name or f"用户{applicant.id}"
+        content_parts = [f"{applicant_name} 申请了任务「{task.title}」"]
+        
+        if application_message:
+            content_parts.append(f"申请留言：{application_message}")
+        else:
+            content_parts.append("申请留言：无")
+        
+        if negotiated_price:
+            content_parts.append(f"议价金额：£{negotiated_price:.2f} {currency}")
+        else:
+            content_parts.append("议价金额：无议价（使用任务原定金额）")
+        
+        notification_content = "\n".join(content_parts)
         
         # 创建通知
         notification = crud.create_notification(
@@ -439,20 +439,16 @@ async def send_counter_offer_accepted_notification(
         if not applicant:
             return
         
-        notification_content = json.dumps({
-            "type": "counter_offer_accepted",
-            "applicant_id": applicant_id,
-            "applicant_name": applicant.name or f"用户{applicant_id}",
-            "counter_price": float(counter_price),
-            "message": "用户已同意您的议价，可以创建任务了",
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        applicant_name = applicant.name or f"用户{applicant_id}"
+        content = f"{applicant_name} 已同意您的议价：£{float(counter_price):.2f}，可以创建任务了"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=expert_id,
             notification_type="counter_offer_accepted",
             title="用户已同意议价",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=applicant_id,
         )
         
@@ -475,19 +471,16 @@ async def send_counter_offer_rejected_notification(
         if not applicant:
             return
         
-        notification_content = json.dumps({
-            "type": "counter_offer_rejected",
-            "applicant_id": applicant_id,
-            "applicant_name": applicant.name or f"用户{applicant_id}",
-            "message": "用户拒绝了您的议价",
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        applicant_name = applicant.name or f"用户{applicant_id}"
+        content = f"{applicant_name} 拒绝了您的议价"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=expert_id,
             notification_type="counter_offer_rejected",
             title="用户拒绝了议价",
-            content=notification_content,
+            content=content,  # 直接使用文本，不存储 JSON
             related_id=applicant_id,
         )
         
@@ -508,13 +501,8 @@ async def send_service_application_approved_notification(
     try:
         from app import async_crud
         
-        notification_content = json.dumps({
-            "type": "service_application_approved",
-            "task_id": task_id,
-            "service_name": service_name,
-            "expert_id": expert_id,
-            "message": f"您的服务申请已通过，任务已创建",
-        }, ensure_ascii=False)
+        # ⚠️ 直接使用文本内容，不存储 JSON
+        notification_content = f"您的服务申请「{service_name}」已通过，任务已创建"
         
         await async_crud.async_notification_crud.create_notification(
             db=db,

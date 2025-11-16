@@ -52,6 +52,23 @@ interface TaskApplicationContent {
   currency?: string;
 }
 
+interface ServiceApplicationContent {
+  type: string;
+  service_id: number;
+  service_name: string;
+  applicant_id: string;
+  applicant_name: string;
+  negotiated_price?: number | null;
+}
+
+interface ServiceApplicationRejectedContent {
+  type: string;
+  service_id: number;
+  expert_id: string;
+  reject_reason?: string;
+  message?: string;
+}
+
 interface NotificationPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -754,6 +771,158 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       );
                     } catch (error) {
                       // 如果解析失败，显示原始内容
+                      return (
+                        <>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {notification.content}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </>
+                      );
+                    }
+                  })() : notification.type === 'service_application' ? (() => {
+                    // ⚠️ 兼容 JSON 格式（旧数据）和文本格式（新数据）
+                    try {
+                      const appData: ServiceApplicationContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            <strong>{appData.applicant_name}</strong> 申请了服务 <strong>{appData.service_name}</strong>
+                            {appData.negotiated_price !== null && appData.negotiated_price !== undefined ? (
+                              <>
+                                <br />
+                                议价金额：<strong style={{ color: '#059669' }}>
+                                  £{appData.negotiated_price.toFixed(2)}
+                                </strong>
+                              </>
+                            ) : null}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // 如果解析失败，说明是新格式的文本，直接显示
+                      return (
+                        <>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {notification.content}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </>
+                      );
+                    }
+                  })() : notification.type === 'service_application_rejected' ? (() => {
+                    // ⚠️ 兼容 JSON 格式（旧数据）和文本格式（新数据）
+                    try {
+                      const rejectedData: ServiceApplicationRejectedContent = JSON.parse(notification.content);
+                      return (
+                        <div>
+                          <p style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '13px',
+                            color: '#333',
+                            lineHeight: '1.4'
+                          }}>
+                            {rejectedData.message || '您的服务申请已被拒绝'}
+                            {rejectedData.reject_reason && rejectedData.reject_reason.trim() ? (
+                              <>
+                                <br />
+                                拒绝原因：{rejectedData.reject_reason}
+                              </>
+                            ) : null}
+                          </p>
+                          {notification.is_read === 0 && (
+                            <button
+                              onClick={() => onMarkAsRead(notification.id)}
+                              style={{
+                                padding: '4px 8px',
+                                border: 'none',
+                                background: '#2196F3',
+                                color: 'white',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                            >
+                              标记已读
+                            </button>
+                          )}
+                        </div>
+                      );
+                    } catch (error) {
+                      // 如果解析失败，说明是新格式的文本，直接显示
                       return (
                         <>
                           <p style={{
