@@ -646,22 +646,26 @@ const PublishTask: React.FC = () => {
             <label
               htmlFor="image-upload-input"
               style={{
-                display: 'inline-block',
-                padding: isMobile ? '14px 20px' : '12px 24px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: isMobile ? '56px' : '64px',
+                height: isMobile ? '56px' : '64px',
+                padding: 0,
                 background: images.length >= 5 ? '#e5e7eb' : 'linear-gradient(135deg, #667eea, #764ba2)',
                 color: '#fff',
-                borderRadius: '12px',
+                borderRadius: '50%',
                 cursor: images.length >= 5 ? 'not-allowed' : 'pointer',
-                fontSize: isMobile ? '15px' : '16px',
+                fontSize: isMobile ? '24px' : '28px',
                 fontWeight: '600',
                 transition: 'all 0.3s ease',
                 opacity: images.length >= 5 ? 0.6 : 1,
-                textAlign: 'center',
-                width: isMobile ? '100%' : 'auto',
-                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                flexShrink: 0
               }}
+              title={images.length >= 5 ? '已达到最大上传数量' : '上传图片'}
             >
-              {images.length >= 5 ? '已达到最大上传数量' : '+ 上传图片'}
+              {images.length >= 5 ? '✕' : '+'}
             </label>
             {images.length > 0 && (
               <div style={{
