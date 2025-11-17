@@ -1542,14 +1542,28 @@ const MessagePage: React.FC = () => {
 
   // 优化的删除任务处理函数
   const handleRemoveTask = useCallback((taskId: number) => {
+    // 从任务列表中移除
     setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+    
+    // 保存到localStorage，确保刷新后不会重新出现
+    try {
+      const removedTasksKey = `removedTasks_${user?.id || 'anonymous'}`;
+      const removedTasks = JSON.parse(localStorage.getItem(removedTasksKey) || '[]');
+      if (!removedTasks.includes(taskId)) {
+        removedTasks.push(taskId);
+        localStorage.setItem(removedTasksKey, JSON.stringify(removedTasks));
+      }
+    } catch (error) {
+      console.error('保存已移除任务失败:', error);
+    }
+    
     // 如果移除的是当前激活的任务，清除激活状态
     if (activeTaskId === taskId) {
       setActiveTaskId(null);
       setActiveTask(null);
       setTaskMessages([]);
     }
-  }, [activeTaskId]);
+  }, [activeTaskId, user?.id]);
 
   // 当任务ID变化时，加载评价数据
   useEffect(() => {
@@ -1638,13 +1652,29 @@ const MessagePage: React.FC = () => {
     try {
       const data = await getTaskChatList(50, 0);
       if (data && data.tasks) {
-        // 过滤掉已取消的任务和已完成超过3天的任务
+        // 获取已移除的任务ID列表（从localStorage）
+        let removedTaskIds: number[] = [];
+        try {
+          const removedTasksKey = `removedTasks_${user.id}`;
+          const removedTasks = localStorage.getItem(removedTasksKey);
+          if (removedTasks) {
+            removedTaskIds = JSON.parse(removedTasks);
+          }
+        } catch (error) {
+          console.error('读取已移除任务列表失败:', error);
+        }
+        
+        // 过滤掉已取消的任务、已完成超过3天的任务、以及用户手动移除的任务
         const now = new Date();
         const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
         
         const activeTasks = data.tasks.filter((task: any) => {
           // 过滤已取消的任务
           if (task.status === 'cancelled') {
+            return false;
+          }
+          // 过滤用户手动移除的任务
+          if (removedTaskIds.includes(task.id)) {
             return false;
           }
           // 过滤已完成超过3天的任务
