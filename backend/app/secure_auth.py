@@ -641,7 +641,7 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     """创建用户refresh token，绑定IP和设备指纹（只允许一个设备）"""
     import secrets
     from datetime import datetime, timedelta
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     
     # 生成refresh token
     refresh_token = secrets.token_urlsafe(32)

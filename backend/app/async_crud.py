@@ -15,6 +15,7 @@ from fastapi import HTTPException
 
 from app import models, schemas
 from app.security import get_password_hash
+from app.utils.time_utils import get_utc_time
 import uuid
 
 logger = logging.getLogger(__name__)

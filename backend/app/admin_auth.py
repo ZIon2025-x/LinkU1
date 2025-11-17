@@ -642,7 +642,7 @@ def revoke_all_admin_refresh_tokens(admin_id: str) -> int:
 def create_admin_refresh_token_cookie(response: Response, refresh_token: str) -> Response:
     """设置管理员refresh token Cookie"""
     from app.config import Config
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     
     # 不设置domain，与客服保持一致
     cookie_domain = None

@@ -115,7 +115,7 @@ def get_password_hash(password: str) -> str:
 def generate_strong_password(length: int = 16) -> str:
     """生成强密码（包含大小写字母、数字、特殊字符）"""
     import string
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     # 确保包含各种字符类型
     uppercase = string.ascii_uppercase
     lowercase = string.ascii_lowercase

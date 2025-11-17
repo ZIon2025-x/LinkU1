@@ -332,7 +332,7 @@ async def get_cs_permissions(
     获取客服权限列表
     """
     from app.role_management import RolePermissions, UserRole
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     
     permissions = RolePermissions.get_permissions(UserRole.CUSTOMER_SERVICE)
     

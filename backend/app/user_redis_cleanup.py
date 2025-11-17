@@ -477,7 +477,7 @@ class UserRedisCleanup:
         """将pickle数据迁移为JSON格式（⚠️ 保留TTL，严禁固定ex=3600）"""
         try:
             import json
-from app.utils.time_utils import get_utc_time
+            from app.utils.time_utils import get_utc_time
             # ⚠️ 先读取PTTL，保留原有过期时间（毫秒）
             ttl_ms = self.redis_client.pttl(key)
             if ttl_ms < 0:

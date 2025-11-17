@@ -608,7 +608,7 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
         samesite_value = settings.COOKIE_SAMESITE if settings.COOKIE_SAMESITE in ["lax", "strict", "none"] else "lax"
         # 类型转换
         from typing import Literal
-from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time
         samesite_literal: Literal["lax", "strict", "none"] = samesite_value  # type: ignore
         
         # 只使用API域名，不设置domain属性

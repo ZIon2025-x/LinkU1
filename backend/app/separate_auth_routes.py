@@ -862,7 +862,7 @@ def user_logout(
     if session_id:
         # 删除会话（使用原有系统）
         from app.secure_auth import SecureAuthManager
-from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time
         SecureAuthManager.revoke_session(session_id)
     
     # 清除Cookie

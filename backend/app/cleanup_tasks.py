@@ -195,7 +195,7 @@ class CleanupTasks:
             from pathlib import Path
             import os
             from datetime import datetime, timedelta
-from app.utils.time_utils import get_utc_time
+            from app.utils.time_utils import get_utc_time
             
             # 检测部署环境
             RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

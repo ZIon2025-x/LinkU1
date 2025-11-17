@@ -272,7 +272,7 @@ async def get_admin_permissions(
     获取管理员权限列表
     """
     from app.role_management import RolePermissions, UserRole
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     
     if current_admin.is_super_admin:
         permissions = RolePermissions.get_permissions(UserRole.SUPER_ADMIN)

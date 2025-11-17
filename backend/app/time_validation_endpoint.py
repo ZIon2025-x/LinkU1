@@ -163,7 +163,7 @@ async def get_timezone_info():
     try:
         from datetime import datetime
         from zoneinfo import ZoneInfo
-from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time
         
         uk_zone = ZoneInfo("Europe/London")
         current_time = datetime.now(uk_zone)

@@ -377,5 +377,5 @@ def send_verification_email_with_token(
     subject, body = get_email_verification_email(language, verification_url)
     
     from app.email_utils import send_email
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     background_tasks.add_task(send_email, email, subject, body)

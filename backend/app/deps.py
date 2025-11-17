@@ -359,7 +359,7 @@ def get_current_user_secure_sync_csrf(
     """CSRF保护的安全用户认证（同步版本）"""
     # 首先尝试使用会话认证
     from app.secure_auth import validate_session
-from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time
     
     session = validate_session(request)
     if session:
