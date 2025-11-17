@@ -7,6 +7,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
+from app.utils.time_utils import get_utc_time
+
 logger = logging.getLogger(__name__)
 
 class UserRedisCleanup:

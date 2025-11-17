@@ -15,6 +15,8 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import logging
 
+from app.utils.time_utils import get_utc_time
+
 logger = logging.getLogger(__name__)
 
 # 配置 - 从环境变量读取

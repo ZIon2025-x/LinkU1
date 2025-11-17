@@ -1761,16 +1761,15 @@ def cleanup_expired_tasks_files(db: Session):
     """清理过期任务（已取消或deadline已过超过3天）的图片和文件"""
     from app.models import Task, TaskHistory
     from datetime import timedelta, datetime as dt
-    from app.time_utils_v2 import TimeHandlerV2
+    from app.utils.time_utils import get_utc_time
     from sqlalchemy import or_, and_, func
     import logging
     
     logger = logging.getLogger(__name__)
     
-    # 获取当前UTC时间
-    now_utc = TimeHandlerV2.get_utc_now()
-    now_naive = now_utc.replace(tzinfo=None) if now_utc.tzinfo else now_utc
-    three_days_ago = now_naive - timedelta(days=3)
+    # 获取当前UTC时间（带时区）
+    now_utc = get_utc_time()
+    three_days_ago = now_utc - timedelta(days=3)
     
     # 查找过期任务（已取消超过3天，或deadline已过超过3天）：
     # 注意：Task 模型没有 updated_at 字段
@@ -1795,8 +1794,14 @@ def cleanup_expired_tasks_files(db: Session):
         
         # 使用取消时间或创建时间作为判断依据
         cancel_time = cancel_history.timestamp if cancel_history else task.created_at
-        if cancel_time and cancel_time <= three_days_ago:
-            expired_tasks.append(task)
+        if cancel_time:
+            # 确保 cancel_time 是带时区的，以便与 three_days_ago 比较
+            if cancel_time.tzinfo is None:
+                # 如果是 naive datetime，假设它是 UTC 时间
+                from datetime import timezone
+                cancel_time = cancel_time.replace(tzinfo=timezone.utc)
+            if cancel_time <= three_days_ago:
+                expired_tasks.append(task)
     
     # 2. 查找deadline已过超过3天的open任务
     deadline_expired_tasks = (
