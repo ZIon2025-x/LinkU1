@@ -67,9 +67,8 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
   // ⚠️ 未读数刷新解耦：不再强依赖完整Profile对象
   // 服务器用鉴权主体推断userId，前端无需传参
   const refreshUnreadCount = useCallback(async () => {
-    // 尝试从user对象或localStorage获取userId
-    const userId = user?.id || localStorage.getItem('userId');
-    if (!userId) {
+    // 直接从user对象获取userId，不依赖localStorage（安全考虑）
+    if (!user?.id) {
       setUnreadCount(0);
       return;
     }
