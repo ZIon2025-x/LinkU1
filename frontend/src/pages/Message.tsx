@@ -536,6 +536,7 @@ const MessagePage: React.FC = () => {
   const [chatMode, setChatMode] = useState<'tasks'>('tasks'); // 聊天模式：任务（联系人功能已移除）
   const [tasks, setTasks] = useState<any[]>([]); // 任务列表
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [taskSearchTerm, setTaskSearchTerm] = useState(''); // 任务搜索关键词
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [activeTask, setActiveTask] = useState<any>(null);
   const [taskMessages, setTaskMessages] = useState<any[]>([]); // 任务消息
@@ -1669,6 +1670,35 @@ const MessagePage: React.FC = () => {
       setTasksLoading(false);
     }
   }, [user]);
+
+  // 过滤任务列表（根据搜索关键词）
+  const filteredTasks = useMemo(() => {
+    if (!taskSearchTerm.trim()) {
+      return tasks;
+    }
+    
+    const searchTerm = taskSearchTerm.toLowerCase().trim();
+    return tasks.filter((task: any) => {
+      // 搜索任务标题
+      if (task.title && task.title.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+      // 搜索任务类型
+      if (task.task_type && task.task_type.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+      // 搜索任务地点
+      if (task.location && task.location.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+      // 搜索最后一条消息内容
+      if (task.last_message && task.last_message.content && 
+          task.last_message.content.toLowerCase().includes(searchTerm)) {
+        return true;
+      }
+      return false;
+    });
+  }, [tasks, taskSearchTerm]);
 
   // 恢复客服聊天状态
   const restoreCustomerServiceChat = useCallback(async () => {
@@ -3439,6 +3469,8 @@ const MessagePage: React.FC = () => {
             }}>
               <input
                 type="text"
+                value={taskSearchTerm}
+                onChange={(e) => setTaskSearchTerm(e.target.value)}
                 placeholder={t('messages.searchTasks') || '搜索任务...'}
                 style={{
                   width: '100%',
@@ -3612,12 +3644,12 @@ const MessagePage: React.FC = () => {
             }}>
               {tasksLoading && tasks.length === 0 ? (
                 <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
-              ) : tasks.length === 0 ? (
+              ) : filteredTasks.length === 0 ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
-                  暂无任务
+                  {taskSearchTerm.trim() ? (t('messages.noTasksFound') || '没有找到匹配的任务') : (t('messages.noTasks') || '暂无任务')}
                 </div>
               ) : (
-                tasks.map(task => (
+                filteredTasks.map(task => (
                   <TaskListItem
                     key={task.id}
                     task={task}
