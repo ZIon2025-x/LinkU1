@@ -122,9 +122,49 @@ async def get_tasks(
         sort_by=sort_by,
     )
     
+    # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
+    # format_iso_utc 已在文件顶部导入
+    
+    formatted_tasks = []
+    for task in tasks:
+        # 解析图片字段
+        images_list = []
+        if task.images:
+            try:
+                if isinstance(task.images, str):
+                    images_list = json.loads(task.images)
+                elif isinstance(task.images, list):
+                    images_list = task.images
+            except (json.JSONDecodeError, TypeError):
+                images_list = []
+        
+        # 构建格式化的任务数据
+        task_data = {
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "deadline": format_iso_utc(task.deadline) if task.deadline else None,
+            "is_flexible": task.is_flexible or 0,
+            "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
+            "base_reward": float(task.base_reward) if task.base_reward else None,
+            "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+            "currency": task.currency or "GBP",
+            "location": task.location,
+            "task_type": task.task_type,
+            "poster_id": task.poster_id,
+            "taker_id": task.taker_id,
+            "status": task.status,
+            "task_level": task.task_level,
+            "created_at": format_iso_utc(task.created_at) if task.created_at else None,
+            "is_public": int(task.is_public) if task.is_public is not None else 1,
+            "images": images_list,
+            "points_reward": int(task.points_reward) if task.points_reward else None,
+        }
+        formatted_tasks.append(task_data)
+    
     # 返回与前端期望的数据结构兼容的格式
     return {
-        "tasks": tasks,
+        "tasks": formatted_tasks,
         "total": total,
         "page": page,
         "page_size": page_size
