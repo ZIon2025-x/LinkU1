@@ -520,15 +520,6 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 执行自动数据库迁移（部署时自动执行）
-        try:
-            from app.db_migrations import run_migration_sync
-            run_migration_sync(sync_engine)
-        except Exception as e:
-            logger.warning(f"自动数据库迁移执行失败（可继续运行）: {e}")
-            import traceback
-            traceback.print_exc()
-        
         # 创建优化索引（使用 pg_trgm）
         try:
             database_url = os.getenv("DATABASE_URL")
