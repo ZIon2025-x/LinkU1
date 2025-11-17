@@ -62,8 +62,8 @@ def get_current_admin_optional(request: Request, db: Session = Depends(get_sync_
 def get_current_service(request: Request, db: Session = Depends(get_sync_db)) -> models.CustomerService:
     """获取当前客服（独立认证）"""
     try:
-        logger.info(f"[SERVICE_AUTH] get_current_service - URL: {request.url}")
-        logger.info(f"[SERVICE_AUTH] get_current_service - Cookies: {dict(request.cookies)}")
+        logger.debug(f"[SERVICE_AUTH] get_current_service - URL: {request.url}")
+        logger.debug(f"[SERVICE_AUTH] get_current_service - Cookies: {dict(request.cookies)}")
         
         # 验证客服会话
         service_session = validate_service_session(request)
@@ -83,7 +83,7 @@ def get_current_service(request: Request, db: Session = Depends(get_sync_db)) ->
                 detail="客服不存在"
             )
         
-        logger.info(f"[SERVICE_AUTH] 客服认证成功: {service.id}")
+        logger.debug(f"[SERVICE_AUTH] 客服认证成功: {service.id}")
         return service
         
     except HTTPException:

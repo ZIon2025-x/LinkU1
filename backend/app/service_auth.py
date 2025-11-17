@@ -44,7 +44,7 @@ def safe_redis_get(key: str) -> Optional[dict]:
     try:
         data = redis_client.get(key)
         if not data:
-            logger.info(f"[SERVICE_AUTH] Redis中未找到key: {key}")
+            logger.debug(f"[SERVICE_AUTH] Redis中未找到key: {key}")
             return None
         
         # RedisCache使用decode_responses=False，所以data是bytes
@@ -53,7 +53,7 @@ def safe_redis_get(key: str) -> Optional[dict]:
         
         try:
             result = json.loads(data)
-            logger.info(f"[SERVICE_AUTH] 成功从Redis获取数据: {key}")
+            logger.debug(f"[SERVICE_AUTH] 成功从Redis获取数据: {key}")
             return result
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             logger.error(f"[SERVICE_AUTH] JSON解码失败 key={key}: {e}")
@@ -74,7 +74,7 @@ def safe_redis_set(key: str, value: dict, expire_seconds: Optional[int] = None):
             redis_client.setex(key, expire_seconds, json_data)
         else:
             redis_client.set(key, json_data)
-        logger.info(f"[SERVICE_AUTH] 成功设置Redis数据: {key}")
+        logger.debug(f"[SERVICE_AUTH] 成功设置Redis数据: {key}")
         return True
     except Exception as e:
         logger.error(f"[SERVICE_AUTH] Redis设置数据失败 key={key}: {e}")
@@ -335,23 +335,23 @@ class ServiceAuthManager:
             if USE_REDIS and redis_client:
                 # 从Redis查找
                 pattern = f"service_session:*:{session_id}"
-                logger.info(f"[SERVICE_AUTH] 查找会话数据 - pattern: {pattern}")
+                logger.debug(f"[SERVICE_AUTH] 查找会话数据 - pattern: {pattern}")
                 keys = redis_client.keys(pattern)
-                logger.info(f"[SERVICE_AUTH] 找到的keys: {keys}")
+                logger.debug(f"[SERVICE_AUTH] 找到的keys: {keys}")
                 if keys:
                     result = safe_redis_get(keys[0])
-                    logger.info(f"[SERVICE_AUTH] 获取到的会话数据: {result}")
+                    logger.debug(f"[SERVICE_AUTH] 获取到的会话数据: {result}")
                     if result:
                         return result
                     else:
                         logger.warning(f"[SERVICE_AUTH] Redis数据获取失败，尝试内存查找")
                 else:
-                    logger.info(f"[SERVICE_AUTH] Redis中未找到匹配的会话数据，尝试内存查找")
+                    logger.debug(f"[SERVICE_AUTH] Redis中未找到匹配的会话数据，尝试内存查找")
                 
                 # 如果Redis中没有找到，尝试从内存查找
                 session = service_active_sessions.get(session_id)
                 if session:
-                    logger.info(f"[SERVICE_AUTH] 从内存找到会话数据: {session_id[:8]}...")
+                    logger.debug(f"[SERVICE_AUTH] 从内存找到会话数据: {session_id[:8]}...")
                     return {
                         'session_id': session.session_id,
                         'service_id': session.service_id,
@@ -363,7 +363,7 @@ class ServiceAuthManager:
                         'is_active': session.is_active
                     }
                 
-                logger.info(f"[SERVICE_AUTH] 内存中也没有找到会话数据: {session_id[:8]}...")
+                logger.debug(f"[SERVICE_AUTH] 内存中也没有找到会话数据: {session_id[:8]}...")
                 return None
             else:
                 # 从内存查找
@@ -424,7 +424,7 @@ class ServiceAuthManager:
             current_time = datetime.utcnow()
             is_expired = current_time > expire_time
             
-            logger.info(f"[SERVICE_AUTH] 会话过期检查 - last_activity: {last_activity}, expire_time: {expire_time}, current_time: {current_time}, is_expired: {is_expired}")
+            logger.debug(f"[SERVICE_AUTH] 会话过期检查 - last_activity: {last_activity}, expire_time: {expire_time}, current_time: {current_time}, is_expired: {is_expired}")
             return is_expired
         except Exception as e:
             logger.error(f"[SERVICE_AUTH] 会话过期检查失败: {e}")
@@ -519,25 +519,25 @@ def create_service_session(service_id: str, request: Request) -> str:
 
 def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
     """验证客服会话（最高安全等级）"""
-    logger.info(f"[SERVICE_AUTH] validate_service_session - URL: {request.url}")
-    logger.info(f"[SERVICE_AUTH] validate_service_session - Cookies: {dict(request.cookies)}")
+    logger.debug(f"[SERVICE_AUTH] validate_service_session - URL: {request.url}")
+    logger.debug(f"[SERVICE_AUTH] validate_service_session - Cookies: {dict(request.cookies)}")
     
     # 获取客服会话Cookie
     service_session_id = request.cookies.get("service_session_id")
     
     if not service_session_id:
-        logger.info("[SERVICE_AUTH] 未找到service_session_id")
+        logger.debug("[SERVICE_AUTH] 未找到service_session_id")
         return None
     
-    logger.info(f"[SERVICE_AUTH] 找到service_session_id: {service_session_id[:8]}...")
+    logger.debug(f"[SERVICE_AUTH] 找到service_session_id: {service_session_id[:8]}...")
     
     # 验证会话
-    logger.info(f"[SERVICE_AUTH] 开始验证会话: {service_session_id[:8]}...")
+    logger.debug(f"[SERVICE_AUTH] 开始验证会话: {service_session_id[:8]}...")
     session = ServiceAuthManager.get_session(service_session_id, update_activity=False)
     if not session:
         logger.warning(f"[SERVICE_AUTH] 客服会话验证失败: {service_session_id[:8]}...")
         return None
-    logger.info(f"[SERVICE_AUTH] 会话验证成功: {session.service_id}")
+    logger.debug(f"[SERVICE_AUTH] 会话验证成功: {session.service_id}")
     
     # 验证会话是否仍然活跃
     if not session.is_active:
@@ -561,7 +561,7 @@ def validate_service_session(request: Request) -> Optional[ServiceSessionInfo]:
         # ServiceAuthManager.delete_session(service_session_id)
         # return None
     
-    logger.info(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
+    logger.debug(f"[SERVICE_AUTH] 客服会话验证成功: {service_session_id[:8]}..., 客服: {session.service_id}")
     return session
 
 def create_service_session_cookie(response: Response, session_id: str, user_agent: str = "", service_id: Optional[str] = None, request: Optional[Request] = None) -> Response:
