@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 
 from app import schemas, models
+from app.utils.time_utils import get_utc_time
 from app.deps import get_db
 from app.role_deps import get_current_admin_secure_sync
 from app.coupon_points_crud import (
@@ -647,12 +648,12 @@ def delete_invitation_code(
     if used_count > 0 and not force:
         # 软删除：设置状态为inactive并设置过期时间
         invitation_code.is_active = False
-        invitation_code.valid_until = datetime.now(tz.utc)
+        invitation_code.valid_until = get_utc_time()
         db.commit()
         return {
             "success": True,
             "message": "邀请码已禁用（软删除）",
-            "deleted_at": datetime.now(tz.utc)
+            "deleted_at": get_utc_time()
         }
     
     if force:
@@ -668,7 +669,7 @@ def delete_invitation_code(
     return {
         "success": True,
         "message": "邀请码删除成功",
-        "deleted_at": datetime.now(tz.utc)
+        "deleted_at": get_utc_time()
     }
 
 
@@ -1218,7 +1219,7 @@ def batch_reward_points(
                     reward_type="points",
                     points_value=request.amount,
                     status="success",
-                    completed_at=datetime.now(tz.utc)
+                    completed_at=get_utc_time()
                 )
                 db.add(detail)
                 
@@ -1236,7 +1237,7 @@ def batch_reward_points(
                     points_value=request.amount,
                     status="failed",
                     error_message=str(e),
-                    completed_at=datetime.now(tz.utc)
+                    completed_at=get_utc_time()
                 )
                 db.add(detail)
                 details.append({
@@ -1249,7 +1250,7 @@ def batch_reward_points(
         admin_reward.success_count = success_count
         admin_reward.failed_count = failed_count
         admin_reward.status = "completed" if failed_count == 0 else "processing"
-        admin_reward.completed_at = datetime.now(tz.utc)
+        admin_reward.completed_at = get_utc_time()
         
         db.commit()
         
@@ -1385,7 +1386,7 @@ def batch_reward_coupons(
                     reward_type="coupon",
                     coupon_id=request.coupon_id,
                     status="success",
-                    completed_at=datetime.now(tz.utc)
+                    completed_at=get_utc_time()
                 )
                 db.add(detail)
                 
@@ -1404,7 +1405,7 @@ def batch_reward_coupons(
                     coupon_id=request.coupon_id,
                     status="failed",
                     error_message=str(e),
-                    completed_at=datetime.now(tz.utc)
+                    completed_at=get_utc_time()
                 )
                 db.add(detail)
                 details.append({
@@ -1417,7 +1418,7 @@ def batch_reward_coupons(
         admin_reward.success_count = success_count
         admin_reward.failed_count = failed_count
         admin_reward.status = "completed" if failed_count == 0 else "processing"
-        admin_reward.completed_at = datetime.now(tz.utc)
+        admin_reward.completed_at = get_utc_time()
         
         db.commit()
         

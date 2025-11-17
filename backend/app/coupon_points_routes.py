@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from app import schemas
+from app.utils.time_utils import get_utc_time
 from app.deps import get_db, get_current_user_secure_sync_csrf
 from app.coupon_points_crud import (
     get_points_account,
@@ -419,7 +420,7 @@ def create_task_payment(
             application_fee_pence,  # 优惠券针对平台服务费
             task.location,
             task.task_type,
-            datetime.now(timezone.utc)
+            get_utc_time()
         )
         
         if not is_valid:
@@ -434,7 +435,7 @@ def create_task_payment(
             application_fee_pence,
             task.location,
             task.task_type,
-            datetime.now(timezone.utc),
+            get_utc_time(),
             idempotency_key=f"task_payment_{task_id}_{current_user.id}"
         )
         

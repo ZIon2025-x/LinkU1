@@ -12,7 +12,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
-from app.utils.time_utils import format_iso_utc
+from app.utils.time_utils import format_iso_utc, get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -502,7 +502,7 @@ class PrenoteFrequencyLimitLogic:
         限制：1条/分钟，日上限20条
         返回：(can_send, error_message)
         """
-        now = datetime.now(timezone.utc)
+        now = get_utc_time()
         one_minute_ago = now - timedelta(minutes=1)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         

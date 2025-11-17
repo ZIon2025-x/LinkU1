@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.dialects.postgresql import insert
 
 from app import models, schemas
+from app.utils.time_utils import get_utc_time
 
 
 # ==================== 积分相关 CRUD ====================
@@ -149,7 +150,7 @@ def update_coupon(db: Session, coupon_id: int, coupon_update: schemas.CouponUpda
 
 def get_available_coupons(db: Session, user_id: Optional[str] = None) -> List[models.Coupon]:
     """获取可用优惠券列表"""
-    now = datetime.now(timezone.utc)
+    now = get_utc_time()
     query = db.query(models.Coupon).filter(
         models.Coupon.status == "active",
         models.Coupon.valid_from <= now,
@@ -207,7 +208,7 @@ def claim_coupon(
         return None
     
     # 检查优惠券状态和有效期
-    now = datetime.now(timezone.utc)
+    now = get_utc_time()
     if coupon.status != "active" or coupon.valid_from > now or coupon.valid_until < now:
         return None
     
@@ -264,7 +265,7 @@ def validate_coupon_usage(
     if not coupon:
         return False, "优惠券不存在", None
     
-    now = datetime.now(timezone.utc)
+    now = get_utc_time()
     
     # 检查状态和有效期
     if coupon.status != "active":
@@ -364,7 +365,7 @@ def use_coupon(
     
     # 更新用户优惠券状态
     user_coupon.status = "used"
-    user_coupon.used_at = datetime.now(timezone.utc)
+    user_coupon.used_at = get_utc_time()
     user_coupon.used_in_task_id = task_id
     
     # 创建使用记录
@@ -575,7 +576,7 @@ def validate_invitation_code(db: Session, code: str) -> tuple[bool, Optional[str
     if not invitation_code.is_active:
         return False, "邀请码已禁用", None
     
-    now = datetime.now(timezone.utc)
+    now = get_utc_time()
     if now < invitation_code.valid_from:
         return False, f"邀请码尚未生效，生效时间：{invitation_code.valid_from}", None
     

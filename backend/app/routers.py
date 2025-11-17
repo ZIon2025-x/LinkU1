@@ -1418,7 +1418,7 @@ def confirm_task_completion(
             
             if points_amount > 0:
                 # 生成批次ID（季度格式：2025Q1-COMP）
-                now = datetime.now(tz.utc)
+                now = get_utc_time()
                 quarter = (now.month - 1) // 3 + 1
                 batch_id = f"{now.year}Q{quarter}-COMP"
                 

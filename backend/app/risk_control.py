@@ -9,6 +9,7 @@ from sqlalchemy import func, and_, or_
 
 from app import models
 from app.device_fingerprint import generate_device_fingerprint, get_ip_address
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def check_risk(
             risk_score = max(risk_score, device.risk_score)
             
             # 更新最后访问时间
-            device.last_seen = datetime.now(tz.utc)
+            device.last_seen = get_utc_time()
         else:
             # 新设备，创建记录
             device = models.DeviceFingerprint(
@@ -79,7 +80,7 @@ def check_risk(
         if action_type == "checkin":
             max_per_day = int(get_system_setting(db, "max_checkin_per_device_per_day").setting_value) if get_system_setting(db, "max_checkin_per_device_per_day") else 1
             
-            today_start = datetime.now(tz.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = get_utc_time().replace(hour=0, minute=0, second=0, microsecond=0)
             checkin_count = db.query(func.count(models.CheckIn.id)).filter(
                 and_(
                     models.CheckIn.ip_address == ip_address,
@@ -94,7 +95,7 @@ def check_risk(
         elif action_type == "coupon_claim":
             max_per_hour = int(get_system_setting(db, "max_coupon_claim_per_ip_per_hour").setting_value) if get_system_setting(db, "max_coupon_claim_per_ip_per_hour") else 10
             
-            hour_ago = datetime.now(tz.utc) - timedelta(hours=1)
+            hour_ago = get_utc_time() - timedelta(hours=1)
             claim_count = db.query(func.count(models.UserCoupon.id)).filter(
                 and_(
                     models.UserCoupon.ip_address == ip_address,
@@ -109,7 +110,7 @@ def check_risk(
     # 检查用户行为
     if user_id:
         # 检查用户短时间内频繁操作
-        hour_ago = datetime.now(tz.utc) - timedelta(hours=1)
+        hour_ago = get_utc_time() - timedelta(hours=1)
         
         if action_type == "checkin":
             recent_checkins = db.query(func.count(models.CheckIn.id)).filter(

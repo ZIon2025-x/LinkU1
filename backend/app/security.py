@@ -225,9 +225,7 @@ def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
 
         # 验证token是否过期
         exp = payload.get("exp")
-        if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(
-            timezone.utc
-        ):
+        if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < get_utc_time():
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Token已过期"
             )
@@ -297,7 +295,7 @@ def revoke_token(token: str) -> bool:
         if exp and jti:
             # 计算剩余过期时间
             expire_time = datetime.fromtimestamp(exp, tz=timezone.utc)
-            now = datetime.now(timezone.utc)
+            now = get_utc_time()
 
             if expire_time > now:
                 # 添加到黑名单

@@ -8,13 +8,14 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import SessionLocal
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
 
 def check_expired_coupons(db: Session):
     """检查并更新过期优惠券"""
-    now = datetime.now(tz.utc)
+    now = get_utc_time()
     
     # 更新优惠券状态
     expired_coupons = db.query(models.Coupon).filter(
@@ -51,7 +52,7 @@ def check_expired_coupons(db: Session):
 
 def check_expired_invitation_codes(db: Session):
     """检查并更新过期邀请码"""
-    now = datetime.now(tz.utc)
+    now = get_utc_time()
     
     expired_codes = db.query(models.InvitationCode).filter(
         and_(
@@ -80,13 +81,13 @@ def check_expired_points(db: Session):
         return  # 永不过期，不处理
     
     # 查找过期的积分交易
-    expire_date = datetime.now(tz.utc) - timedelta(days=expire_days)
+    expire_date = get_utc_time() - timedelta(days=expire_days)
     
     expired_transactions = db.query(models.PointsTransaction).filter(
         and_(
             models.PointsTransaction.type == "earn",
             models.PointsTransaction.expires_at.isnot(None),
-            models.PointsTransaction.expires_at < datetime.now(tz.utc),
+            models.PointsTransaction.expires_at < get_utc_time(),
             models.PointsTransaction.expired == False
         )
     ).all()

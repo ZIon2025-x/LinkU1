@@ -696,7 +696,7 @@ async def send_task_message(
             
             # 频率限制检查（1条/分钟，日上限20条）
             from datetime import timedelta
-            now = datetime.now(timezone.utc)
+            now = get_utc_time()
             one_minute_ago = now - timedelta(minutes=1)
             today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             
