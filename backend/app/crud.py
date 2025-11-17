@@ -3243,8 +3243,8 @@ def get_job_positions(
 def update_job_position(db: Session, position_id: int, position: schemas.JobPositionUpdate):
     """更新岗位"""
     import json
-from app.utils.time_utils import get_utc_time
-from zoneinfo import ZoneInfo
+    from app.utils.time_utils import get_utc_time
+    from zoneinfo import ZoneInfo
     
     db_position = db.query(models.JobPosition).filter(models.JobPosition.id == position_id).first()
     if not db_position:
