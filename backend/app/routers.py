@@ -33,7 +33,7 @@ from app.deps import get_current_user_secure_sync_csrf
 logger = logging.getLogger(__name__)
 import os
 from datetime import datetime, timedelta, timezone
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 import stripe
 from pydantic import BaseModel
@@ -754,7 +754,7 @@ def debug_session_status(request: Request, db: Session = Depends(get_db)):
                 "user_id": session.user_id,
                 "session_id": session.session_id[:8] + "...",
                 "is_active": session.is_active,
-                "last_activity": session.last_activity.isoformat() if session.last_activity else None
+                "last_activity": format_iso_utc(session.last_activity) if session.last_activity else None
             }
         else:
             result["session_validation"] = {"success": False, "reason": "Session not found in storage"}
@@ -771,7 +771,7 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
     
     result = {
         "email": email,
-        "current_time": get_utc_time().isoformat()
+        "current_time": format_iso_utc(get_utc_time())
     }
     
     try:
@@ -783,8 +783,8 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
                 "id": pending_user.id,
                 "name": pending_user.name,
                 "email": pending_user.email,
-                "created_at": pending_user.created_at.isoformat(),
-                "expires_at": pending_user.expires_at.isoformat(),
+                "created_at": format_iso_utc(pending_user.created_at),
+                "expires_at": format_iso_utc(pending_user.expires_at),
                 "is_expired": pending_user.expires_at < get_utc_time()
             }
         else:
@@ -1630,7 +1630,7 @@ def get_my_profile(
                 return None
             # 处理datetime对象（包括timezone-aware和naive）
             if isinstance(value, dt):
-                return value.isoformat()
+                return format_iso_utc(value)
             # 处理date对象（但不是datetime）
             if isinstance(value, date) and not isinstance(value, dt):
                 return value.isoformat()
@@ -3074,7 +3074,7 @@ def get_contacts(current_user=Depends(get_current_user_secure_sync_csrf), db: Se
                     utc_time = msg.last_message_time.replace(tzinfo=timezone.utc)
                 else:
                     utc_time = msg.last_message_time.astimezone(timezone.utc)
-                latest_messages_dict[msg.contact_id] = utc_time.isoformat().replace('+00:00', 'Z')
+                latest_messages_dict[msg.contact_id] = format_iso_utc(utc_time)
             else:
                 latest_messages_dict[msg.contact_id] = None
         
@@ -3280,7 +3280,7 @@ def assign_customer_service(
                         "name": current_user.name or f"用户{current_user.id}",
                     },
                     "chat_id": chat_data["chat_id"],
-                    "timestamp": get_utc_time().isoformat(),
+                    "timestamp": format_iso_utc(get_utc_time()),
                 }
                 # 使用asyncio.create_task来异步发送通知
                 asyncio.create_task(
@@ -4823,9 +4823,32 @@ async def timeout_end_customer_service_chat(
 @router.get("/timezone/info")
 def get_timezone_info():
     """获取当前服务器时区信息 - 使用新的时间处理系统"""
-    from app.time_utils_v2 import TimeHandlerV2
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON, format_iso_utc
+    from datetime import timezone as tz
     
-    return TimeHandlerV2.get_timezone_info()
+    utc_time = get_utc_time()
+    london_time = to_user_timezone(utc_time, LONDON)
+    
+    # 检查是否夏令时
+    is_dst = london_time.dst().total_seconds() > 0
+    tz_name = london_time.tzname()
+    offset_hours = london_time.utcoffset().total_seconds() / 3600
+    
+    return {
+        "server_timezone": "Europe/London",
+        "server_time": format_iso_utc(london_time.astimezone(tz.utc)),
+        "utc_time": format_iso_utc(utc_time),
+        "timezone_offset": london_time.strftime("%z"),
+        "is_dst": is_dst,
+        "timezone_name": tz_name,
+        "offset_hours": offset_hours,
+        "dst_info": {
+            "is_dst": is_dst,
+            "tz_name": tz_name,
+            "offset_hours": offset_hours,
+            "description": f"英国{'夏令时' if is_dst else '冬令时'} ({tz_name}, UTC{offset_hours:+.0f})"
+        }
+    }
 
 
 @router.get("/customer-service/chat-timeout-status/{chat_id}")
@@ -5573,8 +5596,8 @@ def get_job_positions(
                 "tags": json.loads(position.tags) if position.tags else [],
                 "tags_en": json.loads(position.tags_en) if position.tags_en else [],
                 "is_active": bool(position.is_active),
-                "created_at": position.created_at.isoformat() if position.created_at else None,
-                "updated_at": position.updated_at.isoformat() if position.updated_at else None,
+                "created_at": format_iso_utc(position.created_at) if position.created_at else None,
+                "updated_at": format_iso_utc(position.updated_at) if position.updated_at else None,
                 "created_by": position.created_by
             }
             processed_positions.append(position_dict)
@@ -5624,8 +5647,8 @@ def get_job_position(
             "tags": json.loads(position.tags) if position.tags else [],
             "tags_en": json.loads(position.tags_en) if position.tags_en else [],
             "is_active": bool(position.is_active),
-            "created_at": position.created_at.isoformat() if position.created_at else None,
-            "updated_at": position.updated_at.isoformat() if position.updated_at else None,
+            "created_at": format_iso_utc(position.created_at) if position.created_at else None,
+            "updated_at": format_iso_utc(position.updated_at) if position.updated_at else None,
             "created_by": position.created_by
         }
         
@@ -5673,8 +5696,8 @@ def create_job_position(
             "tags": json.loads(db_position.tags) if db_position.tags else [],
             "tags_en": json.loads(db_position.tags_en) if db_position.tags_en else [],
             "is_active": bool(db_position.is_active),
-            "created_at": db_position.created_at.isoformat() if db_position.created_at else None,
-            "updated_at": db_position.updated_at.isoformat() if db_position.updated_at else None,
+            "created_at": format_iso_utc(db_position.created_at) if db_position.created_at else None,
+            "updated_at": format_iso_utc(db_position.updated_at) if db_position.updated_at else None,
             "created_by": db_position.created_by
         }
         
@@ -5724,8 +5747,8 @@ def update_job_position(
             "tags": json.loads(db_position.tags) if db_position.tags else [],
             "tags_en": json.loads(db_position.tags_en) if db_position.tags_en else [],
             "is_active": bool(db_position.is_active),
-            "created_at": db_position.created_at.isoformat() if db_position.created_at else None,
-            "updated_at": db_position.updated_at.isoformat() if db_position.updated_at else None,
+            "created_at": format_iso_utc(db_position.created_at) if db_position.created_at else None,
+            "updated_at": format_iso_utc(db_position.updated_at) if db_position.updated_at else None,
             "created_by": db_position.created_by
         }
         
@@ -5902,8 +5925,8 @@ def get_task_experts(
                     "display_order": expert.display_order,
                     "category": expert.category,
                     "location": expert.location,  # 添加城市字段
-                    "created_at": expert.created_at.isoformat() if expert.created_at else None,
-                    "updated_at": expert.updated_at.isoformat() if expert.updated_at else None,
+                    "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
+                    "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
                 }
                 for expert in experts
             ],

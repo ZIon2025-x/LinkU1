@@ -15,7 +15,7 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import logging
 
-from app.utils.time_utils import get_utc_time, parse_iso_utc
+from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +254,7 @@ class ServiceAuthManager:
         
         # 更新活动时间
         if update_activity:
-            session_data['last_activity'] = get_utc_time().isoformat()
+            session_data['last_activity'] = format_iso_utc(get_utc_time())
             ServiceAuthManager._store_session_data(session_id, session_data)
         
         # 转换字符串日期时间为datetime对象
@@ -298,8 +298,8 @@ class ServiceAuthManager:
         session_data = {
             'session_id': session_info.session_id,
             'service_id': session_info.service_id,
-            'created_at': session_info.created_at.isoformat() if session_info.created_at else None,
-            'last_activity': session_info.last_activity.isoformat() if session_info.last_activity else None,
+            'created_at': format_iso_utc(session_info.created_at) if session_info.created_at else None,
+            'last_activity': format_iso_utc(session_info.last_activity) if session_info.last_activity else None,
             'device_fingerprint': session_info.device_fingerprint,
             'ip_address': session_info.ip_address,
             'user_agent': session_info.user_agent,
@@ -357,8 +357,8 @@ class ServiceAuthManager:
                     return {
                         'session_id': session.session_id,
                         'service_id': session.service_id,
-                        'created_at': session.created_at.isoformat() if session.created_at else None,
-                        'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                        'created_at': format_iso_utc(session.created_at) if session.created_at else None,
+                        'last_activity': format_iso_utc(session.last_activity) if session.last_activity else None,
                         'device_fingerprint': session.device_fingerprint,
                         'ip_address': session.ip_address,
                         'user_agent': session.user_agent,
@@ -374,8 +374,8 @@ class ServiceAuthManager:
                     return {
                         'session_id': session.session_id,
                         'service_id': session.service_id,
-                        'created_at': session.created_at.isoformat() if session.created_at else None,
-                        'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                        'created_at': format_iso_utc(session.created_at) if session.created_at else None,
+                        'last_activity': format_iso_utc(session.last_activity) if session.last_activity else None,
                         'device_fingerprint': session.device_fingerprint,
                         'ip_address': session.ip_address,
                         'user_agent': session.user_agent,
@@ -391,8 +391,8 @@ class ServiceAuthManager:
                     return {
                         'session_id': session.session_id,
                         'service_id': session.service_id,
-                        'created_at': session.created_at.isoformat() if session.created_at else None,
-                        'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                        'created_at': format_iso_utc(session.created_at) if session.created_at else None,
+                        'last_activity': format_iso_utc(session.last_activity) if session.last_activity else None,
                         'device_fingerprint': session.device_fingerprint,
                         'ip_address': session.ip_address,
                         'user_agent': session.user_agent,
@@ -593,8 +593,8 @@ def create_service_session_cookie(response: Response, session_id: str, user_agen
                         "service_id": service_id,
                         "ip_address": get_client_ip(request),
                         "device_fingerprint": get_device_fingerprint(request),
-                        "created_at": get_utc_time().isoformat(),
-                        "expires_at": (get_utc_time() + timedelta(hours=12)).isoformat(),
+                        "created_at": format_iso_utc(get_utc_time()),
+                        "expires_at": format_iso_utc(get_utc_time() + timedelta(hours=12)),
                         "last_used": None  # 记录最后使用时间，用于频率限制
                     }
                     redis_client.setex(
@@ -736,7 +736,7 @@ def verify_service_refresh_token(refresh_token: str, ip_address: str = "", devic
         
         # 更新最后使用时间
         current_time = get_utc_time()
-        data['last_used'] = current_time.isoformat()
+        data['last_used'] = format_iso_utc(current_time)
         redis_client.setex(f"service_refresh_token:{refresh_token}", 12 * 3600, json.dumps(data))
         
         return data.get('service_id')

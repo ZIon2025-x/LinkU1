@@ -31,16 +31,7 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
-# ⚠️ 已弃用：使用 app.utils.time_utils.get_utc_time() 替代
-# 保留此函数仅用于向后兼容（测试端点），将在数据库迁移后删除
-def get_uk_time():
-    """获取当前英国时间 (自动处理夏令时/冬令时) - 已弃用"""
-    from zoneinfo import ZoneInfo
-    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
-    
-    utc_time = get_utc_time()
-    return to_user_timezone(utc_time, LONDON)
-
+# ⚠️ 保留用于测试端点：get_uk_time_online() 仅用于 time_check_endpoint.py 的测试功能
 def get_uk_time_online():
     """通过网络获取真实的英国时间，使用多个API作为备用 - 已弃用，仅用于测试"""
     import requests
@@ -105,7 +96,9 @@ def get_uk_time_online():
     # 检查是否启用在线时间
     if not config.enable_online_time:
         print("在线时间获取已禁用，使用本地时间")
-        return get_uk_time()
+        from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+        utc_time = get_utc_time()
+        return to_user_timezone(utc_time, LONDON)
     
     # 获取API列表
     apis = config.get_apis()
@@ -129,34 +122,12 @@ def get_uk_time_online():
     # 所有API都失败时回退到本地时间
     if config.fallback_to_local:
         print("所有在线时间API都失败，使用本地时间")
-        return get_uk_time()
+        from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+        utc_time = get_utc_time()
+        return to_user_timezone(utc_time, LONDON)
     else:
         print("所有在线时间API都失败，且禁用本地时间回退")
         raise Exception("无法获取英国时间")
-
-# ⚠️ 已弃用：使用 app.utils.time_utils.get_utc_time() 替代
-# 保留此函数仅用于向后兼容，将在数据库迁移后删除
-def get_uk_time_naive():
-    """获取当前英国时间 (timezone-naive，用于数据库存储) - 已弃用"""
-    # 使用新的UTC时间处理系统
-    return get_utc_time()
-
-def get_uk_time_naive_legacy():
-    """获取当前英国时间 (timezone-naive，用于数据库存储) - 旧版本，已弃用"""
-    from zoneinfo import ZoneInfo
-    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
-    
-    # 使用新的UTC时间系统
-    utc_time = get_utc_time()
-    uk_time = to_user_timezone(utc_time, LONDON)
-    
-    print(f"使用本地英国时间: {uk_time}")
-    print(f"时区: {uk_time.tzinfo}")
-    print(f"是否夏令时: {uk_time.dst() != timedelta(0)}")
-    
-    # 移除时区信息，用于数据库存储（仅用于旧数据兼容）
-    return uk_time.replace(tzinfo=None)
-
 
 class User(Base):
     __tablename__ = "users"

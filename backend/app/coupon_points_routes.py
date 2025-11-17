@@ -599,10 +599,13 @@ def get_check_in_status(
     db: Session = Depends(get_db)
 ):
     """获取签到状态"""
-    import pytz
     from zoneinfo import ZoneInfo
-    tz = ZoneInfo("Europe/London")
-    today = datetime.now(tz).date()
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+    
+    # 获取当前UTC时间并转换为伦敦时区
+    utc_time = get_utc_time()
+    london_time = to_user_timezone(utc_time, LONDON)
+    today = london_time.date()
     
     today_check_in = get_check_in_today(db, current_user.id)
     last_check_in = get_last_check_in(db, current_user.id)

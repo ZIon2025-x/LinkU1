@@ -15,7 +15,7 @@ from fastapi import HTTPException
 
 from app import models, schemas
 from app.security import get_password_hash
-from app.utils.time_utils import get_utc_time, parse_iso_utc
+from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -947,7 +947,7 @@ class AsyncPerformanceMonitor:
                 "users": user_count,
                 "tasks": task_count,
                 "messages": message_count,
-                "timestamp": get_utc_time().isoformat(),
+                "timestamp": format_iso_utc(get_utc_time()),
             }
         except Exception as e:
             logger.error(f"Error getting database stats: {e}")

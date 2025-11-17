@@ -17,7 +17,7 @@ async def time_check():
     """检查在线时间获取功能的状态"""
     try:
         # 导入时间函数
-        from app.models import get_uk_time, get_uk_time_online
+        from app.models import get_uk_time_online
         
         result = {
             "status": "success",
@@ -25,12 +25,13 @@ async def time_check():
             "checks": {}
         }
         
-        # 检查1: 本地英国时间
+        # 检查1: 本地英国时间（使用新的时间函数）
         try:
-            local_time = get_uk_time()
+            utc_time = get_utc_time()
+            local_time = to_user_timezone(utc_time, LONDON)
             result["checks"]["local_time"] = {
                 "status": "success",
-                "time": local_time.isoformat(),
+                "time": format_iso_utc(local_time),
                 "timezone": str(local_time.tzinfo),
                 "is_dst": local_time.dst() != datetime.timedelta(0)
             }
@@ -45,7 +46,7 @@ async def time_check():
             online_time = get_uk_time_online()
             result["checks"]["online_time"] = {
                 "status": "success",
-                "time": online_time.isoformat(),
+                "time": format_iso_utc(online_time),
                 "timezone": str(online_time.tzinfo),
                 "is_dst": online_time.dst() != datetime.timedelta(0)
             }
@@ -61,8 +62,8 @@ async def time_check():
             london_time = to_user_timezone(utc_time, LONDON)
             result["checks"]["utc_time"] = {
                 "status": "success",
-                "utc_time": utc_time.isoformat(),
-                "london_time": london_time.isoformat(),
+                "utc_time": format_iso_utc(utc_time),
+                "london_time": format_iso_utc(london_time),
                 "timezone": str(utc_time.tzinfo)
             }
         except Exception as e:
@@ -132,7 +133,7 @@ async def simple_time_check():
         uk_time = get_uk_time_online()
         return {
             "status": "success",
-            "uk_time": uk_time.isoformat(),
+            "uk_time": format_iso_utc(uk_time),
             "timezone": str(uk_time.tzinfo),
             "is_dst": uk_time.dst() != datetime.timedelta(0),
             "message": "在线时间获取功能正常工作"

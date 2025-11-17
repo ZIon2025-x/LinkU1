@@ -23,7 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
-from app.utils.time_utils import get_utc_time, parse_iso_utc
+from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +209,7 @@ async def get_task_chat_list(
                     "content": last_msg["content"],
                     "sender_id": last_msg["sender_id"],
                     "sender_name": sender.name if sender else None,
-                    "created_at": last_msg["created_at"].isoformat() if last_msg["created_at"] else None
+                    "created_at": format_iso_utc(last_msg["created_at"]) if last_msg["created_at"] else None
                 }
             
             # 解析任务图片（JSON字符串转数组）
@@ -231,7 +231,7 @@ async def get_task_chat_list(
                 "poster_id": task.poster_id,
                 "status": task.status,
                 "taker_id": task.taker_id,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+                "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
                 "unread_count": unread_count,
                 "last_message": last_message_data
             }
@@ -409,7 +409,7 @@ async def get_task_messages(
                 "content": msg.content,
                 "message_type": msg.message_type,
                 "task_id": msg.task_id,
-                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                "created_at": format_iso_utc(msg.created_at) if msg.created_at else None,
                 "is_read": is_read,
                 "attachments": attachments_by_message.get(msg.id, [])
             }
@@ -620,7 +620,7 @@ async def get_task_applications(
                 "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
                 "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取
                 "status": app.status,
-                "created_at": app.created_at.isoformat() if app.created_at else None
+                "created_at": format_iso_utc(app.created_at) if app.created_at else None
             }
             applications_data.append(app_data)
         
@@ -802,7 +802,7 @@ async def send_task_message(
             "sender_id": new_message.sender_id,
             "content": new_message.content,
             "task_id": new_message.task_id,
-            "created_at": new_message.created_at.isoformat() if new_message.created_at else None,
+            "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
             "attachments": attachments_data
         }
     
@@ -1403,7 +1403,7 @@ async def withdraw_application(
         return {
             "application_id": application_id,
             "status": "rejected",
-            "withdrawn_at": current_time.isoformat() if current_time else None
+            "withdrawn_at": format_iso_utc(current_time) if current_time else None
         }
     
     except HTTPException:
@@ -1506,7 +1506,7 @@ async def negotiate_application(
                 "task_id": task_id,
                 "nonce": nonce_accept,
                 "exp": expires_at,
-                "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             }
             
             token_data_reject = {
@@ -1516,7 +1516,7 @@ async def negotiate_application(
                 "task_id": task_id,
                 "nonce": nonce_reject,
                 "exp": expires_at,
-                "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
             }
             
             # 存储到Redis，5分钟过期
@@ -2050,7 +2050,7 @@ async def send_application_message(
                     "task_id": task_id,
                     "nonce": nonce_accept,
                     "exp": expires_at,
-                    "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                    "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
                 }
                 
                 token_data_reject = {
@@ -2060,7 +2060,7 @@ async def send_application_message(
                     "task_id": task_id,
                     "nonce": nonce_reject,
                     "exp": expires_at,
-                    "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                    "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
                 }
                 
                 redis_client.setex(

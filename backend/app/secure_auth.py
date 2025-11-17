@@ -15,7 +15,7 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import logging
 
-from app.utils.time_utils import get_utc_time, parse_iso_utc
+from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -195,9 +195,9 @@ class SecureAuthManager:
                 "user_id": session.user_id,
                 "session_id": session.session_id,
                 "device_fingerprint": session.device_fingerprint,
-                "created_at": session.created_at.isoformat(),
-                "last_activity": session.last_activity.isoformat(),
-                "expires_at": expire_time.isoformat(),  # 添加过期时间
+                "created_at": format_iso_utc(session.created_at),
+                "last_activity": format_iso_utc(session.last_activity),
+                "expires_at": format_iso_utc(expire_time),  # 添加过期时间
                 "ip_address": session.ip_address,
                 "user_agent": session.user_agent,
                 "refresh_token": session.refresh_token,
@@ -302,7 +302,7 @@ class SecureAuthManager:
                 time_since_last_activity = get_utc_time() - session.last_activity
                 if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
                     session.last_activity = get_utc_time()
-                    data["last_activity"] = session.last_activity.isoformat()
+                    data["last_activity"] = format_iso_utc(session.last_activity)
                     redis_client.setex(
                         f"session:{session_id}",
                         SESSION_EXPIRE_HOURS * 3600,
@@ -340,8 +340,8 @@ class SecureAuthManager:
                     "user_id": session.user_id,
                     "session_id": session.session_id,
                     "device_fingerprint": session.device_fingerprint,
-                    "created_at": session.created_at.isoformat(),
-                    "last_activity": session.last_activity.isoformat(),
+                    "created_at": format_iso_utc(session.created_at),
+                    "last_activity": format_iso_utc(session.last_activity),
                     "ip_address": session.ip_address,
                     "user_agent": session.user_agent,
                     "is_active": session.is_active
@@ -673,8 +673,8 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
                 "user_id": user_id,
                 "ip_address": ip_address,
                 "device_fingerprint": device_fingerprint,
-                "created_at": get_utc_time().isoformat(),
-                "expires_at": expire_time.isoformat(),
+                "created_at": format_iso_utc(get_utc_time()),
+                "expires_at": format_iso_utc(expire_time),
                 "last_used": None  # 记录最后使用时间，用于频率限制
             })
         )
@@ -734,7 +734,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     
     # 更新最后使用时间
     current_time = get_utc_time()
-    data['last_used'] = current_time.isoformat()
+    data['last_used'] = format_iso_utc(current_time)
     redis_client.setex(keys[0], int(12 * 3600), json.dumps(data))
     
     return data.get('user_id')

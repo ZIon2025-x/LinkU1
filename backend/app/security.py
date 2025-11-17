@@ -115,7 +115,7 @@ def get_password_hash(password: str) -> str:
 def generate_strong_password(length: int = 16) -> str:
     """生成强密码（包含大小写字母、数字、特殊字符）"""
     import string
-    from app.utils.time_utils import get_utc_time
+    from app.utils.time_utils import get_utc_time, format_iso_utc
     # 确保包含各种字符类型
     uppercase = string.ascii_uppercase
     lowercase = string.ascii_lowercase
@@ -362,8 +362,8 @@ def store_refresh_token(refresh_jti: str, user_id: str, expire_time: datetime) -
             # 存储到Redis
             token_data = {
                 "user_id": user_id,
-                "created_at": get_utc_time().isoformat(),
-                "expires_at": expire_time.isoformat(),
+                "created_at": format_iso_utc(get_utc_time()),
+                "expires_at": format_iso_utc(expire_time),
             }
 
             # 设置过期时间

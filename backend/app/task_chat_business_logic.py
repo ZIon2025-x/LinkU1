@@ -12,6 +12,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models
+from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -594,7 +595,7 @@ class NegotiationTokenLogic:
             "task_id": task_id,
             "nonce": nonce_accept,
             "exp": expires_at,
-            "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+            "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
         }
         
         token_data_reject = {
@@ -604,7 +605,7 @@ class NegotiationTokenLogic:
             "task_id": task_id,
             "nonce": nonce_reject,
             "exp": expires_at,
-            "expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+            "expires_at": format_iso_utc(datetime.fromtimestamp(expires_at, tz=timezone.utc))
         }
         
         return token_accept, token_reject, token_data_accept, token_data_reject

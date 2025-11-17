@@ -126,7 +126,7 @@ def admin_login(
             "username": str(admin.username),
             "email": str(admin.email),
             "is_super_admin": bool(admin.is_super_admin),
-            "last_login": admin.last_login.isoformat() if admin.last_login else None  # type: ignore
+            "last_login": format_iso_utc(admin.last_login) if admin.last_login else None  # type: ignore
         },
         "session_id": session_info.session_id
     }
@@ -388,7 +388,7 @@ def verify_admin_code(
             "username": str(admin.username),
             "email": str(admin.email),
             "is_super_admin": bool(admin.is_super_admin),
-            "last_login": admin.last_login.isoformat() if admin.last_login else None  # type: ignore
+            "last_login": format_iso_utc(admin.last_login) if admin.last_login else None  # type: ignore
         },
         "session_id": session_info.session_id
     }
@@ -415,8 +415,8 @@ def get_admin_profile(
         "email": str(current_admin.email),
         "is_super_admin": bool(current_admin.is_super_admin),
         "is_active": bool(current_admin.is_active),
-        "created_at": current_admin.created_at.isoformat() if current_admin.created_at else "",  # type: ignore
-        "last_login": current_admin.last_login.isoformat() if current_admin.last_login else ""  # type: ignore
+        "created_at": format_iso_utc(current_admin.created_at) if current_admin.created_at else "",  # type: ignore
+        "last_login": format_iso_utc(current_admin.last_login) if current_admin.last_login else ""  # type: ignore
     }
 
 @router.post("/admin/change-password")
@@ -470,7 +470,7 @@ def service_redis_test():
         
         # 测试存储和获取
         test_key = "service_test_key"
-        test_data = {"test": "service_redis_test", "timestamp": get_utc_time().isoformat()}
+        test_data = {"test": "service_redis_test", "timestamp": format_iso_utc(get_utc_time())}
         
         # 存储测试数据
         set_result = safe_redis_set(test_key, test_data, 60)
@@ -603,7 +603,7 @@ def service_login(
             "avg_rating": float(service.avg_rating) if service.avg_rating else 0.0,  # type: ignore
             "total_ratings": int(service.total_ratings) if service.total_ratings else 0,  # type: ignore
             "is_online": bool(service.is_online),
-            "created_at": service.created_at.isoformat() if service.created_at else None  # type: ignore
+            "created_at": format_iso_utc(service.created_at) if service.created_at else None  # type: ignore
         },
         "session_id": session_info.session_id
     }
@@ -737,7 +737,7 @@ def service_refresh_token(
                 "avg_rating": float(service.avg_rating) if service.avg_rating else 0.0,  # type: ignore
                 "total_ratings": int(service.total_ratings) if service.total_ratings else 0,  # type: ignore
                 "is_online": bool(service.is_online),
-                "created_at": service.created_at.isoformat() if service.created_at else None  # type: ignore
+                "created_at": format_iso_utc(service.created_at) if service.created_at else None  # type: ignore
             },
             "session_id": new_session.session_id,
             "csrf_token": csrf_token
@@ -844,8 +844,8 @@ def get_user_profile(
         "is_verified": bool(current_user.is_verified),
         "is_suspended": bool(current_user.is_suspended),
         "is_banned": bool(current_user.is_banned),
-        "created_at": current_user.created_at.isoformat(),
-        "last_login": getattr(current_user, 'last_login', None).isoformat() if getattr(current_user, 'last_login', None) else None  # type: ignore
+        "created_at": format_iso_utc(current_user.created_at),
+        "last_login": format_iso_utc(getattr(current_user, 'last_login', None)) if getattr(current_user, 'last_login', None) else None  # type: ignore
     }
 
 @router.post("/user/logout")
@@ -862,7 +862,7 @@ def user_logout(
     if session_id:
         # 删除会话（使用原有系统）
         from app.secure_auth import SecureAuthManager
-        from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time, format_iso_utc
         SecureAuthManager.revoke_session(session_id)
     
     # 清除Cookie

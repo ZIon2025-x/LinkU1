@@ -463,8 +463,8 @@ def get_active_sessions(
                         "session_id": session.session_id[:8] + "...",
                         "device_fingerprint": session.device_fingerprint,
                         "ip_address": session.ip_address,
-                        "created_at": session.created_at.isoformat(),
-                        "last_activity": session.last_activity.isoformat(),
+                        "created_at": format_iso_utc(session.created_at),
+                        "last_activity": format_iso_utc(session.last_activity),
                         "is_current": session.session_id == current_session.session_id
                     })
         
@@ -611,8 +611,8 @@ def get_auth_status(
             },
             "session": {
                 "session_id": session.session_id[:8] + "...",
-                "created_at": session.created_at.isoformat(),
-                "last_activity": session.last_activity.isoformat(),
+                "created_at": format_iso_utc(session.created_at),
+                "last_activity": format_iso_utc(session.last_activity),
             }
         }
 

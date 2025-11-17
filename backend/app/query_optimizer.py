@@ -20,13 +20,11 @@ class QueryOptimizer:
     @staticmethod
     def get_tasks_with_relations(db: Session, skip: int = 0, limit: int = 100, **filters) -> List[models.Task]:
         """获取任务列表，预加载关联数据，避免N+1查询"""
-        from datetime import datetime
-        import pytz
+        from datetime import datetime, timezone
+        from app.utils.time_utils import get_utc_time
         
-        # 获取当前英国时间并转换为UTC时间进行比较
-        uk_tz = ZoneInfo("Europe/London")
-        now_local = datetime.now(uk_tz)
-        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        # 获取当前UTC时间（带时区）
+        now_utc = get_utc_time()
         
         query = (
             db.query(models.Task)

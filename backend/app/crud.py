@@ -338,14 +338,13 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from datetime import datetime, timedelta, timezone
-    from app.time_utils_v2 import TimeHandlerV2
     
     # 直接从数据库查询，不使用缓存（避免缓存不一致问题）
     # 用户任务数据更新频繁，缓存TTL短且容易导致数据不一致
     # 使用预加载避免N+1查询
     
     # 计算3天前的时间（用于过滤已完成超过3天的任务）
-    now_utc = TimeHandlerV2.get_utc_now()
+    now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
     tasks = (
@@ -553,10 +552,9 @@ def list_tasks(
     from sqlalchemy import or_, and_
     from sqlalchemy.orm import selectinload
     from app.models import Task, User
-    from app.time_utils_v2 import TimeHandlerV2
 
     # 使用UTC时间进行过滤
-    now_utc = TimeHandlerV2.get_utc_now()
+    now_utc = get_utc_time()
 
     # 构建基础查询，直接在数据库层面完成所有过滤
     query = (
@@ -642,11 +640,10 @@ def count_tasks(
     from sqlalchemy import or_
 
     from app.models import Task
-    from app.time_utils_v2 import TimeHandlerV2
     from datetime import timezone
 
     # 使用UTC时间进行过滤
-    now_utc = TimeHandlerV2.get_utc_now()
+    now_utc = get_utc_time()
 
     # 构建基础查询 - 需要手动过滤过期任务
     query = db.query(Task).filter(Task.status == "open")
@@ -1003,7 +1000,6 @@ def get_task_history(db: Session, task_id: int):
 def send_message(db: Session, sender_id: str, receiver_id: str, content: str, message_id: str = None, timezone_str: str = "Europe/London", local_time_str: str = None, image_id: str = None):
     from app.models import Message
     from datetime import datetime, timedelta
-    from app.time_utils import TimeHandler
 
     # 如果有消息ID，先检查是否已存在相同ID的消息
     if message_id:
@@ -1039,13 +1035,28 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
     # 处理时间 - 统一使用UTC时间
     if local_time_str:
         # 使用用户提供的本地时间
-        utc_time, tz_info, local_time = TimeHandler.parse_local_time_to_utc(
-            local_time_str, timezone_str, "later"
-        )
+        from app.utils.time_utils import parse_local_as_utc, LONDON
+        from zoneinfo import ZoneInfo
+        from datetime import datetime as dt
+        
+        # 解析本地时间字符串为datetime对象
+        if 'T' in local_time_str:
+            local_dt = dt.fromisoformat(local_time_str.replace('Z', '+00:00'))
+        else:
+            local_dt = dt.strptime(local_time_str, "%Y-%m-%d %H:%M")
+        
+        # 如果已经是带时区的，先转换为naive
+        if local_dt.tzinfo is not None:
+            local_dt = local_dt.replace(tzinfo=None)
+        
+        # 使用新的时间解析函数
+        tz = ZoneInfo(timezone_str) if timezone_str != "Europe/London" else LONDON
+        utc_time = parse_local_as_utc(local_dt, tz)
+        tz_info = timezone_str
+        local_time = local_time_str
     else:
         # 使用当前UTC时间
-        from app.time_utils_v2 import TimeHandlerV2
-        utc_time = TimeHandlerV2.get_utc_now()
+        utc_time = get_utc_time()
         tz_info = timezone_str
         local_time = None
 
@@ -1531,7 +1542,6 @@ def delete_task_safely(db: Session, task_id: int):
 def cancel_expired_tasks(db: Session):
     """自动取消已过期的未接受任务 - 使用UTC时间进行比较，并同步更新参与者状态"""
     from datetime import datetime, timedelta, timezone
-    from app.time_utils_v2 import TimeHandlerV2
     import logging
     from sqlalchemy import text
 
@@ -1541,7 +1551,7 @@ def cancel_expired_tasks(db: Session):
     
     try:
         # 获取当前UTC时间
-        now_utc = TimeHandlerV2.get_utc_now()
+        now_utc = get_utc_time()
         logger.info(f"开始检查过期任务，当前UTC时间: {now_utc}")
 
         # 使用数据库查询直接找到过期的任务，避免逐个检查
@@ -1716,13 +1726,12 @@ def cleanup_completed_tasks_files(db: Session):
     """清理已完成超过3天的任务的图片和文件（公开和私密）"""
     from app.models import Task
     from datetime import timedelta
-    from app.time_utils_v2 import TimeHandlerV2
     import logging
     
     logger = logging.getLogger(__name__)
     
     # 计算3天前的时间
-    now_utc = TimeHandlerV2.get_utc_now()
+    now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
     # 处理时区：将 three_days_ago 转换为 naive datetime（与数据库中的 completed_at 格式一致）

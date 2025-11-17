@@ -11,7 +11,6 @@ from sqlalchemy import or_
 
 from app.deps import get_db
 from app.models import Task
-from app.time_utils_v2 import TimeHandlerV2
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ def generate_sitemap(db: Session = Depends(get_db)):
     """生成动态sitemap.xml，包含所有开放的任务"""
     try:
         # 获取当前UTC时间
-        now_utc = TimeHandlerV2.get_utc_now()
+        now_utc = get_utc_time()
         
         # 获取所有开放且未过期的任务（包括灵活模式任务，deadline 为 NULL）
         tasks = db.query(Task).filter(

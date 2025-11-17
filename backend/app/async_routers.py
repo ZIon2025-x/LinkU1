@@ -281,7 +281,7 @@ async def create_task_async(
             "id": db_task.id,
             "title": db_task.title,
             "description": db_task.description,
-            "deadline": db_task.deadline.isoformat() if db_task.deadline else None,
+            "deadline": format_iso_utc(db_task.deadline) if db_task.deadline else None,
             "reward": float(db_task.agreed_reward) if db_task.agreed_reward is not None else float(db_task.base_reward) if db_task.base_reward is not None else 0.0,
             "base_reward": float(db_task.base_reward) if db_task.base_reward else None,
             "agreed_reward": float(db_task.agreed_reward) if db_task.agreed_reward else None,
@@ -292,7 +292,7 @@ async def create_task_async(
             "taker_id": db_task.taker_id,
             "status": db_task.status,
             "task_level": db_task.task_level,
-            "created_at": db_task.created_at.isoformat() if db_task.created_at else None,
+            "created_at": format_iso_utc(db_task.created_at) if db_task.created_at else None,
             "is_public": int(db_task.is_public) if db_task.is_public is not None else 1,
             "images": images_list  # 返回图片列表
         }
@@ -434,7 +434,7 @@ async def apply_for_task(
             )
         
         # 创建申请记录
-        from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time, format_iso_utc
         from decimal import Decimal
         
         current_time = get_utc_time()
@@ -545,10 +545,10 @@ async def get_user_applications(
                     "task_location": task.location,
                     "status": app.status,
                     "message": app.message,
-                    "created_at": app.created_at.isoformat(),
+                    "created_at": format_iso_utc(app.created_at),
                     "task_poster_id": task.poster_id,
                     "task_status": task.status,  # 添加任务状态，用于前端过滤已取消的任务
-                    "task_deadline": task.deadline.isoformat() if task.deadline else None  # 添加任务截止日期
+                    "task_deadline": format_iso_utc(task.deadline) if task.deadline else None  # 添加任务截止日期
                 })
         
         return result
@@ -610,7 +610,7 @@ async def get_task_applications(
                     "message": app.message,
                     "negotiated_price": negotiated_price_value,  # 从 task_applications.negotiated_price 字段读取
                     "currency": app.currency or "GBP",  # 从 task_applications.currency 字段读取
-                    "created_at": app.created_at.isoformat() if app.created_at else None,
+                    "created_at": format_iso_utc(app.created_at) if app.created_at else None,
                     "status": app.status
                 })
         

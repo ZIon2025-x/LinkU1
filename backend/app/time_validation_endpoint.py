@@ -6,7 +6,16 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from app.time_utils import TimeHandler
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from app.utils.time_utils import (
+    parse_local_as_utc, 
+    handle_ambiguous_time, 
+    detect_dst_transition_dates,
+    to_user_timezone,
+    format_iso_utc,
+    LONDON
+)
 
 router = APIRouter()
 
@@ -38,40 +47,76 @@ async def validate_time(request: TimeValidationRequest):
     验证时间输入，检查歧义和无效时间
     """
     try:
-        # 验证时间输入
-        validation_result = TimeHandler.validate_time_input(
-            request.local_time, 
-            request.timezone
-        )
+        # 解析时间字符串
+        try:
+            local_dt = datetime.strptime(request.local_time, "%Y-%m-%d %H:%M")
+        except ValueError:
+            return TimeValidationResponse(
+                is_valid=False,
+                is_ambiguous=False,
+                is_invalid=True,
+                suggestions=["时间格式错误，请使用 YYYY-MM-DD HH:MM 格式"],
+                parsed_time=None,
+                utc_time=None,
+                timezone_info=None,
+                is_dst=None
+            )
+        
+        # 获取时区
+        tz = ZoneInfo(request.timezone) if request.timezone != "Europe/London" else LONDON
+        
+        # 验证时间输入（检查DST切换日期）
+        is_ambiguous = False
+        is_invalid = False
+        suggestions = []
+        
+        if request.timezone == "Europe/London":
+            # 检查DST切换日期
+            year = local_dt.year
+            dst_dates = detect_dst_transition_dates(year, LONDON)
+            
+            date_str = local_dt.strftime("%Y-%m-%d")
+            time_str = local_dt.strftime("%H:%M")
+            
+            # 检查春季跳时（01:00-02:00不存在）
+            if (dst_dates["spring_transition"] and 
+                date_str == dst_dates["spring_transition"] and 
+                "01:00" <= time_str < "02:00"):
+                is_invalid = True
+                suggestions.append("此时间不存在，请选择02:00或之后的时间")
+            
+            # 检查秋季回拨（01:00-02:00歧义）
+            elif (dst_dates["autumn_transition"] and 
+                  date_str == dst_dates["autumn_transition"] and 
+                  "01:00" <= time_str < "02:00"):
+                is_ambiguous = True
+                suggestions.append("此时间存在歧义，请选择BST或GMT")
         
         # 如果时间有效，尝试解析为UTC
         utc_time = None
         timezone_info = None
         is_dst = None
         
-        if validation_result["is_valid"] and not validation_result["is_invalid"]:
+        if not is_invalid:
             try:
-                utc_dt, tz_info, local_time = TimeHandler.parse_local_time_to_utc(
-                    request.local_time,
-                    request.timezone,
-                    request.disambiguation
-                )
-                utc_time = utc_dt.isoformat()
-                timezone_info = tz_info
+                utc_dt = handle_ambiguous_time(local_dt, tz, request.disambiguation)
+                utc_time = format_iso_utc(utc_dt)
+                timezone_info = request.timezone
                 
                 # 检查是否夏令时
                 if request.timezone == "Europe/London":
-                    is_dst = "BST" in tz_info
+                    london_time = to_user_timezone(utc_dt, LONDON)
+                    is_dst = london_time.dst().total_seconds() > 0
                     
             except Exception as e:
-                validation_result["suggestions"].append(f"时间解析错误: {str(e)}")
+                suggestions.append(f"时间解析错误: {str(e)}")
         
         return TimeValidationResponse(
-            is_valid=validation_result["is_valid"],
-            is_ambiguous=validation_result["is_ambiguous"],
-            is_invalid=validation_result["is_invalid"],
-            suggestions=validation_result["suggestions"],
-            parsed_time=validation_result["parsed_time"],
+            is_valid=not is_invalid,
+            is_ambiguous=is_ambiguous,
+            is_invalid=is_invalid,
+            suggestions=suggestions,
+            parsed_time=local_dt.strftime("%Y-%m-%d %H:%M:%S"),
             utc_time=utc_time,
             timezone_info=timezone_info,
             is_dst=is_dst
@@ -87,15 +132,14 @@ async def get_dst_info(year: int):
     """
     try:
         # 获取DST切换日期
-        dst_dates = TimeHandler.detect_dst_transition_dates(year)
+        dst_dates = detect_dst_transition_dates(year, LONDON)
         
         # 检查当前DST状态
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
+        from datetime import timedelta
+        from app.utils.time_utils import get_utc_time
         
-        uk_zone = ZoneInfo("Europe/London")
-        current_time = datetime.now(uk_zone)
-        current_dst = current_time.dst() != datetime.timedelta(0)
+        current_time = to_user_timezone(get_utc_time(), LONDON)
+        current_dst = current_time.dst() != timedelta(0)
         
         return DSTInfoResponse(
             year=year,
@@ -114,16 +158,19 @@ async def convert_to_utc(request: TimeValidationRequest):
     将本地时间转换为UTC时间
     """
     try:
-        utc_dt, tz_info, local_time = TimeHandler.parse_local_time_to_utc(
-            request.local_time,
-            request.timezone,
-            request.disambiguation
-        )
+        # 解析时间字符串
+        local_dt = datetime.strptime(request.local_time, "%Y-%m-%d %H:%M")
+        
+        # 获取时区
+        tz = ZoneInfo(request.timezone) if request.timezone != "Europe/London" else LONDON
+        
+        # 转换为UTC
+        utc_dt = handle_ambiguous_time(local_dt, tz, request.disambiguation)
         
         return {
-            "utc_time": utc_dt.isoformat(),
-            "timezone_info": tz_info,
-            "local_time": local_time,
+            "utc_time": format_iso_utc(utc_dt),
+            "timezone_info": request.timezone,
+            "local_time": request.local_time,
             "success": True
         }
         
@@ -139,13 +186,29 @@ async def format_time(
     将UTC时间格式化为用户时区显示
     """
     try:
-        from datetime import datetime
+        from datetime import timedelta
+        from app.utils.time_utils import parse_iso_utc
         
         # 解析UTC时间
-        utc_dt = datetime.fromisoformat(utc_time.replace('Z', '+00:00'))
+        utc_dt = parse_iso_utc(utc_time)
         
-        # 格式化为用户时区
-        formatted = TimeHandler.format_utc_to_user_timezone(utc_dt, user_timezone)
+        # 获取时区
+        tz = ZoneInfo(user_timezone) if user_timezone != "Europe/London" else LONDON
+        
+        # 转换为用户时区
+        local_dt = to_user_timezone(utc_dt, tz)
+        
+        # 检查是否夏令时
+        is_dst = local_dt.dst() != timedelta(0)
+        
+        # 格式化
+        formatted = {
+            "local_time": local_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "timezone": f"Europe/London ({'BST' if is_dst else 'GMT'})" if user_timezone == "Europe/London" else user_timezone,
+            "utc_time": format_iso_utc(utc_dt),
+            "is_dst": is_dst,
+            "offset_hours": local_dt.utcoffset().total_seconds() / 3600
+        }
         
         return {
             "formatted_time": formatted,
@@ -176,8 +239,8 @@ async def get_timezone_info():
             "is_dst": is_dst,
             "timezone_display": f"Europe/London ({'BST' if is_dst else 'GMT'})",
             "offset_hours": offset_hours,
-            "current_time": current_time.isoformat(),
-            "utc_time": get_utc_time().isoformat()
+            "current_time": format_iso_utc(current_time),
+            "utc_time": format_iso_utc(get_utc_time())
         }
         
     except Exception as e:
