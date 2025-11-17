@@ -276,7 +276,7 @@ class AdminAuthManager:
     @staticmethod
     def _is_session_expired(session_data: dict) -> bool:
         """检查会话是否过期"""
-        last_activity = datetime.fromisoformat(session_data['last_activity'])
+        last_activity = parse_iso_utc(session_data['last_activity'])
         expire_time = last_activity + timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS)
         return get_utc_time() > expire_time
     
@@ -305,7 +305,7 @@ class AdminAuthManager:
                             # 检查时间过期
                             last_activity_str = data.get('last_activity', data.get('created_at'))
                             if last_activity_str:
-                                last_activity = datetime.fromisoformat(last_activity_str)
+                                last_activity = parse_iso_utc(last_activity_str)
                                 if get_utc_time() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     # 删除过期会话
                                     redis_client.delete(key_str)
@@ -352,7 +352,7 @@ class AdminAuthManager:
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
                             try:
-                                last_activity = datetime.fromisoformat(last_activity_str)
+                                last_activity = parse_iso_utc(last_activity_str)
                                 if get_utc_time() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     redis_client.delete(key_str)
                                     cleaned_count += 1
@@ -395,7 +395,7 @@ class AdminAuthManager:
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
                             try:
-                                last_activity = datetime.fromisoformat(last_activity_str)
+                                last_activity = parse_iso_utc(last_activity_str)
                                 if get_utc_time() - last_activity <= timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     active_sessions.append(data)
                             except (ValueError, TypeError):
@@ -572,7 +572,7 @@ def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_
     
     # 检查是否过期
     try:
-        expires_at = datetime.fromisoformat(token_data['expires_at'])
+        expires_at = parse_iso_utc(token_data['expires_at'])
         if get_utc_time() > expires_at:
             # 过期了，删除token
             redis_client.delete(keys[0])
@@ -595,7 +595,7 @@ def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_
     # 检查频率限制（20分钟内最多使用一次）
     last_used_str = token_data.get('last_used')
     if last_used_str:
-        last_used = datetime.fromisoformat(last_used_str)
+        last_used = parse_iso_utc(last_used_str)
         if get_utc_time() - last_used < timedelta(minutes=20):
             logger.warning(f"[ADMIN_AUTH] 管理员refresh token 使用过于频繁: {refresh_token}")
             return None

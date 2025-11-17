@@ -145,14 +145,14 @@ class ServiceAuthManager:
                         # 检查是否过期
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
-                            last_activity = datetime.fromisoformat(last_activity_str)
+                            last_activity = parse_iso_utc(last_activity_str)
                             if get_utc_time() - last_activity <= timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
                                 # 转换为ServiceSessionInfo对象
                                 session_info = ServiceSessionInfo(
                                     session_id=data['session_id'],
                                     service_id=data['service_id'],
-                                    created_at=datetime.fromisoformat(data['created_at']),
-                                    last_activity=datetime.fromisoformat(last_activity_str),
+                                    created_at=parse_iso_utc(data['created_at']),
+                                    last_activity=parse_iso_utc(last_activity_str),
                                     device_fingerprint=data.get('device_fingerprint', ''),
                                     ip_address=data.get('ip_address', ''),
                                     user_agent=data.get('user_agent', ''),
@@ -259,9 +259,9 @@ class ServiceAuthManager:
         
         # 转换字符串日期时间为datetime对象
         if 'created_at' in session_data and isinstance(session_data['created_at'], str):
-            session_data['created_at'] = datetime.fromisoformat(session_data['created_at'])
+            session_data['created_at'] = parse_iso_utc(session_data['created_at'])
         if 'last_activity' in session_data and isinstance(session_data['last_activity'], str):
-            session_data['last_activity'] = datetime.fromisoformat(session_data['last_activity'])
+            session_data['last_activity'] = parse_iso_utc(session_data['last_activity'])
         
         return ServiceSessionInfo(**session_data)
     
@@ -421,7 +421,7 @@ class ServiceAuthManager:
     def _is_session_expired(session_data: dict) -> bool:
         """检查会话是否过期"""
         try:
-            last_activity = datetime.fromisoformat(session_data['last_activity'])
+            last_activity = parse_iso_utc(session_data['last_activity'])
             expire_time = last_activity + timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS)
             current_time = get_utc_time()
             is_expired = current_time > expire_time
@@ -457,7 +457,7 @@ class ServiceAuthManager:
                             # 检查时间过期
                             last_activity_str = data.get('last_activity', data.get('created_at'))
                             if last_activity_str:
-                                last_activity = datetime.fromisoformat(last_activity_str)
+                                last_activity = parse_iso_utc(last_activity_str)
                                 if get_utc_time() - last_activity > timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS):
                                     # 删除过期会话
                                     redis_client.delete(key_str)
@@ -472,9 +472,13 @@ class ServiceAuthManager:
                 for session_id, session in service_active_sessions.items():
                     # 确保last_activity是datetime对象
                     if isinstance(session.last_activity, str):
-                        last_activity = datetime.fromisoformat(session.last_activity)
+                        last_activity = parse_iso_utc(session.last_activity)
                     else:
                         last_activity = session.last_activity
+                        # 确保是aware datetime
+                        if last_activity.tzinfo is None:
+                            from datetime import timezone
+                            last_activity = last_activity.replace(tzinfo=timezone.utc)
                     
                     expire_time = last_activity + timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS)
                     if current_time > expire_time:
@@ -503,9 +507,13 @@ class ServiceAuthManager:
                 if session.service_id == service_id:
                     # 确保last_activity是datetime对象
                     if isinstance(session.last_activity, str):
-                        last_activity = datetime.fromisoformat(session.last_activity)
+                        last_activity = parse_iso_utc(session.last_activity)
                     else:
                         last_activity = session.last_activity
+                        # 确保是aware datetime
+                        if last_activity.tzinfo is None:
+                            from datetime import timezone
+                            last_activity = last_activity.replace(tzinfo=timezone.utc)
                     
                     expire_time = last_activity + timedelta(hours=SERVICE_SESSION_EXPIRE_HOURS)
                     if current_time > expire_time:
@@ -700,7 +708,7 @@ def verify_service_refresh_token(refresh_token: str, ip_address: str = "", devic
         # 检查是否过期
         expires_at_str = data.get('expires_at')
         if expires_at_str:
-            expires_at = datetime.fromisoformat(expires_at_str)
+            expires_at = parse_iso_utc(expires_at_str)
             if get_utc_time() > expires_at:
                 # 过期了，删除
                 redis_client.delete(f"service_refresh_token:{refresh_token}")
@@ -721,7 +729,7 @@ def verify_service_refresh_token(refresh_token: str, ip_address: str = "", devic
         # 检查频率限制（20分钟内最多使用一次）
         last_used_str = data.get('last_used')
         if last_used_str:
-            last_used = datetime.fromisoformat(last_used_str)
+            last_used = parse_iso_utc(last_used_str)
             if get_utc_time() - last_used < timedelta(minutes=20):
                 logger.warning(f"[SERVICE_AUTH] 客服refresh token 使用过于频繁: {refresh_token}")
                 return None

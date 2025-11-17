@@ -107,15 +107,15 @@ class SecureAuthManager:
                         # 检查是否过期
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
-                            last_activity = datetime.fromisoformat(last_activity_str)
+                            last_activity = parse_iso_utc(last_activity_str)
                             if get_utc_time() - last_activity <= timedelta(hours=SESSION_EXPIRE_HOURS):
                                 # 转换为SessionInfo对象
                                 session_info = SessionInfo(
                                     user_id=data['user_id'],
                                     session_id=data['session_id'],
                                     device_fingerprint=data.get('device_fingerprint', ''),
-                                    created_at=datetime.fromisoformat(data['created_at']),
-                                    last_activity=datetime.fromisoformat(last_activity_str),
+                                    created_at=parse_iso_utc(data['created_at']),
+                                    last_activity=parse_iso_utc(last_activity_str),
                                     ip_address=data.get('ip_address', ''),
                                     user_agent=data.get('user_agent', ''),
                                     is_active=data.get('is_active', True)
@@ -278,8 +278,8 @@ class SecureAuthManager:
                 user_id=data["user_id"],
                 session_id=data["session_id"],
                 device_fingerprint=data["device_fingerprint"],
-                created_at=datetime.fromisoformat(data["created_at"]),
-                last_activity=datetime.fromisoformat(data["last_activity"]),
+                created_at=parse_iso_utc(data["created_at"]),
+                last_activity=parse_iso_utc(data["last_activity"]),
                 ip_address=data["ip_address"],
                 user_agent=data["user_agent"],
                 refresh_token=data.get("refresh_token", ""),
@@ -447,7 +447,7 @@ class SecureAuthManager:
                             # 检查时间过期
                             last_activity_str = data.get('last_activity', data.get('created_at'))
                             if last_activity_str:
-                                last_activity = datetime.fromisoformat(last_activity_str)
+                                last_activity = parse_iso_utc(last_activity_str)
                                 if get_utc_time() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
                                     # 删除过期会话
                                     redis_client.delete(key_str)
@@ -706,7 +706,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     # 检查是否过期
     expires_at_str = data.get('expires_at')
     if expires_at_str:
-        expires_at = datetime.fromisoformat(expires_at_str)
+        expires_at = parse_iso_utc(expires_at_str)
         if get_utc_time() > expires_at:
             # 过期了，删除
             redis_client.delete(keys[0])
@@ -727,7 +727,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     # 检查频率限制（20分钟内最多使用一次）
     last_used_str = data.get('last_used')
     if last_used_str:
-        last_used = datetime.fromisoformat(last_used_str)
+        last_used = parse_iso_utc(last_used_str)
         if get_utc_time() - last_used < timedelta(minutes=20):
             logger.warning(f"[SECURE_AUTH] refresh token 使用过于频繁: {refresh_token}")
             return None
@@ -800,7 +800,7 @@ def cleanup_expired_sessions_aggressive() -> int:
                     should_delete = False
                     if expires_at_str:
                         try:
-                            expires_at = datetime.fromisoformat(expires_at_str)
+                            expires_at = parse_iso_utc(expires_at_str)
                             if current_time > expires_at:
                                 should_delete = True
                         except Exception:
@@ -810,7 +810,7 @@ def cleanup_expired_sessions_aggressive() -> int:
                     if not should_delete:
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
-                            last_activity = datetime.fromisoformat(last_activity_str)
+                            last_activity = parse_iso_utc(last_activity_str)
                             if current_time - last_activity > timedelta(minutes=60):
                                 should_delete = True
 
@@ -851,7 +851,7 @@ def cleanup_expired_sessions_aggressive() -> int:
                 if not expires_at_str:
                     continue
                 try:
-                    expires_at = datetime.fromisoformat(expires_at_str)
+                    expires_at = parse_iso_utc(expires_at_str)
                     if current_time > expires_at:
                         redis_client.delete(key)
                         cleaned_count += 1

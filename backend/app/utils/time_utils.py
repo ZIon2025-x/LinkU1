@@ -169,6 +169,28 @@ def format_iso_utc(dt: datetime) -> str:
     return dt.isoformat().replace('+00:00', 'Z')
 
 
+def parse_iso_utc(iso_string: str) -> datetime:
+    """
+    安全地解析ISO-8601格式的时间字符串，确保返回UTC aware datetime
+    
+    用于从Redis/数据库等存储中读取时间数据，确保与get_utc_time()兼容
+    
+    Args:
+        iso_string: ISO-8601格式的时间字符串（可能带或不带时区信息）
+    
+    Returns:
+        datetime: UTC时间对象（带时区）
+    """
+    dt = datetime.fromisoformat(iso_string)
+    # 如果是naive时间，假设是UTC（用于向后兼容旧数据）
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        # 如果有时区信息，转换为UTC
+        dt = dt.astimezone(timezone.utc)
+    return dt
+
+
 def detect_dst_transition_dates(year: int, tz: ZoneInfo = LONDON) -> dict:
     """
     检测指定年份的DST切换日期
