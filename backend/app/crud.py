@@ -6,7 +6,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 # 密码加密上下文已移至 app.security 模块
 # 请使用: from app.security import pwd_context
@@ -313,10 +313,9 @@ def create_user(db: Session, user: schemas.UserCreate):
             break
 
     # 处理同意时间
-    from datetime import datetime
     terms_agreed_at = None
     if user.terms_agreed_at:
-        terms_agreed_at = datetime.fromisoformat(user.terms_agreed_at.replace('Z', '+00:00'))
+        terms_agreed_at = parse_iso_utc(user.terms_agreed_at.replace('Z', '+00:00') if user.terms_agreed_at.endswith('Z') else user.terms_agreed_at)
     
     db_user = models.User(
         id=user_id,

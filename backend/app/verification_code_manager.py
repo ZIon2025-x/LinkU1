@@ -9,7 +9,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 from app.redis_cache import get_redis_client
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def get_code_info(email: str) -> Optional[dict]:
         # 检查是否过期
         expires_at_str = code_data.get("expires_at")
         if expires_at_str:
-            expires_at = datetime.fromisoformat(expires_at_str)
+            expires_at = parse_iso_utc(expires_at_str)
             if get_utc_time() > expires_at:
                 # 已过期，删除
                 redis_client.delete(key)

@@ -26,6 +26,7 @@ from app.csrf import (
     cookie_bearer_readonly,
     sync_cookie_bearer_readonly,
 )
+from app.utils.time_utils import get_utc_time
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
 
@@ -150,7 +151,7 @@ def check_user_status(current_user=Depends(authenticate_with_session)):
             detail="Authentication required"
         )
     
-    now = datetime.get_utc_time()
+    now = get_utc_time()
     if current_user.is_banned:
         raise HTTPException(status_code=403, detail="User is banned.")
     if current_user.is_suspended or (

@@ -507,7 +507,7 @@ class UserRedisCleanup:
             if not last_activity_str:
                 return True
             
-            last_activity = datetime.fromisoformat(last_activity_str)
+            last_activity = parse_iso_utc(last_activity_str)
             # 会话24小时过期
             return get_utc_time() - last_activity > timedelta(hours=24)
         except Exception as e:
@@ -521,7 +521,7 @@ class UserRedisCleanup:
             if not expires_at_str:
                 return True
             
-            expires_at = datetime.fromisoformat(expires_at_str)
+            expires_at = parse_iso_utc(expires_at_str)
             # 检查是否已过期
             return get_utc_time() > expires_at
         except Exception as e:
@@ -537,7 +537,7 @@ class UserRedisCleanup:
                 if field in data:
                     time_str = data[field]
                     if time_str:
-                        created_time = datetime.fromisoformat(time_str)
+                        created_time = parse_iso_utc(time_str)
                         # 缓存7天过期
                         return get_utc_time() - created_time > timedelta(days=7)
             return False

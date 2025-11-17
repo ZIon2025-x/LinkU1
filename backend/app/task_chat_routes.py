@@ -23,7 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +296,7 @@ async def get_task_messages(
                 cursor_parts = cursor.split('_', 1)
                 if len(cursor_parts) == 2:
                     cursor_time_str, cursor_id_str = cursor_parts
-                    cursor_time = datetime.fromisoformat(cursor_time_str.replace('Z', '+00:00'))
+                    cursor_time = parse_iso_utc(cursor_time_str.replace('Z', '+00:00') if cursor_time_str.endswith('Z') else cursor_time_str)
                     cursor_id = int(cursor_id_str)
                     
                     # 查询更旧的消息：created_at < cursor_time OR (created_at = cursor_time AND id < cursor_id)

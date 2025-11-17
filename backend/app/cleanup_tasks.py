@@ -7,7 +7,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class CleanupTasks:
                                         time_str = data.get('last_activity', data.get('created_at'))
                                         if time_str:
                                             try:
-                                                created_time = datetime.fromisoformat(time_str)
+                                                created_time = parse_iso_utc(time_str)
                                                 # 如果超过7天，删除
                                                 if get_utc_time() - created_time > timedelta(days=7):
                                                     redis_cache.delete(key)

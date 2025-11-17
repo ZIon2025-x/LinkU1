@@ -1710,9 +1710,9 @@ def user_profile(
         raise HTTPException(status_code=404, detail="User not found")
 
     # 计算注册天数
-    import datetime
+    from app.utils.time_utils import get_utc_time
 
-    days_since_joined = (datetime.get_utc_time() - user.created_at).days
+    days_since_joined = (get_utc_time() - user.created_at).days
 
     # 获取用户的任务统计（限制数量以提高性能）
     tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
@@ -2270,9 +2270,8 @@ def admin_set_user_status(
     if is_suspended is not None:
         user.is_suspended = is_suspended
     if suspend_until:
-        import datetime
-
-        user.suspend_until = datetime.datetime.fromisoformat(suspend_until)
+        from app.utils.time_utils import parse_iso_utc
+        user.suspend_until = parse_iso_utc(suspend_until)
     db.commit()
     return {"message": f"User {user_id} status updated."}
 
@@ -4861,27 +4860,13 @@ def get_chat_timeout_status(
         last_message_time = chat["last_message_at"]
 
         # 统一处理时间格式 - 使用UTC时间
-        from app.utils.time_utils import get_utc_time, LONDON, to_user_timezone, parse_local_as_utc
+        from app.utils.time_utils import get_utc_time, LONDON, to_user_timezone, parse_iso_utc
 
         current_time = get_utc_time()
 
         if isinstance(last_message_time, str):
-            # 处理字符串格式的时间
-            if last_message_time.endswith("Z"):
-                # UTC时间，直接解析
-                last_message_time = datetime.fromisoformat(
-                    last_message_time.replace("Z", "+00:00")
-                )
-            elif "+" in last_message_time or last_message_time.endswith("Z"):
-                # 带时区信息，直接解析
-                last_message_time = datetime.fromisoformat(last_message_time)
-            else:
-                # 如果没有时区信息，假设是UTC时间（数据库迁移后应该都是带时区的）
-                last_message_time = datetime.fromisoformat(last_message_time)
-                if last_message_time.tzinfo is None:
-                    # 旧数据兼容：假设是UTC时间
-                    last_message_time = last_message_time.replace(tzinfo=timezone.utc)
-                    logger.info(f"处理无时区信息的时间，假设为UTC: {last_message_time}")
+            # 处理字符串格式的时间，统一使用 parse_iso_utc 确保返回 aware datetime
+            last_message_time = parse_iso_utc(last_message_time.replace("Z", "+00:00") if last_message_time.endswith("Z") else last_message_time)
         elif hasattr(last_message_time, "replace"):
             # 如果是datetime对象但没有时区信息，假设是UTC
             if last_message_time.tzinfo is None:

@@ -15,7 +15,7 @@ from fastapi import HTTPException
 
 from app import models, schemas
 from app.security import get_password_hash
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, parse_iso_utc
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class AsyncUserCRUD:
             # 处理同意时间
             terms_agreed_at = None
             if user.terms_agreed_at:
-                terms_agreed_at = datetime.fromisoformat(user.terms_agreed_at.replace('Z', '+00:00'))
+                terms_agreed_at = parse_iso_utc(user.terms_agreed_at.replace('Z', '+00:00') if user.terms_agreed_at.endswith('Z') else user.terms_agreed_at)
             
             db_user = models.User(
                 id=user_id,
