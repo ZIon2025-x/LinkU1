@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
+from app.utils.time_utils import format_iso_utc
 from typing import Dict, Any, Optional
 from fastapi import Request, Response
 from app.config import get_settings
@@ -47,7 +48,7 @@ class SecurityMonitor:
         try:
             # 构建日志数据
             log_data = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": format_iso_utc(datetime.now(timezone.utc)),
                 "event_type": event_type,
                 "user_id": user_id,
                 "ip_address": ip_address,

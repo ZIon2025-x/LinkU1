@@ -98,6 +98,6 @@ def get_kpi_summary() -> Dict[str, Any]:
     return {
         "thresholds": KPI_THRESHOLDS,
         "alert_levels": ALERT_LEVELS,
-        "last_updated": datetime.now().isoformat()
+        "last_updated": format_iso_utc(get_utc_time())
     }
 

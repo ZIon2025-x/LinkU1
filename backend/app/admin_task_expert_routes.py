@@ -6,6 +6,7 @@
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
+from app.utils.time_utils import format_iso_utc
 from decimal import Decimal
 
 from fastapi import (
@@ -236,7 +237,7 @@ async def review_expert_application(
                     "rating": user_avg_rating,  # 使用用户的平均评分
                     "total_services": 0,
                     "completed_tasks": user_completed_tasks,  # 使用用户已完成任务数量
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": format_iso_utc(datetime.now(timezone.utc)),
                 }
                 
                 return {

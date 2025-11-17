@@ -5849,8 +5849,8 @@ def get_public_job_positions(
                 "tags": json.loads(position.tags) if position.tags else [],
                 "tags_en": json.loads(position.tags_en) if position.tags_en else [],
                 "is_active": bool(position.is_active),
-                "created_at": position.created_at.isoformat() if position.created_at else None,
-                "updated_at": position.updated_at.isoformat() if position.updated_at else None
+                "created_at": format_iso_utc(position.created_at) if position.created_at else None,
+                "updated_at": format_iso_utc(position.updated_at) if position.updated_at else None
             }
             processed_positions.append(position_dict)
         

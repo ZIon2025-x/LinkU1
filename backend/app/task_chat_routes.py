@@ -435,7 +435,7 @@ async def get_task_messages(
             "poster_id": task.poster_id,
             "taker_id": task.taker_id,
             "status": task.status,
-            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
             "base_reward": float(task.base_reward) if task.base_reward else None,
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
             "currency": task.currency or "GBP"

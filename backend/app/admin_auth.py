@@ -410,8 +410,8 @@ class AdminAuthManager:
                         active_sessions.append({
                             'session_id': session.session_id,
                             'admin_id': session.admin_id,
-                            'created_at': session.created_at.isoformat() if session.created_at else None,
-                            'last_activity': session.last_activity.isoformat() if session.last_activity else None,
+                            'created_at': format_iso_utc(session.created_at) if session.created_at else None,
+                            'last_activity': format_iso_utc(session.last_activity) if session.last_activity else None,
                         })
         
         return active_sessions

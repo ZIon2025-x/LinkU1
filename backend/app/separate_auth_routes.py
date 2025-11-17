@@ -651,7 +651,7 @@ def service_refresh(
                 "avg_rating": float(current_service.avg_rating) if current_service.avg_rating else 0.0,  # type: ignore
                 "total_ratings": int(current_service.total_ratings) if current_service.total_ratings else 0,  # type: ignore
                 "is_online": bool(current_service.is_online),
-                "created_at": current_service.created_at.isoformat() if current_service.created_at else None  # type: ignore
+                "created_at": format_iso_utc(current_service.created_at) if current_service.created_at else None  # type: ignore
             },
             "session_id": session_info.session_id
         }
@@ -805,7 +805,7 @@ def get_service_profile(
         "avg_rating": float(current_service.avg_rating) if current_service.avg_rating else 0.0,  # type: ignore
         "total_ratings": int(current_service.total_ratings) if current_service.total_ratings else 0,  # type: ignore
         "is_online": bool(current_service.is_online),
-        "created_at": current_service.created_at.isoformat() if current_service.created_at else None  # type: ignore
+        "created_at": format_iso_utc(current_service.created_at) if current_service.created_at else None  # type: ignore
     }
 
 @router.post("/service/change-password")

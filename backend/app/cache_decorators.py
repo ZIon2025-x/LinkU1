@@ -8,6 +8,7 @@ from typing import Callable, Any, Optional
 import orjson
 
 from app.redis_cache import get_redis_client
+from app.utils.time_utils import format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -92,8 +93,8 @@ def cache_task_detail_sync(ttl: int = 300):
                                             cache_data[col.key] = float(value)
                                         # 处理 datetime 类型
                                         elif isinstance(value, datetime):
-                                            cache_data[col.key] = value.isoformat()
-                                        # 处理 date 类型
+                                            cache_data[col.key] = format_iso_utc(value)
+                                        # 处理 date 类型（date 对象保持 isoformat）
                                         elif isinstance(value, date) and not isinstance(value, datetime):
                                             cache_data[col.key] = value.isoformat()
                                         else:
@@ -108,7 +109,7 @@ def cache_task_detail_sync(ttl: int = 300):
                                             if isinstance(value, Decimal):
                                                 cache_data[key] = float(value)
                                             elif isinstance(value, datetime):
-                                                cache_data[key] = value.isoformat()
+                                                cache_data[key] = format_iso_utc(value)
                                             elif isinstance(value, date) and not isinstance(value, datetime):
                                                 cache_data[key] = value.isoformat()
                                             else:
@@ -125,7 +126,7 @@ def cache_task_detail_sync(ttl: int = 300):
                                         if isinstance(value, Decimal):
                                             cache_data[key] = float(value)
                                         elif isinstance(value, datetime):
-                                            cache_data[key] = value.isoformat()
+                                            cache_data[key] = format_iso_utc(value)
                                         elif isinstance(value, date) and not isinstance(value, datetime):
                                             cache_data[key] = value.isoformat()
                                         else:
@@ -229,7 +230,7 @@ def cache_task_detail_async(ttl: int = 300):
                                         cache_data[col.key] = float(value)
                                     # 处理 datetime 类型
                                     elif isinstance(value, datetime):
-                                        cache_data[col.key] = value.isoformat()
+                                        cache_data[col.key] = format_iso_utc(value)
                                     # 处理 date 类型
                                     elif isinstance(value, date) and not isinstance(value, datetime):
                                         cache_data[col.key] = value.isoformat()
@@ -245,7 +246,7 @@ def cache_task_detail_async(ttl: int = 300):
                                         if isinstance(value, Decimal):
                                             cache_data[key] = float(value)
                                         elif isinstance(value, datetime):
-                                            cache_data[key] = value.isoformat()
+                                            cache_data[key] = format_iso_utc(value)
                                         elif isinstance(value, date) and not isinstance(value, datetime):
                                             cache_data[key] = value.isoformat()
                                         else:
@@ -262,7 +263,7 @@ def cache_task_detail_async(ttl: int = 300):
                                     if isinstance(value, Decimal):
                                         cache_data[key] = float(value)
                                     elif isinstance(value, datetime):
-                                        cache_data[key] = value.isoformat()
+                                        cache_data[key] = format_iso_utc(value)
                                     elif isinstance(value, date) and not isinstance(value, datetime):
                                         cache_data[key] = value.isoformat()
                                     else:
