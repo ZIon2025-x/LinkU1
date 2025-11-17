@@ -565,8 +565,11 @@ def cs_login(
     user_agent = request.headers.get("user-agent", "")
     response = create_service_session_cookie(response, session_id, user_agent, str(cs.id), request)
     
-    # 更新客服在线状态
-    crud.update_customer_service_online_status(db, cs.id, True)
+    # 更新客服在线状态 - 直接在登录时更新，确保状态正确设置
+    cs.is_online = 1
+    db.commit()
+    db.refresh(cs)
+    logger.info(f"[CUSTOMER_SERVICE] 客服登录成功，已设置在线状态: {cs.id}, is_online: {cs.is_online}")
 
     return {
         "message": "客服登录成功",

@@ -524,7 +524,7 @@ const MyTasks: React.FC = () => {
       case 'in_progress': return '#3b82f6';
       case 'pending_confirmation': return '#f59e0b';
       case 'completed': return '#6b7280';
-      case 'cancelled': return '#3b82f6';
+      case 'cancelled': return '#ef4444'; // 红色
       default: return '#6b7280';
     }
   };
@@ -1516,7 +1516,7 @@ const MyTasks: React.FC = () => {
                             padding: '8px 16px',
                             border: 'none',
                             borderRadius: '8px',
-                            background: '#3b82f6',
+                            background: '#ef4444', // 红色
                             color: '#fff',
                             cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
                             fontSize: '12px',
