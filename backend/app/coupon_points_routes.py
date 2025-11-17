@@ -600,7 +600,8 @@ def get_check_in_status(
 ):
     """获取签到状态"""
     import pytz
-    tz = pytz.timezone("Europe/London")
+from zoneinfo import ZoneInfo
+    tz = ZoneInfo("Europe/London")
     today = datetime.now(tz).date()
     
     today_check_in = get_check_in_today(db, current_user.id)

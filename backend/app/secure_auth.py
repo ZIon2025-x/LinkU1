@@ -106,7 +106,7 @@ class SecureAuthManager:
                         last_activity_str = data.get('last_activity', data.get('created_at'))
                         if last_activity_str:
                             last_activity = datetime.fromisoformat(last_activity_str)
-                            if datetime.utcnow() - last_activity <= timedelta(hours=SESSION_EXPIRE_HOURS):
+                            if get_utc_time() - last_activity <= timedelta(hours=SESSION_EXPIRE_HOURS):
                                 # 转换为SessionInfo对象
                                 session_info = SessionInfo(
                                     user_id=data['user_id'],
@@ -222,7 +222,7 @@ class SecureAuthManager:
         refresh_token: str = ""
     ) -> SessionInfo:
         """创建新会话（优化版：支持会话复用和数量限制）"""
-        now = datetime.utcnow()
+        now = get_utc_time()
         
         # 1. 检查现有活跃会话
         existing_sessions = SecureAuthManager._get_active_sessions(user_id)
@@ -288,7 +288,7 @@ class SecureAuthManager:
                 return None
             
             # 检查会话是否过期
-            if datetime.utcnow() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+            if get_utc_time() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
                 # 删除过期会话
                 redis_client.delete(f"session:{session_id}")
                 redis_client.srem(f"user_sessions:{session.user_id}", session_id)
@@ -297,9 +297,9 @@ class SecureAuthManager:
             # 只有在需要更新活动时间时才更新（避免频繁更新导致token刷新）
             if update_activity:
                 # 检查是否真的需要更新（避免过于频繁的更新）
-                time_since_last_activity = datetime.utcnow() - session.last_activity
+                time_since_last_activity = get_utc_time() - session.last_activity
                 if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
-                    session.last_activity = datetime.utcnow()
+                    session.last_activity = get_utc_time()
                     data["last_activity"] = session.last_activity.isoformat()
                     redis_client.setex(
                         f"session:{session_id}",
@@ -315,16 +315,16 @@ class SecureAuthManager:
                 return None
             
             # 检查会话是否过期
-            if datetime.utcnow() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+            if get_utc_time() - session.last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
                 session.is_active = False
                 return None
             
             # 只有在需要更新活动时间时才更新
             if update_activity:
                 # 检查是否真的需要更新（避免过于频繁的更新）
-                time_since_last_activity = datetime.utcnow() - session.last_activity
+                time_since_last_activity = get_utc_time() - session.last_activity
                 if time_since_last_activity > timedelta(minutes=5):  # 至少5分钟才更新一次
-                    session.last_activity = datetime.utcnow()
+                    session.last_activity = get_utc_time()
             
             return session
     
@@ -446,7 +446,7 @@ class SecureAuthManager:
                             last_activity_str = data.get('last_activity', data.get('created_at'))
                             if last_activity_str:
                                 last_activity = datetime.fromisoformat(last_activity_str)
-                                if datetime.utcnow() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
+                                if get_utc_time() - last_activity > timedelta(hours=SESSION_EXPIRE_HOURS):
                                     # 删除过期会话
                                     redis_client.delete(key_str)
                                     # 从用户会话列表中移除
@@ -461,7 +461,7 @@ class SecureAuthManager:
             return
         
         # 内存存储的清理逻辑
-        now = datetime.utcnow()
+        now = get_utc_time()
         expired_sessions = []
         
         for session_id, session in active_sessions.items():
@@ -641,12 +641,13 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
     """创建用户refresh token，绑定IP和设备指纹（只允许一个设备）"""
     import secrets
     from datetime import datetime, timedelta
+from app.utils.time_utils import get_utc_time
     
     # 生成refresh token
     refresh_token = secrets.token_urlsafe(32)
     
     # 设置过期时间（12小时）
-    expire_time = datetime.utcnow() + timedelta(hours=12)
+    expire_time = get_utc_time() + timedelta(hours=12)
     
     # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS and redis_client:
@@ -670,7 +671,7 @@ def create_user_refresh_token(user_id: str, ip_address: str = "", device_fingerp
                 "user_id": user_id,
                 "ip_address": ip_address,
                 "device_fingerprint": device_fingerprint,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": get_utc_time().isoformat(),
                 "expires_at": expire_time.isoformat(),
                 "last_used": None  # 记录最后使用时间，用于频率限制
             })
@@ -704,7 +705,7 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     expires_at_str = data.get('expires_at')
     if expires_at_str:
         expires_at = datetime.fromisoformat(expires_at_str)
-        if datetime.utcnow() > expires_at:
+        if get_utc_time() > expires_at:
             # 过期了，删除
             redis_client.delete(keys[0])
             return None
@@ -725,12 +726,12 @@ def verify_user_refresh_token(refresh_token: str, ip_address: str = "", device_f
     last_used_str = data.get('last_used')
     if last_used_str:
         last_used = datetime.fromisoformat(last_used_str)
-        if datetime.utcnow() - last_used < timedelta(minutes=20):
+        if get_utc_time() - last_used < timedelta(minutes=20):
             logger.warning(f"[SECURE_AUTH] refresh token 使用过于频繁: {refresh_token}")
             return None
     
     # 更新最后使用时间
-    current_time = datetime.utcnow()
+    current_time = get_utc_time()
     data['last_used'] = current_time.isoformat()
     redis_client.setex(keys[0], int(12 * 3600), json.dumps(data))
     
@@ -781,7 +782,7 @@ def cleanup_expired_sessions_aggressive() -> int:
         return 0
     
     cleaned_count = 0
-    current_time = datetime.utcnow()
+    current_time = get_utc_time()
     
     try:
         # 清理普通用户会话

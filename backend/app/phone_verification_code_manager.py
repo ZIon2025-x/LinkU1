@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 from app.redis_cache import get_redis_client
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ def store_verification_code(phone: str, code: str) -> bool:
         code_data = {
             "code": code,
             "phone": phone,
-            "created_at": datetime.utcnow().isoformat(),
-            "expires_at": (datetime.utcnow() + timedelta(seconds=VERIFICATION_CODE_EXPIRE_SECONDS)).isoformat()
+            "created_at": get_utc_time().isoformat(),
+            "expires_at": (get_utc_time() + timedelta(seconds=VERIFICATION_CODE_EXPIRE_SECONDS)).isoformat()
         }
         
         # 存储验证码，设置5分钟过期时间
@@ -124,7 +125,7 @@ def get_code_info(phone: str) -> Optional[dict]:
         expires_at_str = code_data.get("expires_at")
         if expires_at_str:
             expires_at = datetime.fromisoformat(expires_at_str)
-            if datetime.utcnow() > expires_at:
+            if get_utc_time() > expires_at:
                 # 已过期，删除
                 redis_client.delete(key)
                 return None

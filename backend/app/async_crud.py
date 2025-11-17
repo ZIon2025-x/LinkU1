@@ -218,7 +218,7 @@ class AsyncTaskCRUD:
                 # 如果没有提供 deadline 且不是灵活模式，需要设置一个默认值
                 # 这里可以根据业务需求设置默认值，或者抛出错误
                 from datetime import timedelta
-                from app.models import get_utc_time
+                from app.utils.time_utils import get_utc_time
                 deadline = get_utc_time() + timedelta(days=7)
                 is_flexible = 0
             
@@ -357,13 +357,11 @@ class AsyncTaskCRUD:
         """获取任务列表和总数（带过滤条件）"""
         try:
             from sqlalchemy import or_, func
-            from datetime import datetime
-            import pytz
+            from datetime import datetime, timezone
+            from app.utils.time_utils import get_utc_time
             
-            # 获取当前英国时间并转换为UTC时间进行比较
-            uk_tz = pytz.timezone('Europe/London')
-            now_local = datetime.now(uk_tz)
-            now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+            # 获取当前UTC时间
+            now_utc = get_utc_time()
             
             # 构建基础查询 - 显示开放和已接收但未同意的任务，且未过期
             base_query = select(models.Task).where(
@@ -553,6 +551,7 @@ class AsyncTaskCRUD:
             # 自动发送消息给任务发布者
             try:
                 from app.models import Message
+                from app.utils.time_utils import get_utc_time
                 
                 # 获取任务发布者 ID（确保是字符串）
                 poster_id = str(getattr(task, 'poster_id', ''))
@@ -631,7 +630,7 @@ class AsyncTaskCRUD:
                 .values(
                     taker_id=applicant_id,
                     status="in_progress",
-                    accepted_at=datetime.utcnow()
+                    accepted_at=get_utc_time()
                 )
                 .returning(models.Task)
             )
@@ -858,7 +857,7 @@ class AsyncNotificationCRUD:
             result = await db.execute(
                 update(models.Notification)
                 .where(models.Notification.id == notification_id)
-                .values(is_read=1, read_at=datetime.utcnow())
+                .values(is_read=1, read_at=get_utc_time())
                 .returning(models.Notification)
             )
             notification = result.scalar_one_or_none()
@@ -947,7 +946,7 @@ class AsyncPerformanceMonitor:
                 "users": user_count,
                 "tasks": task_count,
                 "messages": message_count,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": get_utc_time().isoformat(),
             }
         except Exception as e:
             logger.error(f"Error getting database stats: {e}")

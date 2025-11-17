@@ -4,6 +4,7 @@
 """
 from typing import Dict, Any
 from datetime import datetime
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 # KPI 阈值配置
 KPI_THRESHOLDS = {
@@ -89,7 +90,7 @@ def check_kpi_threshold(metric_name: str, value: float, endpoint: str = "default
         "threshold": threshold,
         "exceeded": is_exceeded,
         "level": level,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": format_iso_utc(get_utc_time())
     }
 
 def get_kpi_summary() -> Dict[str, Any]:

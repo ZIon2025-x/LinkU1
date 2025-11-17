@@ -33,6 +33,7 @@ from app.deps import get_current_user_secure_sync_csrf
 logger = logging.getLogger(__name__)
 import os
 from datetime import datetime, timedelta, timezone
+from app.utils.time_utils import get_utc_time
 
 import stripe
 from pydantic import BaseModel
@@ -770,7 +771,7 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
     
     result = {
         "email": email,
-        "current_time": datetime.utcnow().isoformat()
+        "current_time": get_utc_time().isoformat()
     }
     
     try:
@@ -784,7 +785,7 @@ def debug_check_pending(email: str, db: Session = Depends(get_db)):
                 "email": pending_user.email,
                 "created_at": pending_user.created_at.isoformat(),
                 "expires_at": pending_user.expires_at.isoformat(),
-                "is_expired": pending_user.expires_at < datetime.utcnow()
+                "is_expired": pending_user.expires_at < get_utc_time()
             }
         else:
             result["pending_user_found"] = False
@@ -1008,20 +1009,19 @@ def accept_task(
                 )
 
         # 检查任务是否已过期
-        from datetime import datetime
+        from datetime import datetime, timezone
+        from app.utils.time_utils import get_utc_time, LONDON, to_user_timezone
 
-        import pytz
+        current_time = get_utc_time()
 
-        uk_tz = pytz.timezone("Europe/London")
-        current_time = datetime.now(uk_tz)
-
-        # 如果deadline是naive datetime，假设它是英国时间
+        # 如果deadline是naive datetime，假设它是UTC时间（数据库迁移后应该都是带时区的）
         if db_task.deadline.tzinfo is None:
-            deadline_uk = uk_tz.localize(db_task.deadline)
+            # 旧数据兼容：假设是UTC时间
+            deadline_utc = db_task.deadline.replace(tzinfo=timezone.utc)
         else:
-            deadline_uk = db_task.deadline.astimezone(uk_tz)
+            deadline_utc = db_task.deadline.astimezone(timezone.utc)
 
-        if deadline_uk < current_time:
+        if deadline_utc < current_time:
             raise HTTPException(status_code=400, detail="Task deadline has passed")
 
         updated_task = crud.accept_task(db, task_id, current_user.id)
@@ -1279,13 +1279,13 @@ def complete_task(
 
     # 更新任务状态为等待确认
     db_task.status = "pending_confirmation"
-    db_task.completed_at = crud.get_uk_time()
+    db_task.completed_at = get_utc_time()
     db.commit()
     db.refresh(db_task)
 
     # 发送系统消息到任务聊天框
     try:
-        from app.models import Message, get_uk_time_naive
+        from app.models import Message
         import json
         
         taker_name = current_user.name or f"用户{current_user.id}"
@@ -1297,7 +1297,7 @@ def complete_task(
             message_type="system",
             conversation_type="task",
             meta=json.dumps({"system_action": "task_completed_by_taker"}),
-            created_at=get_uk_time_naive()
+            created_at=get_utc_time()
         )
         db.add(system_message)
         db.commit()
@@ -1353,7 +1353,7 @@ def confirm_task_completion(
 
     # 发送系统消息到任务聊天框
     try:
-        from app.models import Message, get_uk_time_naive
+        from app.models import Message
         import json
         
         poster_name = current_user.name or f"用户{current_user.id}"
@@ -1365,7 +1365,7 @@ def confirm_task_completion(
             message_type="system",
             conversation_type="task",
             meta=json.dumps({"system_action": "task_confirmed_by_poster"}),
-            created_at=get_uk_time_naive()
+            created_at=get_utc_time()
         )
         db.add(system_message)
         db.commit()
@@ -1712,7 +1712,7 @@ def user_profile(
     # 计算注册天数
     import datetime
 
-    days_since_joined = (datetime.datetime.utcnow() - user.created_at).days
+    days_since_joined = (datetime.get_utc_time() - user.created_at).days
 
     # 获取用户的任务统计（限制数量以提高性能）
     tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
@@ -2099,7 +2099,7 @@ def update_profile(
                         last_update_date = last_update
                     
                     # 获取当前日期（UTC）
-                    current_date = datetime.utcnow().date()
+                    current_date = get_utc_time().date()
                     
                     # 计算日期差
                     days_diff = (current_date - last_update_date).days
@@ -2114,7 +2114,7 @@ def update_profile(
                 # 更新名字和修改时间（只保存日期部分，兼容 date 类型）
                 update_data["name"] = new_name
                 # 使用当前日期（不包含时间），兼容 date 类型数据库字段
-                update_data["name_updated_at"] = datetime.utcnow().date()
+                update_data["name_updated_at"] = get_utc_time().date()
         
         if data.residence_city is not None:
             # 验证城市选项（可选：可以在后端验证城市是否在允许列表中）
@@ -2926,7 +2926,7 @@ def admin_update_customer_service_request(
         request.priority = request_update["priority"]
 
     request.admin_id = current_user.id
-    request.updated_at = datetime.utcnow()
+    request.updated_at = get_utc_time()
 
     db.commit()
     db.refresh(request)
@@ -3281,7 +3281,7 @@ def assign_customer_service(
                         "name": current_user.name or f"用户{current_user.id}",
                     },
                     "chat_id": chat_data["chat_id"],
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": get_utc_time().isoformat(),
                 }
                 # 使用asyncio.create_task来异步发送通知
                 asyncio.create_task(
@@ -4856,50 +4856,45 @@ def get_chat_timeout_status(
             return {"is_ended": True, "is_timeout": False, "timeout_available": False}
 
         # 计算最后消息时间到现在的时间差
-        from datetime import datetime, timedelta, timezone, timezone
+        from datetime import datetime, timedelta, timezone
 
         last_message_time = chat["last_message_at"]
 
-        # 统一处理时间格式 - 使用动态英国时间
-        import pytz
+        # 统一处理时间格式 - 使用UTC时间
+        from app.utils.time_utils import get_utc_time, LONDON, to_user_timezone, parse_local_as_utc
 
-        uk_tz = pytz.timezone("Europe/London")
-        current_time = datetime.now(uk_tz)
+        current_time = get_utc_time()
 
         if isinstance(last_message_time, str):
             # 处理字符串格式的时间
             if last_message_time.endswith("Z"):
-                # UTC时间，转换为英国时间
-                last_message_time = last_message_time[:-1] + "+00:00"
+                # UTC时间，直接解析
                 last_message_time = datetime.fromisoformat(
-                    last_message_time
-                ).astimezone(uk_tz)
-            elif "+" not in last_message_time and "T" in last_message_time:
-                # 如果没有时区信息，假设是英国时间
+                    last_message_time.replace("Z", "+00:00")
+                )
+            elif "+" in last_message_time or last_message_time.endswith("Z"):
+                # 带时区信息，直接解析
                 last_message_time = datetime.fromisoformat(last_message_time)
-                # 添加当前英国时区信息
-                last_message_time = uk_tz.localize(last_message_time)
-                logger.info(f"处理无时区信息的时间，添加英国时区: {last_message_time}")
             else:
+                # 如果没有时区信息，假设是UTC时间（数据库迁移后应该都是带时区的）
                 last_message_time = datetime.fromisoformat(last_message_time)
                 if last_message_time.tzinfo is None:
-                    last_message_time = uk_tz.localize(last_message_time)
+                    # 旧数据兼容：假设是UTC时间
+                    last_message_time = last_message_time.replace(tzinfo=timezone.utc)
+                    logger.info(f"处理无时区信息的时间，假设为UTC: {last_message_time}")
         elif hasattr(last_message_time, "replace"):
-            # 如果是datetime对象但没有时区信息，添加英国时区
+            # 如果是datetime对象但没有时区信息，假设是UTC
             if last_message_time.tzinfo is None:
-                last_message_time = uk_tz.localize(last_message_time)
-                logger.info(f"为datetime对象添加英国时区: {last_message_time}")
+                last_message_time = last_message_time.replace(tzinfo=timezone.utc)
+                logger.info(f"为datetime对象添加UTC时区: {last_message_time}")
         else:
-            # 如果是其他类型，使用当前英国时间
+            # 如果是其他类型，使用当前UTC时间
             logger.warning(
                 f"Unexpected time type: {type(last_message_time)}, value: {last_message_time}"
             )
             last_message_time = current_time
 
-        # 获取当前英国时区偏移信息
-        uk_offset = current_time.strftime("%z")  # +0100 或 +0000
-        uk_hours = int(uk_offset[1:3])  # 提取小时数
-        logger.info(f"英国当前时区偏移: {uk_offset} (UTC+{uk_hours})")
+        # 计算时间差（都是UTC时间）
         time_diff = current_time - last_message_time
 
         # 调试信息
@@ -6022,7 +6017,7 @@ def update_task_expert(
             if hasattr(expert, key):
                 setattr(expert, key, value)
         
-        expert.updated_at = datetime.now()
+        expert.updated_at = get_utc_time()
         db.commit()
         db.refresh(expert)
         
@@ -6256,6 +6251,8 @@ async def translate_batch(
         
         try:
             from deep_translator import GoogleTranslator
+            from app.utils.time_utils import get_utc_time
+            from zoneinfo import ZoneInfo
         except ImportError:
             logger.error("deep-translator模块未安装，请运行: pip install deep-translator")
             raise HTTPException(

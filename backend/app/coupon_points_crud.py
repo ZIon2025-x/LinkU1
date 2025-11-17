@@ -394,9 +394,13 @@ def use_coupon(
 
 def get_check_in_today(db: Session, user_id: str, timezone_str: str = "Europe/London") -> Optional[models.CheckIn]:
     """获取用户今天的签到记录"""
-    import pytz
-    tz = pytz.timezone(timezone_str)
-    today = datetime.now(tz).date()
+    from zoneinfo import ZoneInfo
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+    
+    tz = ZoneInfo(timezone_str)
+    utc_time = get_utc_time()
+    local_time = to_user_timezone(utc_time, tz)
+    today = local_time.date()
     
     return db.query(models.CheckIn).filter(
         models.CheckIn.user_id == user_id,
@@ -420,9 +424,13 @@ def check_in(
     idempotency_key: Optional[str] = None
 ) -> tuple[Optional[models.CheckIn], Optional[str]]:
     """每日签到"""
-    import pytz
-    tz = pytz.timezone(timezone_str)
-    today = datetime.now(tz).date()
+    from zoneinfo import ZoneInfo
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+    
+    tz = ZoneInfo(timezone_str)
+    utc_time = get_utc_time()
+    local_time = to_user_timezone(utc_time, tz)
+    today = local_time.date()
     
     # 检查幂等性
     if idempotency_key:

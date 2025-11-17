@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 from fastapi import Request
 import os
+from app.utils.time_utils import get_utc_time
 
 # 创建安全日志记录器
 security_logger = logging.getLogger("security")
@@ -126,7 +127,7 @@ class SecurityLogger:
         try:
             # 构建日志数据
             log_data = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": get_utc_time().isoformat(),
                 "event_type": event_type,
                 "event_name": SecurityLogger.EVENT_TYPES.get(event_type, event_type),
                 "message": message,

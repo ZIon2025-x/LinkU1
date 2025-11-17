@@ -162,8 +162,8 @@ class AcceptApplicationLogic:
                 return False, "任务已被接受"
             
             # 获取当前时间
-            from app.models import get_uk_time_naive
-            current_time = get_uk_time_naive()
+            from app.utils.time_utils import get_utc_time
+            current_time = get_utc_time()
             
             # 更新任务
             locked_task.taker_id = application.applicant_id
@@ -302,8 +302,8 @@ class MessageReadLogic:
         标记消息为已读
         返回标记的消息数量
         """
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        from app.utils.time_utils import get_utc_time
+        current_time = get_utc_time()
         
         marked_count = 0
         
@@ -733,8 +733,8 @@ class NegotiationResponseLogLogic:
         记录议价响应操作日志
         与业务事务一起提交
         """
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        from app.utils.time_utils import get_utc_time
+        current_time = get_utc_time()
         
         log_entry = models.NegotiationResponseLog(
             task_id=task_id,

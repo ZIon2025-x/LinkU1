@@ -6,19 +6,14 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
+from app.utils.time_utils import get_utc_time
 
 # 密码加密上下文已移至 app.security 模块
 # 请使用: from app.security import pwd_context
 
 
-def get_uk_time():
-    """获取当前英国时间 (自动处理夏令时/冬令时)"""
-    from datetime import datetime
-
-    import pytz
-
-    uk_tz = pytz.timezone("Europe/London")
-    return datetime.now(uk_tz)
+# ⚠️ 已删除：get_utc_time() 函数
+# 请使用: from app.utils.time_utils import get_utc_time
 
 
 # 密码哈希函数已移至 app.security 模块
@@ -492,8 +487,7 @@ def create_task(db: Session, user_id: str, task: schemas.TaskCreate):
     else:
         # 如果没有提供 deadline 且不是灵活模式，设置默认值（7天后）
         from datetime import timedelta
-        from app.models import get_uk_time_naive
-        deadline = task.deadline if task.deadline else (get_uk_time_naive() + timedelta(days=7))
+        deadline = task.deadline if task.deadline else (get_utc_time() + timedelta(days=7))
         is_flexible = 0
     
     # 处理图片字段：将列表转为JSON字符串
@@ -1018,7 +1012,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             db.query(Message)
             .filter(Message.sender_id == sender_id)
             .filter(Message.content == content)
-            .filter(Message.created_at >= datetime.utcnow() - timedelta(minutes=1))
+            .filter(Message.created_at >= get_utc_time() - timedelta(minutes=1))
             .first()
         )
         if existing_by_id:
@@ -1026,7 +1020,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
             return existing_by_id
 
     # 检查是否在最近5秒内发送过完全相同的消息（防止重复发送）
-    recent_time = datetime.utcnow() - timedelta(seconds=5)
+    recent_time = get_utc_time() - timedelta(seconds=5)
     existing_message = (
         db.query(Message)
         .filter(
@@ -1040,7 +1034,7 @@ def send_message(db: Session, sender_id: str, receiver_id: str, content: str, me
     )
     
     if existing_message:
-        print(f"检测到重复消息，跳过保存: {content} (时间差: {(datetime.utcnow() - existing_message.created_at).total_seconds():.2f}秒)")
+        print(f"检测到重复消息，跳过保存: {content} (时间差: {(get_utc_time() - existing_message.created_at).total_seconds():.2f}秒)")
         return existing_message
 
     # 处理时间 - 统一使用UTC时间
@@ -1260,7 +1254,8 @@ def create_notification(
     related_id: str = None,
     auto_commit: bool = True,
 ):
-    from app.models import Notification, get_uk_time_naive
+    from app.models import Notification
+    from app.utils.time_utils import get_utc_time
     from sqlalchemy.exc import IntegrityError
 
     try:
@@ -1287,7 +1282,7 @@ def create_notification(
             # 更新现有通知的内容和时间
             existing_notification.content = content
             existing_notification.title = title
-            existing_notification.created_at = get_uk_time()
+            existing_notification.created_at = get_utc_time()
             existing_notification.is_read = 0  # 重置为未读
             db.commit()
             db.refresh(existing_notification)
@@ -2007,7 +2002,7 @@ def update_task_cancel_request(
     if request:
         request.status = status
         request.admin_comment = admin_comment
-        request.reviewed_at = get_uk_time()
+        request.reviewed_at = get_utc_time()
         
         # 根据审核者类型设置相应字段
         if reviewer_type is None:
@@ -2176,7 +2171,7 @@ def mark_staff_notification_read(
     )
     if notification:
         notification.is_read = 1
-        notification.read_at = get_uk_time()
+        notification.read_at = get_utc_time()
         db.commit()
         db.refresh(notification)
         return notification
@@ -2198,7 +2193,7 @@ def mark_all_staff_notifications_read(
     )
     for notification in notifications:
         notification.is_read = 1
-        notification.read_at = get_uk_time()
+        notification.read_at = get_utc_time()
     db.commit()
     return len(notifications)
 
@@ -2523,7 +2518,7 @@ def update_admin_last_login(db: Session, admin_id: str):
     """更新管理员最后登录时间"""
     admin = db.query(models.AdminUser).filter(models.AdminUser.id == admin_id).first()
     if admin:
-        admin.last_login = get_uk_time()
+        admin.last_login = get_utc_time()
         db.commit()
         db.refresh(admin)
     return admin
@@ -2571,7 +2566,7 @@ def update_system_setting(
         db_setting.setting_value = setting_value
         if description is not None:
             db_setting.description = description
-        db_setting.updated_at = get_uk_time()
+        db_setting.updated_at = get_utc_time()
         db.commit()
         db.refresh(db_setting)
     return db_setting
@@ -2595,7 +2590,7 @@ def upsert_system_setting(
         db_setting.setting_value = setting_value
         if description is not None:
             db_setting.description = description
-        db_setting.updated_at = get_uk_time()
+        db_setting.updated_at = get_utc_time()
     else:
         # 创建新设置
         db_setting = models.SystemSettings(
@@ -2792,9 +2787,7 @@ def get_user_task_statistics(db: Session, user_id: str):
 # 客服对话管理函数
 def generate_customer_service_chat_id(user_id: str, service_id: str) -> str:
     """生成客服对话ID"""
-    from datetime import datetime
-
-    now = datetime.now()
+    now = get_utc_time()
     timestamp = now.strftime("%Y%m%d_%H%M%S")
     return f"CS_CHAT_{timestamp}_{user_id}_{service_id}"
 
@@ -2848,7 +2841,7 @@ def create_customer_service_chat(db: Session, user_id: str, service_id: str) -> 
     db.add(system_message)
 
     # 更新对话的最后消息时间和总消息数
-    new_chat.last_message_at = get_uk_time()
+    new_chat.last_message_at = get_utc_time()
     new_chat.total_messages = 1
 
     db.commit()
@@ -3025,7 +3018,7 @@ def end_customer_service_chat(db: Session, chat_id: str) -> bool:
         return False
 
     chat.is_ended = 1
-    chat.ended_at = get_uk_time()
+    chat.ended_at = get_utc_time()
     db.commit()
 
     # 清理该聊天的所有图片和文件
@@ -3058,7 +3051,7 @@ def rate_customer_service_chat(
 
     chat.user_rating = rating
     chat.user_comment = comment
-    chat.rated_at = get_uk_time()
+    chat.rated_at = get_utc_time()
     db.commit()
 
     return True
@@ -3097,7 +3090,7 @@ def save_customer_service_message(
     )
     if chat:
         # 使用英国时间 (UTC+0)
-        chat.last_message_at = get_uk_time()
+        chat.last_message_at = get_utc_time()
         chat.total_messages += 1
 
     db.commit()
@@ -3250,6 +3243,8 @@ def get_job_positions(
 def update_job_position(db: Session, position_id: int, position: schemas.JobPositionUpdate):
     """更新岗位"""
     import json
+from app.utils.time_utils import get_utc_time
+from zoneinfo import ZoneInfo
     
     db_position = db.query(models.JobPosition).filter(models.JobPosition.id == position_id).first()
     if not db_position:
@@ -3277,7 +3272,7 @@ def update_job_position(db: Session, position_id: int, position: schemas.JobPosi
     for field, value in update_data.items():
         setattr(db_position, field, value)
     
-    db_position.updated_at = get_uk_time()
+    db_position.updated_at = get_utc_time()
     db.commit()
     db.refresh(db_position)
     return db_position
@@ -3301,7 +3296,7 @@ def toggle_job_position_status(db: Session, position_id: int):
         return None
     
     db_position.is_active = 1 if db_position.is_active == 0 else 0
-    db_position.updated_at = get_uk_time()
+    db_position.updated_at = get_utc_time()
     db.commit()
     db.refresh(db_position)
     return db_position

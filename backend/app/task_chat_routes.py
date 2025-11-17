@@ -23,6 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -753,8 +754,7 @@ async def send_task_message(
                     )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # 创建消息
         meta_str = json.dumps(request.meta) if request.meta else None
@@ -848,8 +848,7 @@ async def mark_messages_read(
             )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         marked_count = 0
         
@@ -1123,8 +1122,7 @@ async def accept_application(
             )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # 更新任务
         locked_task.taker_id = application.applicant_id
@@ -1166,8 +1164,7 @@ async def accept_application(
         
         # 发送通知给申请者
         try:
-            from app.models import get_uk_time_naive
-            notification_time = get_uk_time_naive()
+            notification_time = get_utc_time()
             
             # ⚠️ 直接使用文本内容，不存储 JSON
             content = f"您的任务申请已被接受：{task.title}"
@@ -1250,8 +1247,7 @@ async def reject_application(
             )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # 更新申请状态
         application.status = "rejected"
@@ -1270,8 +1266,7 @@ async def reject_application(
         
         # 发送通知给申请者
         try:
-            from app.models import get_uk_time_naive
-            notification_time = get_uk_time_naive()
+            notification_time = get_utc_time()
             
             # ⚠️ 直接使用文本内容，不存储 JSON
             content = f"您的任务申请已被拒绝：{task.title}"
@@ -1362,8 +1357,7 @@ async def withdraw_application(
             )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # 更新申请状态为 rejected（等同于撤回）
         application.status = "rejected"
@@ -1545,8 +1539,7 @@ async def negotiate_application(
             )
         
         # 创建系统通知
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # ⚠️ 直接使用文本内容，不存储 JSON
         # token 将通过 API 端点通过 notification_id 获取
@@ -1821,8 +1814,7 @@ async def respond_negotiation(
             )
         
         # 获取当前时间
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         if request.action == "accept":
             # 接受议价：等同于接受申请，需要更新任务状态
@@ -2090,8 +2082,7 @@ async def send_application_message(
                 )
         
         # 创建或更新系统通知
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # ⚠️ 所有通知都使用文本格式，token 通过 notification_id 从 Redis 获取
         if notification_type == "negotiation_offer":
@@ -2283,8 +2274,7 @@ async def reply_application_message(
             )
         
         # 创建回复通知给发布者
-        from app.models import get_uk_time_naive
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         
         # ⚠️ 直接使用文本内容，不存储 JSON
         content = f"申请者回复了您对任务「{task.title}」的留言：{request.message}"

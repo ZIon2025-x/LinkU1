@@ -12,6 +12,7 @@ from sqlalchemy import or_
 from app.deps import get_db
 from app.models import Task
 from app.time_utils_v2 import TimeHandlerV2
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def generate_sitemap(db: Session = Depends(get_db)):
         
         # 添加主要页面
         base_url = "https://www.link2ur.com"
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = get_utc_time().strftime("%Y-%m-%d")
         
         main_pages = [
             ("/", "1.0", "daily"),
@@ -92,13 +93,13 @@ def generate_sitemap(db: Session = Depends(get_db)):
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.link2ur.com/</loc>
-    <lastmod>{datetime.now().strftime("%Y-%m-%d")}</lastmod>
+    <lastmod>{get_utc_time().strftime("%Y-%m-%d")}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://www.link2ur.com/en/tasks</loc>
-    <lastmod>{datetime.now().strftime("%Y-%m-%d")}</lastmod>
+    <lastmod>{get_utc_time().strftime("%Y-%m-%d")}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>

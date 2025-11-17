@@ -7,6 +7,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class CleanupTasks:
                                             try:
                                                 created_time = datetime.fromisoformat(time_str)
                                                 # 如果超过7天，删除
-                                                if datetime.utcnow() - created_time > timedelta(days=7):
+                                                if get_utc_time() - created_time > timedelta(days=7):
                                                     redis_cache.delete(key)
                                                     total_cleaned += 1
                                             except:
@@ -138,7 +139,7 @@ class CleanupTasks:
         """清理已完成超过3天的任务的图片和文件（每天检查一次）"""
         try:
             # 检查今天是否已经清理过
-            today = datetime.utcnow().date()
+            today = get_utc_time().date()
             if self.last_completed_tasks_cleanup_date == today:
                 # 今天已经清理过，跳过
                 return
@@ -165,7 +166,7 @@ class CleanupTasks:
         """清理过期任务（已取消或deadline已过超过3天）的文件（每天检查一次）"""
         try:
             # 检查今天是否已经清理过
-            today = datetime.utcnow().date()
+            today = get_utc_time().date()
             if self.last_expired_tasks_cleanup_date == today:
                 # 今天已经清理过，跳过
                 return
@@ -194,6 +195,7 @@ class CleanupTasks:
             from pathlib import Path
             import os
             from datetime import datetime, timedelta
+from app.utils.time_utils import get_utc_time
             
             # 检测部署环境
             RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -209,7 +211,7 @@ class CleanupTasks:
                 return
             
             # 计算24小时前的时间
-            cutoff_time = datetime.now() - timedelta(hours=24)
+            cutoff_time = get_utc_time() - timedelta(hours=24)
             cleaned_count = 0
             
             # 遍历所有临时文件夹（temp_*）

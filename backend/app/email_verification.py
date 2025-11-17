@@ -73,8 +73,8 @@ class EmailVerificationManager:
             existing_pending.hashed_password = get_password_hash(user_data.password)
             existing_pending.phone = user_data.phone
             existing_pending.verification_token = verification_token
-            existing_pending.created_at = datetime.utcnow()
-            existing_pending.expires_at = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+            existing_pending.created_at = get_utc_time()
+            existing_pending.expires_at = get_utc_time() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
             existing_pending.agreed_to_terms = 1 if user_data.agreed_to_terms else 0
             existing_pending.terms_agreed_at = terms_agreed_at
             existing_pending.inviter_id = inviter_id
@@ -117,8 +117,8 @@ class EmailVerificationManager:
             hashed_password=get_password_hash(user_data.password),
             phone=user_data.phone,
             verification_token=verification_token,
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
+            created_at=get_utc_time(),
+            expires_at=get_utc_time() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS),
             agreed_to_terms=1 if user_data.agreed_to_terms else 0,
             terms_agreed_at=terms_agreed_at,
             inviter_id=inviter_id,
@@ -149,7 +149,7 @@ class EmailVerificationManager:
             
             if pending_user:
                 # 检查令牌是否过期
-                if pending_user.expires_at < datetime.utcnow():
+                if pending_user.expires_at < get_utc_time():
                     logger.warning(f"验证令牌已过期: {token}")
                     # 删除过期的待验证用户
                     db.delete(pending_user)
@@ -192,7 +192,7 @@ class EmailVerificationManager:
                     is_verified=1,  # 已验证
                     is_active=1,    # 激活
                     user_level="normal",
-                    created_at=datetime.utcnow(),
+                    created_at=get_utc_time(),
                     agreed_to_terms=pending_user.agreed_to_terms,
                     terms_agreed_at=pending_user.terms_agreed_at,
                     inviter_id=pending_user.inviter_id,
@@ -325,7 +325,7 @@ class EmailVerificationManager:
         # 生成新的验证令牌
         new_token = EmailVerificationManager.generate_verification_token(email)
         pending_user.verification_token = new_token
-        pending_user.expires_at = datetime.utcnow() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
+        pending_user.expires_at = get_utc_time() + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
         
         db.commit()
         
@@ -339,7 +339,7 @@ class EmailVerificationManager:
     def cleanup_expired_pending_users(db: Session) -> int:
         """清理过期的待验证用户"""
         expired_users = db.query(models.PendingUser).filter(
-            models.PendingUser.expires_at < datetime.utcnow()
+            models.PendingUser.expires_at < get_utc_time()
         ).all()
         
         count = len(expired_users)
@@ -377,4 +377,5 @@ def send_verification_email_with_token(
     subject, body = get_email_verification_email(language, verification_url)
     
     from app.email_utils import send_email
+from app.utils.time_utils import get_utc_time
     background_tasks.add_task(send_email, email, subject, body)

@@ -118,7 +118,7 @@ class AdminAuthManager:
     def create_session(admin_id: str, request: Request) -> AdminSessionInfo:
         """创建管理员会话（带会话数量限制）"""
         session_id = AdminAuthManager.generate_session_id()
-        current_time = datetime.utcnow()
+        current_time = get_utc_time()
         
         # 获取客户端信息 - 使用统一的IP获取方法
         from app.security import get_client_ip
@@ -172,7 +172,7 @@ class AdminAuthManager:
         
         # 更新活动时间
         if update_activity:
-            session_data['last_activity'] = datetime.utcnow().isoformat()
+            session_data['last_activity'] = get_utc_time().isoformat()
             AdminAuthManager._store_session_data(session_id, session_data)
         
         return AdminSessionInfo(**session_data)
@@ -276,7 +276,7 @@ class AdminAuthManager:
         """检查会话是否过期"""
         last_activity = datetime.fromisoformat(session_data['last_activity'])
         expire_time = last_activity + timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS)
-        return datetime.utcnow() > expire_time
+        return get_utc_time() > expire_time
     
     @staticmethod
     def cleanup_expired_sessions():
@@ -304,7 +304,7 @@ class AdminAuthManager:
                             last_activity_str = data.get('last_activity', data.get('created_at'))
                             if last_activity_str:
                                 last_activity = datetime.fromisoformat(last_activity_str)
-                                if datetime.utcnow() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                if get_utc_time() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     # 删除过期会话
                                     redis_client.delete(key_str)
                                     cleaned_count += 1
@@ -312,7 +312,7 @@ class AdminAuthManager:
                 logger.info(f"[ADMIN_AUTH] Redis清理了 {cleaned_count} 个过期会话")
             else:
                 # 清理内存中的过期会话
-                current_time = datetime.utcnow()
+                current_time = get_utc_time()
                 expired_sessions = []
                 
                 for session_id, session in admin_active_sessions.items():
@@ -351,7 +351,7 @@ class AdminAuthManager:
                         if last_activity_str:
                             try:
                                 last_activity = datetime.fromisoformat(last_activity_str)
-                                if datetime.utcnow() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                if get_utc_time() - last_activity > timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     redis_client.delete(key_str)
                                     cleaned_count += 1
                             except (ValueError, TypeError):
@@ -361,7 +361,7 @@ class AdminAuthManager:
                 logger.info(f"[ADMIN_AUTH] 清理了 {cleaned_count} 个过期会话（管理员: {admin_id}）")
         else:
             # 清理内存中的过期会话
-            current_time = datetime.utcnow()
+            current_time = get_utc_time()
             expired_sessions = []
             
             for session_id, session in admin_active_sessions.items():
@@ -394,13 +394,13 @@ class AdminAuthManager:
                         if last_activity_str:
                             try:
                                 last_activity = datetime.fromisoformat(last_activity_str)
-                                if datetime.utcnow() - last_activity <= timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
+                                if get_utc_time() - last_activity <= timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS):
                                     active_sessions.append(data)
                             except (ValueError, TypeError):
                                 pass
         else:
             # 从内存获取
-            current_time = datetime.utcnow()
+            current_time = get_utc_time()
             for session_id, session in admin_active_sessions.items():
                 if session.admin_id == admin_id and session.is_active:
                     expire_time = session.last_activity + timedelta(hours=ADMIN_SESSION_EXPIRE_HOURS)
@@ -526,7 +526,7 @@ def create_admin_refresh_token(admin_id: str, ip_address: str = "", device_finge
     refresh_token = secrets.token_urlsafe(32)
     
     # 设置过期时间（12小时）
-    expire_time = datetime.utcnow() + timedelta(hours=12)
+    expire_time = get_utc_time() + timedelta(hours=12)
     
     # 存储到Redis，包含IP和设备指纹绑定
     if USE_REDIS:
@@ -538,7 +538,7 @@ def create_admin_refresh_token(admin_id: str, ip_address: str = "", device_finge
                 "admin_id": admin_id,
                 "ip_address": ip_address,
                 "device_fingerprint": device_fingerprint,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": get_utc_time().isoformat(),
                 "expires_at": expire_time.isoformat(),
                 "last_used": None  # 记录最后使用时间，用于频率限制
             })
@@ -571,7 +571,7 @@ def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_
     # 检查是否过期
     try:
         expires_at = datetime.fromisoformat(token_data['expires_at'])
-        if datetime.utcnow() > expires_at:
+        if get_utc_time() > expires_at:
             # 过期了，删除token
             redis_client.delete(keys[0])
             return None
@@ -594,12 +594,12 @@ def verify_admin_refresh_token(refresh_token: str, ip_address: str = "", device_
     last_used_str = token_data.get('last_used')
     if last_used_str:
         last_used = datetime.fromisoformat(last_used_str)
-        if datetime.utcnow() - last_used < timedelta(minutes=20):
+        if get_utc_time() - last_used < timedelta(minutes=20):
             logger.warning(f"[ADMIN_AUTH] 管理员refresh token 使用过于频繁: {refresh_token}")
             return None
     
     # 更新最后使用时间
-    current_time = datetime.utcnow()
+    current_time = get_utc_time()
     token_data['last_used'] = current_time.isoformat()
     redis_client.setex(keys[0], int(12 * 3600), json.dumps(token_data))
     
@@ -642,6 +642,7 @@ def revoke_all_admin_refresh_tokens(admin_id: str) -> int:
 def create_admin_refresh_token_cookie(response: Response, refresh_token: str) -> Response:
     """设置管理员refresh token Cookie"""
     from app.config import Config
+from app.utils.time_utils import get_utc_time
     
     # 不设置domain，与客服保持一致
     cookie_domain = None

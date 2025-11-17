@@ -1,4 +1,5 @@
 from datetime import timedelta, timezone as tz, datetime
+from app.utils.time_utils import get_utc_time
 
 from sqlalchemy import (
     Column,
@@ -30,18 +31,22 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+# ⚠️ 已弃用：使用 app.utils.time_utils.get_utc_time() 替代
+# 保留此函数仅用于向后兼容（测试端点），将在数据库迁移后删除
 def get_uk_time():
-    """获取当前英国时间 (自动处理夏令时/冬令时)"""
-    import pytz
-
-    uk_tz = pytz.timezone("Europe/London")
-    return datetime.now(uk_tz)
+    """获取当前英国时间 (自动处理夏令时/冬令时) - 已弃用"""
+    from zoneinfo import ZoneInfo
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+    
+    utc_time = get_utc_time()
+    return to_user_timezone(utc_time, LONDON)
 
 def get_uk_time_online():
-    """通过网络获取真实的英国时间，使用多个API作为备用"""
+    """通过网络获取真实的英国时间，使用多个API作为备用 - 已弃用，仅用于测试"""
     import requests
-    import pytz
+    from zoneinfo import ZoneInfo
     from datetime import datetime, timezone
+    from app.utils.time_utils import to_user_timezone, LONDON
     
     # 导入Railway配置
     try:
@@ -82,7 +87,7 @@ def get_uk_time_online():
                 else:
                     # 如果没有datetime字段，使用utc_datetime转换
                     utc_time = datetime.fromisoformat(data['utc_datetime'].replace('Z', '+00:00'))
-                    uk_tz = pytz.timezone("Europe/London")
+                    uk_tz = ZoneInfo("Europe/London")
                     return utc_time.astimezone(uk_tz)
             
             def _parse_timeapi(self, data):
@@ -92,7 +97,7 @@ def get_uk_time_online():
             def _parse_worldclockapi(self, data):
                 # 使用UTC时间转换为英国时间
                 utc_time = datetime.fromisoformat(data['currentDateTime'].replace('Z', '+00:00'))
-                uk_tz = pytz.timezone("Europe/London")
+                uk_tz = ZoneInfo("Europe/London")
                 return utc_time.astimezone(uk_tz)
         
         config = DefaultConfig()
@@ -129,27 +134,27 @@ def get_uk_time_online():
         print("所有在线时间API都失败，且禁用本地时间回退")
         raise Exception("无法获取英国时间")
 
+# ⚠️ 已弃用：使用 app.utils.time_utils.get_utc_time() 替代
+# 保留此函数仅用于向后兼容，将在数据库迁移后删除
 def get_uk_time_naive():
-    """获取当前英国时间 (timezone-naive，用于数据库存储) - 兼容性函数"""
+    """获取当前英国时间 (timezone-naive，用于数据库存储) - 已弃用"""
     # 使用新的UTC时间处理系统
-    from app.time_utils import get_utc_time
     return get_utc_time()
 
 def get_uk_time_naive_legacy():
-    """获取当前英国时间 (timezone-naive，用于数据库存储) - 旧版本"""
-    import pytz
-    from datetime import timezone
-
-    # 暂时禁用在线时间获取，直接使用本地时间确保准确性
-    # TODO: 在线时间API有时区问题，暂时使用本地时间
-    uk_tz = pytz.timezone("Europe/London")
-    uk_time = datetime.now(uk_tz)
+    """获取当前英国时间 (timezone-naive，用于数据库存储) - 旧版本，已弃用"""
+    from zoneinfo import ZoneInfo
+    from app.utils.time_utils import get_utc_time, to_user_timezone, LONDON
+    
+    # 使用新的UTC时间系统
+    utc_time = get_utc_time()
+    uk_time = to_user_timezone(utc_time, LONDON)
     
     print(f"使用本地英国时间: {uk_time}")
     print(f"时区: {uk_time.tzinfo}")
     print(f"是否夏令时: {uk_time.dst() != timedelta(0)}")
     
-    # 移除时区信息，用于数据库存储
+    # 移除时区信息，用于数据库存储（仅用于旧数据兼容）
     return uk_time.replace(tzinfo=None)
 
 
@@ -160,7 +165,7 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=True)  # 邮箱唯一，可为空（手机号登录时为空）
     hashed_password = Column(String(128), nullable=False)
     phone = Column(String(20), unique=True, nullable=True)  # 手机号唯一，可为空（邮箱登录时为空）
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
     is_active = Column(Integer, default=1)  # 1=active, 0=inactive
     is_verified = Column(Integer, default=0)  # 1=verified, 0=not verified
     user_level = Column(String(20), default="normal")  # normal, vip, super
@@ -169,14 +174,14 @@ class User(Base):
     avg_rating = Column(Float, default=0.0)
     avatar = Column(String(200), default="")
     is_suspended = Column(Integer, default=0)  # 1=suspended, 0=not
-    suspend_until = Column(DateTime, nullable=True)
+    suspend_until = Column(DateTime(timezone=True), nullable=True)
     is_banned = Column(Integer, default=0)  # 1=banned, 0=not
     timezone = Column(String(50), default="UTC")  # 用户时区，默认为UTC
     residence_city = Column(String(50), nullable=True)  # 常住城市
     language_preference = Column(String(10), default="en")  # 语言偏好：zh（中文）或 en（英文）
     agreed_to_terms = Column(Integer, default=0)  # 1=agreed, 0=not agreed
-    terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
-    name_updated_at = Column(DateTime, nullable=True)  # 上次修改名字的时间
+    terms_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 同意时间
+    name_updated_at = Column(DateTime(timezone=True), nullable=True)  # 上次修改名字的时间
     inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
@@ -195,7 +200,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
-    deadline = Column(DateTime, nullable=True)  # 允许为 NULL，支持灵活模式任务（无截止日期）
+    deadline = Column(DateTime(timezone=True), nullable=True)  # 允许为 NULL，支持灵活模式任务（无截止日期）
     is_flexible = Column(Integer, default=0)  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
     reward = Column(Float, nullable=False)  # 价格字段（与base_reward同步）
     base_reward = Column(DECIMAL(12, 2), nullable=False)  # 原始标价（发布时的价格）
@@ -207,9 +212,9 @@ class Task(Base):
     taker_id = Column(String(8), ForeignKey("users.id"), nullable=True)
     status = Column(String(20), default="open")
     task_level = Column(String(20), default="normal")  # normal, vip, super, expert（达人任务）
-    created_at = Column(DateTime, default=get_uk_time_naive)
-    accepted_at = Column(DateTime, nullable=True)  # 任务接受时间
-    completed_at = Column(DateTime, nullable=True)  # 任务完成时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)  # 任务接受时间
+    completed_at = Column(DateTime(timezone=True), nullable=True)  # 任务完成时间
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     escrow_amount = Column(Float, default=0.0)
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
@@ -234,7 +239,7 @@ class Review(Base):
     rating = Column(Float, nullable=False)  # 改为Float以支持0.5星间隔
     comment = Column(Text, nullable=True)
     is_anonymous = Column(Integer, default=0)  # 0=实名, 1=匿名
-    created_at = Column(DateTime, default=get_uk_time_naive)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
     # 关系
     task = relationship("Task", back_populates="reviews")
     user = relationship("User", back_populates="reviews")
@@ -246,7 +251,7 @@ class TaskHistory(Base):
     task_id = Column(Integer, ForeignKey("tasks.id"))
     user_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 可空，用于管理员操作
     action = Column(String(20), nullable=False)  # accepted, completed, cancelled
-    timestamp = Column(DateTime, default=get_uk_time)
+    timestamp = Column(DateTime(timezone=True), default=get_utc_time)
     remark = Column(Text, nullable=True)
 
 
@@ -258,7 +263,7 @@ class Message(Base):
     )  # 允许为NULL，用于系统消息
     receiver_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 允许为NULL，用于任务消息
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now())  # 统一存储UTC时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 统一存储UTC时间
     is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 message_reads 表)
     image_id = Column(String(100), nullable=True)  # 私密图片ID
     # 任务聊天相关字段
@@ -302,8 +307,8 @@ class Notification(Base):
     )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply'
     related_id = Column(Integer, nullable=True)  # application_id 或 task_id（根据 type 而定）
     content = Column(Text, nullable=False)  # JSON 格式存储通知数据
-    created_at = Column(DateTime, default=get_uk_time_naive)
-    read_at = Column(DateTime, nullable=True)  # 已读时间（可为空）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    read_at = Column(DateTime(timezone=True), nullable=True)  # 已读时间（可为空）
     # 保留向后兼容字段
     title = Column(String(200), nullable=True)  # 可选，用于旧通知
     is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 read_at)
@@ -328,8 +333,8 @@ class TaskCancelRequest(Base):
         String(6), ForeignKey("customer_service.id"), nullable=True
     )  # 审核的客服ID（格式：CS8888，指向 customer_service 表）
     admin_comment = Column(Text, nullable=True)  # 审核意见
-    created_at = Column(DateTime, default=get_uk_time)
-    reviewed_at = Column(DateTime, nullable=True)  # 审核时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
 
 
 class CustomerService(Base):
@@ -341,7 +346,7 @@ class CustomerService(Base):
     is_online = Column(Integer, default=0)  # 1=在线, 0=离线
     avg_rating = Column(Float, default=0.0)  # 平均评分
     total_ratings = Column(Integer, default=0)  # 总评分数量
-    created_at = Column(DateTime, default=get_uk_time)  # 创建时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 创建时间
 
 
 class AdminRequest(Base):
@@ -361,8 +366,8 @@ class AdminRequest(Base):
     admin_id = Column(
         String(5), ForeignKey("admin_users.id"), nullable=True
     )  # 处理的管理员ID（格式：A0001，指向 admin_users 表）
-    created_at = Column(DateTime, default=get_uk_time)
-    updated_at = Column(DateTime, nullable=True)  # 更新时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), nullable=True)  # 更新时间
 
 
 class AdminChatMessage(Base):
@@ -373,7 +378,7 @@ class AdminChatMessage(Base):
         String(20), nullable=False
     )  # 发送者类型：customer_service, admin
     content = Column(Text, nullable=False)  # 消息内容
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
 
 
 class AdminUser(Base):
@@ -385,8 +390,8 @@ class AdminUser(Base):
     hashed_password = Column(String(128), nullable=False)  # 登录密码
     is_active = Column(Integer, default=1)  # 1=激活, 0=禁用
     is_super_admin = Column(Integer, default=0)  # 1=超级管理员, 0=普通管理员
-    created_at = Column(DateTime, default=get_uk_time)  # 创建时间
-    last_login = Column(DateTime, nullable=True)  # 最后登录时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 创建时间
+    last_login = Column(DateTime(timezone=True), nullable=True)  # 最后登录时间
 
 
 class StaffNotification(Base):
@@ -403,7 +408,7 @@ class StaffNotification(Base):
         String(20), default="info"
     )  # 提醒类型：info, warning, error, success
     is_read = Column(Integer, default=0)  # 是否已读：1=已读, 0=未读
-    created_at = Column(DateTime, default=get_uk_time_naive)  # 创建时间（使用不带时区的 datetime）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 创建时间（使用不带时区的 datetime）
     read_at = Column(DateTime, nullable=True)  # 阅读时间
 
 
@@ -416,8 +421,8 @@ class SystemSettings(Base):
         String(20), default="string"
     )  # 设置类型：string, boolean, number, json
     description = Column(String(200), nullable=True)  # 设置描述
-    created_at = Column(DateTime, default=get_uk_time)
-    updated_at = Column(DateTime, default=get_uk_time, onupdate=get_uk_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
 
 
 class CustomerServiceChat(Base):
@@ -429,13 +434,13 @@ class CustomerServiceChat(Base):
     user_id = Column(String(20), nullable=False)  # 用户ID
     service_id = Column(String(20), nullable=False)  # 客服ID
     is_ended = Column(Integer, default=0)  # 是否已结束对话 (0: 进行中, 1: 已结束)
-    created_at = Column(DateTime, default=get_uk_time)
-    ended_at = Column(DateTime, nullable=True)  # 结束时间
-    last_message_at = Column(DateTime, default=get_uk_time)  # 最后消息时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    ended_at = Column(DateTime(timezone=True), nullable=True)  # 结束时间
+    last_message_at = Column(DateTime(timezone=True), default=get_utc_time)  # 最后消息时间
     total_messages = Column(Integer, default=0)  # 总消息数
     user_rating = Column(Integer, nullable=True)  # 用户评分 (1-5)
     user_comment = Column(Text, nullable=True)  # 用户评价内容
-    rated_at = Column(DateTime, nullable=True)  # 评分时间
+    rated_at = Column(DateTime(timezone=True), nullable=True)  # 评分时间
 
 
 class CustomerServiceMessage(Base):
@@ -448,7 +453,7 @@ class CustomerServiceMessage(Base):
     )  # 发送者类型: 'user', 'customer_service', 'system'
     content = Column(Text, nullable=False)  # 消息内容
     is_read = Column(Integer, default=0)  # 是否已读 (0: 未读, 1: 已读)
-    created_at = Column(DateTime, default=get_uk_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
     image_id = Column(String(100), nullable=True)  # 私密图片ID
 
 
@@ -525,10 +530,10 @@ class PendingUser(Base):
     hashed_password = Column(String(128), nullable=False)
     phone = Column(String(20), nullable=True)
     verification_token = Column(String(255), unique=True, nullable=False)  # 增加到255以支持JWT token
-    created_at = Column(DateTime, default=get_uk_time)
-    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
-    terms_agreed_at = Column(DateTime, nullable=True)  # 同意时间
+    terms_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 同意时间
     inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
@@ -549,7 +554,7 @@ class TaskApplication(Base):
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     status = Column(String(20), default="pending")  # pending, approved, rejected
-    created_at = Column(DateTime, default=get_uk_time_naive)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
     message = Column(Text, nullable=True)  # 申请时的留言
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
     currency = Column(String(3), default="GBP")  # 货币类型
@@ -587,8 +592,8 @@ class JobPosition(Base):
     tags = Column(Text, nullable=True)  # 技能标签（JSON格式存储）
     tags_en = Column(Text, nullable=True)  # 技能标签（英文，JSON格式存储）
     is_active = Column(Integer, default=1)  # 是否启用
-    created_at = Column(DateTime, default=get_uk_time_naive)
-    updated_at = Column(DateTime, default=get_uk_time_naive, onupdate=get_uk_time_naive)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
     
     # 索引
@@ -638,8 +643,8 @@ class FeaturedTaskExpert(Base):
     category = Column(String(50), nullable=True)  # 分类（programming, design, marketing, writing, translation）
     location = Column(String(50), nullable=True)  # 城市位置（如：London, Manchester, Online等）
     
-    created_at = Column(DateTime, default=get_uk_time_naive)
-    updated_at = Column(DateTime, default=get_uk_time_naive, onupdate=get_uk_time_naive)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
     
     # 索引
@@ -666,8 +671,8 @@ class UserPreferences(Base):
     task_levels = Column(Text, nullable=True)  # JSON格式存储偏好的任务等级
     keywords = Column(Text, nullable=True)  # JSON格式存储偏好关键词
     min_deadline_days = Column(Integer, default=1)  # 最少截止时间（天）
-    created_at = Column(DateTime, default=get_uk_time)
-    updated_at = Column(DateTime, default=get_uk_time, onupdate=get_uk_time)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
     # 关系
     user = relationship("User", backref="preferences")
@@ -686,7 +691,7 @@ class MessageRead(Base):
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
-    read_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    read_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
     
     __table_args__ = (
         UniqueConstraint("message_id", "user_id", name="uq_message_reads_message_user"),
@@ -706,7 +711,7 @@ class MessageAttachment(Base):
     url = Column(String(500), nullable=True)  # 附件URL（公开附件）
     blob_id = Column(String(100), nullable=True)  # 私密文件ID（私密附件）
     meta = Column(Text, nullable=True)  # JSON格式存储元数据
-    created_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
     
     __table_args__ = (
         # 存在性约束：url 和 blob_id 必须二选一
@@ -729,7 +734,7 @@ class NegotiationResponseLog(Base):
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     action = Column(String(20), nullable=False)  # 'accept' 或 'reject' 或 'withdraw'
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格（如果接受）
-    responded_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    responded_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
     ip_address = Column(String(45), nullable=True)  # 操作IP（可选，用于审计）
     user_agent = Column(Text, nullable=True)  # 用户代理（可选，用于审计）
     
@@ -751,7 +756,7 @@ class MessageReadCursor(Base):
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
     last_read_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
-    updated_at = Column(DateTime, default=get_uk_time_naive, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
     
     __table_args__ = (
         UniqueConstraint("task_id", "user_id", name="uq_message_read_cursors_task_user"),

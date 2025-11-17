@@ -5,9 +5,10 @@
 
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
-import pytz
 import requests
 import json
+from app.utils.time_utils import get_utc_time, LONDON, to_user_timezone, format_iso_utc
+from app.models import get_uk_time_online  # 保留用于测试
 
 router = APIRouter()
 
@@ -16,11 +17,11 @@ async def time_check():
     """检查在线时间获取功能的状态"""
     try:
         # 导入时间函数
-        from app.models import get_uk_time, get_uk_time_online, get_uk_time_naive
+        from app.models import get_uk_time, get_uk_time_online
         
         result = {
             "status": "success",
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": format_iso_utc(get_utc_time()),
             "checks": {}
         }
         
@@ -54,13 +55,15 @@ async def time_check():
                 "error": str(e)
             }
         
-        # 检查3: 数据库存储时间
+        # 检查3: UTC时间（新的统一时间函数）
         try:
-            naive_time = get_uk_time_naive()
-            result["checks"]["naive_time"] = {
+            utc_time = get_utc_time()
+            london_time = to_user_timezone(utc_time, LONDON)
+            result["checks"]["utc_time"] = {
                 "status": "success",
-                "time": naive_time.isoformat(),
-                "timezone": str(naive_time.tzinfo)
+                "utc_time": utc_time.isoformat(),
+                "london_time": london_time.isoformat(),
+                "timezone": str(utc_time.tzinfo)
             }
         except Exception as e:
             result["checks"]["naive_time"] = {

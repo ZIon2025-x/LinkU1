@@ -8,6 +8,7 @@ import logging
 import os
 from typing import Any, Dict
 from datetime import datetime
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -216,7 +217,7 @@ def refresh_session(
             )
         
         # 更新现有会话的最后活动时间（不创建新会话）
-        session.last_activity = datetime.utcnow()
+        session.last_activity = get_utc_time()
         SecureAuthManager._store_session(session)
         
         # 生成并存储新的刷新令牌到Redis
@@ -660,7 +661,7 @@ def get_redis_status():
         
         # 基础信息
         status = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": format_iso_utc(get_utc_time()),
             "railway_environment": os.getenv("RAILWAY_ENVIRONMENT", "false"),
             "redis_url_set": bool(Config.REDIS_URL),
             "redis_url_preview": Config.REDIS_URL[:20] + "..." if Config.REDIS_URL else None,
@@ -713,7 +714,7 @@ def get_redis_status():
         # 测试会话存储
         try:
             test_session_id = "test_railway_redis"
-            test_data = {"test": "railway_redis_check", "timestamp": datetime.now().isoformat()}
+            test_data = {"test": "railway_redis_check", "timestamp": format_iso_utc(get_utc_time())}
             
             # 存储测试数据
             redis_client.setex(f"session:{test_session_id}", 60, json.dumps(test_data))
@@ -742,7 +743,7 @@ def get_redis_status():
             "redis_enabled": False,
             "message": f"Redis 连接失败: {str(e)}",
             "error_details": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": format_iso_utc(get_utc_time())
         }
 
 @secure_auth_router.post("/cleanup-refresh-tokens")
@@ -1077,7 +1078,7 @@ def login_with_phone_verification_code(
                     phone=phone_digits,
                     avatar="",
                     agreed_to_terms=1,
-                    terms_agreed_at=datetime.utcnow(),
+                    terms_agreed_at=get_utc_time(),
                     is_verified=1,  # 验证码登录创建的用户已验证
                     is_active=1,    # 激活
                 )
@@ -1266,7 +1267,7 @@ def login_with_verification_code(
                     phone=None,
                     avatar="",
                     agreed_to_terms=1,
-                    terms_agreed_at=datetime.utcnow(),
+                    terms_agreed_at=get_utc_time(),
                     is_verified=1,  # 验证码登录创建的用户已验证
                     is_active=1,    # 激活
                 )
@@ -1334,6 +1335,7 @@ def login_with_verification_code(
         
         # 生成并设置CSRF token
         from app.csrf import CSRFProtection
+from app.utils.time_utils import get_utc_time
         csrf_token = CSRFProtection.generate_csrf_token()
         CookieManager.set_csrf_cookie(response, csrf_token, user_agent)
         

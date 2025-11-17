@@ -115,6 +115,7 @@ def get_password_hash(password: str) -> str:
 def generate_strong_password(length: int = 16) -> str:
     """生成强密码（包含大小写字母、数字、特殊字符）"""
     import string
+from app.utils.time_utils import get_utc_time
     # 确保包含各种字符类型
     uppercase = string.ascii_uppercase
     lowercase = string.ascii_lowercase
@@ -146,14 +147,14 @@ def create_access_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = get_utc_time() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = get_utc_time() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update(
         {
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": get_utc_time(),
             "type": "access",
             "jti": secrets.token_urlsafe(16),  # JWT ID，用于撤销
         }
@@ -170,9 +171,9 @@ def create_refresh_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = get_utc_time() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=REFRESH_TOKEN_EXPIRE_HOURS)
+        expire = get_utc_time() + timedelta(hours=REFRESH_TOKEN_EXPIRE_HOURS)
 
     # 生成唯一的refresh token ID
     refresh_jti = secrets.token_urlsafe(32)
@@ -180,7 +181,7 @@ def create_refresh_token(
     to_encode.update(
         {
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": get_utc_time(),
             "type": "refresh",
             "jti": refresh_jti,
             "version": 1,  # 用于token轮换
@@ -361,12 +362,12 @@ def store_refresh_token(refresh_jti: str, user_id: str, expire_time: datetime) -
             # 存储到Redis
             token_data = {
                 "user_id": user_id,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": get_utc_time().isoformat(),
                 "expires_at": expire_time.isoformat(),
             }
 
             # 设置过期时间
-            ttl = int((expire_time - datetime.utcnow()).total_seconds())
+            ttl = int((expire_time - get_utc_time()).total_seconds())
 
             redis_client.setex(
                 f"refresh_token:{refresh_jti}", ttl, json.dumps(token_data)

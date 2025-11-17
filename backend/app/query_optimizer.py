@@ -24,7 +24,7 @@ class QueryOptimizer:
         import pytz
         
         # 获取当前英国时间并转换为UTC时间进行比较
-        uk_tz = pytz.timezone('Europe/London')
+        uk_tz = ZoneInfo("Europe/London")
         now_local = datetime.now(uk_tz)
         now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
         
@@ -99,13 +99,11 @@ class QueryOptimizer:
     @staticmethod
     def get_tasks_with_pagination_info(db: Session, **filters) -> Dict[str, Any]:
         """获取任务列表和分页信息，一次查询完成"""
-        from datetime import datetime
-        import pytz
+        from datetime import datetime, timezone
+        from app.utils.time_utils import get_utc_time
         
-        # 获取当前英国时间并转换为UTC时间进行比较
-        uk_tz = pytz.timezone('Europe/London')
-        now_local = datetime.now(uk_tz)
-        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        # 获取当前UTC时间
+        now_utc = get_utc_time()
         
         # 构建基础查询 - 显示开放和已接收但未同意的任务，且未过期
         base_query = db.query(models.Task).filter(
@@ -246,13 +244,11 @@ class AsyncQueryOptimizer:
         **filters
     ) -> List[models.Task]:
         """异步获取任务列表，预加载关联数据"""
-        from datetime import datetime
-        import pytz
+        from datetime import datetime, timezone
+        from app.utils.time_utils import get_utc_time
         
-        # 获取当前英国时间并转换为UTC时间进行比较
-        uk_tz = pytz.timezone('Europe/London')
-        now_local = datetime.now(uk_tz)
-        now_utc = now_local.astimezone(pytz.UTC).replace(tzinfo=None)  # 转换为UTC naive datetime
+        # 获取当前UTC时间
+        now_utc = get_utc_time()
         
         query = (
             select(models.Task)

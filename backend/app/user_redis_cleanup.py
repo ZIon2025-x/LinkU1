@@ -477,6 +477,7 @@ class UserRedisCleanup:
         """将pickle数据迁移为JSON格式（⚠️ 保留TTL，严禁固定ex=3600）"""
         try:
             import json
+from app.utils.time_utils import get_utc_time
             # ⚠️ 先读取PTTL，保留原有过期时间（毫秒）
             ttl_ms = self.redis_client.pttl(key)
             if ttl_ms < 0:
@@ -506,7 +507,7 @@ class UserRedisCleanup:
             
             last_activity = datetime.fromisoformat(last_activity_str)
             # 会话24小时过期
-            return datetime.utcnow() - last_activity > timedelta(hours=24)
+            return get_utc_time() - last_activity > timedelta(hours=24)
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 检查会话过期失败: {e}")
             return True
@@ -520,7 +521,7 @@ class UserRedisCleanup:
             
             expires_at = datetime.fromisoformat(expires_at_str)
             # 检查是否已过期
-            return datetime.utcnow() > expires_at
+            return get_utc_time() > expires_at
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 检查refresh token过期失败: {e}")
             return True
@@ -536,7 +537,7 @@ class UserRedisCleanup:
                     if time_str:
                         created_time = datetime.fromisoformat(time_str)
                         # 缓存7天过期
-                        return datetime.utcnow() - created_time > timedelta(days=7)
+                        return get_utc_time() - created_time > timedelta(days=7)
             return False
         except Exception as e:
             logger.error(f"[USER_REDIS_CLEANUP] 检查缓存过期失败: {e}")

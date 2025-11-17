@@ -6,9 +6,10 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
+from app.utils.time_utils import get_utc_time, format_iso_utc
 from pathlib import Path
 
-import pytz
+# pytz已移除，统一使用zoneinfo
 from fastapi import (
     BackgroundTasks,
     Depends,
@@ -519,8 +520,14 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 自动数据库迁移已禁用（迁移脚本已执行完成并删除）
-        # 如需执行迁移，请手动运行迁移脚本或使用 Alembic
+        # 执行自动数据库迁移（部署时自动执行）
+        try:
+            from app.db_migrations import run_migration_sync
+            run_migration_sync(sync_engine)
+        except Exception as e:
+            logger.warning(f"自动数据库迁移执行失败（可继续运行）: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 创建优化索引（使用 pg_trgm）
         try:
@@ -1105,7 +1112,7 @@ async def health_check():
     
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": format_iso_utc(get_utc_time()),
         "checks": {}
     }
     

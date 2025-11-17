@@ -163,6 +163,7 @@ async def get_timezone_info():
     try:
         from datetime import datetime
         from zoneinfo import ZoneInfo
+from app.utils.time_utils import get_utc_time
         
         uk_zone = ZoneInfo("Europe/London")
         current_time = datetime.now(uk_zone)
@@ -176,7 +177,7 @@ async def get_timezone_info():
             "timezone_display": f"Europe/London ({'BST' if is_dst else 'GMT'})",
             "offset_hours": offset_hours,
             "current_time": current_time.isoformat(),
-            "utc_time": datetime.utcnow().isoformat()
+            "utc_time": get_utc_time().isoformat()
         }
         
     except Exception as e:

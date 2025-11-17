@@ -253,10 +253,10 @@ def run_migrations(engine: Engine) -> bool:
     
     返回: 是否成功
     """
-    # 检查是否启用自动迁移（默认禁用，迁移脚本已执行完成）
-    auto_migrate = os.getenv("AUTO_MIGRATE", "false").lower() == "true"
+    # 检查是否启用自动迁移（默认启用，部署时自动执行）
+    auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
     if not auto_migrate:
-        logger.info("自动迁移已禁用（迁移脚本已执行完成，如需迁移请手动执行）")
+        logger.info("自动迁移已禁用（如需迁移请设置 AUTO_MIGRATE=true）")
         return True
     
     logger.info("🚀 开始执行自动数据库迁移...")
@@ -280,6 +280,7 @@ def run_migrations(engine: Engine) -> bool:
         "add_service_application_deadline_fields.sql",  # 为服务申请添加截至日期和灵活选项字段
         "allow_task_deadline_null.sql",  # 允许 tasks 表的 deadline 字段为 NULL（支持灵活模式任务）
         "add_task_is_flexible_field.sql",  # 在 tasks 表中添加 is_flexible 字段
+        "migrate_time_fields_to_timestamptz.sql",  # 时间字段迁移：将 TIMESTAMP 转换为 TIMESTAMPTZ
     ]
     
     total_executed = 0

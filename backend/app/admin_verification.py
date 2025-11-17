@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Redis配置
 try:
     from app.redis_cache import get_redis_client
+from app.utils.time_utils import get_utc_time
     redis_client = get_redis_client()
     USE_REDIS = redis_client is not None
     logger.info(f"[ADMIN_VERIFICATION] Redis连接状态: {USE_REDIS}")
@@ -48,7 +49,7 @@ class AdminVerificationManager:
                 verification_data = {
                     "admin_id": admin_id,
                     "code": code,
-                    "created_at": datetime.utcnow().isoformat(),
+                    "created_at": get_utc_time().isoformat(),
                     "is_used": False
                 }
                 

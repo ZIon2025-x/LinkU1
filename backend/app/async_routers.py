@@ -434,10 +434,10 @@ async def apply_for_task(
             )
         
         # 创建申请记录
-        from app.models import get_uk_time_naive
+        from app.utils.time_utils import get_utc_time
         from decimal import Decimal
         
-        current_time = get_uk_time_naive()
+        current_time = get_utc_time()
         new_application = models.TaskApplication(
             task_id=task_id,
             applicant_id=applicant_id,

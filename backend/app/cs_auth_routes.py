@@ -99,7 +99,7 @@ async def cs_login(
         add_security_headers(response)
         
         # 更新最后登录时间（客服模型中没有last_login字段，暂时跳过）
-        # cs.last_login = datetime.utcnow()
+        # cs.last_login = get_utc_time()
         # db.commit()
         
         # 记录成功登录
@@ -332,6 +332,7 @@ async def get_cs_permissions(
     获取客服权限列表
     """
     from app.role_management import RolePermissions, UserRole
+from app.utils.time_utils import get_utc_time
     
     permissions = RolePermissions.get_permissions(UserRole.CUSTOMER_SERVICE)
     

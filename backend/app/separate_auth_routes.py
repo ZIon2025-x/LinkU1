@@ -109,7 +109,7 @@ def admin_login(
     CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
     
     # 更新最后登录时间
-    admin.last_login = datetime.utcnow()  # type: ignore
+    admin.last_login = get_utc_time()  # type: ignore
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员登录成功: {admin.id}")
@@ -371,7 +371,7 @@ def verify_admin_code(
     CSRFProtection.set_csrf_cookie(response, csrf_token, user_agent)
     
     # 更新最后登录时间
-    admin.last_login = datetime.utcnow()  # type: ignore
+    admin.last_login = get_utc_time()  # type: ignore
     db.commit()
     
     logger.info(f"[ADMIN_AUTH] 管理员验证码登录成功: {admin.id}")
@@ -470,7 +470,7 @@ def service_redis_test():
         
         # 测试存储和获取
         test_key = "service_test_key"
-        test_data = {"test": "service_redis_test", "timestamp": datetime.utcnow().isoformat()}
+        test_data = {"test": "service_redis_test", "timestamp": get_utc_time().isoformat()}
         
         # 存储测试数据
         set_result = safe_redis_set(test_key, test_data, 60)
@@ -862,6 +862,7 @@ def user_logout(
     if session_id:
         # 删除会话（使用原有系统）
         from app.secure_auth import SecureAuthManager
+from app.utils.time_utils import get_utc_time
         SecureAuthManager.revoke_session(session_id)
     
     # 清除Cookie
