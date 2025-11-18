@@ -2902,7 +2902,7 @@ def admin_get_customer_service_chat_messages(
             "sender_type": message.sender_type,
             "sender_name": sender_name,
             "content": message.content,
-            "created_at": message.created_at,
+            "created_at": format_iso_utc(message.created_at) if message.created_at else None,
         }
         result.append(message_dict)
 
@@ -3531,8 +3531,8 @@ def get_customer_service_chats(
                     "user_id": user.id,
                     "user_name": user.name,
                     "user_avatar": user.avatar or "/static/avatar1.png",
-                    "created_at": chat["created_at"],
-                    "last_message_at": chat["last_message_at"],
+                    "created_at": format_iso_utc(chat["created_at"]) if chat["created_at"] else None,
+                    "last_message_at": format_iso_utc(chat["last_message_at"]) if chat["last_message_at"] else None,
                     "is_ended": chat["is_ended"],
                     "total_messages": chat["total_messages"],
                     "unread_count": unread_count,

@@ -6,7 +6,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, schemas
-from app.utils.time_utils import get_utc_time, parse_iso_utc
+from app.utils.time_utils import get_utc_time, parse_iso_utc, format_iso_utc
 
 # 密码加密上下文已移至 app.security 模块
 # 请使用: from app.security import pwd_context
@@ -2887,13 +2887,13 @@ def get_customer_service_chat(db: Session, chat_id: str) -> dict:
         "user_id": chat.user_id,
         "service_id": chat.service_id,
         "is_ended": chat.is_ended,
-        "created_at": chat.created_at,
-        "ended_at": chat.ended_at,
-        "last_message_at": chat.last_message_at,
+        "created_at": format_iso_utc(chat.created_at) if chat.created_at else None,
+        "ended_at": format_iso_utc(chat.ended_at) if chat.ended_at else None,
+        "last_message_at": format_iso_utc(chat.last_message_at) if chat.last_message_at else None,
         "total_messages": chat.total_messages,
         "user_rating": chat.user_rating,
         "user_comment": chat.user_comment,
-        "rated_at": chat.rated_at,
+        "rated_at": format_iso_utc(chat.rated_at) if chat.rated_at else None,
     }
 
 
@@ -2914,13 +2914,13 @@ def get_user_customer_service_chats(db: Session, user_id: str) -> list:
             "user_id": chat.user_id,
             "service_id": chat.service_id,
             "is_ended": chat.is_ended,
-            "created_at": chat.created_at,
-            "ended_at": chat.ended_at,
-            "last_message_at": chat.last_message_at,
+            "created_at": format_iso_utc(chat.created_at) if chat.created_at else None,
+            "ended_at": format_iso_utc(chat.ended_at) if chat.ended_at else None,
+            "last_message_at": format_iso_utc(chat.last_message_at) if chat.last_message_at else None,
             "total_messages": chat.total_messages,
             "user_rating": chat.user_rating,
             "user_comment": chat.user_comment,
-            "rated_at": chat.rated_at,
+            "rated_at": format_iso_utc(chat.rated_at) if chat.rated_at else None,
         }
         for chat in chats
     ]
@@ -2965,13 +2965,13 @@ def get_service_customer_service_chats(db: Session, service_id: str) -> list:
             "user_id": chat.user_id,
             "service_id": chat.service_id,
             "is_ended": chat.is_ended,
-            "created_at": chat.created_at,
-            "ended_at": chat.ended_at,
-            "last_message_at": chat.last_message_at,
+            "created_at": format_iso_utc(chat.created_at) if chat.created_at else None,
+            "ended_at": format_iso_utc(chat.ended_at) if chat.ended_at else None,
+            "last_message_at": format_iso_utc(chat.last_message_at) if chat.last_message_at else None,
             "total_messages": chat.total_messages,
             "user_rating": chat.user_rating,
             "user_comment": chat.user_comment,
-            "rated_at": chat.rated_at,
+            "rated_at": format_iso_utc(chat.rated_at) if chat.rated_at else None,
         }
         for chat in all_chats
     ]
@@ -3392,11 +3392,11 @@ def save_customer_service_message(
         "sender_type": message.sender_type,
         "content": message.content,
         "is_read": message.is_read,
-        "created_at": message.created_at,
+        "created_at": format_iso_utc(message.created_at) if message.created_at else None,
         "status": message.status,
-        "sent_at": message.sent_at,
-        "delivered_at": message.delivered_at,
-        "read_at": message.read_at,
+        "sent_at": format_iso_utc(message.sent_at) if message.sent_at else None,
+        "delivered_at": format_iso_utc(message.delivered_at) if message.delivered_at else None,
+        "read_at": format_iso_utc(message.read_at) if message.read_at else None,
     }
 
 
@@ -3423,7 +3423,7 @@ def get_customer_service_messages(
             "sender_type": msg.sender_type,
             "content": msg.content,
             "is_read": msg.is_read,
-            "created_at": msg.created_at,
+            "created_at": format_iso_utc(msg.created_at) if msg.created_at else None,
         }
         for msg in messages
     ]
