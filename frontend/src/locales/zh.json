@@ -2149,7 +2149,7 @@
     "connecting": "连接中...",
     "loadingHistory": "正在加载历史消息...",
     "loadHistoryFailed": "加载聊天历史失败，请刷新页面重试",
-    "noServiceAvailable": "当前无可用客服，请您稍后尝试。如有紧急情况请发送邮件至客服邮箱。",
+    "noServiceAvailable": "当前无可用客服，请您稍后尝试。如有紧急情况，请发送邮件至 support@link2ur.com",
     "noServiceAvailableShort": "当前无可用客服，请您稍后尝试",
     "connectServiceError": "连接客服时出现错误，请稍后重试",
     "noActiveChat": "没有活跃的客服对话，无法结束对话",

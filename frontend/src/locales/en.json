@@ -2257,7 +2257,7 @@
     "connecting": "Connecting...",
     "loadingHistory": "Loading message history...",
     "loadHistoryFailed": "Failed to load chat history, please refresh the page",
-    "noServiceAvailable": "No customer service available at the moment. Please try again later. For urgent matters, please email customer service.",
+    "noServiceAvailable": "No customer service available at the moment. Please try again later. For urgent matters, please email support@link2ur.com",
     "noServiceAvailableShort": "No customer service available at the moment, please try again later",
     "connectServiceError": "Error connecting to customer service, please try again later",
     "systemMessages": {

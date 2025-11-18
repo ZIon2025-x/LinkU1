@@ -3163,7 +3163,7 @@ const MessagePage: React.FC = () => {
         const noServiceMessage: Message = {
           id: Date.now(),
           from: t('messages.system'),
-          content: '当前无可用客服，请您稍后尝试',
+          content: t('messages.noServiceAvailable'),
           created_at: new Date().toISOString()
         };
         setMessages(prev => [...prev, noServiceMessage]);
