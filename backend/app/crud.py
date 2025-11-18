@@ -40,13 +40,28 @@ def get_user_by_id(db: Session, user_id: str):
     # 尝试从Redis缓存获取
     from app.redis_cache import get_user_info, cache_user_info
     cached_user = get_user_info(user_id)
-    if cached_user:
+    
+    # 如果缓存返回的是字典（新格式），需要从数据库重新查询
+    # 因为代码期望 SQLAlchemy 对象，而不是字典
+    # 注意：缓存主要用于减少数据库查询，但为了兼容性，我们仍然从数据库返回对象
+    if cached_user and isinstance(cached_user, dict):
+        # 缓存命中但格式是字典，从数据库查询以确保返回 SQLAlchemy 对象
+        # 这样可以保持代码兼容性
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        if user:
+            # 重新缓存（现在会转换为字典格式）
+            cache_user_info(user_id, user)
+        return user
+    
+    # 如果缓存返回的是 SQLAlchemy 对象（旧格式），直接返回
+    # 但这种情况不应该发生，因为我们已经修改了缓存逻辑
+    if cached_user and hasattr(cached_user, '__table__'):
         return cached_user
     
     # 缓存未命中，从数据库查询
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
-        # 缓存用户信息
+        # 缓存用户信息（会自动转换为字典格式）
         cache_user_info(user_id, user)
     return user
 

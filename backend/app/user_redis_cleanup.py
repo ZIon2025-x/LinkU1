@@ -203,7 +203,21 @@ class UserRedisCleanup:
                                 preview = "empty"
                             
                             # ⚠️ 采样日志：只记录部分无法解析的数据，避免日志放大
-                            if random.random() < 0.1:  # 10%采样率
+                            # 如果是 pickle 格式的旧数据（SQLAlchemy 对象），这是正常的清理行为
+                            is_pickle_old_format = (
+                                isinstance(raw_data, bytes) and 
+                                raw_data.startswith(b'\x80') and  # pickle 魔数
+                                key_str.startswith('user:')  # 用户缓存键
+                            )
+                            
+                            if is_pickle_old_format:
+                                # 旧格式数据，使用 debug 级别，不记录为警告
+                                logger.debug(
+                                    f"[USER_REDIS_CLEANUP] 清理旧格式pickle数据: {key_str}, "
+                                    f"类型: {data_type}, 大小: {data_size}"
+                                )
+                            elif random.random() < 0.1:  # 10%采样率
+                                # 其他无法解析的数据，记录为警告
                                 logger.warning(
                                     f"[USER_REDIS_CLEANUP] 无法解析的缓存数据: {key_str}, "
                                     f"类型: {data_type}, 大小: {data_size}, 哈希: {data_hash}, 预览: {preview}"
@@ -460,7 +474,8 @@ class UserRedisCleanup:
                         # ⚠️ 如果解析出来的是对象（如 SQLAlchemy User 对象），而不是字典
                         # 这是旧格式的数据，应该删除而不是迁移
                         # 因为新系统使用 JSON 格式存储字典数据
-                        logger.info(f"[USER_REDIS_CLEANUP] 检测到旧格式对象数据（非字典）: {key}, 类型: {type(parsed_data).__name__}, 将删除")
+                        # 这是正常的清理行为，不需要记录为警告
+                        logger.debug(f"[USER_REDIS_CLEANUP] 检测到旧格式对象数据（非字典）: {key}, 类型: {type(parsed_data).__name__}, 将自动清理")
                         return None  # 返回 None 会触发删除逻辑
                 except (pickle.UnpicklingError, TypeError, Exception) as e:
                     logger.warning(f"[USER_REDIS_CLEANUP] Pickle解析失败 {key}: {e}")

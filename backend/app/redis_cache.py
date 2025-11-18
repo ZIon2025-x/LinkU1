@@ -74,12 +74,29 @@ class RedisCache:
             logger.info("Redis未配置，使用内存缓存")
     
     def _serialize(self, data: Any) -> bytes:
-        """序列化数据"""
+        """序列化数据
+        
+        优先使用 JSON 序列化（安全、可读），
+        只有在 JSON 无法序列化时才使用 pickle（向后兼容）。
+        """
+        # 优先尝试 JSON 序列化（字典、列表等标准类型）
+        if isinstance(data, (dict, list, str, int, float, bool, type(None))):
+            try:
+                return json.dumps(data, default=str).encode('utf-8')
+            except (TypeError, ValueError):
+                # JSON 序列化失败，回退到 pickle
+                pass
+        
+        # 对于其他类型（如复杂对象），使用 pickle（向后兼容）
         try:
             return pickle.dumps(data)
         except Exception as e:
             logger.error(f"序列化失败: {e}")
-            return json.dumps(data, default=str).encode('utf-8')
+            # 最后兜底：尝试 JSON（可能丢失信息）
+            try:
+                return json.dumps(data, default=str).encode('utf-8')
+            except:
+                return str(data).encode('utf-8')
     
     def _deserialize(self, data: bytes) -> Any:
         """反序列化数据"""
@@ -226,8 +243,25 @@ def get_cache_key(prefix: str, *args) -> str:
     return f"{prefix}:{arg_str}"
 
 def cache_user_info(user_id: str, user_data: Any, ttl: int = DEFAULT_TTL['USER_INFO']) -> bool:
-    """缓存用户信息"""
+    """缓存用户信息
+    
+    如果传入的是 SQLAlchemy 对象，会自动转换为字典格式存储。
+    这样可以避免 pickle 序列化问题，使用 JSON 格式存储。
+    """
     key = get_cache_key(CACHE_PREFIXES['USER'], user_id)
+    
+    # 如果传入的是 SQLAlchemy 对象，转换为字典
+    if hasattr(user_data, '__table__'):  # SQLAlchemy 对象
+        user_dict = {}
+        for column in user_data.__table__.columns:
+            value = getattr(user_data, column.name, None)
+            # 处理 datetime 对象
+            if isinstance(value, datetime):
+                from app.utils.time_utils import format_iso_utc
+                value = format_iso_utc(value)
+            user_dict[column.name] = value
+        user_data = user_dict
+    
     return redis_cache.set(key, user_data, ttl)
 
 def get_user_info(user_id: str) -> Optional[Any]:

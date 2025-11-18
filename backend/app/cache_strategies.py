@@ -45,9 +45,14 @@ class UserCacheStrategy(CacheStrategy):
     
     @staticmethod
     def cache_user_info(user_id: str, user_data: Any) -> bool:
-        """缓存用户基本信息"""
-        key = CacheStrategy.generate_cache_key("user", user_id)
-        return redis_cache.set(key, user_data, UserCacheStrategy.USER_INFO_TTL * 60)
+        """缓存用户基本信息
+        
+        注意：此方法已被弃用，请使用 redis_cache.cache_user_info
+        保留此方法仅用于向后兼容。
+        """
+        # 使用统一的缓存函数，确保格式转换
+        from app.redis_cache import cache_user_info
+        return cache_user_info(user_id, user_data, UserCacheStrategy.USER_INFO_TTL * 60)
     
     @staticmethod
     def get_user_info(user_id: str) -> Optional[Any]:
