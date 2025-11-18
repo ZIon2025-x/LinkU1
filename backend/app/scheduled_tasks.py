@@ -132,6 +132,27 @@ def run_scheduled_tasks():
         check_expired_invitation_codes(db)
         check_expired_points(db)
         
+        # 客服系统定时任务（每5分钟执行一次）
+        try:
+            from app.customer_service_tasks import (
+                process_customer_service_queue,
+                auto_end_timeout_chats,
+                send_timeout_warnings
+            )
+            # 处理客服排队
+            queue_result = process_customer_service_queue(db)
+            logger.info(f"客服排队处理: {queue_result}")
+            
+            # 自动结束超时对话
+            timeout_result = auto_end_timeout_chats(db, timeout_minutes=2)
+            logger.info(f"超时对话处理: {timeout_result}")
+            
+            # 发送超时预警
+            warning_result = send_timeout_warnings(db, warning_minutes=1)
+            logger.info(f"超时预警: {warning_result}")
+        except Exception as e:
+            logger.error(f"客服系统定时任务执行失败: {e}", exc_info=True)
+        
         logger.info("定时任务执行完成")
     except Exception as e:
         logger.error(f"定时任务执行失败: {e}", exc_info=True)

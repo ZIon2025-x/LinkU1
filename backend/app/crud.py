@@ -3015,6 +3015,79 @@ def cleanup_old_ended_chats(db: Session, service_id: str) -> int:
     return 0
 
 
+def add_user_to_customer_service_queue(db: Session, user_id: str) -> dict:
+    """将用户添加到客服排队队列"""
+    from app.models import CustomerServiceQueue
+    
+    # 检查用户是否已在队列中（等待或已分配但未完成）
+    existing_queue = (
+        db.query(CustomerServiceQueue)
+        .filter(
+            CustomerServiceQueue.user_id == user_id,
+            CustomerServiceQueue.status.in_(["waiting", "assigned"])
+        )
+        .first()
+    )
+    
+    if existing_queue:
+        # 计算等待时间
+        from app.utils.time_utils import get_utc_time
+        wait_seconds = int((get_utc_time() - existing_queue.queued_at).total_seconds())
+        
+        return {
+            "queue_id": existing_queue.id,
+            "status": existing_queue.status,
+            "queued_at": existing_queue.queued_at,
+            "wait_seconds": wait_seconds,
+            "assigned_service_id": existing_queue.assigned_service_id
+        }
+    
+    # 创建新的排队记录
+    from app.utils.time_utils import get_utc_time
+    new_queue = CustomerServiceQueue(
+        user_id=user_id,
+        status="waiting",
+        queued_at=get_utc_time()
+    )
+    db.add(new_queue)
+    db.commit()
+    db.refresh(new_queue)
+    
+    return {
+        "queue_id": new_queue.id,
+        "status": "waiting",
+        "queued_at": new_queue.queued_at,
+        "wait_seconds": 0
+    }
+
+
+def get_user_queue_status(db: Session, user_id: str) -> dict:
+    """获取用户在排队队列中的状态"""
+    from app.models import CustomerServiceQueue
+    from app.utils.time_utils import get_utc_time
+    
+    queue_entry = (
+        db.query(CustomerServiceQueue)
+        .filter(CustomerServiceQueue.user_id == user_id)
+        .order_by(CustomerServiceQueue.queued_at.desc())
+        .first()
+    )
+    
+    if not queue_entry:
+        return {"status": "not_in_queue"}
+    
+    wait_seconds = int((get_utc_time() - queue_entry.queued_at).total_seconds())
+    
+    return {
+        "queue_id": queue_entry.id,
+        "status": queue_entry.status,
+        "queued_at": queue_entry.queued_at,
+        "wait_seconds": wait_seconds,
+        "assigned_service_id": queue_entry.assigned_service_id,
+        "assigned_at": queue_entry.assigned_at
+    }
+
+
 def end_customer_service_chat(
     db: Session, 
     chat_id: str,
@@ -3098,6 +3171,51 @@ def rate_customer_service_chat(
     return True
 
 
+def mark_customer_service_message_delivered(db: Session, message_id: int) -> bool:
+    """标记消息为已送达"""
+    from app.models import CustomerServiceMessage
+    from app.utils.time_utils import get_utc_time
+    
+    message = db.query(CustomerServiceMessage).filter(
+        CustomerServiceMessage.id == message_id
+    ).first()
+    
+    if not message:
+        return False
+    
+    if message.status != "sent":
+        return False  # 只有已发送的消息才能标记为已送达
+    
+    message.status = "delivered"
+    message.delivered_at = get_utc_time()
+    db.commit()
+    return True
+
+
+def mark_customer_service_message_read(db: Session, message_id: int) -> bool:
+    """标记消息为已读"""
+    from app.models import CustomerServiceMessage
+    from app.utils.time_utils import get_utc_time
+    
+    message = db.query(CustomerServiceMessage).filter(
+        CustomerServiceMessage.id == message_id
+    ).first()
+    
+    if not message:
+        return False
+    
+    if message.status not in ["sent", "delivered"]:
+        return False  # 只有已发送或已送达的消息才能标记为已读
+    
+    message.status = "read"
+    message.read_at = get_utc_time()
+    # 如果之前没有delivered_at，也设置它
+    if not message.delivered_at:
+        message.delivered_at = message.read_at
+    db.commit()
+    return True
+
+
 def save_customer_service_message(
     db: Session, chat_id: str, sender_id: str, sender_type: str, content: str, image_id: str = None
 ) -> dict:
@@ -3119,9 +3237,19 @@ def save_customer_service_message(
         message_data['image_id'] = image_id
         print(f"🔍 [DEBUG] 客服消息设置image_id: {image_id}")
     
+    # 设置消息状态和时间戳
+    from app.utils.time_utils import get_utc_time
+    message_data['status'] = 'sending'  # 初始状态为发送中
+    message_data['sent_at'] = get_utc_time()  # 发送时间
+    
     message = CustomerServiceMessage(**message_data)
 
     db.add(message)
+    db.flush()  # 刷新以获取message.id
+    
+    # 立即标记为已发送（因为消息已保存到数据库）
+    message.status = 'sent'
+    db.commit()
 
     # 更新对话的最后消息时间和总消息数
     chat = (
@@ -3134,7 +3262,6 @@ def save_customer_service_message(
         chat.last_message_at = get_utc_time()
         chat.total_messages += 1
 
-    db.commit()
     db.refresh(message)
 
     return {
@@ -3145,6 +3272,10 @@ def save_customer_service_message(
         "content": message.content,
         "is_read": message.is_read,
         "created_at": message.created_at,
+        "status": message.status,
+        "sent_at": message.sent_at,
+        "delivered_at": message.delivered_at,
+        "read_at": message.read_at,
     }
 
 

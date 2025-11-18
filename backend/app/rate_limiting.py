@@ -175,6 +175,12 @@ rate_limiter = RateLimiter()
 
 # 速率限制配置
 RATE_LIMITS = {
+    # 消息发送限制
+    "send_message": {"limit": 30, "window": 60},  # 每分钟30条消息
+    # 结束对话限制
+    "end_chat": {"limit": 10, "window": 60},  # 每分钟10次
+    # 评分限制
+    "rate_service": {"limit": 5, "window": 60},  # 每分钟5次
     # 用户登录相关
     "login": {"limit": 5, "window": 300},  # 5次/5分钟
     "register": {"limit": 3, "window": 3600},  # 3次/小时
@@ -199,8 +205,7 @@ RATE_LIMITS = {
     "api_auth": {"limit": 20, "window": 60},  # 20次/分钟
     "api_write": {"limit": 30, "window": 60},  # 30次/分钟
     
-    # 消息相关
-    "send_message": {"limit": 10, "window": 60},  # 10次/分钟
+    # 消息相关（已在上面定义，这里移除重复）
     "upload_file": {"limit": 5, "window": 60},  # 5次/分钟
     
     # 任务相关

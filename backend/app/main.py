@@ -526,17 +526,7 @@ async def startup_event():
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
         
-        # 执行数据库迁移脚本（自动迁移）
-        try:
-            from app.db_migrations import run_migration_sync
-            logger.info("开始执行数据库迁移...")
-            run_migration_sync(sync_engine)
-            logger.info("数据库迁移执行完成！")
-        except Exception as e:
-            logger.error(f"数据库迁移执行失败: {e}")
-            import traceback
-            traceback.print_exc()
-            # 迁移失败不阻止应用启动
+        # 数据库迁移已手动完成，不再自动执行
         
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")

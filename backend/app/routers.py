@@ -3238,82 +3238,156 @@ def admin_review_cancel_request(
 def assign_customer_service(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
-    """用户分配客服"""
+    """用户分配客服（使用排队系统）"""
     try:
-        # 随机分配一个在线客服
+        from app.models import CustomerService, CustomerServiceChat, CustomerServiceQueue
+        from app.utils.time_utils import get_utc_time, format_iso_utc
+        
+        # 1. 检查用户是否已有未结束的对话
+        existing_chat = (
+            db.query(CustomerServiceChat)
+            .filter(
+                CustomerServiceChat.user_id == current_user.id,
+                CustomerServiceChat.is_ended == 0
+            )
+            .first()
+        )
+        
+        if existing_chat:
+            # 返回现有对话
+            service = db.query(CustomerService).filter(
+                CustomerService.id == existing_chat.service_id
+            ).first()
+            
+            if service:
+                return {
+                    "service": {
+                        "id": service.id,
+                        "name": service.name,
+                        "avatar": "/static/service.png",
+                        "avg_rating": service.avg_rating,
+                        "total_ratings": service.total_ratings,
+                    },
+                    "chat": {
+                        "chat_id": existing_chat.chat_id,
+                        "user_id": existing_chat.user_id,
+                        "service_id": existing_chat.service_id,
+                        "is_ended": existing_chat.is_ended,
+                        "created_at": existing_chat.created_at.isoformat() if existing_chat.created_at else None,
+                        "total_messages": existing_chat.total_messages or 0,
+                    },
+                }
+        
+        # 2. 检查是否有在线客服
         services = (
             db.query(CustomerService).filter(CustomerService.is_online == 1).all()
         )
-
-        print(f"找到 {len(services)} 个在线客服")
-
-        import random
-
+        
         if not services:
-            # 没有可用客服时，返回错误信息
+            # 没有可用客服时，将用户加入排队队列
+            queue_info = crud.add_user_to_customer_service_queue(db, current_user.id)
             return {
                 "error": "no_available_service",
-                "message": "暂无在线客服",
+                "message": "暂无在线客服，已加入排队队列",
+                "queue_status": queue_info,
                 "system_message": {
-                    "content": "目前没有可用的客服，请您稍后再试。客服时间为每日8:00-18:00，如有紧急情况请发送邮件至客服邮箱。"
+                    "content": "目前没有可用的客服，您已加入排队队列。系统将尽快为您分配客服，请稍候。"
                 },
             }
-
-        service = random.choice(services)
-        print(f"选择客服: {service.id} - {service.name}")
-
-        # 创建或获取客服对话
-        chat_data = crud.create_customer_service_chat(db, current_user.id, service.id)
-        print(f"创建/获取客服对话成功: {chat_data['chat_id']}")
-
-        # 向客服发送用户连接通知
-        try:
-            import asyncio
-            import json
-
-            from app.main import active_connections
-
-            if service.id in active_connections:
-                notification_message = {
-                    "type": "user_connected",
-                    "user_info": {
-                        "id": current_user.id,
-                        "name": current_user.name or f"用户{current_user.id}",
-                    },
-                    "chat_id": chat_data["chat_id"],
-                    "timestamp": format_iso_utc(get_utc_time()),
-                }
-                # 使用asyncio.create_task来异步发送通知
-                asyncio.create_task(
-                    active_connections[service.id].send_text(
-                        json.dumps(notification_message)
-                    )
+        
+        # 3. 尝试立即分配（如果有可用客服且负载未满）
+        import random
+        from sqlalchemy import func
+        
+        # 计算每个客服的当前负载
+        service_loads = []
+        for service in services:
+            active_chats = (
+                db.query(func.count(CustomerServiceChat.chat_id))
+                .filter(
+                    CustomerServiceChat.service_id == service.id,
+                    CustomerServiceChat.is_ended == 0
                 )
-                print(f"已向客服 {service.id} 发送用户连接通知")
-        except Exception as e:
-            print(f"发送客服通知失败: {e}")
-
-        return {
-            "service": {
-                "id": service.id,
-                "name": service.name,
-                "avatar": "/static/service.png",
-                "avg_rating": service.avg_rating,
-                "total_ratings": service.total_ratings,
-            },
-            "chat": {
-                "chat_id": chat_data["chat_id"],
-                "user_id": chat_data["user_id"],
-                "service_id": chat_data["service_id"],
-                "is_ended": chat_data["is_ended"],
-                "created_at": chat_data["created_at"],
-                "total_messages": chat_data["total_messages"],
-            },
-        }
+                .scalar() or 0
+            )
+            max_concurrent = getattr(service, 'max_concurrent_chats', 5) or 5
+            if active_chats < max_concurrent:
+                service_loads.append((service, active_chats))
+        
+        if service_loads:
+            # 选择负载最低的客服
+            service_loads.sort(key=lambda x: x[1])
+            service = service_loads[0][0]
+            
+            # 创建对话
+            chat_data = crud.create_customer_service_chat(db, current_user.id, service.id)
+            
+            # 向客服发送用户连接通知
+            try:
+                import asyncio
+                import json
+                from app.main import active_connections
+                
+                if service.id in active_connections:
+                    notification_message = {
+                        "type": "user_connected",
+                        "user_info": {
+                            "id": current_user.id,
+                            "name": current_user.name or f"用户{current_user.id}",
+                        },
+                        "chat_id": chat_data["chat_id"],
+                        "timestamp": format_iso_utc(get_utc_time()),
+                    }
+                    asyncio.create_task(
+                        active_connections[service.id].send_text(
+                            json.dumps(notification_message)
+                        )
+                    )
+            except Exception as e:
+                logger.error(f"发送客服通知失败: {e}")
+            
+            return {
+                "service": {
+                    "id": service.id,
+                    "name": service.name,
+                    "avatar": "/static/service.png",
+                    "avg_rating": service.avg_rating,
+                    "total_ratings": service.total_ratings,
+                },
+                "chat": {
+                    "chat_id": chat_data["chat_id"],
+                    "user_id": chat_data["user_id"],
+                    "service_id": chat_data["service_id"],
+                    "is_ended": chat_data["is_ended"],
+                    "created_at": chat_data["created_at"],
+                    "total_messages": chat_data["total_messages"],
+                },
+            }
+        else:
+            # 所有客服都满载，加入排队队列
+            queue_info = crud.add_user_to_customer_service_queue(db, current_user.id)
+            return {
+                "error": "all_services_busy",
+                "message": "所有客服都在忙碌中，已加入排队队列",
+                "queue_status": queue_info,
+                "system_message": {
+                    "content": "所有客服都在忙碌中，您已加入排队队列。系统将尽快为您分配客服，请稍候。"
+                },
+            }
+            
     except Exception as e:
-        print(f"客服会话分配错误: {e}")
+        logger.error(f"客服会话分配错误: {e}", exc_info=True)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"客服会话分配失败: {str(e)}")
+
+
+@router.get("/api/user/customer-service/queue-status")
+def get_customer_service_queue_status(
+    current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+):
+    """获取用户在客服排队队列中的状态"""
+    queue_status = crud.get_user_queue_status(db, current_user.id)
+    return queue_status
 
 
 # 客服在线状态管理
@@ -3509,6 +3583,27 @@ def get_customer_service_messages(
     return messages
 
 
+@router.post("/api/user/customer-service/chats/{chat_id}/messages/{message_id}/mark-read")
+def mark_customer_service_message_read(
+    chat_id: str,
+    message_id: int,
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """标记单条消息为已读"""
+    # 验证chat_id是否属于当前用户
+    chat = crud.get_customer_service_chat(db, chat_id)
+    if not chat or chat["user_id"] != current_user.id:
+        raise HTTPException(status_code=404, detail="Chat not found or not authorized")
+    
+    # 标记消息为已读
+    success = crud.mark_customer_service_message_read(db, message_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to mark message as read")
+    
+    return {"message": "Message marked as read", "message_id": message_id}
+
+
 @router.post("/customer-service/mark-messages-read/{chat_id}")
 def mark_customer_service_messages_read(
     chat_id: str,
@@ -3576,6 +3671,7 @@ def send_customer_service_message(
 
 # 结束对话和评分相关接口
 @router.post("/api/user/customer-service/chats/{chat_id}/end")
+@rate_limit("end_chat")
 def end_customer_service_chat_user(
     chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3607,6 +3703,7 @@ def end_customer_service_chat_user(
     return {"message": "Chat ended successfully"}
 
 @router.post("/api/customer-service/chats/{chat_id}/end")
+@rate_limit("end_chat")
 def end_customer_service_chat(
     chat_id: str, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
 ):
@@ -3649,6 +3746,7 @@ def end_customer_service_chat(
 
 
 @router.post("/api/user/customer-service/chats/{chat_id}/rate")
+@rate_limit("rate_service")
 def rate_customer_service(
     chat_id: str,
     rating_data: schemas.CustomerServiceRating,
