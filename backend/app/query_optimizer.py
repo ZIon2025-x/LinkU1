@@ -302,19 +302,49 @@ class AsyncQueryOptimizer:
         if not user_ids:
             return {}
         
+        # 去重，防止重复查询
+        user_ids = list(set(user_ids))
+        
         query = (
             select(models.User)
-            .options(
-                selectinload(models.User.tasks_posted),
-                selectinload(models.User.tasks_taken)
-            )
-            .filter(models.User.id.in_(user_ids))
+            .where(models.User.id.in_(user_ids))
         )
         
         result = await db.execute(query)
         users = result.scalars().all()
         
         return {user.id: user for user in users}
+    
+    @staticmethod
+    async def batch_get_tasks(
+        db: AsyncSession, 
+        task_ids: List[int],
+        with_reviews: bool = False  # 列表接口默认不加载 reviews
+    ) -> Dict[int, models.Task]:
+        """批量获取任务信息，避免N+1查询"""
+        if not task_ids:
+            return {}
+        
+        # 去重，防止重复查询
+        task_ids = list(set(task_ids))
+        
+        query = (
+            select(models.Task)
+            .options(
+                selectinload(models.Task.poster),
+                selectinload(models.Task.taker)
+            )
+            .where(models.Task.id.in_(task_ids))
+        )
+        
+        # 列表接口默认不加载 reviews（详情接口才需要）
+        if with_reviews:
+            query = query.options(selectinload(models.Task.reviews))
+        
+        result = await db.execute(query)
+        tasks = result.scalars().all()
+        
+        return {task.id: task for task in tasks}
 
 
 # 创建优化器实例

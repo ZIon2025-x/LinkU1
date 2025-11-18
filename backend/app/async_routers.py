@@ -98,6 +98,7 @@ async def get_tasks(
     limit: int = Query(100, ge=1, le=1000),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    cursor: Optional[str] = Query(None),
     task_type: Optional[str] = Query(None),
     location: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -105,7 +106,30 @@ async def get_tasks(
     sort_by: Optional[str] = Query("latest"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务列表（异步版本）"""
+    """
+    获取任务列表（异步版本）
+    
+    分页策略：
+    - 时间排序（latest/oldest）且提供了 cursor：使用游标分页
+    - 其他情况：使用 offset/limit + total
+    """
+    # 时间排序：用游标分页
+    if sort_by in ("latest", "oldest") and cursor is not None:
+        tasks, next_cursor = await async_crud.async_task_crud.get_tasks_cursor(
+            db=db,
+            cursor=cursor,
+            limit=limit,
+            task_type=task_type,
+            location=location,
+            keyword=keyword,
+            sort_by=sort_by,
+        )
+        return {
+            "tasks": tasks,
+            "next_cursor": next_cursor,
+        }
+    
+    # 其他排序或初次加载：用 offset/limit + total
     # 支持page/page_size参数，向后兼容skip/limit
     if page > 1 or page_size != 20:
         skip = (page - 1) * page_size
@@ -559,24 +583,30 @@ async def apply_for_task(
 async def get_user_applications(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ):
-    """获取当前用户的申请记录"""
+    """获取当前用户的申请记录（优化版本：使用selectinload避免N+1查询）"""
     try:
-        # 获取用户的所有申请记录
-        applications_query = select(models.TaskApplication).where(
-            models.TaskApplication.applicant_id == current_user.id
-        ).order_by(models.TaskApplication.created_at.desc())
+        from sqlalchemy.orm import selectinload
+        
+        # 使用 selectinload 预加载任务信息，避免N+1查询
+        applications_query = (
+            select(models.TaskApplication)
+            .options(selectinload(models.TaskApplication.task))  # 预加载任务
+            .where(models.TaskApplication.applicant_id == current_user.id)
+            .order_by(models.TaskApplication.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         
         applications_result = await db.execute(applications_query)
         applications = applications_result.scalars().all()
         
-        # 获取每个申请对应的任务信息
+        # 直接使用关联数据，无需额外查询
         result = []
         for app in applications:
-            task_query = select(models.Task).where(models.Task.id == app.task_id)
-            task_result = await db.execute(task_query)
-            task = task_result.scalar_one_or_none()
-            
+            task = app.task  # 已预加载，无需查询
             if task:
                 result.append({
                     "id": app.id,
@@ -602,9 +632,14 @@ async def get_task_applications(
     task_id: int,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ):
-    """获取任务的申请者列表（仅任务发布者可查看）"""
+    """获取任务的申请者列表（仅任务发布者可查看，优化版本：批量查询用户避免N+1）"""
     try:
+        from sqlalchemy.orm import selectinload
+        from app.query_optimizer import AsyncQueryOptimizer
+        
         # 检查是否为任务发布者
         task = await db.execute(
             select(models.Task).where(models.Task.id == task_id)
@@ -617,15 +652,24 @@ async def get_task_applications(
         if task.poster_id != current_user.id:
             raise HTTPException(status_code=403, detail="Only task poster can view applications")
         
-        applications = await async_crud.async_task_crud.get_task_applications(db, task_id)
+        # 使用 selectinload 预加载申请者信息，避免N+1查询
+        applications_query = (
+            select(models.TaskApplication)
+            .options(selectinload(models.TaskApplication.applicant))  # 预加载申请者
+            .where(models.TaskApplication.task_id == task_id)
+            .where(models.TaskApplication.status == "pending")
+            .order_by(models.TaskApplication.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        
+        applications_result = await db.execute(applications_query)
+        applications = applications_result.scalars().all()
     
-        # 获取申请者详细信息
+        # 直接使用关联数据，无需额外查询
         result = []
         for app in applications:
-            user = await db.execute(
-                select(models.User).where(models.User.id == app.applicant_id)
-            )
-            user = user.scalar_one_or_none()
+            user = app.applicant  # 已预加载，无需查询
             
             if user:
                 # 处理议价金额：从 task_applications 表中读取 negotiated_price 字段
@@ -729,10 +773,18 @@ async def approve_application(
 async def get_user_tasks(
     user_id: str,
     task_type: str = Query("all"),
+    posted_skip: int = Query(0, ge=0),
+    posted_limit: int = Query(25, ge=1, le=100),
+    taken_skip: int = Query(0, ge=0),
+    taken_limit: int = Query(25, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取用户的任务（异步版本）"""
-    tasks = await async_crud.async_task_crud.get_user_tasks(db, user_id, task_type)
+    """获取用户的任务（异步版本，支持分页）"""
+    tasks = await async_crud.async_task_crud.get_user_tasks(
+        db, user_id, task_type, 
+        posted_skip=posted_skip, posted_limit=posted_limit,
+        taken_skip=taken_skip, taken_limit=taken_limit
+    )
     return tasks
 
 

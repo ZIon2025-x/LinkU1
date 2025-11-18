@@ -163,6 +163,10 @@ class Config:
     
     # 环境配置
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+    
+    # 搜索配置
+    USE_PG_TRGM = os.getenv("USE_PG_TRGM", "false").lower() == "true"  # 是否使用pg_trgm扩展
+    SEARCH_LANGUAGE = os.getenv("SEARCH_LANGUAGE", "english")  # 全文搜索语言
 
     @classmethod
     def get_redis_config(cls) -> Optional[dict]:

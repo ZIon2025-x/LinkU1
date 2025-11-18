@@ -520,16 +520,16 @@ async def startup_event():
         Base.metadata.create_all(bind=sync_engine)
         logger.info("数据库表创建完成！")
         
-        # 创建优化索引（使用 pg_trgm）
+        # 执行自动数据库迁移（包括索引创建）
         try:
-            database_url = os.getenv("DATABASE_URL")
-            if database_url:
-                import sys
-                sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-                from create_indexes import create_trgm_indexes
-                create_trgm_indexes(database_url)
+            from app.db_migrations import run_migration_sync
+            logger.info("开始执行自动数据库迁移...")
+            run_migration_sync(sync_engine)
+            logger.info("自动数据库迁移完成！")
         except Exception as e:
-            logger.warning(f"创建索引时出错（可继续运行）: {e}")
+            logger.warning(f"执行数据库迁移时出错（可继续运行）: {e}")
+            import traceback
+            traceback.print_exc()
         
         # 验证表是否创建成功
         from sqlalchemy import inspect

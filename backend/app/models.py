@@ -242,6 +242,9 @@ class Message(Base):
     message_type = Column(String(20), default="normal")  # normal, system
     conversation_type = Column(String(20), default="task")  # task, customer_service, global
     meta = Column(Text, nullable=True)  # JSON格式存储元数据
+    # 对话键（用于优化查询）：值为 least(sender_id, receiver_id) || '-' || greatest(sender_id, receiver_id)
+    # 注意：conversation_key 由数据库触发器自动维护，应用层不需要手动设置
+    conversation_key = Column(String(255), index=True, nullable=True)
     
     __table_args__ = (
         # 确保任务消息必须关联 task_id
@@ -529,6 +532,10 @@ class TaskApplication(Base):
     message = Column(Text, nullable=True)  # 申请时的留言
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格
     currency = Column(String(3), default="GBP")  # 货币类型
+    
+    # 关系
+    task = relationship("Task", backref="applications")  # 任务关系
+    applicant = relationship("User", foreign_keys=[applicant_id])  # 申请者关系
     
     # 确保同一用户不能重复申请同一任务
     __table_args__ = (

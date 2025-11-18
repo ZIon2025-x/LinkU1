@@ -302,35 +302,59 @@ class AsyncTaskCRUD:
             if status and status not in ['全部状态', '全部', 'all']:
                 query = query.where(models.Task.status == status)
             
-            # 添加关键词搜索（使用 pg_trgm 优化）
+            # 添加关键词搜索（支持pg_trgm或全文搜索，根据配置选择）
+            has_keyword_sort = False
             if keyword:
                 keyword = keyword.strip()
-                query = query.where(
-                    or_(
-                        func.similarity(models.Task.title, keyword) > 0.2,
-                        func.similarity(models.Task.description, keyword) > 0.2,
-                        models.Task.title.ilike(f"%{keyword}%"),
-                        models.Task.description.ilike(f"%{keyword}%")
+                from app.config import Config
+                
+                if Config.USE_PG_TRGM:
+                    # 方案1: pg_trgm（适合需要容错搜索的场景，中英文都适用）
+                    query = query.where(
+                        or_(
+                            func.similarity(models.Task.title, keyword) > 0.2,
+                            func.similarity(models.Task.description, keyword) > 0.2,
+                        )
                     )
-                )
+                    # 如果使用关键词搜索，默认按相似度排序（除非指定了其他排序方式）
+                    if sort_by == "latest" or sort_by is None:
+                        query = query.order_by(
+                            func.similarity(models.Task.title, keyword).desc(),
+                            func.similarity(models.Task.description, keyword).desc(),
+                            # 添加稳定的 tie-breaker，避免相似度接近时顺序抖动
+                            models.Task.created_at.desc(),
+                            models.Task.id.desc()
+                        )
+                        has_keyword_sort = True
+                else:
+                    # 方案2: 全文搜索（适合精确搜索，主要针对英文）
+                    ts_vector = func.to_tsvector(
+                        Config.SEARCH_LANGUAGE,
+                        models.Task.title + ' ' + models.Task.description
+                    )
+                    ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
+                    query = query.where(ts_vector.op('@@')(ts_query))
+                    # 可选：按相关性排序
+                    # query = query.order_by(func.ts_rank(ts_vector, ts_query).desc())
 
-            # 排序
-            if sort_by == "latest":
-                query = query.order_by(models.Task.created_at.desc())
-            elif sort_by == "oldest":
-                query = query.order_by(models.Task.created_at.asc())
-            elif sort_by == "reward_high" or sort_by == "reward_desc":
-                # 使用base_reward排序
-                query = query.order_by(models.Task.base_reward.desc())
-            elif sort_by == "reward_low" or sort_by == "reward_asc":
-                # 使用base_reward排序
-                query = query.order_by(models.Task.base_reward.asc())
-            elif sort_by == "deadline_asc":
-                query = query.order_by(models.Task.deadline.asc())
-            elif sort_by == "deadline_desc":
-                query = query.order_by(models.Task.deadline.desc())
-            else:
-                query = query.order_by(models.Task.created_at.desc())
+            # 排序（如果关键词搜索已经设置了排序，则跳过）
+            if not has_keyword_sort:
+                if sort_by == "latest":
+                    query = query.order_by(models.Task.created_at.desc())
+                elif sort_by == "oldest":
+                    query = query.order_by(models.Task.created_at.asc())
+                elif sort_by == "reward_high" or sort_by == "reward_desc":
+                    # 使用base_reward排序
+                    query = query.order_by(models.Task.base_reward.desc())
+                elif sort_by == "reward_low" or sort_by == "reward_asc":
+                    # 使用base_reward排序
+                    query = query.order_by(models.Task.base_reward.asc())
+                elif sort_by == "deadline_asc":
+                    query = query.order_by(models.Task.deadline.asc())
+                elif sort_by == "deadline_desc":
+                    query = query.order_by(models.Task.deadline.desc())
+                else:
+                    query = query.order_by(models.Task.created_at.desc())
 
             result = await db.execute(
                 query.offset(skip).limit(limit)
@@ -355,16 +379,25 @@ class AsyncTaskCRUD:
         keyword: Optional[str] = None,
         sort_by: Optional[str] = "latest",
     ) -> tuple[List[models.Task], int]:
-        """获取任务列表和总数（带过滤条件）"""
+        """
+        获取任务列表 + 总数（使用缓存 + 精确 count，不用 reltuples 估算）
+        
+        规则约束：
+        - 即使 status 为 None，也默认视为 status='open'，这也算"有筛选"
+        - 只要 status / task_type / location / keyword 任一有值，就视为"有筛选"
+        - 本函数统一使用缓存 + 精确 count，不再使用 reltuples 估算
+        """
         try:
             from sqlalchemy import or_, func
-            from datetime import datetime, timezone
             from app.utils.time_utils import get_utc_time
+            from app.redis_cache import get_tasks_count_cache_key
+            from app.config import Config
             
             # 获取当前UTC时间
             now_utc = get_utc_time()
             
-            # 构建基础查询 - 显示开放和已接收但未同意的任务，且未过期
+            # 1. 构建 base_query（列表 & 总数共用）
+            actual_status = status or "open"
             base_query = select(models.Task).where(
                 or_(
                     models.Task.status == "open",
@@ -377,88 +410,331 @@ class AsyncTaskCRUD:
                 )
             )
 
-            if task_type and task_type not in ['全部类型', '全部']:
+            # 任务类型筛选
+            if task_type and task_type not in ["全部类型", "全部", "all"]:
                 base_query = base_query.where(models.Task.task_type == task_type)
-            if location and location not in ['全部城市', '全部']:
-                base_query = base_query.where(models.Task.location == location)
-            if status and status not in ['全部状态', '全部']:
-                base_query = base_query.where(models.Task.status == status)
             
-            # 添加关键词搜索
+            # 地点筛选
+            if location and location not in ["全部城市", "全部", "all"]:
+                base_query = base_query.where(models.Task.location == location)
+            
+            # 关键词筛选（和 /tasks 的实现保持一致）
             if keyword:
                 keyword = keyword.strip()
-                base_query = base_query.where(
-                    or_(
-                        models.Task.title.ilike(f"%{keyword}%"),
-                        models.Task.description.ilike(f"%{keyword}%"),
-                        models.Task.task_type.ilike(f"%{keyword}%"),
-                        models.Task.location.ilike(f"%{keyword}%"),
+                from app.config import Config
+                
+                if Config.USE_PG_TRGM:
+                    # pg_trgm 相似度搜索
+                    base_query = base_query.where(
+                        or_(
+                            func.similarity(models.Task.title, keyword) > 0.2,
+                            func.similarity(models.Task.description, keyword) > 0.2,
+                        )
                     )
-                )
-
-            # 获取总数
-            count_query = select(func.count()).select_from(base_query.subquery())
-            total_result = await db.execute(count_query)
-            total = total_result.scalar()
-
-            # 获取任务列表
-            query = (
-                base_query
-                .options(selectinload(models.Task.poster))
+                else:
+                    # 全文搜索
+                    ts_vector = func.to_tsvector(
+                        Config.SEARCH_LANGUAGE,
+                        models.Task.title + " " + models.Task.description,
+                    )
+                    ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
+                    base_query = base_query.where(ts_vector.op("@@")(ts_query))
+            
+            # 2. 先算 total（缓存 + 精确 count）
+            cache_key = get_tasks_count_cache_key(
+                task_type=task_type,
+                location=location,
+                status=actual_status,  # 包含默认 'open'
+                keyword=keyword,
             )
-
-            # 排序
+            
+            # 尝试从缓存获取总数
+            try:
+                # 使用异步Redis客户端
+                import redis.asyncio as aioredis
+                redis_url = Config.REDIS_URL or f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/{Config.REDIS_DB}"
+                async_redis = aioredis.from_url(redis_url, decode_responses=True)
+                
+                try:
+                    cached_total = await async_redis.get(cache_key)
+                    if cached_total is not None:
+                        try:
+                            total = int(cached_total)
+                        except ValueError:
+                            total = 0
+                    else:
+                        # 缓存未命中，执行精确 count
+                        count_query = select(func.count()).select_from(base_query.subquery())
+                        total_result = await db.execute(count_query)
+                        total = total_result.scalar() or 0
+                        # 缓存总数（TTL 可以按需调整）
+                        await async_redis.setex(cache_key, 300, str(total))
+                finally:
+                    await async_redis.aclose()
+            except Exception as e:
+                # Redis 不可用时，直接执行 count
+                logger.warning(f"Redis缓存失败，直接执行count: {e}")
+                count_query = select(func.count()).select_from(base_query.subquery())
+                total_result = await db.execute(count_query)
+                total = total_result.scalar() or 0
+            
+            # 3. 列表查询（基于同一个 base_query）
+            list_query = base_query.options(
+                selectinload(models.Task.poster)
+            )
+            
+            # 排序：注意和 get_tasks_cursor 的约束保持一致
             if sort_by == "latest":
-                query = query.order_by(models.Task.created_at.desc())
+                list_query = list_query.order_by(
+                    models.Task.created_at.desc(), models.Task.id.desc()
+                )
             elif sort_by == "oldest":
-                query = query.order_by(models.Task.created_at.asc())
+                list_query = list_query.order_by(
+                    models.Task.created_at.asc(), models.Task.id.asc()
+                )
             elif sort_by == "reward_high" or sort_by == "reward_desc":
-                query = query.order_by(models.Task.base_reward.desc())
+                list_query = list_query.order_by(
+                    models.Task.base_reward.desc(), models.Task.created_at.desc()
+                )
             elif sort_by == "reward_low" or sort_by == "reward_asc":
-                query = query.order_by(models.Task.base_reward.asc())
+                list_query = list_query.order_by(
+                    models.Task.base_reward.asc(), models.Task.created_at.asc()
+                )
             elif sort_by == "deadline_asc":
-                query = query.order_by(models.Task.deadline.asc())
+                list_query = list_query.order_by(
+                    models.Task.deadline.asc().nulls_last(),
+                    models.Task.created_at.desc(),
+                )
             elif sort_by == "deadline_desc":
-                query = query.order_by(models.Task.deadline.desc())
+                list_query = list_query.order_by(
+                    models.Task.deadline.desc().nulls_last(),
+                    models.Task.created_at.desc(),
+                )
             else:
-                query = query.order_by(models.Task.created_at.desc())
-
-            result = await db.execute(
-                query.offset(skip).limit(limit)
-            )
+                # 默认按最新
+                list_query = list_query.order_by(
+                    models.Task.created_at.desc(), models.Task.id.desc()
+                )
+            
+            list_query = list_query.offset(skip).limit(limit)
+            
+            result = await db.execute(list_query)
             tasks = list(result.scalars().all())
             
-            return tasks, total or 0
+            return tasks, total
         except Exception as e:
             logger.error(f"Error getting tasks with total: {e}")
             return [], 0
 
     @staticmethod
+    async def get_tasks_cursor(
+        db: AsyncSession,
+        cursor: Optional[str] = None,
+        limit: int = 20,
+        task_type: Optional[str] = None,
+        location: Optional[str] = None,
+        keyword: Optional[str] = None,
+        sort_by: str = "latest",  # 只支持 latest / oldest
+    ) -> tuple[List[models.Task], Optional[str]]:
+        """
+        使用游标分页获取任务列表。
+        
+        约束：
+        - 只在 sort_by 为 "latest" / "oldest" 时使用
+        - 游标格式: "<ISO8601时间>_<id>"，例如 "2025-01-27T12:00:00Z_123"
+        """
+        from app.utils.time_utils import parse_iso_utc, format_iso_utc
+        from sqlalchemy import and_
+        
+        # 1. 仅对时间排序场景启用，其他排序请用 offset/limit
+        if sort_by not in ("latest", "oldest"):
+            raise ValueError("get_tasks_cursor 仅支持 sort_by=latest/oldest")
+        
+        # 获取当前UTC时间（用于过滤过期任务）
+        from app.utils.time_utils import get_utc_time
+        now_utc = get_utc_time()
+        
+        query = (
+            select(models.Task)
+            .options(selectinload(models.Task.poster))
+            .where(
+                or_(
+                    models.Task.status == "open",
+                    models.Task.status == "taken"
+                )
+            )
+            .where(
+                or_(
+                    models.Task.deadline > now_utc,  # 有截止日期且未过期
+                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                )
+            )
+        )
+        
+        # 筛选条件：和 /tasks 保持一致
+        if task_type and task_type not in ["全部类型", "全部", "all"]:
+            query = query.where(models.Task.task_type == task_type)
+        
+        if location and location not in ["全部城市", "全部", "all"]:
+            query = query.where(models.Task.location == location)
+        
+        if keyword:
+            keyword = keyword.strip()
+            from app.config import Config
+            
+            if Config.USE_PG_TRGM:
+                query = query.where(
+                    or_(
+                        func.similarity(models.Task.title, keyword) > 0.2,
+                        func.similarity(models.Task.description, keyword) > 0.2,
+                    )
+                )
+            else:
+                ts_vector = func.to_tsvector(
+                    Config.SEARCH_LANGUAGE,
+                    models.Task.title + " " + models.Task.description,
+                )
+                ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
+                query = query.where(ts_vector.op("@@")(ts_query))
+        
+        # 2. 应用游标条件（基于 created_at + id）
+        if cursor:
+            try:
+                ts, id_str = cursor.split("_", 1)
+                cursor_time = parse_iso_utc(ts.replace("Z", "+00:00"))
+                cursor_id = int(id_str)
+                
+                if sort_by == "latest":
+                    # 向后翻页：更旧的数据
+                    query = query.where(
+                        or_(
+                            models.Task.created_at < cursor_time,
+                            and_(
+                                models.Task.created_at == cursor_time,
+                                models.Task.id < cursor_id,
+                            ),
+                        )
+                    )
+                else:
+                    # sort_by == "oldest"，向后翻页：更"新"的数据
+                    query = query.where(
+                        or_(
+                            models.Task.created_at > cursor_time,
+                            and_(
+                                models.Task.created_at == cursor_time,
+                                models.Task.id > cursor_id,
+                            ),
+                        )
+                    )
+            except Exception as e:
+                logger.warning("Invalid cursor for tasks: %s, error: %s", cursor, e)
+        
+        # 3. 排序（必须与游标条件一致）
+        if sort_by == "latest":
+            query = query.order_by(
+                models.Task.created_at.desc(), models.Task.id.desc()
+            )
+        else:  # oldest
+            query = query.order_by(
+                models.Task.created_at.asc(), models.Task.id.asc()
+            )
+        
+        # 4. 查询 limit + 1 条，用于判断是否有更多
+        result = await db.execute(query.limit(limit + 1))
+        tasks = list(result.scalars().all())
+        
+        has_more = len(tasks) > limit
+        if has_more:
+            tasks = tasks[:limit]
+        
+        # 5. 生成下一页游标
+        next_cursor = None
+        if has_more and tasks:
+            last = tasks[-1]
+            next_cursor = f"{format_iso_utc(last.created_at)}_{last.id}"
+        
+        return tasks, next_cursor
+
+    @staticmethod
     async def get_user_tasks(
-        db: AsyncSession, user_id: str, task_type: str = "all"
-    ) -> Dict[str, List[models.Task]]:
-        """获取用户的任务（发布的和接受的）"""
+        db: AsyncSession, 
+        user_id: str, 
+        task_type: str = "all",
+        posted_skip: int = 0,
+        posted_limit: int = 25,
+        taken_skip: int = 0,
+        taken_limit: int = 25,
+        with_reviews: bool = False  # 列表接口默认不加载 reviews，减少数据量
+    ) -> Dict[str, Any]:
+        """获取用户的任务（发布的和接受的），支持筛选和分页（优化版本：使用selectinload避免N+1）"""
         try:
-            # 发布的任务
-            posted_result = await db.execute(
+            # 构建发布任务查询
+            posted_query = (
                 select(models.Task)
+                .options(
+                    selectinload(models.Task.poster),
+                    selectinload(models.Task.taker)
+                )
                 .where(models.Task.poster_id == user_id)
-                .order_by(models.Task.created_at.desc())
             )
-            posted_tasks = posted_result.scalars().all()
-
-            # 接受的任务
-            taken_result = await db.execute(
+            
+            # 构建接受任务查询
+            taken_query = (
                 select(models.Task)
+                .options(
+                    selectinload(models.Task.poster),
+                    selectinload(models.Task.taker)
+                )
                 .where(models.Task.taker_id == user_id)
-                .order_by(models.Task.created_at.desc())
             )
+            
+            # 列表接口默认不加载 reviews（详情接口才需要）
+            if with_reviews:
+                posted_query = posted_query.options(selectinload(models.Task.reviews))
+                taken_query = taken_query.options(selectinload(models.Task.reviews))
+            
+            # 应用任务类型筛选
+            if task_type and task_type != "all":
+                posted_query = posted_query.where(models.Task.task_type == task_type)
+                taken_query = taken_query.where(models.Task.task_type == task_type)
+            
+            # 分别执行查询并应用分页
+            posted_result = await db.execute(
+                posted_query.order_by(models.Task.created_at.desc())
+                           .offset(posted_skip)
+                           .limit(posted_limit)
+            )
+            taken_result = await db.execute(
+                taken_query.order_by(models.Task.created_at.desc())
+                          .offset(taken_skip)
+                          .limit(taken_limit)
+            )
+            
+            posted_tasks = list(posted_result.scalars().all())
             taken_tasks = list(taken_result.scalars().all())
-
-            return {"posted": list(posted_tasks), "taken": taken_tasks}
+            
+            # 获取总数（可选，如果前端需要）
+            from sqlalchemy import func
+            posted_count_query = select(func.count()).select_from(
+                posted_query.subquery()
+            )
+            taken_count_query = select(func.count()).select_from(
+                taken_query.subquery()
+            )
+            posted_total = (await db.execute(posted_count_query)).scalar() or 0
+            taken_total = (await db.execute(taken_count_query)).scalar() or 0
+            
+            return {
+                "posted": posted_tasks,
+                "taken": taken_tasks,
+                "total_posted": posted_total,
+                "total_taken": taken_total,
+                "posted_has_more": len(posted_tasks) == posted_limit,
+                "taken_has_more": len(taken_tasks) == taken_limit
+            }
         except Exception as e:
             logger.error(f"Error getting user tasks for {user_id}: {e}")
-            return {"posted": [], "taken": []}
+            return {"posted": [], "taken": [], "total_posted": 0, "total_taken": 0, "posted_has_more": False, "taken_has_more": False}
 
     @staticmethod
     async def apply_for_task(
@@ -756,27 +1032,50 @@ class AsyncMessageCRUD:
     async def get_conversation_messages(
         db: AsyncSession, user1_id: str, user2_id: str, skip: int = 0, limit: int = 50
     ) -> List[models.Message]:
-        """获取两个用户之间的对话消息"""
+        """
+        获取两个用户之间的对话消息（优化版本：使用conversation_key）
+        
+        注意：如果conversation_key字段不存在，会回退到原来的查询方式
+        """
         try:
-            result = await db.execute(
-                select(models.Message)
-                .where(
-                    or_(
-                        and_(
-                            models.Message.sender_id == user1_id,
-                            models.Message.receiver_id == user2_id,
-                        ),
-                        and_(
-                            models.Message.sender_id == user2_id,
-                            models.Message.receiver_id == user1_id,
-                        ),
-                    )
+            # 构建 conversation_key（与数据库触发器逻辑保持一致）
+            # 使用 LEAST/GREATEST 确保无论 sender/receiver 如何交换，key 都一致
+            ids = [str(user1_id), str(user2_id)]
+            conversation_key = f"{min(ids)}-{max(ids)}"
+            
+            # 尝试使用 conversation_key 查询（高效走索引）
+            # 如果字段不存在，会抛出异常，我们捕获后使用旧方式
+            try:
+                result = await db.execute(
+                    select(models.Message)
+                    .where(models.Message.conversation_key == conversation_key)
+                    .order_by(models.Message.created_at.asc())
+                    .offset(skip)
+                    .limit(limit)
                 )
-                .order_by(models.Message.created_at.asc())
-                .offset(skip)
-                .limit(limit)
-            )
-            return list(result.scalars().all())
+                return list(result.scalars().all())
+            except Exception:
+                # conversation_key 字段可能不存在，回退到原来的查询方式
+                logger.warning("conversation_key字段不存在，使用旧查询方式")
+                result = await db.execute(
+                    select(models.Message)
+                    .where(
+                        or_(
+                            and_(
+                                models.Message.sender_id == user1_id,
+                                models.Message.receiver_id == user2_id,
+                            ),
+                            and_(
+                                models.Message.sender_id == user2_id,
+                                models.Message.receiver_id == user1_id,
+                            ),
+                        )
+                    )
+                    .order_by(models.Message.created_at.asc())
+                    .offset(skip)
+                    .limit(limit)
+                )
+                return list(result.scalars().all())
         except Exception as e:
             logger.error(f"Error getting conversation messages: {e}")
             return []

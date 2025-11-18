@@ -253,17 +253,94 @@ def get_user_tasks(cache_key: str) -> Optional[Any]:
         key = get_cache_key(CACHE_PREFIXES['USER_TASKS'], cache_key)
     return redis_cache.get(key)
 
+def get_tasks_cache_key(skip: int, limit: int, task_type: Optional[str], 
+                        location: Optional[str], status: Optional[str],
+                        keyword: Optional[str], sort_by: Optional[str]) -> str:
+    """生成任务列表缓存键（使用哈希避免键过长）"""
+    import hashlib
+    import json
+    
+    # 构建参数字典
+    params = {
+        "skip": skip,
+        "limit": limit,
+        "task_type": task_type or "all",
+        "location": location or "all",
+        "status": status or "all",
+        "keyword": keyword or "",
+        "sort_by": sort_by or "latest"
+    }
+    
+    # 对参数进行哈希（避免键过长）
+    params_str = json.dumps(params, sort_keys=True)
+    params_hash = hashlib.md5(params_str.encode()).hexdigest()[:16]
+    
+    # 使用版本号和哈希
+    version = get_cache_version("tasks")
+    return f"tasks:list:v{version}:{params_hash}"
+
+def get_tasks_count_cache_key(task_type: Optional[str], 
+                              location: Optional[str], 
+                              status: Optional[str],
+                              keyword: Optional[str]) -> str:
+    """生成任务总数缓存键（与列表缓存键结构统一，只包含参与 count 的过滤条件）"""
+    import hashlib
+    import json
+    
+    # 构建参数字典（不包含 skip/limit/sort_by，这些不影响总数）
+    params = {
+        "task_type": task_type or "all",
+        "location": location or "all",
+        "status": status or "all",
+        "keyword": keyword or ""
+    }
+    
+    # 对参数进行哈希
+    params_str = json.dumps(params, sort_keys=True)
+    params_hash = hashlib.md5(params_str.encode()).hexdigest()[:16]
+    
+    # 使用版本号和哈希（与列表缓存键结构统一）
+    version = get_cache_version("tasks")
+    return f"tasks:count:v{version}:{params_hash}"
+
+def get_cache_version(cache_type: str) -> int:
+    """获取缓存版本号（用于缓存失效）"""
+    # 简单实现：从环境变量或Redis获取版本号
+    # 如果Redis不可用，返回固定版本号
+    try:
+        version_key = f"cache_version:{cache_type}"
+        version = redis_cache.get(version_key)
+        if version is None:
+            redis_cache.set(version_key, 1, ttl=86400 * 365)  # 1年
+            return 1
+        return int(version) if isinstance(version, (int, str)) else 1
+    except Exception:
+        return 1
+
 def cache_tasks_list(params: dict, tasks_data: Any, ttl: int = DEFAULT_TTL['TASKS_LIST']) -> bool:
-    """缓存任务列表"""
-    # 生成基于参数的唯一键
-    param_str = '_'.join(f"{k}_{v}" for k, v in sorted(params.items()))
-    key = get_cache_key(CACHE_PREFIXES['TASKS'], param_str)
+    """缓存任务列表（使用新的缓存键设计）"""
+    key = get_tasks_cache_key(
+        skip=params.get('skip', 0),
+        limit=params.get('limit', 20),
+        task_type=params.get('task_type'),
+        location=params.get('location'),
+        status=params.get('status'),
+        keyword=params.get('keyword'),
+        sort_by=params.get('sort_by')
+    )
     return redis_cache.set(key, tasks_data, ttl)
 
 def get_tasks_list(params: dict) -> Optional[Any]:
-    """获取任务列表缓存"""
-    param_str = '_'.join(f"{k}_{v}" for k, v in sorted(params.items()))
-    key = get_cache_key(CACHE_PREFIXES['TASKS'], param_str)
+    """获取任务列表缓存（使用新的缓存键设计）"""
+    key = get_tasks_cache_key(
+        skip=params.get('skip', 0),
+        limit=params.get('limit', 20),
+        task_type=params.get('task_type'),
+        location=params.get('location'),
+        status=params.get('status'),
+        keyword=params.get('keyword'),
+        sort_by=params.get('sort_by')
+    )
     return redis_cache.get(key)
 
 def cache_tasks_list_safe(params: dict, fetch_fn, ttl: int = DEFAULT_TTL['TASKS_LIST']) -> Any:

@@ -270,16 +270,10 @@ def run_migrations(engine: Engine) -> bool:
         return True
     
     # 定义迁移脚本执行顺序
+    # 注意：之前的迁移脚本已经执行过，不再重复执行
+    # 只保留新的性能优化索引迁移
     migration_files = [
-        "create_coupon_points_tables.sql",
-        "add_task_indexes.sql",
-        "create_task_expert_tables.sql",  # 任务达人功能迁移
-        "create_task_expert_profile_update_requests_table.sql",  # 任务达人信息修改审核表迁移
-        "update_featured_task_experts_id_to_user_id.sql",  # 修改 featured_task_experts 表的 id 为 user_id
-        "sync_featured_task_experts_id_user_id.sql",  # 确保 featured_task_experts 表的 id 和 user_id 同步
-        "add_service_application_deadline_fields.sql",  # 为服务申请添加截至日期和灵活选项字段
-        "allow_task_deadline_null.sql",  # 允许 tasks 表的 deadline 字段为 NULL（支持灵活模式任务）
-        "add_task_is_flexible_field.sql",  # 在 tasks 表中添加 is_flexible 字段
+        "add_performance_indexes.sql",  # 数据库性能优化索引（pg_trgm、复合索引、conversation_key等）
     ]
     
     total_executed = 0
