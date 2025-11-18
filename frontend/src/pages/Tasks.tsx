@@ -21,6 +21,8 @@ import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useTaskFilters } from '../hooks/useTaskFilters';
+import WebSocketManager from '../utils/WebSocketManager';
+import { WS_BASE_URL } from '../config';
 import { useTaskSorting } from '../hooks/useTaskSorting';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import { Grid, GridImperativeAPI } from 'react-window';
@@ -838,6 +840,42 @@ const Tasks: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [showNotifications, user]);
+
+  // WebSocket实时更新通知（监听notification_created事件）
+  useEffect(() => {
+    if (!user) return;
+
+    // 初始化WebSocket管理器
+    WebSocketManager.initialize(WS_BASE_URL);
+    WebSocketManager.connect(user.id);
+
+    // 订阅WebSocket消息
+    const unsubscribe = WebSocketManager.subscribe((msg) => {
+      // 处理通知创建事件
+      if (msg.type === 'notification_created') {
+        // 立即刷新未读通知数量
+        getUnreadNotificationCount().then(count => {
+          setUnreadCount(count);
+        }).catch(error => {
+          console.error('更新未读通知数量失败:', error);
+        });
+
+        // 如果通知面板已打开，刷新通知列表
+        if (showNotifications) {
+          getNotificationsWithRecentRead(10).then(notificationsData => {
+            setNotifications(notificationsData);
+          }).catch(error => {
+            console.error('刷新通知列表失败:', error);
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      // 注意：不断开连接，因为可能其他组件也在使用
+    };
+  }, [user, showNotifications]);
 
   // 设置滑动提示文本的双语化CSS变量
   useEffect(() => {

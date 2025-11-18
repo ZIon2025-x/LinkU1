@@ -4,6 +4,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications } from '../api';
+import WebSocketManager from '../utils/WebSocketManager';
+import { WS_BASE_URL } from '../config';
 import api from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -161,6 +163,67 @@ const MyTasks: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // 当通知面板打开时，定期刷新通知列表
+  useEffect(() => {
+    if (showNotifications && user) {
+      // 打开时立即刷新一次
+      const loadNotificationsList = async () => {
+        try {
+          const notificationsData = await getNotificationsWithRecentRead(10);
+          setNotifications(notificationsData);
+        } catch (error) {
+          console.error('刷新通知列表失败:', error);
+        }
+      };
+      loadNotificationsList();
+      
+      // 每10秒刷新一次通知列表（比未读数量刷新更频繁）
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadNotificationsList();
+        }
+      }, 10000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [showNotifications, user]);
+
+  // WebSocket实时更新通知（监听notification_created事件）
+  useEffect(() => {
+    if (!user) return;
+
+    // 初始化WebSocket管理器
+    WebSocketManager.initialize(WS_BASE_URL);
+    WebSocketManager.connect(user.id);
+
+    // 订阅WebSocket消息
+    const unsubscribe = WebSocketManager.subscribe((msg) => {
+      // 处理通知创建事件
+      if (msg.type === 'notification_created') {
+        // 立即刷新未读通知数量
+        getUnreadNotificationCount().then(count => {
+          setUnreadCount(count);
+        }).catch(error => {
+          console.error('更新未读通知数量失败:', error);
+        });
+
+        // 如果通知面板已打开，刷新通知列表
+        if (showNotifications) {
+          getNotificationsWithRecentRead(10).then(notificationsData => {
+            setNotifications(notificationsData);
+          }).catch(error => {
+            console.error('刷新通知列表失败:', error);
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      // 注意：不断开连接，因为可能其他组件也在使用
+    };
+  }, [user, showNotifications]);
 
   // 加载用户的申请记录
   const loadUserApplications = async () => {

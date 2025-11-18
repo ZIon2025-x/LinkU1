@@ -3610,6 +3610,7 @@ def send_customer_service_message(
     message_data: dict = Body(...),
     current_user=Depends(get_current_service),
     request: Request = None,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
 ):
     """客服发送消息给用户"""
@@ -3630,20 +3631,38 @@ def send_customer_service_message(
         message_data.get("content", ""),
     )
 
-    # 创建通知给用户（客服ID不在users表中，所以不传递related_id）
-    try:
-        crud.create_notification(
-            db,
-            chat["user_id"],
-            "message",
-            "新消息",
-            "客服给您发来一条消息",
-            None,  # 不传递客服ID作为related_id，因为客服ID不在users表中
-        )
-    except Exception as e:
-        # 通知创建失败不应该影响消息发送
-        print(f"Failed to create notification: {e}")
-        pass
+    # 通过WebSocket实时推送给用户（使用后台任务异步发送）
+    async def send_websocket_message():
+        try:
+            from app.main import active_connections
+            user_ws = active_connections.get(chat["user_id"])
+            if user_ws:
+                # 构建消息响应
+                message_response = {
+                    "from": current_user.id,
+                    "receiver_id": chat["user_id"],
+                    "content": message["content"],
+                    "created_at": str(message["created_at"]),
+                    "sender_type": "customer_service",
+                    "original_sender_id": current_user.id,
+                    "chat_id": chat_id,
+                    "message_id": message["id"],
+                }
+                try:
+                    await user_ws.send_text(json.dumps(message_response))
+                    logger.info(f"Customer service message sent to user {chat['user_id']} via WebSocket")
+                except Exception as ws_error:
+                    logger.error(f"Failed to send WebSocket message to user {chat['user_id']}: {ws_error}")
+                    # 如果连接失败，从活跃连接中移除
+                    active_connections.pop(chat["user_id"], None)
+        except Exception as e:
+            # WebSocket推送失败不应该影响消息发送
+            logger.error(f"Failed to push message via WebSocket: {e}")
+    
+    background_tasks.add_task(send_websocket_message)
+
+    # 注意：不再在每次发送消息时创建通知
+    # 通知只在用户快被自动超时结束的时候才创建（在send_timeout_warnings中实现）
 
     return message
 

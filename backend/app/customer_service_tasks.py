@@ -13,6 +13,7 @@ from app.models import (
     CustomerServiceQueue,
     CustomerService,
     CustomerServiceMessage,
+    Notification,
 )
 from app.utils.time_utils import get_utc_time
 from app import crud
@@ -280,10 +281,85 @@ def send_timeout_warnings(db: Session, warning_minutes: int = 1) -> Dict[str, An
             .all()
         )
         
-        # TODO: 实现WebSocket通知或推送通知
-        # 这里可以发送通知给用户或客服，提醒对话即将超时
+        # 为即将超时的对话创建通知并推送
+        warning_count = 0
+        for chat in warning_chats:
+            try:
+                # 检查是否已经发送过预警通知（避免重复通知）
+                # 通过检查最近1分钟内是否已有相同类型的通知
+                from datetime import timedelta
+                recent_notification = (
+                    db.query(Notification)
+                    .filter(
+                        Notification.user_id == chat.user_id,
+                        Notification.type == "chat_timeout_warning",
+                        Notification.related_id == chat.chat_id,
+                        Notification.created_at > get_utc_time() - timedelta(minutes=1)
+                    )
+                    .first()
+                )
+                
+                if recent_notification:
+                    # 最近1分钟内已发送过通知，跳过
+                    continue
+                
+                # 创建超时预警通知
+                crud.create_notification(
+                    db=db,
+                    user_id=chat.user_id,
+                    type="chat_timeout_warning",
+                    title="对话即将超时",
+                    content="您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。",
+                    related_id=chat.chat_id,
+                )
+                
+                # 通过WebSocket推送通知更新事件
+                try:
+                    from app.main import active_connections
+                    import json
+                    user_ws = active_connections.get(chat.user_id)
+                    if user_ws:
+                        # 发送通知更新事件
+                        notification_update = {
+                            "type": "notification_created",
+                            "notification_type": "chat_timeout_warning",
+                            "chat_id": chat.chat_id,
+                            "title": "对话即将超时",
+                            "content": "您的客服对话即将因超时（2分钟无活动）自动结束，请尽快回复。"
+                        }
+                        # 使用异步方式发送（Celery任务中需要创建新的事件循环）
+                        import asyncio
+                        try:
+                            # 尝试获取当前事件循环
+                            try:
+                                loop = asyncio.get_event_loop()
+                                if loop.is_running():
+                                    # 如果事件循环正在运行，创建任务
+                                    asyncio.create_task(user_ws.send_text(json.dumps(notification_update)))
+                                else:
+                                    # 如果事件循环未运行，运行直到完成
+                                    loop.run_until_complete(user_ws.send_text(json.dumps(notification_update)))
+                            except RuntimeError:
+                                # 如果没有事件循环，创建新的
+                                asyncio.run(user_ws.send_text(json.dumps(notification_update)))
+                        except Exception as ws_error:
+                            logger.error(f"Failed to send timeout warning via WebSocket to user {chat.user_id}: {ws_error}")
+                            # 如果连接失败，从活跃连接中移除
+                            try:
+                                from app.main import active_connections
+                                active_connections.pop(chat.user_id, None)
+                            except:
+                                pass
+                except Exception as e:
+                    logger.error(f"Failed to push timeout warning notification via WebSocket: {e}")
+                
+                warning_count += 1
+                logger.info(f"Sent timeout warning to user {chat.user_id} for chat {chat.chat_id}")
+            except Exception as e:
+                logger.error(f"Failed to send timeout warning for chat {chat.chat_id}: {e}")
+                continue
         
-        warning_count = len(warning_chats)
+        db.commit()
         logger.info(f"Sent {warning_count} timeout warnings")
         
         return {

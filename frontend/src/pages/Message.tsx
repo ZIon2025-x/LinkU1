@@ -2567,6 +2567,80 @@ const MessagePage: React.FC = () => {
               return; // 任务消息已处理，不再处理为普通消息
             }
             
+            // 处理客服对话消息（通过chat_id判断）
+            if (msg.chat_id && isServiceMode && currentChatId && msg.chat_id === currentChatId) {
+              // 确定消息发送者显示名称
+              let fromName = t('messages.other');
+              if (msg.from === user.id) {
+                fromName = t('messages.me');
+              } else if (msg.sender_type === 'system') {
+                fromName = t('messages.system');
+              } else if (msg.sender_type === 'customer_service') {
+                fromName = t('messages.customerService');
+              } else if (msg.sender_type === 'admin') {
+                fromName = t('messages.admin');
+              } else if (msg.from === 'system') {
+                fromName = t('messages.system');
+              }
+              
+              // 只处理有内容的消息
+              if (msg.content && msg.content.trim()) {
+                const messageId = msg.message_id || msg.id || Date.now();
+                
+                // 检查是否已经存在相同的消息（避免重复显示）
+                setMessages(prev => {
+                  // 检查是否已经存在相同内容、相同发送者、时间相近的消息
+                  const exists = prev.some(m => 
+                    (m.id === messageId) || 
+                    (m.content === msg.content.trim() && 
+                     m.from === fromName && 
+                     Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000) // 5秒内的消息认为是重复的
+                  );
+                  
+                  if (exists) {
+                    return prev; // 如果已存在，不添加
+                  }
+                  
+                  return [...prev, {
+                    id: messageId,
+                    from: fromName,
+                    content: msg.content.trim(), 
+                    created_at: msg.created_at 
+                  }];
+                });
+                
+                // 标记为新消息，触发自动滚动（只对非系统消息）
+                if (fromName !== '系统') {
+                  setIsNewMessage(true);
+                }
+                
+                // 如果是接收到的消息（不是自己发送的），播放提示音
+                if (msg.from !== user.id && msg.sender_type !== 'system') {
+                  playMessageSound();
+                  
+                  // 显示桌面通知
+                  if ('Notification' in window && Notification.permission === 'granted') {
+                    // 检查页面是否可见，如果不可见才显示通知
+                    if (document.hidden) {
+                      const notification = new Notification('新消息', {
+                        body: `${fromName}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`,
+                        icon: '/static/favicon.png',
+                        tag: 'message-notification',
+                        requireInteraction: false
+                      });
+                      
+                      // 3秒后自动关闭通知
+                      setTimeout(() => {
+                        notification.close();
+                      }, 3000);
+                    }
+                  }
+                }
+                
+                return; // 客服消息已处理，不再处理为普通消息
+              }
+            }
+            
             if (msg.from) {
               // 确定消息发送者显示名称
               let fromName = t('messages.other');

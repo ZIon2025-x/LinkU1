@@ -592,18 +592,25 @@ const CustomerService: React.FC = () => {
                 messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
               }
             }, 100);
-          }
-          
-          // 更新会话列表中的未读消息数量
-          setSessions(prev => prev.map(session => {
-            if (session.user_id === msg.from) {
-              return {
-                ...session,
-                unread_count: (session.unread_count || 0) + 1
-              };
+            
+            // 如果正在查看该对话，立即标记为已读，不增加未读数量
+            if (selectedSession.chat_id) {
+              markCustomerServiceMessagesRead(selectedSession.chat_id).catch(err => {
+                console.error('标记消息为已读失败:', err);
+              });
             }
-            return session;
-          }));
+          } else {
+            // 如果不在查看该对话，才增加未读数量
+            setSessions(prev => prev.map(session => {
+              if (session.user_id === msg.from) {
+                return {
+                  ...session,
+                  unread_count: (session.unread_count || 0) + 1
+                };
+              }
+              return session;
+            }));
+          }
         }
       } catch (error) {
         console.error('客服WebSocket消息解析错误:', error);
