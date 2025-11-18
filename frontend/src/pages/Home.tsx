@@ -18,6 +18,7 @@ import SEOHead from '../components/SEOHead';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import styles from './Home.module.css';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -621,13 +622,13 @@ const Home: React.FC = () => {
         ogUrl={canonicalUrl}
       />
       {/* 顶部导航栏 - 使用汉堡菜单 */}
-      <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
           {/* Logo */}
-          <div style={{fontWeight: 'bold', fontSize: 24, background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Link²Ur</div>
+          <div className={styles.logo}>Link²Ur</div>
           
           {/* 语言切换器、通知按钮和汉堡菜单 */}
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <div className={styles.headerActions}>
             <LanguageSwitcher />
             <NotificationButton
               user={user}
@@ -651,7 +652,7 @@ const Home: React.FC = () => {
         </div>
       </header>
       {/* 占位，防止内容被导航栏遮挡 */}
-      <div style={{height: 60}} />
+      <div className={styles.headerSpacer} />
       
       {/* 通知弹窗 - 独立显示 */}
       <NotificationPanel
@@ -664,297 +665,110 @@ const Home: React.FC = () => {
       />
       
       {/* 英雄区域 - 重新设计 */}
-      <section className="hero-section" style={{
-        backgroundImage: 'url(/static/background.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        minHeight: '100vh',
-        padding: '80px 0',
-        textAlign: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <section 
+        className={styles.heroSection}
+        style={{ backgroundImage: 'url(/static/background.jpg)' }}
+      >
         {/* 背景遮罩层 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'rgba(0, 0, 0, 0.4)',
-          pointerEvents: 'none'
-        }} />
+        <div className={styles.heroOverlay} />
         
-        <div style={{maxWidth: 1200, width: '100%', padding: '0 24px', position: 'relative', zIndex: 2}}>
+        <div className={styles.heroContent}>
           {/* SEO 优化的主标题 - 使用 h1 作为页面主标题 */}
-          <h1 className="hero-title" style={{
-            fontSize: '48px',
-            fontWeight: '800',
-            marginBottom: '24px',
-            color: '#fff',
-            textShadow: '0 4px 8px rgba(0,0,0,0.3)',
-            lineHeight: '1.2'
-          }}>
+          <h1 className={styles.heroTitle}>
             {t('home.welcome')}
-            <span style={{display: 'block', color: '#FFD700', marginTop: '0.5em'}}>
+            <span className={styles.heroTitleHighlight}>
               {t('home.subtitle')}
             </span>
           </h1>
           
-          <p className="hero-subtitle" style={{
-            fontSize: '20px',
-            color: 'rgba(255,255,255,0.9)',
-            marginBottom: '40px',
-            maxWidth: '600px',
-            margin: '0 auto 40px',
-            lineHeight: '1.6'
-          }}>
+          <p className={styles.heroSubtitle}>
             {t('home.heroDescription')}
           </p>
           
-          <div style={{display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '60px'}}>
+          <div className={styles.heroButtons}>
             <button 
               onClick={() => navigate('/tasks')}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                color: '#fff',
-                padding: '16px 32px',
-                borderRadius: '50px',
-                fontSize: '18px',
-                fontWeight: '700',
-                border: '2px solid rgba(255,255,255,0.3)',
-                cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-              }}
+              className={styles.heroButton}
             >
               ✨ {t('navigation.tasks')}
             </button>
             
             <button 
               onClick={() => navigate('/publish')}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                color: '#fff',
-                padding: '16px 32px',
-                borderRadius: '50px',
-                fontSize: '18px',
-                fontWeight: '700',
-                border: '2px solid rgba(255,255,255,0.3)',
-                cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-              }}
+              className={styles.heroButton}
             >
               🚀 {t('navigation.publish')}
             </button>
             
             <button 
               onClick={() => navigate('/task-experts')}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                color: '#fff',
-                padding: '16px 32px',
-                borderRadius: '50px',
-                fontSize: '18px',
-                fontWeight: '700',
-                border: '2px solid rgba(255,255,255,0.3)',
-                cursor: 'pointer',
-                backdropFilter: 'blur(10px)',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-              }}
+              className={styles.heroButton}
             >
               👑 {t('footer.taskExperts')}
             </button>
-        </div>
+          </div>
           
           {/* 统计数据 */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '40px',
-            maxWidth: '800px',
-            margin: '0 auto'
-          }}>
-            <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>{t('home.betaVersion')}</div>
-              <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('about.teamText')}</div>
-          </div>
-            <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>{t('home.coverageArea')}</div>
-              <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('profile.tasksCompleted')}</div>
-          </div>
-            <div style={{textAlign: 'center'}}>
-              <div style={{fontSize: '36px', fontWeight: '800', color: '#FFD700', marginBottom: '8px'}}>100%</div>
-              <div style={{color: 'rgba(255,255,255,0.8)', fontSize: '16px'}}>{t('home.userSatisfactionGoal')}</div>
+          <div className={styles.heroStats}>
+            <div className={styles.heroStatItem}>
+              <div className={styles.heroStatValue}>{t('home.betaVersion')}</div>
+              <div className={styles.heroStatLabel}>{t('about.teamText')}</div>
+            </div>
+            <div className={styles.heroStatItem}>
+              <div className={styles.heroStatValue}>{t('home.coverageArea')}</div>
+              <div className={styles.heroStatLabel}>{t('profile.tasksCompleted')}</div>
+            </div>
+            <div className={styles.heroStatItem}>
+              <div className={styles.heroStatValue}>100%</div>
+              <div className={styles.heroStatLabel}>{t('home.userSatisfactionGoal')}</div>
             </div>
           </div>
         </div>
       </section>
       
       {/* 特色功能区域 */}
-      <section style={{padding: '80px 0', background: '#f8fafc'}}>
-        <div style={{maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
-          <h2 style={{
-            fontSize: '36px',
-            fontWeight: '700',
-            textAlign: 'center',
-            marginBottom: '16px',
-            color: '#2d3748'
-          }}>
+      <section className={styles.featuresSection}>
+        <div className={styles.featuresContainer}>
+          <h2 className={styles.featuresTitle}>
             {t('about.title')}
           </h2>
-          <p style={{
-            fontSize: '18px',
-            color: '#718096',
-            textAlign: 'center',
-            marginBottom: '60px',
-            maxWidth: '600px',
-            margin: '0 auto 60px'
-          }}>
+          <p className={styles.featuresSubtitle}>
             {t('about.subtitle')}
           </p>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '40px'
-          }}>
-            <div style={{
-              background: '#fff',
-              padding: '40px 30px',
-              borderRadius: '20px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-              textAlign: 'center',
-              transition: 'transform 0.3s ease',
-              border: '1px solid #e2e8f0'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-8px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px',
-                fontSize: '32px'
-              }}>
+          <div className={styles.featuresGrid}>
+            <div className={styles.featureCard}>
+              <div className={`${styles.featureIcon} ${styles.featureIconValues}`}>
                 🎯
               </div>
-              <h3 style={{fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#2d3748'}}>
+              <h3 className={styles.featureTitle}>
                 {t('about.values')}
               </h3>
-              <p style={{color: '#718096', lineHeight: '1.6'}}>
+              <p className={styles.featureText}>
                 {t('about.valuesText')}
               </p>
             </div>
             
-            <div style={{
-              background: '#fff',
-              padding: '40px 30px',
-              borderRadius: '20px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-              textAlign: 'center',
-              transition: 'transform 0.3s ease',
-              border: '1px solid #e2e8f0'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-8px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px',
-                fontSize: '32px'
-              }}>
+            <div className={styles.featureCard}>
+              <div className={`${styles.featureIcon} ${styles.featureIconMission}`}>
                 🛡️
               </div>
-              <h3 style={{fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#2d3748'}}>
+              <h3 className={styles.featureTitle}>
                 {t('about.mission')}
               </h3>
-              <p style={{color: '#718096', lineHeight: '1.6'}}>
+              <p className={styles.featureText}>
                 {t('about.missionText')}
               </p>
             </div>
             
-            <div style={{
-              background: '#fff',
-              padding: '40px 30px',
-              borderRadius: '20px',
-              boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-              textAlign: 'center',
-              transition: 'transform 0.3s ease',
-              border: '1px solid #e2e8f0'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-8px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            >
-              <div style={{
-                width: '80px',
-                height: '80px',
-                background: 'linear-gradient(135deg, #48bb78, #38a169)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px',
-                fontSize: '32px'
-              }}>
+            <div className={styles.featureCard}>
+              <div className={`${styles.featureIcon} ${styles.featureIconVision}`}>
                 ⚡
               </div>
-              <h3 style={{fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#2d3748'}}>
+              <h3 className={styles.featureTitle}>
                 {t('about.vision')}
               </h3>
-              <p style={{color: '#718096', lineHeight: '1.6'}}>
+              <p className={styles.featureText}>
                 {t('about.visionText')}
               </p>
             </div>
@@ -962,54 +776,28 @@ const Home: React.FC = () => {
         </div>
       </section>
       {/* 最新任务区块 - 重新设计 */}
-      <main style={{maxWidth: 1200, margin: '0 auto', padding: '80px 24px'}}>
-        <div style={{textAlign: 'center', marginBottom: '60px'}}>
-          <h2 style={{
-            fontSize: '36px',
-            fontWeight: '700',
-            marginBottom: '16px',
-            color: '#2d3748'
-          }}>
+      <main className={styles.tasksSection}>
+        <div className={styles.tasksHeader}>
+          <h2 className={styles.tasksTitle}>
             {t('home.recentTasks')}
           </h2>
-          <p style={{
-            fontSize: '18px',
-            color: '#718096',
-            maxWidth: '600px',
-            margin: '0 auto'
-          }}>
+          <p className={styles.tasksSubtitle}>
             {t('home.subtitle')}
           </p>
         </div>
         {/* 任务卡片列表 - 重新设计 */}
         {loading ? (
-          <div style={{
-            textAlign: 'center', 
-            padding: '80px 40px',
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-          }}>
-            <div style={{fontSize: '18px', color: '#718096'}}>🔄 {t('home.loadingTasks')}</div>
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingText}>🔄 {t('home.loadingTasks')}</div>
           </div>
         ) : tasks.length === 0 ? (
-          <div style={{
-            textAlign: 'center', 
-            padding: '80px 40px',
-            background: '#fff',
-            borderRadius: '16px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-          }}>
-            <div style={{fontSize: '48px', marginBottom: '16px'}}>📝</div>
-            <div style={{fontSize: '18px', color: '#718096', marginBottom: '8px'}}>{t('home.noTasksAvailable')}</div>
-            <div style={{fontSize: '14px', color: '#a0aec0'}}>{t('home.noTasksDesc')}</div>
+          <div className={styles.emptyContainer}>
+            <div className={styles.emptyIcon}>📝</div>
+            <div className={styles.emptyTitle}>{t('home.noTasksAvailable')}</div>
+            <div className={styles.emptyDesc}>{t('home.noTasksDesc')}</div>
           </div>
         ) : (
-          <div style={{
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', 
-            gap: '32px'
-          }}>
+          <div className={styles.tasksGrid}>
             {tasks.map(task => {
               // 判断是否应该对非相关用户隐藏真实状态（显示为open）
               const shouldHideStatus = () => {
@@ -1065,58 +853,26 @@ const Home: React.FC = () => {
               };
 
               return (
-                <div key={task.id} style={{
-                  background: '#fff', 
-                  borderRadius: '20px', 
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.08)', 
-                  padding: '24px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  justifyContent: 'space-between', 
-                  border: '1px solid #e2e8f0',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.08)';
-                }}
-                onClick={() => {
-                  setSelectedTaskId(task.id);
-                  setShowTaskDetailModal(true);
-                }}
+                <div 
+                  key={task.id} 
+                  className={styles.taskCard}
+                  onClick={() => {
+                    setSelectedTaskId(task.id);
+                    setShowTaskDetailModal(true);
+                  }}
                 >
                   {/* 任务等级标签 */}
                   {task.task_level && task.task_level !== 'normal' && (
-                    <div style={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 12,
-                      padding: '4px 8px',
-                      borderRadius: 12,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      zIndex: 1,
-                      ...getTaskLevelStyle(task.task_level)
-                    }}>
+                    <div className={`${styles.taskLevelBadge} ${
+                      task.task_level === 'vip' ? styles.taskLevelBadgeVip : 
+                      task.task_level === 'super' ? styles.taskLevelBadgeSuper : ''
+                    }`}>
                       {getTaskLevelText(task.task_level)}
                     </div>
                   )}
                   
                   <div>
-                    <div style={{
-                      fontWeight: '700', 
-                      fontSize: '20px', 
-                      marginBottom: '12px',
-                      color: '#2d3748',
-                      lineHeight: '1.4'
-                    }}>
+                    <div className={styles.taskTitle}>
                       <TaskTitle
                         title={task.title}
                         language={language}
@@ -1129,120 +885,65 @@ const Home: React.FC = () => {
                       />
                     </div>
                     
-                    <div style={{
-                      display: 'flex',
-                      gap: '12px',
-                      marginBottom: '16px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <span style={{
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        color: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
+                    <div className={styles.taskInfoRow}>
+                      <span className={styles.taskTypeBadge}>
                         {task.task_type}
                       </span>
-                      <span style={{
-                        background: task.location === 'Online' ? '#e6f3ff' : '#f7fafc',
-                        color: task.location === 'Online' ? '#2563eb' : '#4a5568',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        border: task.location === 'Online' ? '1px solid #93c5fd' : '1px solid #e2e8f0'
-                      }}>
+                      <span className={`${styles.taskLocationBadge} ${
+                        task.location === 'Online' ? styles.taskLocationOnline : styles.taskLocationOffline
+                      }`}>
                         {task.location === 'Online' ? '🌐' : '📍'} {task.location}
                       </span>
                     </div>
                     
-                    <div style={{
-                      color: '#4a5568', 
-                      marginBottom: '16px',
-                      lineHeight: '1.6',
-                      fontSize: '14px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
+                    <div className={styles.taskDescription}>
                       {task.description}
                     </div>
                     {/* 任务状态和时间信息 */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '20px',
-                      padding: '12px 16px',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0'
-                    }}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                        <div style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
-                                     displayStatus === 'in_progress' ? '#4299e1' : 
-                                     displayStatus === 'completed' ? '#9f7aea' : 
-                                     displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
-                        }} />
-                        <span style={{
-                          color: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
-                                 displayStatus === 'in_progress' ? '#4299e1' : 
-                                 displayStatus === 'completed' ? '#9f7aea' : 
-                                 displayStatus === 'cancelled' ? '#f56565' : '#a0aec0',
-                          fontWeight: '600',
-                          fontSize: '14px'
-                      }}>
-                        {(displayStatus === 'open' || displayStatus === 'taken') ? t('taskStatuses.published') :
-                         displayStatus === 'in_progress' ? t('taskStatuses.inProgress') :
-                         displayStatus === 'completed' ? t('taskStatuses.completed') :
-                         displayStatus === 'cancelled' ? t('taskStatuses.cancelled') : displayStatus}
-                      </span>
+                    <div className={styles.taskStatusContainer}>
+                      <div className={styles.taskStatusIndicator}>
+                        <div 
+                          className={styles.taskStatusDot}
+                          style={{
+                            background: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                       displayStatus === 'in_progress' ? '#4299e1' : 
+                                       displayStatus === 'completed' ? '#9f7aea' : 
+                                       displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
+                          }}
+                        />
+                        <span 
+                          className={styles.taskStatusText}
+                          style={{
+                            color: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                   displayStatus === 'in_progress' ? '#4299e1' : 
+                                   displayStatus === 'completed' ? '#9f7aea' : 
+                                   displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
+                          }}
+                        >
+                          {(displayStatus === 'open' || displayStatus === 'taken') ? t('taskStatuses.published') :
+                           displayStatus === 'in_progress' ? t('taskStatuses.inProgress') :
+                           displayStatus === 'completed' ? t('taskStatuses.completed') :
+                           displayStatus === 'cancelled' ? t('taskStatuses.cancelled') : displayStatus}
+                        </span>
+                      </div>
                     </div>
                       
                     {(task.status === 'open' || task.status === 'taken') && (
-                        <div style={{
-                          color: isExpiringSoon(task.deadline) ? '#ed8936' : '#48bb78',
-                          fontWeight: '600',
-                          fontSize: '12px'
-                        }}>
+                        <div className={`${styles.taskTimeRemaining} ${
+                          isExpiringSoon(task.deadline) ? styles.taskTimeRemainingSoon : styles.taskTimeRemainingNormal
+                        }`}>
                           ⏰ {getRemainTime(task.deadline, t)}
-                      </div>
+                        </div>
                     )}
-                  </div>
                   </div>
                   
                   {/* 底部价格和操作区域 */}
-                  <div style={{
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    paddingTop: '16px',
-                    borderTop: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <span style={{
-                        color: '#2d3748', 
-                        fontWeight: '800', 
-                        fontSize: '24px'
-                      }}>
+                  <div className={styles.taskRewardContainer}>
+                    <div className={styles.taskRewardInfo}>
+                      <span className={styles.taskRewardAmount}>
                         £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
                       </span>
-                      <span style={{
-                        color: '#718096',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}>
+                      <span className={styles.taskRewardLabel}>
                         {t('home.taskReward')}
                       </span>
                     </div>
@@ -1252,26 +953,7 @@ const Home: React.FC = () => {
                         setSelectedTaskId(task.id);
                         setShowTaskDetailModal(true);
                       }} 
-                      style={{
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '8px 16px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
-                      }}
+                      className={styles.taskViewButton}
                     >
                       {t('home.viewDetails')}
                     </button>

@@ -1,0 +1,536 @@
+/* Header Styles */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  z-index: 100;
+  box-shadow: 0 2px 8px #e6f7ff;
+}
+
+.headerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 24px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerSpacer {
+  height: 60px;
+}
+
+/* Hero Section Styles */
+.heroSection {
+  /* background-image 在组件中通过内联样式设置，因为需要引用 public 目录的静态资源 */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  padding: 80px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.heroContent {
+  max-width: 1200px;
+  width: 100%;
+  padding: 0 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.heroTitle {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: #fff;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+}
+
+.heroTitleHighlight {
+  display: block;
+  color: #FFD700;
+  margin-top: 0.5em;
+}
+
+.heroSubtitle {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 40px;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+.heroButtons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 60px;
+}
+
+.heroButton {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.heroButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.heroStatItem {
+  text-align: center;
+}
+
+.heroStatValue {
+  font-size: 36px;
+  font-weight: 800;
+  color: #FFD700;
+  margin-bottom: 8px;
+}
+
+.heroStatLabel {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+}
+
+/* Features Section Styles */
+.featuresSection {
+  padding: 80px 0;
+  background: #f8fafc;
+}
+
+.featuresContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.featuresTitle {
+  font-size: 36px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+  color: #2d3748;
+}
+
+.featuresSubtitle {
+  font-size: 18px;
+  color: #718096;
+  text-align: center;
+  margin-bottom: 60px;
+  max-width: 600px;
+  margin: 0 auto 60px;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+}
+
+.featureCard {
+  background: #fff;
+  padding: 40px 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  transition: transform 0.3s ease;
+  border: 1px solid #e2e8f0;
+}
+
+.featureCard:hover {
+  transform: translateY(-8px);
+}
+
+.featureIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 32px;
+}
+
+.featureIconValues {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+.featureIconMission {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+}
+
+.featureIconVision {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+}
+
+.featureTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #2d3748;
+}
+
+.featureText {
+  color: #718096;
+  line-height: 1.6;
+}
+
+/* Tasks Section Styles */
+.tasksSection {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 24px;
+}
+
+.tasksHeader {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.tasksTitle {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #2d3748;
+}
+
+.tasksSubtitle {
+  font-size: 18px;
+  color: #718096;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.loadingContainer,
+.emptyContainer {
+  text-align: center;
+  padding: 80px 40px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.loadingText {
+  font-size: 18px;
+  color: #718096;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.emptyTitle {
+  font-size: 18px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
+.emptyDesc {
+  font-size: 14px;
+  color: #a0aec0;
+}
+
+.tasksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 32px;
+}
+
+.taskCard {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #e2e8f0;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.taskCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.taskLevelBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.taskLevelBadgeVip {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B4513;
+  border: 2px solid #FFD700;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+}
+
+.taskLevelBadgeSuper {
+  background: linear-gradient(135deg, #FF6B6B, #FF4757);
+  color: #fff;
+  border: 2px solid #FF4757;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.taskTitle {
+  font-weight: 700;
+  font-size: 20px;
+  margin-bottom: 12px;
+  color: #2d3748;
+  line-height: 1.4;
+}
+
+.taskInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.taskInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #718096;
+}
+
+.taskInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.taskInfoRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.taskTypeBadge {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.taskLocationBadge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.taskLocationOnline {
+  background: #e6f3ff;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+}
+
+.taskLocationOffline {
+  background: #f7fafc;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.taskDescription {
+  color: #4a5568;
+  margin-bottom: 16px;
+  line-height: 1.6;
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.taskStatusContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.taskStatusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.taskStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.taskStatusText {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.taskTimeRemaining {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.taskTimeRemainingSoon {
+  color: #ed8936;
+}
+
+.taskTimeRemainingNormal {
+  color: #48bb78;
+}
+
+.taskReward {
+  font-size: 24px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.taskRewardContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.taskRewardInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.taskRewardAmount {
+  color: #2d3748;
+  font-weight: 800;
+  font-size: 24px;
+}
+
+.taskRewardLabel {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.taskViewButton {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.taskViewButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 32px;
+  }
+
+  .heroSubtitle {
+    font-size: 18px;
+  }
+
+  .heroButton {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+
+  .featuresTitle,
+  .tasksTitle {
+    font-size: 28px;
+  }
+
+  .tasksGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
