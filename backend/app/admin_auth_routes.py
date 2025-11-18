@@ -16,6 +16,7 @@ from app.cookie_manager import CookieManager
 from app.role_deps import get_current_admin_secure_sync, get_current_super_admin_secure_sync
 from app.rate_limiting import rate_limit
 from app.role_management import UserRole
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 

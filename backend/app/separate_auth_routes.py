@@ -13,7 +13,7 @@ from app.admin_auth import AdminAuthManager, create_admin_session_cookie, clear_
 from app.service_auth import ServiceAuthManager, create_service_session_cookie, clear_service_session_cookie
 from app.separate_auth_deps import get_current_admin, get_current_service, get_current_user
 from app.config import Config
-from app.utils.time_utils import format_iso_utc
+from app.utils.time_utils import format_iso_utc, get_utc_time
 from datetime import datetime
 import logging
 

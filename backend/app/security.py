@@ -17,6 +17,7 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWT
 from passlib.context import CryptContext
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,6 @@ def get_password_hash(password: str) -> str:
 def generate_strong_password(length: int = 16) -> str:
     """生成强密码（包含大小写字母、数字、特殊字符）"""
     import string
-    from app.utils.time_utils import get_utc_time, format_iso_utc
     # 确保包含各种字符类型
     uppercase = string.ascii_uppercase
     lowercase = string.ascii_lowercase
@@ -355,6 +355,7 @@ def revoke_all_user_tokens(user_id: str) -> bool:
 
 def store_refresh_token(refresh_jti: str, user_id: str, expire_time: datetime) -> bool:
     """存储刷新令牌信息"""
+    from app.utils.time_utils import format_iso_utc
     try:
         if redis_client:
             # 存储到Redis
