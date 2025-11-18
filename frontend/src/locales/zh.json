@@ -929,6 +929,35 @@
     "cancelReason": "请输入取消原因（可选）：",
     "reviewPlaceholder": "请分享您对这次任务的体验...",
     "anonymousReviewNote": "(选择匿名后，您的评价将不会显示您的身份信息)",
+    "reviewTags": {
+      "poster": {
+        "taskClear": "任务描述清晰",
+        "communicationTimely": "沟通及时",
+        "paymentTimely": "付款及时",
+        "requirementsReasonable": "任务要求合理",
+        "cooperationPleasant": "合作愉快",
+        "recommend": "推荐",
+        "trustworthy": "值得信赖",
+        "professionalEfficient": "专业高效"
+      },
+      "taker": {
+        "workQuality": "工作质量高",
+        "punctual": "准时完成",
+        "responsible": "认真负责",
+        "goodAttitude": "态度良好",
+        "skilled": "技能熟练",
+        "reliable": "值得信赖",
+        "recommend": "推荐",
+        "excellent": "表现优秀"
+      }
+    },
+    "ratingText": {
+      "1": "很差",
+      "2": "较差",
+      "3": "一般",
+      "4": "很好",
+      "5": "超级棒"
+    },
     "alerts": {
       "taskMarkedComplete": "任务已标记为完成，等待发布者确认！",
       "taskConfirmedComplete": "任务已确认完成！",
@@ -2167,9 +2196,7 @@
       "negotiationAmountLower": "您输入的议价金额（{amount}）低于任务原本金额（{baseAmount}）。\n\n这将降低您获得的金额。是否确定要继续？",
       "applicationSubmitted": "申请提交成功！",
       "applicationFailed": "申请失败，请重试",
-      "enterMessageContent": "请输入留言内容",
-      "messageSent": "留言已发送",
-      "sendMessageFailed": "发送留言失败，请重试"
+      "enterMessageContent": "请输入留言内容"
     },
     "errors": {
       "loadingProblem": "存在加载问题，请再次刷新",
@@ -2194,6 +2221,18 @@
     "ratingNeutral": "😐 一般",
     "ratingSatisfied": "😊 满意",
     "ratingVerySatisfied": "😍 非常满意",
+    "reviewTags": {
+      "customerService": {
+        "responseTimely": "响应及时",
+        "professional": "专业",
+        "helpful": "有帮助",
+        "patient": "耐心",
+        "clearExplanation": "解释清晰",
+        "problemSolved": "问题解决",
+        "recommend": "推荐",
+        "excellent": "服务优秀"
+      }
+    },
     "currentRating": "当前评分: {rating} 星",
     "endChat": "结束对话",
     "imageTooLargeAlert": "图片过大，无法上传。\n\n当前大小: {size}MB\n最大允许: 5MB\n\n请压缩图片后重试。",

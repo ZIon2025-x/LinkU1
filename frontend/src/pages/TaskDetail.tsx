@@ -15,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import styles from './TaskDetail.module.css';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -45,6 +46,7 @@ const TaskDetail: React.FC = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [showReviews, setShowReviews] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -1295,6 +1297,58 @@ const TaskDetail: React.FC = () => {
     }
   };
 
+  // 根据角色获取标签选项
+  const getReviewTags = (task: any | null) => {
+    if (!task || !user) return [];
+    
+    const isPoster = task.poster_id === user.id;
+    const isTaker = task.taker_id === user.id;
+    
+    // 如果是发布者（评价接收者）
+    if (isPoster) {
+      return [
+        t('myTasks.reviewTags.taker.workQuality'),
+        t('myTasks.reviewTags.taker.punctual'),
+        t('myTasks.reviewTags.taker.responsible'),
+        t('myTasks.reviewTags.taker.goodAttitude'),
+        t('myTasks.reviewTags.taker.skilled'),
+        t('myTasks.reviewTags.taker.reliable'),
+        t('myTasks.reviewTags.taker.recommend'),
+        t('myTasks.reviewTags.taker.excellent')
+      ];
+    }
+    
+    // 如果是接收者（评价发布者）
+    if (isTaker) {
+      return [
+        t('myTasks.reviewTags.poster.taskClear'),
+        t('myTasks.reviewTags.poster.communicationTimely'),
+        t('myTasks.reviewTags.poster.paymentTimely'),
+        t('myTasks.reviewTags.poster.requirementsReasonable'),
+        t('myTasks.reviewTags.poster.cooperationPleasant'),
+        t('myTasks.reviewTags.poster.recommend'),
+        t('myTasks.reviewTags.poster.trustworthy'),
+        t('myTasks.reviewTags.poster.professionalEfficient')
+      ];
+    }
+    
+    return [];
+  };
+
+  // 根据评分获取描述文本
+  const getRatingText = (rating: number) => {
+    return t(`myTasks.ratingText.${rating}`) || '';
+  };
+
+  // 切换标签选择
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   const handleSubmitReview = async () => {
     if (!user) {
       alert('请先登录');
@@ -1306,12 +1360,24 @@ const TaskDetail: React.FC = () => {
     }
     setActionLoading(true);
     try {
-      await createReview(Number(id), reviewRating, reviewComment, isAnonymous);
+      // 将选择的标签添加到评论中
+      let finalComment = reviewComment;
+      if (selectedTags.length > 0) {
+        const tagsText = selectedTags.join('、');
+        if (finalComment) {
+          finalComment = `${tagsText}\n\n${finalComment}`;
+        } else {
+          finalComment = tagsText;
+        }
+      }
+      
+      await createReview(Number(id), reviewRating, finalComment, isAnonymous);
       alert('评价提交成功！');
       // 评价提交成功，重新加载评价数据
       setShowReviewModal(false);
       setReviewRating(5);
       setReviewComment('');
+      setSelectedTags([]);
       setIsAnonymous(false);
       // 重新加载评价
       await loadTaskReviews();
@@ -3007,146 +3073,85 @@ const TaskDetail: React.FC = () => {
       )}
 
       {/* 评价弹窗 */}
-      {showReviewModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 32,
-            maxWidth: 500,
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h2 style={{marginBottom: 24, color: '#A67C52', textAlign: 'center'}}>评价任务</h2>
+      {showReviewModal && task && (
+        <div 
+          className={styles.reviewModalOverlay} 
+          onClick={() => {
+            setShowReviewModal(false);
+            setReviewRating(5);
+            setReviewComment('');
+            setSelectedTags([]);
+            setIsAnonymous(false);
+            setHoverRating(0);
+          }}
+        >
+          <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.reviewModalHeader}>
+              <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+              <h2 className={styles.reviewModalTitle}>
+                {t('myTasks.actions.review')}
+              </h2>
+            </div>
             
-            <div style={{marginBottom: 20}}>
-              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                评分 (0.5-5星)
-              </label>
-              <div style={{display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center'}}>
-                {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5].map(star => (
-                  <button
+            {/* 星级评价 */}
+            <div className={styles.reviewRatingSection}>
+              <div className={styles.reviewStars}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <span
                     key={star}
                     onClick={() => setReviewRating(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                                     style={{
-                   background: 'none',
-                   border: 'none',
-                   fontSize: star % 1 === 0 ? 24 : 18,
-                   cursor: 'pointer',
-                   color: star <= (hoverRating || reviewRating) ? '#ffc107' : '#ddd',
-                   transition: 'all 0.3s ease',
-                   padding: '2px',
-                   transform: star <= (hoverRating || reviewRating) ? 'scale(1.2)' : 'scale(1)',
-                   filter: star <= (hoverRating || reviewRating) ? 'drop-shadow(0 0 8px rgba(255, 193, 7, 0.6))' : 'none'
-                 }}
+                    className={styles.reviewStar}
+                    style={{
+                      opacity: star <= (hoverRating || reviewRating) ? 1 : 0.3
+                    }}
                   >
-                                         {star <= (hoverRating || reviewRating) ? '⭐' : '☆'}
-                  </button>
+                    ⭐
+                  </span>
                 ))}
               </div>
-                       <div style={{
-           textAlign: 'center', 
-           marginTop: 8, 
-           color: '#666', 
-           fontSize: 14,
-           fontWeight: 600,
-           opacity: reviewRating > 0 ? 1 : 0.7,
-           transform: reviewRating > 0 ? 'scale(1.05)' : 'scale(1)',
-           transition: 'all 0.3s ease'
-         }}>
-           当前评分: {reviewRating} 星
-         </div>
+              <div className={styles.reviewRatingText}>
+                {getRatingText(reviewRating)}
+              </div>
             </div>
 
-            <div style={{marginBottom: 24}}>
-              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                评价内容 (可选)
+            {/* 标签选择 */}
+            <div className={styles.reviewTagsSection}>
+              <div className={styles.reviewTagsGrid}>
+                {getReviewTags(task).map(tag => (
+                  <div
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`${styles.reviewTag} ${selectedTags.includes(tag) ? styles.reviewTagSelected : ''}`}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 评论输入 */}
+            <div className={styles.reviewCommentSection}>
+              <label className={styles.reviewCommentLabel}>
+                {t('myTasks.reviewPlaceholder')} ({t('myTasks.optional')})
               </label>
               <textarea
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="请分享您对这次任务的体验..."
-                style={{
-                  width: '100%',
-                  minHeight: 100,
-                  padding: 12,
-                  border: '1px solid #ddd',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  resize: 'vertical'
-                }}
+                placeholder={t('myTasks.reviewPlaceholder')}
+                className={styles.reviewCommentInput}
               />
             </div>
 
-            <div style={{marginBottom: 24}}>
-              <label style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer'}}>
-                <input
-                  type="checkbox"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  style={{transform: 'scale(1.2)'}}
-                />
-                <span style={{fontWeight: 600, color: '#333'}}>
-                  匿名评价
-                </span>
-                <span style={{fontSize: 12, color: '#666'}}>
-                  (选择匿名后，您的评价将不会显示您的身份信息)
-                </span>
-              </label>
-            </div>
-
-            <div style={{display: 'flex', gap: 12, justifyContent: 'center'}}>
-              <button
-                onClick={handleSubmitReview}
-                disabled={actionLoading}
-                style={{
-                  background: '#28a745',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '12px 24px',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  cursor: actionLoading ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading ? 0.6 : 1
-                }}
-              >
-                {actionLoading ? '提交中...' : '提交评价'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowReviewModal(false);
-                  setReviewRating(5);
-                  setReviewComment('');
-                }}
-                style={{
-                  background: '#6c757d',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '12px 24px',
-                  fontWeight: 600,
-                  fontSize: 16,
-                  cursor: 'pointer'
-                }}
-              >
-                取消
-              </button>
-            </div>
+            {/* 提交按钮 */}
+            <button
+              onClick={handleSubmitReview}
+              disabled={actionLoading}
+              className={styles.reviewSubmitButton}
+            >
+              {actionLoading ? t('myTasks.actions.processing') : t('myTasks.actions.submitReview')}
+            </button>
           </div>
         </div>
       )}

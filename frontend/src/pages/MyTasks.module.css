@@ -266,6 +266,388 @@
   gap: 24px;
 }
 
+/* Task Card Styles */
+.taskCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.taskCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.taskCardLevelDecoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 40px solid transparent;
+  opacity: 0.1;
+}
+
+.taskCardLevelDecorationVip {
+  border-top: 40px solid #f59e0b;
+}
+
+.taskCardLevelDecorationSuper {
+  border-top: 40px solid #8b5cf6;
+}
+
+.taskCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.taskCardHeaderLeft {
+  flex: 1;
+  margin-right: 12px;
+}
+
+.taskCardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.taskCardLevelBadge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.taskCardLevelBadgeVip {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B4513;
+  border: 1px solid #FFD700;
+}
+
+.taskCardLevelBadgeSuper {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+  border: 1px solid #8b5cf6;
+}
+
+.taskCardStatusBadge {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.taskCardInfo {
+  margin-bottom: 16px;
+}
+
+.taskCardInfoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.taskCardInfoItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.taskCardInfoIcon {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.taskCardInfoText {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.taskCardInfoTextNormal {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: normal;
+}
+
+.taskCardInfoTextOnline {
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.taskCardDeadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.taskCardDescription {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+  border: 1px solid #e2e8f0;
+}
+
+.taskCardActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.taskCardButton {
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  border: none;
+}
+
+.taskCardButtonView {
+  border: 1px solid #667eea;
+  background: transparent;
+  color: #667eea;
+}
+
+.taskCardButtonView:hover {
+  background: #667eea;
+  color: #fff;
+}
+
+.taskCardButtonVisibility {
+  color: #fff;
+}
+
+.taskCardButtonVisibilityPublic {
+  background: #3b82f6;
+}
+
+.taskCardButtonVisibilityPrivate {
+  background: #10b981;
+}
+
+.taskCardButtonComplete {
+  background: #10b981;
+  color: #fff;
+}
+
+.taskCardButtonCancel {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.taskCardButtonChat {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.taskCardButtonChat:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.taskCardButtonReview {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.taskCardButtonReview:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
+.taskCardButtonViewReviews {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #06b6d4;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.taskCardButtonViewReviews:hover {
+  background: #0891b2;
+  transform: translateY(-1px);
+}
+
+.taskCardButtonDelete {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.taskCardButtonDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.taskCardWaitingApproval {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #856404;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.taskCardWaitingApprovalIcon {
+  font-size: 16px;
+}
+
+/* Review List Styles */
+.taskCardReviewsContainer {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.taskCardReviewsTitle {
+  margin-bottom: 12px;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.taskCardReviewItem {
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.taskCardReviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.taskCardReviewUser {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.taskCardReviewRating {
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.taskCardReviewComment {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.taskCardReviewTime {
+  color: #94a3b8;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.paginationButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.paginationButtonPrev,
+.paginationButtonNext {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.paginationButtonPrev:disabled,
+.paginationButtonNext:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.paginationNumbers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.paginationNumber {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.paginationNumberActive {
+  background: #3b82f6;
+  color: #fff;
+}
+
 /* Empty State */
 .emptyState {
   text-align: center;
@@ -314,11 +696,181 @@
   color: #6b7280;
 }
 
+/* Review Modal */
+.reviewModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  padding: 10px;
+}
+
+.reviewModal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.reviewModalHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.reviewModalLogo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  margin-right: 12px;
+}
+
+.reviewModalTitle {
+  text-align: center;
+  color: #3b82f6;
+  font-size: 20px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.reviewRatingSection {
+  margin-bottom: 24px;
+}
+
+.reviewStars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.reviewStar {
+  font-size: 32px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  color: #ffd700;
+}
+
+.reviewStar:hover {
+  transform: scale(1.1);
+}
+
+.reviewRatingText {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.reviewTagsSection {
+  margin-bottom: 24px;
+}
+
+.reviewTagsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reviewTag {
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reviewTag:hover {
+  background: #e5e7eb;
+}
+
+.reviewTagSelected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.reviewCommentSection {
+  margin-bottom: 24px;
+}
+
+.reviewCommentLabel {
+  display: block;
+  margin-bottom: 8px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.reviewCommentInput {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+
+.reviewCommentInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.reviewSubmitButton {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  color: #3b82f6;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reviewSubmitButton:hover:not(:disabled) {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.reviewSubmitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .logo {
     font-size: 18px !important;
     padding: 2px 4px !important;
+  }
+
+  .reviewModal {
+    padding: 24px;
+  }
+
+  .reviewTagsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

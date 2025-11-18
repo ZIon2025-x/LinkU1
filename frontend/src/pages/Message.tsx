@@ -459,6 +459,8 @@ const MessagePage: React.FC = () => {
   const [currentChat, setCurrentChat] = useState<CustomerServiceChat | null>(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
+  const [ratingSelectedTags, setRatingSelectedTags] = useState<string[]>([]);
+  const [ratingHoverRating, setRatingHoverRating] = useState(0);
   const [userTimezone, setUserTimezone] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -492,7 +494,9 @@ const MessagePage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [taskReviews, setTaskReviews] = useState<any[]>([]); // 任务评价列表
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplicationListModal, setShowApplicationListModal] = useState(false);
@@ -1354,23 +1358,87 @@ const MessagePage: React.FC = () => {
     }
   };
 
+  // 根据角色获取标签选项
+  const getReviewTags = (task: any | null) => {
+    if (!task || !user) return [];
+    
+    const isPoster = task.poster_id === user.id;
+    const isTaker = task.taker_id === user.id;
+    
+    // 如果是发布者（评价接收者）
+    if (isPoster) {
+      return [
+        t('myTasks.reviewTags.taker.workQuality'),
+        t('myTasks.reviewTags.taker.punctual'),
+        t('myTasks.reviewTags.taker.responsible'),
+        t('myTasks.reviewTags.taker.goodAttitude'),
+        t('myTasks.reviewTags.taker.skilled'),
+        t('myTasks.reviewTags.taker.reliable'),
+        t('myTasks.reviewTags.taker.recommend'),
+        t('myTasks.reviewTags.taker.excellent')
+      ];
+    }
+    
+    // 如果是接收者（评价发布者）
+    if (isTaker) {
+      return [
+        t('myTasks.reviewTags.poster.taskClear'),
+        t('myTasks.reviewTags.poster.communicationTimely'),
+        t('myTasks.reviewTags.poster.paymentTimely'),
+        t('myTasks.reviewTags.poster.requirementsReasonable'),
+        t('myTasks.reviewTags.poster.cooperationPleasant'),
+        t('myTasks.reviewTags.poster.recommend'),
+        t('myTasks.reviewTags.poster.trustworthy'),
+        t('myTasks.reviewTags.poster.professionalEfficient')
+      ];
+    }
+    
+    return [];
+  };
+
+  // 根据评分获取描述文本
+  const getRatingText = (rating: number) => {
+    return t(`myTasks.ratingText.${rating}`) || '';
+  };
+
+  // 切换标签选择
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   // 评价任务
   const handleReviewTask = async () => {
-    if (!activeTaskId || !user || !reviewComment.trim()) {
+    if (!activeTaskId || !user) {
       showToast('error', t('messages.notifications.enterReviewContent'));
       return;
     }
     
     setActionLoading(true);
     try {
+      // 将选择的标签添加到评论中
+      let finalComment = reviewComment;
+      if (selectedTags.length > 0) {
+        const tagsText = selectedTags.join('、');
+        if (finalComment) {
+          finalComment = `${tagsText}\n\n${finalComment}`;
+        } else {
+          finalComment = tagsText;
+        }
+      }
+      
       await api.post(`/api/tasks/${activeTaskId}/review`, {
         rating: reviewRating,
-        comment: reviewComment
+        comment: finalComment
       });
       showToast('success', t('messages.notifications.reviewSubmitted'));
       setShowReviewModal(false);
       setReviewComment('');
       setReviewRating(5);
+      setSelectedTags([]);
       // 重新加载任务信息和评价数据
       await loadTasks();
       if (activeTaskId) {
@@ -3156,6 +3224,41 @@ const MessagePage: React.FC = () => {
     }
   };
 
+  // 获取客服评价标签
+  const getCustomerServiceReviewTags = () => {
+    return [
+      t('messages.reviewTags.customerService.responseTimely'),
+      t('messages.reviewTags.customerService.professional'),
+      t('messages.reviewTags.customerService.helpful'),
+      t('messages.reviewTags.customerService.patient'),
+      t('messages.reviewTags.customerService.clearExplanation'),
+      t('messages.reviewTags.customerService.problemSolved'),
+      t('messages.reviewTags.customerService.recommend'),
+      t('messages.reviewTags.customerService.excellent')
+    ];
+  };
+
+  // 切换标签选择
+  const toggleRatingTag = (tag: string) => {
+    setRatingSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // 获取评分文字
+  const getRatingTextForService = (rating: number) => {
+    const ratingTexts: { [key: number]: string } = {
+      1: t('messages.ratingVeryDissatisfied'),
+      2: t('messages.ratingDissatisfied'),
+      3: t('messages.ratingNeutral'),
+      4: t('messages.ratingSatisfied'),
+      5: t('messages.ratingVerySatisfied')
+    };
+    return ratingTexts[rating] || '';
+  };
+
   // 提交评价
   const handleSubmitRating = async () => {
     if (!ratingChatId) {
@@ -3164,16 +3267,26 @@ const MessagePage: React.FC = () => {
     }
     
     try {
+      // 将标签添加到评论中
+      let finalComment = ratingComment;
+      if (ratingSelectedTags.length > 0) {
+        const tagsText = ratingSelectedTags.join('、');
+        finalComment = finalComment 
+          ? `${finalComment}\n\n标签: ${tagsText}`
+          : `标签: ${tagsText}`;
+      }
+
       // 使用 api.post 自动包含 CSRF token
       await api.post(`/api/users/customer-service/rate/${ratingChatId}`, {
         rating: rating,
-        comment: ratingComment
+        comment: finalComment
       });
       
       // 关闭评价弹窗
       setShowRatingModal(false);
       setRating(5);
       setRatingComment('');
+      setRatingSelectedTags([]);
       setRatingChatId(null);
       
       // 显示感谢消息
@@ -5120,239 +5233,79 @@ const MessagePage: React.FC = () => {
 
       {/* 评价弹窗和其他弹窗 */}
       {showRatingModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
+        <div className={styles.reviewModalOverlay} onClick={() => {
+          setShowRatingModal(false);
+          setRating(5);
+          setRatingComment('');
+          setRatingSelectedTags([]);
+          setRatingChatId(null);
         }}>
-          <div style={{
-            background: '#fff',
-            borderRadius: isMobile ? '16px' : '20px',
-            padding: isMobile ? '20px' : '30px',
-            maxWidth: isMobile ? '95%' : '500px',
-            width: isMobile ? '95%' : '90%',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-            maxHeight: isMobile ? '90vh' : 'auto',
-            overflowY: isMobile ? 'auto' : 'visible'
-          }}>
-            <h3 style={{
-              margin: '0 0 20px 0',
-              fontSize: isMobile ? '18px' : '20px',
-              fontWeight: '700',
-              color: '#1e293b',
-              textAlign: 'center'
-            }}>
-              💬 {t('messages.rateService')}
-            </h3>
+          <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.reviewModalHeader}>
+              <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+              <h3 className={styles.reviewModalTitle}>
+                {t('messages.rateService')}
+              </h3>
+            </div>
             
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '15px',
-                fontSize: '16px',
-                fontWeight: '600',
-                color: '#374151',
-                textAlign: 'center'
-              }}>
-                {t('messages.rateServicePrompt')}
-              </label>
-              
-              {/* 交互式星星评分 */}
-              <div style={{ 
-                display: 'flex', 
-                gap: isMobile ? '20px' : '30px', 
-                justifyContent: 'center',
-                marginBottom: '12px'
-              }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
+            {/* 星级评价 */}
+            <div className={styles.reviewRatingSection}>
+              <div className={styles.reviewStars}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <span
                     key={star}
                     onClick={() => setRating(star)}
+                    onMouseEnter={() => setRatingHoverRating(star)}
+                    onMouseLeave={() => setRatingHoverRating(0)}
+                    className={styles.reviewStar}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: isMobile ? '28px' : '36px',
-                      cursor: 'pointer',
-                      padding: isMobile ? '2px' : '4px',
-                      borderRadius: '4px',
-                      transition: 'all 0.3s ease',
-                      position: 'relative'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.2)';
-                      e.currentTarget.style.filter = 'drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4))';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.filter = 'none';
+                      opacity: star <= (ratingHoverRating || rating) ? 1 : 0.3
                     }}
                   >
-                    {/* 星星轮廓 */}
-                    <span style={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: isMobile ? '28px' : '36px',
-                      color: '#d1d5db',
-                      zIndex: 1
-                    }}>
-                      ⭐
-                    </span>
-                    
-                    {/* 填充的星星 */}
-                    {star <= rating && (
-                      <span style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: isMobile ? '28px' : '36px',
-                        color: '#fbbf24',
-                        zIndex: 2,
-                        textShadow: '0 2px 4px rgba(251, 191, 36, 0.3)'
-                      }}>
-                        ⭐
-                      </span>
-                    )}
-                  </button>
+                    ⭐
+                  </span>
                 ))}
               </div>
-              
-              {/* 评分文字说明 */}
-              <div style={{
-                textAlign: 'center',
-                fontSize: '16px',
-                fontWeight: '600',
-                color: rating >= 4 ? '#059669' : rating >= 3 ? '#d97706' : '#dc2626',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                background: rating >= 4 ? '#ecfdf5' : rating >= 3 ? '#fef3c7' : '#fef2f2',
-                border: `2px solid ${rating >= 4 ? '#10b981' : rating >= 3 ? '#f59e0b' : '#ef4444'}`,
-                display: 'inline-block',
-                margin: '0 auto',
-                minWidth: '120px'
-              }}>
-                {rating === 1 && t('messages.ratingVeryDissatisfied')}
-                {rating === 2 && t('messages.ratingDissatisfied')}
-                {rating === 3 && t('messages.ratingNeutral')}
-                {rating === 4 && t('messages.ratingSatisfied')}
-                {rating === 5 && t('messages.ratingVerySatisfied')}
-              </div>
-              
-              {/* 评分数字显示 */}
-              <div style={{
-                textAlign: 'center',
-                marginTop: '8px',
-                fontSize: '14px',
-                color: '#6b7280'
-              }}>
-                {t('messages.currentRating', { rating })}
+              <div className={styles.reviewRatingText}>
+                {getRatingTextForService(rating)}
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#374151'
-              }}>
-                {t('messages.ratingComment')}：
+            {/* 标签选择 */}
+            <div className={styles.reviewTagsSection}>
+              <div className={styles.reviewTagsGrid}>
+                {getCustomerServiceReviewTags().map(tag => (
+                  <div
+                    key={tag}
+                    onClick={() => toggleRatingTag(tag)}
+                    className={`${styles.reviewTag} ${ratingSelectedTags.includes(tag) ? styles.reviewTagSelected : ''}`}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 评论输入 */}
+            <div className={styles.reviewCommentSection}>
+              <label className={styles.reviewCommentLabel}>
+                {t('messages.ratingComment')}
               </label>
               <textarea
                 value={ratingComment}
                 onChange={(e) => setRatingComment(e.target.value)}
                 placeholder={t('messages.ratingCommentPlaceholder')}
-                style={{
-                  width: '100%',
-                  minHeight: '80px',
-                  padding: '12px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                }}
+                className={styles.reviewCommentInput}
               />
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: isMobile ? '8px' : '12px',
-              justifyContent: 'center',
-              flexDirection: isMobile ? 'column' : 'row'
-            }}>
-              <button
-                onClick={() => {
-                  setShowRatingModal(false);
-                  setRating(5);
-                  setRatingComment('');
-                  setRatingChatId(null);
-                }}
-                style={{
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  borderRadius: '8px',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  width: isMobile ? '100%' : 'auto'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#e5e7eb';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f3f4f6';
-                }}
-              >
-                {t('common.cancel')}
-              </button>
-              <button
-                onClick={handleSubmitRating}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  borderRadius: '8px',
-                  fontSize: isMobile ? '16px' : '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  width: isMobile ? '100%' : 'auto'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {t('messages.submitRating')}
-              </button>
-            </div>
+            {/* 提交按钮 */}
+            <button
+              onClick={handleSubmitRating}
+              className={styles.reviewSubmitButton}
+            >
+              {t('messages.submitRating')}
+            </button>
           </div>
         </div>
       )}
@@ -6335,120 +6288,81 @@ const MessagePage: React.FC = () => {
       </style>
       
       {/* 评价弹窗 */}
-      {showReviewModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: '#fff',
-            borderRadius: 16,
-            padding: 32,
-            maxWidth: 500,
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <h2 style={{marginBottom: 24, color: '#A67C52', textAlign: 'center'}}>评价任务</h2>
+      {showReviewModal && activeTask && (
+        <div 
+          className={styles.reviewModalOverlay} 
+          onClick={() => {
+            setShowReviewModal(false);
+            setReviewRating(5);
+            setReviewComment('');
+            setSelectedTags([]);
+            setHoverRating(0);
+          }}
+        >
+          <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.reviewModalTitle}>
+              {t('myTasks.actions.review')}
+            </h2>
             
-            <div style={{marginBottom: 20}}>
-              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                评分 (1-5星)
-              </label>
-              <div style={{display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center'}}>
+            {/* 星级评价 */}
+            <div className={styles.reviewRatingSection}>
+              <div className={styles.reviewStars}>
                 {[1, 2, 3, 4, 5].map(star => (
-                  <button
+                  <span
                     key={star}
                     onClick={() => setReviewRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className={styles.reviewStar}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '32px',
-                      cursor: 'pointer',
-                      color: star <= reviewRating ? '#ffc107' : '#ddd',
-                      padding: '4px'
+                      opacity: star <= (hoverRating || reviewRating) ? 1 : 0.3
                     }}
                   >
                     ⭐
-                  </button>
+                  </span>
                 ))}
               </div>
-              <div style={{textAlign: 'center', marginTop: 8, color: '#666', fontSize: '14px'}}>
-                当前评分: {reviewRating} 星
+              <div className={styles.reviewRatingText}>
+                {getRatingText(reviewRating)}
               </div>
             </div>
-            
-            <div style={{marginBottom: 20}}>
-              <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#333'}}>
-                评价内容 <span style={{color: '#999', fontWeight: 'normal'}}>(必填)</span>
+
+            {/* 标签选择 */}
+            <div className={styles.reviewTagsSection}>
+              <div className={styles.reviewTagsGrid}>
+                {getReviewTags(activeTask).map(tag => (
+                  <div
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`${styles.reviewTag} ${selectedTags.includes(tag) ? styles.reviewTagSelected : ''}`}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 评论输入 */}
+            <div className={styles.reviewCommentSection}>
+              <label className={styles.reviewCommentLabel}>
+                {t('myTasks.reviewPlaceholder')} ({t('myTasks.optional')})
               </label>
               <textarea
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="请输入您的评价..."
-                style={{
-                  width: '100%',
-                  minHeight: '120px',
-                  padding: '12px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                  outline: 'none'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e5e7eb';
-                }}
+                placeholder={t('myTasks.reviewPlaceholder')}
+                className={styles.reviewCommentInput}
               />
             </div>
-            
-            <div style={{display: 'flex', gap: '12px', justifyContent: 'flex-end'}}>
-              <button
-                onClick={() => {
-                  setShowReviewModal(false);
-                  setReviewComment('');
-                  setReviewRating(5);
-                }}
-                style={{
-                  padding: '10px 24px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  background: '#fff',
-                  color: '#666',
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleReviewTask}
-                disabled={actionLoading || !reviewComment.trim()}
-                style={{
-                  padding: '10px 24px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: actionLoading || !reviewComment.trim() ? '#ccc' : '#ffc107',
-                  color: '#000',
-                  cursor: actionLoading || !reviewComment.trim() ? 'not-allowed' : 'pointer',
-                  fontWeight: 700
-                }}
-              >
-                {actionLoading ? '提交中...' : '提交评价'}
-              </button>
-            </div>
+
+            {/* 提交按钮 */}
+            <button
+              onClick={handleReviewTask}
+              disabled={actionLoading}
+              className={styles.reviewSubmitButton}
+            >
+              {actionLoading ? t('myTasks.actions.processing') : t('myTasks.actions.submitReview')}
+            </button>
           </div>
         </div>
       )}

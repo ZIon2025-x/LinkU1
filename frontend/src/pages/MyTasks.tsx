@@ -61,6 +61,7 @@ const MyTasks: React.FC = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [currentReviewTask, setCurrentReviewTask] = useState<Task | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [taskReviews, setTaskReviews] = useState<{[key: number]: any[]}>({});
   const [showTaskReviews, setShowTaskReviews] = useState<{[key: number]: boolean}>({});
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -414,18 +415,73 @@ const MyTasks: React.FC = () => {
     setShowReviewModal(true);
   };
 
+  // 根据角色获取标签选项
+  const getReviewTags = (task: Task | null) => {
+    if (!task || !user) return [];
+    
+    const isPoster = task.poster_id === user.id;
+    const isTaker = task.taker_id === user.id;
+    
+    // 如果是发布者（评价接收者）
+    if (isPoster) {
+      return [
+        t('myTasks.reviewTags.taker.workQuality'),
+        t('myTasks.reviewTags.taker.punctual'),
+        t('myTasks.reviewTags.taker.responsible'),
+        t('myTasks.reviewTags.taker.goodAttitude'),
+        t('myTasks.reviewTags.taker.skilled'),
+        t('myTasks.reviewTags.taker.reliable'),
+        t('myTasks.reviewTags.taker.recommend'),
+        t('myTasks.reviewTags.taker.excellent')
+      ];
+    }
+    
+    // 如果是接收者（评价发布者）
+    if (isTaker) {
+      return [
+        t('myTasks.reviewTags.poster.taskClear'),
+        t('myTasks.reviewTags.poster.communicationTimely'),
+        t('myTasks.reviewTags.poster.paymentTimely'),
+        t('myTasks.reviewTags.poster.requirementsReasonable'),
+        t('myTasks.reviewTags.poster.cooperationPleasant'),
+        t('myTasks.reviewTags.poster.recommend'),
+        t('myTasks.reviewTags.poster.trustworthy'),
+        t('myTasks.reviewTags.poster.professionalEfficient')
+      ];
+    }
+    
+    return [];
+  };
+
+  // 根据评分获取描述文本
+  const getRatingText = (rating: number) => {
+    return t(`myTasks.ratingText.${rating}`) || '';
+  };
+
   const handleSubmitReview = async () => {
     if (!currentReviewTask) return;
     
     const taskId = currentReviewTask.id;
     setActionLoading(taskId);
     try {
-      await createReview(taskId, reviewRating, reviewComment, isAnonymous);
+      // 将选择的标签添加到评论中
+      let finalComment = reviewComment;
+      if (selectedTags.length > 0) {
+        const tagsText = selectedTags.join('、');
+        if (finalComment) {
+          finalComment = `${tagsText}\n\n${finalComment}`;
+        } else {
+          finalComment = tagsText;
+        }
+      }
+      
+      await createReview(taskId, reviewRating, finalComment, isAnonymous);
       message.success(t('myTasks.alerts.reviewSubmitted'));
       // 评价提交成功，任务数据会重新加载
       setShowReviewModal(false);
       setReviewRating(5);
       setReviewComment('');
+      setSelectedTags([]);
       setIsAnonymous(false);
       setCurrentReviewTask(null);
       
@@ -439,6 +495,15 @@ const MyTasks: React.FC = () => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // 切换标签选择
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
   };
 
   const loadTaskReviews = async (taskId: number) => {
@@ -972,144 +1037,72 @@ const MyTasks: React.FC = () => {
                 const isTaker = task.taker_id === user?.id;
                 
                 return (
-                        <div key={task.id} className="task-card" style={{
-                          background: '#fff',
-                          borderRadius: '16px',
-                          padding: '24px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                          border: '1px solid #e2e8f0',
-                          transition: 'all 0.3s ease',
-                          position: 'relative',
-                          overflow: 'hidden'
-                        }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
-                  }}
-                  >
+                        <div key={task.id} className={styles.taskCard}>
                     {/* 任务等级装饰 */}
                     {task.task_level && task.task_level !== 'normal' && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '0',
-                        right: '0',
-                        width: '0',
-                        height: '0',
-                        borderLeft: '40px solid transparent',
-                        borderTop: `40px solid ${task.task_level === 'vip' ? '#f59e0b' : '#8b5cf6'}`,
-                        opacity: 0.1
-                      }} />
+                      <div className={`${styles.taskCardLevelDecoration} ${task.task_level === 'vip' ? styles.taskCardLevelDecorationVip : styles.taskCardLevelDecorationSuper}`} />
                     )}
 
                     {/* 任务标题和状态 */}
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'flex-start',
-                      marginBottom: '16px'
-                    }}>
-                      <div style={{ flex: 1, marginRight: '12px' }}>
-                        <h3 style={{ 
-                          fontSize: '18px', 
-                          fontWeight: '700', 
-                          color: '#1e293b',
-                          margin: '0 0 8px 0',
-                          lineHeight: '1.4'
-                        }}>
+                    <div className={styles.taskCardHeader}>
+                      <div className={styles.taskCardHeaderLeft}>
+                        <h3 className={styles.taskCardTitle}>
                           {task.title}
                         </h3>
                         {/* 任务等级标签 */}
                         {task.task_level && task.task_level !== 'normal' && (
-                          <div style={{
-                            display: 'inline-block',
-                            padding: '4px 8px',
-                            borderRadius: '8px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            marginRight: '8px',
-                            ...getTaskLevelStyle(task.task_level)
-                          }}>
+                          <div className={`${styles.taskCardLevelBadge} ${task.task_level === 'vip' ? styles.taskCardLevelBadgeVip : styles.taskCardLevelBadgeSuper}`}>
                             {getTaskLevelText(task.task_level)}
                           </div>
                         )}
                       </div>
-                      <span style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: '#fff',
-                        background: getStatusColor(task),
-                        whiteSpace: 'nowrap'
-                      }}>
+                      <span 
+                        className={styles.taskCardStatusBadge}
+                        style={{
+                          background: getStatusColor(task)
+                        }}
+                      >
                         {getStatusText(task)}
                       </span>
                     </div>
 
                     {/* 任务信息 */}
-                    <div style={{ marginBottom: '16px' }}>
-                            <div className="task-info-grid" style={{ 
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr',
-                              gap: '8px',
-                              marginBottom: '12px'
-                            }}>
-                        <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '14px', color: '#64748b' }}>💰</span>
-                          <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>£{((task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
+                    <div className={styles.taskCardInfo}>
+                            <div className={styles.taskCardInfoGrid}>
+                        <div className={styles.taskCardInfoItem}>
+                          <span className={styles.taskCardInfoIcon}>💰</span>
+                          <span className={styles.taskCardInfoText}>£{((task.base_reward ?? task.reward) || 0).toFixed(2)}</span>
                         </div>
-                        <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '14px', color: '#64748b' }}>
+                        <div className={styles.taskCardInfoItem}>
+                          <span className={styles.taskCardInfoIcon}>
                             {task.location === 'Online' ? '🌐' : '📍'}
                           </span>
-                          <span style={{ 
-                            fontSize: '14px', 
-                            color: task.location === 'Online' ? '#2563eb' : '#1e293b',
-                            fontWeight: task.location === 'Online' ? '600' : 'normal'
-                          }}>
+                          <span className={task.location === 'Online' ? styles.taskCardInfoTextOnline : styles.taskCardInfoTextNormal}>
                             {task.location}
                           </span>
                         </div>
-                        <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '14px', color: '#64748b' }}>🏷️</span>
-                          <span style={{ fontSize: '14px', color: '#1e293b' }}>{task.task_type}</span>
+                        <div className={styles.taskCardInfoItem}>
+                          <span className={styles.taskCardInfoIcon}>🏷️</span>
+                          <span className={styles.taskCardInfoTextNormal}>{task.task_type}</span>
                         </div>
-                        <div className="task-info-item" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '14px', color: '#64748b' }}>👤</span>
-                          <span style={{ fontSize: '14px', color: '#1e293b' }}>
+                        <div className={styles.taskCardInfoItem}>
+                          <span className={styles.taskCardInfoIcon}>👤</span>
+                          <span className={styles.taskCardInfoTextNormal}>
                             {isPoster ? t('myTasks.userRole.poster') : isTaker ? t('myTasks.userRole.taker') : t('myTasks.userRole.unknown')}
                           </span>
                         </div>
                       </div>
                       
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px',
-                        marginBottom: '8px'
-                      }}>
-                        <span style={{ fontSize: '14px', color: '#64748b' }}>⏰</span>
-                        <span style={{ fontSize: '14px', color: '#1e293b' }}>
+                      <div className={styles.taskCardDeadline}>
+                        <span className={styles.taskCardInfoIcon}>⏰</span>
+                        <span className={styles.taskCardInfoTextNormal}>
                           {task.deadline && TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')}
                         </span>
                       </div>
                     </div>
 
                           {/* 任务描述 */}
-                          <div className="task-description" style={{ 
-                            marginBottom: '20px',
-                            padding: '12px',
-                            background: '#f8fafc',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            color: '#475569',
-                            lineHeight: '1.5',
-                            border: '1px solid #e2e8f0'
-                          }}>
+                          <div className={styles.taskCardDescription}>
                       {task.description.length > 120 
                         ? `${task.description.substring(0, 120)}...` 
                         : task.description
@@ -1117,36 +1110,10 @@ const MyTasks: React.FC = () => {
                     </div>
 
                           {/* 操作按钮 */}
-                          <div className="task-actions" style={{ 
-                            display: 'flex', 
-                            gap: '12px',
-                            flexWrap: 'wrap',
-                            marginTop: '16px',
-                            paddingTop: '16px',
-                            borderTop: '1px solid #f3f4f6'
-                          }}>
+                          <div className={styles.taskCardActions}>
                       <button
                         onClick={() => handleViewTask(task.id)}
-                        style={{
-                          padding: '10px 18px',
-                          border: '1px solid #667eea',
-                          borderRadius: '6px',
-                          background: 'transparent',
-                          color: '#667eea',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease',
-                          minWidth: '80px'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#667eea';
-                          e.currentTarget.style.color = '#fff';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = '#667eea';
-                        }}
+                        className={`${styles.taskCardButton} ${styles.taskCardButtonView}`}
                       >
 {t('myTasks.actions.viewDetails')}
                       </button>
@@ -1156,19 +1123,7 @@ const MyTasks: React.FC = () => {
                         <button
                           onClick={() => handleUpdateVisibility(task.id, task.is_public === 1 ? 0 : 1)}
                           disabled={actionLoading === task.id}
-                          style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: task.is_public === 1 ? '#3b82f6' : '#10b981',
-                            color: '#fff',
-                            cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            opacity: actionLoading === task.id ? 0.6 : 1,
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
-                          }}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonVisibility} ${task.is_public === 1 ? styles.taskCardButtonVisibilityPublic : styles.taskCardButtonVisibilityPrivate} ${actionLoading === task.id ? styles.taskCardButtonDisabled : ''}`}
                         >
                           {actionLoading === task.id ? t('myTasks.actions.processing') : (task.is_public === 1 ? t('myTasks.actions.setPrivate') : t('myTasks.actions.setPublic'))}
                         </button>
@@ -1176,20 +1131,8 @@ const MyTasks: React.FC = () => {
 
                       {/* 根据任务状态和用户角色显示不同按钮 */}
                       {task.status === 'taken' && isTaker && (
-                        <div style={{
-                          background: '#fff3cd',
-                          border: '1px solid #ffeaa7',
-                          borderRadius: '8px',
-                          padding: '12px 16px',
-                          color: '#856404',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '8px'
-                        }}>
-                          <span style={{fontSize: '16px'}}>⏳</span>
+                        <div className={styles.taskCardWaitingApproval}>
+                          <span className={styles.taskCardWaitingApprovalIcon}>⏳</span>
                           <span>{t('myTasks.actions.waitingApproval')}</span>
                         </div>
                       )}
@@ -1198,19 +1141,7 @@ const MyTasks: React.FC = () => {
                         <button
                           onClick={() => handleCompleteTask(task.id)}
                           disabled={actionLoading === task.id}
-                          style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#10b981',
-                            color: '#fff',
-                            cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            opacity: actionLoading === task.id ? 0.6 : 1,
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
-                          }}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonComplete} ${actionLoading === task.id ? styles.taskCardButtonDisabled : ''}`}
                         >
                           {actionLoading === task.id ? t('myTasks.actions.processing') : t('myTasks.actions.markComplete')}
                         </button>
@@ -1220,19 +1151,7 @@ const MyTasks: React.FC = () => {
                         <button
                           onClick={() => handleConfirmCompletion(task.id)}
                           disabled={actionLoading === task.id}
-                          style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#10b981',
-                            color: '#fff',
-                            cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            opacity: actionLoading === task.id ? 0.6 : 1,
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
-                          }}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonComplete} ${actionLoading === task.id ? styles.taskCardButtonDisabled : ''}`}
                         >
                           {actionLoading === task.id ? t('myTasks.actions.processing') : t('myTasks.actions.confirmComplete')}
                         </button>
@@ -1244,18 +1163,9 @@ const MyTasks: React.FC = () => {
                         <button
                           onClick={() => !pendingCancelTasks.has(task.id) && handleCancelTask(task.id)}
                           disabled={actionLoading === task.id || pendingCancelTasks.has(task.id)}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonCancel} ${(actionLoading === task.id || pendingCancelTasks.has(task.id)) ? styles.taskCardButtonDisabled : ''}`}
                           style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: pendingCancelTasks.has(task.id) ? '#9ca3af' : '#3b82f6',
-                            color: '#fff',
-                            cursor: (actionLoading === task.id || pendingCancelTasks.has(task.id)) ? 'not-allowed' : 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            opacity: (actionLoading === task.id || pendingCancelTasks.has(task.id)) ? 0.6 : 1,
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
+                            background: pendingCancelTasks.has(task.id) ? '#9ca3af' : undefined
                           }}
                         >
                           {pendingCancelTasks.has(task.id) ? '待审核' : (actionLoading === task.id ? t('myTasks.actions.processing') : t('myTasks.actions.cancelTask'))}
@@ -1266,26 +1176,7 @@ const MyTasks: React.FC = () => {
                       {(task.status === 'in_progress' && task.taker_id) && (
                         <button
                           onClick={() => handleChat(task.id)}
-                          style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#3b82f6',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#2563eb';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#3b82f6';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                          }}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonChat}`}
                         >
 {t('myTasks.actions.contactTaker')}
                         </button>
@@ -1295,26 +1186,7 @@ const MyTasks: React.FC = () => {
                       {canReview(task) && !hasReviewed(task) && (
                         <button
                           onClick={() => handleReviewTask(task)}
-                          style={{
-                            padding: '10px 18px',
-                            border: 'none',
-                            borderRadius: '6px',
-                            background: '#f59e0b',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            transition: 'all 0.2s ease',
-                            minWidth: '80px'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#d97706';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#f59e0b';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                          }}
+                          className={`${styles.taskCardButton} ${styles.taskCardButtonReview}`}
                         >
 {t('myTasks.actions.review')}
                         </button>
@@ -1324,25 +1196,7 @@ const MyTasks: React.FC = () => {
                       {task.status === 'completed' && taskReviews[task.id] && taskReviews[task.id].length > 0 && (
                         <button
                           onClick={() => toggleTaskReviews(task.id)}
-                          style={{
-                            padding: '8px 16px',
-                            border: 'none',
-                            borderRadius: '8px',
-                            background: '#06b6d4',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#0891b2';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = '#06b6d4';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                          }}
+                          className={styles.taskCardButtonViewReviews}
                         >
 {showTaskReviews[task.id] ? t('myTasks.actions.hideReviews') : `${t('myTasks.actions.viewReviews')} (${taskReviews[task.id].length})`}
                         </button>
@@ -1353,18 +1207,7 @@ const MyTasks: React.FC = () => {
                         <button
                           onClick={() => handleDeleteTask(task.id)}
                           disabled={actionLoading === task.id}
-                          style={{
-                            padding: '8px 16px',
-                            border: 'none',
-                            borderRadius: '8px',
-                            background: '#ef4444', // 红色
-                            color: '#fff',
-                            cursor: actionLoading === task.id ? 'not-allowed' : 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            opacity: actionLoading === task.id ? 0.6 : 1,
-                            transition: 'all 0.3s ease'
-                          }}
+                          className={`${styles.taskCardButtonDelete} ${actionLoading === task.id ? styles.taskCardButtonDisabled : ''}`}
                         >
                           {actionLoading === task.id ? t('myTasks.actions.processing') : `🗑️ ${t('myTasks.actions.deleteTask')}`}
                         </button>
@@ -1373,65 +1216,28 @@ const MyTasks: React.FC = () => {
 
                     {/* 评价列表 */}
                     {showTaskReviews[task.id] && taskReviews[task.id] && taskReviews[task.id].length > 0 && (
-                      <div style={{
-                        marginTop: '20px',
-                        padding: '16px',
-                        background: '#f8fafc',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <h4 style={{
-                          marginBottom: '12px',
-                          color: '#667eea',
-                          fontSize: '14px',
-                          fontWeight: '600'
-                        }}>
+                      <div className={styles.taskCardReviewsContainer}>
+                        <h4 className={styles.taskCardReviewsTitle}>
 {t('myTasks.actions.viewReviews')}
                         </h4>
                         {taskReviews[task.id].map((review: any, index: number) => (
-                          <div key={index} style={{
-                            padding: '12px',
-                            background: '#fff',
-                            borderRadius: '8px',
-                            marginBottom: '8px',
-                            border: '1px solid #e2e8f0'
-                          }}>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '6px'
-                            }}>
-                              <div style={{
-                                fontWeight: '600',
-                                color: '#1e293b',
-                                fontSize: '13px'
-                              }}>
+                          <div key={index} className={styles.taskCardReviewItem}>
+                            <div className={styles.taskCardReviewHeader}>
+                              <div className={styles.taskCardReviewUser}>
                                 {t('myTasks.user')} {review.user_id}
                               </div>
-                              <div style={{
-                                color: '#f59e0b',
-                                fontSize: '14px'
-                              }}>
+                              <div className={styles.taskCardReviewRating}>
                                 {Array.from({length: Math.floor(review.rating)}, (_, i) => '⭐').join('')}
                                 {review.rating % 1 !== 0 && '☆'}
                                 {Array.from({length: 5 - Math.ceil(review.rating)}, (_, i) => '☆').join('')}
                               </div>
                             </div>
                             {review.comment && (
-                              <div style={{
-                                color: '#64748b',
-                                fontSize: '12px',
-                                lineHeight: '1.4'
-                              }}>
+                              <div className={styles.taskCardReviewComment}>
                                 {review.comment}
                               </div>
                             )}
-                            <div style={{
-                              color: '#94a3b8',
-                              fontSize: '11px',
-                              marginTop: '6px'
-                            }}>
+                            <div className={styles.taskCardReviewTime}>
                               {TimeHandlerV2.formatUtcToLocal(review.created_at)}
                             </div>
                           </div>
@@ -1446,41 +1252,16 @@ const MyTasks: React.FC = () => {
 
                 {/* 分页组件 */}
                 {totalPages > 1 && (
-                  <div className="pagination" style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginTop: '32px',
-                    padding: '16px',
-                    background: '#f9fafb',
-                    borderRadius: '8px',
-                    border: '1px solid #e5e7eb'
-                  }}>
+                  <div className={styles.pagination}>
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: currentPage === 1 ? '#f3f4f6' : '#3b82f6',
-                  color: currentPage === 1 ? '#9ca3af' : '#fff',
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`${styles.paginationButton} ${styles.paginationButtonPrev}`}
               >
                 ← {t('myTasks.previousPage')}
               </button>
               
-                    <div className="page-numbers" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '0 16px'
-                    }}>
+                    <div className={styles.paginationNumbers}>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const pageNum = i + 1;
                   const isActive = pageNum === currentPage;
@@ -1488,18 +1269,7 @@ const MyTasks: React.FC = () => {
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        border: 'none',
-                        borderRadius: '6px',
-                        background: isActive ? '#3b82f6' : 'transparent',
-                        color: isActive ? '#fff' : '#6b7280',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className={`${styles.paginationNumber} ${isActive ? styles.paginationNumberActive : ''}`}
                     >
                       {pageNum}
                     </button>
@@ -1510,17 +1280,7 @@ const MyTasks: React.FC = () => {
               <button
                 onClick={() => setCurrentPage(prev => prev + 1)}
                 disabled={currentPage >= totalPages}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  background: currentPage >= totalPages ? '#f3f4f6' : '#3b82f6',
-                  color: currentPage >= totalPages ? '#9ca3af' : '#fff',
-                  cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease'
-                }}
+                className={`${styles.paginationButton} ${styles.paginationButtonNext}`}
               >
                 {t('myTasks.nextPage')} →
               </button>
@@ -1532,219 +1292,87 @@ const MyTasks: React.FC = () => {
 
           {/* 评价弹窗 */}
           {showReviewModal && currentReviewTask && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              backdropFilter: 'blur(4px)',
-              padding: '10px'
-            }}>
-              <div className="review-modal" style={{
-                background: '#fff',
-                borderRadius: '16px',
-                padding: '20px',
-                maxWidth: '500px',
-                width: '90%',
-                maxHeight: '90vh',
-                overflow: 'auto',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
-              }}>
-            <h2 style={{
-              marginBottom: '24px', 
-              color: '#667eea', 
-              textAlign: 'center',
-              fontSize: '24px',
-              fontWeight: 'bold'
-            }}>
-{t('myTasks.actions.review')}: {currentReviewTask.title}
-            </h2>
-            
-            <div style={{marginBottom: '24px'}}>
-              <label style={{
-                display: 'block', 
-                marginBottom: '12px', 
-                fontWeight: '600', 
-                color: '#1e293b',
-                fontSize: '16px'
-              }}>
-                {t('myTasks.ratingLabel')}
-              </label>
-              {/* 移动端优化的星星选择 */}
-              <div style={{
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(5, 1fr)', 
-                gap: '8px', 
-                marginBottom: '12px',
-                maxWidth: '100%'
-              }}>
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onClick={() => setReviewRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    onTouchStart={() => setHoverRating(star)}
-                    onTouchEnd={() => setHoverRating(0)}
-                    style={{
-                      background: star <= (hoverRating || reviewRating) ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : '#f3f4f6',
-                      border: star <= (hoverRating || reviewRating) ? '2px solid #f59e0b' : '2px solid #e5e7eb',
-                      borderRadius: '12px',
-                      padding: '12px 8px',
-                      cursor: 'pointer',
-                      fontSize: '24px',
-                      transition: 'all 0.2s ease',
-                      transform: star <= (hoverRating || reviewRating) ? 'scale(1.05)' : 'scale(1)',
-                      minHeight: '60px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ⭐
-                  </button>
-                ))}
-              </div>
-              <div style={{
-                textAlign: 'center', 
-                color: '#64748b', 
-                fontSize: '16px',
-                fontWeight: '600',
-                opacity: reviewRating > 0 ? 1 : 0.7,
-                transform: reviewRating > 0 ? 'scale(1.05)' : 'scale(1)',
-                transition: 'all 0.3s ease'
-              }}>
-                {t('myTasks.currentRating')}: {reviewRating} {t('myTasks.stars')}
+            <div 
+              className={styles.reviewModalOverlay} 
+              onClick={() => {
+                setShowReviewModal(false);
+                setReviewRating(5);
+                setReviewComment('');
+                setSelectedTags([]);
+                setIsAnonymous(false);
+                setCurrentReviewTask(null);
+              }}
+            >
+              <div className={styles.reviewModal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.reviewModalHeader}>
+                  <img src="/static/logo.png" alt="Link²Ur Logo" className={styles.reviewModalLogo} />
+                  <h2 className={styles.reviewModalTitle}>
+                    {t('myTasks.actions.review')}
+                  </h2>
+                </div>
+                
+                {/* 星级评价 */}
+                <div className={styles.reviewRatingSection}>
+                  <div className={styles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <span
+                        key={star}
+                        onClick={() => setReviewRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className={styles.reviewStar}
+                        style={{
+                          opacity: star <= (hoverRating || reviewRating) ? 1 : 0.3
+                        }}
+                      >
+                        ⭐
+                      </span>
+                    ))}
+                  </div>
+                  <div className={styles.reviewRatingText}>
+                    {getRatingText(reviewRating)}
+                  </div>
+                </div>
+
+                {/* 标签选择 */}
+                <div className={styles.reviewTagsSection}>
+                  <div className={styles.reviewTagsGrid}>
+                    {getReviewTags(currentReviewTask).map(tag => (
+                      <div
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={`${styles.reviewTag} ${selectedTags.includes(tag) ? styles.reviewTagSelected : ''}`}
+                      >
+                        {tag}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 评论输入 */}
+                <div className={styles.reviewCommentSection}>
+                  <label className={styles.reviewCommentLabel}>
+                    {t('myTasks.reviewPlaceholder')} ({t('myTasks.optional')})
+                  </label>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder={t('myTasks.reviewPlaceholder')}
+                    className={styles.reviewCommentInput}
+                  />
+                </div>
+
+                {/* 提交按钮 */}
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={actionLoading === currentReviewTask.id}
+                  className={styles.reviewSubmitButton}
+                >
+                  {actionLoading === currentReviewTask.id ? t('myTasks.actions.processing') : t('myTasks.actions.submitReview')}
+                </button>
               </div>
             </div>
-
-            <div style={{marginBottom: '32px'}}>
-              <label style={{
-                display: 'block', 
-                marginBottom: '12px', 
-                fontWeight: '600', 
-                color: '#1e293b',
-                fontSize: '16px'
-              }}>
-                {t('myTasks.reviewPlaceholder')} ({t('myTasks.optional')})
-              </label>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={t('myTasks.reviewPlaceholder')}
-                style={{
-                  width: '100%',
-                  minHeight: '120px',
-                  padding: '16px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  transition: 'border-color 0.3s ease'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#667eea';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                }}
-              />
-            </div>
-
-            <div style={{marginBottom: '24px'}}>
-              <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-                <input
-                  type="checkbox"
-                  checked={isAnonymous}
-                  onChange={(e) => setIsAnonymous(e.target.checked)}
-                  style={{transform: 'scale(1.2)'}}
-                />
-                <span style={{fontWeight: '600', color: '#1e293b'}}>
-{t('myTasks.actions.review')}
-                </span>
-                <span style={{fontSize: '12px', color: '#64748b'}}>
-                  {t('myTasks.anonymousReviewNote')}
-                </span>
-              </label>
-            </div>
-
-            <div style={{
-              display: 'flex', 
-              gap: '16px', 
-              justifyContent: 'center'
-            }}>
-              <button
-                onClick={handleSubmitReview}
-                disabled={actionLoading === currentReviewTask.id}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '16px 32px',
-                  fontWeight: '600',
-                  fontSize: '16px',
-                  cursor: actionLoading === currentReviewTask.id ? 'not-allowed' : 'pointer',
-                  opacity: actionLoading === currentReviewTask.id ? 0.6 : 1,
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  if (actionLoading !== currentReviewTask.id) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (actionLoading !== currentReviewTask.id) {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-                  }
-                }}
-              >
-                {actionLoading === currentReviewTask.id ? t('myTasks.actions.processing') : t('myTasks.actions.submitReview')}
-              </button>
-              <button
-                onClick={() => {
-                  setShowReviewModal(false);
-                  setReviewRating(5);
-                  setReviewComment('');
-                  setIsAnonymous(false);
-                  setCurrentReviewTask(null);
-                }}
-                style={{
-                  background: '#f1f5f9',
-                  color: '#64748b',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '16px 32px',
-                  fontWeight: '600',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#e2e8f0';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                }}
-              >
-{t('myTasks.actions.cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
       
       {/* 通知弹窗 */}
       <NotificationPanel
