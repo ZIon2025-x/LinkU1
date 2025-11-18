@@ -160,7 +160,7 @@ async def security_exception_handler(request: Request, exc: SecurityError) -> JS
     client_ip = get_client_ip(request)
     logger.warning(f"安全异常: {exc.error_code} - {request.url} - IP: {client_ip}")
     
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
         content=create_error_response(
             message=safe_message,
@@ -168,6 +168,10 @@ async def security_exception_handler(request: Request, exc: SecurityError) -> JS
             error_code=exc.error_code
         )
     )
+    
+    # 设置CORS头
+    set_cors_headers(response, request)
+    return response
 
 
 async def business_exception_handler(request: Request, exc: BusinessError) -> JSONResponse:
@@ -176,7 +180,7 @@ async def business_exception_handler(request: Request, exc: BusinessError) -> JS
     
     logger.info(f"业务异常: {exc.error_code} - {exc.message}")
     
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=create_error_response(
             message=safe_message,
@@ -184,6 +188,10 @@ async def business_exception_handler(request: Request, exc: BusinessError) -> JS
             error_code=exc.error_code
         )
     )
+    
+    # 设置CORS头
+    set_cors_headers(response, request)
+    return response
 
 
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -194,7 +202,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
     # 返回通用错误信息
     safe_message = get_safe_error_message("SERVER_ERROR")
     
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=create_error_response(
             message=safe_message,
@@ -202,6 +210,10 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
             error_code="SERVER_ERROR"
         )
     )
+    
+    # 设置CORS头
+    set_cors_headers(response, request)
+    return response
 
 
 # 便捷的错误抛出函数

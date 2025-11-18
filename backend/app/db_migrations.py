@@ -1,326 +1,225 @@
 """
-数据库迁移执行模块
-在应用启动时自动执行数据库迁移脚本
+数据库迁移工具
+自动运行 migrations 目录下的 SQL 脚本
 """
-
-import logging
 import os
+import logging
 from pathlib import Path
-from typing import List, Tuple
-
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
+# 迁移脚本目录
+MIGRATIONS_DIR = Path(__file__).parent.parent / "migrations"
 
-def split_sql_statements(sql_content: str) -> List[str]:
-    """
-    智能分割 SQL 语句，正确处理：
-    - 函数定义 (CREATE FUNCTION ... $$ ... $$)
-    - DO 块 (DO $$ BEGIN ... END $$;)
-    - 美元引号字符串 ($$ ... $$ 或 $tag$ ... $tag$)
-    - 单引号字符串中的分号
-    - 注释
-    """
-    statements = []
-    current_statement = []
-    in_dollar_quote = False
-    dollar_quote_tag = None
-    in_single_quote = False
-    in_double_quote = False
-    in_line_comment = False
-    in_block_comment = False
-    i = 0
-    
-    while i < len(sql_content):
-        char = sql_content[i]
-        next_char = sql_content[i + 1] if i + 1 < len(sql_content) else None
-        
-        # 处理块注释
-        if not in_dollar_quote and not in_single_quote and not in_double_quote:
-            if char == '/' and next_char == '*':
-                in_block_comment = True
-                current_statement.append(char)
-                if next_char:
-                    current_statement.append(next_char)
-                    i += 1
-                i += 1
-                continue
-            elif in_block_comment and char == '*' and next_char == '/':
-                in_block_comment = False
-                current_statement.append(char)
-                if next_char:
-                    current_statement.append(next_char)
-                    i += 1
-                i += 1
-                continue
-            elif in_block_comment:
-                current_statement.append(char)
-                i += 1
-                continue
-        
-        # 处理行注释
-        if not in_dollar_quote and not in_single_quote and not in_double_quote and not in_block_comment:
-            if char == '-' and next_char == '-':
-                in_line_comment = True
-                # 不将注释内容添加到 current_statement，直接跳过
-                i += 2
-                continue
-            elif in_line_comment and char == '\n':
-                in_line_comment = False
-                # 注释结束，不添加换行符到 current_statement
-                i += 1
-                continue
-            elif in_line_comment:
-                # 跳过注释内容
-                i += 1
-                continue
-        
-        # 处理单引号字符串
-        if not in_dollar_quote and not in_double_quote and not in_block_comment and not in_line_comment:
-            if char == "'" and (i == 0 or sql_content[i-1] != '\\'):
-                in_single_quote = not in_single_quote
-                current_statement.append(char)
-                i += 1
-                continue
-        
-        # 处理双引号字符串
-        if not in_dollar_quote and not in_single_quote and not in_block_comment and not in_line_comment:
-            if char == '"' and (i == 0 or sql_content[i-1] != '\\'):
-                in_double_quote = not in_double_quote
-                current_statement.append(char)
-                i += 1
-                continue
-        
-        # 处理美元引号
-        if not in_single_quote and not in_double_quote and not in_block_comment and not in_line_comment:
-            if char == '$':
-                # 查找美元引号标签（可能是 $$ 或 $tag$）
-                tag_start = i
-                tag_end = i + 1
-                # 查找第一个 $ 后的标签内容
-                while tag_end < len(sql_content) and sql_content[tag_end] != '$':
-                    tag_end += 1
-                if tag_end < len(sql_content):
-                    tag_end += 1  # 包含结束的 $
-                    dollar_quote_tag = sql_content[tag_start:tag_end]
-                    
-                    if not in_dollar_quote:
-                        # 进入美元引号
-                        in_dollar_quote = True
-                        current_statement.append(dollar_quote_tag)
-                        i = tag_end
-                        continue
-                    else:
-                        # 检查是否是匹配的结束标签
-                        if sql_content[tag_start:tag_end] == dollar_quote_tag:
-                            # 退出美元引号
-                            in_dollar_quote = False
-                            current_statement.append(dollar_quote_tag)
-                            dollar_quote_tag = None
-                            i = tag_end
-                            continue
-        
-        # 添加字符到当前语句
-        current_statement.append(char)
-        
-        # 如果不在引号、注释或美元引号内，检查是否是语句结束
-        if not in_dollar_quote and not in_single_quote and not in_double_quote and not in_block_comment and not in_line_comment:
-            if char == ';':
-                statement_text = ''.join(current_statement).strip()
-                if statement_text and not statement_text.startswith('--') and not statement_text.startswith('/*'):
-                    statements.append(statement_text)
-                current_statement = []
-        
-        i += 1
-    
-    # 处理最后一个语句（如果没有以分号结尾）
-    if current_statement:
-        statement_text = ''.join(current_statement).strip()
-        if statement_text and not statement_text.startswith('--') and not statement_text.startswith('/*'):
-            statements.append(statement_text)
-    
-    return statements
+# 已执行的迁移记录表名
+MIGRATION_TABLE = "schema_migrations"
 
 
-def execute_sql_file(engine: Engine, sql_file_path: Path) -> Tuple[int, int, int]:
+def ensure_migration_table(engine: Engine):
+    """确保迁移记录表存在"""
+    with engine.connect() as conn:
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {MIGRATION_TABLE} (
+                id SERIAL PRIMARY KEY,
+                migration_name VARCHAR(255) UNIQUE NOT NULL,
+                executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                execution_time_ms INTEGER
+            )
+        """))
+        conn.commit()
+
+
+def is_migration_executed(engine: Engine, migration_name: str) -> bool:
+    """检查迁移是否已执行"""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text(f"SELECT 1 FROM {MIGRATION_TABLE} WHERE migration_name = :name"),
+                {"name": migration_name}
+            )
+            return result.fetchone() is not None
+    except Exception as e:
+        logger.warning(f"检查迁移状态失败: {e}，假设未执行")
+        return False
+
+
+def mark_migration_executed(engine: Engine, migration_name: str, execution_time_ms: int):
+    """标记迁移已执行"""
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text(f"""
+                    INSERT INTO {MIGRATION_TABLE} (migration_name, execution_time_ms)
+                    VALUES (:name, :time)
+                    ON CONFLICT (migration_name) DO NOTHING
+                """),
+                {"name": migration_name, "time": execution_time_ms}
+            )
+            conn.commit()
+    except Exception as e:
+        logger.error(f"标记迁移执行状态失败: {e}")
+
+
+def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
     """
     执行 SQL 文件
     
-    返回: (执行成功数, 跳过数, 错误数)
+    Returns:
+        (success: bool, execution_time_ms: int)
     """
-    executed = 0
-    skipped = 0
-    errors = 0
-    
-    if not sql_file_path.exists():
-        logger.warning(f"迁移文件不存在: {sql_file_path}")
-        return executed, skipped, errors
+    import time
+    start_time = time.time()
     
     try:
-        with open(sql_file_path, 'r', encoding='utf-8') as f:
-            sql_content = f.read()
-        
-        # 智能分割 SQL 语句，正确处理函数定义和 DO 块
-        statements = split_sql_statements(sql_content)
-        
-        # 调试：记录分割后的语句数量
-        logger.debug(f"迁移文件 {sql_file_path.name} 分割后得到 {len(statements)} 个语句")
-        if len(statements) == 0:
-            logger.warning(f"警告：迁移文件 {sql_file_path.name} 没有识别到任何 SQL 语句")
-            logger.warning(f"文件内容预览（前500字符）: {repr(sql_content[:500])}")
-            logger.warning(f"文件总长度: {len(sql_content)} 字符")
-            # 尝试手动查找 ALTER TABLE 语句
-            if 'ALTER TABLE' in sql_content.upper():
-                logger.warning(f"文件中包含 ALTER TABLE，但未被识别为语句")
-                # 尝试简单的按分号分割
-                simple_split = [s.strip() for s in sql_content.split(';') if s.strip() and not s.strip().startswith('--')]
-                logger.warning(f"简单分割后得到 {len(simple_split)} 个语句片段")
-                for idx, stmt in enumerate(simple_split[:3]):  # 只显示前3个
-                    logger.warning(f"  片段 {idx+1}: {stmt[:100]}...")
-        
-        # 执行每个语句（每个语句在独立的事务中执行）
-        for statement in statements:
-            statement = statement.strip()
-            if not statement or statement.startswith('--'):
-                continue
+        with engine.connect() as conn:
+            # 读取 SQL 文件内容
+            sql_content = sql_file.read_text(encoding='utf-8')
             
-            # 记录要执行的语句（用于调试）
-            logger.debug(f"准备执行 SQL 语句: {statement[:100]}...")
-            
-            # 每个语句使用独立的事务
+            # 使用 psycopg2 的 execute 方法执行整个 SQL 文件
+            # 这样可以正确处理函数定义、注释等复杂情况
             try:
-                with engine.connect() as conn:
-                    trans = conn.begin()
-                    try:
-                        # 使用 text() 包装 SQL 语句
-                        conn.execute(text(statement))
-                        trans.commit()
-                        executed += 1
-                        logger.debug(f"SQL 语句执行成功: {statement[:50]}...")
-                    except Exception as e:
-                        # 回滚当前事务
+                # 获取原始连接（psycopg2 connection）
+                raw_conn = conn.connection.dbapi_connection
+                
+                # 使用 psycopg2 的 execute 方法执行 SQL
+                # 它会自动处理多语句、函数定义等
+                with raw_conn.cursor() as cursor:
+                    cursor.execute(sql_content)
+                    raw_conn.commit()
+            except AttributeError:
+                # 如果不是 psycopg2 连接，回退到 SQLAlchemy 方式
+                # 简单处理：按分号分割，但跳过注释行
+                statements = []
+                current_statement = []
+                
+                for line in sql_content.split('\n'):
+                    stripped = line.strip()
+                    
+                    # 跳过空行和注释行
+                    if not stripped or stripped.startswith('--'):
+                        continue
+                    
+                    current_statement.append(line)
+                    
+                    # 如果行以分号结尾，结束当前语句
+                    if stripped.endswith(';'):
+                        statement = '\n'.join(current_statement).strip()
+                        if statement:
+                            statements.append(statement)
+                        current_statement = []
+                
+                # 处理最后一个语句（可能没有分号）
+                if current_statement:
+                    statement = '\n'.join(current_statement).strip()
+                    if statement:
+                        statements.append(statement)
+                
+                # 执行每个语句
+                for statement in statements:
+                    if statement:
                         try:
-                            trans.rollback()
-                        except:
-                            pass  # 如果回滚也失败，忽略
-                        
-                        error_msg = str(e).lower()
-                        # 检查是否是"已存在"的错误（幂等性）
-                        # 包括列已存在、表已存在、索引已存在等情况
-                        if any(keyword in error_msg for keyword in ['already exists', 'duplicate', 'duplicate key']):
-                            skipped += 1
-                            logger.debug(f"跳过已存在的对象: {statement[:50]}...")
-                        # 检查是否是"列已存在"的错误（更具体的匹配）
-                        elif ('column' in error_msg and 'already exists' in error_msg) or 'duplicate column' in error_msg:
-                            skipped += 1
-                            logger.debug(f"列已存在，跳过: {statement[:50]}...")
-                        # 检查是否是语法错误（可能是 IF NOT EXISTS 不支持）
-                        elif 'syntax error' in error_msg or 'unexpected' in error_msg:
-                            errors += 1
-                            logger.warning(f"SQL 语法错误（可能是 PostgreSQL 版本不支持某些语法）: {e}")
-                            logger.warning(f"失败的语句: {statement[:200]}...")
-                        # 检查是否是事务失败的错误（可能是之前的语句失败导致的）
-                        elif 'infailed' in error_msg or 'transaction is aborted' in error_msg:
-                            # 这种情况不应该发生，因为每个语句都在独立事务中
-                            # 但如果发生了，记录警告并继续
-                            skipped += 1
-                            logger.debug(f"跳过事务失败的语句（可能是已存在）: {statement[:50]}...")
-                        else:
-                            errors += 1
-                            logger.warning(f"执行 SQL 语句失败: {e}")
-                            logger.warning(f"失败的语句: {statement[:200]}...")
-            except Exception as e:
-                # 连接级别的错误
-                errors += 1
-                logger.warning(f"执行 SQL 语句时发生连接错误: {e}")
-                logger.warning(f"失败的语句: {statement[:200]}...")
-        
-        logger.info(f"迁移文件执行完成: {sql_file_path.name}")
-        logger.info(f"  执行: {executed}, 跳过: {skipped}, 错误: {errors}")
+                            conn.execute(text(statement))
+                        except Exception as e:
+                            # 某些语句可能因为已存在而失败（如 CREATE INDEX IF NOT EXISTS）
+                            # 记录警告但继续执行
+                            error_msg = str(e).lower()
+                            if any(keyword in error_msg for keyword in [
+                                "already exists", "duplicate", "does not exist"
+                            ]):
+                                logger.debug(f"语句已存在或已删除，跳过: {statement[:50]}...")
+                            else:
+                                raise
+                
+                conn.commit()
+            
+        execution_time = int((time.time() - start_time) * 1000)
+        return True, execution_time
         
     except Exception as e:
-        logger.error(f"读取或执行迁移文件失败 {sql_file_path}: {e}")
-        errors += 1
-    
-    return executed, skipped, errors
+        logger.error(f"执行 SQL 文件失败 {sql_file.name}: {e}")
+        return False, int((time.time() - start_time) * 1000)
 
 
-def run_migrations(engine: Engine) -> bool:
+def run_migrations(engine: Engine, force: bool = False):
     """
-    执行所有数据库迁移脚本
+    运行所有未执行的迁移脚本
     
-    返回: 是否成功
+    Args:
+        engine: SQLAlchemy 引擎
+        force: 是否强制重新执行所有迁移（用于开发环境）
     """
-    # 检查是否启用自动迁移（默认启用，部署时自动执行）
-    auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
-    if not auto_migrate:
-        logger.info("自动迁移已禁用（如需迁移请设置 AUTO_MIGRATE=true）")
-        return True
+    if not MIGRATIONS_DIR.exists():
+        logger.warning(f"迁移目录不存在: {MIGRATIONS_DIR}")
+        return
     
-    logger.info("🚀 开始执行自动数据库迁移...")
+    # 确保迁移记录表存在
+    ensure_migration_table(engine)
     
-    # 获取迁移脚本目录
-    backend_dir = Path(__file__).parent.parent
-    migrations_dir = backend_dir / "migrations"
+    # 获取所有 SQL 文件，按文件名排序
+    sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
     
-    if not migrations_dir.exists():
-        logger.warning(f"迁移目录不存在: {migrations_dir}")
-        return True
+    if not sql_files:
+        logger.info("没有找到迁移脚本")
+        return
     
-    # 定义迁移脚本执行顺序
-    # 注意：之前的迁移脚本已经执行过，不再重复执行
-    # 只保留新的客服功能相关迁移
-    migration_files = [
-        "add_customer_service_fields.sql",  # 客服功能字段扩展（结束原因、消息状态等）
-        "add_customer_service_queue.sql",  # 客服排队系统表
-    ]
+    logger.info(f"找到 {len(sql_files)} 个迁移脚本")
     
-    total_executed = 0
-    total_skipped = 0
-    total_errors = 0
+    executed_count = 0
+    skipped_count = 0
+    failed_count = 0
     
-    for migration_file in migration_files:
-        sql_file = migrations_dir / migration_file
+    for sql_file in sql_files:
+        migration_name = sql_file.name
         
-        if not sql_file.exists():
-            logger.warning(f"迁移文件不存在，跳过: {migration_file}")
+        # 检查是否已执行
+        if not force and is_migration_executed(engine, migration_name):
+            logger.info(f"⏭️  跳过已执行的迁移: {migration_name}")
+            skipped_count += 1
             continue
         
-        logger.info(f"🚀 开始执行 {migration_file}...")
+        logger.info(f"🔄 执行迁移: {migration_name}")
         
-        executed, skipped, errors = execute_sql_file(engine, sql_file)
+        success, execution_time = execute_sql_file(engine, sql_file)
         
-        total_executed += executed
-        total_skipped += skipped
-        total_errors += errors
-        
-        if errors > 0:
-            logger.warning(f"⚠️  {migration_file} 执行完成，但有 {errors} 个错误")
+        if success:
+            mark_migration_executed(engine, migration_name, execution_time)
+            logger.info(f"✅ 迁移执行成功: {migration_name} (耗时: {execution_time}ms)")
+            executed_count += 1
         else:
-            logger.info(f"✅ {migration_file} 迁移完成")
+            logger.error(f"❌ 迁移执行失败: {migration_name}")
+            failed_count += 1
     
-    logger.info(f"✅ 自动数据库迁移完成！")
-    logger.info(f"   总计 - 执行: {total_executed}, 跳过: {total_skipped}, 错误: {total_errors}")
-    
-    # 如果有错误，记录警告但不阻止启动
-    if total_errors > 0:
-        logger.warning(f"⚠️  迁移过程中有 {total_errors} 个错误，请检查日志")
-    
-    return True
+    logger.info(f"迁移完成: {executed_count} 个已执行, {skipped_count} 个已跳过, {failed_count} 个失败")
 
 
-def run_migration_sync(engine: Engine) -> bool:
+def run_specific_migration(engine: Engine, migration_name: str, force: bool = False):
     """
-    同步执行迁移（用于同步数据库连接）
+    运行指定的迁移脚本
+    
+    Args:
+        engine: SQLAlchemy 引擎
+        migration_name: 迁移文件名（如 "fix_conversation_key.sql"）
+        force: 是否强制重新执行
     """
-    try:
-        return run_migrations(engine)
-    except Exception as e:
-        logger.error(f"执行数据库迁移失败: {e}")
-        import traceback
-        traceback.print_exc()
-        # 迁移失败不阻止应用启动
+    sql_file = MIGRATIONS_DIR / migration_name
+    
+    if not sql_file.exists():
+        logger.error(f"迁移文件不存在: {migration_name}")
+        return False
+    
+    if not force and is_migration_executed(engine, migration_name):
+        logger.info(f"迁移已执行: {migration_name}")
         return True
-
+    
+    logger.info(f"执行迁移: {migration_name}")
+    success, execution_time = execute_sql_file(engine, sql_file)
+    
+    if success:
+        mark_migration_executed(engine, migration_name, execution_time)
+        logger.info(f"迁移执行成功: {migration_name} (耗时: {execution_time}ms)")
+        return True
+    else:
+        logger.error(f"迁移执行失败: {migration_name}")
+        return False

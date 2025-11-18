@@ -3531,8 +3531,8 @@ def get_customer_service_chats(
                     "user_id": user.id,
                     "user_name": user.name,
                     "user_avatar": user.avatar or "/static/avatar1.png",
-                    "created_at": format_iso_utc(chat["created_at"]) if chat["created_at"] else None,
-                    "last_message_at": format_iso_utc(chat["last_message_at"]) if chat["last_message_at"] else None,
+                    "created_at": chat["created_at"],  # 已经在 crud 中格式化了
+                    "last_message_at": chat["last_message_at"],  # 已经在 crud 中格式化了
                     "is_ended": chat["is_ended"],
                     "total_messages": chat["total_messages"],
                     "unread_count": unread_count,

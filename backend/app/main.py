@@ -103,42 +103,39 @@ async def add_noindex_header(request: Request, call_next):
 @app.middleware("http")
 async def custom_cors_middleware(request: Request, call_next):
     """自定义CORS中间件，覆盖Railway默认设置"""
-    # 处理OPTIONS预检请求
-    if request.method == "OPTIONS":
-        response = Response(status_code=200)
-        origin = request.headers.get("origin")
-        allowed_domains = [
-            "https://link-u1", "http://localhost", "https://www.link2ur.com", "https://api.link2ur.com"
-        ]
+    origin = request.headers.get("origin")
+    allowed_domains = [
+        "https://link-u1", 
+        "http://localhost", 
+        "https://www.link2ur.com", 
+        "https://api.link2ur.com",
+        "http://localhost:3000",
+        "http://localhost:8080"
+    ]
+    
+    def set_cors_headers(response: Response):
+        """设置CORS响应头"""
         if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+    
+    # 处理OPTIONS预检请求
+    if request.method == "OPTIONS":
+        response = Response(status_code=200)
+        set_cors_headers(response)
         return response
     
+    # 处理实际请求
     response = await call_next(request)
     
     # 强制设置CORS头（包括错误响应）
-    origin = request.headers.get("origin")
-    allowed_domains = [
-        "https://link-u1", "http://localhost", "https://www.link2ur.com", "https://api.link2ur.com"
-    ]
-    if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
-        # 确保即使错误响应也包含CORS头
-        if response.status_code >= 400:
-            # 对于错误响应，也要确保CORS头存在
-            pass  # CORS头已经在上面的条件中设置了
-    
+    set_cors_headers(response)
     add_security_headers(response)
     return response
 
 # DEBUG 中间件已移除 - 性能优化
-
 
 app.include_router(user_router, prefix="/api/users", tags=["users"])
 app.include_router(main_router, prefix="/api", tags=["main"])  # 添加主路由，包含图片上传API
@@ -533,7 +530,15 @@ async def startup_event():
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
         
-        # 数据库迁移已手动完成，不再自动执行
+        # 自动运行数据库迁移脚本
+        try:
+            from app.db_migrations import run_migrations
+            logger.info("正在运行数据库迁移...")
+            run_migrations(sync_engine, force=False)
+            logger.info("数据库迁移完成")
+        except Exception as e:
+            logger.error(f"数据库迁移失败: {e}", exc_info=True)
+            # 迁移失败不应该阻止应用启动，只记录错误
         
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")
