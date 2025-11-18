@@ -14,6 +14,7 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
+import styles from './MyTasks.module.css';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -606,17 +607,9 @@ const MyTasks: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#fff',
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        fontSize: 18,
-        color: '#333'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingContent}>
+          <div className={styles.loadingIcon}>⏳</div>
           <div>{t('myTasks.loading')}</div>
         </div>
       </div>
@@ -624,64 +617,20 @@ const MyTasks: React.FC = () => {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: '#f8fafc'
-    }}>
+    <div className={styles.pageContainer}>
       {/* 顶部导航栏 */}
-      <header style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        background: '#fff',
-        zIndex: 100,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        padding: '12px 16px'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          gap: '8px',
-          minHeight: '44px'
-        }}>
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
           {/* Logo */}
           <div 
-            style={{
-              fontWeight: 'bold',
-              fontSize: '24px',
-              color: '#6EC1E4',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              padding: '4px 8px',
-              borderRadius: '8px',
-              flexShrink: 0
-            }}
+            className={styles.logo}
             onClick={() => navigate('/')}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#4A90E2';
-              e.currentTarget.style.background = 'rgba(110, 193, 228, 0.1)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#6EC1E4';
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
           >
             Link²Ur
           </div>
 
           {/* 通知按钮和汉堡菜单 */}
-          <div style={{
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            flexShrink: 0  // 防止被压缩
-          }}>
+          <div className={styles.headerRight}>
             <NotificationButton
               user={user}
               unreadCount={unreadCount}
@@ -732,89 +681,27 @@ const MyTasks: React.FC = () => {
       </header>
 
           {/* 主要内容区域 */}
-          <div className="main-content" style={{
-            marginTop: '80px',
-            padding: '40px 20px'
-          }}>
-        <div style={{ 
-          maxWidth: '1400px', 
-          margin: '0 auto',
-          background: '#fff',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
+          <div className={styles.mainContent}>
+        <div className={styles.contentWrapper}>
               {/* 页面头部 */}
-              <div className="page-header" style={{
-                background: '#fff',
-                color: '#1f2937',
-                padding: '32px 40px',
-                borderBottom: '1px solid #e5e7eb',
-                position: 'relative'
-              }}>
+              <div className={styles.pageHeader}>
                 <button
-                  className="back-button"
+                  className={styles.backButton}
                   onClick={() => navigate('/')}
-                  style={{
-                    position: 'absolute',
-                    left: '40px',
-                    top: '32px',
-                    background: '#3b82f6',
-                    border: 'none',
-                    color: '#fff',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#1d4ed8';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#3b82f6';
-            }}
-          >
-{t('myTasks.buttons.backToHome')}
-          </button>
+                >
+                  {t('myTasks.buttons.backToHome')}
+                </button>
           
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            gap: '12px',
-            marginBottom: '8px'
-          }}>
-            <div style={{ fontSize: '24px' }}>📋</div>
-            <h1 style={{ 
-              position: 'absolute',
-              top: '-100px',
-              left: '-100px',
-              width: '1px',
-              height: '1px',
-              padding: '0',
-              margin: '0',
-              overflow: 'hidden',
-              clip: 'rect(0, 0, 0, 0)',
-              whiteSpace: 'nowrap',
-              border: '0',
-              fontSize: '1px',
-              color: 'transparent',
-              background: 'transparent'
-            }}>
-{t('myTasks.title')}
-            </h1>
-          </div>
-          <p style={{ 
-            fontSize: '16px', 
-            color: '#6b7280',
-            margin: '0 0 16px 0',
-            textAlign: 'center'
-          }}>
-{t('myTasks.subtitle')}
-          </p>
-        </div>
+                <div className={styles.pageHeaderTitle}>
+                  <div className={styles.pageHeaderIcon}>📋</div>
+                  <h1 className={styles.seoH1}>
+                    {t('myTasks.title')}
+                  </h1>
+                </div>
+                <p className={styles.pageHeaderSubtitle}>
+                  {t('myTasks.subtitle')}
+                </p>
+              </div>
 
               {/* 统计概览 */}
               <div className="stats-section" style={{ 
@@ -887,14 +774,8 @@ const MyTasks: React.FC = () => {
         </div>
 
               {/* 标签页 */}
-              <div className="tabs-section" style={{ 
-                padding: '16px 40px 0 40px',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                <div className="tabs-container" style={{ 
-                  display: 'flex', 
-                  gap: '8px'
-                }}>
+              <div className={styles.tabsSection}>
+                <div className={styles.tabsContainer}>
             {[
               { key: 'all', label: t('myTasks.tabs.all'), count: tasks.length, icon: '📋' },
               { key: 'posted', label: t('myTasks.tabs.posted'), count: tasks.filter(t => t.poster_id === user?.id && t.status !== 'cancelled').length, icon: '📤' },
@@ -905,44 +786,12 @@ const MyTasks: React.FC = () => {
             ].map(tab => (
                     <button
                       key={tab.key}
-                      className="tab-button"
+                      className={`${styles.tabButton} ${activeTab === tab.key ? styles.tabButtonActive : styles.tabButtonInactive}`}
                       onClick={() => setActiveTab(tab.key as any)}
-                      style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '6px',
-                       background: activeTab === tab.key ? '#3b82f6' : '#f3f4f6',
-                       color: activeTab === tab.key ? '#fff' : '#374151',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: activeTab === tab.key ? '0 1px 2px rgba(59, 130, 246, 0.2)' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== tab.key) {
-                    e.currentTarget.style.background = '#e5e7eb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== tab.key) {
-                    e.currentTarget.style.background = '#f3f4f6';
-                  }
-                }}
-              >
+                    >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
-                <span style={{
-                  background: activeTab === tab.key ? 'rgba(255,255,255,0.2)' : '#d1d5db',
-                  color: activeTab === tab.key ? '#fff' : '#6b7280',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '500'
-                }}>
+                <span className={activeTab === tab.key ? styles.tabBadgeActive : styles.tabBadgeInactive}>
                   {tab.count}
                 </span>
               </button>
@@ -951,15 +800,11 @@ const MyTasks: React.FC = () => {
         </div>
 
               {/* 任务列表 */}
-              <div className="tasks-section" style={{ padding: '24px 40px' }}>
+              <div className={styles.tasksSection}>
           {paginatedData.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '80px 20px',
-              color: '#64748b'
-            }}>
-              <div style={{ fontSize: 64, marginBottom: 20 }}>📭</div>
-              <div style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>📭</div>
+              <div className={styles.emptyStateTitle}>
                 {activeTab === 'all' && t('myTasks.emptyStates.noTasks')}
                 {activeTab === 'posted' && t('myTasks.emptyStates.noPosted')}
                 {activeTab === 'taken' && t('myTasks.emptyStates.noTaken')}
@@ -967,7 +812,7 @@ const MyTasks: React.FC = () => {
                 {activeTab === 'completed' && t('myTasks.emptyStates.noCompleted')}
                 {activeTab === 'cancelled' && t('myTasks.emptyStates.noCancelled')}
               </div>
-              <div style={{ fontSize: 14 }}>
+              <div className={styles.emptyStateText}>
                 {activeTab === 'posted' && t('myTasks.emptyStates.postFirst')}
                 {activeTab === 'taken' && t('myTasks.emptyStates.browseTasks')}
                 {activeTab === 'pending' && t('myTasks.emptyStates.noPendingApplicationsDesc')}
@@ -976,11 +821,7 @@ const MyTasks: React.FC = () => {
               </div>
             </div>
           ) : (
-                  <div className="tasks-grid" style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-                    gap: '24px'
-                  }}>
+                  <div className={styles.tasksGrid}>
               {paginatedData.map((item, index) => {
                 // 如果是申请记录，需要特殊处理
                 if (activeTab === 'pending') {

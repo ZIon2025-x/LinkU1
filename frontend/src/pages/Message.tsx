@@ -36,15 +36,17 @@ import TaskDetailModal from '../components/TaskDetailModal';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from '../hooks/useTranslation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import styles from './Message.module.css';
 
 // 私密图片显示组件
 const PrivateImageDisplay: React.FC<{
   imageId: string;
   currentUserId: string;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
+  className?: string;
   alt?: string;
   onClick?: () => void;
-}> = ({ imageId, currentUserId, style, alt = "Private Image", onClick }) => {
+}> = ({ imageId, currentUserId, style, className, alt = "Private Image", onClick }) => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -105,19 +107,19 @@ const PrivateImageDisplay: React.FC<{
     };
   }, [imageId, currentUserId]);
 
+  // 合并样式，处理 style 为 undefined 的情况
+  const mergedStyle: React.CSSProperties = {
+    ...(style || {}),
+    width: style?.width || style?.maxWidth || '150px',
+    height: style?.height || style?.maxHeight || '150px',
+  };
+
   if (loading) {
     return (
-      <div style={{
-        ...style,
-        width: style.width || style.maxWidth || '150px',
-        height: style.height || style.maxHeight || '150px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f3f4f6',
-        color: '#6b7280',
-        flexShrink: 0
-      }}>
+      <div 
+        className={styles.privateImageLoading}
+        style={mergedStyle}
+      >
         <div style={{ fontSize: '14px' }}>Loading...</div>
       </div>
     );
@@ -125,27 +127,15 @@ const PrivateImageDisplay: React.FC<{
 
   if (error) {
     return (
-      <div style={{
-        ...style,
-        width: style.width || style.maxWidth || '150px',
-        height: style.height || style.maxHeight || '150px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f3f4f6, #e5e7eb)',
-        color: '#6b7280',
-        border: '2px dashed #d1d5db',
-        padding: '8px',
-        textAlign: 'center',
-        flexShrink: 0,
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ fontSize: '16px', marginBottom: '4px' }}>🔒</div>
-        <div style={{ fontWeight: '600', marginBottom: '2px', fontSize: '10px' }}>
+      <div 
+        className={styles.privateImageError}
+        style={mergedStyle}
+      >
+        <div className={styles.privateImageErrorIcon}>🔒</div>
+        <div className={styles.privateImageErrorTitle}>
           Failed
         </div>
-        <div style={{ fontSize: '9px', opacity: 0.7 }}>
+        <div className={styles.privateImageErrorText}>
           Error
         </div>
       </div>
@@ -156,11 +146,10 @@ const PrivateImageDisplay: React.FC<{
     <img 
       src={imageUrl} 
       alt={alt} 
+      className={className}
       style={{
-        ...style,
-        width: style.width || style.maxWidth || '150px',
-        height: style.height || style.maxHeight || '150px',
-        objectFit: style.objectFit || 'contain',
+        ...mergedStyle,
+        objectFit: style?.objectFit || 'contain',
         display: 'block',
         flexShrink: 0
       }}
@@ -306,48 +295,6 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
     return null;
   }, [task.last_message]);
 
-  const itemStyle = useMemo(() => ({
-    padding: '12px 16px',
-    borderBottom: '1px solid #e5e7eb',
-    cursor: 'pointer',
-    backgroundColor: isActive ? '#eff6ff' : 'white',
-    transition: 'background-color 0.2s'
-  }), [isActive]);
-
-  const imageStyle = useMemo(() => ({
-    width: '50px',
-    height: '50px',
-    borderRadius: '8px',
-    objectFit: 'cover' as const,
-    display: 'block' as const
-  }), []);
-
-  const placeholderStyle = useMemo(() => ({
-    width: '50px',
-    height: '50px',
-    borderRadius: '8px',
-    background: '#f3f4f6',
-    display: 'flex' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    fontSize: '24px',
-    color: '#6b7280'
-  }), []);
-
-  const deleteButtonStyle = useMemo(() => ({
-    background: 'transparent',
-    border: 'none',
-    color: '#ef4444',
-    fontSize: '18px',
-    cursor: 'pointer',
-    padding: '4px',
-    display: 'flex' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    borderRadius: '4px',
-    transition: 'all 0.2s'
-  }), []);
-
   const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     e.currentTarget.style.display = 'none';
     const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -365,47 +312,52 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
   }, []);
 
   return (
-    <div onClick={handleClick} style={itemStyle}>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+    <div 
+      onClick={handleClick} 
+      className={`${styles.taskListItem} ${isActive ? styles.taskListItemActive : ''}`}
+    >
+      <div className={styles.taskListItemContent}>
         {/* 任务图片容器 */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div className={styles.taskImageContainer}>
           {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
           {taskImageUrl ? (
             <img
               src={taskImageUrl}
               alt={task.title}
-              style={imageStyle}
+              className={styles.taskImage}
               onError={handleImageError}
             />
           ) : (
-            <div style={placeholderStyle}>
+            <div className={styles.taskImagePlaceholder}>
               {taskTypeEmoji}
             </div>
           )}
           {/* 占位符（仅在任务图片加载失败时显示） */}
-          <div style={{
-            ...placeholderStyle,
-            display: 'none',
-            position: 'absolute',
-            top: 0,
-            left: 0
-          }}>
+          <div 
+            className={styles.taskImagePlaceholder}
+            style={{
+              display: 'none',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}
+          >
             {taskTypeEmoji}
           </div>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>{task.title}</div>
+        <div className={styles.taskInfo}>
+          <div className={styles.taskTitle}>{task.title}</div>
           {task.last_message && (
-            <div style={{ fontSize: '14px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div className={styles.taskDescription}>
               {task.last_message.sender_name}: {task.last_message.content}
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+        <div className={styles.taskMeta}>
           {task.status === 'completed' && (
             <button
               onClick={handleRemoveClick}
-              style={deleteButtonStyle}
+              className={styles.deleteButton}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               title="从列表中移除"
@@ -414,21 +366,12 @@ const TaskListItem = memo<TaskListItemProps>(({ task, isActive, isMobile, onTask
             </button>
           )}
           {task.unread_count > 0 && (
-            <div style={{
-              backgroundColor: '#ef4444',
-              color: 'white',
-              borderRadius: '10px',
-              padding: '2px 8px',
-              fontSize: '12px',
-              fontWeight: 600,
-              minWidth: '20px',
-              textAlign: 'center'
-            }}>
+            <div className={styles.unreadBadge} style={{ minWidth: '20px', textAlign: 'center' }}>
               {task.unread_count}
             </div>
           )}
           {lastMessageTime && (
-            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+            <div className={styles.taskTime}>
               {lastMessageTime}
             </div>
           )}
@@ -1044,34 +987,14 @@ const MessagePage: React.FC = () => {
       
       
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ 
-            fontSize: '12px', 
-            color: '#6b7280', 
-            marginBottom: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
+        <div className={styles.messageImageContainer}>
+          <div className={styles.messageImageLabel}>
             📷 {t('messages.privateImage')}
-            <span style={{ 
-              fontSize: '10px', 
-              background: '#fef3c7', 
-              padding: '2px 6px', 
-              borderRadius: '4px',
-              color: '#92400e',
-              fontWeight: '600'
-            }}>
+            <span className={styles.messageImageBadge}>
               {t('messages.chatOnly')}
             </span>
           </div>
-          <div style={{ 
-            maxWidth: '250px', 
-            maxHeight: '250px',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}>
+          <div className={styles.messageImageWrapper}>
             <PrivateImageDisplay
               imageId={imageId}
               currentUserId={user?.id || ''}
@@ -1096,57 +1019,28 @@ const MessagePage: React.FC = () => {
       const fileUrl = parts[1];
       
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontSize: '14px', opacity: 0.8 }}>
+        <div className={styles.messageFileContainer}>
+          <div className={styles.messageFileLabel}>
             📎 {t('messages.file')}
           </div>
-          <div style={{
-            padding: '12px',
-            background: '#f0fdf4',
-            borderRadius: '8px',
-            border: '1px solid #bbf7d0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onClick={() => {
-            if (fileUrl) {
-              window.open(fileUrl, '_blank');
-            }
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#dcfce7';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#f0fdf4';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
+          <div 
+            className={styles.messageFileCard}
+            onClick={() => {
+              if (fileUrl) {
+                window.open(fileUrl, '_blank');
+              }
+            }}
           >
-            <div style={{ fontSize: '24px' }}>📎</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ 
-                fontSize: '14px', 
-                fontWeight: '600', 
-                color: '#166534',
-                marginBottom: '2px'
-              }}>
+            <div className={styles.messageFileIcon}>📎</div>
+            <div className={styles.messageFileInfo}>
+              <div className={styles.messageFileName}>
                 {fileName}
               </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#6b7280' 
-              }}>
+              <div className={styles.messageFileHint}>
                 {t('messages.clickToDownload')}
               </div>
             </div>
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#6b7280',
-              opacity: 0.7
-            }}>
+            <div className={styles.messageFileSize} style={{ opacity: 0.7 }}>
               →
             </div>
           </div>
@@ -3299,30 +3193,10 @@ const MessagePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          background: '#fff',
-          padding: '40px',
-          borderRadius: '20px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '20px',
-            animation: 'spin 1s linear infinite'
-          }}>⏳</div>
-          <div style={{
-            fontSize: '18px',
-            color: '#3b82f6',
-            fontWeight: '600'
-          }}>{t('messages.loadingMessageCenter')}</div>
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingCard}>
+          <div className={styles.loadingIcon}>⏳</div>
+          <div className={styles.loadingText}>{t('messages.loadingMessageCenter')}</div>
         </div>
       </div>
     );
@@ -3330,43 +3204,13 @@ const MessagePage: React.FC = () => {
 
   if (!user) {
   return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          background: '#fff',
-          padding: '40px',
-          borderRadius: '20px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '20px'
-          }}>🔒</div>
-          <div style={{
-            fontSize: '18px',
-            color: '#ef4444',
-            fontWeight: '600',
-            marginBottom: '20px'
-          }}>请先登录</div>
+      <div className={styles.authContainer}>
+        <div className={styles.authCard}>
+          <div className={styles.authIcon}>🔒</div>
+          <div className={styles.authTitle}>请先登录</div>
           <button
             onClick={() => setShowLoginModal(true)}
-            style={{
-              padding: '12px 24px',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease'
-            }}
+            className={styles.authButton}
           >
             前往登录
           </button>
@@ -3376,149 +3220,49 @@ const MessagePage: React.FC = () => {
   }
 
   return (
-    <div style={{ 
-      height: '100vh', 
-      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-      padding: '0',
-      overflow: 'hidden',
-      boxSizing: 'border-box'
-    }}>
+    <div className={styles.pageContainer}>
       {/* SEO优化：H1标签，几乎不可见但SEO可检测 */}
-      <h1 style={{ 
-        position: 'absolute',
-        top: '-100px',
-        left: '-100px',
-        width: '1px',
-        height: '1px',
-        padding: '0',
-        margin: '0',
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        border: '0',
-        fontSize: '1px',
-        color: 'transparent',
-        background: 'transparent'
-      }}>
+      <h1 className={styles.seoH1}>
         {t('messages.messageCenter')}
       </h1>
-      <div style={{ 
-        width: '100%',
-        height: '100vh',
-        background: '#fff',
-        overflow: 'hidden',
-        display: 'flex',
-        boxSizing: 'border-box'
-      }}>
+      <div className={styles.mainContent}>
         
         {/* 左侧任务列表 */}
-        <div style={{ 
-          width: isMobile ? '100%' : '350px', 
-          borderRight: isMobile ? 'none' : '1px solid #e2e8f0', 
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          display: isMobile && showMobileChat ? 'none' : 'flex',
-          flexDirection: 'column',
-          position: isMobile ? 'absolute' : 'relative',
-          zIndex: isMobile ? 1000 : 'auto',
-          transition: isMobile ? 'transform 0.3s ease-in-out' : 'all 0.3s ease',
-          overflow: isMobile ? 'hidden' : 'visible',
-          transform: 'none',
-          left: isMobile ? '0' : 'auto',
-          top: isMobile ? '0' : 'auto',
-          height: isMobile ? '100vh' : 'auto'
-        }}>
+        <div className={`${styles.taskListSidebar} ${isMobile ? styles.taskListSidebarMobile : ''}`}
+          style={{
+            display: isMobile && showMobileChat ? 'none' : 'flex',
+            transform: 'none'
+          }}
+        >
           {/* 头部标题 */}
-          <div style={{ 
-            padding: isMobile ? '20px 16px' : '30px 24px', 
-            textAlign: 'center', 
-            fontWeight: '800', 
-            fontSize: isMobile ? '20px' : '24px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: '#fff',
-            position: 'relative'
-          }}>
-            <div style={{ 
-              position: 'absolute', 
-              left: isMobile ? '16px' : '20px', 
-              top: '50%', 
-              transform: 'translateY(-50%)',
-              background: 'rgba(255,255,255,0.2)',
-              border: 'none',
-              color: '#fff',
-              padding: isMobile ? '6px 12px' : '8px 16px',
-              borderRadius: '20px',
-              cursor: 'pointer',
-              fontSize: isMobile ? '12px' : '14px',
-              fontWeight: '600',
-              backdropFilter: 'blur(10px)',
-              transition: 'all 0.3s ease'
-            }}
-            onClick={() => {
-              navigate('/');
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
-              e.currentTarget.style.transform = 'translateY(-50%) scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-            }}
-          >
-            {isMobile ? t('messages.backToHome') : t('messages.back')}
-        </div>
+          <div className={`${styles.taskListHeader} ${isMobile ? styles.taskListHeaderMobile : ''}`}>
+            <div 
+              className={`${styles.backButton} ${isMobile ? styles.backButtonMobile : ''}`}
+              onClick={() => {
+                navigate('/');
+              }}
+            >
+              {isMobile ? t('messages.backToHome') : t('messages.back')}
+            </div>
             💬 {t('messages.messageCenter')}
             {totalUnreadCount > 0 && (
-              <span style={{
-                background: '#ef4444',
-                color: '#fff',
-                borderRadius: '12px',
-                padding: '2px 8px',
-                fontSize: '12px',
-                fontWeight: '600',
-                marginLeft: '8px',
-                animation: 'pulse 2s infinite'
-              }}>
+              <span className={styles.unreadBadge}>
                 {totalUnreadCount}
               </span>
             )}
           </div>
 
           {/* 搜索框 */}
-          <div style={{ 
-            padding: isMobile ? '16px' : '20px 24px',
-            borderBottom: '1px solid #e2e8f0'
-          }}>
-            <div style={{ 
-              position: 'relative',
-              background: '#fff',
-              borderRadius: '25px',
-              border: '2px solid #e2e8f0',
-              overflow: 'hidden',
-              transition: 'all 0.3s ease'
-            }}>
+          <div className={`${styles.searchSection} ${isMobile ? styles.searchSectionMobile : ''}`}>
+            <div className={styles.searchInputContainer}>
               <input
                 type="text"
                 value={taskSearchTerm}
                 onChange={(e) => setTaskSearchTerm(e.target.value)}
                 placeholder={t('messages.searchTasks') || '搜索任务...'}
-                style={{
-                  width: '100%',
-                  padding: '12px 20px 12px 45px',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '14px',
-                  background: 'transparent'
-                }}
+                className={styles.searchInput}
               />
-              <div style={{
-                position: 'absolute',
-                left: '15px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '16px',
-                color: '#94a3b8'
-              }}>
+              <div className={styles.searchIcon}>
                 🔍
               </div>
             </div>
@@ -3667,15 +3411,11 @@ const MessagePage: React.FC = () => {
             </div>
 
             {/* 任务列表内容 */}
-            <div style={{ 
-              flex: 1, 
-              overflowY: 'auto',
-              borderTop: '1px solid #e2e8f0'
-            }}>
+            <div className={styles.taskListContainer} style={{ borderTop: '1px solid #e2e8f0' }}>
               {tasksLoading && tasks.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
+                <div className={styles.taskListLoading}>加载中...</div>
               ) : filteredTasks.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                <div className={styles.taskListEmpty}>
                   {taskSearchTerm.trim() ? (t('messages.noTasksFound') || '没有找到匹配的任务') : (t('messages.noTasks') || '暂无任务')}
                 </div>
               ) : (
@@ -3695,18 +3435,17 @@ const MessagePage: React.FC = () => {
         </div>
         
         {/* 右侧聊天区域 */}
-        <div style={{ 
-          flex: 1, 
-          display: isMobile && !showMobileChat ? 'none' : 'flex', 
-          flexDirection: 'column',
-          background: '#fff',
-          position: isMobile ? 'absolute' : 'relative',
-          width: isMobile ? '100%' : 'auto',
-          height: isMobile ? '100vh' : 'auto',
-          zIndex: isMobile ? 1001 : 'auto',
-          left: isMobile ? '0' : 'auto',
-          top: isMobile ? '0' : 'auto'
-        }}
+        <div 
+          className={styles.chatArea}
+          style={{ 
+            display: isMobile && !showMobileChat ? 'none' : 'flex', 
+            position: isMobile ? 'absolute' : 'relative',
+            width: isMobile ? '100%' : 'auto',
+            height: isMobile ? '100vh' : 'auto',
+            zIndex: isMobile ? 1001 : 'auto',
+            left: isMobile ? '0' : 'auto',
+            top: isMobile ? '0' : 'auto'
+          }}
         ref={(el) => {
           // 保存右侧聊天区域的引用，用于计算按钮位置
           if (el) {
@@ -3715,111 +3454,55 @@ const MessagePage: React.FC = () => {
         }}>
           {/* 聊天头部 */}
           {isServiceMode ? (
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid #e2e8f0',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '16px'
-            }}>
+            <div className={`${styles.chatHeader} ${styles.chatHeaderService}`}>
               {isMobile && (
                 <button
                   onClick={() => setShowMobileChat(false)}
-                  style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    border: 'none',
-                    color: '#fff',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    marginRight: '8px'
-                  }}
+                  className={styles.chatHeaderServiceBackButton}
                 >
                   ←
                 </button>
               )}
-              <img src={'/static/service.png'} alt={t('messages.service')} style={{ 
-                width: '50px', 
-                height: '50px', 
-                borderRadius: '50%', 
-                border: '3px solid #f59e0b', 
-                background: '#fffbe6', 
-                objectFit: 'cover',
-                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
-              }} 
-              onError={(e) => {
-                console.error('客服头像加载失败:', e.currentTarget.src);
-                e.currentTarget.src = '/static/avatar1.png';
-              }}
+              <img 
+                src={'/static/service.png'} 
+                alt={t('messages.service')} 
+                className={styles.chatHeaderServiceAvatar}
+                onError={(e) => {
+                  console.error('客服头像加载失败:', e.currentTarget.src);
+                  e.currentTarget.src = '/static/avatar1.png';
+                }}
               />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>
+              <div className={styles.chatHeaderServiceInfo}>
+                <div className={styles.chatHeaderServiceTitle}>
                   {t('messages.customerServiceCenter')}
                 </div>
-                <div style={{ 
-                  fontSize: '14px', 
-                  opacity: 0.9,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
+                <div className={styles.chatHeaderServiceSubtitle}>
                   <span>{t('messages.onlineService')}</span>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    background: '#10b981',
-                    borderRadius: '50%'
-                  }}></div>
+                  <div className={styles.chatHeaderServiceStatus}></div>
                 </div>
               </div>
             </div>
           ) : activeTaskId && activeTask ? (
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid #e2e8f0',
-              background: 'white',
-              display: 'flex',
-              gap: '16px',
-              alignItems: 'center'
-            }}>
+            <div className={styles.chatHeader}>
               {isMobile && (
                 <button
                   onClick={() => setShowMobileChat(false)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#374151',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    marginRight: '8px'
-                  }}
+                  className={styles.chatHeaderBackButton}
+                  style={{ marginRight: '8px' }}
                 >
                   ←
                 </button>
               )}
               {/* 任务图片 - 优先使用第一张任务图片，否则使用任务类型图片 */}
               <div 
-                style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+                className={styles.chatHeaderTaskImage}
                 onClick={() => setShowTaskDetailModal(true)}
               >
                 {(activeTask.images && Array.isArray(activeTask.images) && activeTask.images.length > 0 && activeTask.images[0]) ? (
                   <img
                     src={getTaskImageUrl(activeTask.images[0], API_BASE_URL) || activeTask.images[0]}
                     alt={activeTask.title}
-                    style={{
-                      width: '50px',
-                      height: '50px',
-                      borderRadius: '8px',
-                      objectFit: 'cover',
-                      display: 'block'
-                    }}
+                    className={styles.chatHeaderTaskImageImg}
                     onError={(e) => {
                       // 如果任务图片加载失败，显示任务类型emoji图标
                       e.currentTarget.style.display = 'none';
@@ -3830,105 +3513,52 @@ const MessagePage: React.FC = () => {
                     }}
                   />
                 ) : (
-                  <div style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '8px',
-                    background: '#f3f4f6',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px',
-                    color: '#6b7280'
-                  }}>
+                  <div className={styles.chatHeaderTaskImagePlaceholder}>
                     {getTaskTypeEmoji(activeTask.task_type)}
                   </div>
                 )}
                 {/* 占位符（仅在任务图片加载失败时显示） */}
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '8px',
-                  background: '#f3f4f6',
-                  display: 'none',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '24px',
-                  color: '#6b7280',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0
-                }}>
+                <div 
+                  className={styles.chatHeaderTaskImagePlaceholder}
+                  style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0
+                  }}
+                >
                   {getTaskTypeEmoji(activeTask.task_type)}
                 </div>
               </div>
-              <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowTaskDetailModal(true)}>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{activeTask.title}</h3>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className={styles.chatHeaderTaskInfo} onClick={() => setShowTaskDetailModal(true)}>
+                <h3 className={styles.chatHeaderTaskTitle}>{activeTask.title}</h3>
+                <div className={styles.chatHeaderTaskMeta}>
                   {activeTask.status === 'open' && !activeTask.taker_id && (
-                    <span style={{
-                      padding: '2px 8px',
-                      background: '#fef3c7',
-                      color: '#92400e',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>等待接受</span>
+                    <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeWaiting}`}>
+                      等待接受
+                    </span>
                   )}
                   {activeTask.status === 'in_progress' && (
-                    <span style={{
-                      padding: '2px 8px',
-                      background: '#dbeafe',
-                      color: '#1e40af',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>进行中</span>
+                    <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeInProgress}`}>
+                      进行中
+                    </span>
                   )}
                   {activeTask.status === 'completed' && (
-                    <span style={{
-                      padding: '2px 8px',
-                      background: '#d1fae5',
-                      color: '#065f46',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>已完成</span>
+                    <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeCompleted}`}>
+                      已完成
+                    </span>
                   )}
                   {activeTask.status === 'cancelled' && (
-                    <span style={{
-                      padding: '2px 8px',
-                      background: '#fee2e2',
-                      color: '#991b1b',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 600
-                    }}>已取消</span>
+                    <span className={`${styles.taskStatusBadge} ${styles.taskStatusBadgeCancelled}`}>
+                      已取消
+                    </span>
                   )}
                 </div>
               </div>
               {activeTask.poster_id === user?.id && activeTask.status === 'open' && !activeTask.taker_id && (
                 <button
                   onClick={() => setShowApplicationListModal(true)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
+                  className={styles.chatHeaderTaskButton}
                 >
                   查看申请
                 </button>
@@ -4007,74 +3637,23 @@ const MessagePage: React.FC = () => {
             
             
             {isServiceMode && !serviceConnected ? (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%',
-                color: '#64748b',
-                fontSize: '18px',
-                flexDirection: 'column',
-                gap: '20px',
-                padding: '40px'
-              }}>
-                <div style={{ 
-                  fontSize: '80px', 
-                  opacity: 0.3,
-                  marginBottom: '10px'
-                }}>🎧</div>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#374151',
-                  marginBottom: '8px'
-                }}>
+              <div className={`${styles.emptyChatState} ${isMobile ? styles.emptyChatStateMobile : ''}`}>
+                <div className={`${styles.emptyChatIcon} ${isMobile ? styles.emptyChatIconMobile : ''}`}>🎧</div>
+                <div className={`${styles.emptyChatTitle} ${isMobile ? styles.emptyChatTitleMobile : ''}`}>
                   {t('messages.contactCustomerService')}
                 </div>
-                <div style={{
-                  fontSize: '16px',
-                  color: '#6b7280',
-                  textAlign: 'center',
-                  lineHeight: '1.5',
-                  maxWidth: '400px',
-                  marginBottom: '20px'
-                }}>
+                <div className={`${styles.emptyChatText} ${isMobile ? styles.emptyChatTextMobile : ''}`}>
                   {t('messages.ourTeamReadyToHelpWithButton')}
                 </div>
               </div>
             ) : !activeTaskId && !isServiceMode ? (
               (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  height: '100%',
-                  color: '#64748b',
-                  fontSize: '18px',
-                  flexDirection: 'column',
-                  gap: isMobile ? '12px' : '20px',
-                  padding: isMobile ? '20px' : '40px'
-                }}>
-                  <div style={{ 
-                    fontSize: isMobile ? '60px' : '80px', 
-                    opacity: 0.3,
-                    marginBottom: isMobile ? '8px' : '10px'
-                  }}>📋</div>
-                  <div style={{
-                    fontSize: isMobile ? '18px' : '20px',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: isMobile ? '6px' : '8px'
-                  }}>
+                <div className={`${styles.emptyChatState} ${isMobile ? styles.emptyChatStateMobile : ''}`}>
+                  <div className={`${styles.emptyChatIcon} ${isMobile ? styles.emptyChatIconMobile : ''}`}>📋</div>
+                  <div className={`${styles.emptyChatTitle} ${isMobile ? styles.emptyChatTitleMobile : ''}`}>
                     选择任务开始聊天
                   </div>
-                  <div style={{
-                    fontSize: isMobile ? '14px' : '16px',
-                    color: '#6b7280',
-                    textAlign: 'center',
-                    lineHeight: '1.5',
-                    maxWidth: isMobile ? '280px' : '300px'
-                  }}>
+                  <div className={`${styles.emptyChatText} ${isMobile ? styles.emptyChatTextMobile : ''} ${styles.emptyChatTextNoMargin} ${isMobile ? styles.emptyChatTextNoMarginMobile : ''}`}>
                     从左侧列表中选择一个任务查看聊天记录
                   </div>
                 </div>
@@ -4086,89 +3665,48 @@ const MessagePage: React.FC = () => {
               <>
                 {/* 申请卡片区 - 独立于消息流 */}
                 {activeTask.status === 'open' && !activeTask.taker_id && (
-                  <div style={{
-                    padding: '16px',
-                    marginBottom: '16px',
-                    background: 'white',
-                    borderRadius: '12px',
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                  }}>
+                  <div className={styles.applicationCard}>
                     {activeTask.poster_id === user?.id ? (
                       <div>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: '12px'
-                        }}>
-                          <div style={{ fontWeight: 600, fontSize: '16px' }}>待处理申请</div>
+                        <div className={styles.applicationCardHeader}>
+                          <div className={styles.applicationCardTitle}>待处理申请</div>
                           {applications.length > 0 && (
                             <button
                               onClick={() => setShowApplicationListModal(true)}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: 600
-                              }}
+                              className={styles.applicationCardButton}
                             >
                               查看全部 ({applications.length})
                             </button>
                           )}
                         </div>
                         {applications.length === 0 ? (
-                          <div style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', padding: '20px' }}>
+                          <div className={styles.applicationCardEmpty}>
                             暂无申请
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div className={styles.applicationList}>
                             {applications.slice(0, 3).map((app: any) => (
                               <div
                                 key={app.id}
-                                style={{
-                                  padding: '12px',
-                                  background: '#f9fafb',
-                                  borderRadius: '8px',
-                                  border: '1px solid #e5e7eb'
-                                }}
+                                className={styles.applicationItem}
                               >
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '10px',
-                                  marginBottom: '8px'
-                                }}>
+                                <div className={styles.applicationItemHeader}>
                                   <img
                                     src={app.applicant_avatar || '/static/avatar1.png'}
                                     alt={app.applicant_name || '用户'}
-                                    style={{
-                                      width: '32px',
-                                      height: '32px',
-                                      borderRadius: '50%',
-                                      objectFit: 'cover'
-                                    }}
+                                    className={styles.applicationItemAvatar}
                                   />
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600, fontSize: '14px' }}>
+                                  <div className={styles.applicationItemInfo}>
+                                    <div className={styles.applicationItemName}>
                                       {app.applicant_name || '用户'}
                                     </div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                    <div className={styles.applicationItemTime}>
                                       {dayjs(app.created_at).format('MM-DD HH:mm')}
                                     </div>
                                   </div>
                                 </div>
                                 {app.message && (
-                                  <div style={{
-                                    fontSize: '13px',
-                                    color: '#374151',
-                                    marginBottom: '8px',
-                                    lineHeight: '1.5'
-                                  }}>
+                                  <div className={styles.applicationItemMessage}>
                                     {app.message}
                                   </div>
                                 )}
@@ -4203,12 +3741,7 @@ const MessagePage: React.FC = () => {
                                   );
                                 })()}
                                 {activeTask?.poster_id === user?.id && (
-                                  <div style={{
-                                    display: 'flex',
-                                    gap: '8px',
-                                    marginTop: '8px',
-                                    flexWrap: 'wrap'
-                                  }}>
+                                  <div className={styles.applicationItemActions} style={{ flexWrap: 'wrap' }}>
                                     <button
                                       onClick={async (e) => {
                                         e.stopPropagation();
@@ -4223,18 +3756,7 @@ const MessagePage: React.FC = () => {
                                           alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
                                         }
                                       }}
-                                      style={{
-                                        flex: 1,
-                                        minWidth: '60px',
-                                        padding: '6px 12px',
-                                        background: '#10b981',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: 600
-                                      }}
+                                      className={`${styles.applicationActionButton} ${styles.applicationActionButtonAccept}`}
                                     >
                                       接受
                                     </button>
@@ -4250,18 +3772,7 @@ const MessagePage: React.FC = () => {
                                           alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
                                         }
                                       }}
-                                      style={{
-                                        flex: 1,
-                                        minWidth: '60px',
-                                        padding: '6px 12px',
-                                        background: '#ef4444',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: 600
-                                      }}
+                                      className={`${styles.applicationActionButton} ${styles.applicationActionButtonReject}`}
                                     >
                                       拒绝
                                     </button>
@@ -4274,18 +3785,7 @@ const MessagePage: React.FC = () => {
                                         setIsMessageNegotiateChecked(false);
                                         setShowMessageModal(true);
                                       }}
-                                      style={{
-                                        flex: 1,
-                                        minWidth: '60px',
-                                        padding: '6px 12px',
-                                        background: '#3b82f6',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: 600
-                                      }}
+                                      className={`${styles.applicationActionButton} ${styles.applicationActionButtonMessage}`}
                                     >
                                       留言
                                     </button>
@@ -4294,18 +3794,10 @@ const MessagePage: React.FC = () => {
                               </div>
                             ))}
                             {applications.length > 3 && (
-                              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                              <div className={styles.applicationMoreButton}>
                                 <button
                                   onClick={() => setShowApplicationListModal(true)}
-                                  style={{
-                                    padding: '6px 12px',
-                                    background: 'transparent',
-                                    color: '#3b82f6',
-                                    border: '1px solid #3b82f6',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '13px'
-                                  }}
+                                  className={styles.applicationMoreButtonLink}
                                 >
                                   查看更多 ({applications.length - 3} 个)
                                 </button>
@@ -4317,15 +3809,7 @@ const MessagePage: React.FC = () => {
                     ) : (
                       <div>
                         {applications.some((app: any) => app.applicant_id === user?.id) ? (
-                          <div style={{
-                            padding: '12px',
-                            background: '#ecfdf5',
-                            borderRadius: '8px',
-                            border: '1px solid #10b981',
-                            textAlign: 'center',
-                            color: '#059669',
-                            fontWeight: 600
-                          }}>
+                          <div className={styles.applicationStatusCard}>
                             ✓ 您已申请此任务
                           </div>
                         ) : (
@@ -4336,26 +3820,7 @@ const MessagePage: React.FC = () => {
                               setIsNegotiateChecked(false);
                               setShowApplicationModal(true);
                             }}
-                            style={{
-                              width: '100%',
-                              padding: '12px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              fontSize: '16px',
-                              fontWeight: 600,
-                              transition: 'all 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#2563eb';
-                              e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#3b82f6';
-                              e.currentTarget.style.transform = 'translateY(0)';
-                            }}
+                            className={styles.applicationSubmitButton}
                           >
                             申请任务
                           </button>
@@ -4522,26 +3987,11 @@ const MessagePage: React.FC = () => {
                           }}
                         >
                           {msg.content.startsWith('[图片]') ? (
-                            <div
-                              style={{
-                                width: '150px',
-                                height: '150px',
-                                borderRadius: '8px',
-                                overflow: 'hidden',
-                                flexShrink: 0
-                              }}
-                            >
+                            <div className={styles.messageImage}>
                               <PrivateImageDisplay
                                 imageId={msg.content.replace('[图片]', '').trim()}
                                 currentUserId={user?.id || ''}
-                                style={{
-                                  width: '150px',
-                                  height: '150px',
-                                  borderRadius: '8px',
-                                  cursor: 'pointer',
-                                  objectFit: 'contain',
-                                  display: 'block'
-                                }}
+                                className={styles.messageImageContent}
                                 alt="图片"
                                 onClick={async () => {
                                   // 生成图片URL用于预览
@@ -4819,15 +4269,7 @@ const MessagePage: React.FC = () => {
           {isServiceMode ? (
             <div 
               ref={inputAreaRef}
-              style={{
-                padding: '16px 24px',
-                borderTop: '1px solid #e2e8f0',
-                background: 'white',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                position: 'relative'
-              }}>
+              className={styles.inputArea}>
               {/* 图片预览（桌面端） */}
               {imagePreview && !isMobile && (
                 <div style={{
@@ -4941,41 +4383,13 @@ const MessagePage: React.FC = () => {
               )}
               
               {/* 功能按钮行 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                paddingBottom: '8px',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
+              <div className={styles.inputActionButtons}>
                 {/* 表情按钮 */}
                 <button
                   data-emoji-button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={!serviceConnected || isSending}
-                  style={{
-                    padding: '8px 12px',
-                    background: 'transparent',
-                    border: '1px solid #e5e7eb',
-                    cursor: (!serviceConnected || isSending) ? 'not-allowed' : 'pointer',
-                    fontSize: '18px',
-                    opacity: (!serviceConnected || isSending) ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (serviceConnected && !isSending) {
-                      e.currentTarget.style.background = '#f3f4f6';
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                  }}
+                  className={styles.inputActionButton}
                   title="表情"
                 >
                   😊
@@ -4983,28 +4397,10 @@ const MessagePage: React.FC = () => {
                 
                 {/* 图片上传按钮 */}
                 <label
+                  className={styles.inputActionButton}
                   style={{
-                    padding: '8px 12px',
-                    background: 'transparent',
-                    border: '1px solid #e5e7eb',
                     cursor: (!serviceConnected || isSending || uploadingImage) ? 'not-allowed' : 'pointer',
-                    fontSize: '18px',
-                    opacity: (!serviceConnected || isSending || uploadingImage) ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (serviceConnected && !isSending && !uploadingImage) {
-                      e.currentTarget.style.background = '#f3f4f6';
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    opacity: (!serviceConnected || isSending || uploadingImage) ? 0.5 : 1
                   }}
                   title="发送图片"
                 >
@@ -5013,35 +4409,17 @@ const MessagePage: React.FC = () => {
                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp,image/svg+xml"
                     onChange={handleImageSelect}
                     disabled={!serviceConnected || isSending || uploadingImage}
-                    style={{ display: 'none' }}
+                    className={styles.inputActionButtonHidden}
                   />
                   {uploadingImage ? '⏳' : '📷'}
                 </label>
                 
                 {/* 文件上传按钮 */}
                 <label
+                  className={styles.inputActionButton}
                   style={{
-                    padding: '8px 12px',
-                    background: 'transparent',
-                    border: '1px solid #e5e7eb',
                     cursor: (!serviceConnected || isSending || uploadingFile) ? 'not-allowed' : 'pointer',
-                    fontSize: '18px',
-                    opacity: (!serviceConnected || isSending || uploadingFile) ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (serviceConnected && !isSending && !uploadingFile) {
-                      e.currentTarget.style.background = '#f3f4f6';
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    opacity: (!serviceConnected || isSending || uploadingFile) ? 0.5 : 1
                   }}
                   title="发送文件"
                 >
@@ -5049,7 +4427,7 @@ const MessagePage: React.FC = () => {
                     type="file"
                     onChange={handleFileSelect}
                     disabled={!serviceConnected || isSending || uploadingFile}
-                    style={{ display: 'none' }}
+                    className={styles.inputActionButtonHidden}
                   />
                   {uploadingFile ? '⏳' : '📎'}
                 </label>
@@ -5058,22 +4436,7 @@ const MessagePage: React.FC = () => {
                 <button
                   onClick={serviceConnected ? handleEndConversation : handleContactCustomerService}
                   disabled={isConnectingToService}
-                  style={{
-                    padding: '8px 16px',
-                    background: isConnectingToService 
-                      ? '#9ca3af' 
-                      : serviceConnected 
-                        ? 'linear-gradient(135deg, #ef4444, #dc2626)' 
-                        : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: isConnectingToService ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    marginLeft: 'auto'
-                  }}
+                  className={`${styles.serviceConnectButton} ${isConnectingToService ? '' : serviceConnected ? styles.serviceConnectButtonEnd : styles.serviceConnectButtonConnect}`}
                   title={serviceConnected ? '结束对话' : '连接客服'}
                 >
                   {isConnectingToService ? '连接中...' : serviceConnected ? '结束对话' : '连接客服'}
@@ -5081,54 +4444,31 @@ const MessagePage: React.FC = () => {
               </div>
               
               {/* 输入框和发送按钮 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }} className="message-input-container">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder={serviceConnected ? t('messages.typeMessage') : t('messages.connectToChat')}
-                  disabled={!serviceConnected || isSending}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '24px',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e5e7eb';
-                  }}
-                />
+              <div className={styles.inputContainer}>
+                <div className={styles.inputWrapper}>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder={serviceConnected ? t('messages.typeMessage') : t('messages.connectToChat')}
+                    disabled={!serviceConnected || isSending}
+                    className={styles.messageInput}
+                  />
+                </div>
                 <button
                   onClick={handleSend}
                   disabled={!serviceConnected || !input.trim() || isSending}
+                  className={styles.sendButton}
                   style={{
-                    padding: '12px 24px',
                     background: serviceConnected && input.trim() && !isSending
                       ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-                      : '#cbd5e1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '24px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: serviceConnected && input.trim() && !isSending ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s ease'
+                      : '#cbd5e1'
                   }}
                 >
                   {isSending ? '发送中...' : '发送'}
@@ -5471,29 +4811,7 @@ const MessagePage: React.FC = () => {
                   <button
                     onClick={handleCompleteTask}
                     disabled={actionLoading}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#28a745',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: actionLoading ? 'not-allowed' : 'pointer',
-                      opacity: actionLoading ? 0.6 : 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!actionLoading) {
-                        e.currentTarget.style.background = '#218838';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#28a745';
-                    }}
+                    className={`${styles.taskActionButton} ${styles.taskActionButtonComplete}`}
                     title="完成任务"
                   >
                     {actionLoading ? '处理中...' : '✅ 完成任务'}
@@ -5505,29 +4823,7 @@ const MessagePage: React.FC = () => {
                   <button
                     onClick={handleConfirmCompletion}
                     disabled={actionLoading}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#28a745',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: actionLoading ? 'not-allowed' : 'pointer',
-                      opacity: actionLoading ? 0.6 : 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!actionLoading) {
-                        e.currentTarget.style.background = '#218838';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#28a745';
-                    }}
+                    className={`${styles.taskActionButton} ${styles.taskActionButtonComplete}`}
                     title="确认完成"
                   >
                     {actionLoading ? '处理中...' : '✅ 确认完成'}
@@ -5538,26 +4834,7 @@ const MessagePage: React.FC = () => {
                 {canReview() && !hasReviewed() && (
                   <button
                     onClick={() => setShowReviewModal(true)}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#ffc107',
-                      color: '#000',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#ffb300';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#ffc107';
-                    }}
+                    className={`${styles.taskActionButton} ${styles.taskActionButtonReview}`}
                     title="评价任务"
                   >
                     ⭐ 评价
