@@ -1,6 +1,6 @@
 # 管理员发布多人任务功能开发日志
 
-> **版本**: v1.2  
+> **版本**: v1.3  
 > **创建日期**: 2025-01-20  
 > **最后更新**: 2025-01-20  
 > **设计原则**: 向后兼容、可扩展、安全优先  
@@ -34,6 +34,49 @@
 
 ---
 
+## 🎯 MVP 范围说明（v1.0 必须实现）
+
+### 本次迭代必须实现的功能
+
+**核心功能**：
+- ✅ 管理员创建官方多人任务（仅支持积分奖励）
+- ✅ 用户申请参与（官方任务自动接受）
+- ✅ 任务聊天室（申请后自动加入）
+- ✅ 参与者退出申请
+- ✅ 管理员批准/拒绝退出申请
+- ✅ 管理员手动开始任务（不支持自动开始）
+- ✅ 参与者提交完成
+- ✅ 管理员确认完成并分配奖励（仅支持平均分配积分）
+
+**数据库字段**：
+- ✅ 所有必要字段（为未来扩展预留字段，但业务逻辑暂不使用）
+- ⚠️ `current_participants`：MVP阶段可以不存，实时 `COUNT(*)`
+- ⚠️ `planned_reward_amount` / `planned_points_reward`：MVP阶段可以不存，仅在奖励分配时计算
+
+**限制条件**：
+- ❌ 不支持现金奖励（仅支持积分奖励）
+- ❌ 不支持自定义奖励分配（仅支持平均分配）
+- ❌ 不支持迟到加入（任务开始后禁止新成员申请）
+- ❌ 不支持自动开始（仅管理员手动开始）
+- ❌ 不支持普通用户发布多人任务（仅管理员）
+
+### 未来扩展（不在本次迭代内）
+
+以下功能在文档中已设计，但**不在 v1.0 实现范围**：
+- 普通用户发布多人任务
+- 自动开始功能（达到 min_participants 自动开始）
+- 迟到加入功能（任务进行中补招）
+- 现金奖励或现金+积分奖励
+- 自定义奖励分配
+- 复杂取消和退款流程（v1.0 仅支持基础取消）
+
+**实现建议**：
+- 数据库字段可以提前预留，但业务逻辑和测试优先只实现 MVP 功能
+- 这样可以大大减少第一次上线的状态组合，测试工作量也会小很多
+- 后续版本再逐步打开扩展功能
+
+---
+
 ## 🗄️ 数据库模型设计
 
 ### 1. 修改 Task 表
@@ -54,6 +97,19 @@ ALTER TABLE tasks ADD COLUMN auto_accept BOOLEAN DEFAULT false;  -- 是否自动
 ALTER TABLE tasks ADD COLUMN allow_negotiation BOOLEAN DEFAULT true;  -- 是否允许议价（多人任务默认false）
 ALTER TABLE tasks ADD COLUMN created_by_admin BOOLEAN DEFAULT false;  -- 是否由管理员创建
 ALTER TABLE tasks ADD COLUMN admin_creator_id VARCHAR(36) REFERENCES admin_users(id);  -- 创建任务的管理员ID（使用UUID格式，与admin_users表一致）
+
+-- 添加数据库级CHECK约束（跨字段验证）
+ALTER TABLE tasks ADD CONSTRAINT chk_tasks_participants_range CHECK (
+    max_participants >= min_participants AND min_participants >= 1
+);
+ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_non_negative CHECK (
+    (reward IS NULL OR reward >= 0) AND (points_reward IS NULL OR points_reward >= 0)
+);
+ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
+    (reward_type = 'cash' AND (reward IS NOT NULL OR reward = 0)) OR
+    (reward_type = 'points' AND points_reward > 0) OR
+    (reward_type = 'both' AND (reward IS NOT NULL OR reward = 0) AND points_reward > 0)
+);
 ```
 
 **字段说明：**
@@ -89,8 +145,8 @@ CREATE TABLE task_participants (
     user_id VARCHAR(8) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(20) DEFAULT 'pending',  -- pending, accepted, in_progress, completed, exit_requested, exited, cancelled
     previous_status VARCHAR(20),  -- 前一个状态（用于退出申请被拒绝时恢复）
-    reward_amount DECIMAL(12, 2),  -- 该参与者应得的现金奖励（如果reward_distribution=custom）
-    points_reward BIGINT DEFAULT 0,  -- 该参与者应得的积分奖励
+    planned_reward_amount DECIMAL(12, 2),  -- 该参与者计划应得的现金奖励（如果reward_distribution=custom，仅用于展示，实际值以task_participant_rewards表为准）
+    planned_points_reward BIGINT DEFAULT 0,  -- 该参与者计划应得的积分奖励（仅用于展示，实际值以task_participant_rewards表为准）
     applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,  -- 申请时间
     accepted_at TIMESTAMPTZ,  -- 接受时间（自动接受时等于applied_at，待审核时为NULL）
     started_at TIMESTAMPTZ,  -- 开始时间（任务开始）
@@ -111,12 +167,13 @@ CREATE TABLE task_participants (
     )
 );
 
-CREATE INDEX idx_task_participants_task ON task_participants(task_id);
-CREATE INDEX idx_task_participants_user ON task_participants(user_id);
-CREATE INDEX idx_task_participants_status ON task_participants(status);
-CREATE INDEX idx_task_participants_task_status ON task_participants(task_id, status);
-CREATE INDEX idx_task_participants_task_user ON task_participants(task_id, user_id);  -- 覆盖唯一约束的查询
-CREATE INDEX idx_task_participants_task_status_updated ON task_participants(task_id, status, updated_at);  -- 用于管理页排序查询
+-- 索引优化说明：
+-- 1. 唯一约束 uq_task_participant UNIQUE(task_id, user_id) 会自动创建索引，无需手动创建 idx_task_participants_task_user
+-- 2. 复合索引 (task_id, status, updated_at) 可以覆盖单列查询（left prefix），因此单列的 task_id 索引可选
+-- 3. 根据实际查询模式，保留以下索引：
+CREATE INDEX idx_task_participants_user ON task_participants(user_id);  -- 用户查询自己的任务
+CREATE INDEX idx_task_participants_status ON task_participants(status);  -- 状态过滤
+CREATE INDEX idx_task_participants_task_status_updated ON task_participants(task_id, status, updated_at);  -- 管理页排序查询（覆盖 task_id 和 task_id+status 查询）
 ```
 
 **字段说明：**
@@ -131,14 +188,15 @@ CREATE INDEX idx_task_participants_task_status_updated ON task_participants(task
   - `exited`: 已退出（管理员批准退出）
   - `cancelled`: 已取消（管理员取消参与者资格）
 - `previous_status`: 前一个状态（当进入 `exit_requested` 时保存，用于拒绝退出申请时恢复）
-- `reward_amount`: 该参与者**计划**应得的现金奖励金额（仅在reward_distribution=custom时使用，建议重命名为 `planned_reward_amount`）
-- `points_reward`: 该参与者**计划**应得的积分奖励（建议重命名为 `planned_points_reward`）
+- `planned_reward_amount`: 该参与者**计划**应得的现金奖励金额（仅在reward_distribution=custom时使用，仅用于展示）
+- `planned_points_reward`: 该参与者**计划**应得的积分奖励（仅用于展示）
 
 **重要说明**：
-- 参与者表中的 `reward_amount` 和 `points_reward` 字段为**计划值**，用于展示和初步计算
-- **实际发放值**以 `task_participant_rewards` 表为准
+- 参与者表中的 `planned_reward_amount` 和 `planned_points_reward` 字段为**计划值**，仅用于展示和初步计算
+- **实际发放值**以 `task_participant_rewards` 表为准（`reward_amount` 和 `points_amount`）
 - 读接口应根据 `task_participant_rewards` 表做聚合，返回实际发放值
 - 如果计划值与实际值不一致，以实际值为准
+- **MVP阶段建议**：如果短期内只需要"平均分配积分"，可以不在参与者表存储计划值，仅在奖励分配时计算并写入 `task_participant_rewards` 表
 - `applied_at`: 申请时间
 - `accepted_at`: 接受时间（自动接受时等于applied_at，待审核时为NULL）
 - `started_at`: 开始时间（任务开始，参与者可以开始工作，初始为NULL）
@@ -194,6 +252,30 @@ CREATE TABLE task_participant_rewards (
         (reward_type = 'both' AND reward_amount IS NOT NULL AND points_amount IS NOT NULL)
     )
 );
+
+-- 添加触发器，确保奖励表的reward_type与任务表的reward_type一致（应用层也应做此验证）
+CREATE OR REPLACE FUNCTION validate_reward_type_consistency() RETURNS trigger AS $$
+DECLARE
+    task_reward_type VARCHAR(20);
+BEGIN
+    SELECT reward_type INTO task_reward_type FROM tasks WHERE id = NEW.task_id;
+    IF task_reward_type IS NULL THEN
+        RAISE EXCEPTION 'Task not found: %', NEW.task_id;
+    END IF;
+    -- 验证奖励类型一致性
+    IF task_reward_type = 'points' AND NEW.reward_type != 'points' THEN
+        RAISE EXCEPTION 'Reward type mismatch: task is points-only but reward type is %', NEW.reward_type;
+    END IF;
+    IF task_reward_type = 'cash' AND NEW.reward_type != 'cash' THEN
+        RAISE EXCEPTION 'Reward type mismatch: task is cash-only but reward type is %', NEW.reward_type;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_reward_type_consistency
+BEFORE INSERT OR UPDATE ON task_participant_rewards
+FOR EACH ROW EXECUTE FUNCTION validate_reward_type_consistency();
 
 CREATE INDEX idx_participant_rewards_task ON task_participant_rewards(task_id);
 CREATE INDEX idx_participant_rewards_participant ON task_participant_rewards(participant_id);
@@ -255,15 +337,30 @@ CREATE INDEX idx_audit_logs_task_created ON task_audit_logs(task_id, created_at)
 **字段说明：**
 - `task_id`: 关联的任务ID（可为空，用于系统级操作）
 - `participant_id`: 关联的参与者记录ID（可为空）
-- `user_id`: 操作用户ID（可为空，用于管理员操作）
-- `admin_id`: 操作管理员ID（可为空，用于用户操作）
-- **互斥规则**：`user_id` 和 `admin_id` 必须有一个不为 NULL（应用层校验：(user_id IS NOT NULL) XOR (admin_id IS NOT NULL)）
-- **代理操作场景**：如果管理员代表用户操作，应同时记录 `user_id`（被代理用户）和 `admin_id`（代理管理员），并在 `description` 中标注代理来源
+- `user_id`: 被影响的业务用户ID（可为空，用于管理员直接操作任务）
+  - **语义**：记录操作主要涉及到的业务用户（如：用户申请参与、用户提交完成）
+  - **代理场景**：管理员代表用户操作时，应同时记录 `user_id`（被代理用户）和 `admin_id`（代理管理员）
+- `admin_id`: 操作执行者ID（管理员，可为空，用于用户操作）
+  - **语义**：记录谁执行了这个操作（管理员）
+  - **代理场景**：管理员代表用户操作时，应同时记录 `user_id`（被代理用户）和 `admin_id`（代理管理员）
+- **操作者规则**：
+  - **至少有一个不为 NULL**：`user_id` 和 `admin_id` 必须至少有一个不为 NULL
+  - **允许两个都不为空**：代理操作场景下，`user_id` 和 `admin_id` 可以同时不为 NULL
+  - **应用层校验**：`(user_id IS NOT NULL) OR (admin_id IS NOT NULL)`
+- **实体关系说明**：
+  - `entity_type` + `task_id`/`participant_id` 始终指：被修改的那条业务实体
+  - `admin_id` = 操作执行者（谁执行了这个操作）
+  - `user_id` = 被影响的业务用户（如果有，如参与者、任务发布者等）
+  - **示例**：管理员A帮用户U批准退出参与者P
+    - `admin_id` = A（操作执行者）
+    - `user_id` = U（被影响的业务用户）
+    - `participant_id` = P（被修改的实体）
+    - `entity_type` = 'participant'
 - `action_type`: 操作类型（如：task_created, participant_applied, status_changed, reward_distributed, exit_approved等）
 - `entity_type`: 实体类型（task, participant, reward）
 - `old_value`: 变更前的值（JSON格式，便于查询和回滚）
 - `new_value`: 变更后的值（JSON格式）
-- `description`: 操作描述（人类可读的描述）
+- `description`: 操作描述（人类可读的描述，代理操作需标注代理来源）
 - `ip_address`: 操作者IP地址（用于安全审计）
 - `user_agent`: 用户代理（用于安全审计）
 
@@ -429,7 +526,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "message": "我有相关经验，希望参与此任务",
-  "idempotency_key": "unique-request-id-12345"  // 可选，用于防止重复申请
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请
 }
 ```
 
@@ -484,7 +581,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "exit_reason": "因个人原因无法继续参与",
-  "idempotency_key": "unique-request-id-12345"  // 可选，用于防止重复申请退出
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请退出
 }
 ```
 
@@ -616,7 +713,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "completion_notes": "已完成我的部分工作",
-  "idempotency_key": "unique-request-id-12345"  // 可选，用于防止重复提交完成
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复提交完成
 }
 ```
 
@@ -813,11 +910,15 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ### 3. 任务聊天室页面
 
-**路径**: `/tasks/{task_id}/chat` 或 `/rooms/{room_code}`（推荐使用后者，彻底避免泄漏任务ID）
+**路径**: `/rooms/{room_code}`（推荐，彻底避免泄漏任务ID）
 
 **路由策略**：
-- **方案A（当前）**：使用 `/tasks/{task_id}/chat`，前端在进入页面时从后端获取 `room_code`，然后使用 `room_code` 建立 WebSocket 连接
-- **方案B（推荐）**：使用 `/rooms/{room_code}` 作为路由参数，后端在进入页面时验证用户是否为该聊天室的参与者，然后 302 重定向或直接渲染页面，彻底避免泄漏任务ID
+- **推荐方案**：使用 `/rooms/{room_code}` 作为路由参数
+  - 后端在进入页面时验证用户是否为该聊天室的参与者（根据 `room_code` 查询 `chat_rooms` 表，再验证 `task_participants` 表）
+  - 验证通过后直接渲染页面，彻底避免在 URL 中暴露 `task_id`
+  - WebSocket 连接时使用 `room_code` 而非 `task_id`
+- **备选方案（不推荐）**：使用 `/tasks/{task_id}/chat`，前端在进入页面时从后端获取 `room_code`，然后使用 `room_code` 建立 WebSocket 连接
+  - 缺点：URL 中暴露了 `task_id`，存在信息泄露风险
 
 **功能**:
 - 显示任务基本信息（标题、参与人数等）
@@ -928,19 +1029,29 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ### 4. 幂等性策略
 
-- **客户端生成幂等键**：所有可能重复的操作（申请、退出申请、完成、奖励分配）都应包含 `idempotency_key`
+- **统一规则**：所有会产生 side-effect 的 POST 操作（尤其是可能被用户"连点两次"的）都应包含 `idempotency_key`
+  - **建议携带**：申请参与、退出申请、提交完成
+  - **强制要求**：奖励分配、发起支付等关键操作
+- **客户端生成幂等键**：客户端生成 UUID 格式的 `idempotency_key`
 - **服务端缓存**：在 Redis 或内存中缓存幂等键（5-15分钟），拒绝重复请求
 - **数据库唯一约束**：在相关表中添加 `idempotency_key` 唯一约束，作为最后一道防线
+  - **全局唯一**：当前使用 `UNIQUE(idempotency_key)`，UUID 冲突概率几乎可以忽略
+  - **可选优化**：如果希望不同用户可以复用同一个 key，可改为 `UNIQUE(user_id, idempotency_key)`
 - **幂等返回**：如果检测到重复请求，返回已有的操作结果，而非错误
 
 ### 5. current_participants 字段说明
 
 - `current_participants` 字段仅作为**展示用缓存**，不应用于业务逻辑决策
 - 所有决策（如是否允许申请、是否达到最大人数）都应使用实时 `COUNT(*)` 查询
-- **推荐方案**：使用数据库触发器自动维护 `current_participants`，禁止应用层直接 UPDATE 该字段
-- 如果发现不一致，以实时计数为准
+- **MVP阶段建议**：可以完全不存 `current_participants`，所有地方实时 `COUNT(*)`
+  - 对于人数上限较小的任务（7人级别），`COUNT(*)` 性能足够
+  - 如果后续发现列表页 QPS 很高，且 profiling 显示 `COUNT(*)` 是瓶颈，再考虑添加缓存字段
+- **如果使用缓存字段**：
+  - 使用数据库触发器自动维护 `current_participants`，禁止应用层直接 UPDATE 该字段
+  - 触发器应使用增量更新（判断 old/new.status 是否从"占坑状态"变成"非占坑状态"再 ±1），而非每次都 `COUNT(*)` 全表计算
+  - 如果发现不一致，以实时计数为准
 
-**触发器维护方案（可选）**：
+**触发器维护方案（可选，MVP阶段不建议使用）**：
 ```sql
 -- 创建触发器函数，自动维护 current_participants
 CREATE OR REPLACE FUNCTION update_task_participants_count() RETURNS trigger AS $$
@@ -1007,7 +1118,12 @@ cancelled (已取消) [可发生在任何状态，管理员操作]
 **状态说明**：
 - `open`: 任务开放申请，参与者可以申请参与
 - `in_progress`: 任务进行中，参与者正在工作
-- `completed`: 任务已完成，奖励已分配
+- `completed`: 任务工作流程已完成（根据完成规则判定）
+  - **重要说明**：`completed` 状态仅表示任务工作流程已完成，**不代表奖励已分配**
+  - **奖励结算状态**：需查询 `task_participant_rewards` 表的 `payment_status` 和 `points_status` 字段判断奖励是否已发放
+  - **前端展示建议**：
+    - "任务执行完成" = `status = 'completed'`
+    - "奖励结算完成" = 所有相关 `task_participant_rewards` 记录都进入 `paid`/`credited` 等终态
 - `cancelled`: 任务已取消（可发生在任何状态，管理员操作）
 
 **重要规则**：
@@ -1059,6 +1175,20 @@ cancelled (已取消) [可发生在任何状态，管理员操作]
 - 添加"迟到加入"标识，便于前端显示和统计
 - 在审计日志中记录"迟到加入"操作
 - 考虑添加"迟到加入截止时间"字段，限制最晚加入时间
+
+### 退出逻辑与占坑规则
+
+**当前策略（策略A）**：
+- 申请参与时计算人数：状态为 `pending`、`accepted`、`in_progress` 的参与者
+- `exit_requested` 状态**不占坑**（因为当前策略下任务开始后不允许新成员加入，不会出现超卖问题）
+- `completed` 状态**不占坑**（已完成者不占用参与名额）
+
+**未来扩展（策略B，迟到加入）**：
+- 如果开放"迟到加入"，需要将 `exit_requested` 状态也计入占坑人数，防止超卖
+- 需要明确 `completed` 状态是否占坑：
+  - 如果 `completed` 占坑：已完成者仍占用名额，新成员无法加入（除非有人退出）
+  - 如果 `completed` 不占坑：已完成者释放名额，新成员可以补位
+- **建议**：`completed` 不占坑，允许已完成者释放名额给新成员
 
 ---
 
@@ -1471,9 +1601,31 @@ accepted (已接受)
 
 **最后更新**: 2025-01-20  
 **文档维护者**: 开发团队  
-**版本**: v1.2
+**版本**: v1.3
 
 ## 📝 版本变更日志
+
+### v1.3 (2025-01-20)
+
+**高优先修复**：
+1. ✅ 修复审计日志 `user_id`/`admin_id` 规则冲突，统一语义（采用方案B：至少有一个不为NULL，允许两个都不为空）
+2. ✅ 明确审计日志字段语义（`admin_id`=操作执行者，`user_id`=被影响的业务用户）
+3. ✅ 修复任务 `completed` 状态语义不一致，明确区分"工作完成"和"奖励结算"
+4. ✅ 添加数据库级 CHECK 约束（跨字段验证：参与人数范围、奖励非负、奖励类型一致性）
+5. ✅ 优化字段命名（`reward_amount` → `planned_reward_amount`，`points_reward` → `planned_points_reward`）
+6. ✅ 添加奖励表与任务表的 `reward_type` 一致性验证触发器
+7. ✅ 优化索引（删除冗余索引，保留必要索引）
+8. ✅ 优化 `current_participants` 策略（MVP阶段建议不存，实时 `COUNT(*)`）
+
+**中优先优化**：
+1. ✅ 统一幂等键使用规则（所有 side-effect 操作建议携带，关键操作强制要求）
+2. ✅ 明确退出逻辑与占坑规则（当前策略和未来扩展策略）
+3. ✅ 明确聊天室路由策略（推荐使用 `/rooms/{room_code}`）
+4. ✅ 添加 MVP 范围说明（明确 v1.0 必须实现的功能和未来扩展）
+
+**低优先改进**：
+1. ✅ 更新 API 接口中的幂等键说明（从"可选"改为"建议携带"）
+2. ✅ 优化索引说明（解释为什么删除某些索引）
 
 ### v1.2 (2025-01-20)
 
