@@ -3437,14 +3437,31 @@ def get_customer_service_status(
 
 
 @router.get("/customer-service/check-availability")
-def check_customer_service_availability(db: Session = Depends(get_db)):
+def check_customer_service_availability(db: Session = Depends(get_sync_db)):
     """检查是否有在线客服可用"""
     from app.models import CustomerService
 
     # 查询在线客服数量
-    online_services = (
-        db.query(CustomerService).filter(CustomerService.is_online == 1).count()
-    )
+    try:
+        online_services = (
+            db.query(CustomerService).filter(CustomerService.is_online == 1).count()
+        )
+        
+        # 添加调试日志
+        logger.info(f"[CUSTOMER_SERVICE] 查询在线客服: 标准查询结果={online_services}")
+        
+        # 如果查询结果为0，记录所有客服的状态用于调试
+        if online_services == 0:
+            all_services = db.query(CustomerService).all()
+            logger.info(f"[CUSTOMER_SERVICE] 调试信息: 总客服数量={len(all_services)}")
+            for s in all_services:
+                logger.info(f"[CUSTOMER_SERVICE] 客服 {s.id}: is_online={s.is_online} (type: {type(s.is_online).__name__})")
+                # 如果发现is_online不是1但应该是1的情况，记录详细信息
+                if s.is_online and s.is_online != 0:
+                    logger.warning(f"[CUSTOMER_SERVICE] 客服 {s.id} 的 is_online={s.is_online} 不是1，但也不是0")
+    except Exception as e:
+        logger.error(f"[CUSTOMER_SERVICE] 查询客服可用性失败: {e}", exc_info=True)
+        online_services = 0
 
     return {
         "available": online_services > 0,

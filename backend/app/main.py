@@ -165,6 +165,11 @@ app.include_router(time_validation_router, tags=["时间验证"])
 
 # 添加sitemap路由（不需要/api前缀，直接访问/sitemap.xml）
 app.include_router(sitemap_router, tags=["SEO"])
+
+# 添加Analytics路由（用于收集Web Vitals性能指标）
+from app.analytics_routes import router as analytics_router
+app.include_router(analytics_router, tags=["Analytics"])
+
 # 暂时禁用安全监控路由以解决异步/同步混用问题
 # app.include_router(security_monitoring_router, tags=["安全监控"])
 

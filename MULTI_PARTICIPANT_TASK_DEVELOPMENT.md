@@ -1,6 +1,6 @@
 # 管理员发布多人任务功能开发日志
 
-> **版本**: v1.4  
+> **版本**: v1.5  
 > **创建日期**: 2025-01-20  
 > **最后更新**: 2025-01-20  
 > **设计原则**: 向后兼容、可扩展、安全优先  
@@ -109,6 +109,12 @@ ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
     (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
     (reward_type = 'points' AND points_reward > 0 AND (reward IS NULL OR reward = 0)) OR
     (reward_type = 'both' AND reward > 0 AND points_reward > 0)
+);
+-- MVP 限制约束（v1.0 仅支持官方多人积分任务 + 平均分配，未来可能移除）
+ALTER TABLE tasks ADD CONSTRAINT chk_mvp_official_multi_points_equal CHECK (
+    NOT is_multi_participant
+    OR NOT is_official_task
+    OR (reward_type = 'points' AND reward_distribution = 'equal')
 );
 ```
 
@@ -251,6 +257,10 @@ CREATE TABLE task_participant_rewards (
         (reward_type = 'cash' AND reward_amount IS NOT NULL AND points_amount IS NULL) OR
         (reward_type = 'points' AND reward_amount IS NULL AND points_amount IS NOT NULL) OR
         (reward_type = 'both' AND reward_amount IS NOT NULL AND points_amount IS NOT NULL)
+    ),
+    CONSTRAINT chk_reward_positive_amount CHECK (
+        (reward_amount IS NULL OR reward_amount > 0) AND
+        (points_amount IS NULL OR points_amount > 0)
     )
 );
 
@@ -291,8 +301,9 @@ CREATE INDEX idx_participant_rewards_task_status ON task_participant_rewards(tas
 - `participant_id`: 关联的参与者记录ID
 - `user_id`: 参与者用户ID
 - `reward_type`: 奖励类型（cash, points, both）
-- `reward_amount`: 实际发放的现金奖励金额（如果reward_type包含cash，初始为NULL）
-- `points_amount`: 实际发放的积分奖励（如果reward_type包含points，初始为NULL）
+- `reward_amount`: 实际发放的现金奖励金额（如果reward_type包含cash，初始为NULL，不允许为0）
+- `points_amount`: 实际发放的积分奖励（如果reward_type包含points，初始为NULL，不允许为0）
+- **重要说明**：不允许 0 金额记录（`reward_amount` 和 `points_amount` 必须为 NULL 或 > 0），用于避免"看起来像发了奖励，实际给了 0"的歧义
 - `currency`: 货币类型
 - `payment_status`: 现金支付状态
 - `points_status`: 积分发放状态
@@ -805,22 +816,23 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 3. 验证任务 `reward_type='points'` 且 `reward_distribution='equal'`（MVP限制）
 4. **幂等性验证**：检查 `idempotency_key` 是否已存在，如果存在则返回已有记录（幂等返回）
 5. 开启数据库事务
-6. **自动计算平均分配**（仅针对状态为 `completed` 的参与者）：
+6. **并发控制**：对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定，对相关 `task_participants` 记录使用 `SELECT ... FOR UPDATE` 锁定，确保"判定任务状态 + 计算完成人数 + 创建奖励记录 + 更新任务状态"在同一事务内原子执行
+7. **自动计算平均分配**（仅针对状态为 `completed` 的参与者）：
    - 查询所有状态为 `completed` 的参与者
    - 积分奖励：`总积分奖励 / 已完成参与者数量`（向下取整，余数分配给完成时间最早的参与者）
-7. **完整性约束验证**：
+8. **完整性约束验证**：
    - 验证所有参与者的 `points_amount` 总和 <= 任务 `points_reward`
    - 验证所有 `reward_amount` 必须为 NULL（不接受 0）
-8. 创建 `task_participant_rewards` 记录，包含：
+9. 创建 `task_participant_rewards` 记录，包含：
    - `reward_type='points'`
    - `points_amount`（计算出的平均分配值）
    - `idempotency_key`（客户端生成）
    - `admin_operator_id`（当前管理员ID）
-9. 更新任务状态为 `completed`（如果尚未完成）
-10. **审计日志**：记录操作到 `task_audit_logs` 表，包含完整的分配方案
-11. 提交事务
-12. 发送通知给所有参与者
-13. 触发积分发放流程（使用 `idempotency_key` 确保幂等性）
+10. 更新任务状态为 `completed`（如果尚未完成）
+11. **审计日志**：记录操作到 `task_audit_logs` 表，包含完整的分配方案
+12. 提交事务
+13. 发送通知给所有参与者
+14. 触发积分发放流程（使用 `idempotency_key` 确保幂等性）
 
 **业务逻辑（未来扩展版本，支持自定义分配）**:
 1-4. 同 MVP 版本
@@ -932,6 +944,14 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - 显示官方任务标识（如果是官方任务）
 - 显示多人任务标识和参与人数信息（当前人数/最大人数）
 - 显示奖励信息（现金/积分/现金+积分）
+- **任务状态显示**：
+  - **任务状态**：`open` / `in_progress` / `completed` / `cancelled`
+  - **奖励状态**（需查询 `task_participant_rewards` 表）：
+    - 未结算：所有奖励记录的 `payment_status` 和 `points_status` 均为 `pending`
+    - 结算中：部分奖励记录的 `payment_status` 或 `points_status` 为 `pending`
+    - 已结算：所有奖励记录的 `payment_status` 和 `points_status` 均为 `paid`/`credited`
+    - 部分失败：存在 `failed` 状态的奖励记录
+  - **重要说明**：`status='completed'` 仅表示任务工作流程完成，不代表奖励已发放，需查看奖励状态
 - 显示参与者列表（如果用户是参与者或管理员）
 - 申请参与按钮（如果用户未申请且未达到最大人数）
 - 参与状态显示（如果用户已申请/参与）
@@ -1099,6 +1119,9 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - 如果发现不一致，以实时计数为准
 
 **触发器维护方案（可选，MVP阶段不建议使用）**：
+
+⚠️ **v1.0 不要实现本触发器，仅作为未来优化方案**。v1.0 阶段所有地方使用实时 `COUNT(*)` 查询，不维护 `current_participants` 缓存字段。如果实现触发器但上层逻辑仍用 `COUNT(*)` 做可信源，会导致两个值对不上。
+
 ```sql
 -- 创建触发器函数，自动维护 current_participants
 CREATE OR REPLACE FUNCTION update_task_participants_count() RETURNS trigger AS $$
@@ -1650,9 +1673,28 @@ accepted (已接受)
 
 **最后更新**: 2025-01-20  
 **文档维护者**: 开发团队  
-**版本**: v1.4
+**版本**: v1.5
 
 ## 📝 版本变更日志
+
+### v1.5 (2025-01-20)
+
+**关键修复（彻底清理重复版本）**：
+1. ✅ 确认 TaskParticipant 表 DDL 只有一套版本（使用 `planned_reward_amount` / `planned_points_reward`）
+2. ✅ 确认 TaskParticipantReward 表 DDL 只有一套版本（包含完整约束和触发器）
+3. ✅ 确认 TaskAuditLog 表只有一套语义（允许代理场景同时记录 user_id + admin_id）
+4. ✅ 确认 /complete 接口只有 MVP 和未来扩展两个版本
+5. ✅ 确认 Task 表的 CHECK 约束只有严格版本（`reward > 0` 和 `points_reward > 0`）
+
+**数据库约束增强**：
+1. ✅ 添加 `chk_reward_positive_amount` 约束（不允许 0 金额记录）
+2. ✅ 添加 `chk_mvp_official_multi_points_equal` 约束（MVP 限制：官方多人任务必须使用积分+平均分配）
+3. ✅ 明确奖励金额字段说明（不允许为 0，必须为 NULL 或 > 0）
+
+**业务逻辑优化**：
+1. ✅ 在 /complete 接口添加并发控制说明（使用 `SELECT ... FOR UPDATE` 锁定）
+2. ✅ 在前端任务详情页面添加奖励状态显示规范（区分任务状态和奖励状态）
+3. ✅ 在触发器章节添加 v1.0 不实现的醒目警告
 
 ### v1.4 (2025-01-20)
 
