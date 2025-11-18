@@ -22,6 +22,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useTaskFilters } from '../hooks/useTaskFilters';
 import { useTaskSorting } from '../hooks/useTaskSorting';
+import { useThrottledCallback } from '../hooks/useThrottledCallback';
+import { Grid, GridImperativeAPI } from 'react-window';
 import { injectTasksStyles } from '../styles/Tasks.styles';
 
 // 配置dayjs插件
@@ -872,37 +874,131 @@ const Tasks: React.FC = () => {
     }
   }, [filters.type, filters.city, filters.debouncedKeyword, filters.cityInitialized]); // 移除 loadTasks 依赖，使用 ref 避免循环触发
   
-  // 滚动监听，实现无限滚动
-  useEffect(() => {
-    const handleScroll = () => {
-      if (loadingMore || loading || !hasMore) return;
-      
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      
-      // 当滚动到距离底部200px时，开始加载更多
-      if (scrollTop + windowHeight >= documentHeight - 200) {
-        loadMoreTasks();
-      }
-    };
-    
-    // 使用节流优化滚动事件
-    let ticking = false;
-    const throttledHandleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-    
-    window.addEventListener('scroll', throttledHandleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', throttledHandleScroll);
-  }, [loadingMore, loading, hasMore, loadMoreTasks]);
+  // 使用 useMemo 优化任务筛选逻辑，避免不必要的重新计算
+  // 注意：需要在 handleScroll 之前定义，因为虚拟滚动相关变量会使用它
+  const filteredTasks = useMemo(() => {
+    let filtered = [...tasks];
 
+    // 按任务等级筛选
+    if (filters.taskLevel !== t('tasks.levels.all')) {
+      const levelMap: { [key: string]: string } = {
+        [t('tasks.levels.normal')]: 'normal',
+        [t('tasks.levels.vip')]: 'vip',
+        [t('tasks.levels.super')]: 'super'
+      };
+      
+      const targetLevel = levelMap[filters.taskLevel];
+      if (targetLevel) {
+        filtered = filtered.filter(task => task.task_level === targetLevel);
+      }
+    }
+
+    // 按城市筛选
+    if (filters.city !== 'all') {
+      filtered = filtered.filter(task => task.location === filters.city);
+    }
+
+    // 按类型筛选
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(task => task.task_type === filters.type);
+    }
+
+    // 注意：搜索关键词已经在服务端处理，这里不需要再次过滤
+    // 如果服务端返回了搜索结果，说明已经匹配了标题和描述
+    // 客户端过滤会导致搜索结果不准确，因为只过滤了已加载的任务
+
+    // 注意：排序应该在服务端进行，这里只进行筛选
+    // 客户端排序会破坏服务端的分页排序逻辑
+    
+    return filtered;
+  }, [tasks, filters.taskLevel, filters.city, filters.type, filters.debouncedKeyword, t]);
+
+  // 动态判断是否使用虚拟滚动（任务数超过 50 时启用）
+  const shouldUseVirtualList = filteredTasks.length > 50;
+  
+  // 计算任务卡片高度（移动端和桌面端不同）
+  // 移动端：卡片更小，约 300px；桌面端：约 400px
+  const taskCardHeight = isMobile ? 300 : 400;
+  const containerHeight = typeof window !== 'undefined' ? window.innerHeight - 200 : 600; // 减去头部等高度
+  
+  // 计算网格布局参数
+  const cardWidth = isMobile ? 170 : 300; // 卡片最小宽度
+  const gap = 16; // 网格间距
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [columnCount, setColumnCount] = useState(3); // 默认列数
+  const [rowCount, setRowCount] = useState(0);
+  
+  // 计算列数和行数
+  useEffect(() => {
+    if (!shouldUseVirtualList || !gridContainerRef.current) return;
+    
+    const updateGridDimensions = () => {
+      const container = gridContainerRef.current;
+      if (!container) return;
+      
+      const containerWidth = container.clientWidth;
+      // 计算每行能放多少个卡片：(容器宽度 + 间距) / (卡片宽度 + 间距)
+      const cols = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
+      const rows = Math.ceil(filteredTasks.length / cols);
+      
+      setColumnCount(cols);
+      setRowCount(rows);
+    };
+    
+    updateGridDimensions();
+    
+    // 监听窗口大小变化
+    const resizeObserver = new ResizeObserver(updateGridDimensions);
+    if (gridContainerRef.current) {
+      resizeObserver.observe(gridContainerRef.current);
+    }
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [shouldUseVirtualList, filteredTasks.length, cardWidth, gap, isMobile]);
+
+  // Grid 组件的滚动处理（用于无限滚动）
+  const gridRef = useRef<GridImperativeAPI>(null);
+  
+  // Grid 的滚动事件处理
+  const handleGridScroll = useCallback(() => {
+    if (loadingMore || loading || !hasMore) return;
+    
+    const grid = gridRef.current;
+    if (!grid || !grid.element) return;
+    
+    const container = grid.element;
+    const scrollTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    const scrollHeight = container.scrollHeight;
+    
+    // 当滚动到距离底部200px时，开始加载更多
+    if (scrollTop + containerHeight >= scrollHeight - 200) {
+      loadMoreTasks();
+    }
+  }, [loadingMore, loading, hasMore]);
+  
+  // 普通模式的滚动监听
+  const handleScroll = useThrottledCallback(() => {
+    if (loadingMore || loading || !hasMore) return;
+    
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+    
+    if (scrollTop + windowHeight >= documentHeight - 200) {
+      loadMoreTasks();
+    }
+  }, 100);
+
+  useEffect(() => {
+    if (!shouldUseVirtualList) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll, shouldUseVirtualList]);
+  
   // 点击外部关闭下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1115,43 +1211,35 @@ const Tasks: React.FC = () => {
     }
   }, [t]);
 
-  // 使用 useMemo 优化任务筛选逻辑，避免不必要的重新计算
-  const filteredTasks = useMemo(() => {
-    let filtered = [...tasks];
-
-    // 按任务等级筛选
-    if (filters.taskLevel !== t('tasks.levels.all')) {
-      const levelMap: { [key: string]: string } = {
-        [t('tasks.levels.normal')]: 'normal',
-        [t('tasks.levels.vip')]: 'vip',
-        [t('tasks.levels.super')]: 'super'
-      };
-      
-      const targetLevel = levelMap[filters.taskLevel];
-      if (targetLevel) {
-        filtered = filtered.filter(task => task.task_level === targetLevel);
-      }
-    }
-
-    // 按城市筛选
-    if (filters.city !== 'all') {
-      filtered = filtered.filter(task => task.location === filters.city);
-    }
-
-    // 按类型筛选
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(task => task.task_type === filters.type);
-    }
-
-    // 注意：搜索关键词已经在服务端处理，这里不需要再次过滤
-    // 如果服务端返回了搜索结果，说明已经匹配了标题和描述
-    // 客户端过滤会导致搜索结果不准确，因为只过滤了已加载的任务
-
-    // 注意：排序应该在服务端进行，这里只进行筛选
-    // 客户端排序会破坏服务端的分页排序逻辑
+  // Grid 单元格渲染函数（必须在所有依赖的函数定义之后）
+  const Cell = useCallback(({ columnIndex, rowIndex, style, ...props }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; [key: string]: any }) => {
+    const index = rowIndex * columnCount + columnIndex;
     
-    return filtered;
-  }, [tasks, filters.taskLevel, filters.city, filters.type, filters.debouncedKeyword, t]);
+    if (index >= filteredTasks.length) {
+      return <div style={style} />;
+    }
+    
+    const task = filteredTasks[index];
+    
+    return (
+      <div style={{ ...style, padding: `${gap / 2}px` }}>
+        <TaskCard
+          key={task.id}
+          task={task}
+          isMobile={isMobile}
+          language={language}
+          onViewTask={handleViewTask}
+          getTaskTypeLabel={getTaskTypeLabel}
+          getRemainTime={getRemainTime}
+          isExpired={isExpired}
+          isExpiringSoon={isExpiringSoon}
+          getTaskLevelColor={getTaskLevelColor}
+          getTaskLevelLabel={getTaskLevelLabel}
+          t={t}
+        />
+      </div>
+    );
+  }, [filteredTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t]);
 
   return (
     <div style={{ 
@@ -1659,58 +1747,110 @@ const Tasks: React.FC = () => {
           </div>
 
 
-          {/* 任务列表 */}
-          <div className="tasks-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '170px' : '300px'}, 1fr))`,
-            gap: '16px'
-          }}>
-            {loading ? (
-              <div style={{ 
-                gridColumn: '1 / -1',
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#6b7280'
-              }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-                <div>加载中...</div>
+          {/* 任务列表 - 动态使用虚拟滚动 */}
+          {loading ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              color: '#6b7280'
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+              <div>加载中...</div>
+            </div>
+          ) : filteredTasks.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '80px 20px',
+              color: '#6b7280'
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+              <div>
+                {tasks.length === 0 ? t('tasks.search.noTasks') : t('tasks.search.noMatchingTasks')}
               </div>
-            ) : filteredTasks.length === 0 ? (
-              <div style={{ 
-                gridColumn: '1 / -1',
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#6b7280'
-              }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
-                <div>
-                  {tasks.length === 0 ? t('tasks.search.noTasks') : t('tasks.search.noMatchingTasks')}
+              {tasks.length > 0 && (
+                <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
+                  {t('tasks.search.tryAdjustFilter')}
                 </div>
-                {tasks.length > 0 && (
-                  <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
-                    {t('tasks.search.tryAdjustFilter')}
-                  </div>
-                )}
-              </div>
-            ) : (
-              filteredTasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isMobile={isMobile}
-                  language={language}
-                  onViewTask={handleViewTask}
-                  getTaskTypeLabel={getTaskTypeLabel}
-                  getRemainTime={getRemainTime}
-                  isExpired={isExpired}
-                  isExpiringSoon={isExpiringSoon}
-                  getTaskLevelColor={getTaskLevelColor}
-                  getTaskLevelLabel={getTaskLevelLabel}
-                  t={t}
+              )}
+            </div>
+          ) : shouldUseVirtualList ? (
+            // 虚拟滚动模式（任务数 > 50）- 使用 react-window Grid
+            <div
+              ref={gridContainerRef}
+              style={{
+                height: containerHeight,
+                width: '100%'
+              }}
+            >
+              {rowCount > 0 && columnCount > 0 && (
+                <Grid
+                  gridRef={gridRef}
+                  columnCount={columnCount}
+                  columnWidth={cardWidth + gap}
+                  rowCount={rowCount}
+                  rowHeight={taskCardHeight + gap}
+                  defaultHeight={containerHeight}
+                  defaultWidth={gridContainerRef.current?.clientWidth || 0}
+                  overscanCount={2}
+                  cellComponent={Cell}
+                  cellProps={{} as any}
                 />
-              ))
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            // 普通模式（任务数 <= 50）
+            <div className="tasks-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '170px' : '300px'}, 1fr))`,
+              gap: '16px'
+            }}>
+              {loading ? (
+                <div style={{ 
+                  gridColumn: '1 / -1',
+                  textAlign: 'center', 
+                  padding: '80px 20px',
+                  color: '#6b7280'
+                }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+                  <div>加载中...</div>
+                </div>
+              ) : filteredTasks.length === 0 ? (
+                <div style={{ 
+                  gridColumn: '1 / -1',
+                  textAlign: 'center', 
+                  padding: '80px 20px',
+                  color: '#6b7280'
+                }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+                  <div>
+                    {tasks.length === 0 ? t('tasks.search.noTasks') : t('tasks.search.noMatchingTasks')}
+                  </div>
+                  {tasks.length > 0 && (
+                    <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
+                      {t('tasks.search.tryAdjustFilter')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                filteredTasks.map(task => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isMobile={isMobile}
+                    language={language}
+                    onViewTask={handleViewTask}
+                    getTaskTypeLabel={getTaskTypeLabel}
+                    getRemainTime={getRemainTime}
+                    isExpired={isExpired}
+                    isExpiringSoon={isExpiringSoon}
+                    getTaskLevelColor={getTaskLevelColor}
+                    getTaskLevelLabel={getTaskLevelLabel}
+                    t={t}
+                  />
+                ))
+              )}
+            </div>
+          )}
 
           {/* 滚动加载提示 */}
           <div ref={scrollContainerRef}>

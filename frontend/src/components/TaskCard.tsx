@@ -2,6 +2,7 @@ import React from 'react';
 import TaskTitle from './TaskTitle';
 import { TASK_TYPES } from '../pages/Tasks';
 import { Language } from '../contexts/LanguageContext';
+import styles from './TaskCard.module.css';
 
 interface TaskCardProps {
   task: any;
@@ -30,57 +31,40 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
   getTaskLevelLabel,
   t
 }) => {
+  // 根据任务等级确定卡片样式类名
+  const getCardClassName = () => {
+    const baseClass = styles.taskCard;
+    if (task.task_level === 'vip') {
+      return `${baseClass} ${styles.taskCardVip}`;
+    } else if (task.task_level === 'super') {
+      return `${baseClass} ${styles.taskCardSuper}`;
+    }
+    return baseClass;
+  };
+
+  // 根据任务等级确定标签样式类名
+  const getLevelBadgeClassName = () => {
+    const baseClass = isMobile ? styles.levelBadgeMobile : styles.levelBadge;
+    if (task.task_level === 'vip') {
+      return `${baseClass} ${styles.levelBadgeVip}`;
+    } else if (task.task_level === 'super') {
+      return `${baseClass} ${styles.levelBadgeSuper}`;
+    }
+    return baseClass;
+  };
+
   return (
     <div
-      className="task-card"
-      style={{
-        background: '#fff',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        boxShadow: task.task_level === 'vip' ? '0 4px 15px rgba(245, 158, 11, 0.2)' : 
-                   task.task_level === 'super' ? '0 4px 20px rgba(139, 92, 246, 0.3)' : 
-                   '0 2px 8px rgba(0,0,0,0.05)',
-        border: task.task_level === 'vip' ? '2px solid #f59e0b' : 
-                task.task_level === 'super' ? '2px solid #8b5cf6' : 
-                '1px solid #e5e7eb',
-        animation: task.task_level === 'vip' ? 'vipGlow 4s infinite' : 
-                   task.task_level === 'super' ? 'superPulse 3s infinite' : 'none'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        if (task.task_level === 'vip') {
-          e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.4)';
-        } else if (task.task_level === 'super') {
-          e.currentTarget.style.boxShadow = '0 8px 25px rgba(139, 92, 246, 0.5)';
-        } else {
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        if (task.task_level === 'vip') {
-          e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.2)';
-        } else if (task.task_level === 'super') {
-          e.currentTarget.style.boxShadow = '0 4px 20px rgba(139, 92, 246, 0.3)';
-        } else {
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-        }
-      }}
+      className={getCardClassName()}
       onClick={() => onViewTask(task.id)}
     >
       {/* 任务图片区域 */}
-      <div style={{
-        aspectRatio: isMobile ? '9 / 16' : '16 / 9',
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        background: `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <div 
+        className={`${styles.imageContainer} ${isMobile ? styles.imageContainerMobile : ''}`}
+        style={{
+          background: `linear-gradient(135deg, ${getTaskLevelColor(task.task_level)}20, ${getTaskLevelColor(task.task_level)}40)`
+        }}
+      >
         {/* 任务类型图标占位符 */}
         {(!task.images || !Array.isArray(task.images) || task.images.length === 0 || !task.images[0]) && (
           <div 
@@ -349,41 +333,19 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({
 
         {/* 任务等级标签 */}
         {task.task_level && task.task_level !== 'normal' && (
-          <div style={{
-            position: 'absolute',
-            top: isMobile ? '42px' : '48px',
-            right: isMobile ? '8px' : '12px',
-            background: getTaskLevelColor(task.task_level),
-            color: '#fff',
-            padding: isMobile ? '3px 8px' : '4px 10px',
-            borderRadius: '16px',
-            fontSize: isMobile ? '9px' : '11px',
-            fontWeight: '700',
-            zIndex: 3,
-            boxShadow: task.task_level === 'vip' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 
-                      task.task_level === 'super' ? '0 2px 10px rgba(139, 92, 246, 0.5)' : 
-                      '0 2px 6px rgba(0,0,0,0.2)'
-          }}>
+          <div 
+            className={getLevelBadgeClassName()}
+            style={{
+              background: getTaskLevelColor(task.task_level)
+            }}
+          >
             {getTaskLevelLabel(task.task_level)}
           </div>
         )}
       </div>
       
       {/* 任务标题 */}
-      <div style={{
-        padding: '12px',
-        fontSize: '15px',
-        fontWeight: '600',
-        color: '#1f2937',
-        whiteSpace: isMobile ? 'nowrap' : 'normal',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        lineHeight: '1.4',
-        background: 'transparent',
-        display: isMobile ? 'block' : '-webkit-box',
-        WebkitLineClamp: isMobile ? 1 : 2,
-        WebkitBoxOrient: isMobile ? 'unset' : 'vertical'
-      }}>
+      <div className={`${styles.taskTitle} ${isMobile ? styles.taskTitleMobile : styles.taskTitleDesktop}`}>
         <TaskTitle
           title={task.title}
           language={language}

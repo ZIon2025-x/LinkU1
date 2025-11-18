@@ -140,8 +140,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     }
   }, []);
 
-  // 翻译函数
-  const t = (key: string, params?: Record<string, any>): string => {
+  // 翻译函数 - 使用 useCallback 优化，避免每次渲染都创建新函数
+  const t = useCallback((key: string, params?: Record<string, any>): string => {
     const keys = key.split('.');
     
     // 尝试从当前语言获取翻译
@@ -187,13 +187,13 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     }
     
     return result;
-  };
+  }, [language]);
 
   const value = React.useMemo(() => ({
     language,
     setLanguage: handleSetLanguage,
     t
-  }), [language, handleSetLanguage]);
+  }), [language, handleSetLanguage, t]);
 
   return (
     <LanguageContext.Provider value={value}>

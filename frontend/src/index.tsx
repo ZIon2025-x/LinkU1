@@ -5,12 +5,18 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { autoFixHttp2 } from './utils/http2Fix';
 import { setupNetworkMonitoring } from './utils/networkDiagnostics';
+import { initWebVitalsMonitoring } from './utils/webVitalsReporter';
 
 // 自动应用HTTP/2修复
 autoFixHttp2();
 
 // 启动网络监控
 setupNetworkMonitoring();
+
+// 初始化 Web Vitals 性能监控（生产环境）
+if (process.env.NODE_ENV === 'production') {
+  initWebVitalsMonitoring();
+}
 
 // 全局错误处理 - 捕获未处理的错误和 Promise rejection
 window.addEventListener('error', (event) => {
