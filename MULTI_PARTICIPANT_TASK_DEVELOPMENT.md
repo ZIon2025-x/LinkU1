@@ -1,6 +1,6 @@
 # 管理员发布多人任务功能开发日志
 
-> **版本**: v1.3  
+> **版本**: v1.4  
 > **创建日期**: 2025-01-20  
 > **最后更新**: 2025-01-20  
 > **设计原则**: 向后兼容、可扩展、安全优先  
@@ -106,9 +106,9 @@ ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_non_negative CHECK (
     (reward IS NULL OR reward >= 0) AND (points_reward IS NULL OR points_reward >= 0)
 );
 ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
-    (reward_type = 'cash' AND (reward IS NOT NULL OR reward = 0)) OR
-    (reward_type = 'points' AND points_reward > 0) OR
-    (reward_type = 'both' AND (reward IS NOT NULL OR reward = 0) AND points_reward > 0)
+    (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
+    (reward_type = 'points' AND points_reward > 0 AND (reward IS NULL OR reward = 0)) OR
+    (reward_type = 'both' AND reward > 0 AND points_reward > 0)
 );
 ```
 
@@ -125,9 +125,10 @@ ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
   - `equal`: 总奖励平均分配给所有参与者
   - `custom`: 管理员可以自定义每个参与者的奖励
 - `reward_type`: 
-  - `cash`: 仅现金奖励
-  - `points`: 仅积分奖励
-  - `both`: 现金+积分奖励
+  - `cash`: 仅现金奖励（`reward > 0`，`points_reward = 0` 或 NULL）
+  - `points`: 仅积分奖励（`points_reward > 0`，`reward = 0` 或 NULL）
+  - `both`: 现金+积分奖励（`reward > 0` 且 `points_reward > 0`）
+  - **重要说明**：当 `reward_type='both'` 时，任务级别同时有现金和积分奖励，但具体到某个参与者，可以只拿现金、只拿积分或两者都拿，按 `task_participant_rewards.reward_type` 为准
 - `points_reward`: 积分奖励数量（如果reward_type包含points）
 - `auto_accept`: 是否自动接受申请（官方多人任务默认true，用户申请后立即接受）
 - `allow_negotiation`: 是否允许议价（多人任务默认false，不支持议价）
@@ -648,7 +649,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 2. 验证参与者状态为 `exit_requested`
 3. 更新参与者状态为 `exited`
 4. 设置 `exited_at` 时间
-5. 更新任务的 `current_participants` 计数（减1）
+5. **人数统计**：如启用 `current_participants` 缓存字段，则在此处由触发器自动维护，无需应用层更新（详见"current_participants 字段说明"章节）
 6. 从任务聊天室移除该用户（可选）
 7. 发送通知给参与者
 8. 在聊天室发送系统消息（可选）
@@ -750,7 +751,14 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 **权限**: 需要管理员认证
 
-**请求体**:
+**请求体（MVP版本，仅支持平均分配积分）**:
+```json
+{
+  "idempotency_key": "unique-request-id-12345"  // 必需，用于防止重复分配奖励
+}
+```
+
+**请求体（未来扩展版本，支持自定义分配）**:
 ```json
 {
   "participant_rewards": [
@@ -775,34 +783,58 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   "id": 123,
   "status": "completed",
   "completed_at": "2025-01-20T16:00:00Z",
-  "total_reward_distributed": 500.00
+  "total_points_distributed": 5000,
+  "participant_rewards": [
+    {
+      "participant_id": 456,
+      "user_id": "12345678",
+      "points_amount": 2500
+    },
+    {
+      "participant_id": 457,
+      "user_id": "87654321",
+      "points_amount": 2500
+    }
+  ]
 }
 ```
 
-**业务逻辑**:
+**业务逻辑（MVP版本）**:
 1. 验证管理员权限
 2. 验证任务状态为 `in_progress` 或已完成
-3. **幂等性验证**：如果请求包含 `idempotency_key`，检查是否已存在相同键的奖励分配记录
-4. 开启数据库事务
-5. 如果 `reward_distribution=equal`：
-   - 自动计算平均分配（仅针对状态为 `completed` 的参与者）
-   - 现金奖励：`总现金奖励 / 已完成参与者数量`（四舍五入到2位小数）
+3. 验证任务 `reward_type='points'` 且 `reward_distribution='equal'`（MVP限制）
+4. **幂等性验证**：检查 `idempotency_key` 是否已存在，如果存在则返回已有记录（幂等返回）
+5. 开启数据库事务
+6. **自动计算平均分配**（仅针对状态为 `completed` 的参与者）：
+   - 查询所有状态为 `completed` 的参与者
    - 积分奖励：`总积分奖励 / 已完成参与者数量`（向下取整，余数分配给完成时间最早的参与者）
-6. 如果 `reward_distribution=custom`，使用请求中的分配方案
 7. **完整性约束验证**：
-   - 现金奖励：验证所有参与者的 `reward_amount` 总和 <= 任务 `reward`（如果 `reward_type` 包含 `cash`）
-   - 积分奖励：验证所有参与者的 `points_amount` 总和 <= 任务 `points_reward`（如果 `reward_type` 包含 `points`）
-   - 如果 `reward_type='points'`，验证所有 `reward_amount` 必须为 NULL（不接受 0）
-   - 如果 `reward_type='cash'`，验证所有 `points_amount` 必须为 NULL（不接受 0）
-   - 如果 `reward_type='both'`，验证所有 `reward_amount` 和 `points_amount` 都不为 NULL
+   - 验证所有参与者的 `points_amount` 总和 <= 任务 `points_reward`
+   - 验证所有 `reward_amount` 必须为 NULL（不接受 0）
 8. 创建 `task_participant_rewards` 记录，包含：
+   - `reward_type='points'`
+   - `points_amount`（计算出的平均分配值）
    - `idempotency_key`（客户端生成）
    - `admin_operator_id`（当前管理员ID）
 9. 更新任务状态为 `completed`（如果尚未完成）
 10. **审计日志**：记录操作到 `task_audit_logs` 表，包含完整的分配方案
 11. 提交事务
 12. 发送通知给所有参与者
-13. 触发支付流程（如果需要，使用 `idempotency_key` 和 `external_txn_id` 确保幂等性）
+13. 触发积分发放流程（使用 `idempotency_key` 确保幂等性）
+
+**业务逻辑（未来扩展版本，支持自定义分配）**:
+1-4. 同 MVP 版本
+5. 开启数据库事务
+6. 如果 `reward_distribution=equal`：
+   - 自动计算平均分配（同 MVP 版本）
+7. 如果 `reward_distribution=custom`，使用请求中的分配方案
+8. **完整性约束验证**：
+   - 现金奖励：验证所有参与者的 `reward_amount` 总和 <= 任务 `reward`（如果 `reward_type` 包含 `cash`）
+   - 积分奖励：验证所有参与者的 `points_amount` 总和 <= 任务 `points_reward`（如果 `reward_type` 包含 `points`）
+   - 如果 `reward_type='points'`，验证所有 `reward_amount` 必须为 NULL（不接受 0）
+   - 如果 `reward_type='cash'`，验证所有 `points_amount` 必须为 NULL（不接受 0）
+   - 如果 `reward_type='both'`，验证所有 `reward_amount` 和 `points_amount` 都不为 NULL
+9-13. 同 MVP 版本
 
 ### 8. 获取任务参与者列表
 
@@ -929,6 +961,12 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - 系统消息显示（如：新成员加入、成员退出等）
 - 聊天室权限控制（仅参与者可以发送消息）
 
+**聊天室权限规则**（必须严格执行）：
+- **允许进入聊天室的状态**：`accepted`、`in_progress`、`completed`
+- **允许发送消息的状态**：`accepted`、`in_progress`、`completed`
+- **禁止进入和发言的状态**：`pending`、`exit_requested`、`exited`、`cancelled`
+- **说明**：已完成（`completed`）的参与者可以查看历史消息并继续发言，但退出申请中（`exit_requested`）、已退出（`exited`）或已取消（`cancelled`）的参与者不能进入聊天室
+
 **聊天室进入逻辑**:
 - 用户申请参与官方任务后，状态立即变为 `accepted`
 - 用户可以在任务详情页面点击"进入聊天室"按钮
@@ -937,7 +975,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - WebSocket连接时，服务器端需要验证：
   1. 用户身份（JWT token）
   2. 用户是否为该任务的参与者（查询 `task_participants` 表）
-  3. 参与者状态是否为 `accepted`、`in_progress` 或 `completed`（允许已完成用户查看历史消息）
+  3. 参与者状态是否为 `accepted`、`in_progress` 或 `completed`（按上述权限规则）
 
 ### 4. 管理员任务管理页面
 
@@ -1037,7 +1075,16 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - **数据库唯一约束**：在相关表中添加 `idempotency_key` 唯一约束，作为最后一道防线
   - **全局唯一**：当前使用 `UNIQUE(idempotency_key)`，UUID 冲突概率几乎可以忽略
   - **可选优化**：如果希望不同用户可以复用同一个 key，可改为 `UNIQUE(user_id, idempotency_key)`
-- **幂等返回**：如果检测到重复请求，返回已有的操作结果，而非错误
+- **幂等返回规范**（必须严格执行）：
+  - **原则**：当遇到 `UNIQUE(idempotency_key)` 冲突时，**不是返回 4xx 错误**，而是根据已有记录重放结果
+  - **实现方式**：
+    1. 查询数据库中已存在的记录（根据 `idempotency_key`）
+    2. 返回该记录的完整信息，状态码为 200 OK
+    3. 不在业务逻辑中重复执行操作
+  - **具体示例**：
+    - **申请参与**：查询 `task_participants` 表中 `idempotency_key` 对应的记录，返回该参与者信息（包括 `status`、`applied_at`、`accepted_at` 等）
+    - **提交完成**：查询 `task_participants` 表中 `idempotency_key` 对应的记录，返回该参与者的完成信息（包括 `status='completed'`、`completed_at` 等）
+    - **分配奖励**：查询 `task_participant_rewards` 表中 `idempotency_key` 对应的记录，聚合返回所有参与者的奖励分配结果
 
 ### 5. current_participants 字段说明
 
@@ -1249,6 +1296,8 @@ accepted (已接受)
 
 ## 📋 取消策略矩阵
 
+⚠️ **重要说明**：本节为未来扩展设计，v1.0 仅实现「状态变更 + 审计日志」，不实现真实退款/积分回退逻辑。v1.0 的取消操作仅更新状态和记录审计日志，不涉及支付网关对接和积分扣除。
+
 ### 任务取消场景
 
 | 取消时机 | 发起者 | 退款/回退策略 | 通知对象 | 状态变更 |
@@ -1262,8 +1311,8 @@ accepted (已接受)
 | 取消时机 | 发起者 | 退款/回退策略 | 通知对象 | 状态变更 |
 |---------|--------|--------------|---------|---------|
 | 申请阶段（pending） | 管理员 | 无需处理 | 参与者 | 参与者状态 → cancelled |
-| 已接受（accepted） | 管理员 | 无需退款（尚未开始工作） | 参与者 | 参与者状态 → cancelled，任务 current_participants -1 |
-| 进行中（in_progress） | 管理员 | 按完成度部分退款/积分回退 | 参与者 | 参与者状态 → cancelled，任务 current_participants -1 |
+| 已接受（accepted） | 管理员 | 无需退款（尚未开始工作） | 参与者 | 参与者状态 → cancelled（人数统计逻辑见"current_participants 字段说明"章节） |
+| 进行中（in_progress） | 管理员 | 按完成度部分退款/积分回退 | 参与者 | 参与者状态 → cancelled（人数统计逻辑见"current_participants 字段说明"章节） |
 | 已完成（completed） | 管理员 | 已发放奖励需追回（退款/积分扣除） | 参与者、财务部门 | 参与者状态 → cancelled，奖励记录标记为 refunded |
 
 ### 取消操作流程
@@ -1601,9 +1650,27 @@ accepted (已接受)
 
 **最后更新**: 2025-01-20  
 **文档维护者**: 开发团队  
-**版本**: v1.3
+**版本**: v1.4
 
 ## 📝 版本变更日志
+
+### v1.4 (2025-01-20)
+
+**关键修复（必须修复）**：
+1. ✅ 统一审计日志语义（删除旧版本描述，明确应用层校验规则：`(user_id IS NOT NULL) OR (admin_id IS NOT NULL)`）
+2. ✅ 统一任务 completed 状态语义（明确区分"工作完成"和"奖励结算"，删除旧版本"奖励已分配"的描述）
+3. ✅ 统一 task_participants 表 DDL（使用 `planned_reward_amount` / `planned_points_reward` 作为唯一规范版本）
+4. ✅ 修正 current_participants 在流程描述中的引用（改为"人数统计逻辑见 current_participants 字段说明"）
+
+**数据库约束优化**：
+1. ✅ 收紧 CHECK 约束（`reward_type='cash'` 时要求 `reward > 0`，`reward_type='points'` 时要求 `points_reward > 0`）
+2. ✅ 明确 `reward_type='both'` 的实际含义（任务级别有现金+积分，但参与者可以只拿其中一种）
+
+**业务逻辑优化**：
+1. ✅ 简化 MVP 下的完成接口（移除 `participant_rewards` 请求体，服务端自动计算平均分配）
+2. ✅ 在取消矩阵显式标注「v1.0 不实现真实退款/积分回退逻辑」
+3. ✅ 明确聊天室权限规则（允许进入/发言的状态：`accepted`、`in_progress`、`completed`）
+4. ✅ 完善幂等键策略的落地规范（添加明确的实现示例：申请参与、提交完成、分配奖励）
 
 ### v1.3 (2025-01-20)
 
