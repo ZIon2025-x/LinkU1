@@ -516,6 +516,14 @@ def service_login(
     db: Session = Depends(get_sync_db)
 ):
     """客服登录（独立认证系统）"""
+    # 添加CORS头
+    origin = request.headers.get("origin")
+    if origin and origin in ["https://www.link2ur.com", "https://api.link2ur.com"]:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+    
     logger.info(f"[SERVICE_AUTH] 客服登录尝试: {login_data.cs_id}")
     
     # 支持ID或邮箱登录

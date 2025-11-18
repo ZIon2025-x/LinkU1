@@ -77,7 +77,7 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder_replace_wit
 router = APIRouter()
 
 
-@router.post("/api/csp-report")
+@router.post("/csp-report")
 async def csp_report(report: dict):
     """接收 CSP 违规报告"""
     logger.warning(f"CSP violation: {report}")
@@ -3171,7 +3171,7 @@ def admin_review_cancel_request(
     return {"message": f"Cancel request {review.status}", "request": updated_request}
 
 
-@router.post("/api/user/customer-service/assign")
+@router.post("/user/customer-service/assign")
 def assign_customer_service(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3318,7 +3318,7 @@ def assign_customer_service(
         raise HTTPException(status_code=500, detail=f"客服会话分配失败: {str(e)}")
 
 
-@router.get("/api/user/customer-service/queue-status")
+@router.get("/user/customer-service/queue-status")
 def get_customer_service_queue_status(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3328,7 +3328,7 @@ def get_customer_service_queue_status(
 
 
 # 客服在线状态管理
-@router.post("/api/customer-service/online")
+@router.post("/customer-service/online")
 def set_customer_service_online(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3352,7 +3352,7 @@ def set_customer_service_online(
         raise HTTPException(status_code=500, detail=f"设置在线状态失败: {str(e)}")
 
 
-@router.post("/api/customer-service/offline")
+@router.post("/customer-service/offline")
 def set_customer_service_offline(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3386,7 +3386,7 @@ def logout(response: Response):
 
 # 旧的客服登出路由已删除，请使用 /api/customer-service/logout (在 cs_auth_routes.py 中)
 
-@router.get("/api/customer-service/status")
+@router.get("/customer-service/status")
 def get_customer_service_status(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3436,7 +3436,7 @@ def get_customer_service_status(
     }
 
 
-@router.get("/api/customer-service/check-availability")
+@router.get("/customer-service/check-availability")
 def check_customer_service_availability(db: Session = Depends(get_db)):
     """检查是否有在线客服可用"""
     from app.models import CustomerService
@@ -3458,7 +3458,7 @@ def check_customer_service_availability(db: Session = Depends(get_db)):
 
 
 # 客服管理相关接口
-@router.get("/api/customer-service/chats")
+@router.get("/customer-service/chats")
 def get_customer_service_chats(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3494,7 +3494,7 @@ def get_customer_service_chats(
     return user_chats
 
 
-@router.get("/api/customer-service/chats/{chat_id}/messages")
+@router.get("/customer-service/chats/{chat_id}/messages")
 def get_customer_service_messages(
     chat_id: str,
     current_user=Depends(get_current_service),
@@ -3512,7 +3512,7 @@ def get_customer_service_messages(
     return messages
 
 
-@router.post("/api/user/customer-service/chats/{chat_id}/messages/{message_id}/mark-read")
+@router.post("/user/customer-service/chats/{chat_id}/messages/{message_id}/mark-read")
 def mark_customer_service_message_read(
     chat_id: str,
     message_id: int,
@@ -3533,7 +3533,7 @@ def mark_customer_service_message_read(
     return {"message": "Message marked as read", "message_id": message_id}
 
 
-@router.post("/api/customer-service/chats/{chat_id}/mark-read")
+@router.post("/customer-service/chats/{chat_id}/mark-read")
 def mark_customer_service_messages_read(
     chat_id: str,
     current_user=Depends(get_current_service),
@@ -3553,7 +3553,7 @@ def mark_customer_service_messages_read(
     return {"message": "Messages marked as read", "marked_count": marked_count}
 
 
-@router.post("/api/customer-service/chats/{chat_id}/messages")
+@router.post("/customer-service/chats/{chat_id}/messages")
 @rate_limit("send_message")
 def send_customer_service_message(
     chat_id: str,
@@ -3599,7 +3599,7 @@ def send_customer_service_message(
 
 
 # 结束对话和评分相关接口
-@router.post("/api/user/customer-service/chats/{chat_id}/end")
+@router.post("/user/customer-service/chats/{chat_id}/end")
 @rate_limit("end_chat")
 def end_customer_service_chat_user(
     chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
@@ -3631,7 +3631,7 @@ def end_customer_service_chat_user(
 
     return {"message": "Chat ended successfully"}
 
-@router.post("/api/customer-service/chats/{chat_id}/end")
+@router.post("/customer-service/chats/{chat_id}/end")
 @rate_limit("end_chat")
 def end_customer_service_chat(
     chat_id: str, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
@@ -3674,7 +3674,7 @@ def end_customer_service_chat(
     return {"message": "Chat ended successfully"}
 
 
-@router.post("/api/user/customer-service/chats/{chat_id}/rate")
+@router.post("/user/customer-service/chats/{chat_id}/rate")
 @rate_limit("rate_service")
 def rate_customer_service(
     chat_id: str,
@@ -3740,7 +3740,7 @@ def rate_customer_service(
     return {"message": "Rating submitted successfully"}
 
 
-@router.get("/api/user/customer-service/chats")
+@router.get("/user/customer-service/chats")
 def get_my_customer_service_chats(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3749,7 +3749,7 @@ def get_my_customer_service_chats(
     return chats
 
 
-@router.get("/api/user/customer-service/chats/{chat_id}/messages")
+@router.get("/user/customer-service/chats/{chat_id}/messages")
 def get_customer_service_chat_messages(
     chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3765,7 +3765,7 @@ def get_customer_service_chat_messages(
     return messages
 
 
-@router.post("/api/user/customer-service/chats/{chat_id}/messages")
+@router.post("/user/customer-service/chats/{chat_id}/messages")
 @rate_limit("send_message")
 def send_customer_service_chat_message(
     chat_id: str,
@@ -3803,7 +3803,7 @@ def send_customer_service_chat_message(
 
 
 # 客服对话文件上传接口
-@router.post("/api/user/customer-service/chats/{chat_id}/files")
+@router.post("/user/customer-service/chats/{chat_id}/files")
 @rate_limit("upload_file")
 async def upload_customer_service_chat_file(
     chat_id: str,
@@ -3899,7 +3899,7 @@ async def upload_customer_service_chat_file(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
-@router.post("/api/customer-service/chats/{chat_id}/files")
+@router.post("/customer-service/chats/{chat_id}/files")
 @rate_limit("upload_file")
 async def upload_customer_service_file(
     chat_id: str,
@@ -3995,7 +3995,7 @@ async def upload_customer_service_file(
         raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
 
 
-@router.get("/api/customer-service/{service_id}/rating")
+@router.get("/customer-service/{service_id}/rating")
 def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
     """获取客服的平均评分信息"""
     service = db.query(CustomerService).filter(CustomerService.id == service_id).first()
@@ -4010,7 +4010,7 @@ def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/api/customer-service/all-ratings")
+@router.get("/customer-service/all-ratings")
 def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     """获取所有客服的平均评分信息"""
     services = db.query(CustomerService).all()
@@ -4027,7 +4027,7 @@ def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/api/customer-service/cancel-requests")
+@router.get("/customer-service/cancel-requests")
 def cs_get_cancel_requests(
     current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
@@ -4078,7 +4078,7 @@ def cs_get_cancel_requests(
     return result
 
 
-@router.post("/api/customer-service/cancel-requests/{request_id}/review")
+@router.post("/customer-service/cancel-requests/{request_id}/review")
 def cs_review_cancel_request(
     request_id: int,
     review: schemas.TaskCancelRequestReview,
@@ -4178,7 +4178,7 @@ def get_admin_requests(
     return requests
 
 
-@router.post("/api/customer-service/admin-requests", response_model=schemas.AdminRequestOut)
+@router.post("/customer-service/admin-requests", response_model=schemas.AdminRequestOut)
 def create_admin_request(
     request_data: schemas.AdminRequestCreate,
     current_user=Depends(get_current_service),
@@ -4222,7 +4222,7 @@ def get_admin_chat_messages(
     return messages
 
 
-@router.post("/api/customer-service/admin-chat", response_model=schemas.AdminChatMessageOut)
+@router.post("/customer-service/admin-chat", response_model=schemas.AdminChatMessageOut)
 def send_admin_chat_message(
     message_data: schemas.AdminChatMessageCreate,
     current_user=Depends(get_current_service),
@@ -4955,7 +4955,7 @@ def update_user_preferences(
         raise HTTPException(status_code=500, detail=f"保存偏好设置失败: {str(e)}")
 
 
-@router.post("/api/customer-service/cleanup-old-chats/{service_id}")
+@router.post("/customer-service/cleanup-old-chats/{service_id}")
 def cleanup_old_customer_service_chats(
     service_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
@@ -4976,7 +4976,7 @@ def cleanup_old_customer_service_chats(
         raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
 
 
-@router.post("/api/customer-service/chats/{chat_id}/timeout-end")
+@router.post("/customer-service/chats/{chat_id}/timeout-end")
 async def timeout_end_customer_service_chat(
     chat_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
@@ -5098,7 +5098,7 @@ def get_timezone_info():
     }
 
 
-@router.get("/api/customer-service/chats/{chat_id}/timeout-status")
+@router.get("/customer-service/chats/{chat_id}/timeout-status")
 def get_chat_timeout_status(
     chat_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
