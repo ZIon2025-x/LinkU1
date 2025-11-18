@@ -17,6 +17,9 @@ redis>=4.5.0
 PyJWT>=2.8.0
 slowapi>=0.1.9
 
+# 任务队列
+celery[redis]>=5.3.0
+
 # 邮件服务
 fastapi-mail>=1.4.0
 sendgrid>=6.10.0
