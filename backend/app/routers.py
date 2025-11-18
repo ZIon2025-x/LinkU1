@@ -3384,15 +3384,7 @@ def logout(response: Response):
     clear_secure_cookies(response)
     return {"message": "登出成功"}
 
-@router.post("/api/customer-service/logout")
-def customer_service_logout(
-    current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
-):
-    """客服登出时自动设置为离线状态"""
-    current_user.is_online = 0
-    db.commit()
-    return {"message": "已登出并设置为离线状态"}
-
+# 旧的客服登出路由已删除，请使用 /api/customer-service/logout (在 cs_auth_routes.py 中)
 
 @router.get("/api/customer-service/status")
 def get_customer_service_status(
