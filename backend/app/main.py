@@ -197,6 +197,10 @@ app.include_router(coupon_points_router, tags=["优惠券和积分系统"])
 from app.admin_coupon_points_routes import router as admin_coupon_points_router
 app.include_router(admin_coupon_points_router, tags=["管理员-优惠券和积分系统"])
 
+# 数据库管理工具
+from app.admin_db_tools import router as admin_db_tools_router
+app.include_router(admin_db_tools_router, tags=["管理员-数据库工具"])
+
 # 任务达人功能路由
 from app.task_expert_routes import task_expert_router
 app.include_router(task_expert_router)

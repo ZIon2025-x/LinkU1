@@ -84,11 +84,15 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 raw_conn = conn.connection.dbapi_connection
                 
                 # 使用 psycopg2 的 execute 方法执行 SQL
-                # 它会自动处理多语句、函数定义等
+                # 使用 execute_batch 或逐语句执行以确保正确处理
                 with raw_conn.cursor() as cursor:
+                    # 使用 psycopg2 的 execute 方法，它会自动处理多语句
+                    # 但需要确保 autocommit 或手动提交
                     cursor.execute(sql_content)
                     raw_conn.commit()
-            except AttributeError:
+            except (AttributeError, Exception) as e:
+                # 如果 psycopg2 方式失败，记录错误并使用 SQLAlchemy 方式
+                logger.debug(f"psycopg2 执行失败，使用 SQLAlchemy 方式: {e}")
                 # 如果不是 psycopg2 连接，回退到 SQLAlchemy 方式
                 # 简单处理：按分号分割，但跳过注释行
                 statements = []
