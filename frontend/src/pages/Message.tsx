@@ -2961,27 +2961,7 @@ const MessagePage: React.FC = () => {
 
   // 联系在线客服
   const handleContactCustomerService = async () => {
-    // 首先检查客服是否在线
-    if (!serviceAvailable) {
-      const noServiceMessage: Message = {
-        id: Date.now(),
-        from: t('messages.system'),
-        content: t('messages.noServiceAvailable'),
-        created_at: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, noServiceMessage]);
-      // 确保滚动到底部显示系统消息 - 使用多次延迟确保消息渲染完成
-      setTimeout(() => {
-        scrollToBottomImmediate(0, true);
-      }, 50);
-      setTimeout(() => {
-        scrollToBottomImmediate(0, true);
-      }, 200);
-      setTimeout(() => {
-        scrollToBottomImmediate(0, true);
-      }, 400);
-      return;
-    }
+    // 注意：不再依赖serviceAvailable状态，直接调用API检查，确保获取最新状态
 
     // 先检查localStorage中是否已有活跃的客服对话
     const savedChat = localStorage.getItem('currentCustomerServiceChat');
