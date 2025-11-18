@@ -7,6 +7,16 @@ from typing import Optional
 from app.config import Config
 
 
+def get_email_header() -> str:
+    """生成邮件头部，包含logo"""
+    logo_url = f"{Config.FRONTEND_URL}/static/favicon.png"
+    return f"""
+    <div style="text-align: center; padding: 20px 0; background-color: #ffffff; margin-bottom: 20px;">
+        <img src="{logo_url}" alt="Link²Ur Logo" style="max-width: 200px; height: auto;" />
+    </div>
+    """
+
+
 def get_user_language(user: Optional[object]) -> str:
     """获取用户语言偏好，默认为英文"""
     if not user:
@@ -24,10 +34,12 @@ def get_user_language(user: Optional[object]) -> str:
 
 def get_login_verification_code_email(language: str, verification_code: str) -> tuple[str, str]:
     """登录验证码邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = "Link²Ur 登录验证码"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">登录验证码</h2>
             <p>您好，</p>
             <p>您正在尝试登录 Link²Ur 平台，请使用以下验证码完成登录：</p>
@@ -54,6 +66,7 @@ def get_login_verification_code_email(language: str, verification_code: str) -> 
         subject = "Link²Ur Login Verification Code"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">Login Verification Code</h2>
             <p>Hello,</p>
             <p>You are attempting to log in to Link²Ur platform. Please use the following verification code to complete your login:</p>
@@ -81,10 +94,12 @@ def get_login_verification_code_email(language: str, verification_code: str) -> 
 
 def get_email_update_verification_code_email(language: str, new_email: str, verification_code: str) -> tuple[str, str]:
     """邮箱修改验证码邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = "Link²Ur 邮箱修改验证码"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">邮箱修改验证码</h2>
             <p>您好，</p>
             <p>您正在尝试将 Link²Ur 账户的邮箱修改为：<strong>{new_email}</strong></p>
@@ -112,6 +127,7 @@ def get_email_update_verification_code_email(language: str, new_email: str, veri
         subject = "Link²Ur Email Update Verification Code"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">Email Update Verification Code</h2>
             <p>Hello,</p>
             <p>You are attempting to change your Link²Ur account email to: <strong>{new_email}</strong></p>
@@ -142,12 +158,14 @@ def get_email_update_verification_code_email(language: str, new_email: str, veri
 
 def get_email_verification_email(language: str, verification_url: str) -> tuple[str, str]:
     """邮箱验证邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = "Link²Ur 邮箱验证"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
                     欢迎注册 Link²Ur 平台！
                 </h2>
@@ -183,6 +201,7 @@ def get_email_verification_email(language: str, verification_url: str) -> tuple[
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
                     Welcome to Link²Ur!
                 </h2>
@@ -219,12 +238,14 @@ def get_email_verification_email(language: str, verification_url: str) -> tuple[
 
 def get_password_reset_email(language: str, reset_url: str) -> tuple[str, str]:
     """密码重置邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = "Link²Ur 密码重置"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #f44336; border-bottom: 2px solid #f44336; padding-bottom: 10px;">
                     密码重置请求
                 </h2>
@@ -260,6 +281,7 @@ def get_password_reset_email(language: str, reset_url: str) -> tuple[str, str]:
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #f44336; border-bottom: 2px solid #f44336; padding-bottom: 10px;">
                     Password Reset Request
                 </h2>
@@ -298,12 +320,14 @@ def get_task_application_email(language: str, task_title: str, task_description:
                                reward: float, applicant_name: str, application_message: str = "",
                                negotiated_price: Optional[float] = None, currency: str = "GBP") -> tuple[str, str]:
     """任务申请通知邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = f"Link²Ur - 新任务申请：{task_title}"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
                     📝 新任务申请
                 </h2>
@@ -345,6 +369,7 @@ def get_task_application_email(language: str, task_title: str, task_description:
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
                     📝 New Task Application
                 </h2>
@@ -385,12 +410,14 @@ def get_task_application_email(language: str, task_title: str, task_description:
 
 def get_task_approval_email(language: str, task_title: str, task_description: str, reward: float) -> tuple[str, str]:
     """任务申请同意通知邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = f"Link²Ur - 任务申请已同意：{task_title}"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #4caf50; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     ✅ 任务申请已同意
                 </h2>
@@ -428,6 +455,7 @@ def get_task_approval_email(language: str, task_title: str, task_description: st
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #4caf50; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     ✅ Task Application Approved
                 </h2>
@@ -465,12 +493,14 @@ def get_task_approval_email(language: str, task_title: str, task_description: st
 def get_task_completion_email(language: str, task_title: str, task_description: str, 
                              reward: float, taker_name: str) -> tuple[str, str]:
     """任务完成通知邮件（给发布者）"""
+    header = get_email_header()
     if language == 'zh':
         subject = f"Link²Ur - 任务已完成：{task_title}"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #ff9800; border-bottom: 2px solid #ff9800; padding-bottom: 10px;">
                     🎉 任务已完成
                 </h2>
@@ -508,6 +538,7 @@ def get_task_completion_email(language: str, task_title: str, task_description: 
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #ff9800; border-bottom: 2px solid #ff9800; padding-bottom: 10px;">
                     🎉 Task Completed
                 </h2>
@@ -544,12 +575,14 @@ def get_task_completion_email(language: str, task_title: str, task_description: 
 
 def get_task_confirmation_email(language: str, task_title: str, task_description: str, reward: float) -> tuple[str, str]:
     """任务确认完成通知邮件（给接收者）"""
+    header = get_email_header()
     if language == 'zh':
         subject = f"Link²Ur - 任务已确认完成：{task_title}"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #4caf50; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     🎊 任务已确认完成
                 </h2>
@@ -587,6 +620,7 @@ def get_task_confirmation_email(language: str, task_title: str, task_description
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #4caf50; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     🎊 Task Confirmed
                 </h2>
@@ -623,12 +657,14 @@ def get_task_confirmation_email(language: str, task_title: str, task_description
 
 def get_task_rejection_email(language: str, task_title: str, task_description: str, reward: float) -> tuple[str, str]:
     """任务申请拒绝通知邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = f"Link²Ur - 任务申请被拒绝：{task_title}"
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #f44336; border-bottom: 2px solid #f44336; padding-bottom: 10px;">
                     ❌ 任务申请被拒绝
                 </h2>
@@ -666,6 +702,7 @@ def get_task_rejection_email(language: str, task_title: str, task_description: s
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
                 <h2 style="color: #f44336; border-bottom: 2px solid #f44336; padding-bottom: 10px;">
                     ❌ Task Application Rejected
                 </h2>
@@ -704,10 +741,12 @@ def get_task_rejection_email(language: str, task_title: str, task_description: s
 
 def get_admin_verification_code_email(language: str, verification_code: str, admin_name: str, expire_minutes: int) -> tuple[str, str]:
     """管理员验证码邮件"""
+    header = get_email_header()
     if language == 'zh':
         subject = "Link²Ur 管理员登录验证码"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">管理员登录验证码</h2>
             <p>尊敬的 {admin_name}，</p>
             <p>您正在尝试登录 Link²Ur 管理员系统，请使用以下验证码完成登录：</p>
@@ -734,6 +773,7 @@ def get_admin_verification_code_email(language: str, verification_code: str, adm
         subject = "Link²Ur Admin Login Verification Code"
         body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            {header}
             <h2 style="color: #333; text-align: center;">Admin Login Verification Code</h2>
             <p>Dear {admin_name},</p>
             <p>You are attempting to log in to Link²Ur admin system. Please use the following verification code to complete your login:</p>
