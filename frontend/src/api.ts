@@ -287,7 +287,7 @@ api.interceptors.response.use(
       const skipRefreshApis = [
         '/api/secure-auth/refresh',
         '/api/secure-auth/refresh-token',
-        '/api/cs/refresh',
+        '/api/customer-service/refresh',
         '/api/admin/refresh',
         '/api/users/messages/mark-chat-read'
       ];

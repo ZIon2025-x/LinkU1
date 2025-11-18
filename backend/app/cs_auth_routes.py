@@ -19,7 +19,7 @@ from app.role_management import UserRole
 
 logger = logging.getLogger(__name__)
 
-cs_auth_router = APIRouter(prefix="/api/cs", tags=["客服认证"])
+cs_auth_router = APIRouter(prefix="/api/customer-service", tags=["客服认证"])
 
 @cs_auth_router.post("/login", response_model=Dict[str, Any])
 @rate_limit("cs_login")

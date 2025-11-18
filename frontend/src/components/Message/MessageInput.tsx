@@ -32,13 +32,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
       formData.append('image', file);
       
       // 根据聊天类型构建上传URL
-      let uploadUrl = '/api/upload/image';
+      let uploadUrl: string;
       if (taskId) {
-        // 任务聊天：传递task_id
+        // 任务聊天：使用通用上传接口，传递task_id
         uploadUrl = `/api/upload/image?task_id=${taskId}`;
       } else if (chatId) {
-        // 客服聊天：传递chat_id
-        uploadUrl = `/api/upload/image?chat_id=${chatId}`;
+        // 客服聊天：使用专用文件上传接口（也支持图片）
+        uploadUrl = `/api/user/customer-service/chats/${chatId}/files`;
+      } else {
+        // 默认使用通用上传接口
+        uploadUrl = '/api/upload/image';
       }
       
       const response = await api.post(uploadUrl, formData, {
@@ -47,9 +50,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
         },
       });
       
+      // 处理不同的响应格式（通用接口返回image_id，专用接口返回file_id）
+      let imageId: string;
       if (response.data.success) {
-        const { image_id } = response.data;
-        onSendImage(image_id);
+        if (response.data.image_id) {
+          // 通用接口返回格式
+          imageId = response.data.image_id;
+        } else if (response.data.file_id) {
+          // 专用接口返回格式
+          imageId = response.data.file_id;
+        } else {
+          throw new Error('服务器未返回图片ID');
+        }
+        onSendImage(imageId);
       } else {
         throw new Error('图片上传失败');
       }

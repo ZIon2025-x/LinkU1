@@ -3033,14 +3033,31 @@ def add_user_to_customer_service_queue(db: Session, user_id: str) -> dict:
         # 计算等待时间
         from app.utils.time_utils import get_utc_time
         wait_seconds = int((get_utc_time() - existing_queue.queued_at).total_seconds())
+        wait_time_minutes = wait_seconds // 60
         
-        return {
+        result = {
             "queue_id": existing_queue.id,
             "status": existing_queue.status,
-            "queued_at": existing_queue.queued_at,
+            "queued_at": existing_queue.queued_at.isoformat() if hasattr(existing_queue.queued_at, 'isoformat') else str(existing_queue.queued_at),
             "wait_seconds": wait_seconds,
+            "wait_time_minutes": wait_time_minutes,
             "assigned_service_id": existing_queue.assigned_service_id
         }
+        
+        # 如果状态是waiting，计算排队位置和预计等待时间
+        if existing_queue.status == "waiting":
+            # 计算排队位置
+            queue_position = db.query(CustomerServiceQueue).filter(
+                CustomerServiceQueue.status == "waiting",
+                CustomerServiceQueue.queued_at <= existing_queue.queued_at
+            ).count()
+            
+            # 计算预计等待时间
+            estimated_wait_time = calculate_estimated_wait_time(queue_position, db)
+            result["queue_position"] = queue_position
+            result["estimated_wait_time"] = estimated_wait_time  # 分钟
+        
+        return result
     
     # 创建新的排队记录
     from app.utils.time_utils import get_utc_time
@@ -3053,12 +3070,90 @@ def add_user_to_customer_service_queue(db: Session, user_id: str) -> dict:
     db.commit()
     db.refresh(new_queue)
     
+    # 计算排队位置和预计等待时间
+    queue_position = db.query(CustomerServiceQueue).filter(
+        CustomerServiceQueue.status == "waiting",
+        CustomerServiceQueue.queued_at <= new_queue.queued_at
+    ).count()
+    
+    estimated_wait_time = calculate_estimated_wait_time(queue_position, db)
+    
     return {
         "queue_id": new_queue.id,
         "status": "waiting",
-        "queued_at": new_queue.queued_at,
-        "wait_seconds": 0
+        "queued_at": new_queue.queued_at.isoformat() if hasattr(new_queue.queued_at, 'isoformat') else str(new_queue.queued_at),
+        "wait_seconds": 0,
+        "wait_time_minutes": 0,
+        "queue_position": queue_position,
+        "estimated_wait_time": estimated_wait_time  # 分钟
     }
+
+
+def calculate_estimated_wait_time(
+    queue_position: int,
+    db: Session
+) -> int:
+    """
+    计算预计等待时间（分钟）
+    使用移动平均处理时长，统一使用UTC时间
+    返回：至少1分钟，避免返回0
+    
+    单一权威实现：所有调用此函数的地方应统一引用此实现，避免重复定义
+    严禁在接口返回示例中内联简化版实现，必须统一调用此函数
+    """
+    from sqlalchemy import func
+    from app.models import CustomerService, CustomerServiceChat
+    from app.utils.time_utils import get_utc_time, to_utc
+    
+    # 获取最近100个已分配对话的平均处理时长
+    recent_chats = db.query(CustomerServiceChat).filter(
+        CustomerServiceChat.is_ended == 1,
+        CustomerServiceChat.ended_at.isnot(None),
+        CustomerServiceChat.assigned_at.isnot(None)
+    ).order_by(
+        CustomerServiceChat.ended_at.desc()
+    ).limit(100).all()
+    
+    if not recent_chats:
+        # 没有历史数据，使用保守的默认值（5分钟/人）
+        # 注意：这是函数内部的默认值计算，不是独立的实现
+        return max(1, queue_position * 5)
+    
+    # 计算平均处理时长（统一使用UTC）
+    total_duration = 0
+    count = 0
+    
+    for chat in recent_chats:
+        if chat.assigned_at and chat.ended_at:
+            # 统一转换为UTC后计算
+            assigned_utc = to_utc(chat.assigned_at)
+            ended_utc = to_utc(chat.ended_at)
+            duration = (ended_utc - assigned_utc).total_seconds() / 60
+            total_duration += duration
+            count += 1
+    
+    if count == 0:
+        # 没有有效数据，使用保守的默认值（5分钟/人）
+        # 注意：这是函数内部的默认值计算，不是独立的实现
+        return max(1, queue_position * 5)
+    
+    avg_duration = total_duration / count
+    
+    # 考虑当前客服负载
+    online_services = db.query(CustomerService).filter(
+        CustomerService.is_online == 1
+    ).count()
+    
+    if online_services == 0:
+        # 没有在线客服，等待时间更长（函数内部计算，不是独立实现）
+        return max(1, queue_position * 10)
+    
+    # 动态调整：根据在线客服数量和平均处理时长
+    load_factor = max(1.0, 5.0 / online_services)  # 客服越少，等待时间越长
+    estimated_time = queue_position * avg_duration * load_factor
+    
+    # 确保至少返回1分钟，避免返回0
+    return max(1, int(estimated_time))
 
 
 def get_user_queue_status(db: Session, user_id: str) -> dict:
@@ -3077,15 +3172,39 @@ def get_user_queue_status(db: Session, user_id: str) -> dict:
         return {"status": "not_in_queue"}
     
     wait_seconds = int((get_utc_time() - queue_entry.queued_at).total_seconds())
+    wait_time_minutes = wait_seconds // 60
     
-    return {
+    # 如果状态是waiting，计算排队位置和预计等待时间
+    estimated_wait_time = None
+    queue_position = None
+    
+    if queue_entry.status == "waiting":
+        # 计算排队位置（前面有多少人在等待）
+        queue_position = db.query(CustomerServiceQueue).filter(
+            CustomerServiceQueue.status == "waiting",
+            CustomerServiceQueue.queued_at <= queue_entry.queued_at
+        ).count()
+        
+        # 计算预计等待时间
+        estimated_wait_time = calculate_estimated_wait_time(queue_position, db)
+    
+    result = {
         "queue_id": queue_entry.id,
         "status": queue_entry.status,
-        "queued_at": queue_entry.queued_at,
+        "queued_at": queue_entry.queued_at.isoformat() if hasattr(queue_entry.queued_at, 'isoformat') else str(queue_entry.queued_at),
         "wait_seconds": wait_seconds,
+        "wait_time_minutes": wait_time_minutes,
         "assigned_service_id": queue_entry.assigned_service_id,
-        "assigned_at": queue_entry.assigned_at
+        "assigned_at": queue_entry.assigned_at.isoformat() if queue_entry.assigned_at and hasattr(queue_entry.assigned_at, 'isoformat') else (str(queue_entry.assigned_at) if queue_entry.assigned_at else None)
     }
+    
+    if queue_position is not None:
+        result["queue_position"] = queue_position
+    
+    if estimated_wait_time is not None:
+        result["estimated_wait_time"] = estimated_wait_time  # 分钟
+    
+    return result
 
 
 def end_customer_service_chat(

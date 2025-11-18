@@ -7,7 +7,6 @@ import logging
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from sqlalchemy.orm import with_for_update
 
 from app.models import (
     CustomerServiceChat,
@@ -17,8 +16,54 @@ from app.models import (
 )
 from app.utils.time_utils import get_utc_time
 from app import crud
+from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+# 导入Celery（如果可用）
+try:
+    from app.celery_app import celery_app
+    
+    @celery_app.task(name='app.customer_service_tasks.process_customer_service_queue_task')
+    def process_customer_service_queue_task():
+        """处理客服队列 - Celery任务包装"""
+        db = SessionLocal()
+        try:
+            return process_customer_service_queue(db)
+        finally:
+            db.close()
+    
+    @celery_app.task(name='app.customer_service_tasks.auto_end_timeout_chats_task')
+    def auto_end_timeout_chats_task():
+        """自动结束超时对话 - Celery任务包装"""
+        db = SessionLocal()
+        try:
+            return auto_end_timeout_chats(db, timeout_minutes=2)
+        finally:
+            db.close()
+    
+    @celery_app.task(name='app.customer_service_tasks.send_timeout_warnings_task')
+    def send_timeout_warnings_task():
+        """发送超时预警 - Celery任务包装"""
+        db = SessionLocal()
+        try:
+            return send_timeout_warnings(db, warning_minutes=1)
+        finally:
+            db.close()
+    
+    @celery_app.task(name='app.customer_service_tasks.cleanup_long_inactive_chats_task')
+    def cleanup_long_inactive_chats_task():
+        """清理长期无活动对话 - Celery任务包装"""
+        db = SessionLocal()
+        try:
+            return cleanup_long_inactive_chats(db, inactive_days=30)
+        finally:
+            db.close()
+    
+    CELERY_AVAILABLE = True
+except ImportError:
+    logger.warning("Celery未安装，将使用后台线程方式执行定时任务")
+    CELERY_AVAILABLE = False
 
 
 def process_customer_service_queue(db: Session) -> Dict[str, Any]:

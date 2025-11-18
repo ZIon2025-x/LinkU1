@@ -720,13 +720,16 @@ const MessagePage: React.FC = () => {
       formData.append('image', selectedImage);
       
       // 根据聊天类型构建上传URL
-      let uploadUrl = '/api/upload/image';
+      let uploadUrl: string;
       if (activeTaskId) {
-        // 任务聊天：传递task_id
+        // 任务聊天：使用通用上传接口，传递task_id
         uploadUrl = `/api/upload/image?task_id=${activeTaskId}`;
       } else if (isServiceMode && currentChat?.chat_id) {
-        // 客服聊天：传递chat_id
-        uploadUrl = `/api/upload/image?chat_id=${currentChat.chat_id}`;
+        // 客服聊天：使用专用文件上传接口（也支持图片）
+        uploadUrl = `/api/user/customer-service/chats/${currentChat.chat_id}/files`;
+      } else {
+        // 默认使用通用上传接口
+        uploadUrl = '/api/upload/image';
       }
       
       // 上传图片到服务器（使用api.post自动处理CSRF token）
@@ -738,11 +741,17 @@ const MessagePage: React.FC = () => {
       
       const uploadResult = uploadResponse.data;
       
-      if (!uploadResult.image_id) {
+      // 处理不同的响应格式（通用接口返回image_id，专用接口返回file_id）
+      let imageId: string;
+      if (uploadResult.image_id) {
+        // 通用接口返回格式
+        imageId = uploadResult.image_id;
+      } else if (uploadResult.file_id) {
+        // 专用接口返回格式
+        imageId = uploadResult.file_id;
+      } else {
         throw new Error('服务器未返回图片ID');
       }
-      
-      const imageId = uploadResult.image_id;
       
       // 发送包含图片ID的消息
       const messageContent = `[图片] ${imageId}`;
@@ -842,13 +851,16 @@ const MessagePage: React.FC = () => {
       formData.append('file', selectedFile);
       
       // 构建上传URL，根据当前聊天类型添加 task_id 或 chat_id
-      let uploadUrl = `${API_BASE_URL}/api/upload/file`;
+      let uploadUrl: string;
       if (activeTaskId) {
-        // 任务聊天：传递 task_id
-        uploadUrl += `?task_id=${activeTaskId}`;
+        // 任务聊天：使用通用上传接口，传递 task_id
+        uploadUrl = `${API_BASE_URL}/api/upload/file?task_id=${activeTaskId}`;
       } else if (currentChat?.chat_id) {
-        // 客服聊天：传递 chat_id
-        uploadUrl += `?chat_id=${currentChat.chat_id}`;
+        // 客服聊天：使用专用文件上传接口
+        uploadUrl = `${API_BASE_URL}/api/user/customer-service/chats/${currentChat.chat_id}/files`;
+      } else {
+        // 默认使用通用上传接口
+        uploadUrl = `${API_BASE_URL}/api/upload/file`;
       }
       
       // 上传文件到服务器
@@ -866,11 +878,15 @@ const MessagePage: React.FC = () => {
       
       const uploadResult = await uploadResponse.json();
       
-      if (!uploadResult.url) {
+      // 处理不同的响应格式
+      let fileUrl: string;
+      if (uploadResult.url) {
+        fileUrl = uploadResult.url;
+      } else if (uploadResult.file_url) {
+        fileUrl = uploadResult.file_url;
+      } else {
         throw new Error('服务器未返回文件URL');
       }
-      
-      const fileUrl = uploadResult.url;
       
       // 发送包含文件URL的消息
       const messageContent = `[文件] ${selectedFile.name} - ${fileUrl}`;
@@ -926,13 +942,16 @@ const MessagePage: React.FC = () => {
       formData.append('image', selectedImage);
       
       // 根据聊天类型构建上传URL
-      let uploadUrl = '/api/upload/image';
+      let uploadUrl: string;
       if (activeTaskId) {
-        // 任务聊天：传递task_id
+        // 任务聊天：使用通用上传接口，传递task_id
         uploadUrl = `/api/upload/image?task_id=${activeTaskId}`;
       } else if (isServiceMode && currentChat?.chat_id) {
-        // 客服聊天：传递chat_id
-        uploadUrl = `/api/upload/image?chat_id=${currentChat.chat_id}`;
+        // 客服聊天：使用专用文件上传接口（也支持图片）
+        uploadUrl = `/api/user/customer-service/chats/${currentChat.chat_id}/files`;
+      } else {
+        // 默认使用通用上传接口
+        uploadUrl = '/api/upload/image';
       }
       
       // 上传图片到服务器（使用api.post自动处理CSRF token）
@@ -944,11 +963,17 @@ const MessagePage: React.FC = () => {
       
       const uploadResult = uploadResponse.data;
       
-      if (!uploadResult.image_id) {
+      // 处理不同的响应格式（通用接口返回image_id，专用接口返回file_id）
+      let imageId: string;
+      if (uploadResult.image_id) {
+        // 通用接口返回格式
+        imageId = uploadResult.image_id;
+      } else if (uploadResult.file_id) {
+        // 专用接口返回格式
+        imageId = uploadResult.file_id;
+      } else {
         throw new Error('服务器未返回图片ID');
       }
-      
-      const imageId = uploadResult.image_id;
       
       // 发送包含图片ID的消息
       const messageContent = `[图片] ${imageId}`;

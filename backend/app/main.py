@@ -33,6 +33,7 @@ from app.secure_auth_routes import secure_auth_router
 # 旧的客服认证路由已删除，使用新的独立认证系统
 # 旧的管理员认证路由已删除，使用新的独立认证系统
 from app.separate_auth_routes import router as separate_auth_router
+from app.cs_auth_routes import cs_auth_router
 from app.csrf_routes import router as csrf_router
 from app.rate_limit_routes import router as rate_limit_router
 from app.security_monitoring_routes import router as security_monitoring_router
@@ -146,6 +147,7 @@ app.include_router(secure_auth_router, tags=["安全认证"]) # 使用新的安�
 # 旧的客服认证路由已删除，使用新的独立认证系统
 # 旧的管理员认证路由已删除，使用新的独立认证系统
 app.include_router(separate_auth_router, prefix="/api/auth", tags=["独立认证系统"])  # 新增独立认证系统
+app.include_router(cs_auth_router, tags=["客服认证"])  # 客服认证路由
 app.include_router(csrf_router, tags=["CSRF保护"])
 app.include_router(rate_limit_router, tags=["速率限制"])
 

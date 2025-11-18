@@ -20,8 +20,8 @@ export const API_ENDPOINTS = {
   LOGOUT: '/api/secure-auth/logout',
   
   // 客服认证
-  CS_LOGIN: '/api/cs/login',
-  CS_REFRESH: '/api/cs/refresh',
+  CS_LOGIN: '/api/customer-service/login',
+  CS_REFRESH: '/api/customer-service/refresh',
   
   // 管理员认证
   ADMIN_LOGIN: '/api/admin/login',
@@ -55,6 +55,9 @@ export const API_ENDPOINTS = {
   
   // 文件上传
   UPLOAD_IMAGE: '/api/upload/image',
+  UPLOAD_FILE: '/api/upload/file',
+  // 客服文件上传（专用接口）
+  CS_UPLOAD_FILE: (chatId: string) => `/api/user/customer-service/chats/${chatId}/files`,
   
   // WebSocket
   WS_CHAT: (userId: string) => `/ws/chat/${userId}`,
