@@ -25,6 +25,7 @@ import { useTaskSorting } from '../hooks/useTaskSorting';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import { Grid, GridImperativeAPI } from 'react-window';
 import { injectTasksStyles } from '../styles/Tasks.styles';
+import styles from './Tasks.module.css';
 
 // 配置dayjs插件
 dayjs.extend(utc);
@@ -1242,10 +1243,7 @@ const Tasks: React.FC = () => {
   }, [filteredTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t]);
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: '#f5f5f5'
-    }}>
+    <div className={styles.pageContainer}>
       {/* SEO优化 - 添加canonical URL防止重复索引 */}
       <SEOHead 
         title={t('tasks.pageTitle')}
@@ -1258,99 +1256,29 @@ const Tasks: React.FC = () => {
       />
 
       {/* 顶部导航栏 - 使用汉堡菜单 */}
-      <header style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        background: '#fff',
-        zIndex: 100,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        padding: '12px 16px'
-      }}>
-        <div className="header-container" style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          gap: '8px',
-          minHeight: '44px'
-        }}>
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
           {/* Logo和位置信息 */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            flexShrink: 0
-        }}>
+          <div className={styles.headerLeft}>
           {/* Logo */}
             <div 
-            className="header-logo"
-              style={{
-                fontWeight: 'bold',
-                fontSize: '24px',
-                color: '#6EC1E4',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                padding: '4px 8px',
-              borderRadius: '8px',
-              flexShrink: 0
-              }}
+              className={styles.logo}
               onClick={() => navigate('/')}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#4A90E2';
-                e.currentTarget.style.background = 'rgba(110, 193, 228, 0.1)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#6EC1E4';
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
             >
               Link²Ur
           </div>
 
           {/* 位置信息 */}
           <div 
-            className="location-container"
-            style={{
-              position: 'relative',
-              flexShrink: 0
-            }}
+            className={styles.locationContainer}
             data-location-dropdown
           >
             <div 
               onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                  gap: '6px',
-                color: '#6b7280',
-                fontSize: '14px',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                  borderRadius: '8px',
-                transition: 'all 0.2s ease',
-                  background: showLocationDropdown ? '#f3f4f6' : 'transparent',
-                  border: '1px solid #e5e7eb'
-              }}
-              onMouseEnter={(e) => {
-                if (!showLocationDropdown) {
-                    e.currentTarget.style.background = '#f8fafc';
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showLocationDropdown) {
-                  e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                }
-              }}
+              className={`${styles.locationButton} ${showLocationDropdown ? styles.locationButtonActive : ''}`}
             >
-                <span style={{ fontSize: '16px' }}>📍</span>
-                <span style={{ fontWeight: '500' }}>
+              <span className={styles.locationIcon}>📍</span>
+              <span className={styles.locationText}>
                   {filters.city === 'all' ? t('home.allCities') : userLocation}
                 </span>
               <span style={{
@@ -1363,46 +1291,22 @@ const Tasks: React.FC = () => {
             {/* 位置下拉菜单 */}
             {showLocationDropdown && (
               <div 
-                className="location-dropdown"
+                className={styles.locationDropdown}
                 style={{
                   position: isMobile ? 'fixed' : 'absolute',
-                  top: isMobile ? undefined : '100%',
+                  top: isMobile ? undefined : 'calc(100% + 8px)',
                   bottom: isMobile ? 'auto' : undefined,
                   left: isMobile ? undefined : '0',
                   right: isMobile ? undefined : 'auto',
-                  background: '#fff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                   zIndex: 99999,
-                  marginTop: isMobile ? '0' : '4px',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  minWidth: '150px',
-                  width: 'auto',
-                  maxWidth: '200px',
-                  boxSizing: 'border-box'
+                  maxHeight: '400px'
                 }}
-                ref={locationDropdownRef}>
+                ref={locationDropdownRef}
+              >
                 <div
                   onClick={() => handleLocationChange('all')}
-                  style={{
-                    padding: '12px 16px',
-                    paddingRight: '20px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    color: '#374151',
-                    borderBottom: '1px solid #f3f4f6',
-                    transition: 'background 0.2s ease',
-                    fontWeight: '600'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f9fafb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
+                  className={styles.locationDropdownItem}
+                  style={{ fontWeight: '600' }}
                 >
                   {t('home.allCities')}
                 </div>
@@ -1410,21 +1314,7 @@ const Tasks: React.FC = () => {
                   <div
                     key={cityName}
                     onClick={() => handleLocationChange(cityName)}
-                    style={{
-                      padding: '12px 16px',
-                      paddingRight: '20px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      color: '#374151',
-                      borderBottom: '1px solid #f3f4f6',
-                      transition: 'background 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f9fafb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
+                    className={styles.locationDropdownItem}
                   >
                     {cityName}
                   </div>
@@ -1435,7 +1325,7 @@ const Tasks: React.FC = () => {
           </div>
 
           {/* 通知按钮和汉堡菜单 */}
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <div className={styles.headerRight}>
             <NotificationButton
               user={user}
               unreadCount={unreadCount}
@@ -1459,55 +1349,18 @@ const Tasks: React.FC = () => {
       </header>
 
       {/* 主要内容区域 */}
-      <div style={{
-        marginTop: '80px',
-        padding: '16px'
-      }}>
+      <div className={styles.mainContent}>
         {/* 浮空双语选择按钮 */}
         <div 
+          className={`${styles.languageSwitcherContainer} ${isMobile ? styles.languageSwitcherContainerMobile : ''}`}
           style={{
-            position: 'fixed',
-            bottom: isMobile ? '20px' : '30px',
-            right: isMobile ? '16px' : 'max(16px, calc((100vw - 1200px) / 2 + 16px))',
-            zIndex: 1000,
-            width: 'auto'
+            right: isMobile ? '16px' : 'max(16px, calc((100vw - 1200px) / 2 + 16px))'
           }}
           data-language-dropdown
         >
           <div 
             onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              background: showLanguageDropdown ? '#f3f4f6' : '#fff',
-              border: '1px solid #e5e7eb',
-              boxShadow: showLanguageDropdown 
-                ? '0 4px 16px rgba(0,0,0,0.15)' 
-                : '0 4px 12px rgba(0,0,0,0.12)',
-              transform: showLanguageDropdown ? 'translateY(-2px) scale(1.05)' : 'translateY(0) scale(1)'
-            }}
-            onMouseEnter={(e) => {
-              if (!showLanguageDropdown) {
-                e.currentTarget.style.background = '#fff';
-                e.currentTarget.style.borderColor = '#d1d5db';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
-                e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!showLanguageDropdown) {
-                e.currentTarget.style.background = '#fff';
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              }
-            }}
+            className={`${styles.languageButton} ${showLanguageDropdown ? styles.languageButtonActive : ''}`}
             title={language === 'zh' ? 'English' : '中文'}
           >
             <span style={{ fontSize: '24px' }}>🌐</span>
@@ -1515,46 +1368,16 @@ const Tasks: React.FC = () => {
           
           {/* 语言选择下拉菜单 */}
           {showLanguageDropdown && (
-            <div 
-              style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: '0',
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '12px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)',
-                zIndex: 9999,
-                marginBottom: '6px',
-                minWidth: '120px',
-                transform: 'translateY(0)',
-                animation: 'fadeInUp 0.2s ease-out',
-                backdropFilter: 'blur(10px)'
-              }}>
+            <div className={styles.languageDropdown}>
               <div
                 onClick={() => {
                   setLanguage('zh', navigateRaw);
                   setShowLanguageDropdown(false);
                 }}
+                className={`${styles.languageOption} ${language === 'zh' ? styles.languageOptionActive : ''}`}
                 style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
                   color: language === 'zh' ? '#1890ff' : '#374151',
-                  borderBottom: '1px solid #f3f4f6',
-                  transition: 'background 0.2s ease',
-                  fontWeight: language === 'zh' ? '600' : '400',
                   background: language === 'zh' ? '#f0f9ff' : 'transparent'
-                }}
-                onMouseEnter={(e) => {
-                  if (language !== 'zh') {
-                    e.currentTarget.style.background = '#f9fafb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (language !== 'zh') {
-                    e.currentTarget.style.background = 'transparent';
-                  }
                 }}
               >
                 中文
@@ -1564,25 +1387,11 @@ const Tasks: React.FC = () => {
                   setLanguage('en', navigateRaw);
                   setShowLanguageDropdown(false);
                 }}
+                className={`${styles.languageOption} ${language === 'en' ? styles.languageOptionActive : ''}`}
                 style={{
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
                   color: language === 'en' ? '#1890ff' : '#374151',
-                  transition: 'background 0.2s ease',
-                  fontWeight: language === 'en' ? '600' : '400',
                   background: language === 'en' ? '#f0f9ff' : 'transparent',
                   borderRadius: '0 0 12px 12px'
-                }}
-                onMouseEnter={(e) => {
-                  if (language !== 'en') {
-                    e.currentTarget.style.background = '#f9fafb';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (language !== 'en') {
-                    e.currentTarget.style.background = 'transparent';
-                  }
                 }}
               >
                 English
@@ -1591,37 +1400,13 @@ const Tasks: React.FC = () => {
           )}
         </div>
         
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
+        <div className={styles.contentWrapper}>
           {/* SEO优化：可见的H1标签 */}
-          <h1 style={{ 
-            position: 'absolute',
-            top: '-100px',
-            left: '-100px',
-            width: '1px',
-            height: '1px',
-            padding: '0',
-            margin: '0',
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: '0',
-            fontSize: '1px',
-            color: 'transparent',
-            background: 'transparent'
-          }}>
+          <h1 className={styles.seoH1}>
             任务大厅 - Link²Ur
           </h1>
           {/* 分类图标行 */}
-          <div className="category-section" style={{
-            background: 'transparent',
-            borderRadius: '16px',
-            padding: '20px',
-            marginBottom: '20px',
-            position: 'relative'
-          }}>
+          <div className={styles.categorySection}>
             <CategoryIcons
               taskTypes={TASK_TYPES}
               getTaskTypeLabel={getTaskTypeLabel}
@@ -1630,17 +1415,7 @@ const Tasks: React.FC = () => {
           </div>
 
           {/* 排序按钮和搜索框行 */}
-          <div style={{
-            background: '#fff',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap'
-          }}>
+          <div className={styles.sortSearchSection}>
             {/* 排序控制区域 - 使用 SortControls 组件 */}
             <SortControls
               loadTasks={loadTasks}
@@ -1652,53 +1427,16 @@ const Tasks: React.FC = () => {
             />
 
             {/* 搜索框区域 */}
-            <div className="search-section" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexShrink: 0,
-              minWidth: '300px'
-            }}>
-              <div className="search-input-container" style={{
-                position: 'relative',
-                minWidth: '250px',
-                maxWidth: '400px'
-              }}>
+            <div className={styles.searchSection}>
+              <div className={styles.searchInputContainer}>
                 <input
                   type="text"
                   placeholder={t('tasks.search.placeholder')}
                   value={filters.keyword}
                   onChange={(e) => filters.setKeyword(e.target.value)}
-                  style={{ 
-                    width: '100%',
-                    padding: '8px 12px 8px 35px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    background: '#f9fafb',
-                    outline: 'none',
-                    transition: 'all 0.3s ease',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.background = '#fff';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#e5e7eb';
-                    e.target.style.background = '#f9fafb';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  className={styles.searchInput}
                 />
-                <div style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: '#6b7280',
-                  fontSize: '16px'
-                }}>
+                <div className={styles.searchIcon}>
                   🔍
                 </div>
               </div>
@@ -1706,40 +1444,19 @@ const Tasks: React.FC = () => {
           </div>
 
           {/* 自动取消过期任务提示 */}
-          <div style={{
-            background: 'linear-gradient(135deg, #fff3cd, #ffeaa7)',
-            border: '1px solid #ffc107',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-          }}>
-            <span style={{fontSize: '20px'}}>⏰</span>
-            <span style={{color: '#856404', fontSize: '14px', fontWeight: '500'}}>
+          <div className={styles.systemNotice}>
+            <span className={styles.systemNoticeIcon}>⏰</span>
+            <span className={styles.systemNoticeText}>
               {t('tasks.systemNotice')}
             </span>
           </div>
 
           {/* 任务统计信息 */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '20px',
-            marginBottom: '12px',
-            padding: '0 4px'
-          }}>
-            <div style={{
-              fontSize: '14px',
-              color: '#6b7280',
-              fontWeight: '500'
-            }}>
-              {t('tasks.search.found')} <span style={{ color: '#3b82f6', fontWeight: '600' }}>{total}</span> {t('tasks.search.tasks')}
+          <div className={styles.taskStats}>
+            <div className={styles.taskStatsText}>
+              {t('tasks.search.found')} <span className={styles.taskStatsCount}>{total}</span> {t('tasks.search.tasks')}
               {filters.debouncedKeyword && (
-                <span style={{ color: '#9ca3af', marginLeft: '8px' }}>
+                <span className={styles.taskStatsSubtext}>
                   ({t('tasks.search.total')} {tasks.length} {t('tasks.search.tasks')})
                 </span>
               )}
@@ -1749,26 +1466,18 @@ const Tasks: React.FC = () => {
 
           {/* 任务列表 - 动态使用虚拟滚动 */}
           {loading ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '80px 20px',
-              color: '#6b7280'
-            }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+            <div className={styles.loadingContainer}>
+              <div className={styles.loadingIcon}>⏳</div>
               <div>加载中...</div>
             </div>
           ) : filteredTasks.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '80px 20px',
-              color: '#6b7280'
-            }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+            <div className={styles.emptyContainer}>
+              <div className={styles.emptyIcon}>📝</div>
               <div>
                 {tasks.length === 0 ? t('tasks.search.noTasks') : t('tasks.search.noMatchingTasks')}
               </div>
               {tasks.length > 0 && (
-                <div style={{ fontSize: '14px', color: '#999', marginTop: '8px' }}>
+                <div className={styles.emptySubtext}>
                   {t('tasks.search.tryAdjustFilter')}
                 </div>
               )}
@@ -1777,10 +1486,8 @@ const Tasks: React.FC = () => {
             // 虚拟滚动模式（任务数 > 50）- 使用 react-window Grid
             <div
               ref={gridContainerRef}
-              style={{
-                height: containerHeight,
-                width: '100%'
-              }}
+              className={styles.virtualGridContainer}
+              style={{ height: containerHeight }}
             >
               {rowCount > 0 && columnCount > 0 && (
                 <Grid
@@ -1799,10 +1506,8 @@ const Tasks: React.FC = () => {
             </div>
           ) : (
             // 普通模式（任务数 <= 50）
-            <div className="tasks-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '170px' : '300px'}, 1fr))`,
-              gap: '16px'
+            <div className={styles.tasksGrid} style={{
+              gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? '170px' : '300px'}, 1fr))`
             }}>
               {loading ? (
                 <div style={{ 
@@ -1923,106 +1628,23 @@ const Tasks: React.FC = () => {
       
       {/* 申请任务弹窗 */}
       {showApplyModal && selectedTaskForApply && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}
-        onClick={() => {
-          setShowApplyModal(false);
-          setSelectedTaskForApply(null);
-          setApplyMessage('');
-          setNegotiatedPrice(undefined);
-        }}
-        >
-          <div style={{
-            background: '#fff',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        <div 
+          className={styles.applyModalOverlay}
+          onClick={() => {
+            setShowApplyModal(false);
+            setSelectedTaskForApply(null);
+            setApplyMessage('');
+            setNegotiatedPrice(undefined);
           }}
-          onClick={(e) => e.stopPropagation()}
+        >
+          <div 
+            className={styles.applyModalContent}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 600 }}>申请任务</h3>
+            <h3 className={styles.applyModalTitle}>申请任务</h3>
             
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#374151'
-              }}>
-                申请留言（可选）
-              </label>
-              <textarea
-                value={applyMessage}
-                onChange={(e) => setApplyMessage(e.target.value)}
-                placeholder={t('tasks.apply.applicationMessagePlaceholder')}
-                style={{
-                  width: '100%',
-                  minHeight: '100px',
-                  padding: '12px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                  outline: 'none',
-                  transition: 'border-color 0.2s ease'
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#374151',
-                cursor: 'pointer'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={isNegotiateChecked}
-                  onChange={(e) => {
-                    setIsNegotiateChecked(e.target.checked);
-                    if (e.target.checked) {
-                      // 如果勾选，设置默认值为任务金额
-                      const task = tasks.find(t => t.id === selectedTaskForApply);
-                      const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
-                      setNegotiatedPrice(defaultPrice);
-                    } else {
-                      setNegotiatedPrice(undefined);
-                    }
-                  }}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <span>{t('tasks.apply.wantToNegotiate')}</span>
-              </label>
-              
-              {isNegotiateChecked && (
-              <div style={{ marginTop: '12px' }}>
+            <div className={styles.applyModalForm}>
+              <div>
                 <label style={{
                   display: 'block',
                   marginBottom: '8px',
@@ -2030,94 +1652,83 @@ const Tasks: React.FC = () => {
                   fontWeight: 600,
                   color: '#374151'
                 }}>
-                  {t('tasks.apply.negotiationAmount')}
+                  申请留言（可选）
                 </label>
-                <input
-                  type="number"
-                  value={negotiatedPrice !== undefined ? negotiatedPrice : ''}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                    setNegotiatedPrice(value);
-                  }}
-                  placeholder={t('tasks.apply.negotiationAmountPlaceholder')}
-                  min="0.01"
-                  step="0.01"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#3b82f6';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                  }}
-                />
+              <textarea
+                value={applyMessage}
+                onChange={(e) => setApplyMessage(e.target.value)}
+                placeholder={t('tasks.apply.applicationMessagePlaceholder')}
+                className={styles.applyModalTextarea}
+              />
               </div>
-              )}
-            </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end'
-            }}>
-              <button
-                onClick={() => {
-                  setShowApplyModal(false);
-                  setSelectedTaskForApply(null);
-                  setApplyMessage('');
-                  setNegotiatedPrice(undefined);
-                }}
-                style={{
-                  padding: '12px 24px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#e5e7eb';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f3f4f6';
-                }}
-              >
-                {t('tasks.apply.cancel')}
-              </button>
-              <button
-                onClick={handleSubmitApplication}
-                style={{
-                  padding: '12px 24px',
-                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {t('tasks.apply.submitApplication')}
-              </button>
+              <div>
+                <label className={styles.applyModalCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={isNegotiateChecked}
+                    onChange={(e) => {
+                      setIsNegotiateChecked(e.target.checked);
+                      if (e.target.checked) {
+                        // 如果勾选，设置默认值为任务金额
+                        const task = tasks.find(t => t.id === selectedTaskForApply);
+                        const defaultPrice = task?.agreed_reward ?? task?.base_reward ?? task?.reward;
+                        setNegotiatedPrice(defaultPrice);
+                      } else {
+                        setNegotiatedPrice(undefined);
+                      }
+                    }}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span>{t('tasks.apply.wantToNegotiate')}</span>
+                </label>
+                
+                {isNegotiateChecked && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151'
+                  }}>
+                    {t('tasks.apply.negotiationAmount')}
+                  </label>
+                  <input
+                    type="number"
+                    value={negotiatedPrice !== undefined ? negotiatedPrice : ''}
+                    onChange={(e) => {
+                      const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                      setNegotiatedPrice(value);
+                    }}
+                    placeholder={t('tasks.apply.negotiationAmountPlaceholder')}
+                    min="0.01"
+                    step="0.01"
+                    className={styles.applyModalInput}
+                  />
+                </div>
+                )}
+              </div>
+
+              <div className={styles.applyModalButtons}>
+                <button
+                  onClick={() => {
+                    setShowApplyModal(false);
+                    setSelectedTaskForApply(null);
+                    setApplyMessage('');
+                    setNegotiatedPrice(undefined);
+                  }}
+                  className={`${styles.applyModalButton} ${styles.applyModalButtonCancel}`}
+                >
+                  {t('tasks.apply.cancel')}
+                </button>
+                <button
+                  onClick={handleSubmitApplication}
+                  className={`${styles.applyModalButton} ${styles.applyModalButtonSubmit}`}
+                >
+                  {t('tasks.apply.submitApplication')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
