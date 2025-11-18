@@ -1017,7 +1017,7 @@ export const getCustomerServiceMessages = async (chatId: string) => {
 };
 
 export const markCustomerServiceMessagesRead = async (chatId: string) => {
-  const response = await api.post(`/api/customer-service/mark-messages-read/${chatId}`);
+  const response = await api.post(`/api/customer-service/chats/${chatId}/mark-read`);
   return response.data;
 };
 
@@ -1095,12 +1095,6 @@ export const rateCustomerService = async (chatId: string, rating: number, commen
 
 export const getMyCustomerServiceSessions = async () => {
   const res = await api.get('/api/user/customer-service/chats');
-  return res.data;
-};
-
-// 客服改名接口
-export const updateCustomerServiceName = async (name: string) => {
-  const res = await api.patch('/api/customer-service/update-name', name);
   return res.data;
 };
 

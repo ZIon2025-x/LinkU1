@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import { API_BASE_URL, WS_BASE_URL, API_ENDPOINTS } from '../config';
-import api, { updateCustomerServiceName, getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
+import api, { getCustomerServiceSessions, getCustomerServiceMessages, getCustomerServiceStatus, setCustomerServiceOnline, setCustomerServiceOffline, markCustomerServiceMessagesRead } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -186,11 +186,6 @@ const CustomerService: React.FC = () => {
   };
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // 客服改名相关状态
-  const [showNameEditModal, setShowNameEditModal] = useState(false);
-  const [newServiceName, setNewServiceName] = useState('');
-  const [currentServiceName, setCurrentServiceName] = useState('');
-  
   // 新用户连接弹窗状态
   const [showNewUserNotification, setShowNewUserNotification] = useState(false);
   const [newUserInfo, setNewUserInfo] = useState<{name: string, id: string} | null>(null);
@@ -224,7 +219,6 @@ const CustomerService: React.FC = () => {
     checkAdminStatus();
     loadData();
     loadCustomerServiceStatus();
-    loadCurrentServiceName();
     initializeTimezone();
   }, []);
 
@@ -1317,42 +1311,6 @@ const CustomerService: React.FC = () => {
     }
   };
 
-  // 客服改名功能
-  const handleUpdateServiceName = async () => {
-    if (!newServiceName.trim()) {
-      message.warning('请输入新的客服名字');
-      return;
-    }
-    
-    try {
-      await updateCustomerServiceName(newServiceName);
-      setCurrentServiceName(newServiceName);
-      setShowNameEditModal(false);
-      setNewServiceName('');
-      message.success('客服名字更新成功！');
-    } catch (error) {
-      console.error('更新客服名字失败:', error);
-      message.error('更新客服名字失败，请重试');
-    }
-  };
-
-  const openNameEditModal = () => {
-    setNewServiceName(currentServiceName);
-    setShowNameEditModal(true);
-  };
-
-  // 获取当前客服名字
-  const loadCurrentServiceName = async () => {
-    try {
-      const data = await getCustomerServiceStatus();
-      if (data.service && data.service.name) {
-        setCurrentServiceName(data.service.name);
-      }
-    } catch (error) {
-      console.error('获取客服名字失败:', error);
-    }
-  };
-
   const renderDashboard = () => (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -1432,25 +1390,6 @@ const CustomerService: React.FC = () => {
             >
               🔧 测试WebSocket连接
             </button>
-            
-            <div className="name-update-section">
-              <div className="input-group">
-                <input
-                  type="text"
-                  value={newServiceName}
-                  onChange={(e) => setNewServiceName(e.target.value)}
-                  placeholder="输入新客服姓名"
-                  className="name-input"
-                />
-                <button
-                  onClick={handleUpdateServiceName}
-                  className="update-name-btn"
-                >
-                  <span className="btn-icon">✏️</span>
-                  <span className="btn-text">更新</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2541,24 +2480,6 @@ const CustomerService: React.FC = () => {
             onOpenModal={() => setShowNotificationModal(true)}
           />
           
-          {/* 客服改名按钮 */}
-          <button
-            onClick={openNameEditModal}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 6,
-              border: '1px solid #1890ff',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
-              background: '#fff',
-              color: '#1890ff',
-              transition: 'all 0.3s'
-            }}
-          >
-            修改客服名字
-          </button>
-          
           <button
             onClick={handleLogout}
             style={{
@@ -2801,43 +2722,6 @@ const CustomerService: React.FC = () => {
                 拒绝
               </button>
               <button onClick={() => setSelectedCancelRequest(null)} className="btn-secondary">
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 客服改名弹窗 */}
-      {showNameEditModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>修改客服名字</h3>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>
-                当前名字: {currentServiceName || '未设置'}
-              </label>
-              <input
-                type="text"
-                value={newServiceName}
-                onChange={(e) => setNewServiceName(e.target.value)}
-                placeholder="请输入新的客服名字"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #d9d9d9',
-                  fontSize: 14,
-                  outline: 'none',
-                  transition: 'border-color 0.2s'
-                }}
-              />
-            </div>
-            <div className="modal-actions">
-              <button onClick={handleUpdateServiceName} className="btn-primary">
-                确认修改
-              </button>
-              <button onClick={() => setShowNameEditModal(false)} className="btn-secondary">
                 取消
               </button>
             </div>
