@@ -3015,8 +3015,18 @@ def cleanup_old_ended_chats(db: Session, service_id: str) -> int:
     return 0
 
 
-def end_customer_service_chat(db: Session, chat_id: str) -> bool:
-    """结束客服对话，并清理该聊天的所有图片和文件"""
+def end_customer_service_chat(
+    db: Session, 
+    chat_id: str,
+    reason: str = None,
+    ended_by: str = None,
+    ended_type: str = None,
+    comment: str = None
+) -> bool:
+    """
+    结束客服对话，并清理该聊天的所有图片和文件
+    支持记录结束原因、结束者、结束类型和备注
+    """
     from app.models import CustomerServiceChat
     import logging
     
@@ -3030,9 +3040,27 @@ def end_customer_service_chat(db: Session, chat_id: str) -> bool:
     if not chat:
         return False
 
+    if chat.is_ended == 1:
+        # 已经结束，避免重复结束
+        return True
+
     chat.is_ended = 1
     chat.ended_at = get_utc_time()
+    # 记录结束原因信息
+    if reason:
+        chat.ended_reason = reason
+    if ended_by:
+        chat.ended_by = ended_by
+    if ended_type:
+        chat.ended_type = ended_type
+    if comment:
+        chat.ended_comment = comment
     db.commit()
+    
+    # 记录审计日志
+    logger.info(
+        f"Chat {chat_id} ended: reason={reason}, type={ended_type}, by={ended_by}"
+    )
 
     # 清理该聊天的所有图片和文件
     from app.image_cleanup import delete_chat_images_and_files

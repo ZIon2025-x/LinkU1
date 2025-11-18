@@ -271,9 +271,10 @@ def run_migrations(engine: Engine) -> bool:
     
     # 定义迁移脚本执行顺序
     # 注意：之前的迁移脚本已经执行过，不再重复执行
-    # 只保留新的性能优化索引迁移
+    # 只保留新的客服功能相关迁移
     migration_files = [
-        "add_performance_indexes.sql",  # 数据库性能优化索引（pg_trgm、复合索引、conversation_key等）
+        "add_customer_service_fields.sql",  # 客服功能字段扩展（结束原因、消息状态等）
+        "add_customer_service_queue.sql",  # 客服排队系统表
     ]
     
     total_executed = 0

@@ -872,7 +872,7 @@ const CustomerService: React.FC = () => {
   // 检查对话超时状态
   const checkChatTimeoutStatus = async (chatId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chat-timeout-status/${chatId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chats/${chatId}/timeout-status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -901,7 +901,7 @@ const CustomerService: React.FC = () => {
   // 超时结束对话
   const timeoutEndChat = async (chatId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/timeout-end-chat/${chatId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/customer-service/chats/${chatId}/timeout-end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

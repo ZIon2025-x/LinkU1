@@ -800,7 +800,7 @@ const MessagePage: React.FC = () => {
           .find(row => row.startsWith('csrf_token='))
           ?.split('=')[1];
           
-        const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
+        const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${currentChat.chat_id}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1132,7 +1132,7 @@ const MessagePage: React.FC = () => {
             .find(row => row.startsWith('csrf_token='))
             ?.split('=')[1];
             
-          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChat.chat_id}/send-message`, {
+          const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${currentChat.chat_id}/messages`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1703,7 +1703,7 @@ const MessagePage: React.FC = () => {
         if (chatData.chat && chatData.chat.is_ended === 0) {
           // 对话未结束，验证对话是否仍然有效
           try {
-            const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${chatData.chat.chat_id}/messages`, {
               credentials: 'include'  // 使用Cookie认证
             });
             
@@ -2674,7 +2674,7 @@ const MessagePage: React.FC = () => {
     if (isServiceMode && currentChatId && currentChat && currentChat.is_ended === 0) {
       const checkChatStatus = async () => {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${currentChatId}`, {
+          const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${currentChatId}/messages`, {
             credentials: 'include'
           });
           
@@ -2719,7 +2719,7 @@ const MessagePage: React.FC = () => {
       
       // 如果有chatId，加载特定对话的聊天记录（客服聊天）
       if (chatId) {
-        const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatId}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${chatId}/messages`, {
           credentials: 'include'  // 使用Cookie认证
         });
         
@@ -2969,7 +2969,7 @@ const MessagePage: React.FC = () => {
         if (chatData.chat.is_ended === 0) {
           // 对话未结束，验证对话是否仍然有效
           try {
-            const response = await fetch(`${API_BASE_URL}/api/users/customer-service/chat/${chatData.chat.chat_id}/messages`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${chatData.chat.chat_id}/messages`, {
               credentials: 'include'  // 使用Cookie认证
             });
             
@@ -3164,7 +3164,7 @@ const MessagePage: React.FC = () => {
     }
     
     try {
-      const response = await api.post(`/api/users/customer-service/end-chat/${currentChatId}`);
+      const response = await api.post(`/api/user/customer-service/chats/${currentChatId}/end`);
       
       // 显示系统消息
       const endMessage: Message = {
@@ -3277,7 +3277,7 @@ const MessagePage: React.FC = () => {
       }
 
       // 使用 api.post 自动包含 CSRF token
-      await api.post(`/api/users/customer-service/rate/${ratingChatId}`, {
+      await api.post(`/api/user/customer-service/chats/${ratingChatId}/rate`, {
         rating: rating,
         comment: finalComment
       });

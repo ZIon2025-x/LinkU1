@@ -415,6 +415,11 @@ class CustomerServiceChat(Base):
     user_rating = Column(Integer, nullable=True)  # 用户评分 (1-5)
     user_comment = Column(Text, nullable=True)  # 用户评价内容
     rated_at = Column(DateTime(timezone=True), nullable=True)  # 评分时间
+    # 新增字段：结束对话原因追踪
+    ended_reason = Column(String(32), nullable=True)  # 结束原因: timeout, user_ended, service_ended, auto_cleanup
+    ended_by = Column(String(32), nullable=True)  # 结束者: user_id, service_id, system
+    ended_type = Column(String(32), nullable=True)  # 结束类型: user_inactive, service_inactive, manual, auto
+    ended_comment = Column(Text, nullable=True)  # 结束备注（可选）
 
 
 class CustomerServiceMessage(Base):
@@ -429,6 +434,24 @@ class CustomerServiceMessage(Base):
     is_read = Column(Integer, default=0)  # 是否已读 (0: 未读, 1: 已读)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     image_id = Column(String(100), nullable=True)  # 私密图片ID
+    # 新增字段：消息状态追踪
+    status = Column(String(20), default="sending")  # 消息状态: sending, sent, delivered, read
+    sent_at = Column(DateTime(timezone=True), nullable=True)  # 发送时间
+    delivered_at = Column(DateTime(timezone=True), nullable=True)  # 送达时间
+    read_at = Column(DateTime(timezone=True), nullable=True)  # 已读时间
+
+
+class CustomerServiceQueue(Base):
+    """客服排队系统模型"""
+    __tablename__ = "customer_service_queue"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(20), nullable=False)  # 用户ID
+    status = Column(String(20), default="waiting")  # 状态: waiting, assigned, cancelled
+    queued_at = Column(DateTime(timezone=True), default=get_utc_time)  # 排队时间
+    assigned_service_id = Column(String(20), nullable=True)  # 分配的客服ID
+    assigned_at = Column(DateTime(timezone=True), nullable=True)  # 分配时间
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)  # 取消时间
+    version = Column(Integer, default=0)  # 版本号，用于乐观锁
 
 
 # 数据库索引优化
@@ -478,6 +501,14 @@ Index("ix_customer_service_chats_last_message_at", CustomerServiceChat.last_mess
 Index("ix_customer_service_messages_chat_id", CustomerServiceMessage.chat_id)
 Index("ix_customer_service_messages_sender_id", CustomerServiceMessage.sender_id)
 Index("ix_customer_service_messages_created_at", CustomerServiceMessage.created_at)
+Index("ix_customer_service_messages_status", CustomerServiceMessage.status)
+Index("ix_customer_service_messages_chat_status", CustomerServiceMessage.chat_id, CustomerServiceMessage.status)
+
+# 客服排队表索引
+Index("ix_customer_service_queue_user_id", CustomerServiceQueue.user_id)
+Index("ix_customer_service_queue_status", CustomerServiceQueue.status)
+Index("ix_customer_service_queue_queued_at", CustomerServiceQueue.queued_at)
+Index("ix_customer_service_queue_status_queued_at", CustomerServiceQueue.status, CustomerServiceQueue.queued_at)
 
 # 复合索引（用于复杂查询优化）
 Index("ix_tasks_poster_status", Task.poster_id, Task.status)

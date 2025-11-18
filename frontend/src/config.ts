@@ -40,15 +40,18 @@ export const API_ENDPOINTS = {
   // 消息相关
   MESSAGES: '/api/users/messages',
   SEND_MESSAGE: '/api/users/messages/send',
-  CUSTOMER_SERVICE_MESSAGE: '/api/users/customer-service/messages/send',
+  CUSTOMER_SERVICE_MESSAGE: '/api/user/customer-service/chats/{chatId}/messages',
   
-  // 客服相关
-  CS_CHATS: '/api/users/customer-service/chats',
-  CS_MESSAGES: (chatId: string) => `/api/users/customer-service/messages/${chatId}`,
-  CS_STATUS: '/api/users/customer-service/status',
-  CS_CANCEL_REQUESTS: '/api/users/customer-service/cancel-requests',
-  CS_ADMIN_REQUESTS: '/api/users/customer-service/admin-requests',
-  CS_ADMIN_CHAT: '/api/users/customer-service/admin-chat',
+  // 客服相关（用户端）
+  CS_CHATS: '/api/user/customer-service/chats',
+  CS_MESSAGES: (chatId: string) => `/api/user/customer-service/chats/${chatId}/messages`,
+  CS_ASSIGN: '/api/user/customer-service/assign',
+  CS_END_CHAT: (chatId: string) => `/api/user/customer-service/chats/${chatId}/end`,
+  CS_RATE: (chatId: string) => `/api/user/customer-service/chats/${chatId}/rate`,
+  CS_STATUS: '/api/customer-service/status',
+  CS_CANCEL_REQUESTS: '/api/customer-service/cancel-requests',
+  CS_ADMIN_REQUESTS: '/api/customer-service/admin-requests',
+  CS_ADMIN_CHAT: '/api/customer-service/admin-chat',
   
   // 文件上传
   UPLOAD_IMAGE: '/api/upload/image',

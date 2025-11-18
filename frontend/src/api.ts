@@ -1002,7 +1002,7 @@ export async function getAdminPayments() {
 
 // 客服相关API
 export const assignCustomerService = async () => {
-  const response = await api.post('/api/users/assign_customer_service');
+  const response = await api.post('/api/user/customer-service/assign');
   return response.data;
 };
 
@@ -1012,7 +1012,7 @@ export const getCustomerServiceSessions = async () => {
 };
 
 export const getCustomerServiceMessages = async (chatId: string) => {
-  const response = await api.get(`/api/customer-service/messages/${chatId}`);
+  const response = await api.get(`/api/customer-service/chats/${chatId}/messages`);
   return response.data;
 };
 
@@ -1039,7 +1039,7 @@ export const getContactUnreadCounts = async () => {
 };
 
 export const sendCustomerServiceMessage = async (chatId: string, content: string) => {
-  const response = await api.post(`/api/customer-service/send-message/${chatId}`, { content });
+  const response = await api.post(`/api/customer-service/chats/${chatId}/messages`, { content });
   return response.data;
 };
 
@@ -1083,18 +1083,18 @@ export const getCustomerServiceStatus = async () => {
 };
 
 // 结束对话和评分相关API
-export const endCustomerServiceSession = async (sessionId: number) => {
-  const response = await api.post(`/api/customer-service/end-session/${sessionId}`);
+export const endCustomerServiceSession = async (chatId: string) => {
+  const response = await api.post(`/api/customer-service/chats/${chatId}/end`);
   return response.data;
 };
 
-export const rateCustomerService = async (sessionId: number, rating: number, comment?: string) => {
-  const response = await api.post(`/api/customer-service/rate/${sessionId}`, { rating, comment });
+export const rateCustomerService = async (chatId: string, rating: number, comment?: string) => {
+  const response = await api.post(`/api/user/customer-service/chats/${chatId}/rate`, { rating, comment });
   return response.data;
 };
 
 export const getMyCustomerServiceSessions = async () => {
-  const res = await api.get('/api/customer-service/my-sessions');
+  const res = await api.get('/api/user/customer-service/chats');
   return res.data;
 };
 

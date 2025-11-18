@@ -19,7 +19,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm, HTTPAuthorizationCredentials
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -3234,10 +3234,11 @@ def admin_review_cancel_request(
     return {"message": f"Cancel request {review.status}", "request": updated_request}
 
 
-@router.post("/assign_customer_service")
+@router.post("/api/user/customer-service/assign")
 def assign_customer_service(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
+    """用户分配客服"""
     try:
         # 随机分配一个在线客服
         services = (
@@ -3490,7 +3491,7 @@ def get_customer_service_chats(
     return user_chats
 
 
-@router.get("/customer-service/messages/{chat_id}")
+@router.get("/api/customer-service/chats/{chat_id}/messages")
 def get_customer_service_messages(
     chat_id: str,
     current_user=Depends(get_current_service),
@@ -3528,11 +3529,13 @@ def mark_customer_service_messages_read(
     return {"message": "Messages marked as read", "marked_count": marked_count}
 
 
-@router.post("/customer-service/send-message/{chat_id}")
+@router.post("/api/customer-service/chats/{chat_id}/messages")
+@rate_limit("send_message")
 def send_customer_service_message(
     chat_id: str,
     message_data: dict = Body(...),
     current_user=Depends(get_current_service),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """客服发送消息给用户"""
@@ -3572,7 +3575,7 @@ def send_customer_service_message(
 
 
 # 结束对话和评分相关接口
-@router.post("/users/customer-service/end-chat/{chat_id}")
+@router.post("/api/user/customer-service/chats/{chat_id}/end")
 def end_customer_service_chat_user(
     chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3590,14 +3593,20 @@ def end_customer_service_chat_user(
     if chat["is_ended"] == 1:
         raise HTTPException(status_code=400, detail="Chat already ended")
 
-    # 结束对话
-    success = crud.end_customer_service_chat(db, chat_id)
+    # 结束对话，记录结束原因
+    success = crud.end_customer_service_chat(
+        db, 
+        chat_id,
+        reason="user_ended",
+        ended_by=current_user.id,
+        ended_type="manual"
+    )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to end chat")
 
     return {"message": "Chat ended successfully"}
 
-@router.post("/customer-service/end-chat/{chat_id}")
+@router.post("/api/customer-service/chats/{chat_id}/end")
 def end_customer_service_chat(
     chat_id: str, current_user=Depends(get_current_customer_service_or_user), db: Session = Depends(get_db)
 ):
@@ -3615,15 +3624,31 @@ def end_customer_service_chat(
     if chat["is_ended"] == 1:
         raise HTTPException(status_code=400, detail="Chat already ended")
 
-    # 结束对话
-    success = crud.end_customer_service_chat(db, chat_id)
+    # 判断结束者类型
+    if chat["service_id"] == current_user.id:
+        # 客服结束
+        ended_by = f"service_{current_user.id}"
+        reason = "service_ended"
+    else:
+        # 用户结束
+        ended_by = current_user.id
+        reason = "user_ended"
+
+    # 结束对话，记录结束原因
+    success = crud.end_customer_service_chat(
+        db, 
+        chat_id,
+        reason=reason,
+        ended_by=ended_by,
+        ended_type="manual"
+    )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to end chat")
 
     return {"message": "Chat ended successfully"}
 
 
-@router.post("/customer-service/rate/{chat_id}")
+@router.post("/api/user/customer-service/chats/{chat_id}/rate")
 def rate_customer_service(
     chat_id: str,
     rating_data: schemas.CustomerServiceRating,
@@ -3688,7 +3713,7 @@ def rate_customer_service(
     return {"message": "Rating submitted successfully"}
 
 
-@router.get("/customer-service/my-chats")
+@router.get("/api/user/customer-service/chats")
 def get_my_customer_service_chats(
     current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3697,7 +3722,7 @@ def get_my_customer_service_chats(
     return chats
 
 
-@router.get("/customer-service/chat/{chat_id}/messages")
+@router.get("/api/user/customer-service/chats/{chat_id}/messages")
 def get_customer_service_chat_messages(
     chat_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
 ):
@@ -3713,11 +3738,13 @@ def get_customer_service_chat_messages(
     return messages
 
 
-@router.post("/customer-service/chat/{chat_id}/send-message")
+@router.post("/api/user/customer-service/chats/{chat_id}/messages")
+@rate_limit("send_message")
 def send_customer_service_chat_message(
     chat_id: str,
     message_data: dict = Body(...),
     current_user=Depends(get_current_user_secure_sync_csrf),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """用户发送消息到客服对话"""
@@ -4729,7 +4756,7 @@ def cleanup_old_customer_service_chats(
         raise HTTPException(status_code=500, detail=f"清理失败: {str(e)}")
 
 
-@router.post("/customer-service/timeout-end-chat/{chat_id}")
+@router.post("/api/customer-service/chats/{chat_id}/timeout-end")
 async def timeout_end_customer_service_chat(
     chat_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
@@ -4851,7 +4878,7 @@ def get_timezone_info():
     }
 
 
-@router.get("/customer-service/chat-timeout-status/{chat_id}")
+@router.get("/api/customer-service/chats/{chat_id}/timeout-status")
 def get_chat_timeout_status(
     chat_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
