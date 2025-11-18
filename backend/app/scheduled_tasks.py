@@ -137,7 +137,8 @@ def run_scheduled_tasks():
             from app.customer_service_tasks import (
                 process_customer_service_queue,
                 auto_end_timeout_chats,
-                send_timeout_warnings
+                send_timeout_warnings,
+                cleanup_long_inactive_chats
             )
             # 处理客服排队
             queue_result = process_customer_service_queue(db)
@@ -150,6 +151,13 @@ def run_scheduled_tasks():
             # 发送超时预警
             warning_result = send_timeout_warnings(db, warning_minutes=1)
             logger.info(f"超时预警: {warning_result}")
+            
+            # 清理长期无活动对话（每天执行一次，在定时任务中每天第一次运行时执行）
+            # 每天凌晨2点执行清理（简化：每小时检查一次，如果是2点则执行）
+            current_hour = get_utc_time().hour
+            if current_hour == 2:
+                cleanup_result = cleanup_long_inactive_chats(db, inactive_days=30)
+                logger.info(f"清理长期无活动对话: {cleanup_result}")
         except Exception as e:
             logger.error(f"客服系统定时任务执行失败: {e}", exc_info=True)
         

@@ -318,13 +318,13 @@ async def heartbeat_loop(websocket: WebSocket, user_id: str):
     ping_interval = 20  # 20秒发送一次ping
     max_missing_pongs = 3  # 连续3次未收到pong才断开
     missing_pongs = 0
-    last_ping_time = time.time()
+    last_ping_time = get_utc_time()  # 统一使用UTC时间
     
     try:
         while True:
             # 检查是否需要发送ping
-            current_time = time.time()
-            if current_time - last_ping_time >= ping_interval:
+            current_time = get_utc_time()  # 统一使用UTC时间
+            if (current_time - last_ping_time).total_seconds() >= ping_interval:
                 try:
                     # 使用业务帧发送ping（仅在框架不支持websocket.ping()时）
                     await websocket.send_json({"type": "ping"})
@@ -650,7 +650,7 @@ async def websocket_chat(
     # 心跳逻辑已整合到主消息循环中，避免与业务receive竞争
     
     # 心跳相关变量
-    last_ping_time = time.time()
+    last_ping_time = get_utc_time()  # 统一使用UTC时间
     ping_interval = 20  # 20秒发送一次ping
     missing_pongs = 0
     max_missing_pongs = 3
@@ -659,8 +659,8 @@ async def websocket_chat(
         # 主消息循环（统一处理心跳和业务消息）
         while True:
             # ⚠️ 检查是否需要发送ping（心跳与业务消息统一处理）
-            current_time = time.time()
-            if current_time - last_ping_time >= ping_interval:
+            current_time = get_utc_time()  # 统一使用UTC时间
+            if (current_time - last_ping_time).total_seconds() >= ping_interval:
                 try:
                     await websocket.send_json({"type": "ping"})
                     last_ping_time = current_time

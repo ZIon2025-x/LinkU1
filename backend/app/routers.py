@@ -523,7 +523,7 @@ def resend_verification_email(
 # 旧的JWT登录路由已删除，请使用 /api/secure-auth/login
 
 
-@router.post("/cs/login")
+@router.post("/api/customer-service/login")
 def cs_login(
     request: Request,
     response: Response,
@@ -3391,7 +3391,7 @@ def get_customer_service_queue_status(
 
 
 # 客服在线状态管理
-@router.post("/customer-service/online")
+@router.post("/api/customer-service/online")
 def set_customer_service_online(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3415,7 +3415,7 @@ def set_customer_service_online(
         raise HTTPException(status_code=500, detail=f"设置在线状态失败: {str(e)}")
 
 
-@router.post("/customer-service/offline")
+@router.post("/api/customer-service/offline")
 def set_customer_service_offline(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3447,7 +3447,7 @@ def logout(response: Response):
     clear_secure_cookies(response)
     return {"message": "登出成功"}
 
-@router.post("/customer-service/logout")
+@router.post("/api/customer-service/logout")
 def customer_service_logout(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3457,7 +3457,7 @@ def customer_service_logout(
     return {"message": "已登出并设置为离线状态"}
 
 
-@router.get("/customer-service/status")
+@router.get("/api/customer-service/status")
 def get_customer_service_status(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3507,7 +3507,7 @@ def get_customer_service_status(
     }
 
 
-@router.get("/customer-service/check-availability")
+@router.get("/api/customer-service/check-availability")
 def check_customer_service_availability(db: Session = Depends(get_db)):
     """检查是否有在线客服可用"""
     from app.models import CustomerService
@@ -3529,7 +3529,7 @@ def check_customer_service_availability(db: Session = Depends(get_db)):
 
 
 # 客服管理相关接口
-@router.get("/customer-service/chats")
+@router.get("/api/customer-service/chats")
 def get_customer_service_chats(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
 ):
@@ -3604,7 +3604,7 @@ def mark_customer_service_message_read(
     return {"message": "Message marked as read", "message_id": message_id}
 
 
-@router.post("/customer-service/mark-messages-read/{chat_id}")
+@router.post("/api/customer-service/chats/{chat_id}/mark-read")
 def mark_customer_service_messages_read(
     chat_id: str,
     current_user=Depends(get_current_service),
@@ -3873,7 +3873,200 @@ def send_customer_service_chat_message(
     return message
 
 
-@router.get("/customer-service/{service_id}/rating")
+# 客服对话文件上传接口
+@router.post("/api/user/customer-service/chats/{chat_id}/files")
+@rate_limit("upload_file")
+async def upload_customer_service_chat_file(
+    chat_id: str,
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user_secure_sync_csrf),
+    db: Session = Depends(get_db),
+):
+    """
+    用户上传文件到客服对话
+    支持图片和文档文件
+    - 图片：jpg, jpeg, png, gif, webp（最大5MB）
+    - 文档：pdf, doc, docx, txt（最大10MB）
+    """
+    # 验证chat_id是否属于当前用户且未结束
+    chat = crud.get_customer_service_chat(db, chat_id)
+    if not chat or chat["user_id"] != current_user.id:
+        raise HTTPException(status_code=404, detail="Chat not found or not authorized")
+    
+    if chat["is_ended"] == 1:
+        raise HTTPException(status_code=400, detail="Chat has ended")
+    
+    try:
+        # 验证文件类型和大小
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="文件名不能为空")
+        
+        # 获取文件扩展名
+        file_ext = Path(file.filename).suffix.lower()
+        
+        # 检查是否为危险文件类型
+        if file_ext in DANGEROUS_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"不允许上传 {file_ext} 类型的文件")
+        
+        # 判断文件类型（图片或文档）
+        is_image = file_ext in ALLOWED_EXTENSIONS
+        is_document = file_ext in {".pdf", ".doc", ".docx", ".txt"}
+        
+        if not (is_image or is_document):
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
+            )
+        
+        # 读取文件内容（流式读取，避免大文件占内存）
+        content = await file.read()
+        file_size = len(content)
+        
+        # 验证文件大小
+        max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
+        if file_size > max_size:
+            size_mb = max_size / (1024 * 1024)
+            raise HTTPException(
+                status_code=413,
+                detail=f"文件大小不能超过 {size_mb}MB"
+            )
+        
+        # 使用私密文件系统上传
+        from app.file_system import private_file_system
+        result = private_file_system.upload_file(
+            content, 
+            file.filename, 
+            current_user.id, 
+            db, 
+            task_id=None, 
+            chat_id=chat_id
+        )
+        
+        # 生成签名URL
+        from app.signed_url import signed_url_manager
+        file_path_for_url = f"files/{result['filename']}"
+        file_url = signed_url_manager.generate_signed_url(
+            file_path=file_path_for_url,
+            user_id=current_user.id,
+            expiry_minutes=15,  # 15分钟过期
+            one_time=False  # 可以多次使用
+        )
+        
+        return {
+            "success": True,
+            "url": file_url,
+            "file_id": result["file_id"],
+            "filename": result["filename"],
+            "size": result["size"],
+            "original_name": result["original_filename"],
+            "file_type": "image" if is_image else "document",
+            "chat_id": chat_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"客服对话文件上传失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
+@router.post("/api/customer-service/chats/{chat_id}/files")
+@rate_limit("upload_file")
+async def upload_customer_service_file(
+    chat_id: str,
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_service),
+    db: Session = Depends(get_db),
+):
+    """
+    客服上传文件到对话
+    支持图片和文档文件
+    - 图片：jpg, jpeg, png, gif, webp（最大5MB）
+    - 文档：pdf, doc, docx, txt（最大10MB）
+    """
+    # 验证chat_id是否属于当前客服且未结束
+    chat = crud.get_customer_service_chat(db, chat_id)
+    if not chat or chat["service_id"] != current_user.id:
+        raise HTTPException(status_code=404, detail="Chat not found or not authorized")
+    
+    if chat["is_ended"] == 1:
+        raise HTTPException(status_code=400, detail="Chat has ended")
+    
+    try:
+        # 验证文件类型和大小
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="文件名不能为空")
+        
+        # 获取文件扩展名
+        file_ext = Path(file.filename).suffix.lower()
+        
+        # 检查是否为危险文件类型
+        if file_ext in DANGEROUS_EXTENSIONS:
+            raise HTTPException(status_code=400, detail=f"不允许上传 {file_ext} 类型的文件")
+        
+        # 判断文件类型（图片或文档）
+        is_image = file_ext in ALLOWED_EXTENSIONS
+        is_document = file_ext in {".pdf", ".doc", ".docx", ".txt"}
+        
+        if not (is_image or is_document):
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
+            )
+        
+        # 读取文件内容（流式读取，避免大文件占内存）
+        content = await file.read()
+        file_size = len(content)
+        
+        # 验证文件大小
+        max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
+        if file_size > max_size:
+            size_mb = max_size / (1024 * 1024)
+            raise HTTPException(
+                status_code=413,
+                detail=f"文件大小不能超过 {size_mb}MB"
+            )
+        
+        # 使用私密文件系统上传
+        from app.file_system import private_file_system
+        result = private_file_system.upload_file(
+            content, 
+            file.filename, 
+            current_user.id, 
+            db, 
+            task_id=None, 
+            chat_id=chat_id
+        )
+        
+        # 生成签名URL
+        from app.signed_url import signed_url_manager
+        file_path_for_url = f"files/{result['filename']}"
+        file_url = signed_url_manager.generate_signed_url(
+            file_path=file_path_for_url,
+            user_id=chat["user_id"],  # 使用用户ID生成URL，因为客服ID不在users表中
+            expiry_minutes=15,  # 15分钟过期
+            one_time=False  # 可以多次使用
+        )
+        
+        return {
+            "success": True,
+            "url": file_url,
+            "file_id": result["file_id"],
+            "filename": result["filename"],
+            "size": result["size"],
+            "original_name": result["original_filename"],
+            "file_type": "image" if is_image else "document",
+            "chat_id": chat_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"客服文件上传失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
+
+
+@router.get("/api/customer-service/{service_id}/rating")
 def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
     """获取客服的平均评分信息"""
     service = db.query(CustomerService).filter(CustomerService.id == service_id).first()
@@ -3888,7 +4081,7 @@ def get_customer_service_rating(service_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/customer-service/all-ratings")
+@router.get("/api/customer-service/all-ratings")
 def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     """获取所有客服的平均评分信息"""
     services = db.query(CustomerService).all()
@@ -3905,7 +4098,7 @@ def get_all_customer_service_ratings(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/customer-service/cancel-requests")
+@router.get("/api/customer-service/cancel-requests")
 def cs_get_cancel_requests(
     current_user=Depends(get_current_service),
     db: Session = Depends(get_db),
@@ -3956,7 +4149,7 @@ def cs_get_cancel_requests(
     return result
 
 
-@router.post("/customer-service/cancel-requests/{request_id}/review")
+@router.post("/api/customer-service/cancel-requests/{request_id}/review")
 def cs_review_cancel_request(
     request_id: int,
     review: schemas.TaskCancelRequestReview,
@@ -4039,7 +4232,7 @@ def cs_review_cancel_request(
 
 # 管理请求相关API
 @router.get(
-    "/customer-service/admin-requests", response_model=list[schemas.AdminRequestOut]
+    "/api/customer-service/admin-requests", response_model=list[schemas.AdminRequestOut]
 )
 def get_admin_requests(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
@@ -4056,7 +4249,7 @@ def get_admin_requests(
     return requests
 
 
-@router.post("/customer-service/admin-requests", response_model=schemas.AdminRequestOut)
+@router.post("/api/customer-service/admin-requests", response_model=schemas.AdminRequestOut)
 def create_admin_request(
     request_data: schemas.AdminRequestCreate,
     current_user=Depends(get_current_service),
@@ -4086,7 +4279,7 @@ def create_admin_request(
 
 
 @router.get(
-    "/customer-service/admin-chat", response_model=list[schemas.AdminChatMessageOut]
+    "/api/customer-service/admin-chat", response_model=list[schemas.AdminChatMessageOut]
 )
 def get_admin_chat_messages(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
@@ -4100,7 +4293,7 @@ def get_admin_chat_messages(
     return messages
 
 
-@router.post("/customer-service/admin-chat", response_model=schemas.AdminChatMessageOut)
+@router.post("/api/customer-service/admin-chat", response_model=schemas.AdminChatMessageOut)
 def send_admin_chat_message(
     message_data: schemas.AdminChatMessageCreate,
     current_user=Depends(get_current_service),
@@ -4833,7 +5026,7 @@ def update_user_preferences(
         raise HTTPException(status_code=500, detail=f"保存偏好设置失败: {str(e)}")
 
 
-@router.post("/customer-service/cleanup-old-chats/{service_id}")
+@router.post("/api/customer-service/cleanup-old-chats/{service_id}")
 def cleanup_old_customer_service_chats(
     service_id: str,
     current_user: models.CustomerService = Depends(get_current_service),
@@ -5093,6 +5286,7 @@ MAX_FILE_SIZE_LARGE = 10 * 1024 * 1024  # 10MB
 
 
 @router.post("/upload/image")
+@rate_limit("upload_file")
 async def upload_image(
     image: UploadFile = File(...),
     task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
@@ -5505,6 +5699,7 @@ def generate_image_url(
 
 
 @router.post("/upload/file")
+@rate_limit("upload_file")
 async def upload_file(
     file: UploadFile = File(...),
     task_id: Optional[int] = Query(None, description="任务ID（任务聊天时提供）"),
