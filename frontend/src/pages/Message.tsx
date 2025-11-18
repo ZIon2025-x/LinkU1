@@ -2429,10 +2429,11 @@ const MessagePage: React.FC = () => {
                 setTaskMessages(prev => {
                   const systemMsg = {
                     id: Date.now(),
-                    sender_id: 'system',
+                    sender_id: null, // 系统消息 sender_id 为 null
                     sender_name: '系统',
                     sender_avatar: null,
                     content: systemMessage,
+                    message_type: 'system', // 明确标记为系统消息
                     task_id: msg.task_id,
                     created_at: new Date().toISOString(),
                     attachments: [],
@@ -2442,7 +2443,7 @@ const MessagePage: React.FC = () => {
                   // 检查是否已存在相同的系统消息（避免重复）
                   const exists = prev.some(m => 
                     m.content === systemMessage && 
-                    m.sender_id === 'system' &&
+                    (m.message_type === 'system' || !m.sender_id || m.sender_id === 'system') &&
                     Math.abs(new Date(m.created_at).getTime() - new Date(systemMsg.created_at).getTime()) < 5000
                   );
                   
@@ -2480,6 +2481,7 @@ const MessagePage: React.FC = () => {
                   sender_name: msg.sender_name || '对方',
                   sender_avatar: msg.sender_avatar,
                   content: msg.content,
+                  message_type: msg.message_type, // 保留 message_type 字段，用于识别系统消息
                   task_id: msg.task_id,
                   created_at: msg.created_at || new Date().toISOString(),
                   attachments: msg.attachments || []
@@ -4060,7 +4062,8 @@ const MessagePage: React.FC = () => {
 
                 {taskMessages.map((msg, idx) => {
                   const isOwn = msg.sender_id === user?.id;
-                  const isSystemMessage = msg.sender_id === 'system' || msg.isSystemMessage;
+                  // 系统消息判断：检查 message_type 或 sender_id 为 null/undefined
+                  const isSystemMessage = msg.message_type === 'system' || !msg.sender_id || msg.sender_id === 'system' || msg.isSystemMessage;
                   // 显示头像的条件：第一条消息，或者上一条消息的发送者不同（系统消息不显示头像）
                   const showAvatar = !isSystemMessage && (idx === 0 || (taskMessages[idx - 1] && taskMessages[idx - 1].sender_id !== msg.sender_id));
                   
