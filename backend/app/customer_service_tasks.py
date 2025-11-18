@@ -93,9 +93,11 @@ def process_customer_service_queue(db: Session) -> Dict[str, Any]:
         
         for queue_entry in waiting_queue:
             # 2. 在事务内查找可用客服（带锁）
+            # 使用类型转换确保正确匹配，兼容数据库中可能存在的不同类型
+            from sqlalchemy import cast, Integer
             available_services = (
                 db.query(CustomerService)
-                .filter(CustomerService.is_online == 1)
+                .filter(cast(CustomerService.is_online, Integer) == 1)
                 .with_for_update()  # 锁定客服记录，防止并发修改
                 .all()
             )

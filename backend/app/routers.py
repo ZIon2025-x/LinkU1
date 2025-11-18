@@ -3216,9 +3216,27 @@ def assign_customer_service(
                 }
         
         # 2. 检查是否有在线客服
+        # 使用类型转换确保正确匹配，兼容数据库中可能存在的不同类型
+        from sqlalchemy import cast, Integer
         services = (
-            db.query(CustomerService).filter(CustomerService.is_online == 1).all()
+            db.query(CustomerService)
+            .filter(cast(CustomerService.is_online, Integer) == 1)
+            .all()
         )
+        
+        # 如果数据库查询没有结果，使用备用方法：在Python层面检查
+        if not services:
+            all_services = db.query(CustomerService).all()
+            logger.info(f"[CUSTOMER_SERVICE] 数据库查询无结果，使用Python层面检查，总客服数量={len(all_services)}")
+            # 在Python层面检查在线客服（兼容不同的数据类型）
+            services = []
+            for s in all_services:
+                if s.is_online:
+                    # 转换为整数进行比较
+                    is_online_value = int(s.is_online) if s.is_online else 0
+                    if is_online_value == 1:
+                        services.append(s)
+                        logger.info(f"[CUSTOMER_SERVICE] 发现在线客服（Python层面）: {s.id}, is_online={s.is_online}")
         
         if not services:
             # 没有可用客服时，将用户加入排队队列
@@ -3443,22 +3461,37 @@ def check_customer_service_availability(db: Session = Depends(get_sync_db)):
 
     # 查询在线客服数量
     try:
+        # 使用类型转换确保正确匹配，兼容数据库中可能存在的不同类型
+        from sqlalchemy import cast, Integer
         online_services = (
-            db.query(CustomerService).filter(CustomerService.is_online == 1).count()
+            db.query(CustomerService)
+            .filter(cast(CustomerService.is_online, Integer) == 1)
+            .count()
         )
         
         # 添加调试日志
         logger.info(f"[CUSTOMER_SERVICE] 查询在线客服: 标准查询结果={online_services}")
         
-        # 如果查询结果为0，记录所有客服的状态用于调试
+        # 如果查询结果为0，使用备用方法：在Python层面检查
         if online_services == 0:
             all_services = db.query(CustomerService).all()
             logger.info(f"[CUSTOMER_SERVICE] 调试信息: 总客服数量={len(all_services)}")
+            # 在Python层面检查在线客服（兼容不同的数据类型）
+            python_online_count = 0
             for s in all_services:
                 logger.info(f"[CUSTOMER_SERVICE] 客服 {s.id}: is_online={s.is_online} (type: {type(s.is_online).__name__})")
-                # 如果发现is_online不是1但应该是1的情况，记录详细信息
-                if s.is_online and s.is_online != 0:
-                    logger.warning(f"[CUSTOMER_SERVICE] 客服 {s.id} 的 is_online={s.is_online} 不是1，但也不是0")
+                # 检查is_online是否为真值（兼容1, '1', True等）
+                if s.is_online:
+                    # 转换为整数进行比较
+                    is_online_value = int(s.is_online) if s.is_online else 0
+                    if is_online_value == 1:
+                        python_online_count += 1
+                        logger.info(f"[CUSTOMER_SERVICE] 发现在线客服（Python层面）: {s.id}, is_online={s.is_online}")
+            
+            # 如果Python层面发现有在线客服，使用该结果
+            if python_online_count > 0:
+                logger.warning(f"[CUSTOMER_SERVICE] 数据库查询返回0，但Python层面发现{python_online_count}个在线客服，使用Python层面结果")
+                online_services = python_online_count
     except Exception as e:
         logger.error(f"[CUSTOMER_SERVICE] 查询客服可用性失败: {e}", exc_info=True)
         online_services = 0
@@ -4178,7 +4211,7 @@ def cs_review_cancel_request(
 
 # 管理请求相关API
 @router.get(
-    "/api/customer-service/admin-requests", response_model=list[schemas.AdminRequestOut]
+    "/customer-service/admin-requests", response_model=list[schemas.AdminRequestOut]
 )
 def get_admin_requests(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
@@ -4199,7 +4232,7 @@ def get_admin_requests(
 def create_admin_request(
     request_data: schemas.AdminRequestCreate,
     current_user=Depends(get_current_service),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """
     客服提交管理请求
@@ -4225,7 +4258,7 @@ def create_admin_request(
 
 
 @router.get(
-    "/api/customer-service/admin-chat", response_model=list[schemas.AdminChatMessageOut]
+    "/customer-service/admin-chat", response_model=list[schemas.AdminChatMessageOut]
 )
 def get_admin_chat_messages(
     current_user=Depends(get_current_service), db: Session = Depends(get_sync_db)
@@ -4243,7 +4276,7 @@ def get_admin_chat_messages(
 def send_admin_chat_message(
     message_data: schemas.AdminChatMessageCreate,
     current_user=Depends(get_current_service),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_sync_db),
 ):
     """客服发送消息给后台工作人员"""
     from app.models import AdminChatMessage

@@ -3140,8 +3140,10 @@ def calculate_estimated_wait_time(
     avg_duration = total_duration / count
     
     # 考虑当前客服负载
+    # 使用类型转换确保正确匹配，兼容数据库中可能存在的不同类型
+    from sqlalchemy import cast, Integer
     online_services = db.query(CustomerService).filter(
-        CustomerService.is_online == 1
+        cast(CustomerService.is_online, Integer) == 1
     ).count()
     
     if online_services == 0:
