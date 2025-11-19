@@ -190,6 +190,8 @@ interface Message {
   from: string;
   content: string;
   created_at: string;
+  message_type?: string; // 'text' | 'task_card' | 'image' | 'file'
+  task_id?: number; // 任务卡片消息的任务ID
 }
 
 interface CustomerServiceChat {
@@ -476,6 +478,11 @@ const MessagePage: React.FC = () => {
   const [serviceStatusLoading, setServiceStatusLoading] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false); // 移动端是否显示聊天框
+  
+  // 任务卡片相关状态
+  const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [userTasksLoading, setUserTasksLoading] = useState(false);
+  const [showTaskCardModal, setShowTaskCardModal] = useState(false);
   
   // 任务聊天相关状态
   const [chatMode, setChatMode] = useState<'tasks'>('tasks'); // 聊天模式：任务（联系人功能已移除）
@@ -1184,6 +1191,119 @@ const MessagePage: React.FC = () => {
     }
   };
 
+  // 获取用户任务列表（用于发送任务卡片）
+  const loadUserTasks = async () => {
+    if (!user?.id) return;
+    
+    setUserTasksLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users/${user.id}/tasks?posted_limit=50&taken_limit=50`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // 合并发布和接受的任务
+        const allTasks = [
+          ...(data.posted_tasks || []),
+          ...(data.taken_tasks || [])
+        ];
+        // 过滤掉已取消的任务
+        const activeTasks = allTasks.filter((task: any) => task.status !== 'cancelled');
+        setUserTasks(activeTasks);
+      } else {
+        console.error('获取用户任务失败');
+      }
+    } catch (error) {
+      console.error('获取用户任务失败:', error);
+    } finally {
+      setUserTasksLoading(false);
+    }
+  };
+  
+  // 发送任务卡片
+  const sendTaskCard = async (taskId: number) => {
+    if (isSending || !serviceConnected || !currentChat) {
+      return;
+    }
+    
+    setIsSending(true);
+    
+    // 检查客服对话是否已结束
+    if (currentChat.is_ended === 1) {
+      setIsSending(false);
+      alert(t('messages.chatEndedAlert'));
+      return;
+    }
+    
+    const messageId = Date.now() + Math.floor(Math.random() * 1000);
+    const userTimezone = TimeHandlerV2.getUserTimezone();
+    
+    // 立即添加消息到本地状态
+    const newMessage: Message = {
+      id: messageId,
+      from: '我',
+      content: '任务卡片',
+      created_at: new Date().toISOString(),
+      message_type: 'task_card',
+      task_id: taskId
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setIsNewMessage(true);
+    
+    try {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        // 通过WebSocket发送任务卡片消息
+        const messageData = {
+          receiver_id: currentChat.service_id,
+          content: `[TASK_CARD:${taskId}]`, // 特殊格式标识任务卡片
+          chat_id: currentChat.chat_id,
+          message_id: messageId,
+          message_type: 'task_card',
+          task_id: taskId,
+          timezone: userTimezone,
+          local_time: new Date().toLocaleString('en-GB', { timeZone: userTimezone })
+        };
+        ws.send(JSON.stringify(messageData));
+      } else {
+        // WebSocket未连接，使用HTTP API
+        const csrfToken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrf_token='))
+          ?.split('=')[1];
+        
+        const response = await fetch(`${API_BASE_URL}/api/user/customer-service/chats/${currentChat.chat_id}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+          },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            content: `[TASK_CARD:${taskId}]`,
+            message_type: 'task_card',
+            task_id: taskId
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('发送任务卡片失败');
+        }
+      }
+      
+      // 关闭任务选择弹窗
+      setShowTaskCardModal(false);
+      
+    } catch (error) {
+      console.error('发送任务卡片失败:', error);
+      alert('发送任务卡片失败');
+      // 移除失败的消息
+      setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
+    } finally {
+      setIsSending(false);
+    }
+  };
+  
   // 检查是否接近底部（用于智能滚动）
   const checkIfNearBottom = useCallback(() => {
     if (!messagesContainerRef.current) return true;
@@ -2589,12 +2709,29 @@ const MessagePage: React.FC = () => {
               if (msg.content && msg.content.trim()) {
                 const messageId = msg.message_id || msg.id || Date.now();
                 
+                // 检查是否是任务卡片消息
+                const isTaskCard = msg.message_type === 'task_card' || 
+                                  (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+                let taskId: number | undefined;
+                
+                if (isTaskCard) {
+                  // 从消息内容或字段中提取任务ID
+                  if (msg.task_id) {
+                    taskId = msg.task_id;
+                  } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+                    const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+                    if (match) {
+                      taskId = parseInt(match[1], 10);
+                    }
+                  }
+                }
+                
                 // 检查是否已经存在相同的消息（避免重复显示）
                 setMessages(prev => {
                   // 检查是否已经存在相同内容、相同发送者、时间相近的消息
                   const exists = prev.some(m => 
                     (m.id === messageId) || 
-                    (m.content === msg.content.trim() && 
+                    (m.content === (isTaskCard ? '任务卡片' : msg.content.trim()) && 
                      m.from === fromName && 
                      Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 5000) // 5秒内的消息认为是重复的
                   );
@@ -2606,8 +2743,10 @@ const MessagePage: React.FC = () => {
                   return [...prev, {
                     id: messageId,
                     from: fromName,
-                    content: msg.content.trim(), 
-                    created_at: msg.created_at 
+                    content: isTaskCard ? '任务卡片' : msg.content.trim(), 
+                    created_at: msg.created_at,
+                    message_type: isTaskCard ? 'task_card' : (msg.message_type || 'text'),
+                    task_id: taskId || msg.task_id
                   }];
                 });
                 
@@ -2827,12 +2966,31 @@ const MessagePage: React.FC = () => {
         if (response.ok) {
           const chatData = await response.json();
           const formattedMessages = chatData.map((msg: any) => {
+            // 检查是否是任务卡片消息
+            const isTaskCard = msg.message_type === 'task_card' || 
+                              (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+            let taskId: number | undefined;
+            
+            if (isTaskCard) {
+              // 从消息内容或字段中提取任务ID
+              if (msg.task_id) {
+                taskId = msg.task_id;
+              } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+                const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+                if (match) {
+                  taskId = parseInt(match[1], 10);
+                }
+              }
+            }
+            
             return {
               id: msg.id,
               from: msg.sender_type === 'user' ? t('messages.me') : (msg.sender_type === 'system' ? t('messages.system') : t('messages.customerService')),
-              content: msg.content,
+              content: isTaskCard ? '任务卡片' : msg.content,
               created_at: msg.created_at,
-              is_admin_msg: msg.sender_type === 'system' ? 1 : 0
+              is_admin_msg: msg.sender_type === 'system' ? 1 : 0,
+              message_type: isTaskCard ? 'task_card' : (msg.message_type || 'text'),
+              task_id: taskId || msg.task_id
             };
           });
           
@@ -4344,6 +4502,7 @@ const MessagePage: React.FC = () => {
               const isSystemMessage = msg.from === systemText;
               const isImageMessage = msg.content.startsWith('[图片]');
               const isFileMessage = msg.content.startsWith('[文件]');
+              const isTaskCard = msg.message_type === 'task_card' && msg.task_id;
               
               return (
                 <div
@@ -4372,6 +4531,41 @@ const MessagePage: React.FC = () => {
                         fontStyle: 'italic'
                       }}>
                         {msg.content}
+                      </div>
+                    ) : isTaskCard ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '8px'
+                      }}>
+                        <div style={{
+                          fontSize: 24,
+                          width: 40,
+                          height: 40,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: msg.from === meText ? 'rgba(255,255,255,0.2)' : '#f0f0f0',
+                          borderRadius: 8
+                        }}>
+                          📋
+                        </div>
+                        <div>
+                          <div style={{ 
+                            fontSize: 14, 
+                            fontWeight: 600,
+                            marginBottom: 4
+                          }}>
+                            任务卡片
+                          </div>
+                          <div style={{ 
+                            fontSize: 12, 
+                            opacity: 0.8
+                          }}>
+                            已发送任务信息
+                          </div>
+                        </div>
                       </div>
                     ) : isImageMessage ? (
                       <img 
@@ -4626,6 +4820,27 @@ const MessagePage: React.FC = () => {
                   />
                   {uploadingFile ? '⏳' : '📎'}
                 </label>
+                
+                {/* 发送任务卡片按钮 */}
+                <button
+                  onClick={() => {
+                    if (!serviceConnected) {
+                      alert('请先连接客服');
+                      return;
+                    }
+                    loadUserTasks();
+                    setShowTaskCardModal(true);
+                  }}
+                  disabled={!serviceConnected || isSending}
+                  className={styles.inputActionButton}
+                  style={{
+                    cursor: (!serviceConnected || isSending) ? 'not-allowed' : 'pointer',
+                    opacity: (!serviceConnected || isSending) ? 0.5 : 1
+                  }}
+                  title="发送任务卡片"
+                >
+                  📋
+                </button>
                 
                 {/* 连接客服/结束对话按钮 */}
                 <button
@@ -6714,6 +6929,168 @@ const MessagePage: React.FC = () => {
         onClose={() => setShowTaskDetailModal(false)}
         taskId={activeTaskId}
       />
+      
+      {/* 任务卡片选择弹窗 */}
+      {showTaskCardModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10001,
+          backdropFilter: 'blur(5px)'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowTaskCardModal(false);
+          }
+        }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: '24px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 20, 
+                fontWeight: 600, 
+                color: '#262626' 
+              }}>
+                📋 选择要发送的任务
+              </h3>
+              <button
+                onClick={() => setShowTaskCardModal(false)}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: '#f5f5f5',
+                  color: '#666',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ff4d4f';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.color = '#666';
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              paddingRight: '8px'
+            }}>
+              {userTasksLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  加载中...
+                </div>
+              ) : userTasks.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                  暂无任务
+                </div>
+              ) : (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {userTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={() => sendTaskCard(task.id)}
+                      style={{
+                        border: '1px solid #e8e8e8',
+                        borderRadius: 8,
+                        padding: '16px',
+                        background: '#fafafa',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                        e.currentTarget.style.background = '#fff';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e8e8e8';
+                        e.currentTarget.style.background = '#fafafa';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <div style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: '#333',
+                        marginBottom: '8px'
+                      }}>
+                        {task.title}
+                      </div>
+                      <div style={{
+                        display: 'flex',
+                        gap: '16px',
+                        fontSize: 13,
+                        color: '#666'
+                      }}>
+                        <span>💰 £{task.reward || task.base_reward || 0}</span>
+                        <span>📋 {task.task_type}</span>
+                        <span>📍 {task.location || '未知'}</span>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          background: task.status === 'open' ? '#dbeafe' :
+                                     task.status === 'in_progress' ? '#fef3c7' :
+                                     task.status === 'completed' ? '#d1fae5' : '#fee2e2',
+                          color: task.status === 'open' ? '#1e40af' :
+                                 task.status === 'in_progress' ? '#92400e' :
+                                 task.status === 'completed' ? '#065f46' : '#991b1b',
+                          fontSize: 12,
+                          fontWeight: 600
+                        }}>
+                          {task.status === 'open' ? '待接取' :
+                           task.status === 'taken' ? '待审核申请' :
+                           task.status === 'in_progress' ? '进行中' :
+                           task.status === 'completed' ? '已完成' : task.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

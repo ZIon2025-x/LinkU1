@@ -2226,16 +2226,66 @@ def mark_all_staff_notifications_read(
     return len(notifications)
 
 
+def create_audit_log(
+    db: Session,
+    action_type: str,
+    entity_type: str,
+    entity_id: str,
+    admin_id: str = None,
+    user_id: str = None,
+    old_value: dict = None,
+    new_value: dict = None,
+    reason: str = None,
+    ip_address: str = None,
+    device_fingerprint: str = None,
+):
+    """创建审计日志记录
+    old_value和new_value应该是dict类型，SQLAlchemy的JSONB会自动处理
+    """
+    from app.models import AuditLog
+    
+    audit_log = AuditLog(
+        action_type=action_type,
+        entity_type=entity_type,
+        entity_id=str(entity_id),
+        admin_id=admin_id,
+        user_id=user_id,
+        old_value=old_value,  # JSONB类型会自动处理dict
+        new_value=new_value,  # JSONB类型会自动处理dict
+        reason=reason,
+        ip_address=ip_address,
+        device_fingerprint=device_fingerprint,
+    )
+    db.add(audit_log)
+    db.commit()
+    db.refresh(audit_log)
+    return audit_log
+
+
 def update_user_by_admin(db: Session, user_id: str, user_update: dict):
     """管理员更新用户信息"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user:
+        # 记录修改前的值
+        old_values = {}
+        new_values = {}
+        
         for field, value in user_update.items():
             if value is not None and hasattr(user, field):
-                setattr(user, field, value)
+                old_value = getattr(user, field)
+                # 只记录有变更的字段
+                if old_value != value:
+                    old_values[field] = old_value
+                    new_values[field] = value
+                    setattr(user, field, value)
+        
         db.commit()
         db.refresh(user)
-    return user
+        
+        # 如果有变更，返回变更信息用于审计日志
+        if old_values:
+            return user, old_values, new_values
+    return user, None, None
 
 
 def update_customer_service_online_status(db: Session, cs_id: str, is_online: bool):
@@ -2406,16 +2456,51 @@ def update_task_by_admin(db: Session, task_id: int, task_update: dict):
     import json
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
     if task:
+        # 记录修改前的值
+        old_values = {}
+        new_values = {}
+        
         for field, value in task_update.items():
             if value is not None and hasattr(task, field):
+                old_value = getattr(task, field)
                 # 特殊处理 images 字段：如果是列表，需要序列化为 JSON 字符串
                 if field == 'images' and isinstance(value, list):
-                    setattr(task, field, json.dumps(value) if value else None)
+                    new_value = json.dumps(value) if value else None
                 else:
-                    setattr(task, field, value)
+                    new_value = value
+                
+                # 只记录有变更的字段
+                if old_value != new_value:
+                    # 对于images字段，如果old_value是字符串，需要解析
+                    if field == 'images' and isinstance(old_value, str):
+                        try:
+                            old_values[field] = json.loads(old_value) if old_value else None
+                        except:
+                            old_values[field] = old_value
+                    else:
+                        old_values[field] = old_value
+                    
+                    if field == 'images' and isinstance(new_value, str):
+                        try:
+                            new_values[field] = json.loads(new_value) if new_value else None
+                        except:
+                            new_values[field] = new_value
+                    else:
+                        new_values[field] = new_value
+                    
+                    # 设置新值
+                    if field == 'images' and isinstance(value, list):
+                        setattr(task, field, json.dumps(value) if value else None)
+                    else:
+                        setattr(task, field, value)
+        
         db.commit()
         db.refresh(task)
-    return task
+        
+        # 如果有变更，返回变更信息用于审计日志
+        if old_values:
+            return task, old_values, new_values
+    return task, None, None
 
 
 def delete_task_by_admin(db: Session, task_id: int):

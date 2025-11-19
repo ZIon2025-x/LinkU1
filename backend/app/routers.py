@@ -2180,13 +2180,35 @@ def admin_set_user_level(
     user_id: str,
     level: str = Body(...),
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
+    from app.security import get_client_ip
+    
     user = crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+    
+    old_level = user.user_level
     user.user_level = level
     db.commit()
+    
+    # 记录审计日志
+    if old_level != level:
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="update_user_level",
+            entity_type="user",
+            entity_id=user_id,
+            admin_id=current_user.id,
+            user_id=user_id,
+            old_value={"user_level": old_level},
+            new_value={"user_level": level},
+            reason=f"管理员 {current_user.id} ({current_user.name}) 修改了用户等级",
+            ip_address=ip_address,
+        )
+    
     return {"message": f"User {user_id} level set to {level}."}
 
 
@@ -2197,19 +2219,53 @@ def admin_set_user_status(
     is_suspended: int = Body(None),
     suspend_until: str = Body(None),
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
+    from app.security import get_client_ip
+    
     user = crud.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+    
+    # 记录修改前的值
+    old_values = {}
+    new_values = {}
+    
     if is_banned is not None:
+        old_values['is_banned'] = user.is_banned
+        new_values['is_banned'] = is_banned
         user.is_banned = is_banned
+    
     if is_suspended is not None:
+        old_values['is_suspended'] = user.is_suspended
+        new_values['is_suspended'] = is_suspended
         user.is_suspended = is_suspended
+    
     if suspend_until:
         from app.utils.time_utils import parse_iso_utc
+        old_values['suspend_until'] = user.suspend_until.isoformat() if user.suspend_until else None
+        new_values['suspend_until'] = suspend_until
         user.suspend_until = parse_iso_utc(suspend_until)
+    
     db.commit()
+    
+    # 记录审计日志
+    if old_values:
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="update_user_status",
+            entity_type="user",
+            entity_id=user_id,
+            admin_id=current_user.id,
+            user_id=user_id,
+            old_value=old_values,
+            new_value=new_values,
+            reason=f"管理员 {current_user.id} ({current_user.name}) 修改了用户状态",
+            ip_address=ip_address,
+        )
+    
     return {"message": f"User {user_id} status updated."}
 
 
@@ -2218,13 +2274,35 @@ def admin_set_task_level(
     task_id: int,
     level: str = Body(...),
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
+    from app.security import get_client_ip
+    
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
+    
+    old_level = task.task_level
     task.task_level = level
     db.commit()
+    
+    # 记录审计日志
+    if old_level != level:
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="update_task_level",
+            entity_type="task",
+            entity_id=str(task_id),
+            admin_id=current_user.id,
+            user_id=task.poster_id,
+            old_value={"task_level": old_level},
+            new_value={"task_level": level},
+            reason=f"管理员 {current_user.id} ({current_user.name}) 修改了任务等级",
+            ip_address=ip_address,
+        )
+    
     return {"message": f"Task {task_id} level set to {level}."}
 
 
@@ -2642,15 +2720,18 @@ def admin_update_task(
     task_id: int,
     task_update: schemas.AdminTaskUpdate,
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员更新任务信息"""
+    from app.security import get_client_ip
+    
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # 更新任务
-    updated_task = crud.update_task_by_admin(
+    # 更新任务（返回变更信息）
+    updated_task, old_values, new_values = crud.update_task_by_admin(
         db, task_id, task_update.dict(exclude_unset=True)
     )
 
@@ -2658,18 +2739,51 @@ def admin_update_task(
     crud.add_task_history(
         db, task_id, None, "admin_update", f"管理员 {current_user.id} ({current_user.name}) 更新了任务信息"
     )
+    
+    # 记录审计日志（如果有变更）
+    if old_values and new_values:
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="update_task",
+            entity_type="task",
+            entity_id=str(task_id),
+            admin_id=current_user.id,
+            user_id=task.poster_id,  # 任务发布者
+            old_value=old_values,
+            new_value=new_values,
+            reason=f"管理员 {current_user.id} ({current_user.name}) 更新了任务信息",
+            ip_address=ip_address,
+        )
 
     return {"message": "任务更新成功", "task": updated_task}
 
 
 @router.delete("/admin/tasks/{task_id}")
 def admin_delete_task(
-    task_id: int, current_user=Depends(get_current_admin), db: Session = Depends(get_db)
+    task_id: int, 
+    current_user=Depends(get_current_admin), 
+    request: Request = None,
+    db: Session = Depends(get_db)
 ):
     """管理员删除任务"""
+    from app.security import get_client_ip
+    
     task = crud.get_task(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # 记录任务信息（用于审计日志）
+    task_data = {
+        'id': task.id,
+        'title': task.title,
+        'status': task.status,
+        'poster_id': task.poster_id,
+        'taker_id': task.taker_id,
+        'reward': float(task.reward) if task.reward else None,
+        'task_type': task.task_type,
+        'location': task.location,
+    }
 
     # 记录删除历史（管理员操作时user_id设为None）
     crud.add_task_history(
@@ -2680,6 +2794,20 @@ def admin_delete_task(
     success = crud.delete_task_by_admin(db, task_id)
 
     if success:
+        # 记录审计日志
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="delete_task",
+            entity_type="task",
+            entity_id=str(task_id),
+            admin_id=current_user.id,
+            user_id=task.poster_id,
+            old_value=task_data,
+            new_value=None,  # 删除后值为None
+            reason=f"管理员 {current_user.id} ({current_user.name}) 删除了任务",
+            ip_address=ip_address,
+        )
         return {"message": f"任务 {task_id} 已删除"}
     else:
         raise HTTPException(status_code=500, detail="删除任务失败")
@@ -2690,17 +2818,21 @@ def admin_batch_update_tasks(
     task_ids: list[int],
     task_update: schemas.AdminTaskUpdate,
     current_user=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """管理员批量更新任务"""
+    from app.security import get_client_ip
+    
     updated_tasks = []
     failed_tasks = []
+    ip_address = get_client_ip(request) if request else None
 
     for task_id in task_ids:
         try:
             task = crud.get_task(db, task_id)
             if task:
-                updated_task = crud.update_task_by_admin(
+                updated_task, old_values, new_values = crud.update_task_by_admin(
                     db, task_id, task_update.dict(exclude_unset=True)
                 )
                 crud.add_task_history(
@@ -2710,6 +2842,20 @@ def admin_batch_update_tasks(
                     "admin_batch_update",
                     f"管理员 {current_user.id} ({current_user.name}) 批量更新了任务信息",
                 )
+                # 记录审计日志（如果有变更）
+                if old_values and new_values:
+                    crud.create_audit_log(
+                        db=db,
+                        action_type="batch_update_task",
+                        entity_type="task",
+                        entity_id=str(task_id),
+                        admin_id=current_user.id,
+                        user_id=task.poster_id,
+                        old_value=old_values,
+                        new_value=new_values,
+                        reason=f"管理员 {current_user.id} ({current_user.name}) 批量更新了任务信息",
+                        ip_address=ip_address,
+                    )
                 updated_tasks.append(updated_task)
             else:
                 failed_tasks.append({"task_id": task_id, "error": "任务不存在"})
@@ -4367,14 +4513,33 @@ def update_user_by_admin(
     user_id: str,
     user_update: schemas.AdminUserUpdate,
     current_admin=Depends(get_current_admin),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """后台管理员更新用户信息"""
+    from app.security import get_client_ip
+    
     update_data = user_update.dict(exclude_unset=True)
-    user = crud.update_user_by_admin(db, user_id, update_data)
+    user, old_values, new_values = crud.update_user_by_admin(db, user_id, update_data)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # 记录审计日志（如果有变更）
+    if old_values and new_values:
+        ip_address = get_client_ip(request) if request else None
+        crud.create_audit_log(
+            db=db,
+            action_type="update_user",
+            entity_type="user",
+            entity_id=user_id,
+            admin_id=current_admin.id,
+            user_id=user_id,
+            old_value=old_values,
+            new_value=new_values,
+            reason=f"管理员 {current_admin.id} ({current_admin.name}) 更新了用户信息",
+            ip_address=ip_address,
+        )
 
     return {"message": "User updated successfully", "user": user}
 

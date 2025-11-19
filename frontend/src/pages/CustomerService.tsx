@@ -66,6 +66,8 @@ interface Message {
   is_read: number;
   is_admin_msg: number;
   sender_type?: string;
+  message_type?: string; // 'text' | 'task_card' | 'image' | 'file'
+  task_id?: number; // 任务卡片消息的任务ID
 }
 
 interface Notification {
@@ -204,6 +206,12 @@ const CustomerService: React.FC = () => {
   
   // 模板相关状态
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  
+  // 任务卡片相关状态
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [loadingTaskDetail, setLoadingTaskDetail] = useState(false);
   
   // 计算总的未读消息数量
   const totalUnreadCount = sessions.reduce((total, session) => total + session.unread_count, 0);
@@ -666,15 +674,34 @@ const CustomerService: React.FC = () => {
           
           // 如果当前选中的会话是发送消息的用户，立即更新聊天记录
           if (selectedSession && selectedSession.user_id === msg.from) {
+            // 检查是否是任务卡片消息
+            const isTaskCard = msg.message_type === 'task_card' || 
+                              (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+            let taskId: number | undefined;
+            
+            if (isTaskCard) {
+              // 从消息内容或字段中提取任务ID
+              if (msg.task_id) {
+                taskId = msg.task_id;
+              } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+                const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+                if (match) {
+                  taskId = parseInt(match[1], 10);
+                }
+              }
+            }
+            
             const newMessage: Message = {
               id: msg.id || Date.now(),
               sender_id: msg.from,
               receiver_id: currentUser.id,
-              content: msg.content,
+              content: isTaskCard ? '任务卡片' : msg.content,
               created_at: msg.created_at || new Date().toISOString(),
               is_read: 0,
               is_admin_msg: 0,
-              sender_type: 'user'
+              sender_type: 'user',
+              message_type: isTaskCard ? 'task_card' : 'text',
+              task_id: taskId
             };
             
             setChatMessages(prev => {
@@ -964,8 +991,35 @@ const CustomerService: React.FC = () => {
       
       // 确保 messagesData 是数组
       if (Array.isArray(messagesData)) {
+        // 处理消息，识别任务卡片
+        const processedMessages = messagesData.map((msg: any) => {
+          // 检查是否是任务卡片消息
+          const isTaskCard = msg.message_type === 'task_card' || 
+                            (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+          let taskId: number | undefined;
+          
+          if (isTaskCard) {
+            // 从消息内容或字段中提取任务ID
+            if (msg.task_id) {
+              taskId = msg.task_id;
+            } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+              const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+              if (match) {
+                taskId = parseInt(match[1], 10);
+              }
+            }
+          }
+          
+          return {
+            ...msg,
+            message_type: isTaskCard ? 'task_card' : (msg.message_type || 'text'),
+            task_id: taskId || msg.task_id,
+            content: isTaskCard ? '任务卡片' : msg.content
+          };
+        });
+        
         // 直接设置服务器返回的消息，确保只显示当前chat_id的消息
-        setChatMessages(messagesData);
+        setChatMessages(processedMessages);
       } else {
         console.error('聊天消息数据格式错误:', messagesData);
         setChatMessages([]);
@@ -1208,6 +1262,35 @@ const CustomerService: React.FC = () => {
     }
   };
   
+  // 获取任务详情
+  const fetchTaskDetail = async (taskId: number) => {
+    setLoadingTaskDetail(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/tasks/${taskId}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const taskData = await response.json();
+        setSelectedTask(taskData);
+        setShowTaskDetailModal(true);
+      } else {
+        message.error('获取任务详情失败');
+      }
+    } catch (error) {
+      console.error('获取任务详情失败:', error);
+      message.error('获取任务详情失败');
+    } finally {
+      setLoadingTaskDetail(false);
+    }
+  };
+  
+  // 处理任务卡片点击
+  const handleTaskCardClick = (taskId: number) => {
+    setSelectedTaskId(taskId);
+    fetchTaskDetail(taskId);
+  };
+  
   // 使用模板 - 填充到输入框
   const fillTemplateMessage = (templateContent: string) => {
     if (!selectedSession || selectedSession.is_ended === 1) {
@@ -1333,15 +1416,34 @@ const CustomerService: React.FC = () => {
             if (msg.chat_id && latestSelectedSession && msg.chat_id === latestSelectedSession.chat_id) {
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
+                // 检查是否是任务卡片消息
+                const isTaskCard = msg.message_type === 'task_card' || 
+                                  (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+                let taskId: number | undefined;
+                
+                if (isTaskCard) {
+                  // 从消息内容或字段中提取任务ID
+                  if (msg.task_id) {
+                    taskId = msg.task_id;
+                  } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+                    const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+                    if (match) {
+                      taskId = parseInt(match[1], 10);
+                    }
+                  }
+                }
+                
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
                   receiver_id: msg.receiver_id,
-                  content: msg.content.trim(),
+                  content: isTaskCard ? '任务卡片' : msg.content.trim(),
                   created_at: msg.created_at || new Date().toISOString(), // 确保有有效的时间
                   is_read: 0,
                   is_admin_msg: 0,
-                  sender_type: msg.sender_type || 'user'
+                  sender_type: msg.sender_type || 'user',
+                  message_type: isTaskCard ? 'task_card' : 'text',
+                  task_id: taskId
                 }]);
                 
                 // 滚动到底部
@@ -1359,15 +1461,34 @@ const CustomerService: React.FC = () => {
             )) {
               // 只处理接收到的消息，不处理自己发送的消息（避免重复显示）
               if (msg.from !== currentUser.id && msg.content && msg.content.trim()) {
+                // 检查是否是任务卡片消息
+                const isTaskCard = msg.message_type === 'task_card' || 
+                                  (msg.content && msg.content.startsWith('[TASK_CARD:') && msg.content.endsWith(']'));
+                let taskId: number | undefined;
+                
+                if (isTaskCard) {
+                  // 从消息内容或字段中提取任务ID
+                  if (msg.task_id) {
+                    taskId = msg.task_id;
+                  } else if (msg.content && msg.content.startsWith('[TASK_CARD:')) {
+                    const match = msg.content.match(/\[TASK_CARD:(\d+)\]/);
+                    if (match) {
+                      taskId = parseInt(match[1], 10);
+                    }
+                  }
+                }
+                
                 setChatMessages(prev => [...prev, {
                   id: Date.now(), // 临时ID
                   sender_id: msg.from,
                   receiver_id: msg.receiver_id,
-                  content: msg.content.trim(),
+                  content: isTaskCard ? '任务卡片' : msg.content.trim(),
                   created_at: msg.created_at || new Date().toISOString(), // 确保有有效的时间
                   is_read: 0,
                   is_admin_msg: 0,
-                  sender_type: msg.sender_type || 'user'
+                  sender_type: msg.sender_type || 'user',
+                  message_type: isTaskCard ? 'task_card' : 'text',
+                  task_id: taskId
                 }]);
                 
                 // 滚动到底部
@@ -2176,34 +2297,124 @@ const CustomerService: React.FC = () => {
                 overflowY: 'auto', 
                 padding: '20px'
               }}>
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} style={{ 
-                    marginBottom: 16, 
-                    textAlign: msg.sender_type === 'customer_service' ? 'right' : 'left',
-                    display: 'flex',
-                    justifyContent: msg.sender_type === 'system' ? 'center' : (msg.sender_type === 'customer_service' ? 'flex-end' : 'flex-start')
-                  }}>
-                    <div style={{ 
-                      display: 'inline-block', 
-                      background: msg.sender_type === 'system' ? '#f0f0f0' : (msg.sender_type === 'customer_service' ? '#A67C52' : '#e6f7ff'), 
-                      color: msg.sender_type === 'system' ? '#666' : (msg.sender_type === 'customer_service' ? '#fff' : '#333'), 
-                      borderRadius: 16, 
-                      padding: '8px 16px', 
-                      maxWidth: '80%', 
-                      wordBreak: 'break-all',
-                      border: msg.sender_type === 'system' ? '1px solid #ddd' : 'none'
-                    }}>
-                      <div style={{ fontSize: 16 }}>{msg.content}</div>
-                      <div style={{ 
-                        fontSize: 12, 
-                        color: msg.sender_type === 'system' ? '#999' : (msg.sender_type === 'customer_service' ? 'rgba(255,255,255,0.7)' : '#888'), 
-                        marginTop: 4 
+                {chatMessages.map((msg, idx) => {
+                  // 如果是任务卡片消息，渲染任务卡片
+                  if (msg.message_type === 'task_card' && msg.task_id) {
+                    return (
+                      <div key={idx} style={{ 
+                        marginBottom: 16, 
+                        textAlign: 'left',
+                        display: 'flex',
+                        justifyContent: 'flex-start'
                       }}>
-                        {TimeHandlerV2.formatDetailedTime(msg.created_at, userTimezone)}
+                        <div 
+                          onClick={() => handleTaskCardClick(msg.task_id!)}
+                          style={{ 
+                            display: 'inline-block', 
+                            background: '#fff', 
+                            border: '2px solid #A67C52',
+                            borderRadius: 12, 
+                            padding: '16px', 
+                            maxWidth: '400px', 
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(166, 124, 82, 0.3)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 12,
+                            marginBottom: 8
+                          }}>
+                            <div style={{
+                              fontSize: 24,
+                              width: 48,
+                              height: 48,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: '#f0f0f0',
+                              borderRadius: 8
+                            }}>
+                              📋
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                fontSize: 16, 
+                                fontWeight: 600, 
+                                color: '#333',
+                                marginBottom: 4
+                              }}>
+                                任务卡片
+                              </div>
+                              <div style={{ 
+                                fontSize: 12, 
+                                color: '#666',
+                                marginBottom: 4
+                              }}>
+                                任务ID: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#A67C52' }}>{msg.task_id}</span>
+                              </div>
+                              <div style={{ 
+                                fontSize: 12, 
+                                color: '#999'
+                              }}>
+                                点击查看任务详情
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ 
+                            fontSize: 12, 
+                            color: '#999', 
+                            marginTop: 8,
+                            paddingTop: 8,
+                            borderTop: '1px solid #eee'
+                          }}>
+                            {TimeHandlerV2.formatDetailedTime(msg.created_at, userTimezone)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // 普通文本消息
+                  return (
+                    <div key={idx} style={{ 
+                      marginBottom: 16, 
+                      textAlign: msg.sender_type === 'customer_service' ? 'right' : 'left',
+                      display: 'flex',
+                      justifyContent: msg.sender_type === 'system' ? 'center' : (msg.sender_type === 'customer_service' ? 'flex-end' : 'flex-start')
+                    }}>
+                      <div style={{ 
+                        display: 'inline-block', 
+                        background: msg.sender_type === 'system' ? '#f0f0f0' : (msg.sender_type === 'customer_service' ? '#A67C52' : '#e6f7ff'), 
+                        color: msg.sender_type === 'system' ? '#666' : (msg.sender_type === 'customer_service' ? '#fff' : '#333'), 
+                        borderRadius: 16, 
+                        padding: '8px 16px', 
+                        maxWidth: '80%', 
+                        wordBreak: 'break-all',
+                        border: msg.sender_type === 'system' ? '1px solid #ddd' : 'none'
+                      }}>
+                        <div style={{ fontSize: 16 }}>{msg.content}</div>
+                        <div style={{ 
+                          fontSize: 12, 
+                          color: msg.sender_type === 'system' ? '#999' : (msg.sender_type === 'customer_service' ? 'rgba(255,255,255,0.7)' : '#888'), 
+                          marginTop: 4 
+                        }}>
+                          {TimeHandlerV2.formatDetailedTime(msg.created_at, userTimezone)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -3256,6 +3467,236 @@ const CustomerService: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 任务详情弹窗 */}
+      {showTaskDetailModal && selectedTask && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10002,
+          backdropFilter: 'blur(5px)'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowTaskDetailModal(false);
+            setSelectedTask(null);
+            setSelectedTaskId(null);
+          }
+        }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: '24px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            position: 'relative'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 20, 
+                fontWeight: 600, 
+                color: '#262626' 
+              }}>
+                📋 任务详情
+              </h3>
+              <button
+                onClick={() => {
+                  setShowTaskDetailModal(false);
+                  setSelectedTask(null);
+                  setSelectedTaskId(null);
+                }}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: '#f5f5f5',
+                  color: '#666',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ff4d4f';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.color = '#666';
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {loadingTaskDetail ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                加载中...
+              </div>
+            ) : (
+              <div>
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: 14, color: '#666', marginBottom: '8px' }}>任务标题</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: '#333' }}>{selectedTask.title}</div>
+                </div>
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>任务类型</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>{selectedTask.task_type || '未知'}</div>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>任务等级</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>{selectedTask.task_level || '普通'}</div>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>奖励</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#059669' }}>£{selectedTask.reward || selectedTask.base_reward || 0}</div>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>状态</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>
+                      {selectedTask.status === 'open' ? '待接取' :
+                       selectedTask.status === 'taken' ? '待审核申请' :
+                       selectedTask.status === 'in_progress' ? '进行中' :
+                       selectedTask.status === 'completed' ? '已完成' :
+                       selectedTask.status === 'cancelled' ? '已取消' : selectedTask.status}
+                    </div>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>位置</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>{selectedTask.location || '未知'}</div>
+                  </div>
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>任务ID</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#333' }}>{selectedTask.id}</div>
+                  </div>
+                </div>
+                
+                {selectedTask.description && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: 14, color: '#666', marginBottom: '8px' }}>任务描述</div>
+                    <div style={{ 
+                      padding: '12px', 
+                      background: '#f8f9fa', 
+                      borderRadius: 8,
+                      fontSize: 14,
+                      color: '#333',
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {selectedTask.description}
+                    </div>
+                  </div>
+                )}
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '16px',
+                  marginBottom: '20px'
+                }}>
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>发布者ID</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>{selectedTask.poster_id}</div>
+                  </div>
+                  
+                  {selectedTask.taker_id && (
+                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                      <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>接受者ID</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>{selectedTask.taker_id}</div>
+                    </div>
+                  )}
+                  
+                  <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: '4px' }}>创建时间</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>
+                      {TimeHandlerV2.formatDetailedTime(selectedTask.created_at, userTimezone)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '24px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid #eee'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowTaskDetailModal(false);
+                      setSelectedTask(null);
+                      setSelectedTaskId(null);
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      border: '1px solid #d9d9d9',
+                      background: '#fff',
+                      color: '#666',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 600
+                    }}
+                  >
+                    关闭
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.open(`/tasks/${selectedTask.id}`, '_blank');
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: '#A67C52',
+                      color: '#fff',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 600
+                    }}
+                  >
+                    查看完整详情
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

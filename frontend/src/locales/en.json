@@ -2095,7 +2095,8 @@
     "userTypes": {
       "title": "2. User Types and Eligibility",
       "content": "Only users aged 18 and above may register and use the service.",
-      "userTypes": "Users may be business users (B2B) or individual/consumer users (B2C). If you are a consumer, the Consumer Terms Appendix at the end applies."
+      "userTypes": "Users may be business users (B2B) or individual/consumer users (B2C). If you are a consumer, the Consumer Terms Appendix at the end applies.",
+      "workEligibility": "Work Eligibility Requirements: Before accepting tasks, users must ensure they have legal work eligibility. This includes but is not limited to: holding a valid work visa, possessing licenses or qualifications required for the relevant industry, and complying with local laws and regulations regarding the performance of related work. Users are responsible for confirming and complying with all applicable laws and regulations. The platform does not verify users' work eligibility, but reserves the right to require users to provide relevant proof."
     },
     "platformPosition": {
       "title": "3. Platform Position and Off-Platform Transactions",
@@ -2112,7 +2113,8 @@
     "userBehavior": {
       "title": "5. User Behavior and Prohibited Activities",
       "prohibited": "You may not: (1) publish illegal, infringing, fraudulent, misleading or harmful content; (2) publish tasks requiring licenses without proper qualifications; (3) scrape, attack, bypass access controls or attempt to damage the system; (4) engage in money laundering, sanctions evasion or other financial crimes.",
-      "consequences": "If violated, we may delete content, restrict/terminate access, and report to regulatory or law enforcement agencies when necessary."
+      "consequences": "If violated, we may delete content, restrict/terminate access, and report to regulatory or law enforcement agencies when necessary.",
+      "accountSuspension": "Account Suspension Policy: If the platform discovers or becomes aware of any illegal or violations by users, including but not limited to violations of these terms, engaging in illegal activities, fraud, harassment of other users, publishing false information, etc., the platform has the right and obligation to immediately suspend the user's account. Account suspension may include but is not limited to: temporary account suspension, permanent account ban, restriction of account functions, deletion of violating content, etc. The platform will take appropriate measures based on the severity of the violations and reserves the right to report to relevant regulatory or law enforcement agencies. After a user's account is suspended, they will not be able to continue using the platform services, published tasks may be deleted, and ongoing transactions may be terminated."
     },
     "intellectualProperty": {
       "title": "6. Intellectual Property and User Content",

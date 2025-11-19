@@ -166,6 +166,9 @@ const TermsOfService: React.FC = () => {
               </h2>
               <p>{t('termsOfService.userTypes.content')}</p>
               <p>{t('termsOfService.userTypes.userTypes')}</p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca', marginTop: '12px' }}>
+                {t('termsOfService.userTypes.workEligibility')}
+              </p>
 
               {/* 3. 平台定位与站外交易 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
@@ -193,6 +196,9 @@ const TermsOfService: React.FC = () => {
               </h2>
               <p>{t('termsOfService.userBehavior.prohibited')}</p>
               <p>{t('termsOfService.userBehavior.consequences')}</p>
+              <p style={{ color: '#dc2626', fontWeight: '600', backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', border: '1px solid #fecaca', marginTop: '12px' }}>
+                {t('termsOfService.userBehavior.accountSuspension')}
+              </p>
 
               {/* 6. 知识产权与用户内容 */}
               <h2 style={{ color: '#1e293b', fontSize: '1.5rem', marginBottom: '20px', marginTop: '32px' }}>
