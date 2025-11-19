@@ -24,6 +24,17 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 初始化时加载并播放第一个视频
   useEffect(() => {
@@ -118,21 +129,21 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
   const containerStyle = videoDimensions 
     ? {
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: isMobile ? '100%' : '800px',
         margin: '0 auto',
         aspectRatio: `${videoDimensions.width} / ${videoDimensions.height}`,
         background: '#fff',
-        borderRadius: '20px',
+        borderRadius: isMobile ? '12px' : '20px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         overflow: 'hidden'
       }
     : {
         width: '100%',
-        maxWidth: '800px',
+        maxWidth: isMobile ? '100%' : '800px',
         margin: '0 auto',
-        minHeight: '450px',
+        minHeight: isMobile ? '300px' : '450px',
         background: '#fff',
-        borderRadius: '20px',
+        borderRadius: isMobile ? '12px' : '20px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
         overflow: 'hidden'
       };
@@ -211,29 +222,29 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
               left: 0,
               right: 0,
               background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.3) 80%, transparent 100%)',
-              padding: '20px 24px',
+              padding: isMobile ? '16px' : '20px 24px',
               color: '#fff',
               zIndex: 5
             }}>
               <h3 style={{
-                fontSize: '22px',
+                fontSize: isMobile ? '18px' : '22px',
                 fontWeight: '700',
-                marginBottom: '10px',
+                marginBottom: isMobile ? '8px' : '10px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                gap: isMobile ? '8px' : '10px',
                 textShadow: '0 2px 8px rgba(0,0,0,0.8)'
               }}>
-                <span style={{ fontSize: '26px' }}>
+                <span style={{ fontSize: isMobile ? '22px' : '26px' }}>
                   {index === 0 ? '💻' : index === 1 ? '🎨' : index === 2 ? '🍽️' : '🐾'}
                 </span>
                 {video.title}
               </h3>
               
               <p style={{
-                fontSize: '13px',
+                fontSize: isMobile ? '11px' : '13px',
                 lineHeight: '1.6',
-                marginBottom: '14px',
+                marginBottom: isMobile ? '10px' : '14px',
                 opacity: 0.95,
                 textShadow: '0 1px 4px rgba(0,0,0,0.8)'
               }}>
@@ -242,16 +253,16 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
 
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: '12px',
-                fontSize: '11px'
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))',
+                gap: isMobile ? '10px' : '12px',
+                fontSize: isMobile ? '10px' : '11px'
               }}>
                 {/* 特长 */}
                 <div>
                   <h4 style={{
-                    fontSize: '13px',
+                    fontSize: isMobile ? '11px' : '13px',
                     fontWeight: '600',
-                    marginBottom: '6px',
+                    marginBottom: isMobile ? '4px' : '6px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
@@ -267,10 +278,10 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                     margin: 0,
                     opacity: 0.9
                   }}>
-                    {video.specialties.slice(0, 3).map((specialty, i) => (
+                    {video.specialties.slice(0, isMobile ? 2 : 3).map((specialty, i) => (
                       <li key={i} style={{
-                        marginBottom: '3px',
-                        paddingLeft: '14px',
+                        marginBottom: '2px',
+                        paddingLeft: '12px',
                         position: 'relative',
                         textShadow: '0 1px 2px rgba(0,0,0,0.8)'
                       }}>
@@ -288,9 +299,9 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* 达人要求 */}
                 <div>
                   <h4 style={{
-                    fontSize: '13px',
+                    fontSize: isMobile ? '11px' : '13px',
                     fontWeight: '600',
-                    marginBottom: '6px',
+                    marginBottom: isMobile ? '4px' : '6px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
@@ -306,10 +317,10 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                     margin: 0,
                     opacity: 0.9
                   }}>
-                    {video.achievements.slice(0, 3).map((achievement, i) => (
+                    {video.achievements.slice(0, isMobile ? 2 : 3).map((achievement, i) => (
                       <li key={i} style={{
-                        marginBottom: '3px',
-                        paddingLeft: '14px',
+                        marginBottom: '2px',
+                        paddingLeft: '12px',
                         position: 'relative',
                         textShadow: '0 1px 2px rgba(0,0,0,0.8)'
                       }}>
@@ -333,19 +344,19 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
           onClick={handlePrevious}
           style={{
             position: 'absolute',
-            left: '16px',
+            left: isMobile ? '8px' : '16px',
             top: '50%',
             transform: 'translateY(-50%)',
             background: 'rgba(255, 255, 255, 0.9)',
             border: 'none',
             borderRadius: '50%',
-            width: '48px',
-            height: '48px',
+            width: isMobile ? '40px' : '48px',
+            height: isMobile ? '40px' : '48px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: '24px',
+            fontSize: isMobile ? '20px' : '24px',
             color: '#1f2937',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             transition: 'all 0.3s ease',
@@ -367,19 +378,19 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
           onClick={handleNext}
           style={{
             position: 'absolute',
-            right: '16px',
+            right: isMobile ? '8px' : '16px',
             top: '50%',
             transform: 'translateY(-50%)',
             background: 'rgba(255, 255, 255, 0.9)',
             border: 'none',
             borderRadius: '50%',
-            width: '48px',
-            height: '48px',
+            width: isMobile ? '40px' : '48px',
+            height: isMobile ? '40px' : '48px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: '24px',
+            fontSize: isMobile ? '20px' : '24px',
             color: '#1f2937',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             transition: 'all 0.3s ease',
@@ -400,11 +411,11 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
         {/* 指示器 - 放在文字上方 */}
         <div style={{
           position: 'absolute',
-          bottom: '200px',
+          bottom: isMobile ? '160px' : '200px',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
-          gap: '8px',
+          gap: isMobile ? '6px' : '8px',
           zIndex: 15
         }}>
           {videos.map((_, index) => (
@@ -425,9 +436,9 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 }, 50);
               }}
               style={{
-                width: index === currentIndex ? '24px' : '8px',
-                height: '8px',
-                borderRadius: '4px',
+                width: index === currentIndex ? (isMobile ? '20px' : '24px') : (isMobile ? '6px' : '8px'),
+                height: isMobile ? '6px' : '8px',
+                borderRadius: '3px',
                 border: 'none',
                 background: index === currentIndex ? '#fff' : 'rgba(255, 255, 255, 0.5)',
                 cursor: 'pointer',

@@ -32,6 +32,18 @@ const TaskExpertsIntro: React.FC = () => {
   // 任务达人申请弹窗状态
   const [showExpertApplicationModal, setShowExpertApplicationModal] = useState(false);
   
+  // 移动端检测
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   // 加载用户信息和系统设置
   useEffect(() => {
     const loadUserData = async () => {
@@ -130,14 +142,18 @@ const TaskExpertsIntro: React.FC = () => {
 
       {/* 主要内容 */}
       <main style={{ paddingTop: '80px' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px' }}>
+        <div style={{ 
+          maxWidth: 1000, 
+          margin: '0 auto', 
+          padding: isMobile ? '20px 16px' : '40px 24px' 
+        }}>
           {/* 标题部分 */}
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? '40px' : '60px' }}>
             <h1 style={{
-              fontSize: '48px',
+              fontSize: isMobile ? '32px' : '48px',
               fontWeight: '700',
               color: '#1e293b',
-              marginBottom: '20px',
+              marginBottom: isMobile ? '16px' : '20px',
               background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
@@ -145,7 +161,7 @@ const TaskExpertsIntro: React.FC = () => {
               {t('taskExpertsIntro.title')}
             </h1>
             <p style={{
-              fontSize: '20px',
+              fontSize: isMobile ? '16px' : '20px',
               color: '#64748b',
               lineHeight: '1.6',
               maxWidth: '700px',
