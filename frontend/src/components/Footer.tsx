@@ -483,48 +483,25 @@ const Footer: React.FC = () => {
           /* 移动端适配 */
           @media (max-width: 768px) {
             .footer-main-content {
-              grid-template-columns: 1fr 1fr 1fr !important;
-              gap: 20px !important;
-            }
-            
-            .footer-brand {
-              display: none !important;
+              grid-template-columns: 1fr !important;
+              gap: 40px !important;
+              text-align: center;
             }
             
             .footer-links {
               grid-template-columns: 1fr 1fr !important;
               gap: 20px !important;
+              text-align: center;
             }
             
-            .footer-support,
-            .footer-cooperation,
+            .footer-links > div {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+            
             .footer-contact {
-              text-align: left;
-            }
-            
-            .footer-support h4,
-            .footer-cooperation h4,
-            .footer-contact h4 {
-              font-size: 13px !important;
-              margin-bottom: 10px !important;
-            }
-            
-            .footer-support a,
-            .footer-cooperation a {
-              font-size: 12px !important;
-            }
-            
-            .footer-contact p {
-              font-size: 11px !important;
-              margin-bottom: 4px !important;
-            }
-            
-            .footer-contact a {
-              font-size: 11px !important;
-            }
-            
-            .footer-contact > div {
-              margin-bottom: 16px !important;
+              text-align: center;
             }
             
             .footer-download {
@@ -573,33 +550,7 @@ const Footer: React.FC = () => {
           /* 超小屏幕优化 */
           @media (max-width: 480px) {
             .footer-main-content {
-              grid-template-columns: 1fr 1fr 1fr !important;
-              gap: 12px !important;
-            }
-            
-            .footer-support h4,
-            .footer-cooperation h4,
-            .footer-contact h4 {
-              font-size: 12px !important;
-              margin-bottom: 8px !important;
-            }
-            
-            .footer-support a,
-            .footer-cooperation a {
-              font-size: 11px !important;
-            }
-            
-            .footer-contact p {
-              font-size: 10px !important;
-              margin-bottom: 3px !important;
-            }
-            
-            .footer-contact a {
-              font-size: 10px !important;
-            }
-            
-            .footer-contact > div {
-              margin-bottom: 12px !important;
+              gap: 30px !important;
             }
             
             .download-buttons {
