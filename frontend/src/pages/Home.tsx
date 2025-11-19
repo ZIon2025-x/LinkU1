@@ -100,6 +100,25 @@ function isExpiringSoon(deadline: string) {
   }
 }
 
+// Convert number to rounded up approximate value (e.g., 92 -> 100+, 123 -> 130+, 2576 -> 2600+)
+function roundUpApproximate(num: number): string {
+  if (num === 0) return '0';
+  if (num < 100) return '100+';
+  
+  // For numbers 100-999, round up to nearest 10
+  if (num < 1000) {
+    return `${Math.ceil(num / 10) * 10}+`;
+  }
+  
+  // For numbers 1000-9999, round up to nearest 100
+  if (num < 10000) {
+    return `${Math.ceil(num / 100) * 100}+`;
+  }
+  
+  // For numbers 10000+, round up to nearest 1000
+  return `${Math.ceil(num / 1000) * 1000}+`;
+}
+
 // Check if task has expired - using UK time
 function isExpired(deadline: string) {
   try {
@@ -245,6 +264,8 @@ const Home: React.FC = () => {
   // Debug related states
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [maxTaskId, setMaxTaskId] = useState<number>(0);
+  const [totalTasks, setTotalTasks] = useState<number>(0);
 
   // User login and avatar logic
   const [user, setUser] = useState<any>(null);
@@ -405,6 +426,13 @@ const Home: React.FC = () => {
       .then(data => {
         const allTasks = Array.isArray(data) ? data : (data.tasks || []);
         
+        // 计算最大任务ID和任务总数
+        if (allTasks.length > 0) {
+          const maxId = Math.max(...allTasks.map((task: any) => task.id || 0));
+          setMaxTaskId(maxId);
+          setTotalTasks(allTasks.length);
+        }
+        
         // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
         const sortedTasks = allTasks
           .sort((a: any, b: any) => {
@@ -436,6 +464,13 @@ const Home: React.FC = () => {
         fetchTasks({ type: 'all', city: 'all', keyword: '', page: 1, pageSize: 50 })
           .then(data => {
             const allTasks = Array.isArray(data) ? data : (data.tasks || []);
+            
+            // 更新最大任务ID和任务总数
+            if (allTasks.length > 0) {
+              const maxId = Math.max(...allTasks.map((task: any) => task.id || 0));
+              setMaxTaskId(maxId);
+              setTotalTasks(allTasks.length);
+            }
             
             // 按赏金从高到低排序，然后按创建时间从新到旧排序，取前3个
             const sortedTasks = allTasks
@@ -757,8 +792,8 @@ const Home: React.FC = () => {
               <div className={styles.heroStatLabel}>{t('profile.tasksCompleted')}</div>
             </div>
             <div className={styles.heroStatItem}>
-              <div className={styles.heroStatValue}>100%</div>
-              <div className={styles.heroStatLabel}>{t('home.userSatisfactionGoal')}</div>
+              <div className={styles.heroStatValue}>{roundUpApproximate(maxTaskId || 0)}</div>
+              <div className={styles.heroStatLabel}>{t('home.totalTasksPublished')}</div>
             </div>
           </div>
         </div>
