@@ -239,8 +239,8 @@ const TaskExpertsIntro: React.FC = () => {
                   specialties: [
                     '宠物日常护理',
                     '宠物训练',
-                    '宠物医疗协助',
                     '宠物美容',
+                    '宠物寄养',
                     '宠物行为咨询'
                   ],
                   achievements: [

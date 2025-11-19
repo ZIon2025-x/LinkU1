@@ -749,8 +749,8 @@ const Home: React.FC = () => {
           {/* 统计数据 */}
           <div className={styles.heroStats}>
             <div className={styles.heroStatItem}>
-              <div className={styles.heroStatValue}>{t('home.betaVersion')}</div>
-              <div className={styles.heroStatLabel}>{t('about.teamText')}</div>
+              <div className={styles.heroStatValue}>100+</div>
+              <div className={styles.heroStatLabel}>{t('about.registeredUsers')}</div>
             </div>
             <div className={styles.heroStatItem}>
               <div className={styles.heroStatValue}>{t('home.coverageArea')}</div>
