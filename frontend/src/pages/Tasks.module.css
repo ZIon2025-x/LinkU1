@@ -93,10 +93,44 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  min-width: 200px;
+  min-width: 160px;
+  max-width: 180px;
   max-height: 400px;
-  overflow-y: auto;
+  overflow-y: overlay;
+  overflow-x: hidden;
   z-index: 1000;
+  /* 确保滚动条在容器内部 */
+  box-sizing: border-box;
+  /* 自定义滚动条样式，确保在容器内部 */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #fff;
+}
+
+/* WebKit浏览器滚动条样式 - 确保在容器内部 */
+.locationDropdown::-webkit-scrollbar {
+  width: 6px;
+  -webkit-appearance: none;
+}
+
+.locationDropdown::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 0 12px 12px 0;
+  margin: 0;
+}
+
+.locationDropdown::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 0 12px 12px 0;
+  border: none;
+}
+
+.locationDropdown::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 确保滚动条在圆角容器内 */
+.locationDropdown::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .locationDropdownItem {
@@ -107,10 +141,16 @@
   color: #374151;
   border-bottom: 1px solid #f3f4f6;
   transition: background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
 }
 
 .locationDropdownItem:hover {
   background: #f9fafb;
+}
+
+.locationDropdownItem:active {
+  background: #f3f4f6;
 }
 
 .locationDropdownItem:last-child {
@@ -557,6 +597,50 @@
   .languageSwitcherContainer {
     bottom: 20px;
     right: 16px;
+  }
+
+  .locationDropdown {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    max-width: 180px;
+    min-width: 160px;
+    overflow-y: overlay;
+    /* 移动端滚动条样式 - 确保在容器内部 */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #fff;
+  }
+
+  .locationDropdown::-webkit-scrollbar {
+    width: 6px;
+    -webkit-appearance: none;
+  }
+
+  .locationDropdown::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 0 16px 16px 0;
+    margin: 0;
+  }
+
+  .locationDropdown::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 0 16px 16px 0;
+    border: none;
+  }
+
+  .locationDropdown::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .locationDropdown::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  .locationDropdownItem {
+    padding: 16px;
+    font-size: 15px;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
   }
 }
 

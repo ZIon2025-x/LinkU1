@@ -641,7 +641,7 @@ const Tasks: React.FC = () => {
 
   // 点击外部区域关闭下拉菜单
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = event.target as HTMLElement;
       if (showLocationDropdown && !target.closest('[data-location-dropdown]')) {
         setShowLocationDropdown(false);
@@ -650,18 +650,66 @@ const Tasks: React.FC = () => {
 
     if (showLocationDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
       
       // 移动端计算下拉菜单位置
       if (isMobile && locationDropdownRef.current && locationButtonRef.current) {
-        const buttonRect = locationButtonRef.current.getBoundingClientRect();
-        const dropdown = locationDropdownRef.current;
-        dropdown.style.top = `${buttonRect.bottom + 4}px`;
-        dropdown.style.left = `${buttonRect.left}px`;
+        const updatePosition = () => {
+          const buttonRect = locationButtonRef.current!.getBoundingClientRect();
+          const dropdown = locationDropdownRef.current!;
+          const viewportHeight = window.innerHeight;
+          const viewportWidth = window.innerWidth;
+          const dropdownHeight = 400; // 预估高度
+          
+          // 计算下拉菜单应该显示的位置
+          let top = buttonRect.bottom + 4;
+          let left = buttonRect.left;
+          
+          // 如果下拉菜单会超出视口底部，则显示在按钮上方
+          if (top + dropdownHeight > viewportHeight) {
+            top = buttonRect.top - dropdownHeight - 4;
+            // 确保不会超出视口顶部
+            if (top < 0) {
+              top = 8;
+              dropdown.style.maxHeight = `${viewportHeight - top - 8}px`;
+            }
+          }
+          
+          // 计算下拉菜单宽度（使用按钮宽度，但最大180px）
+          const buttonWidth = buttonRect.width;
+          const dropdownWidth = Math.min(Math.max(buttonWidth, 160), 180);
+          
+          // 确保下拉菜单不会超出视口右侧
+          if (left + dropdownWidth > viewportWidth - 16) {
+            left = viewportWidth - dropdownWidth - 16;
+          }
+          // 确保不会超出视口左侧
+          if (left < 16) {
+            left = 16;
+          }
+          
+          dropdown.style.top = `${top}px`;
+          dropdown.style.left = `${left}px`;
+          dropdown.style.width = `${dropdownWidth}px`;
+        };
+        
+        // 立即更新位置
+        updatePosition();
+        
+        // 监听窗口大小变化和滚动，重新计算位置
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+        
+        return () => {
+          window.removeEventListener('resize', updatePosition);
+          window.removeEventListener('scroll', updatePosition, true);
+        };
       }
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showLocationDropdown, isMobile]);
 
@@ -1312,6 +1360,7 @@ const Tasks: React.FC = () => {
             data-location-dropdown
           >
             <div 
+              ref={locationButtonRef}
               onClick={() => setShowLocationDropdown(!showLocationDropdown)}
               className={`${styles.locationButton} ${showLocationDropdown ? styles.locationButtonActive : ''}`}
             >
@@ -1333,11 +1382,9 @@ const Tasks: React.FC = () => {
                 style={{
                   position: isMobile ? 'fixed' : 'absolute',
                   top: isMobile ? undefined : 'calc(100% + 8px)',
-                  bottom: isMobile ? 'auto' : undefined,
                   left: isMobile ? undefined : '0',
-                  right: isMobile ? undefined : 'auto',
                   zIndex: 99999,
-                  maxHeight: '400px'
+                  maxHeight: isMobile ? '60vh' : '400px'
                 }}
                 ref={locationDropdownRef}
               >
