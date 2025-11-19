@@ -22,7 +22,7 @@ const Footer: React.FC = () => {
           marginBottom: '40px'
         }}>
           {/* 左列 - 品牌信息 */}
-          <div>
+          <div className="footer-brand">
             <h3 style={{
               fontSize: '24px',
               fontWeight: '700',
@@ -47,7 +47,7 @@ const Footer: React.FC = () => {
             gridTemplateColumns: '1fr 1fr',
             gap: '40px'
           }}>
-            <div>
+            <div className="footer-support">
               <h4 style={{
                 fontSize: '16px',
                 fontWeight: '600',
@@ -93,7 +93,7 @@ const Footer: React.FC = () => {
               </div>
             </div>
             
-            <div>
+            <div className="footer-cooperation">
               <h4 style={{
                 fontSize: '16px',
                 fontWeight: '600',
@@ -483,25 +483,48 @@ const Footer: React.FC = () => {
           /* 移动端适配 */
           @media (max-width: 768px) {
             .footer-main-content {
-              grid-template-columns: 1fr !important;
-              gap: 40px !important;
-              text-align: center;
+              grid-template-columns: 1fr 1fr 1fr !important;
+              gap: 20px !important;
+            }
+            
+            .footer-brand {
+              display: none !important;
             }
             
             .footer-links {
               grid-template-columns: 1fr 1fr !important;
               gap: 20px !important;
-              text-align: center;
             }
             
-            .footer-links > div {
-              display: flex !important;
-              flex-direction: column !important;
-              gap: 8px !important;
-            }
-            
+            .footer-support,
+            .footer-cooperation,
             .footer-contact {
-              text-align: center;
+              text-align: left;
+            }
+            
+            .footer-support h4,
+            .footer-cooperation h4,
+            .footer-contact h4 {
+              font-size: 13px !important;
+              margin-bottom: 10px !important;
+            }
+            
+            .footer-support a,
+            .footer-cooperation a {
+              font-size: 12px !important;
+            }
+            
+            .footer-contact p {
+              font-size: 11px !important;
+              margin-bottom: 4px !important;
+            }
+            
+            .footer-contact a {
+              font-size: 11px !important;
+            }
+            
+            .footer-contact > div {
+              margin-bottom: 16px !important;
             }
             
             .footer-download {
@@ -545,20 +568,38 @@ const Footer: React.FC = () => {
             .footer-main-content p {
               font-size: 14px !important;
             }
-            
-            .footer-main-content h4 {
-              font-size: 14px !important;
-            }
-            
-            .footer-main-content a {
-              font-size: 13px !important;
-            }
           }
           
           /* 超小屏幕优化 */
           @media (max-width: 480px) {
             .footer-main-content {
-              gap: 30px !important;
+              grid-template-columns: 1fr 1fr 1fr !important;
+              gap: 12px !important;
+            }
+            
+            .footer-support h4,
+            .footer-cooperation h4,
+            .footer-contact h4 {
+              font-size: 12px !important;
+              margin-bottom: 8px !important;
+            }
+            
+            .footer-support a,
+            .footer-cooperation a {
+              font-size: 11px !important;
+            }
+            
+            .footer-contact p {
+              font-size: 10px !important;
+              margin-bottom: 3px !important;
+            }
+            
+            .footer-contact a {
+              font-size: 10px !important;
+            }
+            
+            .footer-contact > div {
+              margin-bottom: 12px !important;
             }
             
             .download-buttons {

@@ -152,9 +152,9 @@ const About: React.FC = () => {
   ];
 
   const stats = [
-    { number: "NA", label: t('about.registeredUsers') },
-    { number: "NA", label: t('about.completedTasks') },
-    { number: "NA", label: t('about.userSatisfaction') },
+    { number: "100+", label: t('about.registeredUsers') },
+    { number: "50+", label: t('about.completedTasks') },
+    { number: "97%", label: t('about.userSatisfaction') },
     { number: t('about.available'), label: t('about.onlineService') }
   ];
 
