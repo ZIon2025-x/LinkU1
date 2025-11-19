@@ -1388,22 +1388,24 @@ const Tasks: React.FC = () => {
                 }}
                 ref={locationDropdownRef}
               >
-                <div
-                  onClick={() => handleLocationChange('all')}
-                  className={styles.locationDropdownItem}
-                  style={{ fontWeight: '600' }}
-                >
-                  {t('home.allCities')}
-                </div>
-                {CITIES.map((cityName) => (
+                <div className={styles.locationDropdownContent}>
                   <div
-                    key={cityName}
-                    onClick={() => handleLocationChange(cityName)}
+                    onClick={() => handleLocationChange('all')}
                     className={styles.locationDropdownItem}
+                    style={{ fontWeight: '600' }}
                   >
-                    {cityName}
+                    {t('home.allCities')}
                   </div>
-                ))}
+                  {CITIES.map((cityName) => (
+                    <div
+                      key={cityName}
+                      onClick={() => handleLocationChange(cityName)}
+                      className={styles.locationDropdownItem}
+                    >
+                      {cityName}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             </div>
