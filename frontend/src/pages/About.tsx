@@ -377,45 +377,47 @@ const About: React.FC = () => {
 
       {/* 我们的愿景 */}
       <div className="vision-section">
-        <Row gutter={[48, 48]} align="middle">
-          <Col xs={24} lg={12}>
-            <div className="vision-image">
-              <img 
-                src="/static/logo.png" 
-                alt={t('about.vision')} 
-                className="vision-img"
-              />
-            </div>
-          </Col>
-          <Col xs={24} lg={12}>
-            <div className="vision-content">
-              <Title level={2}>{t('about.visionSection.title')}</Title>
-              <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <div className="vision-item">
-                  <RocketOutlined className="vision-icon" />
-                  <div>
-                    <Title level={4}>{t('about.visionSection.goals.platform.title')}</Title>
-                    <Paragraph>{t('about.visionSection.goals.platform.description')}</Paragraph>
+        <div className="vision-container">
+          <Row gutter={[48, 48]} align="middle">
+            <Col xs={0} lg={12} className="vision-image-col">
+              <div className="vision-image">
+                <img 
+                  src="/static/logo.png" 
+                  alt={t('about.vision')} 
+                  className="vision-img"
+                />
+              </div>
+            </Col>
+            <Col xs={24} lg={12}>
+              <div className="vision-content">
+                <Title level={2} className="vision-title">{t('about.visionSection.title')}</Title>
+                <div className="vision-items-container">
+                  <div className="vision-item">
+                    <RocketOutlined className="vision-icon" />
+                    <div className="vision-text">
+                      <Title level={4} className="vision-item-title">{t('about.visionSection.goals.platform.title')}</Title>
+                      <Paragraph className="vision-item-desc">{t('about.visionSection.goals.platform.description')}</Paragraph>
+                    </div>
+                  </div>
+                  <div className="vision-item">
+                    <GlobalOutlined className="vision-icon" />
+                    <div className="vision-text">
+                      <Title level={4} className="vision-item-title">{t('about.visionSection.goals.workStyle.title')}</Title>
+                      <Paragraph className="vision-item-desc">{t('about.visionSection.goals.workStyle.description')}</Paragraph>
+                    </div>
+                  </div>
+                  <div className="vision-item">
+                    <TrophyOutlined className="vision-icon" />
+                    <div className="vision-text">
+                      <Title level={4} className="vision-item-title">{t('about.visionSection.goals.socialValue.title')}</Title>
+                      <Paragraph className="vision-item-desc">{t('about.visionSection.goals.socialValue.description')}</Paragraph>
+                    </div>
                   </div>
                 </div>
-                <div className="vision-item">
-                  <GlobalOutlined className="vision-icon" />
-                  <div>
-                    <Title level={4}>{t('about.visionSection.goals.workStyle.title')}</Title>
-                    <Paragraph>{t('about.visionSection.goals.workStyle.description')}</Paragraph>
-                  </div>
-                </div>
-                <div className="vision-item">
-                  <TrophyOutlined className="vision-icon" />
-                  <div>
-                    <Title level={4}>{t('about.visionSection.goals.socialValue.title')}</Title>
-                    <Paragraph>{t('about.visionSection.goals.socialValue.description')}</Paragraph>
-                  </div>
-                </div>
-              </Space>
-            </div>
-          </Col>
-        </Row>
+              </div>
+            </Col>
+          </Row>
+        </div>
       </div>
 
       {/* 页脚 */}

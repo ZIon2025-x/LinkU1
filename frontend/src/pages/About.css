@@ -187,33 +187,68 @@
 }
 
 /* 愿景区域 */
-.vision-content h2 {
+.vision-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.vision-content {
+  width: 100%;
+}
+
+.vision-title {
   color: #333;
   margin-bottom: 40px !important;
+  text-align: center;
+}
+
+.vision-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .vision-item {
   display: flex;
   align-items: flex-start;
   gap: 20px;
-  margin-bottom: 30px;
+  padding: 20px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  margin-bottom: 16px;
+}
+
+.vision-item:last-child {
+  margin-bottom: 0;
+}
+
+.vision-item:hover {
+  background: #f8f9fa;
 }
 
 .vision-icon {
   font-size: 2rem;
   color: #667eea;
   margin-top: 5px;
+  flex-shrink: 0;
 }
 
-.vision-item h4 {
+.vision-text {
+  flex: 1;
+}
+
+.vision-item-title {
   color: #333;
-  margin-bottom: 10px !important;
+  margin-bottom: 8px !important;
+  font-size: 1.25rem !important;
 }
 
-.vision-item p {
+.vision-item-desc {
   color: #666;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 !important;
+  font-size: 1rem;
 }
 
 .vision-image {
@@ -297,9 +332,42 @@
     font-size: 2rem;
   }
   
+  .vision-container {
+    padding: 0 16px;
+  }
+
+  .vision-title {
+    font-size: 1.75rem !important;
+    margin-bottom: 24px !important;
+  }
+
+  .vision-items-container {
+    gap: 0;
+  }
+
   .vision-item {
-    flex-direction: column;
-    text-align: center;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+  }
+
+  .vision-icon {
+    font-size: 1.5rem;
+    margin-top: 2px;
+  }
+
+  .vision-item-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 6px !important;
+  }
+
+  .vision-item-desc {
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
   
   .contact-item {
@@ -330,5 +398,34 @@
   .story-content,
   .contact-content {
     padding: 20px;
+  }
+
+  .vision-container {
+    padding: 0 12px;
+  }
+
+  .vision-title {
+    font-size: 1.5rem !important;
+    margin-bottom: 20px !important;
+  }
+
+  .vision-item {
+    padding: 12px;
+    margin-bottom: 10px;
+    gap: 12px;
+  }
+
+  .vision-icon {
+    font-size: 1.25rem;
+  }
+
+  .vision-item-title {
+    font-size: 1rem !important;
+    margin-bottom: 4px !important;
+  }
+
+  .vision-item-desc {
+    font-size: 0.85rem;
+    line-height: 1.4;
   }
 }
