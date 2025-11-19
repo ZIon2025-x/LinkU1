@@ -11,6 +11,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import TaskExpertApplicationModal from '../components/TaskExpertApplicationModal';
+import VideoCarousel from '../components/VideoCarousel';
 
 const TaskExpertsIntro: React.FC = () => {
   const { t } = useLanguage();
@@ -154,6 +155,92 @@ const TaskExpertsIntro: React.FC = () => {
             </p>
           </div>
 
+          {/* 任务达人视频轮播 */}
+          <section style={{ marginBottom: '60px' }}>
+            <VideoCarousel
+              videos={[
+                {
+                  src: '/static/about1.mp4',
+                  title: '开发任务达人',
+                  description: '专业的软件开发任务达人，拥有丰富的编程经验和项目实战能力，能够高效完成各类技术开发任务。',
+                  specialties: [
+                    'Web前端开发',
+                    '后端API开发',
+                    '移动应用开发',
+                    '数据库设计',
+                    '系统架构设计'
+                  ],
+                  achievements: [
+                    '完成50+开发任务',
+                    '平均评分4.5/5.0以上',
+                    '通过平台严格审核',
+                    '提供专业证明材料',
+                    '获得用户一致好评'
+                  ]
+                },
+                {
+                  src: '/static/about2.mp4',
+                  title: '设计任务达人',
+                  description: '创意设计任务达人，擅长UI/UX设计、平面设计和品牌视觉设计，能够为客户提供专业的设计解决方案。',
+                  specialties: [
+                    'UI/UX界面设计',
+                    '品牌视觉设计',
+                    '平面设计',
+                    '图标设计',
+                    '设计规范制定'
+                  ],
+                  achievements: [
+                    '完成50+设计任务',
+                    '平均评分4.5/5.0以上',
+                    '通过平台严格审核',
+                    '提供专业证明材料',
+                    '获得用户一致好评'
+                  ]
+                },
+                {
+                  src: '/static/about3.mp4',
+                  title: '美食任务达人',
+                  description: '美食制作任务达人，精通各类菜系和烘焙技巧，能够提供专业的美食制作服务和烹饪指导。',
+                  specialties: [
+                    '中餐制作',
+                    '西餐料理',
+                    '烘焙甜点',
+                    '营养搭配',
+                    '私厨服务'
+                  ],
+                  achievements: [
+                    '完成50+美食任务',
+                    '平均评分4.5/5.0以上',
+                    '通过平台严格审核',
+                    '提供专业证明材料',
+                    '获得用户一致好评'
+                  ]
+                },
+                {
+                  src: '/static/about4.mp4',
+                  title: '宠物任务达人',
+                  description: '宠物护理任务达人，拥有丰富的宠物照护经验，能够提供专业的宠物护理、训练和陪伴服务。',
+                  specialties: [
+                    '宠物日常护理',
+                    '宠物训练',
+                    '宠物医疗协助',
+                    '宠物美容',
+                    '宠物行为咨询'
+                  ],
+                  achievements: [
+                    '完成50+宠物任务',
+                    '平均评分4.5/5.0以上',
+                    '通过平台严格审核',
+                    '提供专业证明材料',
+                    '获得用户一致好评'
+                  ]
+                }
+              ]}
+              loop={true}
+              autoplay={true}
+            />
+          </section>
+
           {/* 什么是任务达人 */}
           <section style={{ marginBottom: '60px' }}>
             <div style={{
@@ -182,6 +269,7 @@ const TaskExpertsIntro: React.FC = () => {
               }}>
                 {t('taskExpertsIntro.whatIs.description')}
               </p>
+              
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -254,6 +342,7 @@ const TaskExpertsIntro: React.FC = () => {
                 <span style={{ fontSize: '40px' }}>🚀</span>
                 {t('taskExpertsIntro.howToBecome.title')}
               </h2>
+              
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -328,6 +417,7 @@ const TaskExpertsIntro: React.FC = () => {
                 <span style={{ fontSize: '40px' }}>✨</span>
                 {t('taskExpertsIntro.advantages.title')}
               </h2>
+              
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
