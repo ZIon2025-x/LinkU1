@@ -202,8 +202,114 @@ const CustomerService: React.FC = () => {
   } | null>(null);
   const [timeoutCheckInterval, setTimeoutCheckInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   
+  // 模板相关状态
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  
   // 计算总的未读消息数量
   const totalUnreadCount = sessions.reduce((total, session) => total + session.unread_count, 0);
+  
+  // 客服回答模板
+  const responseTemplates = [
+    {
+      id: 1,
+      category: '问候',
+      title: '欢迎语',
+      content: '👋 您好！欢迎使用 Link²Ur，我是 Link²Ur 的客服，很高兴为您服务。请问有什么可以帮助您的吗？'
+    },
+    {
+      id: 2,
+      category: '问候',
+      title: '感谢等待',
+      content: '🙏 感谢您的耐心等待，我已经收到您的消息，正在为您处理中。'
+    },
+    {
+      id: 3,
+      category: '问题处理',
+      title: '了解问题',
+      content: '👍 我理解您的问题了，让我为您详细解答一下。'
+    },
+    {
+      id: 4,
+      category: '问题处理',
+      title: '需要更多信息',
+      content: '📋 为了更好地帮助您，我需要了解一些详细信息。请问您能提供更多相关细节吗？'
+    },
+    {
+      id: 5,
+      category: '问题处理',
+      title: '转交处理',
+      content: '📝 您的问题我已经记录下来了，我会转交给相关部门处理，预计会在24小时内给您回复。'
+    },
+    {
+      id: 6,
+      category: '任务相关',
+      title: '任务状态查询',
+      content: '🔍 关于您询问的任务状态，我来为您查询一下，请稍等。'
+    },
+    {
+      id: 7,
+      category: '任务相关',
+      title: '任务取消说明',
+      content: '📋 关于任务取消的申请，我已经收到。根据平台规定，取消任务需要双方同意。我会尽快为您处理。'
+    },
+    {
+      id: 8,
+      category: '账户相关',
+      title: '账户问题',
+      content: '🔒 关于您的账户问题，我已经了解。为了确保账户安全，我需要验证一些信息。'
+    },
+    {
+      id: 9,
+      category: '账户相关',
+      title: '账户解封',
+      content: '✅ 关于账户解封的申请，我已经收到。我会尽快审核您的申请，审核结果会在3个工作日内通知您。'
+    },
+    {
+      id: 10,
+      category: '结束语',
+      title: '问题已解决',
+      content: '🎉 很高兴能帮助您解决问题。如果还有其他需要帮助的地方，请随时联系我们。祝您使用愉快！'
+    },
+    {
+      id: 11,
+      category: '结束语',
+      title: '稍后回复',
+      content: '⏳ 您的问题我已经记录，我会在稍后给您详细回复。感谢您的理解与支持！'
+    },
+    {
+      id: 15,
+      category: '结束语',
+      title: '继续帮助',
+      content: '😊 请问还有什么可以帮助您的呢？'
+    },
+    {
+      id: 12,
+      category: '其他',
+      title: '道歉',
+      content: '😔 非常抱歉给您带来了不便，我们会尽快处理您的问题。'
+    },
+    {
+      id: 13,
+      category: '其他',
+      title: '确认信息',
+      content: '✅ 为了确保信息准确，请您确认一下：{信息内容}。'
+    },
+    {
+      id: 14,
+      category: '其他',
+      title: '提供帮助',
+      content: '💪 如果您在使用过程中遇到任何问题，随时可以联系我，我会尽力为您提供帮助。'
+    }
+  ];
+  
+  // 按分类分组模板
+  const templatesByCategory = responseTemplates.reduce((acc, template) => {
+    if (!acc[template.category]) {
+      acc[template.category] = [];
+    }
+    acc[template.category].push(template);
+    return acc;
+  }, {} as Record<string, typeof responseTemplates>);
 
   // 统计数据
   const [stats, setStats] = useState({
@@ -1040,6 +1146,92 @@ const CustomerService: React.FC = () => {
       console.error('发送消息失败:', error);
       message.error('发送消息失败');
     }
+  };
+  
+  // 使用模板 - 直接发送
+  const sendTemplateMessage = async (templateContent: string) => {
+    if (!selectedSession || selectedSession.is_ended === 1) {
+      return;
+    }
+    
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      message.error('连接未就绪，无法发送消息');
+      return;
+    }
+    
+    // 替换模板中的占位符（如果有）
+    let finalContent = templateContent;
+    
+    // 关闭模板弹窗
+    setShowTemplateModal(false);
+    
+    try {
+      // 通过WebSocket直接发送消息
+      const messageData = {
+        receiver_id: selectedSession.user_id,
+        content: finalContent,
+        chat_id: selectedSession.chat_id
+      };
+      
+      ws.send(JSON.stringify(messageData));
+      
+      // 立即添加消息到前端，提供即时反馈
+      const newMessage = {
+        id: Date.now(), // 临时ID
+        sender_id: currentUser.id,
+        receiver_id: selectedSession.user_id,
+        content: finalContent,
+        created_at: new Date().toISOString(),
+        is_read: 0,
+        is_admin_msg: 0,
+        sender_type: 'customer_service'
+      };
+      
+      setChatMessages(prev => [...prev, newMessage]);
+      
+      // 滚动到底部
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      
+      // 重新检查超时状态（因为发送了新消息）
+      if (selectedSession.is_ended === 0) {
+        setTimeout(() => {
+          checkChatTimeoutStatus(selectedSession.chat_id);
+        }, 1000); // 延迟1秒检查，确保后端已处理消息
+      }
+    } catch (error) {
+      console.error('发送模板消息失败:', error);
+      message.error('发送消息失败');
+    }
+  };
+  
+  // 使用模板 - 填充到输入框
+  const fillTemplateMessage = (templateContent: string) => {
+    if (!selectedSession || selectedSession.is_ended === 1) {
+      return;
+    }
+    
+    // 替换模板中的占位符（如果有）
+    let finalContent = templateContent;
+    
+    // 填充到输入框
+    setInputMessage(finalContent);
+    
+    // 关闭模板弹窗
+    setShowTemplateModal(false);
+    
+    // 聚焦到输入框
+    setTimeout(() => {
+      const input = document.querySelector('input[type="text"][placeholder*="输入消息"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        // 将光标移到末尾
+        input.setSelectionRange(finalContent.length, finalContent.length);
+      }
+    }, 100);
   };
 
   const selectSession = async (session: UserSession) => {
@@ -1888,13 +2080,17 @@ const CustomerService: React.FC = () => {
                 gap: 12
               }}>
                 <img 
-                  src="/static/service.png"
-                  alt="客服头像" 
+                  src={selectedSession.user_avatar}
+                  alt="用户头像" 
                   style={{ 
                     width: 40, 
                     height: 40, 
                     borderRadius: '50%',
                     objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    // 如果用户头像加载失败，使用默认头像
+                    e.currentTarget.src = '/static/avatar1.png';
                   }}
                 />
                 <div style={{ flex: 1 }}>
@@ -2019,6 +2215,46 @@ const CustomerService: React.FC = () => {
                 borderTop: '1px solid #eee',
                 background: '#fff'
               }}>
+                {/* 模板按钮 */}
+                <button
+                  onClick={() => {
+                    if (!selectedSession || selectedSession.is_ended === 1 || wsConnectionStatus !== 'connected') {
+                      message.warning('请先选择一个有效的会话');
+                      return;
+                    }
+                    setShowTemplateModal(true);
+                  }}
+                  disabled={!selectedSession || selectedSession.is_ended === 1 || wsConnectionStatus !== 'connected'}
+                  title="选择回答模板"
+                  style={{ 
+                    background: (!selectedSession || selectedSession.is_ended === 1 || wsConnectionStatus !== 'connected') ? '#f5f5f5' : '#f0f0f0', 
+                    color: (!selectedSession || selectedSession.is_ended === 1 || wsConnectionStatus !== 'connected') ? '#999' : '#A67C52', 
+                    border: '1px solid #A67C52', 
+                    borderRadius: 8, 
+                    padding: '12px 16px', 
+                    fontWeight: 600,
+                    cursor: (!selectedSession || selectedSession.is_ended === 1 || wsConnectionStatus !== 'connected') ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 18,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedSession && selectedSession.is_ended !== 1 && wsConnectionStatus === 'connected') {
+                      e.currentTarget.style.background = '#A67C52';
+                      e.currentTarget.style.color = '#fff';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedSession && selectedSession.is_ended !== 1 && wsConnectionStatus === 'connected') {
+                      e.currentTarget.style.background = '#f0f0f0';
+                      e.currentTarget.style.color = '#A67C52';
+                    }
+                  }}
+                >
+                  📝
+                </button>
                 <input
                   type="text"
                   value={inputMessage}
@@ -2054,7 +2290,7 @@ const CustomerService: React.FC = () => {
                   }}
                 >
                   {selectedSession.is_ended === 1 ? '已结束' : 
-                   wsConnectionStatus === 'connecting' ? '连接中...' :
+                   wsConnectionStatus === 'connecting' ? '连接中...' : 
                    wsConnectionStatus === 'connected' ? '发送' :
                    wsConnectionStatus === 'error' ? '连接失败' : '未连接'}
                 </button>
@@ -2815,6 +3051,214 @@ const CustomerService: React.FC = () => {
         userType="customer_service"
         onNotificationRead={handleNotificationRead}
       />
+      
+      {/* 模板选择弹窗 */}
+      {showTemplateModal && selectedSession && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10001,
+          backdropFilter: 'blur(5px)'
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowTemplateModal(false);
+          }
+        }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: '24px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideInDown 0.3s ease-out'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 20, 
+                fontWeight: 600, 
+                color: '#262626' 
+              }}>
+                📝 选择回答模板
+              </h3>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: '#f5f5f5',
+                  color: '#666',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ff4d4f';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.color = '#666';
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              paddingRight: '8px'
+            }}>
+              {Object.entries(templatesByCategory).map(([category, templates]) => (
+                <div key={category} style={{ marginBottom: '24px' }}>
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#A67C52',
+                    marginBottom: '12px',
+                    paddingBottom: '8px',
+                    borderBottom: '1px solid #e8e8e8'
+                  }}>
+                    {category}
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '12px'
+                  }}>
+                    {templates.map((template) => (
+                      <div
+                        key={template.id}
+                        style={{
+                          border: '1px solid #e8e8e8',
+                          borderRadius: 8,
+                          padding: '16px',
+                          background: '#fafafa',
+                          transition: 'all 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#A67C52';
+                          e.currentTarget.style.background = '#fff';
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(166, 124, 82, 0.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e8e8e8';
+                          e.currentTarget.style.background = '#fafafa';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: '#333',
+                          marginBottom: '8px'
+                        }}>
+                          {template.title}
+                        </div>
+                        <div style={{
+                          fontSize: 13,
+                          color: '#666',
+                          lineHeight: 1.5,
+                          marginBottom: '12px',
+                          maxHeight: '60px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical'
+                        }}>
+                          {template.content}
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px'
+                        }}>
+                          <button
+                            onClick={() => sendTemplateMessage(template.content)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              border: '1px solid #A67C52',
+                              background: '#A67C52',
+                              color: '#fff',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#8b6a47';
+                              e.currentTarget.style.borderColor = '#8b6a47';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#A67C52';
+                              e.currentTarget.style.borderColor = '#A67C52';
+                            }}
+                          >
+                            直接发送
+                          </button>
+                          <button
+                            onClick={() => fillTemplateMessage(template.content)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              border: '1px solid #A67C52',
+                              background: '#fff',
+                              color: '#A67C52',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#A67C52';
+                              e.currentTarget.style.color = '#fff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#fff';
+                              e.currentTarget.style.color = '#A67C52';
+                            }}
+                          >
+                            填充编辑
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
