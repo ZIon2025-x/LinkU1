@@ -654,7 +654,14 @@ async def apply_for_service(
             applicant_id=current_user.id,
             service_id=service_id,
             service_name=service.service_name,
-            negotiated_price=application_data.negotiated_price
+            negotiated_price=application_data.negotiated_price,
+            service_description=service.description,
+            base_price=service.base_price,
+            application_message=application_data.application_message,
+            currency=application_data.currency or service.currency,
+            deadline=deadline,
+            is_flexible=(application_data.is_flexible == 1),
+            application_time=new_application.created_at
         )
     except Exception as e:
         logger.error(f"Failed to send notification: {e}")

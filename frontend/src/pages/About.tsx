@@ -336,9 +336,9 @@ const About: React.FC = () => {
             {t('about.valuesSection.subtitle')}
           </Paragraph>
         </div>
-        <Row gutter={[32, 32]}>
+        <Row gutter={[16, 16]} className="values-row">
           {values.map((value, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
+            <Col xs={12} sm={12} lg={6} key={index}>
               <Card className="value-card" hoverable>
                 <div className="value-content">
                   {value.icon}
@@ -359,9 +359,9 @@ const About: React.FC = () => {
             {t('about.teamSection.subtitle')}
           </Paragraph>
         </div>
-        <Row gutter={[32, 32]} justify="center">
+        <Row gutter={[16, 16]} justify="center" className="team-row">
           {teamMembers.map((member, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
+            <Col xs={12} sm={12} lg={6} key={index}>
               <Card className="team-card" hoverable>
                 <div className="team-member">
                   <Avatar size={80} src={member.avatar} className="member-avatar" />

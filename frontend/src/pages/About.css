@@ -331,7 +331,64 @@
   .stat-number {
     font-size: 2rem;
   }
-  
+
+  /* 价值观和团队区域 - 移动端两两一行优化 */
+  .values-row,
+  .team-row {
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+  }
+
+  .values-row .ant-col,
+  .team-row .ant-col {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .value-card,
+  .team-card {
+    margin-bottom: 16px;
+  }
+
+  .value-content,
+  .team-member {
+    padding: 16px !important;
+  }
+
+  .value-icon {
+    font-size: 2rem !important;
+    margin-bottom: 12px !important;
+  }
+
+  .value-title {
+    font-size: 1rem !important;
+    margin-bottom: 10px !important;
+  }
+
+  .value-description {
+    font-size: 0.85rem !important;
+  }
+
+  .member-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .member-name {
+    font-size: 1rem !important;
+    margin-bottom: 6px !important;
+  }
+
+  .member-role {
+    font-size: 0.85rem !important;
+    margin-bottom: 10px !important;
+  }
+
+  .member-description {
+    font-size: 0.8rem !important;
+  }
+
   .vision-container {
     padding: 0 16px;
   }

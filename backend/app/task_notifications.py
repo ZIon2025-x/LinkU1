@@ -21,6 +21,7 @@ from app.email_templates import (
 import logging
 import json
 from decimal import Decimal
+from datetime import datetime
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -362,23 +363,90 @@ async def send_service_application_notification(
     service_id: int,
     service_name: str,
     negotiated_price: Optional[Decimal] = None,
+    service_description: Optional[str] = None,
+    base_price: Optional[Decimal] = None,
+    application_message: Optional[str] = None,
+    currency: Optional[str] = None,
+    deadline: Optional[datetime] = None,
+    is_flexible: Optional[bool] = None,
+    application_time: Optional[datetime] = None,
 ):
-    """用户申请服务，发送通知给任务达人"""
+    """用户申请服务，发送通知和邮件给任务达人"""
     try:
         from app import async_crud
+        from app.email_templates import get_service_application_email, get_user_language
+        import asyncio
         
         # 获取申请用户信息
         applicant = await async_crud.async_user_crud.get_user_by_id(db, applicant_id)
         if not applicant:
             return
         
+        # 获取任务达人信息（用于语言偏好和邮箱）
+        expert = await async_crud.async_user_crud.get_user_by_id(db, expert_id)
+        if not expert or not expert.email:
+            logger.warning(f"任务达人 {expert_id} 不存在或没有邮箱，跳过邮件发送")
+        
+        # 获取服务信息（如果未提供）
+        if not service_description or not base_price:
+            from sqlalchemy import select
+            service_result = await db.execute(
+                select(models.TaskExpertService).where(models.TaskExpertService.id == service_id)
+            )
+            service = service_result.scalar_one_or_none()
+            if service:
+                service_description = service_description or service.description or ""
+                base_price = base_price or service.base_price
+                currency = currency or service.currency or "GBP"
+            else:
+                service_description = service_description or ""
+                base_price = base_price or Decimal('0')
+                currency = currency or "GBP"
+        
+        # 获取申请记录信息（如果未提供）
+        if application_message is None or deadline is None or is_flexible is None or application_time is None:
+            from sqlalchemy import select
+            application_result = await db.execute(
+                select(models.ServiceApplication)
+                .where(models.ServiceApplication.service_id == service_id)
+                .where(models.ServiceApplication.applicant_id == applicant_id)
+                .order_by(models.ServiceApplication.created_at.desc())
+                .limit(1)
+            )
+            application = application_result.scalar_one_or_none()
+            if application:
+                application_message = application_message or application.application_message or ""
+                deadline = deadline or application.deadline
+                is_flexible = is_flexible if is_flexible is not None else (application.is_flexible == 1)
+                application_time = application_time or application.created_at
+                currency = currency or application.currency or "GBP"
+            else:
+                application_message = application_message or ""
+                is_flexible = is_flexible if is_flexible is not None else False
+                application_time = application_time or get_utc_time()
+                currency = currency or "GBP"
+        
+        # 格式化时间
+        if isinstance(application_time, datetime):
+            application_time_str = application_time.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            application_time_str = str(application_time) if application_time else ""
+        
+        if isinstance(deadline, datetime):
+            deadline_str = deadline.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            deadline_str = str(deadline) if deadline else None
+        
         # ⚠️ 直接使用文本内容，不存储 JSON
         applicant_name = applicant.name or f"用户{applicant_id}"
+        applicant_email = applicant.email or ""
+        
         if negotiated_price:
-            content = f"用户 {applicant_name} 申请了服务「{service_name}」，议价金额：£{float(negotiated_price):.2f}"
+            content = f"用户 {applicant_name} 申请了服务「{service_name}」，议价金额：{currency} {float(negotiated_price):.2f}"
         else:
             content = f"用户 {applicant_name} 申请了服务「{service_name}」"
         
+        # 创建站内通知
         await async_crud.async_notification_crud.create_notification(
             db=db,
             user_id=expert_id,
@@ -387,6 +455,50 @@ async def send_service_application_notification(
             content=content,  # 直接使用文本，不存储 JSON
             related_id=str(service_id),
         )
+        
+        # 发送邮件（如果有任务达人邮箱）
+        if expert and expert.email:
+            try:
+                # 获取任务达人语言偏好
+                language = get_user_language(expert)
+                
+                # 生成邮件内容
+                email_subject, email_body = get_service_application_email(
+                    language=language,
+                    service_name=service_name,
+                    service_description=service_description or "",
+                    base_price=float(base_price),
+                    applicant_name=applicant_name,
+                    applicant_email=applicant_email,
+                    application_message=application_message or "",
+                    negotiated_price=float(negotiated_price) if negotiated_price else None,
+                    currency=currency or "GBP",
+                    deadline=deadline_str,
+                    is_flexible=is_flexible or False,
+                    application_time=application_time_str,
+                    service_id=service_id
+                )
+                
+                # 异步发送邮件（使用 asyncio 在后台任务中执行）
+                async def send_email_task():
+                    try:
+                        from fastapi import BackgroundTasks
+                        from app.email_utils import send_email
+                        # 由于 send_email 是同步函数，我们需要在线程池中执行
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(
+                            None,
+                            lambda: send_email(expert.email, email_subject, email_body)
+                        )
+                        logger.info(f"服务申请邮件已发送给任务达人: {expert.email}, 服务: {service_name}")
+                    except Exception as e:
+                        logger.error(f"发送服务申请邮件失败: {e}")
+                
+                # 在后台执行邮件发送，不阻塞主流程
+                asyncio.create_task(send_email_task())
+                
+            except Exception as e:
+                logger.error(f"准备发送服务申请邮件时出错: {e}")
         
         logger.info(f"服务申请通知已发送给任务达人: {expert_id}, 服务: {service_name}")
         

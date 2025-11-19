@@ -737,6 +737,199 @@ def get_task_rejection_email(language: str, task_title: str, task_description: s
     return subject, body
 
 
+# ==================== 任务达人服务申请邮件模板 ====================
+
+def get_service_application_email(
+    language: str,
+    service_name: str,
+    service_description: str,
+    base_price: float,
+    applicant_name: str,
+    applicant_email: str,
+    application_message: str = "",
+    negotiated_price: Optional[float] = None,
+    currency: str = "GBP",
+    deadline: Optional[str] = None,
+    is_flexible: bool = False,
+    application_time: str = "",
+    service_id: int = 0
+) -> tuple[str, str]:
+    """任务达人服务申请通知邮件"""
+    header = get_email_header()
+    
+    # 格式化价格显示
+    currency_symbol = "£" if currency == "GBP" else currency
+    base_price_str = f"{currency_symbol}{base_price:.2f}"
+    negotiated_price_str = f"{currency_symbol}{negotiated_price:.2f}" if negotiated_price else None
+    
+    # 格式化截止日期
+    deadline_str = deadline if deadline else None
+    
+    if language == 'zh':
+        subject = f"Link²Ur - 新服务申请：{service_name}"
+        body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
+                <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
+                    🎯 新服务申请
+                </h2>
+                
+                <p>您好！</p>
+                
+                <p>用户 <strong>{applicant_name}</strong> 申请了您的服务：</p>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1976d2;">
+                    <h3 style="margin-top: 0; color: #333; font-size: 20px;">{service_name}</h3>
+                    <p style="color: #666; margin: 10px 0;"><strong>服务描述：</strong>{service_description}</p>
+                    <p style="color: #666; margin: 10px 0;"><strong>基础价格：</strong>{base_price_str} {currency}</p>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                    <h4 style="margin-top: 0; color: #856404;">📋 申请详情</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666; width: 120px;"><strong>申请用户：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{applicant_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>用户邮箱：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{applicant_email}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>申请时间：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{application_time}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>申请留言：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{application_message if application_message else '无'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>议价金额：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{negotiated_price_str if negotiated_price_str else f'{base_price_str} {currency}（使用基础价格）'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>货币类型：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{currency}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>时间要求：</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{'灵活时间（无固定截止日期）' if is_flexible else (f'截止日期：{deadline_str}' if deadline_str else '未指定')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #1976d2; font-weight: 600;">💡 下一步操作</p>
+                    <p style="margin: 10px 0 0 0; color: #666;">请登录 Link²Ur 平台查看申请详情，您可以：</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+                        <li>同意申请并创建任务</li>
+                        <li>拒绝申请</li>
+                        <li>提出议价（如果申请用户提出了议价）</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{Config.FRONTEND_URL}/task-experts/me/applications" 
+                       style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                        查看服务申请
+                    </a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    此邮件由 Link²Ur 平台自动发送，请勿回复。<br>
+                    如有疑问，请联系客服：support@link2ur.com
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+    else:
+        subject = f"Link²Ur - New Service Application: {service_name}"
+        body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                {header}
+                <h2 style="color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 10px;">
+                    🎯 New Service Application
+                </h2>
+                
+                <p>Hello!</p>
+                
+                <p>User <strong>{applicant_name}</strong> has applied for your service:</p>
+                
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1976d2;">
+                    <h3 style="margin-top: 0; color: #333; font-size: 20px;">{service_name}</h3>
+                    <p style="color: #666; margin: 10px 0;"><strong>Service Description:</strong> {service_description}</p>
+                    <p style="color: #666; margin: 10px 0;"><strong>Base Price:</strong> {base_price_str} {currency}</p>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                    <h4 style="margin-top: 0; color: #856404;">📋 Application Details</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666; width: 140px;"><strong>Applicant:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{applicant_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Email:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{applicant_email}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Application Time:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{application_time}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Message:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{application_message if application_message else 'None'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Negotiated Price:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{negotiated_price_str if negotiated_price_str else f'{base_price_str} {currency} (using base price)'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Currency:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{currency}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666;"><strong>Time Requirement:</strong></td>
+                            <td style="padding: 8px 0; color: #333;">{'Flexible time (no fixed deadline)' if is_flexible else (f'Deadline: {deadline_str}' if deadline_str else 'Not specified')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0; color: #1976d2; font-weight: 600;">💡 Next Steps</p>
+                    <p style="margin: 10px 0 0 0; color: #666;">Please log in to Link²Ur platform to view the application details. You can:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #666;">
+                        <li>Approve the application and create a task</li>
+                        <li>Reject the application</li>
+                        <li>Make a counter offer (if the applicant proposed a negotiated price)</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{Config.FRONTEND_URL}/task-experts/me/applications" 
+                       style="background: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                        View Service Applications
+                    </a>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    This email is automatically sent by Link²Ur platform. Please do not reply.<br>
+                    If you have any questions, please contact support: support@link2ur.com
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+    return subject, body
+
+
 # ==================== 管理员验证码邮件模板 ====================
 
 def get_admin_verification_code_email(language: str, verification_code: str, admin_name: str, expire_minutes: int) -> tuple[str, str]:

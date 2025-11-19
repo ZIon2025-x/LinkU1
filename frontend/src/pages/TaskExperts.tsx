@@ -687,6 +687,41 @@ const TaskExperts: React.FC = () => {
             {t('taskExperts.subtitle')}
           </p>
           
+          {/* 想成为任务达人按钮 */}
+          {!isTaskExpert && (
+            <div style={{ marginTop: '24px' }}>
+              <button
+                onClick={() => navigate('/task-experts/intro')}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50px',
+                  padding: '12px 32px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(59, 130, 246, 0.4)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(59, 130, 246, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.4)';
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>✨</span>
+                想成为任务达人？
+              </button>
+            </div>
+          )}
+          
           {/* 任务达人管理按钮 - 只有任务达人才能看到 */}
           {isTaskExpert && user && (
             <div style={{ marginTop: '24px' }}>
