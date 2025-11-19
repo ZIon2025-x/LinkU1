@@ -358,7 +358,7 @@ const JoinUs: React.FC = () => {
         </div>
         <Row gutter={[32, 32]}>
           {benefits.map((benefit, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
+            <Col xs={12} sm={12} lg={6} key={index}>
               <Card className="benefit-card" hoverable>
                 <div className="benefit-content">
                   {benefit.icon}

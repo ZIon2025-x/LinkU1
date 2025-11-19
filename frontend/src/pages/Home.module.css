@@ -524,10 +524,25 @@
     font-size: 16px;
   }
 
+  .heroStats {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    max-width: 100% !important;
+  }
+
+  .heroStatValue {
+    font-size: 24px !important;
+  }
+
+  .heroStatLabel {
+    font-size: 12px !important;
+  }
+
   .featuresTitle,
   .tasksTitle {
     font-size: 28px;
   }
+
 
   .tasksGrid {
     grid-template-columns: 1fr;

@@ -302,6 +302,26 @@
   .position-card {
     margin-bottom: 20px;
   }
+  
+  /* 移动端福利卡片两列布局优化 */
+  .benefit-content {
+    padding: 20px 12px;
+  }
+  
+  .benefit-icon {
+    font-size: 2.2rem !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .benefit-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 10px !important;
+  }
+  
+  .benefit-description {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -324,6 +344,20 @@
   
   .benefit-content {
     padding: 20px 15px;
+  }
+  
+  .benefit-icon {
+    font-size: 2rem !important;
+    margin-bottom: 15px !important;
+  }
+  
+  .benefit-title {
+    font-size: 1rem !important;
+    margin-bottom: 10px !important;
+  }
+  
+  .benefit-description {
+    font-size: 0.85rem !important;
   }
   
   .apply-content {

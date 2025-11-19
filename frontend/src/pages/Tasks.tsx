@@ -1462,10 +1462,6 @@ const Tasks: React.FC = () => {
                   setShowLanguageDropdown(false);
                 }}
                 className={`${styles.languageOption} ${language === 'zh' ? styles.languageOptionActive : ''}`}
-                style={{
-                  color: language === 'zh' ? '#1890ff' : '#374151',
-                  background: language === 'zh' ? '#f0f9ff' : 'transparent'
-                }}
               >
                 中文
               </div>
@@ -1475,11 +1471,6 @@ const Tasks: React.FC = () => {
                   setShowLanguageDropdown(false);
                 }}
                 className={`${styles.languageOption} ${language === 'en' ? styles.languageOptionActive : ''}`}
-                style={{
-                  color: language === 'en' ? '#1890ff' : '#374151',
-                  background: language === 'en' ? '#f0f9ff' : 'transparent',
-                  borderRadius: '0 0 12px 12px'
-                }}
               >
                 English
               </div>
@@ -1498,6 +1489,7 @@ const Tasks: React.FC = () => {
               taskTypes={TASK_TYPES}
               getTaskTypeLabel={getTaskTypeLabel}
               onTypeClick={filters.setType}
+              selectedType={filters.type}
             />
           </div>
 
@@ -1931,7 +1923,8 @@ const Tasks: React.FC = () => {
               left: auto !important;
               right: auto !important;
               width: auto !important;
-              max-width: 200px !important;
+              max-width: 150px !important;
+              min-width: 130px !important;
               z-index: 99999 !important;
               margin-top: 0 !important;
               box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
@@ -2004,20 +1997,24 @@ const Tasks: React.FC = () => {
             }
             
             .category-section {
-              padding: 4px 4px !important;
-              margin-bottom: 12px !important;
+              padding: 0 !important;
+              margin-left: -8px !important;
+              margin-right: -8px !important;
+              margin-bottom: 8px !important;
+              width: calc(100% + 16px) !important;
             }
             
             .category-icons {
-              padding-bottom: 4px !important;
+              padding: 4px 8px !important;
+              padding-bottom: 2px !important;
             }
             
             .category-icons > div {
               min-width: 80px !important;
               max-width: 100px !important;
               flex-shrink: 0 !important;
-              padding: 8px 6px !important;
-              gap: 8px !important;
+              padding: 6px 4px !important;
+              gap: 6px !important;
             }
             
             .category-icons > div > div,
@@ -2027,11 +2024,16 @@ const Tasks: React.FC = () => {
             }
             
             .category-icon-circle {
-              font-size: 45px !important;
+              font-size: 32px !important;
+            }
+            
+            .category-icon-circle span {
+              font-size: 32px !important;
+              line-height: 1 !important;
             }
             
             .category-icons > div > div {
-              font-size: 45px !important;
+              font-size: 32px !important;
             }
             
             .category-icons span {
