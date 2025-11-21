@@ -281,6 +281,21 @@
   color: #ff4d4f;
 }
 
+.status.seller_negotiating {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.sellerCounterPrice {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.requestInfo {
+  margin-top: 12px;
+}
+
 .requestPrice {
   margin-bottom: 8px;
   font-size: 14px;

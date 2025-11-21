@@ -72,10 +72,10 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   const [sellerInfo, setSellerInfo] = useState<any>(null);
   const [purchaseRequests, setPurchaseRequests] = useState<any[]>([]);
   const [loadingPurchaseRequests, setLoadingPurchaseRequests] = useState(false);
-  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showCounterOfferModal, setShowCounterOfferModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [agreedPrice, setAgreedPrice] = useState<number | undefined>();
-  const [acceptLoading, setAcceptLoading] = useState(false);
+  const [counterPrice, setCounterPrice] = useState<number | undefined>();
+  const [counterOfferLoading, setCounterOfferLoading] = useState(false);
   const [rejectLoading, setRejectLoading] = useState<string | null>(null);
   
   const isOwner = currentUser && item && currentUser.id === item.seller_id;
@@ -155,9 +155,9 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setCurrentImageIndex(0);
       setShowPurchaseModal(false);
       setShowReportModal(false);
-      setShowAcceptModal(false);
+      setShowCounterOfferModal(false);
       setSelectedRequest(null);
-      setAgreedPrice(undefined);
+      setCounterPrice(undefined);
     } else {
       setItem(null);
       setIsFavorited(false);
@@ -279,33 +279,32 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     }
   }, [itemId, reportReason, reportDescription, currentUser, t]);
 
-  // 处理接受购买申请
-  const handleAcceptPurchase = useCallback(async () => {
-    if (!itemId || !selectedRequest) return;
+  // 处理卖家议价
+  const handleCounterOffer = useCallback(async () => {
+    if (!itemId || !selectedRequest || !counterPrice) {
+      message.warning(t('fleaMarket.enterCounterPrice') || '请输入议价金额');
+      return;
+    }
     
-    setAcceptLoading(true);
+    setCounterOfferLoading(true);
     try {
       const requestId = parseInt(selectedRequest.id.replace(/[^0-9]/g, ''));
-      await api.post(`/api/flea-market/items/${itemId}/accept-purchase`, {
+      await api.post(`/api/flea-market/items/${itemId}/counter-offer`, {
         purchase_request_id: requestId,
-        agreed_price: agreedPrice !== undefined ? agreedPrice : undefined
+        counter_price: counterPrice
       });
-      message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，任务已创建');
-      setShowAcceptModal(false);
+      message.success(t('fleaMarket.counterOfferSuccess') || '议价已发送，等待买家回应');
+      setShowCounterOfferModal(false);
       setSelectedRequest(null);
-      setAgreedPrice(undefined);
-      if (onItemUpdated) {
-        onItemUpdated();
-      }
+      setCounterPrice(undefined);
       loadPurchaseRequests();
-      loadItem(); // 重新加载商品信息
     } catch (error: any) {
-      console.error('接受购买申请失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.acceptPurchaseError') || '接受失败');
+      console.error('卖家议价失败:', error);
+      message.error(error.response?.data?.detail || t('fleaMarket.counterOfferError') || '议价失败');
     } finally {
-      setAcceptLoading(false);
+      setCounterOfferLoading(false);
     }
-  }, [itemId, selectedRequest, agreedPrice, onItemUpdated, loadPurchaseRequests, loadItem, t]);
+  }, [itemId, selectedRequest, counterPrice, loadPurchaseRequests, t]);
 
   // 处理拒绝购买申请
   const handleRejectPurchase = useCallback(async (request: any) => {
@@ -547,6 +546,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                             <span className={styles.buyerName}>{request.buyer_name}</span>
                             <span className={`${styles.status} ${styles[request.status]}`}>
                               {request.status === 'pending' && (t('fleaMarket.pending') || '待处理')}
+                              {request.status === 'seller_negotiating' && (t('fleaMarket.sellerNegotiating') || '卖家已议价')}
                               {request.status === 'accepted' && (t('fleaMarket.accepted') || '已接受')}
                               {request.status === 'rejected' && (t('fleaMarket.rejected') || '已拒绝')}
                             </span>
@@ -573,11 +573,11 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                                 size="small"
                                 onClick={() => {
                                   setSelectedRequest(request);
-                                  setAgreedPrice(request.proposed_price || item.price);
-                                  setShowAcceptModal(true);
+                                  setCounterPrice(request.proposed_price || item.price);
+                                  setShowCounterOfferModal(true);
                                 }}
                               >
-                                {t('fleaMarket.accept') || '接受'}
+                                {t('fleaMarket.counterOffer') || '议价'}
                               </Button>
                               <Button
                                 danger
@@ -587,6 +587,17 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                               >
                                 {t('fleaMarket.reject') || '拒绝'}
                               </Button>
+                            </div>
+                          )}
+                          {request.status === 'seller_negotiating' && (
+                            <div className={styles.requestInfo}>
+                              <div className={styles.sellerCounterPrice}>
+                                {t('fleaMarket.sellerCounterPrice') || '卖家议价'}: 
+                                <span className={styles.priceValue}>£{request.seller_counter_price?.toFixed(2)}</span>
+                              </div>
+                              <div className={styles.requestTime}>
+                                {t('fleaMarket.waitingBuyerResponse') || '等待买家回应'}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -640,18 +651,18 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         </div>
       </Modal>
       
-      {/* 接受购买申请弹窗 */}
+      {/* 卖家议价弹窗 */}
       <Modal
-        title={t('fleaMarket.acceptPurchase') || '接受购买申请'}
-        open={showAcceptModal}
-        onOk={handleAcceptPurchase}
+        title={t('fleaMarket.counterOffer') || '卖家议价'}
+        open={showCounterOfferModal}
+        onOk={handleCounterOffer}
         onCancel={() => {
-          setShowAcceptModal(false);
+          setShowCounterOfferModal(false);
           setSelectedRequest(null);
-          setAgreedPrice(undefined);
+          setCounterPrice(undefined);
         }}
-        confirmLoading={acceptLoading}
-        okText={t('fleaMarket.accept') || '接受'}
+        confirmLoading={counterOfferLoading}
+        okText={t('fleaMarket.submitCounterOffer') || '提交议价'}
         cancelText={t('common.cancel') || '取消'}
       >
         {selectedRequest && item && (
@@ -676,15 +687,15 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
               </div>
             )}
             <div className={styles.formItem}>
-              <label>{t('fleaMarket.finalPrice') || '最终成交价'} ({t('common.optional') || '可选，留空则使用买家议价或原价'})</label>
+              <label>{t('fleaMarket.counterPrice') || '您的议价'} *</label>
               <InputNumber
-                value={agreedPrice}
-                onChange={(value) => setAgreedPrice(value || undefined)}
+                value={counterPrice}
+                onChange={(value) => setCounterPrice(value || undefined)}
                 min={0}
                 step={0.01}
                 style={{ width: '100%' }}
                 prefix="£"
-                placeholder={selectedRequest.proposed_price ? `£${selectedRequest.proposed_price.toFixed(2)}` : `£${item.price.toFixed(2)}`}
+                placeholder={t('fleaMarket.enterCounterPrice') || '请输入议价金额'}
               />
             </div>
           </div>

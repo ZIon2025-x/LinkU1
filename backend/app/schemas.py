@@ -1534,14 +1534,25 @@ class FleaMarketPurchaseRequestResponse(BaseModel):
 
 
 class AcceptPurchaseRequest(BaseModel):
-    """接受购买申请请求"""
+    """接受购买申请请求（买家接受卖家议价后创建任务）"""
     purchase_request_id: int
-    agreed_price: Optional[Decimal] = Field(None, gt=0)
 
 
 class RejectPurchaseRequest(BaseModel):
     """拒绝购买申请请求"""
     purchase_request_id: int
+
+
+class SellerCounterOfferRequest(BaseModel):
+    """卖家议价请求"""
+    purchase_request_id: int
+    counter_price: Decimal = Field(..., gt=0)
+
+
+class BuyerRespondToCounterOfferRequest(BaseModel):
+    """买家回应卖家议价请求"""
+    purchase_request_id: int
+    accept: bool  # True表示接受，False表示拒绝
 
 
 class MyPurchasesItemResponse(FleaMarketItemResponse):

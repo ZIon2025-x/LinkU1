@@ -1021,7 +1021,7 @@ async def accept_purchase_request(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """接受购买申请（创建任务）"""
+    """买家接受卖家议价后创建任务"""
     try:
         # 解析ID
         db_id = parse_flea_market_id(item_id)
@@ -1038,13 +1038,6 @@ async def accept_purchase_request(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="商品不存在"
-            )
-        
-        # 权限验证：只有商品所有者可以接受申请
-        if item.seller_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权限操作此商品"
             )
         
         # 状态验证：必须是active状态
@@ -1069,6 +1062,13 @@ async def accept_purchase_request(
                 detail="购买申请不存在"
             )
         
+        # 权限验证：只有买家可以接受卖家议价
+        if purchase_request.buyer_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此申请"
+            )
+        
         # 幂等性检查：如果申请已经是accepted或rejected，直接返回
         if purchase_request.status in ("accepted", "rejected"):
             if purchase_request.status == "accepted" and item.sold_task_id:
@@ -1089,17 +1089,17 @@ async def accept_purchase_request(
                     detail="该申请已被处理"
                 )
         
-        # 状态验证：必须是pending状态
-        if purchase_request.status != "pending":
+        # 状态验证：必须是seller_negotiating状态（卖家已议价）
+        if purchase_request.status != "seller_negotiating":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="该申请状态不允许接受"
+                detail="该申请状态不允许接受，请等待卖家议价"
             )
         
-        # 确定最终成交价
-        final_price = accept_data.agreed_price if accept_data.agreed_price is not None else purchase_request.proposed_price
+        # 确定最终成交价（使用卖家议价）
+        final_price = purchase_request.seller_counter_price
         if final_price is None:
-            final_price = item.price
+            final_price = purchase_request.proposed_price if purchase_request.proposed_price else item.price
         
         # 解析images JSON
         images = []
@@ -1120,7 +1120,7 @@ async def accept_purchase_request(
             description=description,
             reward=float(final_price),
             base_reward=item.price,
-            agreed_reward=final_price,  # 最终成交价（有议价）
+            agreed_reward=final_price,  # 最终成交价（卖家议价）
             currency="GBP",
             location=item.location or "Online",
             task_type="Second-hand & Rental",
@@ -1164,13 +1164,13 @@ async def accept_purchase_request(
             .values(status="accepted")
         )
         
-        # 自动拒绝其他pending状态的申请
+        # 自动拒绝其他pending和seller_negotiating状态的申请
         await db.execute(
             update(models.FleaMarketPurchaseRequest)
             .where(
                 and_(
                     models.FleaMarketPurchaseRequest.item_id == db_id,
-                    models.FleaMarketPurchaseRequest.status == "pending",
+                    models.FleaMarketPurchaseRequest.status.in_(["pending", "seller_negotiating"]),
                     models.FleaMarketPurchaseRequest.id != accept_data.purchase_request_id
                 )
             )
@@ -1179,7 +1179,7 @@ async def accept_purchase_request(
         
         await db.commit()
         
-        # 发送通知给买家
+        # 发送通知给卖家
         await send_purchase_accepted_notification(
             db, item, purchase_request.buyer, new_task.id, float(final_price)
         )
@@ -1262,6 +1262,7 @@ async def get_purchase_requests(
                 "buyer_id": req.buyer_id,
                 "buyer_name": buyer.name if buyer else f"用户{req.buyer_id}",
                 "proposed_price": float(req.proposed_price) if req.proposed_price else None,
+                "seller_counter_price": float(req.seller_counter_price) if req.seller_counter_price else None,
                 "message": req.message,
                 "status": req.status,
                 "created_at": format_iso_utc(req.created_at),
@@ -1364,6 +1365,166 @@ async def reject_purchase_request(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="拒绝购买申请失败"
+        )
+
+
+# ==================== 卖家议价API ====================
+
+@flea_market_router.post("/items/{item_id}/counter-offer", response_model=dict)
+async def seller_counter_offer(
+    item_id: str,
+    counter_data: schemas.SellerCounterOfferRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """卖家对购买申请进行议价"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 权限验证：只有商品所有者可以议价
+        if item.seller_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此商品"
+            )
+        
+        # 查询购买申请
+        request_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == counter_data.purchase_request_id)
+            .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+        )
+        purchase_request = request_result.scalar_one_or_none()
+        
+        if not purchase_request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="购买申请不存在"
+            )
+        
+        # 状态验证：必须是pending状态
+        if purchase_request.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该申请状态不允许议价"
+            )
+        
+        # 更新购买申请：设置卖家议价并更新状态为seller_negotiating
+        await db.execute(
+            update(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == counter_data.purchase_request_id)
+            .values(
+                seller_counter_price=counter_data.counter_price,
+                status="seller_negotiating"
+            )
+        )
+        
+        await db.commit()
+        
+        # TODO: 发送通知给买家（可选）
+        
+        return {
+            "success": True,
+            "data": {
+                "purchase_request_status": "seller_negotiating",
+                "seller_counter_price": float(counter_data.counter_price)
+            },
+            "message": "议价已发送，等待买家回应"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"卖家议价失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="卖家议价失败"
+        )
+
+
+# ==================== 买家回应卖家议价API ====================
+
+@flea_market_router.post("/items/{item_id}/respond-counter-offer", response_model=dict)
+async def buyer_respond_to_counter_offer(
+    item_id: str,
+    respond_data: schemas.BuyerRespondToCounterOfferRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """买家回应卖家的议价（接受或拒绝）"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询购买申请
+        request_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == respond_data.purchase_request_id)
+            .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+        )
+        purchase_request = request_result.scalar_one_or_none()
+        
+        if not purchase_request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="购买申请不存在"
+            )
+        
+        # 权限验证：只有买家可以回应
+        if purchase_request.buyer_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此申请"
+            )
+        
+        # 状态验证：必须是seller_negotiating状态
+        if purchase_request.status != "seller_negotiating":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该申请状态不允许此操作"
+            )
+        
+        if respond_data.accept:
+            # 买家接受卖家议价，调用accept-purchase API创建任务
+            # 这里直接调用accept_purchase_request的逻辑
+            accept_data = schemas.AcceptPurchaseRequest(purchase_request_id=respond_data.purchase_request_id)
+            return await accept_purchase_request(item_id, accept_data, current_user, db)
+        else:
+            # 买家拒绝卖家议价，将申请状态改为rejected
+            await db.execute(
+                update(models.FleaMarketPurchaseRequest)
+                .where(models.FleaMarketPurchaseRequest.id == respond_data.purchase_request_id)
+                .values(status="rejected")
+            )
+            
+            await db.commit()
+            
+            return {
+                "success": True,
+                "data": {
+                    "purchase_request_status": "rejected"
+                },
+                "message": "已拒绝卖家议价，购买申请已取消"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"回应卖家议价失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="回应卖家议价失败"
         )
 
 

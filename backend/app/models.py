@@ -1485,6 +1485,7 @@ class FleaMarketPurchaseRequest(Base):
     item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False)
     buyer_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     proposed_price = Column(DECIMAL(12, 2), nullable=True)  # 议价金额（如果买家议价）
+    seller_counter_price = Column(DECIMAL(12, 2), nullable=True)  # 卖家议价金额
     message = Column(Text, nullable=True)  # 购买留言
     status = Column(String(20), nullable=False, default="pending")
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
@@ -1499,5 +1500,5 @@ class FleaMarketPurchaseRequest(Base):
         Index("idx_flea_market_purchase_requests_buyer_id", buyer_id),
         Index("idx_flea_market_purchase_requests_status", status),
         Index("idx_flea_market_purchase_requests_created_at", created_at),
-        CheckConstraint("status IN ('pending', 'accepted', 'rejected')", name="check_status_valid"),
+        CheckConstraint("status IN ('pending', 'seller_negotiating', 'accepted', 'rejected')", name="check_status_valid"),
     )
