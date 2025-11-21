@@ -156,6 +156,7 @@ class User(Base):
     inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
+    flea_market_notice_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 跳蚤市场须知同意时间
     # 关系
     tasks_posted = relationship(
         "Task", back_populates="poster", foreign_keys="Task.poster_id"
@@ -1383,4 +1384,68 @@ class ServiceApplication(Base):
         Index("ix_service_applications_task_id", task_id),
         # 注意：部分唯一索引需要在数据库层面通过SQL创建
         # CREATE UNIQUE INDEX uq_service_app_pending_combo ON service_applications (service_id, applicant_id, status) WHERE status IN ('pending', 'negotiating', 'price_agreed');
+    )
+
+
+class FleaMarketItem(Base):
+    """跳蚤市场商品表"""
+    __tablename__ = "flea_market_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    price = Column(DECIMAL(12, 2), nullable=False)
+    currency = Column(String(3), nullable=False, default="GBP")
+    images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
+    location = Column(String(100), nullable=True)  # 线下交易地点或"Online"
+    category = Column(String(100), nullable=True)
+    contact = Column(String(200), nullable=True)  # 预留字段，本期不使用
+    status = Column(String(20), nullable=False, default="active")
+    seller_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 卖家ID
+    sold_task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)  # 售出后关联的任务ID
+    view_count = Column(Integer, nullable=False, default=0)  # 浏览量
+    refreshed_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())  # 刷新时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    seller = relationship("User", backref="flea_market_items")  # 卖家关系
+    
+    __table_args__ = (
+        Index("idx_flea_market_items_seller_id", seller_id),
+        Index("idx_flea_market_items_status", status),
+        Index("idx_flea_market_items_category", category),
+        Index("idx_flea_market_items_created_at", created_at),
+        Index("idx_flea_market_items_price", price),
+        Index("idx_flea_market_items_refreshed_at", refreshed_at),  # 用于自动删除查询
+        Index("idx_flea_market_items_view_count", view_count),  # 用于按浏览量排序
+        CheckConstraint("price >= 0", name="check_price_positive"),
+        CheckConstraint("currency = 'GBP'", name="check_currency_gbp"),
+        CheckConstraint("status IN ('active', 'sold', 'deleted')", name="check_status_valid"),
+    )
+
+
+class FleaMarketPurchaseRequest(Base):
+    """跳蚤市场购买申请表"""
+    __tablename__ = "flea_market_purchase_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False)
+    buyer_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    proposed_price = Column(DECIMAL(12, 2), nullable=True)  # 议价金额（如果买家议价）
+    message = Column(Text, nullable=True)  # 购买留言
+    status = Column(String(20), nullable=False, default="pending")
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    item = relationship("FleaMarketItem", backref="purchase_requests")  # 商品关系
+    buyer = relationship("User", backref="flea_market_purchase_requests")  # 买家关系
+    
+    __table_args__ = (
+        Index("idx_flea_market_purchase_requests_item_id", item_id),
+        Index("idx_flea_market_purchase_requests_buyer_id", buyer_id),
+        Index("idx_flea_market_purchase_requests_status", status),
+        Index("idx_flea_market_purchase_requests_created_at", created_at),
+        CheckConstraint("status IN ('pending', 'accepted', 'rejected')", name="check_status_valid"),
     )

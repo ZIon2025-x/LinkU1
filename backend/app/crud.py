@@ -1770,6 +1770,9 @@ def cleanup_completed_tasks_files(db: Session):
     for task in completed_tasks:
         try:
             cleanup_task_files(db, task.id)
+            # 同时清理关联的商品图片（如果是跳蚤市场任务）
+            if task.task_type == "Second-hand & Rental":
+                cleanup_flea_market_item_files_for_task(db, task.id)
             cleaned_count += 1
             logger.info(f"成功清理任务 {task.id} 的文件")
         except Exception as e:
@@ -1882,6 +1885,158 @@ def cleanup_all_old_tasks_files(db: Session):
         "expired_count": expired_count,
         "total_count": total_count
     }
+
+
+def cleanup_expired_flea_market_items(db: Session):
+    """清理超过10天未刷新的跳蚤市场商品（自动删除）"""
+    from app.models import FleaMarketItem
+    from datetime import timedelta
+    import logging
+    import json
+    import os
+    import shutil
+    from pathlib import Path
+    from urllib.parse import urlparse
+    
+    logger = logging.getLogger(__name__)
+    
+    # 计算10天前的时间
+    now_utc = get_utc_time()
+    ten_days_ago = now_utc - timedelta(days=10)
+    
+    # 查找超过10天未刷新且状态为active的商品
+    expired_items = (
+        db.query(FleaMarketItem)
+        .filter(
+            FleaMarketItem.status == "active",
+            FleaMarketItem.refreshed_at <= ten_days_ago
+        )
+        .all()
+    )
+    
+    logger.info(f"找到 {len(expired_items)} 个超过10天未刷新的商品，开始清理")
+    
+    # 检测部署环境
+    RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+    if RAILWAY_ENVIRONMENT:
+        base_dir = Path("/data/uploads")
+    else:
+        base_dir = Path("uploads")
+    
+    deleted_count = 0
+    for item in expired_items:
+        try:
+            # 删除商品图片文件
+            if item.images:
+                try:
+                    images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                    
+                    # 方法1：删除商品图片目录（标准路径）
+                    flea_market_dir = base_dir / "flea_market" / str(item.id)
+                    if flea_market_dir.exists():
+                        shutil.rmtree(flea_market_dir)
+                        logger.info(f"删除商品 {item.id} 的图片目录: {flea_market_dir}")
+                    
+                    # 方法2：从URL中提取路径并删除（兼容其他存储位置）
+                    for image_url in images:
+                        try:
+                            # 解析URL，提取路径
+                            parsed = urlparse(image_url)
+                            path = parsed.path
+                            
+                            # 如果URL包含 /uploads/flea_market/，尝试删除对应文件
+                            if "/uploads/flea_market/" in path:
+                                # 提取相对路径
+                                if path.startswith("/uploads/"):
+                                    relative_path = path[len("/uploads/"):]
+                                    file_path = base_dir / relative_path
+                                    if file_path.exists():
+                                        if file_path.is_file():
+                                            file_path.unlink()
+                                            logger.info(f"删除图片文件: {file_path}")
+                                        elif file_path.is_dir():
+                                            shutil.rmtree(file_path)
+                                            logger.info(f"删除图片目录: {file_path}")
+                        except Exception as e:
+                            logger.warning(f"删除图片URL {image_url} 对应的文件失败: {e}")
+                            
+                except Exception as e:
+                    logger.error(f"删除商品 {item.id} 图片文件失败: {e}")
+            
+            # 更新商品状态为deleted（软删除）
+            item.status = "deleted"
+            db.commit()
+            
+            deleted_count += 1
+            logger.info(f"成功删除商品 {item.id}")
+        except Exception as e:
+            logger.error(f"删除商品 {item.id} 失败: {e}")
+            db.rollback()
+            continue
+    
+    logger.info(f"完成清理，共删除 {deleted_count} 个过期商品")
+    return deleted_count
+
+
+def cleanup_flea_market_item_files_for_task(db: Session, task_id: int):
+    """清理任务关联的商品图片（任务完成后清理）"""
+    from app.models import FleaMarketItem
+    import json
+    import os
+    import shutil
+    from pathlib import Path
+    from urllib.parse import urlparse
+    
+    logger = logging.getLogger(__name__)
+    
+    # 查找关联的商品
+    item = db.query(FleaMarketItem).filter(
+        FleaMarketItem.sold_task_id == task_id
+    ).first()
+    
+    if not item:
+        return
+    
+    try:
+        # 检测部署环境
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        if RAILWAY_ENVIRONMENT:
+            base_dir = Path("/data/uploads")
+        else:
+            base_dir = Path("uploads")
+        
+        # 删除商品图片文件
+        if item.images:
+            try:
+                images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                
+                # 方法1：删除商品图片目录（标准路径）
+                flea_market_dir = base_dir / "flea_market" / str(item.id)
+                if flea_market_dir.exists():
+                    shutil.rmtree(flea_market_dir)
+                    logger.info(f"删除任务 {task_id} 关联的商品 {item.id} 的图片目录: {flea_market_dir}")
+                
+                # 方法2：从URL中提取路径并删除（兼容其他存储位置）
+                for image_url in images:
+                    try:
+                        parsed = urlparse(image_url)
+                        path = parsed.path
+                        if "/uploads/flea_market/" in path:
+                            if path.startswith("/uploads/"):
+                                relative_path = path[len("/uploads/"):]
+                                file_path = base_dir / relative_path
+                                if file_path.exists():
+                                    if file_path.is_file():
+                                        file_path.unlink()
+                                    elif file_path.is_dir():
+                                        shutil.rmtree(file_path)
+                    except Exception as e:
+                        logger.warning(f"删除图片URL {image_url} 对应的文件失败: {e}")
+                        
+            except Exception as e:
+                logger.error(f"删除商品 {item.id} 图片文件失败: {e}")
+    except Exception as e:
+        logger.error(f"清理任务 {task_id} 关联的商品图片失败: {e}")
 
 
 def cleanup_all_completed_and_cancelled_tasks_files(db: Session):

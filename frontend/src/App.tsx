@@ -85,6 +85,7 @@ const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
+const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
 const LanguageRedirect: React.FC = () => {
@@ -159,6 +160,7 @@ const LanguageRoutes: React.FC = () => {
         <React.Fragment key={lang}>
           <Route path={`/${lang}`} element={<Home />} />
           <Route path={`/${lang}/tasks`} element={<Tasks />} />
+          <Route path={`/${lang}/flea-market`} element={<FleaMarketPage />} />
           <Route path={`/${lang}/about`} element={<About />} />
               <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />

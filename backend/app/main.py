@@ -211,6 +211,10 @@ app.include_router(user_service_application_router)
 from app.admin_task_expert_routes import admin_task_expert_router
 app.include_router(admin_task_expert_router)
 
+# 跳蚤市场路由
+from app.flea_market_routes import flea_market_router
+app.include_router(flea_market_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -236,6 +240,8 @@ if RAILWAY_ENVIRONMENT:
     (UPLOAD_DIR / "private_files" / "tasks").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "private_files" / "chats").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "private" / "files").mkdir(parents=True, exist_ok=True)
+    # 跳蚤市场图片目录
+    (UPLOAD_DIR / "flea_market").mkdir(parents=True, exist_ok=True)
 else:
     # 本地开发环境
     UPLOAD_DIR = Path("uploads")
@@ -265,16 +271,26 @@ if RAILWAY_ENVIRONMENT:
     # Railway环境：使用路由方式提供静态文件访问
     @app.get("/uploads/{file_path:path}")
     async def serve_public_uploads(file_path: str):
-        """提供公开上传文件的访问"""
+        """提供公开上传文件的访问（包括跳蚤市场图片）"""
         from fastapi.responses import FileResponse
         import mimetypes
         
-        # 构建文件路径
-        file_full_path = Path("/data/uploads/public") / file_path
+        # 支持跳蚤市场图片路径：/uploads/flea_market/{item_id}/{filename}
+        if file_path.startswith("flea_market/"):
+            # 跳蚤市场图片
+            file_full_path = Path("/data/uploads") / file_path
+        else:
+            # 其他公开文件
+            file_full_path = Path("/data/uploads/public") / file_path
         
-        # 安全检查：确保文件在公开目录内
+        # 安全检查：确保文件在允许的目录内
         try:
-            file_full_path.resolve().relative_to(Path("/data/uploads/public").resolve())
+            if file_path.startswith("flea_market/"):
+                # 跳蚤市场图片：允许访问
+                file_full_path.resolve().relative_to(Path("/data/uploads").resolve())
+            else:
+                # 其他文件：必须在公开目录内
+                file_full_path.resolve().relative_to(Path("/data/uploads/public").resolve())
         except ValueError:
             raise HTTPException(status_code=403, detail="访问被拒绝")
         
@@ -300,7 +316,39 @@ if RAILWAY_ENVIRONMENT:
         )
 else:
     # 本地开发环境：使用静态文件服务
-    app.mount("/uploads", StaticFiles(directory="uploads/public"), name="uploads")
+    # 注意：StaticFiles只支持单个目录，需要添加路由处理跳蚤市场图片
+    app.mount("/uploads/public", StaticFiles(directory="uploads/public"), name="uploads_public")
+    
+    # 跳蚤市场图片路由
+    @app.get("/uploads/flea_market/{file_path:path}")
+    async def serve_flea_market_images(file_path: str):
+        """提供跳蚤市场图片的访问"""
+        from fastapi.responses import FileResponse
+        import mimetypes
+        
+        file_full_path = Path("uploads/flea_market") / file_path
+        
+        # 安全检查
+        try:
+            file_full_path.resolve().relative_to(Path("uploads/flea_market").resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="访问被拒绝")
+        
+        if not file_full_path.exists() or not file_full_path.is_file():
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        media_type, _ = mimetypes.guess_type(str(file_full_path))
+        if not media_type:
+            media_type = "application/octet-stream"
+        
+        return FileResponse(
+            path=str(file_full_path),
+            media_type=media_type,
+            headers={
+                "Cache-Control": "public, max-age=31536000",
+                "Access-Control-Allow-Origin": "*"
+            }
+        )
 
 active_connections = {}
 # 用户级连接锁，确保原子替换
@@ -533,6 +581,22 @@ async def startup_event():
         inspector = inspect(sync_engine)
         tables = inspector.get_table_names()
         logger.info(f"已创建的表: {tables}")
+        
+        # 自动执行数据库迁移（如果启用）
+        auto_migrate = os.getenv("AUTO_MIGRATE", "true").lower() == "true"
+        if auto_migrate:
+            logger.info("开始执行数据库迁移...")
+            try:
+                from app.db_migrations import run_migrations
+                run_migrations(sync_engine, force=False)
+                logger.info("数据库迁移执行完成！")
+            except Exception as e:
+                logger.error(f"数据库迁移执行失败: {e}")
+                import traceback
+                traceback.print_exc()
+                # 迁移失败不阻止应用启动，只记录错误
+        else:
+            logger.info("自动迁移已禁用（AUTO_MIGRATE=false）")
         
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")

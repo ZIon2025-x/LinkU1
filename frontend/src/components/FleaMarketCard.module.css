@@ -1,0 +1,85 @@
+/* FleaMarketCard 组件样式模块 */
+
+.fleaMarketCard {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 2px solid #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.fleaMarketCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  border-color: #059669;
+}
+
+.fleaMarketCardMobile {
+  /* 移动端特殊样式 */
+}
+
+/* 图片区域 */
+.imageContainer {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageContainerMobile {
+  aspect-ratio: 9 / 16;
+}
+
+/* 卡片标题 */
+.cardTitle {
+  padding: 12px 12px 6px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  background: transparent;
+}
+
+.cardTitleMobile {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.cardTitleDesktop {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 卡片描述 */
+.cardDescription {
+  padding: 0 12px 12px 12px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+  background: transparent;
+}
+
+.cardDescriptionMobile {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.cardDescriptionDesktop {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+

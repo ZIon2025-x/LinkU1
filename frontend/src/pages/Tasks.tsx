@@ -12,6 +12,7 @@ import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskTitle from '../components/TaskTitle';
 import TaskCard from '../components/TaskCard';
+import FleaMarketCard from '../components/FleaMarketCard';
 import SortControls from '../components/SortControls';
 import CategoryIcons from '../components/CategoryIcons';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -27,6 +28,7 @@ import { useTaskSorting } from '../hooks/useTaskSorting';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import { Grid, GridImperativeAPI } from 'react-window';
 import { injectTasksStyles } from '../styles/Tasks.styles';
+import { TaskType } from '../constants/taskTypes';
 import styles from './Tasks.module.css';
 
 // 配置dayjs插件
@@ -1000,8 +1002,30 @@ const Tasks: React.FC = () => {
     return filtered;
   }, [tasks, filters.taskLevel, filters.city, filters.type, filters.debouncedKeyword, t]);
 
+  // 创建固定卡片数据
+  const fleaMarketCard = useMemo(() => ({
+    id: 'flea-market-card',
+    title: t('fleaMarket.cardTitle'),
+    description: t('fleaMarket.cardDescription'),
+    task_type: TaskType.SecondHandAndRental,
+    location: 'Online',
+    task_level: 'normal',
+    deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 一年后过期
+    reward: 0,
+    images: []
+  }), [t]);
+
+  // 显示的任务列表（包含固定卡片）
+  const displayTasks = useMemo(() => {
+    // 如果选择了二手任务类型，在第一个位置插入固定卡片
+    if (filters.type === TaskType.SecondHandAndRental) {
+      return [fleaMarketCard, ...filteredTasks];
+    }
+    return filteredTasks;
+  }, [filteredTasks, filters.type, fleaMarketCard]);
+
   // 动态判断是否使用虚拟滚动（任务数超过 50 时启用）
-  const shouldUseVirtualList = filteredTasks.length > 50;
+  const shouldUseVirtualList = displayTasks.length > 50;
   
   // 计算任务卡片高度（移动端和桌面端不同）
   // 移动端：卡片更小，约 300px；桌面端：约 400px
@@ -1026,7 +1050,7 @@ const Tasks: React.FC = () => {
       const containerWidth = container.clientWidth;
       // 计算每行能放多少个卡片：(容器宽度 + 间距) / (卡片宽度 + 间距)
       const cols = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
-      const rows = Math.ceil(filteredTasks.length / cols);
+      const rows = Math.ceil(displayTasks.length / cols);
       
       setColumnCount(cols);
       setRowCount(rows);
@@ -1043,7 +1067,7 @@ const Tasks: React.FC = () => {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [shouldUseVirtualList, filteredTasks.length, cardWidth, gap, isMobile]);
+  }, [shouldUseVirtualList, displayTasks.length, cardWidth, gap, isMobile]);
 
   // Grid 组件的滚动处理（用于无限滚动）
   const gridRef = useRef<GridImperativeAPI>(null);
@@ -1246,10 +1270,16 @@ const Tasks: React.FC = () => {
   };
 
   // 处理任务详情查看
-  const handleViewTask = useCallback((taskId: number) => {
-    setSelectedTaskId(taskId);
+  const handleViewTask = useCallback((taskId: number | string) => {
+    // 如果是固定卡片，跳转到跳蚤市场页面
+    if (taskId === 'flea-market-card') {
+      navigate(`/${language}/flea-market`);
+      return;
+    }
+    // 普通任务，显示详情
+    setSelectedTaskId(taskId as number);
     setShowTaskDetailModal(true);
-  }, []);
+  }, [language, navigate]);
 
   // 处理联系发布者（跳转到任务聊天页面）
   const handleContactPoster = (taskId: number) => {
@@ -1302,11 +1332,20 @@ const Tasks: React.FC = () => {
   const Cell = useCallback(({ columnIndex, rowIndex, style, ...props }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; [key: string]: any }) => {
     const index = rowIndex * columnCount + columnIndex;
     
-    if (index >= filteredTasks.length) {
+    if (index >= displayTasks.length) {
       return <div style={style} />;
     }
     
-    const task = filteredTasks[index];
+    const task = displayTasks[index];
+    
+    // 如果是固定卡片，使用 FleaMarketCard 组件
+    if (task.id === 'flea-market-card') {
+      return (
+        <div style={{ ...style, padding: `${gap / 2}px` }}>
+          <FleaMarketCard isMobile={isMobile} />
+        </div>
+      );
+    }
     
     return (
       <div style={{ ...style, padding: `${gap / 2}px` }}>
@@ -1326,7 +1365,7 @@ const Tasks: React.FC = () => {
         />
       </div>
     );
-  }, [filteredTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t]);
+  }, [displayTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t]);
 
   return (
     <div className={styles.pageContainer}>
@@ -1549,7 +1588,7 @@ const Tasks: React.FC = () => {
               <div className={styles.loadingIcon}>⏳</div>
               <div>加载中...</div>
             </div>
-          ) : filteredTasks.length === 0 ? (
+          ) : displayTasks.length === 0 ? (
             <div className={styles.emptyContainer}>
               <div className={styles.emptyIcon}>📝</div>
               <div>
@@ -1598,7 +1637,7 @@ const Tasks: React.FC = () => {
                   <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
                   <div>加载中...</div>
                 </div>
-              ) : filteredTasks.length === 0 ? (
+              ) : displayTasks.length === 0 ? (
                 <div style={{ 
                   gridColumn: '1 / -1',
                   textAlign: 'center', 
@@ -1616,22 +1655,30 @@ const Tasks: React.FC = () => {
                   )}
                 </div>
               ) : (
-                filteredTasks.map(task => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isMobile={isMobile}
-                    language={language}
-                    onViewTask={handleViewTask}
-                    getTaskTypeLabel={getTaskTypeLabel}
-                    getRemainTime={getRemainTime}
-                    isExpired={isExpired}
-                    isExpiringSoon={isExpiringSoon}
-                    getTaskLevelColor={getTaskLevelColor}
-                    getTaskLevelLabel={getTaskLevelLabel}
-                    t={t}
-                  />
-                ))
+                displayTasks.map(task => {
+                  // 如果是固定卡片，使用 FleaMarketCard 组件
+                  if (task.id === 'flea-market-card') {
+                    return (
+                      <FleaMarketCard key={task.id} isMobile={isMobile} />
+                    );
+                  }
+                  return (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      isMobile={isMobile}
+                      language={language}
+                      onViewTask={handleViewTask}
+                      getTaskTypeLabel={getTaskTypeLabel}
+                      getRemainTime={getRemainTime}
+                      isExpired={isExpired}
+                      isExpiringSoon={isExpiringSoon}
+                      getTaskLevelColor={getTaskLevelColor}
+                      getTaskLevelLabel={getTaskLevelLabel}
+                      t={t}
+                    />
+                  );
+                })
               )}
             </div>
           )}

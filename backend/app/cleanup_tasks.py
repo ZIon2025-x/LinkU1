@@ -54,6 +54,9 @@ class CleanupTasks:
             await self._cleanup_completed_tasks_files()
             await self._cleanup_expired_tasks_files()
             
+            # 清理过期跳蚤市场商品（每天检查一次）
+            await self._cleanup_expired_flea_market_items()
+            
             # 清理未使用的临时图片（每天检查一次）
             await self._cleanup_unused_temp_images()
             
@@ -188,6 +191,35 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理过期任务文件失败: {e}")
+    
+    async def _cleanup_expired_flea_market_items(self):
+        """清理超过10天未刷新的跳蚤市场商品（每天检查一次）"""
+        try:
+            # 检查今天是否已经清理过
+            today = get_utc_time().date()
+            if not hasattr(self, 'last_flea_market_cleanup_date'):
+                self.last_flea_market_cleanup_date = None
+            if self.last_flea_market_cleanup_date == today:
+                # 今天已经清理过，跳过
+                return
+            
+            from app.deps import get_sync_db
+            from app.crud import cleanup_expired_flea_market_items
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用清理函数
+                cleaned_count = cleanup_expired_flea_market_items(db)
+                if cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 个过期跳蚤市场商品")
+                # 更新最后清理日期
+                self.last_flea_market_cleanup_date = today
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"清理过期跳蚤市场商品失败: {e}")
     
     async def _cleanup_unused_temp_images(self):
         """清理未使用的临时图片（超过24小时未使用的临时图片）"""

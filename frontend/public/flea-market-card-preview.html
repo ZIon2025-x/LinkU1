@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳蚤市场商品卡片预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 40px;
+            font-size: 32px;
+        }
+
+        .demo-section {
+            margin-bottom: 60px;
+        }
+
+        .demo-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .itemsGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .itemCard {
+            background: #fff;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            position: relative;
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            contain: layout style paint;
+            aspect-ratio: 1;
+        }
+
+        .itemCard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #059669);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 4;
+        }
+
+        .itemCard:hover {
+            transform: translateY(-8px) translateZ(0);
+            box-shadow: 0 12px 40px rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.3);
+            will-change: transform;
+        }
+
+        .itemCard:hover::before {
+            opacity: 1;
+        }
+
+        .itemImageWrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .itemImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
+        }
+
+        .itemCard:hover .itemImage {
+            transform: scale(1.05) translateZ(0);
+        }
+
+        .itemImagePlaceholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #10b98120, #10b98140);
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .placeholderIcon {
+            font-size: 64px;
+            opacity: 0.6;
+        }
+
+        /* 渐变遮罩层 - 底部用于文字可读性 */
+        .imageOverlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .priceBadge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            z-index: 3;
+            transform: translateZ(0);
+            will-change: transform;
+            backface-visibility: hidden;
+        }
+
+        .itemActions {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 3;
+            transform: translateZ(0);
+            will-change: opacity;
+            backface-visibility: hidden;
+        }
+
+        .itemCard:hover .itemActions {
+            opacity: 1;
+        }
+
+        .actionButton {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            color: #374151;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+
+        .actionButton:hover {
+            background: #fff;
+            transform: scale(1.1) translateZ(0);
+            will-change: transform;
+        }
+
+        /* 商品信息叠加层 - 底部显示 */
+        .itemInfoOverlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .itemTitle {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.4;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .itemLocation {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .locationIcon {
+            font-size: 14px;
+        }
+
+        /* 商品详情弹窗 */
+        .detailModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .detailModal.active {
+            display: flex;
+        }
+
+        .detailModalContent {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .detailModalHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .detailModalTitle {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .closeButton {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .closeButton:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .detailModalBody {
+            padding: 24px;
+        }
+
+        .detailImageSection {
+            margin-bottom: 24px;
+        }
+
+        .detailMainImage {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .detailThumbnails {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 8px 0;
+        }
+
+        .detailThumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .detailThumbnail:hover {
+            border-color: #10b981;
+            transform: scale(1.05);
+        }
+
+        .detailThumbnail.active {
+            border-color: #10b981;
+        }
+
+        .detailInfoSection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .detailPrice {
+            font-size: 32px;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 8px;
+        }
+
+        .detailMeta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detailMetaTag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .detailMetaTag.category {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .detailDescription {
+            margin-bottom: 24px;
+        }
+
+        .detailDescriptionTitle {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .detailDescriptionText {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #4b5563;
+            white-space: pre-wrap;
+        }
+
+        .detailContact {
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .detailContactTitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .detailContactInfo {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .detailActions {
+            display: flex;
+            gap: 12px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .detailButton {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .detailButton.primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+        }
+
+        .detailButton.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .detailButton.secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .detailButton.secondary:hover {
+            background: #e5e7eb;
+        }
+
+        /* 购买确认弹窗 */
+        .purchaseModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1001;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .purchaseModal.active {
+            display: flex;
+        }
+
+        .purchaseModalContent {
+            background: #fff;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        .purchaseModalHeader {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .purchaseModalTitle {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0 0 8px 0;
+        }
+
+        .purchaseItemInfo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .purchaseItemName {
+            font-size: 16px;
+            color: #4b5563;
+            font-weight: 600;
+        }
+
+        .purchaseItemPrice {
+            font-size: 24px;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .purchaseModalBody {
+            padding: 24px;
+        }
+
+        .purchasePriceSection {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+
+        .purchasePriceLabel {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .purchasePriceValue {
+            font-size: 28px;
+            font-weight: 700;
+            color: #10b981;
+        }
+
+        .negotiateSection {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .negotiateCheckboxWrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .negotiateCheckbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .negotiateLabel {
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .negotiateInputWrapper {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .negotiateInputWrapper.active {
+            display: block;
+        }
+
+        .negotiateInput {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .negotiateInput:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .purchaseModalActions {
+            display: flex;
+            gap: 12px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .purchaseButton {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .purchaseButton.primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+        }
+
+        .purchaseButton.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .purchaseButton.secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .purchaseButton.secondary:hover {
+            background: #e5e7eb;
+        }
+
+        @media (max-width: 768px) {
+            .itemsGrid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 16px;
+            }
+
+            .itemCard {
+                aspect-ratio: 1;
+            }
+
+            .itemInfoOverlay {
+                padding: 16px;
+            }
+
+            .itemTitle {
+                font-size: 16px;
+            }
+
+            .itemLocation {
+                font-size: 12px;
+            }
+
+            .priceBadge {
+                font-size: 16px;
+                padding: 6px 12px;
+            }
+
+            .detailModalContent {
+                max-width: 100%;
+                border-radius: 20px 20px 0 0;
+                margin-top: auto;
+            }
+
+            .detailInfoSection {
+                grid-template-columns: 1fr;
+            }
+
+            .detailMainImage {
+                height: 300px;
+            }
+
+            .detailPrice {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ 跳蚤市场商品卡片预览</h1>
+
+        <div class="demo-section">
+            <h2 class="demo-title">示例1：带图片的商品卡片（新样式）</h2>
+            <div class="itemsGrid">
+                <div class="itemCard" onclick="showDetail(1)">
+                    <div class="itemImageWrapper">
+                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop" 
+                             alt="商品图片" 
+                             class="itemImage">
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£99.99</div>
+                        <div class="itemActions">
+                            <button class="actionButton" title="编辑" onclick="event.stopPropagation()">✏️</button>
+                            <button class="actionButton" title="删除" onclick="event.stopPropagation()">🗑️</button>
+                        </div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">二手iPhone 13 Pro Max 256GB</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>London</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="itemCard" onclick="showDetail(2)">
+                    <div class="itemImageWrapper">
+                        <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop" 
+                             alt="商品图片" 
+                             class="itemImage">
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£45.00</div>
+                        <div class="itemActions">
+                            <button class="actionButton" title="编辑" onclick="event.stopPropagation()">✏️</button>
+                            <button class="actionButton" title="删除" onclick="event.stopPropagation()">🗑️</button>
+                        </div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">Nike Air Max 运动鞋</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>Manchester</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="itemCard" onclick="showDetail(3)">
+                    <div class="itemImageWrapper">
+                        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop" 
+                             alt="商品图片" 
+                             class="itemImage">
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£25.50</div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">Casio 电子手表</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>Online</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2 class="demo-title">示例2：无图片的商品卡片（显示占位符）</h2>
+            <div class="itemsGrid">
+                <div class="itemCard" onclick="showDetail(4)">
+                    <div class="itemImageWrapper">
+                        <div class="itemImagePlaceholder">
+                            <span class="placeholderIcon">🛍️</span>
+                        </div>
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£15.00</div>
+                        <div class="itemActions">
+                            <button class="actionButton" title="编辑" onclick="event.stopPropagation()">✏️</button>
+                            <button class="actionButton" title="删除" onclick="event.stopPropagation()">🗑️</button>
+                        </div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">二手教科书 - Computer Science</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>Birmingham</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="itemCard" onclick="showDetail(5)">
+                    <div class="itemImageWrapper">
+                        <div class="itemImagePlaceholder">
+                            <span class="placeholderIcon">🛍️</span>
+                        </div>
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£8.99</div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">IKEA 台灯</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>Online</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2 class="demo-title">示例3：不同价格的商品卡片</h2>
+            <div class="itemsGrid">
+                <div class="itemCard" onclick="showDetail(6)">
+                    <div class="itemImageWrapper">
+                        <img src="https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop" 
+                             alt="商品图片" 
+                             class="itemImage">
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£299.99</div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">MacBook Pro 13寸 2020款</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>London</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="itemCard" onclick="showDetail(7)">
+                    <div class="itemImageWrapper">
+                        <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop" 
+                             alt="商品图片" 
+                             class="itemImage">
+                        <div class="imageOverlay"></div>
+                        <div class="priceBadge">£5.00</div>
+                        <div class="itemInfoOverlay">
+                            <h3 class="itemTitle">咖啡杯套装</h3>
+                            <div class="itemLocation">
+                                <span class="locationIcon">📍</span>
+                                <span>Leeds</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品详情弹窗 -->
+    <div class="detailModal" id="detailModal" onclick="closeDetail(event)">
+        <div class="detailModalContent" onclick="event.stopPropagation()">
+            <div class="detailModalHeader">
+                <h2 class="detailModalTitle" id="detailTitle">商品详情</h2>
+                <button class="closeButton" onclick="closeDetail()">×</button>
+            </div>
+            <div class="detailModalBody">
+                <div class="detailImageSection">
+                    <img id="detailMainImage" class="detailMainImage" src="" alt="商品主图">
+                    <div class="detailThumbnails" id="detailThumbnails"></div>
+                </div>
+                <div class="detailInfoSection">
+                    <div>
+                        <div class="detailPrice" id="detailPrice">£0.00</div>
+                        <div class="detailMeta" id="detailMeta"></div>
+                    </div>
+                </div>
+                <div class="detailDescription">
+                    <div class="detailDescriptionTitle">商品描述</div>
+                    <div class="detailDescriptionText" id="detailDescription"></div>
+                </div>
+                <div class="detailContact" id="detailContact" style="display: none;">
+                    <div class="detailContactTitle">联系方式</div>
+                    <div class="detailContactInfo" id="detailContactInfo"></div>
+                </div>
+                <div class="detailActions">
+                    <button class="detailButton primary" onclick="handlePurchase()">购买</button>
+                    <button class="detailButton secondary" onclick="closeDetail()">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 购买确认弹窗 -->
+    <div class="purchaseModal" id="purchaseModal" onclick="closePurchaseModal(event)">
+        <div class="purchaseModalContent" onclick="event.stopPropagation()">
+            <div class="purchaseModalHeader">
+                <h2 class="purchaseModalTitle">确认购买</h2>
+                <div class="purchaseItemInfo">
+                    <span class="purchaseItemName" id="purchaseItemTitle">商品名称</span>
+                    <span class="purchaseItemPrice" id="purchaseItemPrice">£0.00</span>
+                </div>
+            </div>
+            <div class="purchaseModalBody">
+                <div class="purchasePriceSection">
+                    <div class="purchasePriceLabel">商品原价</div>
+                    <div class="purchasePriceValue" id="purchaseOriginalPrice">£0.00</div>
+                </div>
+                <div class="negotiateSection">
+                    <div class="negotiateCheckboxWrapper">
+                        <input type="checkbox" id="negotiateCheckbox" class="negotiateCheckbox" onchange="toggleNegotiate()">
+                        <label for="negotiateCheckbox" class="negotiateLabel">我要议价</label>
+                    </div>
+                    <div class="negotiateInputWrapper" id="negotiateSection">
+                        <input type="number" 
+                               id="negotiateInput" 
+                               class="negotiateInput" 
+                               placeholder="请输入您的议价金额（GBP）"
+                               min="0.01"
+                               step="0.01">
+                    </div>
+                </div>
+                <div class="purchaseModalActions">
+                    <button class="purchaseButton primary" onclick="confirmPurchase()">确认购买</button>
+                    <button class="purchaseButton secondary" onclick="closePurchaseModal()">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const items = {
+            1: {
+                title: '二手iPhone 13 Pro Max 256GB',
+                price: 99.99,
+                location: 'London',
+                category: '电子产品',
+                description: '几乎全新，使用不到3个月，原装充电器和盒子都在，无任何划痕或损坏。屏幕保护膜一直贴着，机身完美。因为换新手机所以出售。',
+                images: [
+                    'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop'
+                ],
+                contact: '微信: iphone_seller'
+            },
+            2: {
+                title: 'Nike Air Max 运动鞋',
+                price: 45.00,
+                location: 'Manchester',
+                category: '服装鞋帽',
+                description: '只穿过几次，尺码42，非常舒适，适合跑步和日常穿着。鞋子保存完好，鞋盒也在。',
+                images: [
+                    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=800&h=600&fit=crop'
+                ],
+                contact: '电话: 07700 900123'
+            },
+            3: {
+                title: 'Casio 电子手表',
+                price: 25.50,
+                location: 'Online',
+                category: '配饰',
+                description: '经典款电子手表，功能齐全，防水，适合学生和日常使用。',
+                images: [
+                    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop'
+                ]
+            },
+            4: {
+                title: '二手教科书 - Computer Science',
+                price: 15.00,
+                location: 'Birmingham',
+                category: '书籍',
+                description: '计算机科学专业教材，使用一个学期，保存完好，有少量笔记。',
+                images: []
+            },
+            5: {
+                title: 'IKEA 台灯',
+                price: 8.99,
+                location: 'Online',
+                category: '家具',
+                description: '白色简约台灯，适合学习和工作，带LED灯泡，节能环保。',
+                images: []
+            },
+            6: {
+                title: 'MacBook Pro 13寸 2020款',
+                price: 299.99,
+                location: 'London',
+                category: '电子产品',
+                description: 'M1芯片，8GB内存，256GB存储，性能强劲，适合编程和设计工作。使用一年，保养良好，无任何问题。',
+                images: [
+                    'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&h=600&fit=crop',
+                    'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&h=600&fit=crop'
+                ],
+                contact: '邮箱: macbook@example.com'
+            },
+            7: {
+                title: '咖啡杯套装',
+                price: 5.00,
+                location: 'Leeds',
+                category: '生活用品',
+                description: '4个咖啡杯，陶瓷材质，适合宿舍使用，几乎全新。',
+                images: [
+                    'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&h=600&fit=crop'
+                ]
+            }
+        };
+
+        let currentImageIndex = 0;
+
+        function showDetail(itemId) {
+            const item = items[itemId];
+            if (!item) return;
+
+            document.getElementById('detailTitle').textContent = item.title;
+            document.getElementById('detailPrice').textContent = `£${item.price.toFixed(2)}`;
+            document.getElementById('detailDescription').textContent = item.description;
+
+            // 设置元信息
+            const metaContainer = document.getElementById('detailMeta');
+            metaContainer.innerHTML = `
+                <span class="detailMetaTag">📍 ${item.location}</span>
+                <span class="detailMetaTag category">${item.category}</span>
+            `;
+
+            // 设置联系方式
+            const contactDiv = document.getElementById('detailContact');
+            const contactInfo = document.getElementById('detailContactInfo');
+            if (item.contact) {
+                contactDiv.style.display = 'block';
+                contactInfo.textContent = item.contact;
+            } else {
+                contactDiv.style.display = 'none';
+            }
+
+            // 设置图片
+            const mainImage = document.getElementById('detailMainImage');
+            const thumbnailsContainer = document.getElementById('detailThumbnails');
+            
+            if (item.images && item.images.length > 0) {
+                mainImage.src = item.images[0];
+                mainImage.style.display = 'block';
+                currentImageIndex = 0;
+
+                thumbnailsContainer.innerHTML = '';
+                item.images.forEach((img, index) => {
+                    const thumbnail = document.createElement('img');
+                    thumbnail.src = img;
+                    thumbnail.className = 'detailThumbnail' + (index === 0 ? ' active' : '');
+                    thumbnail.onclick = () => {
+                        mainImage.src = img;
+                        document.querySelectorAll('.detailThumbnail').forEach((t, i) => {
+                            t.classList.toggle('active', i === index);
+                        });
+                        currentImageIndex = index;
+                    };
+                    thumbnailsContainer.appendChild(thumbnail);
+                });
+            } else {
+                mainImage.style.display = 'none';
+                thumbnailsContainer.innerHTML = '';
+            }
+
+            document.getElementById('detailModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDetail(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('detailModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDetail();
+            }
+        });
+
+        // 购买按钮处理函数
+        function handlePurchase() {
+            const itemId = Object.keys(items).find(id => {
+                const item = items[id];
+                return document.getElementById('detailTitle').textContent === item.title;
+            });
+            if (itemId) {
+                const item = items[itemId];
+                showPurchaseModal(itemId, item);
+            }
+        }
+
+        // 显示购买确认弹窗
+        function showPurchaseModal(itemId, item) {
+            const modal = document.getElementById('purchaseModal');
+            document.getElementById('purchaseItemTitle').textContent = item.title;
+            document.getElementById('purchaseItemPrice').textContent = `£${item.price.toFixed(2)}`;
+            document.getElementById('purchaseOriginalPrice').textContent = `£${item.price.toFixed(2)}`;
+            document.getElementById('negotiateCheckbox').checked = false;
+            document.getElementById('negotiateInput').value = '';
+            document.getElementById('negotiateSection').style.display = 'none';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭购买弹窗
+        function closePurchaseModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('purchaseModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // 切换议价选项
+        function toggleNegotiate() {
+            const checkbox = document.getElementById('negotiateCheckbox');
+            const section = document.getElementById('negotiateSection');
+            section.style.display = checkbox.checked ? 'block' : 'none';
+            if (!checkbox.checked) {
+                document.getElementById('negotiateInput').value = '';
+            }
+        }
+
+        // 确认购买
+        function confirmPurchase() {
+            const checkbox = document.getElementById('negotiateCheckbox');
+            const negotiateInput = document.getElementById('negotiateInput');
+            const negotiatePrice = parseFloat(negotiateInput.value);
+            const itemId = Object.keys(items).find(id => {
+                const item = items[id];
+                return document.getElementById('purchaseItemTitle').textContent === item.title;
+            });
+            
+            if (!itemId) return;
+
+            const item = items[itemId];
+            let finalPrice = item.price;
+            let hasNegotiate = false;
+
+            if (checkbox.checked) {
+                if (!negotiateInput.value || isNaN(negotiatePrice) || negotiatePrice <= 0) {
+                    alert('请输入有效的议价金额');
+                    return;
+                }
+                finalPrice = negotiatePrice;
+                hasNegotiate = true;
+            }
+
+            if (confirm(`确认购买 "${item.title}"？\n${hasNegotiate ? `议价后价格：£${finalPrice.toFixed(2)}` : `价格：£${finalPrice.toFixed(2)}`}`)) {
+                if (hasNegotiate) {
+                    alert('购买申请已提交！\n已包含议价请求，等待卖家同意或拒绝。\n在实际应用中，这里会调用购买申请API。');
+                } else {
+                    alert('购买成功！\n任务已创建并进入进行中状态。\n在实际应用中，这里会直接创建进行中的任务。');
+                }
+                closePurchaseModal();
+                closeDetail();
+            }
+        }
+    </script>
+</body>
+</html>

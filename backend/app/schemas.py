@@ -1458,3 +1458,97 @@ class PaginatedResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
+
+# ==================== 跳蚤市场相关 Schemas ====================
+
+class FleaMarketItemBase(BaseModel):
+    """跳蚤市场商品基础模型"""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    price: Decimal = Field(..., gt=0)
+    images: List[str] = Field(default_factory=list, max_items=5)
+    location: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)
+
+
+class FleaMarketItemCreate(FleaMarketItemBase):
+    """创建商品请求"""
+    pass
+
+
+class FleaMarketItemUpdate(BaseModel):
+    """更新商品请求"""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
+    price: Optional[Decimal] = Field(None, gt=0)
+    images: Optional[List[str]] = Field(None, max_items=5)
+    location: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)
+    status: Optional[Literal["deleted"]] = None  # 仅允许设置为deleted
+
+
+class FleaMarketItemResponse(FleaMarketItemBase):
+    """商品响应模型"""
+    id: str  # 格式化为 S + 数字
+    currency: Literal["GBP"] = "GBP"
+    status: Literal["active", "sold", "deleted"]
+    seller_id: str
+    view_count: int
+    refreshed_at: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class FleaMarketItemListResponse(BaseModel):
+    """商品列表响应"""
+    items: List[FleaMarketItemResponse]
+    page: int
+    pageSize: int
+    total: int
+    hasMore: bool
+
+
+class FleaMarketPurchaseRequestCreate(BaseModel):
+    """创建购买申请请求"""
+    proposed_price: Decimal = Field(..., gt=0)
+    message: Optional[str] = None
+
+
+class FleaMarketPurchaseRequestResponse(BaseModel):
+    """购买申请响应"""
+    id: str  # 格式化为 S + 数字
+    item_id: str
+    buyer_id: str
+    proposed_price: Optional[Decimal]
+    message: Optional[str]
+    status: Literal["pending", "accepted", "rejected"]
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class AcceptPurchaseRequest(BaseModel):
+    """接受购买申请请求"""
+    purchase_request_id: int
+    agreed_price: Optional[Decimal] = Field(None, gt=0)
+
+
+class MyPurchasesItemResponse(FleaMarketItemResponse):
+    """我的购买商品响应（包含任务信息）"""
+    task_id: str  # 关联的任务ID
+    final_price: Decimal  # 最终成交价
+
+
+class MyPurchasesListResponse(BaseModel):
+    """我的购买商品列表响应"""
+    items: List[MyPurchasesItemResponse]
+    page: int
+    pageSize: int
+    total: int
+    hasMore: bool

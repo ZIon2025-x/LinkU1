@@ -91,3 +91,16 @@ def is_user_id(user_id: Union[str, int]) -> bool:
     if isinstance(user_id, int):
         return True  # 数字ID默认为用户ID
     return user_id.isdigit() and len(user_id) == 8
+
+
+def format_flea_market_id(db_id: int) -> str:
+    """将数据库ID转换为跳蚤市场ID格式: S + 数字"""
+    formatted_id = f"{db_id:04d}"  # 补零到4位
+    return f"S{formatted_id}"
+
+
+def parse_flea_market_id(formatted_id: str) -> int:
+    """将跳蚤市场ID格式转换为数据库ID"""
+    if formatted_id.startswith("S"):
+        return int(formatted_id[1:])
+    return int(formatted_id)
