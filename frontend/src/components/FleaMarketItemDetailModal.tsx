@@ -40,13 +40,15 @@ interface FleaMarketItemDetailModalProps {
   onClose: () => void;
   itemId: string | null;
   onItemUpdated?: () => void;  // 商品更新后的回调
+  onEdit?: (item: FleaMarketItem) => void;  // 编辑商品回调
 }
 
 const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({ 
   isOpen, 
   onClose, 
   itemId,
-  onItemUpdated 
+  onItemUpdated,
+  onEdit
 }) => {
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
@@ -59,6 +61,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [proposedPrice, setProposedPrice] = useState<number | undefined>();
   const [purchaseMessage, setPurchaseMessage] = useState('');
   const [reportReason, setReportReason] = useState<string>('');
@@ -112,14 +115,14 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       }
     } catch (error: any) {
       console.error('加载商品详情失败:', error);
-      message.error(error.response?.data?.detail || '加载商品详情失败');
+      message.error(error.response?.data?.detail || t('fleaMarket.loadItemError') || '加载商品详情失败');
       if (error.response?.status === 404) {
         onClose();
       }
     } finally {
       setLoading(false);
     }
-  }, [itemId, currentUser, onClose]);
+  }, [itemId, currentUser, onClose, t]);
   
   useEffect(() => {
     if (isOpen && itemId) {
@@ -137,7 +140,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   // 收藏/取消收藏
   const handleToggleFavorite = useCallback(async () => {
     if (!currentUser) {
-      message.warning('请先登录');
+      message.warning(t('common.pleaseLogin') || '请先登录');
       return;
     }
     
@@ -147,32 +150,32 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     try {
       await api.post(`/api/flea-market/items/${itemId}/favorite`);
       setIsFavorited(!isFavorited);
-      message.success(isFavorited ? '已取消收藏' : '收藏成功');
+      message.success(isFavorited ? t('fleaMarket.unfavoriteSuccess') || '已取消收藏' : t('fleaMarket.favoriteSuccess') || '收藏成功');
     } catch (error: any) {
       console.error('收藏操作失败:', error);
       message.error(error.response?.data?.detail || '操作失败');
     } finally {
       setFavoriteLoading(false);
     }
-  }, [itemId, isFavorited, currentUser]);
+  }, [itemId, isFavorited, currentUser, t]);
   
   // 直接购买
   const handleDirectPurchase = useCallback(async () => {
     if (!currentUser) {
-      message.warning('请先登录');
+      message.warning(t('common.pleaseLogin') || '请先登录');
       return;
     }
     
     if (!itemId) return;
     
     Modal.confirm({
-      title: '确认购买',
-      content: `确定要以 £${item?.price.toFixed(2)} 的价格购买「${item?.title}」吗？`,
+      title: t('fleaMarket.confirmPurchase') || '确认购买',
+      content: `${t('fleaMarket.confirmPurchaseMessage') || '确定要以'} £${item?.price?.toFixed(2) || '0.00'} ${t('fleaMarket.confirmPurchaseMessage2') || '的价格购买「'}${item?.title || ''}${t('fleaMarket.confirmPurchaseMessage3') || '」吗？'}`,
       onOk: async () => {
         setPurchaseLoading(true);
         try {
           const response = await api.post(`/api/flea-market/items/${itemId}/direct-purchase`);
-          message.success('购买成功！任务已创建');
+          message.success(t('fleaMarket.purchaseSuccess') || '购买成功！任务已创建');
           onClose();
           navigate(`/${language}/message`);
         } catch (error: any) {
@@ -183,7 +186,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         }
       }
     });
-  }, [itemId, item, currentUser, language, navigate, onClose]);
+  }, [itemId, item, currentUser, language, navigate, onClose, t]);
   
   // 提交购买申请
   const handleSubmitPurchaseRequest = useCallback(async () => {
@@ -195,7 +198,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         proposed_price: proposedPrice,
         message: purchaseMessage
       });
-      message.success('购买申请已提交，等待卖家处理');
+      message.success(t('fleaMarket.purchaseRequestSubmitted') || '购买申请已提交，等待卖家处理');
       setShowPurchaseModal(false);
       setProposedPrice(undefined);
       setPurchaseMessage('');
@@ -208,26 +211,32 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     } finally {
       setPurchaseLoading(false);
     }
-  }, [itemId, proposedPrice, purchaseMessage, currentUser, onItemUpdated]);
+  }, [itemId, proposedPrice, purchaseMessage, currentUser, onItemUpdated, t]);
   
   // 举报商品
   const handleReport = useCallback(async () => {
-    if (!currentUser || !itemId || !reportReason) return;
+    if (!currentUser || !itemId || !reportReason) {
+      message.warning(t('fleaMarket.selectReason') || '请选择举报原因');
+      return;
+    }
     
+    setReportLoading(true);
     try {
       await api.post(`/api/flea-market/items/${itemId}/report`, {
         reason: reportReason,
         description: reportDescription
       });
-      message.success('举报已提交，我们会尽快处理');
+      message.success(t('fleaMarket.reportSubmitted') || '举报已提交，我们会尽快处理');
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
       console.error('举报失败:', error);
-      message.error(error.response?.data?.detail || '举报失败');
+      message.error(error.response?.data?.detail || t('fleaMarket.reportError') || '举报失败');
+    } finally {
+      setReportLoading(false);
     }
-  }, [itemId, reportReason, reportDescription, currentUser]);
+  }, [itemId, reportReason, reportDescription, currentUser, t]);
   
   if (!isOpen) return null;
   
@@ -246,9 +255,30 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
             <Spin size="large" />
           </div>
         ) : !item ? (
-          <Empty description="商品不存在" />
+          <Empty description={t('fleaMarket.itemNotFound') || '商品不存在'} />
         ) : (
-          <div className={styles.content}>
+          <>
+            {/* 顶部操作按钮 - 收藏和举报（仅非所有者且商品活跃时显示） */}
+            {!isOwner && isActive && (
+              <div className={styles.topActions}>
+                <Button
+                  type={isFavorited ? 'default' : 'primary'}
+                  icon={isFavorited ? <HeartFilled /> : <HeartOutlined />}
+                  loading={favoriteLoading}
+                  onClick={handleToggleFavorite}
+                  className={styles.topActionButton}
+                  title={isFavorited ? t('fleaMarket.unfavorite') : t('fleaMarket.favorite')}
+                />
+                <Button
+                  danger
+                  icon={<FlagOutlined />}
+                  onClick={() => setShowReportModal(true)}
+                  className={styles.topActionButton}
+                  title={t('fleaMarket.report')}
+                />
+              </div>
+            )}
+            <div className={styles.content}>
             {/* 左侧：图片 */}
             <div className={styles.imageSection}>
               {item.images && item.images.length > 0 ? (
@@ -300,18 +330,18 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                   <span className={styles.location}>📍 {item.location}</span>
                 )}
                 <span className={styles.views}>
-                  👁️ {item.view_count || 0} {t('fleaMarket.views') || '次浏览'}
+                  👁️ {item.view_count || 0} {t('fleaMarket.views')}
                 </span>
               </div>
               
               <div className={styles.description}>
-                <h3>{t('fleaMarket.description') || '商品描述'}</h3>
+                <h3>{t('fleaMarket.description')}</h3>
                 <p>{item.description}</p>
               </div>
               
               {sellerInfo && (
                 <div className={styles.sellerInfo}>
-                  <h3>{t('fleaMarket.seller') || '卖家信息'}</h3>
+                  <h3>{t('fleaMarket.seller')}</h3>
                   <div className={styles.sellerCard}>
                     <span className={styles.sellerName}>
                       {sellerInfo.name || `用户${sellerInfo.id}`}
@@ -326,7 +356,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                         navigate(`/${language}/user/${sellerInfo.id}`);
                       }}
                     >
-                      {t('fleaMarket.viewProfile') || '查看资料'}
+                      {t('fleaMarket.viewProfile')}
                     </Button>
                   </div>
                 </div>
@@ -340,25 +370,25 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                       icon={<EditOutlined />}
                       onClick={() => {
                         onClose();
-                        // 触发编辑，可以通过回调通知父组件
-                        if (onItemUpdated) {
-                          onItemUpdated();
+                        // 触发编辑回调
+                        if (onEdit && item) {
+                          onEdit(item);
                         }
                       }}
                     >
-                      {t('fleaMarket.editItem') || '编辑'}
+                      {t('fleaMarket.editItem')}
                     </Button>
                     <Button
                       danger
                       icon={<DeleteOutlined />}
                       onClick={() => {
                         Modal.confirm({
-                          title: t('fleaMarket.confirmDelete') || '确认删除',
-                          content: t('fleaMarket.confirmDeleteMessage') || '确定要删除这个商品吗？',
+                          title: t('fleaMarket.confirmDelete'),
+                          content: t('fleaMarket.confirmDeleteMessage'),
                           onOk: async () => {
                             try {
                               await api.put(`/api/flea-market/items/${item.id}`, { status: 'deleted' });
-                              message.success(t('fleaMarket.deleteSuccess') || '删除成功');
+                              message.success(t('fleaMarket.deleteSuccess'));
                               onClose();
                               if (onItemUpdated) {
                                 onItemUpdated();
@@ -370,7 +400,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                         });
                       }}
                     >
-                      {t('fleaMarket.delete') || '删除'}
+                      {t('fleaMarket.delete')}
                     </Button>
                   </Space>
                 ) : (
@@ -378,40 +408,25 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                     {isActive && (
                       <Space wrap>
                         <Button
-                          type={isFavorited ? 'default' : 'primary'}
-                          icon={isFavorited ? <HeartFilled /> : <HeartOutlined />}
-                          loading={favoriteLoading}
-                          onClick={handleToggleFavorite}
-                        >
-                          {isFavorited ? (t('fleaMarket.unfavorite') || '取消收藏') : (t('fleaMarket.favorite') || '收藏')}
-                        </Button>
-                        <Button
                           type="primary"
                           size="large"
                           icon={<ShoppingCartOutlined />}
                           loading={purchaseLoading}
                           onClick={handleDirectPurchase}
                         >
-                          {t('fleaMarket.buyNow') || '立即购买'}
+                          {t('fleaMarket.buyNow')}
                         </Button>
                         <Button
                           icon={<MessageOutlined />}
                           onClick={() => setShowPurchaseModal(true)}
                         >
-                          {t('fleaMarket.makeOffer') || '议价购买'}
-                        </Button>
-                        <Button
-                          icon={<FlagOutlined />}
-                          danger
-                          onClick={() => setShowReportModal(true)}
-                        >
-                          {t('fleaMarket.report') || '举报'}
+                          {t('fleaMarket.makeOffer')}
                         </Button>
                       </Space>
                     )}
                     {!isActive && (
                       <div className={styles.statusBadge}>
-                        {item.status === 'sold' ? (t('fleaMarket.sold') || '已售出') : (t('fleaMarket.deleted') || '已下架')}
+                        {item.status === 'sold' ? t('fleaMarket.sold') : t('fleaMarket.deleted')}
                       </div>
                     )}
                   </>
@@ -419,12 +434,13 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
               </div>
             </div>
           </div>
+          </>
         )}
       </Modal>
       
       {/* 购买申请弹窗 */}
       <Modal
-        title={t('fleaMarket.makeOffer') || '议价购买'}
+        title={t('fleaMarket.makeOffer')}
         open={showPurchaseModal}
         onOk={handleSubmitPurchaseRequest}
         onCancel={() => {
@@ -436,10 +452,10 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       >
         <div className={styles.purchaseForm}>
           <div className={styles.formItem}>
-            <label>{t('fleaMarket.originalPrice') || '原价'}: £{item?.price.toFixed(2)}</label>
+            <label>{t('fleaMarket.originalPrice')}: £{item?.price?.toFixed(2) || '0.00'}</label>
           </div>
           <div className={styles.formItem}>
-            <label>{t('fleaMarket.proposedPrice') || '议价金额'} (可选)</label>
+            <label>{t('fleaMarket.proposedPrice')} ({t('common.optional') || '可选'})</label>
             <InputNumber
               value={proposedPrice}
               onChange={(value) => setProposedPrice(value || undefined)}
@@ -450,12 +466,12 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
             />
           </div>
           <div className={styles.formItem}>
-            <label>{t('fleaMarket.message') || '留言'}</label>
+            <label>{t('fleaMarket.message')}</label>
             <TextArea
               value={purchaseMessage}
               onChange={(e) => setPurchaseMessage(e.target.value)}
               rows={4}
-              placeholder={t('fleaMarket.messagePlaceholder') || '请输入购买留言...'}
+              placeholder={t('fleaMarket.messagePlaceholder')}
             />
           </div>
         </div>
@@ -463,7 +479,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       
       {/* 举报弹窗 */}
       <Modal
-        title={t('fleaMarket.report') || '举报商品'}
+        title={t('fleaMarket.report')}
         open={showReportModal}
         onOk={handleReport}
         onCancel={() => {
@@ -471,29 +487,32 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           setReportReason('');
           setReportDescription('');
         }}
+        confirmLoading={reportLoading}
+        okText={t('common.submit') || '提交'}
+        cancelText={t('common.cancel') || '取消'}
       >
         <div className={styles.reportForm}>
           <div className={styles.formItem}>
-            <label>{t('fleaMarket.reportReason') || '举报原因'} *</label>
+            <label>{t('fleaMarket.reportReason')} *</label>
             <select
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
               style={{ width: '100%', padding: '8px', borderRadius: '4px' }}
             >
-              <option value="">{t('fleaMarket.selectReason') || '请选择原因'}</option>
-              <option value="spam">{t('fleaMarket.reasonSpam') || '垃圾信息'}</option>
-              <option value="fraud">{t('fleaMarket.reasonFraud') || '欺诈'}</option>
-              <option value="inappropriate">{t('fleaMarket.reasonInappropriate') || '不当内容'}</option>
-              <option value="other">{t('fleaMarket.reasonOther') || '其他'}</option>
+              <option value="">{t('fleaMarket.selectReason')}</option>
+              <option value="spam">{t('fleaMarket.reasonSpam')}</option>
+              <option value="fraud">{t('fleaMarket.reasonFraud')}</option>
+              <option value="inappropriate">{t('fleaMarket.reasonInappropriate')}</option>
+              <option value="other">{t('fleaMarket.reasonOther')}</option>
             </select>
           </div>
           <div className={styles.formItem}>
-            <label>{t('fleaMarket.reportDescription') || '详细描述'}</label>
+            <label>{t('fleaMarket.reportDescription')}</label>
             <TextArea
               value={reportDescription}
               onChange={(e) => setReportDescription(e.target.value)}
               rows={4}
-              placeholder={t('fleaMarket.reportDescriptionPlaceholder') || '请详细描述举报原因...'}
+              placeholder={t('fleaMarket.reportDescriptionPlaceholder')}
             />
           </div>
         </div>

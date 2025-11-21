@@ -1,9 +1,31 @@
 .modal :global(.ant-modal-content) {
   padding: 0;
+  position: relative;
 }
 
 .modal :global(.ant-modal-body) {
   padding: 24px;
+}
+
+.topActions {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.topActionButton {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
 }
 
 .loadingContainer {
@@ -218,6 +240,17 @@
 }
 
 @media (max-width: 768px) {
+  .topActions {
+    top: 12px;
+    left: 12px;
+    gap: 6px;
+  }
+
+  .topActionButton {
+    width: 36px;
+    height: 36px;
+  }
+
   .content {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -237,6 +270,14 @@
   
   .price {
     font-size: 24px;
+  }
+
+  .actions {
+    padding: 12px;
+  }
+
+  .actions :global(.ant-btn) {
+    font-size: 14px;
   }
 }
 

@@ -1162,6 +1162,20 @@ const FleaMarketPage: React.FC = () => {
           // 商品更新后重新加载列表
           loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
         }}
+        onEdit={(item) => {
+          // 关闭详情弹窗，打开编辑模态框
+          setShowItemDetailModal(false);
+          setSelectedItemId(null);
+          // 转换类型以匹配 FleaMarketPage 的接口
+          const convertedItem: FleaMarketItem = {
+            ...item,
+            id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+            currency: (item.currency || 'GBP') as 'GBP',
+            status: item.status as 'active' | 'sold' | 'deleted',
+            contact: (item as any).contact || undefined
+          };
+          handleEdit(convertedItem);
+        }}
       />
     </div>
   );
