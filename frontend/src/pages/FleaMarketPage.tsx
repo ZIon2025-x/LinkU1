@@ -231,10 +231,11 @@ const FleaMarketPage: React.FC = () => {
       const response = await api.get('/api/flea-market/items', { params });
       const data = response.data;
       
-      // 处理 images 字段（可能是 JSON 字符串）
+      // 处理 images 字段（可能是 JSON 字符串）和 price 字段（确保是数字）
       const processedItems = (data.items || []).map((item: any) => ({
         ...item,
-        images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || [])
+        images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || []),
+        price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))
       }));
       
       if (isLoadMore) {
@@ -284,7 +285,8 @@ const FleaMarketPage: React.FC = () => {
       const postedData = postedResponse.data;
       const processedPostedItems = (postedData.items || []).map((item: any) => ({
         ...item,
-        images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || [])
+        images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || []),
+        price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))
       }));
       setMyPostedItems(processedPostedItems);
 
@@ -300,7 +302,8 @@ const FleaMarketPage: React.FC = () => {
         const purchasedData = purchasedResponse.data;
         const processedPurchasedItems = (purchasedData.items || []).map((item: any) => ({
           ...item,
-          images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || [])
+          images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || []),
+          price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))
         }));
         setMyPurchasedItems(processedPurchasedItems);
       } catch (error: any) {
@@ -437,8 +440,10 @@ const FleaMarketPage: React.FC = () => {
       setShowUploadModal(false);
       setEditingItem(null);
       
-      // 重新加载列表
-      loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+      // 重新加载列表 - 添加小延迟确保数据已保存
+      setTimeout(() => {
+        loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+      }, 500);
     } catch (error: any) {
       console.error('提交商品失败:', error);
       message.error(error.response?.data?.detail || t('fleaMarket.submitError'));
@@ -456,7 +461,10 @@ const FleaMarketPage: React.FC = () => {
         try {
           await api.put(`/api/flea-market/items/${item.id}`, { status: 'deleted' });
           message.success(t('fleaMarket.deleteSuccess'));
-          loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+          // 添加小延迟确保数据已更新
+          setTimeout(() => {
+            loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+          }, 300);
         } catch (error: any) {
           console.error('删除商品失败:', error);
           message.error(error.response?.data?.detail || t('fleaMarket.deleteError'));
@@ -471,7 +479,7 @@ const FleaMarketPage: React.FC = () => {
     setFormData({
       title: item.title,
       description: item.description,
-      price: item.price,
+      price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0)),
       images: item.images,
       location: item.location || 'Online',
       category: item.category || '',
@@ -554,7 +562,7 @@ const FleaMarketPage: React.FC = () => {
           
           {/* 价格标签 - 右上角 */}
           <div className={styles.priceBadge}>
-            £{item.price.toFixed(2)}
+            £{typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(String(item.price || 0)).toFixed(2)}
           </div>
           
           {/* 操作按钮（仅所有者可见） - 左上角 */}

@@ -94,28 +94,6 @@ const FleaMarketCard: React.FC<FleaMarketCardProps> = ({ isMobile }) => {
           pointerEvents: 'none'
         }} />
 
-        {/* 地点 - 左上角 */}
-        <div style={{
-          position: 'absolute',
-          top: isMobile ? '8px' : '12px',
-          left: isMobile ? '8px' : '12px',
-          background: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(4px)',
-          color: '#fff',
-          padding: isMobile ? '4px 8px' : '6px 12px',
-          borderRadius: '20px',
-          fontSize: isMobile ? '10px' : '12px',
-          fontWeight: '600',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          zIndex: 3,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-        }}>
-          <span>🌐</span>
-          <span>Online</span>
-        </div>
-
         {/* 任务类型 - 右上角 */}
         <div style={{
           position: 'absolute',
