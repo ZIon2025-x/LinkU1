@@ -546,7 +546,7 @@ const FleaMarketPage: React.FC = () => {
         key={item.id}
         className={styles.itemCard}
         onClick={() => {
-          setSelectedItemId(item.id);
+          setSelectedItemId(String(item.id));
           setShowItemDetailModal(true);
         }}
       >
