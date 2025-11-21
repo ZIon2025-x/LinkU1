@@ -1539,6 +1539,11 @@ class AcceptPurchaseRequest(BaseModel):
     agreed_price: Optional[Decimal] = Field(None, gt=0)
 
 
+class RejectPurchaseRequest(BaseModel):
+    """拒绝购买申请请求"""
+    purchase_request_id: int
+
+
 class MyPurchasesItemResponse(FleaMarketItemResponse):
     """我的购买商品响应（包含任务信息）"""
     task_id: str  # 关联的任务ID

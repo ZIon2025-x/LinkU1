@@ -222,6 +222,94 @@
 }
 
 .purchaseForm,
+.purchaseRequestsSection {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.purchaseRequestsSection h3 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.purchaseRequestsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.purchaseRequestCard {
+  padding: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.requestHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.buyerName {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status.pending {
+  background: #fff7e6;
+  color: #d46b08;
+}
+
+.status.accepted {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.status.rejected {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.requestPrice {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.priceValue {
+  font-weight: 600;
+  color: #1890ff;
+  font-size: 16px;
+}
+
+.requestMessage {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.requestTime {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.requestActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .reportForm {
   display: flex;
   flex-direction: column;

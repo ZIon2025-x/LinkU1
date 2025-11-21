@@ -1208,6 +1208,165 @@ async def accept_purchase_request(
         )
 
 
+# ==================== 获取购买申请列表API ====================
+
+@flea_market_router.get("/items/{item_id}/purchase-requests", response_model=dict)
+async def get_purchase_requests(
+    item_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取商品的购买申请列表（仅商品所有者可查看）"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 权限验证：只有商品所有者可以查看购买申请
+        if item.seller_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限查看此商品的购买申请"
+            )
+        
+        # 查询购买申请
+        requests_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+            .order_by(models.FleaMarketPurchaseRequest.created_at.desc())
+        )
+        purchase_requests = requests_result.scalars().all()
+        
+        # 格式化响应
+        requests_list = []
+        for req in purchase_requests:
+            # 获取买家信息
+            buyer_result = await db.execute(
+                select(models.User).where(models.User.id == req.buyer_id)
+            )
+            buyer = buyer_result.scalar_one_or_none()
+            
+            requests_list.append({
+                "id": format_flea_market_id(req.id),
+                "item_id": format_flea_market_id(req.item_id),
+                "buyer_id": req.buyer_id,
+                "buyer_name": buyer.name if buyer else f"用户{req.buyer_id}",
+                "proposed_price": float(req.proposed_price) if req.proposed_price else None,
+                "message": req.message,
+                "status": req.status,
+                "created_at": format_iso_utc(req.created_at),
+                "updated_at": format_iso_utc(req.updated_at)
+            })
+        
+        return {
+            "success": True,
+            "data": {
+                "requests": requests_list,
+                "total": len(requests_list)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取购买申请列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取购买申请列表失败"
+        )
+
+
+# ==================== 拒绝购买申请API ====================
+
+@flea_market_router.post("/items/{item_id}/reject-purchase", response_model=dict)
+async def reject_purchase_request(
+    item_id: str,
+    reject_data: schemas.RejectPurchaseRequest,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """拒绝购买申请"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 权限验证：只有商品所有者可以拒绝申请
+        if item.seller_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权限操作此商品"
+            )
+        
+        # 查询购买申请
+        request_result = await db.execute(
+            select(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == reject_data.purchase_request_id)
+            .where(models.FleaMarketPurchaseRequest.item_id == db_id)
+        )
+        purchase_request = request_result.scalar_one_or_none()
+        
+        if not purchase_request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="购买申请不存在"
+            )
+        
+        # 状态验证：必须是pending状态
+        if purchase_request.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该申请已被处理"
+            )
+        
+        # 更新申请状态为rejected
+        await db.execute(
+            update(models.FleaMarketPurchaseRequest)
+            .where(models.FleaMarketPurchaseRequest.id == reject_data.purchase_request_id)
+            .values(status="rejected")
+        )
+        
+        await db.commit()
+        
+        # TODO: 发送通知给买家（可选）
+        
+        return {
+            "success": True,
+            "data": {
+                "purchase_request_status": "rejected"
+            },
+            "message": "购买申请已拒绝"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"拒绝购买申请失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="拒绝购买申请失败"
+        )
+
+
 # ==================== 商品收藏API ====================
 
 @flea_market_router.post("/items/{item_id}/favorite", response_model=dict)

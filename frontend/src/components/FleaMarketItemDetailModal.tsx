@@ -70,6 +70,13 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   const [reportDescription, setReportDescription] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [sellerInfo, setSellerInfo] = useState<any>(null);
+  const [purchaseRequests, setPurchaseRequests] = useState<any[]>([]);
+  const [loadingPurchaseRequests, setLoadingPurchaseRequests] = useState(false);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [agreedPrice, setAgreedPrice] = useState<number | undefined>();
+  const [acceptLoading, setAcceptLoading] = useState(false);
+  const [rejectLoading, setRejectLoading] = useState<string | null>(null);
   
   const isOwner = currentUser && item && currentUser.id === item.seller_id;
   const isActive = item?.status === 'active';
@@ -126,18 +133,45 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     }
   }, [itemId, currentUser, onClose, t]);
   
+  // 加载购买申请列表（仅商品所有者）
+  const loadPurchaseRequests = useCallback(async () => {
+    if (!itemId || !isOwner) return;
+    
+    setLoadingPurchaseRequests(true);
+    try {
+      const response = await api.get(`/api/flea-market/items/${itemId}/purchase-requests`);
+      setPurchaseRequests(response.data.data?.requests || []);
+    } catch (error: any) {
+      console.error('加载购买申请列表失败:', error);
+      // 不显示错误消息，因为可能不是所有者
+    } finally {
+      setLoadingPurchaseRequests(false);
+    }
+  }, [itemId, isOwner]);
+
   useEffect(() => {
     if (isOpen && itemId) {
       loadItem();
       setCurrentImageIndex(0);
       setShowPurchaseModal(false);
       setShowReportModal(false);
+      setShowAcceptModal(false);
+      setSelectedRequest(null);
+      setAgreedPrice(undefined);
     } else {
       setItem(null);
       setIsFavorited(false);
       setSellerInfo(null);
+      setPurchaseRequests([]);
     }
   }, [isOpen, itemId, loadItem]);
+
+  // 当商品加载完成且是所有者时，加载购买申请列表
+  useEffect(() => {
+    if (item && isOwner && isActive) {
+      loadPurchaseRequests();
+    }
+  }, [item, isOwner, isActive, loadPurchaseRequests]);
   
   // 收藏/取消收藏
   const handleToggleFavorite = useCallback(async () => {
@@ -244,6 +278,60 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setReportLoading(false);
     }
   }, [itemId, reportReason, reportDescription, currentUser, t]);
+
+  // 处理接受购买申请
+  const handleAcceptPurchase = useCallback(async () => {
+    if (!itemId || !selectedRequest) return;
+    
+    setAcceptLoading(true);
+    try {
+      const requestId = parseInt(selectedRequest.id.replace(/[^0-9]/g, ''));
+      await api.post(`/api/flea-market/items/${itemId}/accept-purchase`, {
+        purchase_request_id: requestId,
+        agreed_price: agreedPrice !== undefined ? agreedPrice : undefined
+      });
+      message.success(t('fleaMarket.acceptPurchaseSuccess') || '购买申请已接受，任务已创建');
+      setShowAcceptModal(false);
+      setSelectedRequest(null);
+      setAgreedPrice(undefined);
+      if (onItemUpdated) {
+        onItemUpdated();
+      }
+      loadPurchaseRequests();
+      loadItem(); // 重新加载商品信息
+    } catch (error: any) {
+      console.error('接受购买申请失败:', error);
+      message.error(error.response?.data?.detail || t('fleaMarket.acceptPurchaseError') || '接受失败');
+    } finally {
+      setAcceptLoading(false);
+    }
+  }, [itemId, selectedRequest, agreedPrice, onItemUpdated, loadPurchaseRequests, loadItem, t]);
+
+  // 处理拒绝购买申请
+  const handleRejectPurchase = useCallback(async (request: any) => {
+    if (!itemId) return;
+    
+    Modal.confirm({
+      title: t('fleaMarket.confirmRejectPurchase') || '确认拒绝',
+      content: t('fleaMarket.confirmRejectPurchaseMessage') || '确定要拒绝这个购买申请吗？',
+      onOk: async () => {
+        setRejectLoading(request.id);
+        try {
+          const requestId = parseInt(request.id.replace(/[^0-9]/g, ''));
+          await api.post(`/api/flea-market/items/${itemId}/reject-purchase`, {
+            purchase_request_id: requestId
+          });
+          message.success(t('fleaMarket.rejectPurchaseSuccess') || '购买申请已拒绝');
+          loadPurchaseRequests();
+        } catch (error: any) {
+          console.error('拒绝购买申请失败:', error);
+          message.error(error.response?.data?.detail || t('fleaMarket.rejectPurchaseError') || '拒绝失败');
+        } finally {
+          setRejectLoading(null);
+        }
+      }
+    });
+  }, [itemId, loadPurchaseRequests, t]);
   
   if (!isOpen) return null;
   
@@ -439,6 +527,74 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                   </>
                 )}
               </div>
+
+              {/* 购买申请列表（仅商品所有者可见） */}
+              {isOwner && isActive && (
+                <div className={styles.purchaseRequestsSection}>
+                  <h3>{t('fleaMarket.purchaseRequests') || '购买申请'}</h3>
+                  {loadingPurchaseRequests ? (
+                    <Spin />
+                  ) : purchaseRequests.length === 0 ? (
+                    <Empty 
+                      description={t('fleaMarket.noPurchaseRequests') || '暂无购买申请'} 
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : (
+                    <div className={styles.purchaseRequestsList}>
+                      {purchaseRequests.map((request) => (
+                        <div key={request.id} className={styles.purchaseRequestCard}>
+                          <div className={styles.requestHeader}>
+                            <span className={styles.buyerName}>{request.buyer_name}</span>
+                            <span className={`${styles.status} ${styles[request.status]}`}>
+                              {request.status === 'pending' && (t('fleaMarket.pending') || '待处理')}
+                              {request.status === 'accepted' && (t('fleaMarket.accepted') || '已接受')}
+                              {request.status === 'rejected' && (t('fleaMarket.rejected') || '已拒绝')}
+                            </span>
+                          </div>
+                          {request.proposed_price && (
+                            <div className={styles.requestPrice}>
+                              <span>{t('fleaMarket.proposedPrice') || '议价'}: </span>
+                              <span className={styles.priceValue}>£{request.proposed_price.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {request.message && (
+                            <div className={styles.requestMessage}>
+                              <span>{t('fleaMarket.message') || '留言'}: </span>
+                              <span>{request.message}</span>
+                            </div>
+                          )}
+                          <div className={styles.requestTime}>
+                            {new Date(request.created_at).toLocaleString('zh-CN')}
+                          </div>
+                          {request.status === 'pending' && (
+                            <div className={styles.requestActions}>
+                              <Button
+                                type="primary"
+                                size="small"
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setAgreedPrice(request.proposed_price || item.price);
+                                  setShowAcceptModal(true);
+                                }}
+                              >
+                                {t('fleaMarket.accept') || '接受'}
+                              </Button>
+                              <Button
+                                danger
+                                size="small"
+                                loading={rejectLoading === request.id}
+                                onClick={() => handleRejectPurchase(request)}
+                              >
+                                {t('fleaMarket.reject') || '拒绝'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           </>
@@ -484,6 +640,57 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         </div>
       </Modal>
       
+      {/* 接受购买申请弹窗 */}
+      <Modal
+        title={t('fleaMarket.acceptPurchase') || '接受购买申请'}
+        open={showAcceptModal}
+        onOk={handleAcceptPurchase}
+        onCancel={() => {
+          setShowAcceptModal(false);
+          setSelectedRequest(null);
+          setAgreedPrice(undefined);
+        }}
+        confirmLoading={acceptLoading}
+        okText={t('fleaMarket.accept') || '接受'}
+        cancelText={t('common.cancel') || '取消'}
+      >
+        {selectedRequest && item && (
+          <div className={styles.purchaseForm}>
+            <div className={styles.formItem}>
+              <label>{t('fleaMarket.buyer') || '买家'}: {selectedRequest.buyer_name}</label>
+            </div>
+            {selectedRequest.proposed_price && (
+              <div className={styles.formItem}>
+                <label>{t('fleaMarket.proposedPrice') || '买家议价'}: £{selectedRequest.proposed_price.toFixed(2)}</label>
+              </div>
+            )}
+            <div className={styles.formItem}>
+              <label>{t('fleaMarket.originalPrice') || '原价'}: £{item.price.toFixed(2)}</label>
+            </div>
+            {selectedRequest.message && (
+              <div className={styles.formItem}>
+                <label>{t('fleaMarket.message') || '买家留言'}:</label>
+                <div style={{ padding: '8px', background: '#f5f5f5', borderRadius: '4px', marginTop: '4px' }}>
+                  {selectedRequest.message}
+                </div>
+              </div>
+            )}
+            <div className={styles.formItem}>
+              <label>{t('fleaMarket.finalPrice') || '最终成交价'} ({t('common.optional') || '可选，留空则使用买家议价或原价'})</label>
+              <InputNumber
+                value={agreedPrice}
+                onChange={(value) => setAgreedPrice(value || undefined)}
+                min={0}
+                step={0.01}
+                style={{ width: '100%' }}
+                prefix="£"
+                placeholder={selectedRequest.proposed_price ? `£${selectedRequest.proposed_price.toFixed(2)}` : `£${item.price.toFixed(2)}`}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* 举报弹窗 */}
       <Modal
         title={t('fleaMarket.report')}
