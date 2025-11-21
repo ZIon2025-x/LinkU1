@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { message, Modal, Input, InputNumber, Button, Upload, Space, Card, Empty, Spin, UploadFile, Select, Checkbox, Tabs } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined, HeartFilled } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { CITIES } from './Tasks';
@@ -83,9 +83,11 @@ const FleaMarketPage: React.FC = () => {
   const [showMyItemsModal, setShowMyItemsModal] = useState(false);
   const [myPostedItems, setMyPostedItems] = useState<FleaMarketItem[]>([]);
   const [myPurchasedItems, setMyPurchasedItems] = useState<FleaMarketItem[]>([]);
+  const [myFavoriteItems, setMyFavoriteItems] = useState<FleaMarketItem[]>([]);
   const [loadingMyItems, setLoadingMyItems] = useState(false);
   const [showItemDetailModal, setShowItemDetailModal] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [favoriteItemIds, setFavoriteItemIds] = useState<Set<string>>(new Set());
   
   // 防抖搜索关键词
   useEffect(() => {
@@ -254,6 +256,21 @@ const FleaMarketPage: React.FC = () => {
       // 判断是否还有更多商品
       const totalPages = Math.ceil((data.total || 0) / pageSize);
       setHasMore(page < totalPages && processedItems.length > 0);
+      
+      // 如果用户已登录，加载收藏列表
+      if (currentUser && !isLoadMore) {
+        try {
+          const favoritesResponse = await api.get('/api/flea-market/favorites', {
+            params: { page: 1, pageSize: 100 }
+          });
+          const favorites = favoritesResponse.data.items || [];
+          const favoriteIds = new Set<string>(favorites.map((fav: any) => String(fav.item_id)));
+          setFavoriteItemIds(favoriteIds);
+        } catch (e) {
+          // 忽略错误，不影响主流程
+          console.log('加载收藏列表失败:', e);
+        }
+      }
     } catch (error: any) {
       if (!isLoadMore) {
         setItems([]);
@@ -268,7 +285,7 @@ const FleaMarketPage: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [currentPage, pageSize, t]);
+  }, [currentPage, pageSize, t, currentUser]);
 
   // 加载我的闲置商品
   const loadMyItems = useCallback(async () => {
@@ -316,6 +333,49 @@ const FleaMarketPage: React.FC = () => {
         // 如果API不存在，设置为空数组
         console.log('Purchased items API not available:', error);
         setMyPurchasedItems([]);
+      }
+
+      // 获取我的收藏列表
+      try {
+        const favoritesResponse = await api.get('/api/flea-market/favorites', {
+          params: {
+            page: 1,
+            pageSize: 100
+          }
+        });
+        const favoritesData = favoritesResponse.data;
+        const favoriteItemIds = (favoritesData.items || []).map((fav: any) => fav.item_id);
+        
+        // 根据收藏的item_id获取完整的商品信息
+        if (favoriteItemIds.length > 0) {
+          const favoriteItemsPromises = favoriteItemIds.map(async (itemId: string) => {
+            try {
+              const itemResponse = await api.get(`/api/flea-market/items/${itemId}`);
+              const itemData = itemResponse.data;
+              return {
+                ...itemData,
+                images: typeof itemData.images === 'string' ? JSON.parse(itemData.images || '[]') : (itemData.images || []),
+                price: typeof itemData.price === 'number' ? itemData.price : parseFloat(String(itemData.price || 0)),
+                id: typeof itemData.id === 'string' ? parseInt(itemData.id, 10) : itemData.id
+              };
+            } catch (e) {
+              console.error(`加载收藏商品 ${itemId} 失败:`, e);
+              return null;
+            }
+          });
+          
+          const favoriteItems = await Promise.all(favoriteItemsPromises);
+          // 只显示活跃状态的商品，已删除或已售出的商品会被过滤掉
+          setMyFavoriteItems(favoriteItems.filter((item): item is FleaMarketItem => 
+            item !== null && item.status === 'active'
+          ));
+        } else {
+          setMyFavoriteItems([]);
+        }
+      } catch (error: any) {
+        // 如果API不存在或失败，设置为空数组
+        console.log('Favorites API not available:', error);
+        setMyFavoriteItems([]);
       }
     } catch (error: any) {
       console.error('加载我的闲置商品失败:', error);
@@ -534,10 +594,11 @@ const FleaMarketPage: React.FC = () => {
   const FleaMarketItemCard = memo<{
     item: FleaMarketItem;
     isOwner: boolean;
+    isFavorited?: boolean;
     onEdit: (item: FleaMarketItem) => void;
     onDelete: (item: FleaMarketItem) => void;
     onCardClick: (itemId: number) => void;
-  }>(({ item, isOwner, onEdit, onDelete, onCardClick }) => {
+  }>(({ item, isOwner, isFavorited = false, onEdit, onDelete, onCardClick }) => {
     const handleEditClick = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
       onEdit(item);
@@ -575,12 +636,19 @@ const FleaMarketPage: React.FC = () => {
           {/* 渐变遮罩层 - 用于文字可读性 */}
           <div className={styles.imageOverlay}></div>
           
+          {/* 收藏标识 - 左上角 */}
+          {isFavorited && (
+            <div className={styles.favoriteBadge}>
+              <HeartFilled style={{ color: '#ff4d4f', fontSize: '24px' }} />
+            </div>
+          )}
+          
           {/* 价格标签 - 右上角 */}
           <div className={styles.priceBadge}>
             £{typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(String(item.price || 0)).toFixed(2)}
           </div>
           
-          {/* 操作按钮（仅所有者可见） - 左上角 */}
+          {/* 操作按钮（仅所有者可见） - 左上角（如果已收藏，则显示在收藏标识下方） */}
           {isOwner && (
             <div className={styles.itemActions}>
               <Button
@@ -826,6 +894,7 @@ const FleaMarketPage: React.FC = () => {
                 key={item.id}
                 item={item}
                 isOwner={isOwner(item)}
+                isFavorited={favoriteItemIds.has(String(item.id))}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onCardClick={handleCardClick}
@@ -1104,6 +1173,7 @@ const FleaMarketPage: React.FC = () => {
                             key={item.id}
                             item={item}
                             isOwner={true}  // 我的闲置中，所有商品都是我的
+                            isFavorited={favoriteItemIds.has(String(item.id))}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
                             onCardClick={handleCardClick}
@@ -1136,11 +1206,47 @@ const FleaMarketPage: React.FC = () => {
                           key={item.id}
                           item={item}
                           isOwner={false}
+                          isFavorited={favoriteItemIds.has(String(item.id))}
                           onEdit={() => {}}
                           onDelete={() => {}}
                           onCardClick={handleCardClick}
                         />
                       ))}
+                    </div>
+                  )}
+                </div>
+              )
+            },
+            {
+              key: 'favorites',
+              label: t('fleaMarket.myFavorites') || '我的收藏',
+              children: (
+                <div style={{ minHeight: '400px', maxHeight: '600px', overflowY: 'auto' }}>
+                  {loadingMyItems ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                      <Spin size="large" />
+                      <p style={{ marginTop: '16px', color: '#666' }}>{t('common.loading')}</p>
+                    </div>
+                  ) : myFavoriteItems.length === 0 ? (
+                    <Empty
+                      description={t('fleaMarket.noFavoriteItems') || '您还没有收藏任何商品'}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  ) : (
+                    <div className={styles.itemsGrid} style={{ padding: '10px 0' }}>
+                      {myFavoriteItems
+                        .filter(item => item.status === 'active') // 只显示活跃状态的商品
+                        .map(item => (
+                          <FleaMarketItemCard
+                            key={item.id}
+                            item={item}
+                            isOwner={user?.id === item.seller_id}
+                            isFavorited={true} // 收藏列表中的商品都是已收藏的
+                            onEdit={user?.id === item.seller_id ? handleEdit : () => {}}
+                            onDelete={user?.id === item.seller_id ? handleDelete : () => {}}
+                            onCardClick={handleCardClick}
+                          />
+                        ))}
                     </div>
                   )}
                 </div>
@@ -1159,8 +1265,26 @@ const FleaMarketPage: React.FC = () => {
         }}
         itemId={selectedItemId}
         onItemUpdated={() => {
-          // 商品更新后重新加载列表
+          // 商品更新后重新加载列表和收藏状态
           loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+          // 重新加载收藏列表（如果打开了我的闲置弹窗）
+          if (showMyItemsModal) {
+            loadMyItems();
+          }
+        }}
+        onFavoriteChanged={(itemId, isFavorited) => {
+          // 更新收藏状态
+          const newFavoriteIds = new Set(favoriteItemIds);
+          if (isFavorited) {
+            newFavoriteIds.add(String(itemId));
+          } else {
+            newFavoriteIds.delete(String(itemId));
+          }
+          setFavoriteItemIds(newFavoriteIds);
+          // 如果打开了我的闲置弹窗，重新加载收藏列表
+          if (showMyItemsModal) {
+            loadMyItems();
+          }
         }}
         onEdit={(item) => {
           // 关闭详情弹窗，打开编辑模态框

@@ -41,6 +41,7 @@ interface FleaMarketItemDetailModalProps {
   itemId: string | null;
   onItemUpdated?: () => void;  // 商品更新后的回调
   onEdit?: (item: FleaMarketItem) => void;  // 编辑商品回调
+  onFavoriteChanged?: (itemId: string, isFavorited: boolean) => void;  // 收藏状态改变回调
 }
 
 const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({ 
@@ -48,7 +49,8 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   onClose, 
   itemId,
   onItemUpdated,
-  onEdit
+  onEdit,
+  onFavoriteChanged
 }) => {
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
@@ -149,8 +151,13 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
     setFavoriteLoading(true);
     try {
       await api.post(`/api/flea-market/items/${itemId}/favorite`);
-      setIsFavorited(!isFavorited);
-      message.success(isFavorited ? t('fleaMarket.unfavoriteSuccess') || '已取消收藏' : t('fleaMarket.favoriteSuccess') || '收藏成功');
+      const newFavoritedState = !isFavorited;
+      setIsFavorited(newFavoritedState);
+      message.success(newFavoritedState ? t('fleaMarket.favoriteSuccess') || '收藏成功' : t('fleaMarket.unfavoriteSuccess') || '已取消收藏');
+      // 通知父组件收藏状态已改变
+      if (onFavoriteChanged && itemId) {
+        onFavoriteChanged(itemId, newFavoritedState);
+      }
     } catch (error: any) {
       console.error('收藏操作失败:', error);
       message.error(error.response?.data?.detail || '操作失败');

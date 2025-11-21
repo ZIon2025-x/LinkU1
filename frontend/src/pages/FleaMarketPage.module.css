@@ -327,6 +327,20 @@
   backface-visibility: hidden;
 }
 
+.favoriteBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  /* GPU加速优化 */
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .itemActions {
   position: absolute;
   top: 12px;
