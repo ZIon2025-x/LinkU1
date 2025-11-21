@@ -1,6 +1,6 @@
 -- 迁移文件3：创建购买申请表（必建，用于议价购买流程）
 
-DO $$
+DO $body$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'flea_market_purchase_requests') THEN
         CREATE TABLE flea_market_purchase_requests (
@@ -27,17 +27,17 @@ BEGIN
 
         -- 更新时间触发器
         CREATE OR REPLACE FUNCTION update_flea_market_purchase_requests_updated_at()
-        RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $func$
         BEGIN
             NEW.updated_at = NOW();
             RETURN NEW;
         END;
-        $$ LANGUAGE plpgsql;
+        $func$ LANGUAGE plpgsql;
 
         CREATE TRIGGER trigger_update_flea_market_purchase_requests_updated_at
             BEFORE UPDATE ON flea_market_purchase_requests
             FOR EACH ROW
             EXECUTE FUNCTION update_flea_market_purchase_requests_updated_at();
     END IF;
-END $$;
+END $body$;
 

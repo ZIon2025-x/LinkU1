@@ -1,7 +1,7 @@
 -- 迁移文件1：添加用户表字段
 -- 为用户表添加跳蚤市场须知同意时间字段
 
-DO $$
+DO $body$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
@@ -14,5 +14,5 @@ BEGIN
         CREATE INDEX IF NOT EXISTS idx_users_flea_market_notice_agreed_at 
         ON users(flea_market_notice_agreed_at);
     END IF;
-END $$;
+END $body$;
 

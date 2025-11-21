@@ -1,6 +1,6 @@
 -- 迁移文件2：创建跳蚤市场商品表
 
-DO $$
+DO $body$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'flea_market_items') THEN
         CREATE TABLE flea_market_items (
@@ -42,17 +42,17 @@ BEGIN
 
         -- 更新时间触发器（自动更新updated_at）
         CREATE OR REPLACE FUNCTION update_flea_market_items_updated_at()
-        RETURNS TRIGGER AS $$
+        RETURNS TRIGGER AS $func$
         BEGIN
             NEW.updated_at = NOW();
             RETURN NEW;
         END;
-        $$ LANGUAGE plpgsql;
+        $func$ LANGUAGE plpgsql;
 
         CREATE TRIGGER trigger_update_flea_market_items_updated_at
             BEFORE UPDATE ON flea_market_items
             FOR EACH ROW
             EXECUTE FUNCTION update_flea_market_items_updated_at();
     END IF;
-END $$;
+END $body$;
 
