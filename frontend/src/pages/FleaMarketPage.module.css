@@ -231,6 +231,7 @@
   background: linear-gradient(90deg, #10b981, #059669);
   opacity: 0;
   transition: opacity 0.3s ease;
+  z-index: 4;
 }
 
 .itemCard:hover {
@@ -351,7 +352,15 @@
   border: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   color: #374151;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 16px;
 }
 
 .actionButton:hover {

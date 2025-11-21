@@ -524,13 +524,20 @@ const FleaMarketPage: React.FC = () => {
     return filtered;
   }, [items, selectedCategory, selectedLocation]);
 
+  // 处理卡片点击 - 打开详情弹窗
+  const handleCardClick = useCallback((itemId: number) => {
+    setSelectedItemId(String(itemId));
+    setShowItemDetailModal(true);
+  }, []);
+
   // 商品卡片组件 - 使用React.memo优化，避免不必要的重新渲染
   const FleaMarketItemCard = memo<{
     item: FleaMarketItem;
     isOwner: boolean;
     onEdit: (item: FleaMarketItem) => void;
     onDelete: (item: FleaMarketItem) => void;
-  }>(({ item, isOwner, onEdit, onDelete }) => {
+    onCardClick: (itemId: number) => void;
+  }>(({ item, isOwner, onEdit, onDelete, onCardClick }) => {
     const handleEditClick = useCallback((e: React.MouseEvent) => {
       e.stopPropagation();
       onEdit(item);
@@ -541,14 +548,15 @@ const FleaMarketPage: React.FC = () => {
       onDelete(item);
     }, [item, onDelete]);
 
+    const handleCardClickInternal = useCallback(() => {
+      onCardClick(item.id);
+    }, [item.id, onCardClick]);
+
     return (
       <div
         key={item.id}
         className={styles.itemCard}
-        onClick={() => {
-          setSelectedItemId(String(item.id));
-          setShowItemDetailModal(true);
-        }}
+        onClick={handleCardClickInternal}
       >
         {/* 商品图片 - 占满整个卡片 */}
         <div className={styles.itemImageWrapper}>
@@ -820,6 +828,7 @@ const FleaMarketPage: React.FC = () => {
                 isOwner={isOwner(item)}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onCardClick={handleCardClick}
               />
             ))}
           </div>
@@ -1097,6 +1106,7 @@ const FleaMarketPage: React.FC = () => {
                             isOwner={true}  // 我的闲置中，所有商品都是我的
                             onEdit={handleEdit}
                             onDelete={handleDelete}
+                            onCardClick={handleCardClick}
                           />
                         ))}
                     </div>
@@ -1128,6 +1138,7 @@ const FleaMarketPage: React.FC = () => {
                           isOwner={false}
                           onEdit={() => {}}
                           onDelete={() => {}}
+                          onCardClick={handleCardClick}
                         />
                       ))}
                     </div>
@@ -1138,6 +1149,20 @@ const FleaMarketPage: React.FC = () => {
           ]}
         />
       </Modal>
+
+      {/* 商品详情弹窗 */}
+      <FleaMarketItemDetailModal
+        isOpen={showItemDetailModal}
+        onClose={() => {
+          setShowItemDetailModal(false);
+          setSelectedItemId(null);
+        }}
+        itemId={selectedItemId}
+        onItemUpdated={() => {
+          // 商品更新后重新加载列表
+          loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
+        }}
+      />
     </div>
   );
 };
