@@ -1425,6 +1425,58 @@ class FleaMarketItem(Base):
     )
 
 
+class FleaMarketFavorite(Base):
+    """跳蚤市场商品收藏模型"""
+    __tablename__ = "flea_market_favorites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    
+    # 关系
+    user = relationship("User", backref="flea_market_favorites")
+    item = relationship("FleaMarketItem", backref="favorites")
+    
+    # 索引和约束
+    __table_args__ = (
+        UniqueConstraint("user_id", "item_id", name="uix_user_item_favorite"),
+        Index("idx_flea_market_favorites_user_id", user_id),
+        Index("idx_flea_market_favorites_item_id", item_id),
+        Index("idx_flea_market_favorites_created_at", created_at),
+    )
+
+
+class FleaMarketReport(Base):
+    """跳蚤市场商品举报模型"""
+    __tablename__ = "flea_market_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("flea_market_items.id", ondelete="CASCADE"), nullable=False)
+    reporter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason = Column(String(100), nullable=False)  # spam, fraud, inappropriate, other
+    description = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending, reviewing, resolved, rejected
+    admin_comment = Column(Text, nullable=True)
+    handled_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    handled_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # 关系
+    item = relationship("FleaMarketItem", backref="reports")
+    reporter = relationship("User", backref="flea_market_reports")
+    handler = relationship("AdminUser", backref="flea_market_reports_handled")
+    
+    # 索引和约束
+    __table_args__ = (
+        Index("idx_flea_market_reports_item_id", item_id),
+        Index("idx_flea_market_reports_reporter_id", reporter_id),
+        Index("idx_flea_market_reports_status", status),
+        Index("idx_flea_market_reports_created_at", created_at),
+    )
+
+
 class FleaMarketPurchaseRequest(Base):
     """跳蚤市场购买申请表"""
     __tablename__ = "flea_market_purchase_requests"

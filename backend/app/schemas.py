@@ -1552,3 +1552,41 @@ class MyPurchasesListResponse(BaseModel):
     pageSize: int
     total: int
     hasMore: bool
+
+
+# ==================== 商品收藏相关Schemas ====================
+
+class FleaMarketFavoriteResponse(BaseModel):
+    id: int
+    item_id: str  # 格式化的ID
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class FleaMarketFavoriteListResponse(BaseModel):
+    items: List[FleaMarketFavoriteResponse]
+    page: int
+    pageSize: int
+    total: int
+    hasMore: bool
+
+
+# ==================== 商品举报相关Schemas ====================
+
+class FleaMarketReportCreate(BaseModel):
+    reason: str  # spam, fraud, inappropriate, other
+    description: Optional[str] = None
+
+
+class FleaMarketReportResponse(BaseModel):
+    id: int
+    item_id: str
+    reason: str
+    description: Optional[str]
+    status: str
+    created_at: str
+    
+    class Config:
+        from_attributes = True

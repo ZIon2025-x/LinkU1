@@ -35,6 +35,16 @@ from app.id_generator import format_flea_market_id, parse_flea_market_id
 from app.utils.time_utils import get_utc_time, format_iso_utc
 from app.config import Config
 from app.flea_market_constants import FLEA_MARKET_CATEGORIES
+from app.flea_market_extensions import (
+    contains_sensitive_words,
+    filter_sensitive_words,
+    send_purchase_request_notification,
+    send_purchase_accepted_notification,
+    send_direct_purchase_notification,
+    get_cache_key_for_items,
+    get_cache_key_for_item_detail,
+    invalidate_item_cache
+)
 
 logger = logging.getLogger(__name__)
 
@@ -106,10 +116,20 @@ async def get_flea_market_items(
     category: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
     status_filter: Optional[str] = Query("active", alias="status"),
+    seller_id: Optional[str] = Query(None, description="卖家ID，用于筛选特定卖家的商品"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取商品列表（分页、搜索、筛选）"""
+    """获取商品列表（分页、搜索、筛选）- 带Redis缓存"""
     try:
+        # 尝试从缓存获取（如果有seller_id筛选，不使用缓存）
+        if not seller_id:
+            from app.redis_cache import redis_cache
+            cache_key = get_cache_key_for_items(page, pageSize, category, keyword, status_filter or "active")
+            cached_result = redis_cache.get(cache_key)
+            if cached_result:
+                logger.debug(f"缓存命中: {cache_key}")
+                return cached_result
+        
         # 构建查询
         query = select(models.FleaMarketItem)
         
@@ -118,6 +138,10 @@ async def get_flea_market_items(
             query = query.where(models.FleaMarketItem.status == status_filter)
         else:
             query = query.where(models.FleaMarketItem.status == "active")
+        
+        # 卖家筛选
+        if seller_id:
+            query = query.where(models.FleaMarketItem.seller_id == seller_id)
         
         # 分类筛选
         if category:
@@ -152,18 +176,17 @@ async def get_flea_market_items(
         result = await db.execute(query)
         items = result.scalars().all()
         
-        # 格式化响应
-        formatted_items = []
+        # 构建响应
+        processed_items = []
         for item in items:
-            # 解析images JSON
             images = []
             if item.images:
                 try:
-                    images = json.loads(item.images)
+                    images = json.loads(item.images) if isinstance(item.images, str) else item.images
                 except:
                     images = []
             
-            formatted_items.append(schemas.FleaMarketItemResponse(
+            processed_items.append(schemas.FleaMarketItemResponse(
                 id=format_flea_market_id(item.id),
                 title=item.title,
                 description=item.description,
@@ -180,16 +203,22 @@ async def get_flea_market_items(
                 updated_at=format_iso_utc(item.updated_at),
             ))
         
-        # 计算hasMore
-        has_more = page * pageSize < total
-        
-        return schemas.FleaMarketItemListResponse(
-            items=formatted_items,
+        response = schemas.FleaMarketItemListResponse(
+            items=processed_items,
             page=page,
             pageSize=pageSize,
             total=total,
-            hasMore=has_more,
+            hasMore=skip + len(processed_items) < total
         )
+        
+        # 缓存结果（5分钟）
+        try:
+            from app.redis_cache import redis_cache
+            redis_cache.set(cache_key, response, ttl=300)
+        except:
+            pass
+        
+        return response
     except Exception as e:
         logger.error(f"获取商品列表失败: {e}", exc_info=True)
         raise HTTPException(
@@ -380,10 +409,21 @@ async def create_flea_market_item(
                 detail="最多只能上传5张图片"
             )
         
+        # 敏感词过滤
+        if contains_sensitive_words(item_data.title) or contains_sensitive_words(item_data.description):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="商品标题或描述包含敏感词，请修改后重试"
+            )
+        
+        # 过滤敏感词
+        filtered_title = filter_sensitive_words(item_data.title)
+        filtered_description = filter_sensitive_words(item_data.description)
+        
         # 创建商品
         new_item = models.FleaMarketItem(
-            title=item_data.title,
-            description=item_data.description,
+            title=filtered_title,
+            description=filtered_description,
             price=item_data.price,
             currency="GBP",
             images=json.dumps(item_data.images) if item_data.images else None,
@@ -592,6 +632,9 @@ async def refresh_flea_market_item(
             .values(refreshed_at=get_utc_time())
         )
         await db.commit()
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
         
         return {
             "success": True,
@@ -844,6 +887,12 @@ async def direct_purchase_item(
         
         await db.commit()
         
+        # 发送通知给卖家
+        await send_direct_purchase_notification(db, item, current_user, new_task.id)
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
+        
         return {
             "success": True,
             "data": {
@@ -928,6 +977,13 @@ async def create_purchase_request(
         db.add(new_request)
         await db.commit()
         await db.refresh(new_request)
+        
+        # 发送通知给卖家
+        await send_purchase_request_notification(
+            db, item, current_user, 
+            float(request_data.proposed_price) if request_data.proposed_price else None,
+            request_data.message
+        )
         
         return {
             "success": True,
@@ -1123,6 +1179,14 @@ async def accept_purchase_request(
         
         await db.commit()
         
+        # 发送通知给买家
+        await send_purchase_accepted_notification(
+            db, item, purchase_request.buyer, new_task.id, float(final_price)
+        )
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
+        
         return {
             "success": True,
             "data": {
@@ -1141,5 +1205,201 @@ async def accept_purchase_request(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="接受购买申请失败"
+        )
+
+
+# ==================== 商品收藏API ====================
+
+@flea_market_router.post("/items/{item_id}/favorite", response_model=dict)
+async def toggle_favorite_item(
+    item_id: str,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """收藏/取消收藏商品"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 检查商品是否存在
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 检查是否已收藏
+        favorite_result = await db.execute(
+            select(models.FleaMarketFavorite)
+            .where(
+                and_(
+                    models.FleaMarketFavorite.item_id == db_id,
+                    models.FleaMarketFavorite.user_id == current_user.id
+                )
+            )
+        )
+        favorite = favorite_result.scalar_one_or_none()
+        
+        if favorite:
+            # 取消收藏
+            await db.delete(favorite)
+            await db.commit()
+            return {
+                "success": True,
+                "data": {"is_favorited": False},
+                "message": "已取消收藏"
+            }
+        else:
+            # 添加收藏
+            new_favorite = models.FleaMarketFavorite(
+                user_id=current_user.id,
+                item_id=db_id
+            )
+            db.add(new_favorite)
+            await db.commit()
+            return {
+                "success": True,
+                "data": {"is_favorited": True},
+                "message": "收藏成功"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"收藏操作失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="操作失败"
+        )
+
+
+@flea_market_router.get("/favorites", response_model=schemas.FleaMarketFavoriteListResponse)
+async def get_my_favorites(
+    page: int = Query(1, ge=1),
+    pageSize: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的收藏列表"""
+    try:
+        # 查询收藏
+        query = select(models.FleaMarketFavorite).where(
+            models.FleaMarketFavorite.user_id == current_user.id
+        ).order_by(models.FleaMarketFavorite.created_at.desc())
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 分页
+        skip = (page - 1) * pageSize
+        query = query.offset(skip).limit(pageSize)
+        
+        result = await db.execute(query)
+        favorites = result.scalars().all()
+        
+        # 格式化响应
+        items = []
+        for fav in favorites:
+            items.append(schemas.FleaMarketFavoriteResponse(
+                id=fav.id,
+                item_id=format_flea_market_id(fav.item_id),
+                created_at=format_iso_utc(fav.created_at)
+            ))
+        
+        return schemas.FleaMarketFavoriteListResponse(
+            items=items,
+            page=page,
+            pageSize=pageSize,
+            total=total,
+            hasMore=skip + len(items) < total
+        )
+    except Exception as e:
+        logger.error(f"获取收藏列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取收藏列表失败"
+        )
+
+
+# ==================== 商品举报API ====================
+
+@flea_market_router.post("/items/{item_id}/report", response_model=dict)
+async def report_item(
+    item_id: str,
+    report_data: schemas.FleaMarketReportCreate,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """举报商品"""
+    try:
+        db_id = parse_flea_market_id(item_id)
+        
+        # 检查商品是否存在
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 验证举报原因
+        valid_reasons = ["spam", "fraud", "inappropriate", "other"]
+        if report_data.reason not in valid_reasons:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"无效的举报原因。允许的原因: {', '.join(valid_reasons)}"
+            )
+        
+        # 检查是否已举报（pending状态）
+        existing_result = await db.execute(
+            select(models.FleaMarketReport)
+            .where(
+                and_(
+                    models.FleaMarketReport.item_id == db_id,
+                    models.FleaMarketReport.reporter_id == current_user.id,
+                    models.FleaMarketReport.status == "pending"
+                )
+            )
+        )
+        existing = existing_result.scalar_one_or_none()
+        
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="您已经举报过该商品，请等待管理员处理"
+            )
+        
+        # 创建举报
+        new_report = models.FleaMarketReport(
+            item_id=db_id,
+            reporter_id=current_user.id,
+            reason=report_data.reason,
+            description=report_data.description,
+            status="pending"
+        )
+        
+        db.add(new_report)
+        await db.commit()
+        
+        return {
+            "success": True,
+            "message": "举报已提交，我们会尽快处理"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"举报商品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="举报失败"
         )
 

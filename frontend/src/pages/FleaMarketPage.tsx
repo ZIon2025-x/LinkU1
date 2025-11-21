@@ -16,6 +16,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
+import FleaMarketItemDetailModal from '../components/FleaMarketItemDetailModal';
 import styles from './FleaMarketPage.module.css';
 import headerStyles from './Home.module.css';
 
@@ -83,6 +84,8 @@ const FleaMarketPage: React.FC = () => {
   const [myPostedItems, setMyPostedItems] = useState<FleaMarketItem[]>([]);
   const [myPurchasedItems, setMyPurchasedItems] = useState<FleaMarketItem[]>([]);
   const [loadingMyItems, setLoadingMyItems] = useState(false);
+  const [showItemDetailModal, setShowItemDetailModal] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // 防抖搜索关键词
   useEffect(() => {
@@ -283,11 +286,14 @@ const FleaMarketPage: React.FC = () => {
         }
       });
       const postedData = postedResponse.data;
-      const processedPostedItems = (postedData.items || []).map((item: any) => ({
-        ...item,
-        images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || []),
-        price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))
-      }));
+      // 双重验证：确保只显示当前用户的商品
+      const processedPostedItems = (postedData.items || [])
+        .filter((item: any) => item.seller_id === user.id)  // 客户端再次过滤
+        .map((item: any) => ({
+          ...item,
+          images: typeof item.images === 'string' ? JSON.parse(item.images || '[]') : (item.images || []),
+          price: typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0))
+        }));
       setMyPostedItems(processedPostedItems);
 
       // 获取我购买的商品（如果有相关API）
@@ -540,7 +546,8 @@ const FleaMarketPage: React.FC = () => {
         key={item.id}
         className={styles.itemCard}
         onClick={() => {
-          // 可以添加点击查看详情的功能
+          setSelectedItemId(item.id);
+          setShowItemDetailModal(true);
         }}
       >
         {/* 商品图片 - 占满整个卡片 */}
@@ -1081,15 +1088,17 @@ const FleaMarketPage: React.FC = () => {
                     />
                   ) : (
                     <div className={styles.itemsGrid} style={{ padding: '10px 0' }}>
-                      {myPostedItems.map(item => (
-                        <FleaMarketItemCard
-                          key={item.id}
-                          item={item}
-                          isOwner={isOwner(item)}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
-                      ))}
+                      {myPostedItems
+                        .filter(item => item.seller_id === user?.id)  // 再次确保只显示当前用户的商品
+                        .map(item => (
+                          <FleaMarketItemCard
+                            key={item.id}
+                            item={item}
+                            isOwner={true}  // 我的闲置中，所有商品都是我的
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                          />
+                        ))}
                     </div>
                   )}
                 </div>
