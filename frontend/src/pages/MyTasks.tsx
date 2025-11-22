@@ -838,11 +838,7 @@ const MyTasks: React.FC = () => {
                 borderBottom: '1px solid #e5e7eb',
                 marginTop: '0px'
               }}>
-                <div className="stats-grid" style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '16px'
-                }}>
+                <div className={styles.statsGrid}>
                   <div className="stat-item" style={{
                     background: '#fff',
                     padding: '16px',
