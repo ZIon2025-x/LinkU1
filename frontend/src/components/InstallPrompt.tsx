@@ -14,6 +14,10 @@ const InstallPrompt: React.FC = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    // 检测移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     window.innerWidth <= 768;
+    
     // 检测是否已经安装
     const checkIfInstalled = () => {
       // 检查是否在standalone模式下运行（已安装）
@@ -50,16 +54,22 @@ const InstallPrompt: React.FC = () => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
+      console.log('[PWA] 收到 beforeinstallprompt 事件');
       setDeferredPrompt(promptEvent);
       
       // 延迟显示提示，给用户一些时间浏览网站
+      const delay = isMobile ? 5000 : 3000; // 移动端延迟更久
       setTimeout(() => {
-        setIsVisible(true);
-      }, 3000); // 3秒后显示
+        // 检查是否仍然可以显示（未安装）
+        if (!window.matchMedia('(display-mode: standalone)').matches) {
+          setIsVisible(true);
+        }
+      }, delay);
     };
 
     // 监听appinstalled事件（安装完成）
     const handleAppInstalled = () => {
+      console.log('[PWA] 应用已安装');
       setIsInstalled(true);
       setIsVisible(false);
       setDeferredPrompt(null);
@@ -69,71 +79,154 @@ const InstallPrompt: React.FC = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 对于iOS Safari，检测用户是否已经滚动或交互过
+    // 对于移动端，即使没有beforeinstallprompt事件也显示提示
     let hasInteracted = false;
+    let interactionTimer: NodeJS.Timeout | null = null;
+    
     const handleInteraction = () => {
+      if (hasInteracted) return;
       hasInteracted = true;
-      // iOS Safari没有beforeinstallprompt事件，需要手动提示
-      if (!isInstalled && !deferredPrompt && hasInteracted) {
-        setTimeout(() => {
-          // 检查是否是iOS设备
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-          if (isIOS && isSafari) {
+      
+      // 移动端：用户交互后显示提示（即使没有beforeinstallprompt）
+      if (isMobile) {
+        const delay = isMobile ? 5000 : 3000;
+        interactionTimer = setTimeout(() => {
+          // 检查是否仍然可以显示（未安装且没有deferredPrompt）
+          if (!window.matchMedia('(display-mode: standalone)').matches) {
+            // 即使没有beforeinstallprompt事件，移动端也显示提示
             setIsVisible(true);
           }
-        }, 5000); // 5秒后显示iOS提示
+        }, delay);
       }
     };
 
-    window.addEventListener('scroll', handleInteraction, { once: true });
-    window.addEventListener('click', handleInteraction, { once: true });
-    window.addEventListener('touchstart', handleInteraction, { once: true });
+    // 移动端：监听用户交互
+    if (isMobile) {
+      window.addEventListener('scroll', handleInteraction, { once: true, passive: true });
+      window.addEventListener('click', handleInteraction, { once: true });
+      window.addEventListener('touchstart', handleInteraction, { once: true, passive: true });
+    }
 
+    // 移动端：如果没有收到beforeinstallprompt事件，延迟后也显示提示
+    let fallbackTimer: NodeJS.Timeout | null = null;
+    if (isMobile) {
+      fallbackTimer = setTimeout(() => {
+        // 使用函数形式检查状态
+        setDeferredPrompt((currentPrompt) => {
+          if (!currentPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('[PWA] 移动端：未收到beforeinstallprompt事件，显示手动安装提示');
+            setIsVisible(true);
+          }
+          return currentPrompt;
+        });
+      }, 8000); // 8秒后如果还没有事件，显示提示
+    }
+    
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      window.removeEventListener('scroll', handleInteraction);
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
+      if (isMobile) {
+        window.removeEventListener('scroll', handleInteraction);
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
+        if (interactionTimer) clearTimeout(interactionTimer);
+        if (fallbackTimer) clearTimeout(fallbackTimer);
+      }
     };
-  }, [deferredPrompt, isInstalled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时运行一次
 
   const handleInstall = async () => {
+    // 检测设备和浏览器
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+    const isEdge = /Edge/.test(navigator.userAgent);
+    const isFirefox = /Firefox/.test(navigator.userAgent);
+    const isMobile = isIOS || isAndroid;
+    
+    // iOS Safari需要手动指导
+    if (isIOS && isSafari) {
+      alert(
+        t('pwa.iosInstallInstructions') || 
+        '要安装此应用，请点击浏览器底部的分享按钮（□↑图标），然后选择"添加到主屏幕"'
+      );
+      handleDismiss();
+      return;
+    }
+
+    // 如果没有deferredPrompt，提供手动安装指导
     if (!deferredPrompt) {
-      // iOS Safari需要手动指导
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      console.warn('[PWA] 没有可用的安装提示事件，提供手动安装指导');
       
-      if (isIOS && isSafari) {
-        // 显示iOS安装指导
-        alert(
-          t('pwa.iosInstallInstructions') || 
-          '要安装此应用，请点击浏览器底部的分享按钮，然后选择"添加到主屏幕"'
-        );
+      // 尝试检测是否已经安装
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        alert('应用已经安装！');
+        handleDismiss();
+        return;
       }
+      
+      // 根据设备和浏览器提供不同的指导
+      let instructions = '';
+      
+      if (isMobile) {
+        if (isAndroid && isChrome) {
+          instructions = 'Android Chrome：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装应用"或"添加到主屏幕"';
+        } else if (isAndroid && isFirefox) {
+          instructions = 'Android Firefox：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装"或"添加到主屏幕"';
+        } else if (isAndroid) {
+          instructions = 'Android：\n1. 点击浏览器菜单\n2. 查找"安装"或"添加到主屏幕"选项';
+        } else if (isIOS && isChrome) {
+          instructions = 'iOS Chrome：\n1. 点击浏览器底部中间的分享按钮\n2. 选择"添加到主屏幕"';
+        } else {
+          instructions = '移动端：\n请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
+        }
+      } else {
+        // 桌面端
+        if (isChrome || isEdge) {
+          instructions = '桌面端：\n请点击浏览器地址栏右侧的安装图标，或通过菜单选择"安装应用"';
+        } else if (isFirefox) {
+          instructions = '桌面端：\n请点击浏览器菜单，选择"安装"或"添加到主屏幕"';
+        } else {
+          instructions = '请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
+        }
+      }
+      
+      alert(instructions);
       handleDismiss();
       return;
     }
 
     try {
       // 显示安装提示
+      console.log('[PWA] 显示安装提示...');
       await deferredPrompt.prompt();
       
       // 等待用户选择
       const { outcome } = await deferredPrompt.userChoice;
       
+      console.log('[PWA] 用户选择:', outcome);
+      
       if (outcome === 'accepted') {
         console.log('[PWA] 用户接受了安装提示');
+        // 安装提示会由浏览器处理，appinstalled事件会触发并关闭提示
+        // 但为了保险起见，也清除deferredPrompt
+        setDeferredPrompt(null);
+        // 不立即关闭提示，等待appinstalled事件
       } else {
         console.log('[PWA] 用户拒绝了安装提示');
+        // 用户拒绝后，关闭提示
+        setDeferredPrompt(null);
+        handleDismiss();
       }
-      
-      // 清除保存的提示事件
-      setDeferredPrompt(null);
-      setIsVisible(false);
     } catch (error) {
       console.error('[PWA] 安装提示失败:', error);
+      // 出错时也关闭提示
+      handleDismiss();
+      
+      // 提供备用方案
+      alert('安装提示无法显示。请尝试通过浏览器菜单手动安装应用。');
     }
   };
 
