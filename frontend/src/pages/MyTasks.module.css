@@ -159,7 +159,7 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
@@ -262,7 +262,7 @@
 
 .tasksGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
 }
 
@@ -865,12 +865,25 @@
   }
 
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
   }
 
   .stat-item {
-    padding: 12px !important;
+    padding: 12px 8px !important;
+  }
+
+  .stat-item > div:first-child {
+    font-size: 18px !important;
+  }
+
+  .stat-item > div:last-child {
+    font-size: 11px !important;
+  }
+
+  .tasksGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
   }
 
   /* Application card mobile styles */
@@ -897,8 +910,25 @@
   }
 
   .stats-grid {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .stat-item {
+    padding: 10px 4px !important;
+  }
+
+  .stat-item > div:first-child {
+    font-size: 16px !important;
+  }
+
+  .stat-item > div:last-child {
+    font-size: 10px !important;
+  }
+
+  .tasksGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
 
   .application-card {
@@ -983,7 +1013,7 @@
   }
 
   .tasksGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
 
