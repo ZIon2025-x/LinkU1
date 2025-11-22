@@ -163,6 +163,13 @@
   gap: 16px;
 }
 
+/* 确保stats-grid类名也生效（内联样式使用的类名） */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 16px;
+}
+
 .statItem {
   background: #fff;
   padding: 16px;
@@ -980,8 +987,13 @@
   }
 
   .statsGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
   }
 
   .statItem {
@@ -1092,8 +1104,13 @@
   }
 
   .statsGrid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
   }
 
   .tabsSection {
