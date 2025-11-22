@@ -289,7 +289,7 @@ div.stats-grid[style] {
 }
 
 .tabBadgeInactive {
-  background: #d1d5db;
+  background: transparent;
   color: #6b7280;
 }
 
@@ -730,7 +730,7 @@ div.stats-grid[style] {
 }
 
 .tabBadgeInactive {
-  background: #d1d5db;
+  background: transparent;
   color: #6b7280;
 }
 
