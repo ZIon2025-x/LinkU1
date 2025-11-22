@@ -429,6 +429,7 @@ async def create_flea_market_item(
             images=json.dumps(item_data.images) if item_data.images else None,
             location=item_data.location or "Online",
             category=item_data.category,
+            contact=item_data.contact,
             status="active",
             seller_id=current_user.id,
             view_count=0,
@@ -531,6 +532,7 @@ async def update_flea_market_item(
             item_data.images is not None,
             item_data.location is not None,
             item_data.category is not None,
+            item_data.contact is not None,
         ])
         
         # 执行编辑操作
@@ -553,6 +555,8 @@ async def update_flea_market_item(
                 update_data["location"] = item_data.location
             if item_data.category is not None:
                 update_data["category"] = item_data.category
+            if item_data.contact is not None:
+                update_data["contact"] = item_data.contact
             
             await db.execute(
                 update(models.FleaMarketItem)
@@ -837,10 +841,12 @@ async def direct_purchase_item(
             except:
                 images = []
         
-        # 合并description（包含分类）
+        # 合并description（包含分类和联系方式）
         description = item.description
         if item.category:
             description = f"{description}\n\n分类：{item.category}"
+        if item.contact:
+            description = f"{description}\n\n联系方式：{item.contact}"
         
         # 创建任务（在同一个事务中）
         new_task = models.Task(
@@ -1109,10 +1115,12 @@ async def accept_purchase_request(
             except:
                 images = []
         
-        # 合并description（包含分类）
+        # 合并description（包含分类和联系方式）
         description = item.description
         if item.category:
             description = f"{description}\n\n分类：{item.category}"
+        if item.contact:
+            description = f"{description}\n\n联系方式：{item.contact}"
         
         # 创建任务（在同一个事务中）
         new_task = models.Task(

@@ -1470,6 +1470,7 @@ class FleaMarketItemBase(BaseModel):
     images: List[str] = Field(default_factory=list, max_items=5)
     location: Optional[str] = Field(None, max_length=100)
     category: Optional[str] = Field(None, max_length=100)
+    contact: Optional[str] = Field(None, max_length=200)  # 联系方式
 
 
 class FleaMarketItemCreate(FleaMarketItemBase):
@@ -1485,13 +1486,20 @@ class FleaMarketItemUpdate(BaseModel):
     images: Optional[List[str]] = Field(None, max_items=5)
     location: Optional[str] = Field(None, max_length=100)
     category: Optional[str] = Field(None, max_length=100)
+    contact: Optional[str] = Field(None, max_length=200)  # 联系方式
     status: Optional[Literal["deleted"]] = None  # 仅允许设置为deleted
 
 
-class FleaMarketItemResponse(FleaMarketItemBase):
-    """商品响应模型"""
+class FleaMarketItemResponse(BaseModel):
+    """商品响应模型（不包含联系方式）"""
     id: str  # 格式化为 S + 数字
+    title: str
+    description: str
+    price: Decimal
     currency: Literal["GBP"] = "GBP"
+    images: List[str]
+    location: Optional[str]
+    category: Optional[str]
     status: Literal["active", "sold", "deleted"]
     seller_id: str
     view_count: int
