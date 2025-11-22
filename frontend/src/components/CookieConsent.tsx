@@ -59,7 +59,7 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept, onReject, onCus
           </div>
           <div className="cookie-consent-body">
             <p>
-              Click "Accept" to allow LinkU to use cookies to personalize this website and serve ads and measure their effectiveness on other applications and websites, including social media.
+              Click "Accept" to allow Link²Ur to use cookies to personalize this website and serve ads and measure their effectiveness on other applications and websites, including social media.
               Customize your preferences in your cookie settings, or click "Reject" if you do not want us to use cookies for this purpose.
               Learn more in our cookie notice.
             </p>

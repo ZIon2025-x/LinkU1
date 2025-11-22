@@ -14,7 +14,7 @@ struct AppConstants {
     static let wsBaseURL = "wss://api.link2ur.com"
     
     // 应用配置
-    static let appName = "LinkU"
+    static let appName = "Link²Ur"
     static let appVersion = "1.0.0"
     
     // 分页配置

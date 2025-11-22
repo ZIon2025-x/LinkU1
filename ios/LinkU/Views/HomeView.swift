@@ -17,7 +17,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // 欢迎区域
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("欢迎使用 LinkU")
+                        Text("欢迎使用 Link²Ur")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                         

@@ -166,7 +166,7 @@ struct AboutView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.blue)
             
-            Text("LinkU")
+            Text("Link²Ur")
                 .font(.title)
                 .fontWeight(.bold)
             

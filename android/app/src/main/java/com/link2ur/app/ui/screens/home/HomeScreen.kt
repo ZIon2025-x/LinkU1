@@ -30,7 +30,7 @@ fun HomeScreen() {
     ) {
         // 欢迎区域
         Text(
-            text = "欢迎使用 Link2Ur",
+            text = "欢迎使用 Link²Ur",
             style = MaterialTheme.typography.headlineLarge
         )
         

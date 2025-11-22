@@ -23,7 +23,7 @@ struct LoginView: View {
                     .font(.system(size: 80))
                     .foregroundColor(.blue)
                 
-                Text("LinkU")
+                Text("Link²Ur")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
