@@ -2528,6 +2528,8 @@
     "installDescription": "Add Link²Ur to your home screen for faster access and a better experience!",
     "installNow": "Install Now",
     "installLater": "Later",
-    "iosInstallInstructions": "To install this app, tap the share button at the bottom of your browser, then select 'Add to Home Screen'"
+    "iosInstallInstructions": "Please select 'Add to Home Screen' in the share menu",
+    "androidInstallInstructions": "Please select 'Add to Home Screen' or 'Install App' in the share menu",
+    "shareText": "Add Link²Ur to your home screen for a better experience!"
   }
 }

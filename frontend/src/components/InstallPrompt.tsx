@@ -146,88 +146,133 @@ const InstallPrompt: React.FC = () => {
     const isFirefox = /Firefox/.test(navigator.userAgent);
     const isMobile = isIOS || isAndroid;
     
-    // iOS Safari需要手动指导
-    if (isIOS && isSafari) {
-      alert(
-        t('pwa.iosInstallInstructions') || 
-        '要安装此应用，请点击浏览器底部的分享按钮（□↑图标），然后选择"添加到主屏幕"'
-      );
-      handleDismiss();
+    // 如果有deferredPrompt（Chrome/Edge支持），直接使用
+    if (deferredPrompt) {
+      try {
+        // 显示安装提示
+        console.log('[PWA] 显示安装提示...');
+        await deferredPrompt.prompt();
+        
+        // 等待用户选择
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        console.log('[PWA] 用户选择:', outcome);
+        
+        if (outcome === 'accepted') {
+          console.log('[PWA] 用户接受了安装提示');
+          // 安装提示会由浏览器处理，appinstalled事件会触发并关闭提示
+          // 但为了保险起见，也清除deferredPrompt
+          setDeferredPrompt(null);
+          // 不立即关闭提示，等待appinstalled事件
+        } else {
+          console.log('[PWA] 用户拒绝了安装提示');
+          // 用户拒绝后，关闭提示
+          setDeferredPrompt(null);
+          handleDismiss();
+        }
+      } catch (error) {
+        console.error('[PWA] 安装提示失败:', error);
+        // 出错时也关闭提示
+        handleDismiss();
+        
+        // 提供备用方案
+        alert('安装提示无法显示。请尝试通过浏览器菜单手动安装应用。');
+      }
       return;
     }
 
-    // 如果没有deferredPrompt，提供手动安装指导
-    if (!deferredPrompt) {
-      console.warn('[PWA] 没有可用的安装提示事件，提供手动安装指导');
-      
-      // 尝试检测是否已经安装
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        alert('应用已经安装！');
-        handleDismiss();
-        return;
-      }
-      
-      // 根据设备和浏览器提供不同的指导
-      let instructions = '';
-      
-      if (isMobile) {
-        if (isAndroid && isChrome) {
-          instructions = 'Android Chrome：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装应用"或"添加到主屏幕"';
-        } else if (isAndroid && isFirefox) {
-          instructions = 'Android Firefox：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装"或"添加到主屏幕"';
+    // 如果没有deferredPrompt，尝试使用Web Share API触发分享界面
+    if (isMobile && navigator.share) {
+      try {
+        console.log('[PWA] 移动端：使用Web Share API触发分享界面');
+        
+        // 先显示提示，告诉用户要选择"添加到主屏幕"
+        let instructionText = '';
+        if (isIOS) {
+          instructionText = t('pwa.iosInstallInstructions') || 
+            '请在分享界面中选择"添加到主屏幕"选项';
         } else if (isAndroid) {
-          instructions = 'Android：\n1. 点击浏览器菜单\n2. 查找"安装"或"添加到主屏幕"选项';
-        } else if (isIOS && isChrome) {
-          instructions = 'iOS Chrome：\n1. 点击浏览器底部中间的分享按钮\n2. 选择"添加到主屏幕"';
-        } else {
-          instructions = '移动端：\n请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
+          instructionText = t('pwa.androidInstallInstructions') || 
+            '请在分享界面中选择"添加到主屏幕"或"安装应用"选项';
         }
-      } else {
-        // 桌面端
-        if (isChrome || isEdge) {
-          instructions = '桌面端：\n请点击浏览器地址栏右侧的安装图标，或通过菜单选择"安装应用"';
-        } else if (isFirefox) {
-          instructions = '桌面端：\n请点击浏览器菜单，选择"安装"或"添加到主屏幕"';
-        } else {
-          instructions = '请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
+        
+        // 先显示提示
+        if (instructionText) {
+          alert(instructionText);
         }
+        
+        // 关闭安装提示
+        handleDismiss();
+        
+        // 延迟触发分享界面，让用户先看到提示
+        setTimeout(async () => {
+          try {
+            const shareUrl = window.location.origin;
+            const shareTitle = 'Link²Ur';
+            const shareText = t('pwa.shareText') || '将 Link²Ur 添加到主屏幕，享受更好的体验！';
+            
+            // 触发分享界面
+            await navigator.share({
+              title: shareTitle,
+              text: shareText,
+              url: shareUrl
+            });
+          } catch (shareError: any) {
+            // 用户取消分享，不做任何处理
+            if (shareError.name === 'AbortError') {
+              console.log('[PWA] 用户取消了分享');
+            } else {
+              console.error('[PWA] 分享失败:', shareError);
+            }
+          }
+        }, 300);
+        
+        return;
+      } catch (error: any) {
+        console.error('[PWA] 分享初始化失败:', error);
+        // 如果分享失败，继续执行下面的手动指导逻辑
       }
-      
-      alert(instructions);
+    }
+
+    // 如果不支持Web Share API或分享失败，提供手动安装指导
+    console.warn('[PWA] 没有可用的安装提示事件，提供手动安装指导');
+    
+    // 尝试检测是否已经安装
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      alert('应用已经安装！');
       handleDismiss();
       return;
     }
-
-    try {
-      // 显示安装提示
-      console.log('[PWA] 显示安装提示...');
-      await deferredPrompt.prompt();
-      
-      // 等待用户选择
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      console.log('[PWA] 用户选择:', outcome);
-      
-      if (outcome === 'accepted') {
-        console.log('[PWA] 用户接受了安装提示');
-        // 安装提示会由浏览器处理，appinstalled事件会触发并关闭提示
-        // 但为了保险起见，也清除deferredPrompt
-        setDeferredPrompt(null);
-        // 不立即关闭提示，等待appinstalled事件
+    
+    // 根据设备和浏览器提供不同的指导
+    let instructions = '';
+    
+    if (isMobile) {
+      if (isIOS && isSafari) {
+        instructions = t('pwa.iosInstallInstructions') || 
+          '要安装此应用：\n1. 点击浏览器底部的分享按钮（□↑图标）\n2. 选择"添加到主屏幕"';
+      } else if (isIOS && isChrome) {
+        instructions = 'iOS Chrome：\n1. 点击浏览器底部中间的分享按钮\n2. 选择"添加到主屏幕"';
+      } else if (isAndroid && isChrome) {
+        instructions = 'Android Chrome：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装应用"或"添加到主屏幕"';
+      } else if (isAndroid && isFirefox) {
+        instructions = 'Android Firefox：\n1. 点击浏览器右上角菜单（三个点）\n2. 选择"安装"或"添加到主屏幕"';
       } else {
-        console.log('[PWA] 用户拒绝了安装提示');
-        // 用户拒绝后，关闭提示
-        setDeferredPrompt(null);
-        handleDismiss();
+        instructions = '移动端：\n请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
       }
-    } catch (error) {
-      console.error('[PWA] 安装提示失败:', error);
-      // 出错时也关闭提示
-      handleDismiss();
-      
-      // 提供备用方案
-      alert('安装提示无法显示。请尝试通过浏览器菜单手动安装应用。');
+    } else {
+      // 桌面端
+      if (isChrome || isEdge) {
+        instructions = '桌面端：\n请点击浏览器地址栏右侧的安装图标，或通过菜单选择"安装应用"';
+      } else if (isFirefox) {
+        instructions = '桌面端：\n请点击浏览器菜单，选择"安装"或"添加到主屏幕"';
+      } else {
+        instructions = '请通过浏览器菜单查找"安装"或"添加到主屏幕"选项';
+      }
     }
+    
+    alert(instructions);
+    handleDismiss();
   };
 
   const handleDismiss = () => {

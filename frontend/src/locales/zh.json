@@ -2418,6 +2418,8 @@
     "installDescription": "将 Link²Ur 添加到主屏幕，享受更快的访问速度和更好的体验！",
     "installNow": "立即安装",
     "installLater": "稍后",
-    "iosInstallInstructions": "要安装此应用，请点击浏览器底部的分享按钮，然后选择\"添加到主屏幕\""
+    "iosInstallInstructions": "请在分享界面中选择\"添加到主屏幕\"选项",
+    "androidInstallInstructions": "请在分享界面中选择\"添加到主屏幕\"或\"安装应用\"选项",
+    "shareText": "将 Link²Ur 添加到主屏幕，享受更好的体验！"
   }
 }
