@@ -858,15 +858,234 @@
   cursor: not-allowed;
 }
 
+/* Override inline styles for mobile */
+@media (max-width: 768px) {
+  .stats-section {
+    padding: 16px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .stat-item {
+    padding: 12px !important;
+  }
+
+  /* Application card mobile styles */
+  .application-card {
+    padding: 16px !important;
+  }
+
+  .application-card h3 {
+    font-size: 16px !important;
+    padding-right: 80px !important;
+  }
+
+  .application-card > div[style*="position: absolute"] {
+    top: 12px !important;
+    right: 12px !important;
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-section {
+    padding: 12px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .application-card {
+    padding: 12px !important;
+  }
+
+  .application-card h3 {
+    font-size: 15px !important;
+    padding-right: 70px !important;
+  }
+}
+
 /* Responsive */
+@media (max-width: 768px) {
+  .mainContent {
+    margin-top: 60px;
+    padding: 16px 8px;
+  }
+
+  .contentWrapper {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .pageHeader {
+    padding: 20px 16px;
+  }
+
+  .backButton {
+    position: relative;
+    left: auto;
+    top: auto;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+
+  .pageHeaderTitle {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pageHeaderSubtitle {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .statsSection {
+    padding: 16px;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .statItem {
+    padding: 12px;
+  }
+
+  .tabsSection {
+    padding: 12px 8px 0 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabsContainer {
+    display: flex;
+    gap: 6px;
+    min-width: max-content;
+    padding-bottom: 8px;
+  }
+
+  .tabButton {
+    padding: 6px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tasksSection {
+    padding: 16px 8px;
+  }
+
+  .tasksGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .taskCard {
+    padding: 16px;
+  }
+
+  .taskCardTitle {
+    font-size: 16px;
+  }
+
+  .taskCardInfoGrid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .taskCardActions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .taskCardButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .paginationNumbers {
+    flex-wrap: wrap;
+    padding: 0 8px;
+  }
+
+  .emptyState {
+    padding: 40px 16px;
+  }
+
+  .emptyStateIcon {
+    font-size: 48px;
+  }
+
+  .emptyStateTitle {
+    font-size: 16px;
+  }
+
+  .emptyStateText {
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 480px) {
   .logo {
     font-size: 18px !important;
     padding: 2px 4px !important;
   }
 
+  .header {
+    padding: 8px 12px;
+  }
+
+  .mainContent {
+    margin-top: 56px;
+    padding: 12px 4px;
+  }
+
+  .pageHeader {
+    padding: 16px 12px;
+  }
+
+  .statsSection {
+    padding: 12px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .tabsSection {
+    padding: 8px 4px 0 4px;
+  }
+
+  .tabButton {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .tasksSection {
+    padding: 12px 4px;
+  }
+
+  .taskCard {
+    padding: 12px;
+  }
+
   .reviewModal {
-    padding: 24px;
+    padding: 20px;
+    max-width: 95%;
   }
 
   .reviewTagsGrid {
