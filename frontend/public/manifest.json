@@ -1,7 +1,7 @@
 {
   "short_name": "Link²Ur",
-  "name": "Link²Ur",
-  "description": "Professional task publishing and skill matching platform",
+  "name": "Link²Ur - Connect, Capability, Create",
+  "description": "Professional task publishing and skill matching platform, linking skilled people with those in need, making value creation more efficient.",
   "icons": [
     {
       "src": "/static/favicon.png",
@@ -68,11 +68,41 @@
       "type": "image/png"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "theme_color": "#1890ff",
   "background_color": "#ffffff",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "scope": "/",
-  "lang": "en"
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "social"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "发布任务",
+      "short_name": "发布",
+      "description": "快速发布新任务",
+      "url": "/zh/publish",
+      "icons": [{ "src": "/static/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "任务列表",
+      "short_name": "任务",
+      "description": "浏览所有任务",
+      "url": "/zh/tasks",
+      "icons": [{ "src": "/static/favicon.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/zh/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "prefer_related_applications": false
 }

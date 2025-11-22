@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme for Link2Ur -->
+    <!-- This theme is used for the application and activities -->
+    <!-- The actual UI theme is defined in Compose (Theme.kt) -->
+    <style name="Theme.Link2Ur" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="android:colorPrimary">#1890FF</item>
+        <item name="android:colorPrimaryDark">#096DD9</item>
+        <item name="android:colorAccent">#52C41A</item>
+        
+        <!-- Background colors -->
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="android:colorSurface">#FFFFFF</item>
+        
+        <!-- Status bar -->
+        <item name="android:statusBarColor">#1890FF</item>
+        <item name="android:windowLightStatusBar">false</item>
+        
+        <!-- Navigation bar -->
+        <item name="android:navigationBarColor">#FFFFFF</item>
+    </style>
+</resources>
+

@@ -2412,5 +2412,12 @@
     "reportSubmitted": "举报已提交，我们会尽快处理",
     "loadItemError": "加载商品详情失败",
     "reportError": "举报失败，请重试"
+  },
+  "pwa": {
+    "installTitle": "安装 Link²Ur",
+    "installDescription": "将 Link²Ur 添加到主屏幕，享受更快的访问速度和更好的体验！",
+    "installNow": "立即安装",
+    "installLater": "稍后",
+    "iosInstallInstructions": "要安装此应用，请点击浏览器底部的分享按钮，然后选择"添加到主屏幕""
   }
 }

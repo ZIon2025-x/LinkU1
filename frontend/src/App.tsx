@@ -17,6 +17,7 @@ import { CookieProvider } from './contexts/CookieContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { UnreadMessageProvider } from './contexts/UnreadMessageContext';
 import CookieManager from './components/CookieManager';
+import InstallPrompt from './components/InstallPrompt';
 import AdminAuth from './components/AdminAuth';
 import ServiceAuth from './components/ServiceAuth';
 import { AdminGuard, ServiceGuard, UserGuard } from './components/AuthGuard';
@@ -300,6 +301,7 @@ function App() {
                     <ScrollToTop />
                     <LanguageRoutes />
                     <CookieManager />
+                    <InstallPrompt />
                   </ErrorBoundary>
                 </Router>
               </UnreadMessageProvider>

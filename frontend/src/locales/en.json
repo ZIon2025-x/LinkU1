@@ -2522,5 +2522,12 @@
     "reportSubmitted": "Report submitted, we will process it as soon as possible",
     "loadItemError": "Failed to load item details",
     "reportError": "Failed to submit report, please try again"
+  },
+  "pwa": {
+    "installTitle": "Install Link²Ur",
+    "installDescription": "Add Link²Ur to your home screen for faster access and a better experience!",
+    "installNow": "Install Now",
+    "installLater": "Later",
+    "iosInstallInstructions": "To install this app, tap the share button at the bottom of your browser, then select 'Add to Home Screen'"
   }
 }

@@ -18,6 +18,43 @@ if (process.env.NODE_ENV === 'production') {
   initWebVitalsMonitoring();
 }
 
+// 注册 Service Worker (PWA支持)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('[PWA] Service Worker 注册成功:', registration.scope);
+        
+        // 检查更新
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // 新版本可用，提示用户刷新
+                console.log('[PWA] 新版本可用，请刷新页面');
+              }
+            });
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('[PWA] Service Worker 注册失败:', error);
+      });
+
+    // 监听Service Worker更新
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        console.log('[PWA] Service Worker 已更新，页面将刷新');
+        window.location.reload();
+      }
+    });
+  });
+}
+
 // 全局错误处理 - 捕获未处理的错误和 Promise rejection
 window.addEventListener('error', (event) => {
   console.error('全局错误捕获:', event.error);
