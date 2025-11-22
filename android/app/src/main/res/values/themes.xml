@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base application theme for Link2Ur -->
+    <!-- Base application theme for Link²Ur -->
     <!-- This theme is used for the application and activities -->
     <!-- The actual UI theme is defined in Compose (Theme.kt) -->
     <style name="Theme.Link2Ur" parent="android:Theme.Material.Light.NoActionBar">

@@ -36,7 +36,7 @@ fun LoginScreen(
     ) {
         // Logo
         Text(
-            text = "Link2Ur",
+            text = "Link²Ur",
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.primary
         )

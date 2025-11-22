@@ -5,7 +5,7 @@ const RUNTIME_CACHE = 'link2ur-runtime-v1';
 // 需要预缓存的静态资源
 const urlsToCache = [
   '/',
-  '/static/favicon.png',
+  '/static/pwa.png',
   '/static/favicon.ico',
   '/static/logo.png',
   '/static/background.jpg',

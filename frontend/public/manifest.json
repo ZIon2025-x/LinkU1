@@ -4,68 +4,28 @@
   "description": "Professional task publishing and skill matching platform, linking skilled people with those in need, making value creation more efficient.",
   "icons": [
     {
-      "src": "/static/favicon.png",
+      "src": "/static/pwa.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/favicon.png",
+      "src": "/static/pwa.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/favicon.png",
+      "src": "/static/pwa.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/static/favicon.png",
+      "src": "/static/pwa.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/static/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "48x48",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "64x64",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "96x96",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "128x128",
-      "type": "image/png"
-    },
-    {
-      "src": "/static/favicon.png",
-      "sizes": "256x256",
-      "type": "image/png"
     }
   ],
   "start_url": "/",
@@ -85,14 +45,14 @@
       "short_name": "发布",
       "description": "快速发布新任务",
       "url": "/zh/publish",
-      "icons": [{ "src": "/static/favicon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/static/pwa.png", "sizes": "192x192" }]
     },
     {
       "name": "任务列表",
       "short_name": "任务",
       "description": "浏览所有任务",
       "url": "/zh/tasks",
-      "icons": [{ "src": "/static/favicon.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/static/pwa.png", "sizes": "192x192" }]
     }
   ],
   "share_target": {
