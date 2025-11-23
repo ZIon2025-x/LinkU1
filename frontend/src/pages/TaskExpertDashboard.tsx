@@ -198,6 +198,10 @@ const TaskExpertDashboard: React.FC = () => {
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [scheduleStartDate, setScheduleStartDate] = useState<string>('');
   const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
+  const [closedDates, setClosedDates] = useState<any[]>([]);
+  const [showCloseDateModal, setShowCloseDateModal] = useState(false);
+  const [selectedDateForClose, setSelectedDateForClose] = useState<string>('');
+  const [closeDateReason, setCloseDateReason] = useState<string>('');
   
   // 加载时间段列表（用于创建多人任务）
   const loadTimeSlotsForCreateTask = async (serviceId: number) => {
@@ -1668,16 +1672,17 @@ const TaskExpertDashboard: React.FC = () => {
                               <span>{date} ({dayName})</span>
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 {(() => {
-                                  const isClosed = closedDates.some(cd => cd.closed_date === date);
+                                  const isClosed = closedDates.some((cd: any) => cd.closed_date === date);
+                                  const hasTimeSlots = items.some((i: any) => !i.is_task);
                                   return (
                                     <>
-                                      {!item.is_task && items.some((i: any) => !i.is_task) && (
+                                      {hasTimeSlots && (
                                         <button
                                           onClick={async () => {
                                             if (!window.confirm(`确定要删除 ${date} 的所有时间段吗？`)) return;
                                             try {
                                               // 找到该日期的所有服务ID
-                                              const serviceIds = new Set(items.filter((i: any) => !i.is_task).map((i: any) => i.service_id));
+                                              const serviceIds = Array.from(new Set(items.filter((i: any) => !i.is_task).map((i: any) => i.service_id)));
                                               for (const serviceId of serviceIds) {
                                                 await deleteTimeSlotsByDate(serviceId, date);
                                               }
@@ -1707,7 +1712,7 @@ const TaskExpertDashboard: React.FC = () => {
                                             // 取消关门
                                             if (!window.confirm(`确定要取消 ${date} 的关门设置吗？`)) return;
                                             try {
-                                              const closedDate = closedDates.find(cd => cd.closed_date === date);
+                                              const closedDate = closedDates.find((cd: any) => cd.closed_date === date);
                                               if (closedDate) {
                                                 await deleteClosedDate(closedDate.id);
                                               } else {
@@ -2695,7 +2700,6 @@ const TaskExpertDashboard: React.FC = () => {
                       console.error('创建多人任务失败:', err);
                       console.error('错误详情:', {
                         response: err.response?.data,
-                        taskData: taskData,
                         service_id: createMultiTaskForm.service_id,
                         selectedService: selectedService
                       });
@@ -3204,6 +3208,127 @@ const TaskExpertDashboard: React.FC = () => {
                 }}
               >
                 提交审核
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 设置关门日期弹窗 */}
+      {showCloseDateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowCloseDateModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '500px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>设置关门日期</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                日期
+              </label>
+              <input
+                type="date"
+                value={selectedDateForClose}
+                disabled
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  background: '#f3f4f6',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                关门原因（可选）
+              </label>
+              <textarea
+                value={closeDateReason}
+                onChange={(e) => setCloseDateReason(e.target.value)}
+                placeholder="例如：休息日、节假日等"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCloseDateModal(false);
+                  setSelectedDateForClose('');
+                  setCloseDateReason('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  if (!selectedDateForClose) {
+                    message.error('请选择日期');
+                    return;
+                  }
+                  try {
+                    await createClosedDate({
+                      closed_date: selectedDateForClose,
+                      reason: closeDateReason || undefined,
+                    });
+                    message.success('已设置关门日期');
+                    setShowCloseDateModal(false);
+                    setSelectedDateForClose('');
+                    setCloseDateReason('');
+                    await loadSchedule();
+                  } catch (err: any) {
+                    message.error(err.response?.data?.detail || '设置失败');
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                确定
               </button>
             </div>
           </div>
@@ -4067,127 +4192,6 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         </div>
       </div>
     </div>
-
-      {/* 设置关门日期弹窗 */}
-      {showCloseDateModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowCloseDateModal(false)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: '12px',
-              padding: '24px',
-              width: '90%',
-              maxWidth: '500px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>设置关门日期</h3>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                日期
-              </label>
-              <input
-                type="date"
-                value={selectedDateForClose}
-                disabled
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  background: '#f3f4f6',
-                }}
-              />
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                关门原因（可选）
-              </label>
-              <textarea
-                value={closeDateReason}
-                onChange={(e) => setCloseDateReason(e.target.value)}
-                placeholder="例如：休息日、节假日等"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  minHeight: '80px',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowCloseDateModal(false);
-                  setSelectedDateForClose('');
-                  setCloseDateReason('');
-                }}
-                style={{
-                  padding: '10px 20px',
-                  background: '#f3f4f6',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                取消
-              </button>
-              <button
-                onClick={async () => {
-                  if (!selectedDateForClose) {
-                    message.error('请选择日期');
-                    return;
-                  }
-                  try {
-                    await createClosedDate({
-                      closed_date: selectedDateForClose,
-                      reason: closeDateReason || undefined,
-                    });
-                    message.success('已设置关门日期');
-                    setShowCloseDateModal(false);
-                    setSelectedDateForClose('');
-                    setCloseDateReason('');
-                    await loadSchedule();
-                  } catch (err: any) {
-                    message.error(err.response?.data?.detail || '设置失败');
-                  }
-                }}
-                style={{
-                  padding: '10px 20px',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
   );
 };
 
