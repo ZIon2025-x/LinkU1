@@ -1387,20 +1387,41 @@ class TaskExpertService(Base):
 
 
 class ServiceTimeSlot(Base):
-    """服务时间段表 - 存储具体的日期时间段和价格"""
+    """服务时间段表 - 存储具体的日期时间段和价格（使用UTC时间）"""
     __tablename__ = "service_time_slots"
     
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
-    slot_date = Column(Date, nullable=False)  # 日期（如2024-10-01）
-    start_time = Column(Time, nullable=False)  # 开始时间（如13:00:00）
-    end_time = Column(Time, nullable=False)  # 结束时间（如14:00:00）
+    slot_start_datetime = Column(DateTime(timezone=True), nullable=False)  # 时间段开始时间（UTC，包含日期和时间）
+    slot_end_datetime = Column(DateTime(timezone=True), nullable=False)  # 时间段结束时间（UTC，包含日期和时间）
     price_per_participant = Column(DECIMAL(12, 2), nullable=False)  # 每个参与者的价格
     max_participants = Column(Integer, nullable=False)  # 该时间段最多参与者数量
     current_participants = Column(Integer, default=0, nullable=False)  # 当前已报名参与者数量
     is_available = Column(Boolean, default=True, nullable=False)  # 是否可用（可手动关闭某个时间段）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 为了向后兼容，添加属性访问器
+    @property
+    def slot_date(self):
+        """获取日期部分（用于向后兼容）"""
+        if self.slot_start_datetime:
+            return self.slot_start_datetime.date()
+        return None
+    
+    @property
+    def start_time(self):
+        """获取开始时间部分（用于向后兼容）"""
+        if self.slot_start_datetime:
+            return self.slot_start_datetime.time()
+        return None
+    
+    @property
+    def end_time(self):
+        """获取结束时间部分（用于向后兼容）"""
+        if self.slot_end_datetime:
+            return self.slot_end_datetime.time()
+        return None
     
     # 关系
     service = relationship("TaskExpertService", back_populates="time_slots")

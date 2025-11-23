@@ -1501,33 +1501,62 @@ class ServiceTimeSlotUpdate(BaseModel):
 
 
 class ServiceTimeSlotOut(BaseModel):
-    """服务时间段输出"""
+    """服务时间段输出（UTC时间）"""
     id: int
     service_id: int
-    slot_date: str  # 日期格式：YYYY-MM-DD
-    start_time: str  # 时间格式：HH:MM:SS
-    end_time: str  # 时间格式：HH:MM:SS
+    slot_start_datetime: str  # UTC时间格式：YYYY-MM-DDTHH:MM:SS+00:00
+    slot_end_datetime: str  # UTC时间格式：YYYY-MM-DDTHH:MM:SS+00:00
+    slot_date: str  # 日期格式：YYYY-MM-DD（向后兼容，从slot_start_datetime提取）
+    start_time: str  # 时间格式：HH:MM:SS（向后兼容，从slot_start_datetime提取）
+    end_time: str  # 时间格式：HH:MM:SS（向后兼容，从slot_end_datetime提取）
     price_per_participant: float
     max_participants: int
     current_participants: int
     is_available: bool
+    is_expired: bool  # 时间段是否已过期（开始时间已过当前时间）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
     @classmethod
     def from_orm(cls, obj):
-        """自定义ORM转换，处理日期和时间字段"""
-        from datetime import date, time
+        """自定义ORM转换，处理日期时间字段（UTC时间）"""
+        from datetime import timezone
+        from app.utils.time_utils import format_iso_utc
+        from app.models import get_utc_time
+        
+        # 获取UTC时间
+        slot_start_utc = obj.slot_start_datetime
+        slot_end_utc = obj.slot_end_datetime
+        
+        # 确保时区信息存在
+        if slot_start_utc.tzinfo is None:
+            slot_start_utc = slot_start_utc.replace(tzinfo=timezone.utc)
+        else:
+            slot_start_utc = slot_start_utc.astimezone(timezone.utc)
+            
+        if slot_end_utc.tzinfo is None:
+            slot_end_utc = slot_end_utc.replace(tzinfo=timezone.utc)
+        else:
+            slot_end_utc = slot_end_utc.astimezone(timezone.utc)
+        
+        # 检查时间段是否已过期（开始时间是否已过当前UTC时间）
+        current_utc = get_utc_time()
+        is_expired = slot_start_utc < current_utc
+        
         data = {
             "id": obj.id,
             "service_id": obj.service_id,
-            "slot_date": obj.slot_date.isoformat() if isinstance(obj.slot_date, date) else str(obj.slot_date),
-            "start_time": obj.start_time.isoformat() if isinstance(obj.start_time, time) else str(obj.start_time),
-            "end_time": obj.end_time.isoformat() if isinstance(obj.end_time, time) else str(obj.end_time),
+            "slot_start_datetime": format_iso_utc(slot_start_utc),
+            "slot_end_datetime": format_iso_utc(slot_end_utc),
+            # 向后兼容字段
+            "slot_date": slot_start_utc.date().isoformat(),
+            "start_time": slot_start_utc.time().isoformat(),
+            "end_time": slot_end_utc.time().isoformat(),
             "price_per_participant": float(obj.price_per_participant),
             "max_participants": obj.max_participants,
             "current_participants": obj.current_participants,
             "is_available": obj.is_available,
+            "is_expired": is_expired,  # 时间段是否已过期
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
         }

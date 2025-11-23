@@ -810,7 +810,10 @@ async def batch_create_service_time_slots(
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
     
-    # 生成时间段
+    # 生成时间段（使用UTC时间存储）
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime
+    
     created_slots = []
     current_date = start
     slot_start_time = service.time_slot_start_time
@@ -832,21 +835,28 @@ async def batch_create_service_time_slots(
             if slot_end > slot_end_time:
                 break  # 超出服务允许的结束时间
             
-            # 检查是否已存在
+            # 将英国时间的日期+时间组合，然后转换为UTC
+            # 创建英国时区的datetime对象
+            slot_start_local = dt_datetime.combine(current_date, current_time)
+            slot_end_local = dt_datetime.combine(current_date, slot_end)
+            
+            # 转换为UTC时间
+            slot_start_utc = parse_local_as_utc(slot_start_local, LONDON)
+            slot_end_utc = parse_local_as_utc(slot_end_local, LONDON)
+            
+            # 检查是否已存在（使用新的datetime字段）
             existing = await db.execute(
                 select(models.ServiceTimeSlot)
                 .where(models.ServiceTimeSlot.service_id == service_id)
-                .where(models.ServiceTimeSlot.slot_date == current_date)
-                .where(models.ServiceTimeSlot.start_time == current_time)
-                .where(models.ServiceTimeSlot.end_time == slot_end)
+                .where(models.ServiceTimeSlot.slot_start_datetime == slot_start_utc)
+                .where(models.ServiceTimeSlot.slot_end_datetime == slot_end_utc)
             )
             if not existing.scalar_one_or_none():
-                # 创建新时间段
+                # 创建新时间段（使用UTC时间）
                 new_slot = models.ServiceTimeSlot(
                     service_id=service_id,
-                    slot_date=current_date,
-                    start_time=current_time,
-                    end_time=slot_end,
+                    slot_start_datetime=slot_start_utc,
+                    slot_end_datetime=slot_end_utc,
                     price_per_participant=price_per_participant,
                     max_participants=service.participants_per_slot,
                     current_participants=0,
@@ -907,30 +917,38 @@ async def get_service_time_slots_public(
     if not service.has_time_slots:
         return []  # 如果服务未启用时间段，返回空列表
     
-    # 构建查询
+    # 构建查询（使用UTC时间）
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime, time as dt_time
+    
     query = select(models.ServiceTimeSlot).where(
-        models.ServiceTimeSlot.service_id == service_id,
-        models.ServiceTimeSlot.is_available == True  # 只返回可用的时间段
+        models.ServiceTimeSlot.service_id == service_id
+        # 注意：不再过滤is_available，让已满的时间段也能显示
     )
     
     if start_date:
         try:
-            start = date.fromisoformat(start_date)
-            query = query.where(models.ServiceTimeSlot.slot_date >= start)
+            start_date_obj = date.fromisoformat(start_date)
+            # 将开始日期的00:00:00（英国时间）转换为UTC
+            start_local = dt_datetime.combine(start_date_obj, dt_time(0, 0, 0))
+            start_utc = parse_local_as_utc(start_local, LONDON)
+            query = query.where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
         except ValueError:
             raise HTTPException(status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD")
     
     if end_date:
         try:
-            end = date.fromisoformat(end_date)
-            query = query.where(models.ServiceTimeSlot.slot_date <= end)
+            end_date_obj = date.fromisoformat(end_date)
+            # 将结束日期的23:59:59（英国时间）转换为UTC
+            end_local = dt_datetime.combine(end_date_obj, dt_time(23, 59, 59))
+            end_utc = parse_local_as_utc(end_local, LONDON)
+            query = query.where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
         except ValueError:
             raise HTTPException(status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD")
     
-    # 按日期和时间排序
+    # 按开始时间排序
     query = query.order_by(
-        models.ServiceTimeSlot.slot_date.asc(),
-        models.ServiceTimeSlot.start_time.asc()
+        models.ServiceTimeSlot.slot_start_datetime.asc()
     )
     
     result = await db.execute(query)
@@ -1085,6 +1103,11 @@ async def apply_for_service(
         if not time_slot.is_available:
             raise HTTPException(status_code=400, detail="该时间段不可用")
         
+        # 验证时间段是否已过期（开始时间是否已过当前时间）
+        current_utc = models.get_utc_time()
+        if time_slot.slot_start_datetime < current_utc:
+            raise HTTPException(status_code=400, detail="该时间段已过期，无法申请")
+        
         # 验证时间段是否已满
         if time_slot.current_participants >= time_slot.max_participants:
             raise HTTPException(status_code=400, detail="该时间段已满")
@@ -1105,7 +1128,15 @@ async def apply_for_service(
         # 如果服务启用了时间段，不需要截至日期（时间段已经包含了日期信息）
         deadline = None
     
-    # 8. 创建申请记录
+    # 8. 判断是否自动批准：不议价且选择了时间段
+    should_auto_approve = (
+        application_data.negotiated_price is None and  # 没有议价
+        service.has_time_slots and  # 服务启用了时间段
+        application_data.time_slot_id is not None  # 选择了时间段
+    )
+    
+    # 9. 创建申请记录
+    initial_status = "approved" if should_auto_approve else "pending"
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
@@ -1116,11 +1147,21 @@ async def apply_for_service(
         currency=application_data.currency,
         deadline=deadline,
         is_flexible=application_data.is_flexible or 0,
-        status="pending",
+        status=initial_status,
     )
+    
+    # 如果自动批准，设置最终价格和批准时间
+    if should_auto_approve:
+        # 使用时间段的价格，如果没有则使用服务基础价格
+        if time_slot:
+            new_application.final_price = time_slot.price_per_participant
+        else:
+            new_application.final_price = service.base_price
+        new_application.approved_at = models.get_utc_time()
+    
     db.add(new_application)
     
-    # 9. 如果选择了时间段，更新时间段的参与者数量（在提交前更新，避免并发问题）
+    # 10. 如果选择了时间段，更新时间段的参与者数量（在提交前更新，避免并发问题）
     if time_slot:
         await db.execute(
             update(models.ServiceTimeSlot)
@@ -1128,7 +1169,7 @@ async def apply_for_service(
             .values(current_participants=models.ServiceTimeSlot.current_participants + 1)
         )
     
-    # 10. 更新服务统计：申请时+1（原子更新，避免并发丢失）
+    # 11. 更新服务统计：申请时+1（原子更新，避免并发丢失）
     try:
         await db.execute(
             update(models.TaskExpertService)
@@ -1154,17 +1195,98 @@ async def apply_for_service(
             detail="您已申请过此服务，请等待处理（并发冲突）"
         )
     
-    # 11. 发送通知给任务达人
-    from app.task_notifications import send_service_application_notification
-    try:
-        await send_service_application_notification(
-            db=db,
-            expert_id=service.expert_id,
-            applicant_id=current_user.id,
-            service_id=service_id,
-            service_name=service.service_name,
-            negotiated_price=application_data.negotiated_price,
-            service_description=service.description,
+    # 12. 如果自动批准，创建任务
+    if should_auto_approve:
+        from datetime import timedelta
+        
+        # 获取任务达人的位置信息（使用和approve_service_application相同的逻辑）
+        location = None
+        featured_expert = await db.get(models.FeaturedTaskExpert, service.expert_id)
+        if featured_expert and featured_expert.location:
+            location = featured_expert.location.strip() if featured_expert.location else None
+        
+        # 如果 FeaturedTaskExpert 没有 location，从 User 表获取 residence_city
+        if not location:
+            from app import async_crud
+            expert_user = await async_crud.async_user_crud.get_user_by_id(db, service.expert_id)
+            if expert_user and expert_user.residence_city:
+                location = expert_user.residence_city.strip() if expert_user.residence_city else None
+        
+        # 如果仍然没有 location，使用默认值 "线上"
+        if not location:
+            location = "线上"
+        # 如果 location 是 "Online" 或 "线上"（不区分大小写），统一为 "线上"
+        elif location.lower() in ["online", "线上"]:
+            location = "线上"
+        
+        # 确定任务价格
+        price = new_application.final_price
+        
+        # 确定任务截止日期
+        if service.has_time_slots and time_slot:
+            # 使用时间段的结束时间作为任务截止日期
+            task_deadline = time_slot.slot_end_datetime
+        elif deadline:
+            task_deadline = deadline
+        else:
+            # 默认7天后
+            task_deadline = models.get_utc_time() + timedelta(days=7)
+        
+        # 处理图片（JSONB类型，直接使用list）
+        images_list = service.images if service.images else None
+        
+        # 创建任务（任务达人服务创建的任务等级为 expert）
+        new_task = models.Task(
+            title=service.service_name,
+            description=service.description,
+            deadline=task_deadline,
+            is_flexible=application_data.is_flexible or 0,
+            reward=price,
+            base_reward=service.base_price,
+            agreed_reward=price,
+            currency=application_data.currency or service.currency,
+            location=location,
+            task_type="其他",
+            task_level="expert",
+            poster_id=current_user.id,  # 申请用户是发布人
+            taker_id=service.expert_id,  # 任务达人接收方
+            status="in_progress",
+            images=images_list,
+            accepted_at=models.get_utc_time()
+        )
+        
+        db.add(new_task)
+        await db.flush()  # 获取任务ID
+        
+        # 更新申请记录，关联任务ID
+        new_application.task_id = new_task.id
+        await db.commit()
+        await db.refresh(new_task)
+        
+        # 发送通知给申请用户（任务已创建）
+        from app.task_notifications import send_service_application_approved_notification
+        try:
+            await send_service_application_approved_notification(
+                db=db,
+                applicant_id=current_user.id,
+                expert_id=service.expert_id,
+                task_id=new_task.id,
+                service_name=service.service_name
+            )
+        except Exception as e:
+            logger.error(f"Failed to send notification: {e}")
+    else:
+        # 13. 发送通知给任务达人（需要批准）
+        from app.task_notifications import send_service_application_notification
+        try:
+            await send_service_application_notification(
+                db=db,
+                expert_id=service.expert_id,
+                applicant_id=current_user.id,
+                service_id=service_id,
+                service_name=service.service_name,
+                negotiated_price=application_data.negotiated_price,
+                service_description=service.description,
             base_price=service.base_price,
             application_message=application_data.application_message,
             currency=application_data.currency or service.currency,

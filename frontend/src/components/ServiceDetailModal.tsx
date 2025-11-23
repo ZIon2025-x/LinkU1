@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic } from '../api';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
+import { TimeHandlerV2 } from '../utils/timeUtils';
 
 interface ServiceDetailModalProps {
   isOpen: boolean;
@@ -39,13 +40,16 @@ interface ServiceDetail {
 interface TimeSlot {
   id: number;
   service_id: number;
-  slot_date: string;
-  start_time: string;
-  end_time: string;
+  slot_start_datetime?: string;  // UTC时间格式：YYYY-MM-DDTHH:MM:SS+00:00
+  slot_end_datetime?: string;  // UTC时间格式：YYYY-MM-DDTHH:MM:SS+00:00
+  slot_date: string;  // 日期格式：YYYY-MM-DD（向后兼容）
+  start_time: string;  // 时间格式：HH:MM:SS（向后兼容）
+  end_time: string;  // 时间格式：HH:MM:SS（向后兼容）
   price_per_participant: number;
   max_participants: number;
   current_participants: number;
   is_available: boolean;
+  is_expired?: boolean;  // 时间段是否已过期
 }
 
 interface ExpertInfo {
@@ -154,9 +158,14 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
         params.end_date = futureDate.toISOString().split('T')[0];
       }
       const slots = await getServiceTimeSlotsPublic(serviceId, params);
-      setTimeSlots(Array.isArray(slots) ? slots : []);
+      console.log('加载的时间段数据:', slots); // 调试日志
+      console.log('时间段数量:', Array.isArray(slots) ? slots.length : 0); // 调试日志
+      const slotsArray = Array.isArray(slots) ? slots : [];
+      console.log('过滤后的时间段（is_available=true）:', slotsArray.filter((s: any) => s.is_available !== false)); // 调试日志
+      setTimeSlots(slotsArray);
     } catch (err: any) {
       console.error('加载时间段失败:', err);
+      console.error('错误详情:', err.response?.data); // 调试日志
       message.error('加载时间段失败');
     } finally {
       setLoadingTimeSlots(false);
@@ -246,7 +255,13 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
         time_slot_id: selectedTimeSlotId || undefined,
       });
       
-      message.success('申请已提交，等待任务达人处理');
+      // 检查是否自动批准（不议价且选择了时间段）
+      const isAutoApproved = !isNegotiateChecked && service?.has_time_slots && selectedTimeSlotId;
+      if (isAutoApproved) {
+        message.success('申请已通过，任务已创建！');
+      } else {
+        message.success('申请已提交，等待任务达人处理');
+      }
       setShowApplyModal(false);
       setApplyMessage('');
       setNegotiatedPrice(undefined);
@@ -438,35 +453,42 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                     }}>
                       {/* 按日期分组显示时间段 */}
                       {(() => {
-                        // 按日期分组
+                        // 按日期分组（使用UTC时间转换为英国时间）
                         const slotsByDate: { [key: string]: TimeSlot[] } = {};
                         timeSlots
-                          .filter(slot => slot.is_available)
+                          // 注意：不再过滤is_available，让已满的时间段也能显示
                           .sort((a, b) => {
-                            // 先按日期排序
-                            if (a.slot_date !== b.slot_date) {
-                              return a.slot_date.localeCompare(b.slot_date);
-                            }
-                            // 同一天按开始时间排序
-                            return a.start_time.localeCompare(b.start_time);
+                            // 使用UTC时间排序
+                            const aStart = a.slot_start_datetime || (a.slot_date + 'T' + a.start_time + 'Z');
+                            const bStart = b.slot_start_datetime || (b.slot_date + 'T' + b.start_time + 'Z');
+                            return aStart.localeCompare(bStart);
                           })
                           .forEach(slot => {
-                            if (!slotsByDate[slot.slot_date]) {
-                              slotsByDate[slot.slot_date] = [];
+                            // 使用UTC时间转换为英国时间获取日期
+                            const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                            const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+                              slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+                              'YYYY-MM-DD',
+                              'Europe/London'
+                            );
+                            if (!slotsByDate[slotDateUK]) {
+                              slotsByDate[slotDateUK] = [];
                             }
-                            slotsByDate[slot.slot_date].push(slot);
+                            slotsByDate[slotDateUK].push(slot);
                           });
 
                         const dates = Object.keys(slotsByDate).sort();
                         
                         return dates.map(date => {
                           const slots = slotsByDate[date];
-                          const dateObj = new Date(date);
-                          const formattedDate = dateObj.toLocaleDateString('zh-CN', { 
-                            month: 'long', 
-                            day: 'numeric',
-                            weekday: 'short'
-                          });
+                          // 使用UTC时间转换为英国时间显示日期
+                          const firstSlot = slots[0];
+                          const dateStr = firstSlot.slot_start_datetime || firstSlot.slot_date;
+                          const formattedDate = TimeHandlerV2.formatUtcToLocal(
+                            dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00Z`,
+                            'YYYY年MM月DD日 ddd',
+                            'Europe/London'
+                          );
                           
                           return (
                             <div key={date} style={{ marginBottom: '20px' }}>
@@ -487,26 +509,43 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                               }}>
                                 {slots.map((slot) => {
                                   const isFull = slot.current_participants >= slot.max_participants;
+                                  const isExpired = slot.is_expired === true; // 时间段已过期
+                                  const isDisabled = isFull || isExpired; // 已满或已过期都不可用
                                   const availableSpots = slot.max_participants - slot.current_participants;
+                                  
+                                  // 使用UTC时间转换为英国时间显示
+                                  const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                                  const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                                  const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                    startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                                    'HH:mm',
+                                    'Europe/London'
+                                  );
+                                  const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                    endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                                    'HH:mm',
+                                    'Europe/London'
+                                  );
                                   
                                   return (
                                     <div
                                       key={slot.id}
                                       style={{
                                         padding: '12px',
-                                        border: `2px solid ${isFull ? '#e2e8f0' : '#cbd5e0'}`,
+                                        border: `2px solid ${isDisabled ? '#e2e8f0' : '#cbd5e0'}`,
                                         borderRadius: '8px',
-                                        background: isFull ? '#f7fafc' : '#fff',
-                                        opacity: isFull ? 0.7 : 1,
+                                        background: isDisabled ? '#f7fafc' : '#fff',
+                                        opacity: isDisabled ? 0.7 : 1,
                                       }}
                                     >
                                       <div style={{ 
                                         fontWeight: 600, 
-                                        color: '#1a202c', 
+                                        color: isExpired ? '#9ca3af' : '#1a202c', 
                                         marginBottom: '6px',
                                         fontSize: '14px',
                                       }}>
-                                        {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+                                        {startTimeUK} - {endTimeUK}
+                                        {isExpired && <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ef4444' }}>(已过期)</span>}
                                       </div>
                                       <div style={{ 
                                         fontSize: '13px', 
@@ -796,40 +835,76 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                         overflowY: 'auto',
                       }}>
                         {timeSlots
-                          .filter(slot => slot.slot_date === selectedDate && slot.is_available)
+                          .filter((slot: any) => {
+                            // 确保slot_date格式匹配（可能是YYYY-MM-DD或带时间）
+                            const slotDateStr = slot.slot_date ? slot.slot_date.split('T')[0] : '';
+                            const selectedDateStr = selectedDate ? selectedDate.split('T')[0] : '';
+                            const isDateMatch = slotDateStr === selectedDateStr;
+                            const isAvailable = slot.is_available !== false; // 允许undefined/null
+                            console.log('时间段过滤:', {
+                              slot_id: slot.id,
+                              slot_date: slot.slot_date,
+                              slotDateStr,
+                              selectedDate,
+                              selectedDateStr,
+                              isDateMatch,
+                              is_available: slot.is_available,
+                              isAvailable,
+                              passed: isDateMatch && isAvailable
+                            }); // 调试日志
+                            return isDateMatch && isAvailable;
+                          })
                           .map((slot) => {
                             const isFull = slot.current_participants >= slot.max_participants;
+                            const isExpired = slot.is_expired === true; // 时间段已过期
+                            const isDisabled = isFull || isExpired; // 已满或已过期都不可选
                             const isSelected = selectedTimeSlotId === slot.id;
+                            
+                            // 使用UTC时间转换为英国时间显示
+                            const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                            const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                            const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                              startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                              'HH:mm',
+                              'Europe/London'
+                            );
+                            const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                              endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                              'HH:mm',
+                              'Europe/London'
+                            );
+                            
                             return (
                               <button
                                 key={slot.id}
-                                onClick={() => !isFull && setSelectedTimeSlotId(slot.id)}
-                                disabled={isFull}
+                                onClick={() => !isDisabled && setSelectedTimeSlotId(slot.id)}
+                                disabled={isDisabled}
                                 style={{
                                   padding: '12px',
-                                  border: `2px solid ${isSelected ? '#3b82f6' : isFull ? '#e2e8f0' : '#cbd5e0'}`,
+                                  border: `2px solid ${isSelected ? '#3b82f6' : isDisabled ? '#e2e8f0' : '#cbd5e0'}`,
                                   borderRadius: '8px',
-                                  background: isSelected ? '#eff6ff' : isFull ? '#f7fafc' : '#fff',
-                                  cursor: isFull ? 'not-allowed' : 'pointer',
+                                  background: isSelected ? '#eff6ff' : isDisabled ? '#f7fafc' : '#fff',
+                                  cursor: isDisabled ? 'not-allowed' : 'pointer',
                                   textAlign: 'left',
                                   transition: 'all 0.2s',
-                                  opacity: isFull ? 0.6 : 1,
+                                  opacity: isDisabled ? 0.6 : 1,
                                 }}
                                 onMouseEnter={(e) => {
-                                  if (!isFull) {
+                                  if (!isDisabled) {
                                     e.currentTarget.style.borderColor = '#3b82f6';
                                     e.currentTarget.style.background = '#eff6ff';
                                   }
                                 }}
                                 onMouseLeave={(e) => {
                                   if (!isSelected) {
-                                    e.currentTarget.style.borderColor = isFull ? '#e2e8f0' : '#cbd5e0';
-                                    e.currentTarget.style.background = isFull ? '#f7fafc' : '#fff';
+                                    e.currentTarget.style.borderColor = isDisabled ? '#e2e8f0' : '#cbd5e0';
+                                    e.currentTarget.style.background = isDisabled ? '#f7fafc' : '#fff';
                                   }
                                 }}
                               >
-                                <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
-                                  {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+                                <div style={{ fontWeight: 600, color: isExpired ? '#9ca3af' : '#1a202c', marginBottom: '4px' }}>
+                                  {startTimeUK} - {endTimeUK}
+                                  {isExpired && <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ef4444' }}>(已过期)</span>}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#718096' }}>
                                   {service.currency} {slot.price_per_participant.toFixed(2)} / 人
