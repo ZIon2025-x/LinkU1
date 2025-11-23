@@ -22,7 +22,8 @@ from app.schemas import (
     TaskRewardDistributeCustomRequest, TaskParticipantRewardOut
 )
 from app.utils.task_id_utils import parse_task_id, format_task_id
-from app.deps import get_current_admin, get_current_user_secure_sync_csrf
+from app.deps import get_current_user_secure_sync_csrf
+from app.separate_auth_deps import get_current_admin
 from app.utils.time_utils import get_utc_time
 from app.models import TaskExpertService, TaskExpert
 
