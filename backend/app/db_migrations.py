@@ -88,20 +88,24 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 raw_conn = conn.connection.dbapi_connection
                 
                 # 使用 psycopg2 的 execute 方法执行 SQL
-                # 使用 execute_batch 或逐语句执行以确保正确处理
+                # psycopg2 可以正确处理 DO $$ ... END $$; 块
                 with raw_conn.cursor() as cursor:
-                    # 使用 psycopg2 的 execute 方法，它会自动处理多语句
-                    # 在 autocommit 模式下，每个语句自动提交
+                    # 使用 execute 方法执行整个 SQL 文件
+                    # psycopg2 会自动处理多语句和 DO 块
                     cursor.execute(sql_content)
                     raw_conn.commit()
+                    logger.info("✅ 使用 psycopg2 成功执行迁移")
+                    execution_time = int((time.time() - start_time) * 1000)
+                    return True, execution_time
             except (AttributeError, Exception) as e:
                 # 如果 psycopg2 方式失败，记录错误并使用 SQLAlchemy 方式
                 logger.debug(f"psycopg2 执行失败，使用 SQLAlchemy 方式: {e}")
                 # 如果不是 psycopg2 连接，回退到 SQLAlchemy 方式
-                # 简单处理：按分号分割，但跳过注释行
+                # 改进的 SQL 解析：正确处理 DO $$ ... END $$; 块
                 statements = []
                 current_statement = []
                 in_do_block = False
+                do_block_depth = 0  # 跟踪 DO $$ 块的嵌套深度
                 
                 for line in sql_content.split('\n'):
                     stripped = line.strip()
@@ -110,16 +114,29 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                     if not stripped or stripped.startswith('--'):
                         continue
                     
-                    # 检测 DO $$ 块
-                    if 'DO $$' in stripped.upper():
+                    # 检测 DO $$ 块开始
+                    if 'DO $$' in stripped.upper() and not in_do_block:
                         in_do_block = True
+                        do_block_depth = 1
                     
                     current_statement.append(line)
                     
-                    # 如果行以分号结尾，结束当前语句
-                    if stripped.endswith(';'):
-                        if in_do_block and 'END $$;' in stripped.upper():
+                    # 检测 DO $$ 块结束
+                    if in_do_block:
+                        # 检查是否包含 END $$;
+                        if 'END $$;' in stripped.upper():
                             in_do_block = False
+                            do_block_depth = 0
+                            # DO 块结束，保存整个块
+                            statement = '\n'.join(current_statement).strip()
+                            if statement:
+                                statements.append(statement)
+                            current_statement = []
+                        # 在 DO 块内，不按分号分割
+                        continue
+                    
+                    # 不在 DO 块内，按分号分割
+                    if stripped.endswith(';'):
                         statement = '\n'.join(current_statement).strip()
                         if statement:
                             statements.append(statement)
