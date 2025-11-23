@@ -2129,15 +2129,61 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* 时间段选择（仅当服务有时间段时显示） */}
+              {/* 固定时间段服务提示（仅当服务有时间段时显示） */}
               {(() => {
                 const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
                 return selectedService?.has_time_slots;
               })() && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                    选择时间段 <span style={{ color: '#dc3545' }}>*</span>
-                  </label>
+                  <div style={{ 
+                    marginBottom: '12px', 
+                    padding: '12px', 
+                    background: '#f0f9ff', 
+                    border: '1px solid #bae6fd', 
+                    borderRadius: '8px' 
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#0369a1', marginBottom: '4px' }}>
+                      ℹ️ 固定时间段服务
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#075985', lineHeight: '1.5' }}>
+                      此服务为固定时间段服务。任务创建后，系统会根据服务配置自动生成所有时间段。
+                      用户申请参与任务时，将选择具体的时间段。
+                    </div>
+                    {(() => {
+                      const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                      if (selectedService) {
+                        return (
+                          <div style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '4px' }}>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>
+                              时间段配置：{selectedService.time_slot_start_time?.substring(0, 5) || '09:00'} - {selectedService.time_slot_end_time?.substring(0, 5) || '18:00'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>
+                              每个时间段时长：{selectedService.time_slot_duration_minutes || 60} 分钟
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>
+                              每个时间段最多：{selectedService.participants_per_slot || 1} 人
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                  
+                  {/* 可选：预览时间段（不强制选择，仅用于查看） */}
+                  <details style={{ marginBottom: '12px' }}>
+                    <summary style={{ 
+                      cursor: 'pointer', 
+                      fontSize: '13px', 
+                      color: '#718096',
+                      padding: '8px',
+                      background: '#f7fafc',
+                      borderRadius: '6px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      预览时间段（可选，点击展开）
+                    </summary>
+                    <div style={{ marginTop: '8px' }}>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#718096' }}>
                       选择日期
@@ -2152,6 +2198,10 @@ const TaskExpertDashboard: React.FC = () => {
                           selected_time_slot_date: date,
                           selected_time_slot_id: undefined, // 切换日期时重置时间段选择
                         });
+                        // 加载该日期的时间段用于预览
+                        if (date && createMultiTaskForm.service_id) {
+                          loadTimeSlotsForCreateTask(createMultiTaskForm.service_id);
+                        }
                       }}
                       min={new Date().toISOString().split('T')[0]}
                       style={{
@@ -2161,7 +2211,6 @@ const TaskExpertDashboard: React.FC = () => {
                         borderRadius: '6px',
                         fontSize: '14px',
                       }}
-                      required
                     />
                   </div>
                   
@@ -2306,7 +2355,13 @@ const TaskExpertDashboard: React.FC = () => {
                       })()}
                     </div>
                   )}
-                  <div style={{ 
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              {/* 其他表单字段 */}
+              <div style={{ 
                     marginTop: '12px', 
                     padding: '12px', 
                     background: '#e0f2fe', 
@@ -2581,22 +2636,10 @@ const TaskExpertDashboard: React.FC = () => {
                       return;
                     }
                     
-                    // 验证时间段选择（如果服务有时间段）
+                    // 验证参与者数量（如果服务有时间段）
                     if (selectedService.has_time_slots) {
-                      if (!createMultiTaskForm.selected_time_slot_date) {
-                        message.error('请选择日期');
-                        return;
-                      }
-                      if (!createMultiTaskForm.selected_time_slot_id) {
-                        message.error('请选择时间段');
-                        return;
-                      }
-                      // 验证最大参与者数不能超过时间段的最大参与者数
-                      const selectedTimeSlot = availableTimeSlots.find(slot => slot.id === createMultiTaskForm.selected_time_slot_id);
-                      if (selectedTimeSlot && createMultiTaskForm.max_participants > selectedTimeSlot.max_participants) {
-                        message.error(`最多参与者数不能超过时间段的最大参与者数（${selectedTimeSlot.max_participants}人）`);
-                        return;
-                      }
+                      // 固定时间段服务：验证最大参与者数不能超过服务的每个时间段最大参与者数
+                      // 注意：任务达人创建任务时不需要选择具体时间段，时间段由用户申请时选择
                       if (selectedService.participants_per_slot && createMultiTaskForm.max_participants > selectedService.participants_per_slot) {
                         message.error(`最多参与者数不能超过服务的每个时间段最大参与者数（${selectedService.participants_per_slot}人）`);
                         return;
@@ -2673,12 +2716,13 @@ const TaskExpertDashboard: React.FC = () => {
                         taskData: taskData
                       });
                       
-                      // 如果服务有时间段，使用时间段信息；否则使用截至日期
-                      if (selectedService.has_time_slots && createMultiTaskForm.selected_time_slot_id) {
-                        // 使用时间段创建任务，不需要截至日期
-                        // 时间段信息已经在 timeSlotConfig 中
+                      // 如果服务有时间段，使用时间段配置；否则使用截至日期
+                      if (selectedService.has_time_slots) {
+                        // 固定时间段服务：不需要截至日期，时间段信息已经在 timeSlotConfig 中
+                        // 注意：任务达人创建任务时不需要选择具体时间段，系统会根据服务配置自动生成所有时间段
+                        // 用户申请时才会选择具体的时间段
                       } else {
-                        // 使用截至日期
+                        // 非固定时间段服务：使用截至日期
                         taskData.deadline = new Date(createMultiTaskForm.deadline).toISOString();
                       }
                       
