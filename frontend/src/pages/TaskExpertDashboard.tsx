@@ -274,6 +274,14 @@ const TaskExpertDashboard: React.FC = () => {
     }
   }, [activeTab]);
 
+  // 当打开创建多人任务模态框时，确保服务列表已加载
+  useEffect(() => {
+    if (showCreateMultiTaskModal && services.length === 0 && !loadingServices) {
+      console.log('打开创建多人任务模态框，但服务列表为空，开始加载服务列表...');
+      loadServices();
+    }
+  }, [showCreateMultiTaskModal]);
+
   const loadData = async () => {
     try {
       const userData = await fetchCurrentUser();
@@ -345,9 +353,13 @@ const TaskExpertDashboard: React.FC = () => {
   const loadServices = async () => {
     setLoadingServices(true);
     try {
+      // 获取所有服务（包括active和inactive），但在创建任务时只显示active的
       const data = await getMyTaskExpertServices();
+      console.log('服务列表API返回数据:', data);
       // API返回的数据结构可能是 { items: [...] } 或直接是数组
       const servicesList = Array.isArray(data) ? data : (data.items || []);
+      console.log('解析后的服务列表:', servicesList);
+      console.log('active服务数量:', servicesList.filter((s: any) => s.status === 'active').length);
       
       // 从后端返回的服务数据中提取时间段信息
       // 后端直接返回 has_time_slots 等字段，不需要嵌套在 time_slot_config 中
