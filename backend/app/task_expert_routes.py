@@ -356,7 +356,7 @@ async def create_service(
     
     await db.commit()
     await db.refresh(new_service)
-    return new_service
+    return schemas.TaskExpertServiceOut.from_orm(new_service)
 
 
 @task_expert_router.get("/me/services", response_model=schemas.PaginatedResponse)
@@ -485,7 +485,7 @@ async def update_service(
     
     await db.commit()
     await db.refresh(service)
-    return service
+    return schemas.TaskExpertServiceOut.from_orm(service)
 
 
 @task_expert_router.delete("/me/services/{service_id}")
@@ -906,7 +906,7 @@ async def get_service_detail(
     await db.commit()
     await db.refresh(service)
     
-    return service
+    return schemas.TaskExpertServiceOut.from_orm(service)
 
 
 # 获取任务达人的公开服务列表（放在 /services/{service_id} 之后，避免路由冲突）
@@ -942,7 +942,7 @@ async def get_expert_services(
         return {
             "expert_id": expert_id,
             "expert_name": expert.expert_name or (expert.user.name if hasattr(expert, "user") and expert.user else None),
-            "services": [schemas.TaskExpertServiceOut.model_validate(s).model_dump() for s in services],
+            "services": [schemas.TaskExpertServiceOut.from_orm(s) for s in services],
         }
     except HTTPException:
         raise

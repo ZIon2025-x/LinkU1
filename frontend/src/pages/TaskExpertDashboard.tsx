@@ -363,17 +363,24 @@ const TaskExpertDashboard: React.FC = () => {
     setLoadingRecentActivities(true);
     try {
       // 获取任务达人创建的最新的多人任务（最近5个）
+      // 注意：后端可能不支持 order_by 参数，我们获取所有任务后在前端排序
       const response = await api.get('/api/tasks', {
         params: {
           expert_creator_id: user.id,
           is_multi_participant: true,
-          limit: 5,
-          order_by: 'created_at',
-          order: 'desc'
+          limit: 20  // 获取更多任务，然后在前端排序和限制
         }
       });
       const tasks = response.data.tasks || response.data || [];
-      setRecentActivities(tasks);
+      // 按创建时间降序排序，取前5个
+      const sortedTasks = tasks
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, 5);
+      setRecentActivities(sortedTasks);
     } catch (err: any) {
       console.error('加载最近达人活动失败:', err);
       // 不显示错误消息，因为这不是关键功能

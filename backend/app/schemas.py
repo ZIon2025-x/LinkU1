@@ -303,6 +303,12 @@ class TaskOut(TaskBase):
     images: Optional[List[str]] = None  # 图片URL列表
     points_reward: Optional[int] = None  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
     is_flexible: Optional[int] = 0  # 是否灵活时间（1=灵活，无截止日期；0=有截止日期）
+    # 多人任务相关字段
+    is_multi_participant: Optional[bool] = False
+    expert_creator_id: Optional[str] = None
+    # 时间段相关字段（如果任务有固定时间段）
+    time_slot_start_time: Optional[str] = None  # 时间格式：HH:MM:SS
+    time_slot_end_time: Optional[str] = None  # 时间格式：HH:MM:SS
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -334,6 +340,37 @@ class TaskOut(TaskBase):
         else:
             self.reward = float(self.reward)
         return self
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """自定义ORM转换，处理时间字段"""
+        from datetime import time
+        data = {
+            "id": obj.id,
+            "poster_id": obj.poster_id,
+            "taker_id": obj.taker_id,
+            "status": obj.status,
+            "task_level": obj.task_level,
+            "created_at": obj.created_at,
+            "is_public": obj.is_public,
+            "images": obj.images,
+            "points_reward": obj.points_reward,
+            "is_flexible": obj.is_flexible,
+            "title": obj.title,
+            "description": obj.description,
+            "deadline": obj.deadline,
+            "reward": float(obj.reward) if obj.reward else 0.0,
+            "base_reward": float(obj.base_reward) if obj.base_reward else None,
+            "agreed_reward": float(obj.agreed_reward) if obj.agreed_reward else None,
+            "currency": obj.currency,
+            "location": obj.location,
+            "task_type": obj.task_type,
+            "is_multi_participant": getattr(obj, 'is_multi_participant', False),
+            "expert_creator_id": getattr(obj, 'expert_creator_id', None),
+            "time_slot_start_time": obj.time_slot_start_time.isoformat() if hasattr(obj, 'time_slot_start_time') and isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if hasattr(obj, 'time_slot_start_time') and obj.time_slot_start_time else None),
+            "time_slot_end_time": obj.time_slot_end_time.isoformat() if hasattr(obj, 'time_slot_end_time') and isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if hasattr(obj, 'time_slot_end_time') and obj.time_slot_end_time else None),
+        }
+        return cls(**data)
 
     class Config:
         from_attributes = True
@@ -1417,6 +1454,31 @@ class TaskExpertServiceOut(BaseModel):
     time_slot_start_time: Optional[str] = None
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """自定义ORM转换，处理时间字段"""
+        from datetime import time
+        data = {
+            "id": obj.id,
+            "expert_id": obj.expert_id,
+            "service_name": obj.service_name,
+            "description": obj.description,
+            "images": obj.images,
+            "base_price": float(obj.base_price),
+            "currency": obj.currency,
+            "status": obj.status,
+            "display_order": obj.display_order,
+            "view_count": obj.view_count,
+            "application_count": obj.application_count,
+            "created_at": obj.created_at,
+            "has_time_slots": obj.has_time_slots,
+            "time_slot_duration_minutes": obj.time_slot_duration_minutes,
+            "time_slot_start_time": obj.time_slot_start_time.isoformat() if isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if obj.time_slot_start_time else None),
+            "time_slot_end_time": obj.time_slot_end_time.isoformat() if isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if obj.time_slot_end_time else None),
+            "participants_per_slot": obj.participants_per_slot,
+        }
+        return cls(**data)
     
     class Config:
         from_attributes = True
