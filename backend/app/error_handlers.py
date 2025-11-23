@@ -6,12 +6,36 @@
 import logging
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import traceback
 
 logger = logging.getLogger(__name__)
+
+
+def set_cors_headers(response: Response, request: Request = None):
+    """设置CORS响应头"""
+    if request:
+        origin = request.headers.get("origin")
+        allowed_domains = [
+            "https://link-u1", 
+            "http://localhost", 
+            "https://www.link2ur.com", 
+            "https://api.link2ur.com",
+            "http://localhost:3000",
+            "http://localhost:8080"
+        ]
+        if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+    else:
+        # 如果没有request，设置默认的CORS头
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
 
 
 class SecurityError(Exception):

@@ -2281,11 +2281,20 @@ const TaskExpertDashboard: React.FC = () => {
                             borderRadius: '8px',
                             border: '1px solid #fecaca',
                           }}>
-                            该日期暂无可用时间段
-                            {availableTimeSlots.length > 0 && (
-                              <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
-                                提示：共有 {availableTimeSlots.length} 个时间段，但当前日期没有匹配的时间段
-                              </div>
+                            {availableTimeSlots.length === 0 ? (
+                              <>
+                                该服务还没有生成时间段
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                                  提示：请先在"服务管理"页面批量创建时间段，时间段才会显示在这里
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                该日期暂无可用时间段
+                                <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                                  提示：共有 {availableTimeSlots.length} 个时间段，但当前日期没有匹配的时间段
+                                </div>
+                              </>
                             )}
                           </div>
                         ) : (
