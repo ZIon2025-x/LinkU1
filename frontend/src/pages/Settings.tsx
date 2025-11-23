@@ -246,18 +246,21 @@ const Settings: React.FC = () => {
         }
       }
       
-      // 如果没有要更新的字段，提示用户
-      if (Object.keys(updatePayload).length === 0) {
-        message.info('没有需要更新的信息');
-        return;
+      // 保存个人资料（如果有更新）
+      if (Object.keys(updatePayload).length > 0) {
+        // 使用 api.patch 而不是 fetch，这样能自动处理 Cookie 和 CSRF token
+        await api.patch('/api/users/profile', updatePayload);
       }
-      
-      
-      // 使用 api.patch 而不是 fetch，这样能自动处理 Cookie 和 CSRF token
-      await api.patch('/api/users/profile', updatePayload);
 
-      // 保存任务偏好设置（使用 api.put，自动处理 Cookie 和 CSRF token）
+      // 保存任务偏好设置（总是保存，即使个人资料没有更新）
+      // 使用 api.put，自动处理 Cookie 和 CSRF token
       await api.put('/api/user-preferences', formData.preferences);
+      
+      // 如果既没有更新个人资料，也没有更新偏好，提示用户
+      if (Object.keys(updatePayload).length === 0) {
+        // 偏好已经保存，但为了用户体验，仍然显示成功消息
+        message.success('任务偏好已保存！');
+      }
       
       // ⚠️ 重新加载用户数据以获取最新的数据（使用fetchCurrentUser，利用缓存机制）
       try {
