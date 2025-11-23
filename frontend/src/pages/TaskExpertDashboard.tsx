@@ -227,7 +227,11 @@ const TaskExpertDashboard: React.FC = () => {
       slotsArray.forEach((s: any) => {
         const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
         try {
-          const slotDateUK = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+          let slotDateUK = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+          // 去掉时区后缀 (GMT) 或 (BST)
+          if (slotDateUK.includes(' (GMT)') || slotDateUK.includes(' (BST)')) {
+            slotDateUK = slotDateUK.replace(' (GMT)', '').replace(' (BST)', '');
+          }
           dateDistribution[slotDateUK] = (dateDistribution[slotDateUK] || 0) + 1;
         } catch (e) {
           const dateKey = s.slot_date || 'unknown';
@@ -2316,6 +2320,10 @@ const TaskExpertDashboard: React.FC = () => {
                               'YYYY-MM-DD',
                               'Europe/London'
                             );
+                            // 如果返回的格式包含 " (GMT)"，需要去掉
+                            if (slotDateUK.includes(' (GMT)')) {
+                              slotDateUK = slotDateUK.replace(' (GMT)', '');
+                            }
                           } catch (error) {
                             console.error('日期转换失败:', { slotStartStr, error, slot });
                             return false;
@@ -2345,7 +2353,12 @@ const TaskExpertDashboard: React.FC = () => {
                         const sampleSlotDates = availableTimeSlots.slice(0, 5).map((s: any) => {
                           const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
                           try {
-                            return TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+                            let dateStr = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+                            // 去掉时区后缀
+                            if (dateStr.includes(' (GMT)') || dateStr.includes(' (BST)')) {
+                              dateStr = dateStr.replace(' (GMT)', '').replace(' (BST)', '');
+                            }
+                            return dateStr;
                           } catch {
                             return s.slot_date;
                           }
@@ -2365,7 +2378,12 @@ const TaskExpertDashboard: React.FC = () => {
                             converted_date: (() => {
                               const slotStartStr = s.slot_start_datetime || (s.slot_date + 'T' + s.start_time + 'Z');
                               try {
-                                return TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+                                let dateStr = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+                                // 去掉时区后缀
+                                if (dateStr.includes(' (GMT)') || dateStr.includes(' (BST)')) {
+                                  dateStr = dateStr.replace(' (GMT)', '').replace(' (BST)', '');
+                                }
+                                return dateStr;
                               } catch {
                                 return s.slot_date;
                               }

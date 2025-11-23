@@ -516,14 +516,31 @@ async def update_service(
     # 检查是否从统一时间改为按周几配置，或按周几配置发生了变化
     config_changed = False
     
+    # 检查配置变化：需要深度比较字典内容
+    import json
+    
+    # 情况1：提供了新的按周几配置
     if service_data.weekly_time_slot_config is not None:
-        # 如果提供了新的按周几配置
-        if old_weekly_config != service_data.weekly_time_slot_config:
+        # 使用JSON序列化进行深度比较
+        old_config_str = json.dumps(old_weekly_config, sort_keys=True) if old_weekly_config else None
+        new_config_str = json.dumps(service_data.weekly_time_slot_config, sort_keys=True) if service_data.weekly_time_slot_config else None
+        if old_config_str != new_config_str:
             config_changed = True
-    elif service_data.has_time_slots is not None and service_data.has_time_slots:
-        # 如果从按周几配置改为统一时间配置
-        if old_weekly_config:
+            logger.info(f"检测到按周几配置变化: service_id={service_id}, 旧配置={old_config_str}, 新配置={new_config_str}")
+    
+    # 情况2：从按周几配置改为统一时间配置（提供了has_time_slots=true但没有weekly_time_slot_config）
+    if not config_changed and service_data.has_time_slots is not None and service_data.has_time_slots:
+        if old_weekly_config and service_data.weekly_time_slot_config is None:
+            # 之前有按周几配置，现在改为统一时间配置
             config_changed = True
+            logger.info(f"检测到从按周几配置改为统一时间配置: service_id={service_id}")
+    
+    # 情况3：从统一时间配置改为按周几配置（之前没有weekly_time_slot_config，现在有了）
+    if not config_changed and service_data.weekly_time_slot_config is not None:
+        if not old_weekly_config and old_has_time_slots:
+            # 之前是统一时间配置，现在改为按周几配置
+            config_changed = True
+            logger.info(f"检测到从统一时间配置改为按周几配置: service_id={service_id}")
     
     if config_changed and service.has_time_slots:
         # 需要清理不符合新配置的时间段
