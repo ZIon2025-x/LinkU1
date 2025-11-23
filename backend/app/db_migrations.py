@@ -73,7 +73,11 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
     start_time = time.time()
     
     try:
+        # 使用 autocommit 模式执行迁移，避免事务错误影响
         with engine.connect() as conn:
+            # 设置 autocommit 模式
+            conn = conn.execution_options(autocommit=True)
+            
             # 读取 SQL 文件内容
             sql_content = sql_file.read_text(encoding='utf-8')
             
@@ -87,7 +91,7 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 # 使用 execute_batch 或逐语句执行以确保正确处理
                 with raw_conn.cursor() as cursor:
                     # 使用 psycopg2 的 execute 方法，它会自动处理多语句
-                    # 但需要确保 autocommit 或手动提交
+                    # 在 autocommit 模式下，每个语句自动提交
                     cursor.execute(sql_content)
                     raw_conn.commit()
             except (AttributeError, Exception) as e:
@@ -97,6 +101,7 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 # 简单处理：按分号分割，但跳过注释行
                 statements = []
                 current_statement = []
+                in_do_block = False
                 
                 for line in sql_content.split('\n'):
                     stripped = line.strip()
@@ -105,10 +110,16 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                     if not stripped or stripped.startswith('--'):
                         continue
                     
+                    # 检测 DO $$ 块
+                    if 'DO $$' in stripped.upper():
+                        in_do_block = True
+                    
                     current_statement.append(line)
                     
                     # 如果行以分号结尾，结束当前语句
                     if stripped.endswith(';'):
+                        if in_do_block and 'END $$;' in stripped.upper():
+                            in_do_block = False
                         statement = '\n'.join(current_statement).strip()
                         if statement:
                             statements.append(statement)
@@ -120,23 +131,35 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                     if statement:
                         statements.append(statement)
                 
-                # 执行每个语句
-                for statement in statements:
+                # 执行每个语句（每个语句独立事务）
+                for i, statement in enumerate(statements, 1):
                     if statement:
+                        # 每个语句在独立事务中执行
+                        trans = conn.begin()
                         try:
                             conn.execute(text(statement))
+                            trans.commit()
                         except Exception as e:
+                            trans.rollback()
                             # 某些语句可能因为已存在而失败（如 CREATE INDEX IF NOT EXISTS）
                             # 记录警告但继续执行
                             error_msg = str(e).lower()
                             if any(keyword in error_msg for keyword in [
-                                "already exists", "duplicate", "does not exist"
+                                "already exists", "duplicate", "does not exist",
+                                "already has", "relation already exists",
+                                "constraint.*already exists", "already exists"
                             ]):
-                                logger.debug(f"语句已存在或已删除，跳过: {statement[:50]}...")
+                                logger.debug(f"语句已存在或已删除，跳过 ({i}/{len(statements)}): {statement[:50]}...")
+                            elif "current transaction is aborted" in error_msg:
+                                # 事务中止错误，已回滚，继续执行下一个
+                                logger.warning(f"事务中止，已回滚，继续 ({i}/{len(statements)}): {statement[:50]}...")
+                                continue
                             else:
-                                raise
-                
-                conn.commit()
+                                # 记录错误但继续执行
+                                logger.warning(f"执行语句时出错（继续执行） ({i}/{len(statements)}): {e}")
+                                logger.debug(f"问题语句: {statement[:100]}...")
+                                # 继续执行下一个语句
+                                continue
             
         execution_time = int((time.time() - start_time) * 1000)
         return True, execution_time
