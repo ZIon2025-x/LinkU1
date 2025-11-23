@@ -297,7 +297,7 @@ CREATE TABLE IF NOT EXISTS task_audit_logs (
     user_id VARCHAR(8),
     old_status VARCHAR(20),
     new_status VARCHAR(20),
-    metadata JSONB,
+    audit_metadata JSONB,  -- 使用 audit_metadata 避免与 SQLAlchemy 的 metadata 属性冲突
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_audit_user_or_admin CHECK (
         (user_id IS NOT NULL) OR (admin_id IS NOT NULL)

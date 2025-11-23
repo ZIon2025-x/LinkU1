@@ -1646,7 +1646,7 @@ class TaskAuditLog(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     old_status = Column(String(20), nullable=True)
     new_status = Column(String(20), nullable=True)
-    metadata = Column(JSONB, nullable=True)
+    audit_metadata = Column(JSONB, nullable=True)  # 使用 audit_metadata 避免与 SQLAlchemy 的 metadata 属性冲突
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     
     # 关系
