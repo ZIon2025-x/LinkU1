@@ -34,6 +34,7 @@ import {
   createExpertMultiParticipantTask,
   getServiceTimeSlotsPublic,
   batchCreateServiceTimeSlots,
+  deleteTimeSlotsByDate,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -57,6 +58,7 @@ interface Service {
   time_slot_start_time?: string;
   time_slot_end_time?: string;
   participants_per_slot?: number;
+  weekly_time_slot_config?: { [key: string]: { enabled: boolean; start_time: string; end_time: string } };
 }
 
 interface Application {
@@ -173,6 +175,13 @@ const TaskExpertDashboard: React.FC = () => {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<any[]>([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   
+  // 时间段管理相关状态
+  const [showTimeSlotManagement, setShowTimeSlotManagement] = useState(false);
+  const [selectedServiceForTimeSlot, setSelectedServiceForTimeSlot] = useState<Service | null>(null);
+  const [timeSlotManagementSlots, setTimeSlotManagementSlots] = useState<any[]>([]);
+  const [loadingTimeSlotManagement, setLoadingTimeSlotManagement] = useState(false);
+  const [timeSlotManagementDate, setTimeSlotManagementDate] = useState<string>('');
+  
   // 加载时间段列表（用于创建多人任务）
   const loadTimeSlotsForCreateTask = async (serviceId: number) => {
     setLoadingTimeSlots(true);
@@ -191,10 +200,13 @@ const TaskExpertDashboard: React.FC = () => {
       const slotsArray = Array.isArray(slots) ? slots : [];
       console.log('时间段详情:', slotsArray.map((s: any) => ({
         id: s.id,
+        slot_start_datetime: s.slot_start_datetime,
+        slot_end_datetime: s.slot_end_datetime,
         slot_date: s.slot_date,
         start_time: s.start_time,
         end_time: s.end_time,
         is_available: s.is_available,
+        is_expired: s.is_expired,
         current_participants: s.current_participants,
         max_participants: s.max_participants,
       }))); // 调试日志
@@ -325,6 +337,60 @@ const TaskExpertDashboard: React.FC = () => {
   const handleEditService = (service: Service) => {
     setEditingService(service);
     setShowServiceModal(true);
+  };
+
+  const handleManageTimeSlots = async (service: Service) => {
+    setSelectedServiceForTimeSlot(service);
+    setShowTimeSlotManagement(true);
+    // 加载该服务的所有时间段（未来30天）
+    await loadTimeSlotManagement(service.id);
+  };
+
+  const loadTimeSlotManagement = async (serviceId: number) => {
+    setLoadingTimeSlotManagement(true);
+    try {
+      const today = new Date();
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 30);
+      const params = {
+        start_date: today.toISOString().split('T')[0],
+        end_date: futureDate.toISOString().split('T')[0],
+      };
+      const slots = await getServiceTimeSlotsPublic(serviceId, params);
+      const slotsArray = Array.isArray(slots) ? slots : [];
+      // 按日期分组
+      const groupedByDate: { [date: string]: any[] } = {};
+      slotsArray.forEach((slot: any) => {
+        const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+        const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+          slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+          'YYYY-MM-DD',
+          'Europe/London'
+        );
+        if (!groupedByDate[slotDateUK]) {
+          groupedByDate[slotDateUK] = [];
+        }
+        groupedByDate[slotDateUK].push(slot);
+      });
+      setTimeSlotManagementSlots(slotsArray);
+    } catch (err: any) {
+      console.error('加载时间段失败:', err);
+      message.error('加载时间段失败');
+      setTimeSlotManagementSlots([]);
+    } finally {
+      setLoadingTimeSlotManagement(false);
+    }
+  };
+
+  const handleDeleteTimeSlotsByDate = async (serviceId: number, targetDate: string) => {
+    try {
+      await deleteTimeSlotsByDate(serviceId, targetDate);
+      message.success(`已删除 ${targetDate} 的所有时间段`);
+      // 重新加载时间段
+      await loadTimeSlotManagement(serviceId);
+    } catch (err: any) {
+      message.error(err.response?.data?.detail || '删除失败');
+    }
   };
 
   const handleDeleteService = async (serviceId: number) => {
@@ -1486,11 +1552,25 @@ const TaskExpertDashboard: React.FC = () => {
                         : createMultiTaskForm.max_participants,
                     });
                     
-                    // 如果服务有时间段，加载时间段列表
+                    // 如果服务有时间段，加载时间段列表并设置默认日期
                     if (selectedService?.has_time_slots && e.target.value) {
-                      loadTimeSlotsForCreateTask(parseInt(e.target.value));
+                      const serviceId = parseInt(e.target.value);
+                      // 设置默认日期为今天
+                      const today = new Date().toISOString().split('T')[0];
+                      setCreateMultiTaskForm({
+                        ...createMultiTaskForm,
+                        selected_time_slot_date: today,
+                        selected_time_slot_id: undefined, // 重置时间段选择
+                      });
+                      // 加载时间段列表
+                      loadTimeSlotsForCreateTask(serviceId);
                     } else {
                       setAvailableTimeSlots([]);
+                      setCreateMultiTaskForm({
+                        ...createMultiTaskForm,
+                        selected_time_slot_date: undefined,
+                        selected_time_slot_id: undefined,
+                      });
                     }
                   }}
                   style={{
@@ -2234,6 +2314,222 @@ const TaskExpertDashboard: React.FC = () => {
         />
       )}
 
+      {/* 时间段管理弹窗 */}
+      {showTimeSlotManagement && selectedServiceForTimeSlot && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setShowTimeSlotManagement(false);
+            setSelectedServiceForTimeSlot(null);
+            setTimeSlotManagementSlots([]);
+            setTimeSlotManagementDate('');
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '900px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                管理时间段 - {selectedServiceForTimeSlot.service_name}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowTimeSlotManagement(false);
+                  setSelectedServiceForTimeSlot(null);
+                  setTimeSlotManagementSlots([]);
+                  setTimeSlotManagementDate('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 删除特定日期的时间段 */}
+            <div style={{ marginBottom: '24px', padding: '16px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde68a' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#92400e' }}>
+                🗑️ 删除特定日期的时间段
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <input
+                  type="date"
+                  value={timeSlotManagementDate}
+                  onChange={(e) => setTimeSlotManagementDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!timeSlotManagementDate) {
+                      message.warning('请选择要删除的日期');
+                      return;
+                    }
+                    if (!window.confirm(`确定要删除 ${timeSlotManagementDate} 的所有时间段吗？`)) {
+                      return;
+                    }
+                    await handleDeleteTimeSlotsByDate(selectedServiceForTimeSlot.id, timeSlotManagementDate);
+                  }}
+                  disabled={!timeSlotManagementDate || loadingTimeSlotManagement}
+                  style={{
+                    padding: '8px 16px',
+                    background: timeSlotManagementDate && !loadingTimeSlotManagement ? '#ef4444' : '#cbd5e0',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: timeSlotManagementDate && !loadingTimeSlotManagement ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                  }}
+                >
+                  删除该日期所有时间段
+                </button>
+              </div>
+              <div style={{ fontSize: '12px', color: '#92400e', marginTop: '8px' }}>
+                💡 提示：删除后，该日期的时间段将不再显示。如果该日期有已申请的时间段，将无法删除。
+              </div>
+            </div>
+
+            {/* 时间段列表（按日期分组） */}
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>
+                时间段列表（未来30天）
+              </div>
+              {loadingTimeSlotManagement ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              ) : timeSlotManagementSlots.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
+                  暂无时间段，请先批量创建时间段
+                </div>
+              ) : (
+                <div>
+                  {(() => {
+                    // 按日期分组
+                    const groupedByDate: { [date: string]: any[] } = {};
+                    timeSlotManagementSlots.forEach((slot: any) => {
+                      const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                      const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+                        slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+                        'YYYY-MM-DD',
+                        'Europe/London'
+                      );
+                      if (!groupedByDate[slotDateUK]) {
+                        groupedByDate[slotDateUK] = [];
+                      }
+                      groupedByDate[slotDateUK].push(slot);
+                    });
+                    
+                    // 按日期排序
+                    const sortedDates = Object.keys(groupedByDate).sort();
+                    
+                    return sortedDates.map((dateStr) => {
+                      const daySlots = groupedByDate[dateStr];
+                      const hasDeleted = daySlots.some((s: any) => s.is_manually_deleted);
+                      const hasFull = daySlots.some((s: any) => s.current_participants >= s.max_participants);
+                      
+                      return (
+                        <div
+                          key={dateStr}
+                          style={{
+                            marginBottom: '16px',
+                            padding: '16px',
+                            border: `1px solid ${hasDeleted ? '#fecaca' : '#e2e8f0'}`,
+                            borderRadius: '8px',
+                            background: hasDeleted ? '#fef2f2' : '#fff',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: hasDeleted ? '#991b1b' : '#1a202c' }}>
+                              {dateStr} {hasDeleted && '(已删除)'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#718096' }}>
+                              {daySlots.length} 个时间段
+                            </div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px' }}>
+                            {daySlots.map((slot: any) => {
+                              const isFull = slot.current_participants >= slot.max_participants;
+                              const isExpired = slot.is_expired === true;
+                              const isDeleted = slot.is_manually_deleted === true;
+                              
+                              const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                              const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                              const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                                'HH:mm',
+                                'Europe/London'
+                              );
+                              const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                                'HH:mm',
+                                'Europe/London'
+                              );
+                              
+                              return (
+                                <div
+                                  key={slot.id}
+                                  style={{
+                                    padding: '10px',
+                                    border: `1px solid ${isDeleted ? '#fecaca' : isFull || isExpired ? '#fde68a' : '#cbd5e0'}`,
+                                    borderRadius: '6px',
+                                    background: isDeleted ? '#fee2e2' : isFull || isExpired ? '#fef3c7' : '#f7fafc',
+                                    fontSize: '12px',
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600, marginBottom: '4px', color: isDeleted ? '#991b1b' : '#1a202c' }}>
+                                    {startTimeUK} - {endTimeUK}
+                                  </div>
+                                  <div style={{ color: '#64748b', fontSize: '11px' }}>
+                                    {slot.current_participants}/{slot.max_participants} 人
+                                    {isFull && ' (已满)'}
+                                    {isExpired && ' (已过期)'}
+                                    {isDeleted && ' (已删除)'}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 议价弹窗 */}
       {showCounterOfferModal && selectedApplication && (
         <div
@@ -2521,6 +2817,17 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     time_slot_start_time: '09:00',
     time_slot_end_time: '18:00',
     participants_per_slot: 1,
+    // 按周几设置时间段配置
+    use_weekly_config: false, // 是否使用按周几配置
+    weekly_time_slot_config: {
+      monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+      sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+    } as { [key: string]: { enabled: boolean; start_time: string; end_time: string } },
   });
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
@@ -2539,6 +2846,34 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         ? service.time_slot_end_time.substring(0, 5) 
         : '18:00';
       const participantsPerSlot = service.participants_per_slot || 1;
+      const weeklyConfig = service.weekly_time_slot_config || null;
+      const useWeeklyConfig = !!weeklyConfig;
+      
+      // 初始化按周几配置
+      const defaultWeeklyConfig = {
+        monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+        tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+        wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+        thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+        friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+        saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+        sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+      };
+      
+      // 如果服务有按周几配置，使用它；否则使用默认配置
+      const weeklyTimeSlotConfig = useWeeklyConfig ? {
+        ...defaultWeeklyConfig,
+        ...Object.keys(defaultWeeklyConfig).reduce((acc, day) => {
+          const dayKey = day as keyof typeof defaultWeeklyConfig;
+          const dayConfig = (weeklyConfig as any)?.[day] || defaultWeeklyConfig[dayKey];
+          acc[dayKey] = {
+            enabled: dayConfig.enabled !== false,
+            start_time: dayConfig.start_time ? dayConfig.start_time.substring(0, 5) : defaultWeeklyConfig[dayKey].start_time,
+            end_time: dayConfig.end_time ? dayConfig.end_time.substring(0, 5) : defaultWeeklyConfig[dayKey].end_time,
+          };
+          return acc;
+        }, {} as typeof defaultWeeklyConfig)
+      } : defaultWeeklyConfig;
       
       setFormData({
         service_name: service.service_name,
@@ -2552,6 +2887,8 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         time_slot_start_time: timeSlotStart,
         time_slot_end_time: timeSlotEnd,
         participants_per_slot: participantsPerSlot,
+        use_weekly_config: useWeeklyConfig,
+        weekly_time_slot_config: weeklyTimeSlotConfig,
       });
     } else {
       // 新建服务时重置时间段字段
@@ -2567,6 +2904,16 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         time_slot_start_time: '09:00',
         time_slot_end_time: '18:00',
         participants_per_slot: 1,
+        use_weekly_config: false,
+        weekly_time_slot_config: {
+          monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+          sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+        },
       });
     }
   }, [service]);
@@ -2632,12 +2979,33 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       if (formData.has_time_slots) {
         submitData.has_time_slots = true;
         submitData.time_slot_duration_minutes = formData.time_slot_duration_minutes;
-        // 将时间格式转换为 "HH:MM:SS"
-        submitData.time_slot_start_time = formData.time_slot_start_time + ':00';
-        submitData.time_slot_end_time = formData.time_slot_end_time + ':00';
         submitData.participants_per_slot = formData.participants_per_slot;
+        
+        // 如果使用按周几配置
+        if (formData.use_weekly_config) {
+          // 构建按周几配置（将时间格式转换为 "HH:MM:SS"）
+          const weeklyConfig: { [key: string]: { enabled: boolean; start_time: string; end_time: string } } = {};
+          Object.keys(formData.weekly_time_slot_config).forEach(day => {
+            const dayConfig = formData.weekly_time_slot_config[day];
+            weeklyConfig[day] = {
+              enabled: dayConfig.enabled,
+              start_time: dayConfig.start_time + ':00',
+              end_time: dayConfig.end_time + ':00',
+            };
+          });
+          submitData.weekly_time_slot_config = weeklyConfig;
+          // 不设置统一的开始/结束时间
+          submitData.time_slot_start_time = undefined;
+          submitData.time_slot_end_time = undefined;
+        } else {
+          // 使用统一的开始/结束时间（向后兼容）
+          submitData.time_slot_start_time = formData.time_slot_start_time + ':00';
+          submitData.time_slot_end_time = formData.time_slot_end_time + ':00';
+          submitData.weekly_time_slot_config = null;
+        }
       } else {
         submitData.has_time_slots = false;
+        submitData.weekly_time_slot_config = null;
       }
       
       let savedServiceId: number;
@@ -3018,47 +3386,11 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
           
           {formData.has_time_slots && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              {/* 时间段时长和参与者数量（两种模式都需要） */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    开始时间
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.time_slot_start_time}
-                    onChange={(e) => setFormData({ ...formData, time_slot_start_time: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    结束时间
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.time_slot_end_time}
-                    onChange={(e) => setFormData({ ...formData, time_slot_end_time: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    时间段时长（分钟）
+                    时间段时长（分钟）*
                   </label>
                   <input
                     type="number"
@@ -3077,7 +3409,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    每个时间段最多参与者
+                    每个时间段最多参与者 *
                   </label>
                   <input
                     type="number"
@@ -3095,9 +3427,180 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                   />
                 </div>
               </div>
+
+              {/* 配置模式选择 */}
+              <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <input
+                    type="radio"
+                    id="time_slot_mode_unified"
+                    name="time_slot_mode"
+                    checked={!formData.use_weekly_config}
+                    onChange={() => setFormData({ ...formData, use_weekly_config: false })}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
+                  />
+                  <label htmlFor="time_slot_mode_unified" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                    统一时间（每天相同时间）
+                  </label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type="radio"
+                    id="time_slot_mode_weekly"
+                    name="time_slot_mode"
+                    checked={formData.use_weekly_config}
+                    onChange={() => setFormData({ ...formData, use_weekly_config: true })}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
+                  />
+                  <label htmlFor="time_slot_mode_weekly" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                    按周几设置（不同工作日可设置不同时间）
+                  </label>
+                </div>
+              </div>
+
+              {/* 统一时间模式 */}
+              {!formData.use_weekly_config && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                        开始时间 *
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.time_slot_start_time}
+                        onChange={(e) => setFormData({ ...formData, time_slot_start_time: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                        结束时间 *
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.time_slot_end_time}
+                        onChange={(e) => setFormData({ ...formData, time_slot_end_time: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 按周几设置模式 */}
+              {formData.use_weekly_config && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px', color: '#4a5568' }}>
+                    设置每周的工作时间：
+                  </div>
+                  {[
+                    { key: 'monday', label: '周一' },
+                    { key: 'tuesday', label: '周二' },
+                    { key: 'wednesday', label: '周三' },
+                    { key: 'thursday', label: '周四' },
+                    { key: 'friday', label: '周五' },
+                    { key: 'saturday', label: '周六' },
+                    { key: 'sunday', label: '周日' },
+                  ].map(({ key, label }) => {
+                    const dayKey = key as keyof typeof formData.weekly_time_slot_config;
+                    const dayConfig = formData.weekly_time_slot_config[dayKey];
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '80px 1fr 1fr 1fr',
+                          gap: '8px',
+                          alignItems: 'center',
+                          marginBottom: '10px',
+                          padding: '10px',
+                          background: dayConfig.enabled ? '#f0f9ff' : '#f7fafc',
+                          borderRadius: '6px',
+                          border: `1px solid ${dayConfig.enabled ? '#bfdbfe' : '#e2e8f0'}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={dayConfig.enabled}
+                            onChange={(e) => {
+                              const newConfig = { ...formData.weekly_time_slot_config };
+                              newConfig[key] = {
+                                ...dayConfig,
+                                enabled: e.target.checked,
+                              };
+                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
+                            }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', marginRight: '6px' }}
+                          />
+                          <label style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: dayConfig.enabled ? '#1e40af' : '#64748b' }}>
+                            {label}
+                          </label>
+                        </div>
+                        <div>
+                          <input
+                            type="time"
+                            value={dayConfig.start_time}
+                            onChange={(e) => {
+                              const newConfig = { ...formData.weekly_time_slot_config };
+                              newConfig[key] = { ...dayConfig, start_time: e.target.value };
+                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
+                            }}
+                            disabled={!dayConfig.enabled}
+                            style={{
+                              width: '100%',
+                              padding: '6px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              background: dayConfig.enabled ? '#fff' : '#f1f5f9',
+                              cursor: dayConfig.enabled ? 'text' : 'not-allowed',
+                            }}
+                          />
+                        </div>
+                        <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b' }}>至</div>
+                        <div>
+                          <input
+                            type="time"
+                            value={dayConfig.end_time}
+                            onChange={(e) => {
+                              const newConfig = { ...formData.weekly_time_slot_config };
+                              newConfig[key] = { ...dayConfig, end_time: e.target.value };
+                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
+                            }}
+                            disabled={!dayConfig.enabled}
+                            style={{
+                              width: '100%',
+                              padding: '6px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              background: dayConfig.enabled ? '#fff' : '#f1f5f9',
+                              cursor: dayConfig.enabled ? 'text' : 'not-allowed',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               
-              <div style={{ fontSize: '12px', color: '#718096', marginTop: '8px' }}>
-                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。您可以在服务创建后批量创建时间段。
+              <div style={{ fontSize: '12px', color: '#718096', marginTop: '12px' }}>
+                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。您可以在服务创建后批量创建时间段，系统会根据您的配置自动生成。
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
 import datetime
 from datetime import timezone
 from typing import Optional
+from dateutil.relativedelta import relativedelta
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -1887,6 +1888,236 @@ def cleanup_all_old_tasks_files(db: Session):
     }
 
 
+def cleanup_expired_time_slots(db: Session) -> int:
+    """
+    清理过期的时间段（昨天及之前的所有时间段）
+    每天执行一次，删除昨天及之前的过期时间段，保持从今天到下个月的今天的时间段（一个月）
+    删除所有过期的时间段（无论是否有参与者），因为时间段已过期，不再需要
+    """
+    from datetime import timedelta, datetime as dt_datetime, time as dt_time
+    from app.utils.time_utils import get_utc_time, parse_local_as_utc, LONDON
+    
+    try:
+        current_utc = get_utc_time()
+        # 昨天23:59:59（英国时间）转换为UTC
+        yesterday = current_utc.date() - timedelta(days=1)
+        yesterday_end_local = dt_datetime.combine(yesterday, dt_time(23, 59, 59))
+        cutoff_time = parse_local_as_utc(yesterday_end_local, LONDON)
+        
+        # 查找所有过期的时间段（无论是否有参与者）
+        expired_slots = db.query(models.ServiceTimeSlot).filter(
+            models.ServiceTimeSlot.slot_start_datetime < cutoff_time,
+            models.ServiceTimeSlot.is_manually_deleted == False,  # 不删除手动删除的（它们已经被标记为删除）
+        ).all()
+        
+        deleted_count = 0
+        slots_with_participants = 0
+        for slot in expired_slots:
+            try:
+                # 记录有参与者的时间段数量（用于日志）
+                if slot.current_participants > 0:
+                    slots_with_participants += 1
+                db.delete(slot)
+                deleted_count += 1
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"删除过期时间段失败 {slot.id}: {e}")
+        
+        if deleted_count > 0:
+            db.commit()
+            import logging
+            logger = logging.getLogger(__name__)
+            if slots_with_participants > 0:
+                logger.info(f"清理了 {deleted_count} 个过期时间段（昨天及之前的），其中 {slots_with_participants} 个有参与者")
+            else:
+                logger.info(f"清理了 {deleted_count} 个过期时间段（昨天及之前的）")
+        
+        return deleted_count
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"清理过期时间段失败: {e}")
+        db.rollback()
+        return 0
+
+
+def auto_generate_future_time_slots(db: Session) -> int:
+    """
+    自动为所有启用了时间段功能的服务生成下个月的今天的时间段
+    每天执行一次，只生成新的一天，保持从今天到下个月的今天的时间段（一个月）
+    """
+    from datetime import date, timedelta, time as dt_time, datetime as dt_datetime
+    from decimal import Decimal
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    
+    try:
+        # 获取所有启用了时间段功能且状态为active的服务
+        services = db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.has_time_slots == True,
+            models.TaskExpertService.status == 'active',
+        ).all()
+        
+        if not services:
+            return 0
+        
+        total_created = 0
+        today = date.today()
+        # 只生成下个月的今天的时间段（保持一个月）
+        target_date = today + relativedelta(months=1)
+        
+        for service in services:
+            try:
+                # 检查配置
+                has_weekly_config = service.weekly_time_slot_config and isinstance(service.weekly_time_slot_config, dict)
+                
+                if not has_weekly_config:
+                    # 使用旧的统一配置
+                    if not service.time_slot_start_time or not service.time_slot_end_time or not service.time_slot_duration_minutes or not service.participants_per_slot:
+                        continue
+                else:
+                    # 使用新的按周几配置
+                    if not service.time_slot_duration_minutes or not service.participants_per_slot:
+                        continue
+                
+                # 使用服务的base_price作为默认价格
+                price_per_participant = Decimal(str(service.base_price))
+                
+                # 周几名称映射
+                weekday_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+                
+                created_count = 0
+                duration_minutes = service.time_slot_duration_minutes
+                
+                # 只处理目标日期（未来第30天）
+                current_date = target_date
+                
+                # 获取当前日期是周几
+                weekday = current_date.weekday()
+                weekday_name = weekday_names[weekday]
+                
+                # 确定该日期的时间段配置
+                if has_weekly_config:
+                    day_config = service.weekly_time_slot_config.get(weekday_name, {})
+                    if not day_config.get('enabled', False):
+                        # 该周几未启用，跳过这个服务
+                        continue
+                    
+                    slot_start_time_str = day_config.get('start_time', '09:00:00')
+                    slot_end_time_str = day_config.get('end_time', '18:00:00')
+                    
+                    try:
+                        slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                        slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+                    except ValueError:
+                        if len(slot_start_time_str) == 5:
+                            slot_start_time_str += ':00'
+                        if len(slot_end_time_str) == 5:
+                            slot_end_time_str += ':00'
+                        slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                        slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+                else:
+                    slot_start_time = service.time_slot_start_time
+                    slot_end_time = service.time_slot_end_time
+                
+                # 检查该日期是否被手动删除
+                from datetime import datetime as dt_datetime
+                start_local = dt_datetime.combine(current_date, dt_time(0, 0, 0))
+                end_local = dt_datetime.combine(current_date, dt_time(23, 59, 59))
+                start_utc = parse_local_as_utc(start_local, LONDON)
+                end_utc = parse_local_as_utc(end_local, LONDON)
+                
+                deleted_check = db.query(models.ServiceTimeSlot).filter(
+                    models.ServiceTimeSlot.service_id == service.id,
+                    models.ServiceTimeSlot.slot_start_datetime >= start_utc,
+                    models.ServiceTimeSlot.slot_start_datetime <= end_utc,
+                    models.ServiceTimeSlot.is_manually_deleted == True,
+                ).first()
+                
+                if deleted_check:
+                    # 该日期已被手动删除，跳过
+                    continue
+                
+                # 计算该日期的时间段
+                current_time = slot_start_time
+                while current_time < slot_end_time:
+                    # 计算结束时间
+                    total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+                    end_hour = total_minutes // 60
+                    end_minute = total_minutes % 60
+                    if end_hour >= 24:
+                        break
+                    
+                    slot_end = dt_time(end_hour, end_minute)
+                    if slot_end > slot_end_time:
+                        break
+                    
+                    # 转换为UTC时间
+                    slot_start_local = dt_datetime.combine(current_date, current_time)
+                    slot_end_local = dt_datetime.combine(current_date, slot_end)
+                    slot_start_utc = parse_local_as_utc(slot_start_local, LONDON)
+                    slot_end_utc = parse_local_as_utc(slot_end_local, LONDON)
+                    
+                    # 检查是否已存在且未被手动删除
+                    existing = db.query(models.ServiceTimeSlot).filter(
+                        models.ServiceTimeSlot.service_id == service.id,
+                        models.ServiceTimeSlot.slot_start_datetime == slot_start_utc,
+                        models.ServiceTimeSlot.slot_end_datetime == slot_end_utc,
+                        models.ServiceTimeSlot.is_manually_deleted == False,
+                    ).first()
+                    
+                    if not existing:
+                        # 创建新时间段
+                        new_slot = models.ServiceTimeSlot(
+                            service_id=service.id,
+                            slot_start_datetime=slot_start_utc,
+                            slot_end_datetime=slot_end_utc,
+                            price_per_participant=price_per_participant,
+                            max_participants=service.participants_per_slot,
+                            current_participants=0,
+                            is_available=True,
+                            is_manually_deleted=False,
+                        )
+                        db.add(new_slot)
+                        created_count += 1
+                    
+                    # 移动到下一个时间段
+                    total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+                    next_hour = total_minutes // 60
+                    next_minute = total_minutes % 60
+                    if next_hour >= 24:
+                        break
+                    current_time = dt_time(next_hour, next_minute)
+                
+                if created_count > 0:
+                    db.commit()
+                    total_created += created_count
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.info(f"为服务 {service.id} ({service.service_name}) 自动生成了 {created_count} 个时间段（{target_date}）")
+                
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"为服务 {service.id} 自动生成时间段失败: {e}")
+                db.rollback()
+                continue
+        
+        if total_created > 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"总共自动生成了 {total_created} 个时间段（下个月的今天）")
+        
+        return total_created
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"自动生成时间段失败: {e}", exc_info=True)
+        db.rollback()
+        return 0
+
+
 def cleanup_expired_flea_market_items(db: Session):
     """清理超过10天未刷新的跳蚤市场商品（自动删除）"""
     from app.models import FleaMarketItem
@@ -1984,6 +2215,7 @@ def cleanup_flea_market_item_files_for_task(db: Session, task_id: int):
     import json
     import os
     import shutil
+    import logging
     from pathlib import Path
     from urllib.parse import urlparse
     

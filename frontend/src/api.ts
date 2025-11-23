@@ -1628,6 +1628,13 @@ export const batchCreateServiceTimeSlots = async (serviceId: number, params: {
   return res.data;
 };
 
+export const deleteTimeSlotsByDate = async (serviceId: number, targetDate: string) => {
+  const res = await api.delete(`/api/task-experts/me/services/${serviceId}/time-slots/by-date`, {
+    params: { target_date: targetDate }
+  });
+  return res.data;
+};
+
 export const getTaskExpertServices = async (expertId: string, status?: string) => {
   const params = status ? { status } : {};
   const res = await api.get(`/api/task-experts/${expertId}/services`, { params });

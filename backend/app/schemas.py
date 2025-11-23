@@ -1414,9 +1414,10 @@ class TaskExpertServiceCreate(BaseModel):
     # 时间段相关字段
     has_time_slots: bool = False
     time_slot_duration_minutes: Optional[int] = None  # 每个时间段的时长（分钟）
-    time_slot_start_time: Optional[str] = None  # 时间段开始时间（格式：HH:MM:SS）
-    time_slot_end_time: Optional[str] = None  # 时间段结束时间（格式：HH:MM:SS）
+    time_slot_start_time: Optional[str] = None  # 时间段开始时间（格式：HH:MM:SS，向后兼容）
+    time_slot_end_time: Optional[str] = None  # 时间段结束时间（格式：HH:MM:SS，向后兼容）
     participants_per_slot: Optional[int] = None  # 每个时间段最多参与者数量
+    weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
 
 
 class TaskExpertServiceUpdate(BaseModel):
@@ -1433,6 +1434,7 @@ class TaskExpertServiceUpdate(BaseModel):
     time_slot_start_time: Optional[str] = None
     time_slot_end_time: Optional[str] = None
     participants_per_slot: Optional[int] = None
+    weekly_time_slot_config: Optional[dict] = None  # 按周几设置时间段配置
 
 
 class TaskExpertServiceOut(BaseModel):
@@ -1477,6 +1479,7 @@ class TaskExpertServiceOut(BaseModel):
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if obj.time_slot_start_time else None),
             "time_slot_end_time": obj.time_slot_end_time.isoformat() if isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if obj.time_slot_end_time else None),
             "participants_per_slot": obj.participants_per_slot,
+            "weekly_time_slot_config": obj.weekly_time_slot_config,
         }
         return cls(**data)
     
@@ -1514,6 +1517,7 @@ class ServiceTimeSlotOut(BaseModel):
     current_participants: int
     is_available: bool
     is_expired: bool  # 时间段是否已过期（开始时间已过当前时间）
+    is_manually_deleted: bool  # 是否手动删除
     created_at: datetime.datetime
     updated_at: datetime.datetime
     
@@ -1556,9 +1560,10 @@ class ServiceTimeSlotOut(BaseModel):
             "max_participants": obj.max_participants,
             "current_participants": obj.current_participants,
             "is_available": obj.is_available,
-            "is_expired": is_expired,  # 时间段是否已过期
-            "created_at": obj.created_at,
-            "updated_at": obj.updated_at,
+                    "is_expired": is_expired,  # 时间段是否已过期
+                    "is_manually_deleted": obj.is_manually_deleted,
+                    "created_at": obj.created_at,
+                    "updated_at": obj.updated_at,
         }
         return cls(**data)
     

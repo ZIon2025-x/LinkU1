@@ -348,6 +348,7 @@ async def create_service(
         time_slot_start_time=dt_time.fromisoformat(service_data.time_slot_start_time) if service_data.time_slot_start_time else None,
         time_slot_end_time=dt_time.fromisoformat(service_data.time_slot_end_time) if service_data.time_slot_end_time else None,
         participants_per_slot=service_data.participants_per_slot,
+        weekly_time_slot_config=service_data.weekly_time_slot_config,
     )
     db.add(new_service)
     
@@ -474,6 +475,8 @@ async def update_service(
             raise HTTPException(status_code=400, detail="结束时间格式错误，应为HH:MM:SS")
     if service_data.participants_per_slot is not None:
         service.participants_per_slot = service_data.participants_per_slot
+    if service_data.weekly_time_slot_config is not None:
+        service.weekly_time_slot_config = service_data.weekly_time_slot_config
     if service_data.currency is not None:
         service.currency = service_data.currency
     if service_data.status is not None:
@@ -562,7 +565,10 @@ async def create_service_time_slot(
             status_code=400, detail="该服务未启用时间段功能"
         )
     
-    # 解析日期和时间
+    # 解析日期和时间，转换为UTC时间
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime
+    
     try:
         slot_date = date.fromisoformat(time_slot_data.slot_date)
         start_time = dt_time.fromisoformat(time_slot_data.start_time)
@@ -588,26 +594,32 @@ async def create_service_time_slot(
                     detail=f"时间段时长必须为 {service.time_slot_duration_minutes} 分钟"
                 )
         
+        # 将英国时间的日期+时间组合，然后转换为UTC
+        slot_start_local = dt_datetime.combine(slot_date, start_time)
+        slot_end_local = dt_datetime.combine(slot_date, end_time)
+        
+        # 转换为UTC时间
+        slot_start_utc = parse_local_as_utc(slot_start_local, LONDON)
+        slot_end_utc = parse_local_as_utc(slot_end_local, LONDON)
+        
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"日期或时间格式错误: {str(e)}")
     
-    # 检查是否已存在相同的时间段
+    # 检查是否已存在相同的时间段（使用新的datetime字段）
     existing_slot = await db.execute(
         select(models.ServiceTimeSlot)
         .where(models.ServiceTimeSlot.service_id == service_id)
-        .where(models.ServiceTimeSlot.slot_date == slot_date)
-        .where(models.ServiceTimeSlot.start_time == start_time)
-        .where(models.ServiceTimeSlot.end_time == end_time)
+        .where(models.ServiceTimeSlot.slot_start_datetime == slot_start_utc)
+        .where(models.ServiceTimeSlot.slot_end_datetime == slot_end_utc)
     )
     if existing_slot.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="该时间段已存在")
     
-    # 创建时间段
+    # 创建时间段（使用UTC时间）
     new_time_slot = models.ServiceTimeSlot(
         service_id=service_id,
-        slot_date=slot_date,
-        start_time=start_time,
-        end_time=end_time,
+        slot_start_datetime=slot_start_utc,
+        slot_end_datetime=slot_end_utc,
         price_per_participant=time_slot_data.price_per_participant,
         max_participants=time_slot_data.max_participants,
         current_participants=0,
@@ -645,24 +657,33 @@ async def get_service_time_slots(
         models.ServiceTimeSlot.service_id == service_id
     )
     
+    # 日期过滤：将输入的日期转换为UTC datetime范围进行查询
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime, time as dt_time
+    
     if start_date:
         try:
             start = date.fromisoformat(start_date)
-            query = query.where(models.ServiceTimeSlot.slot_date >= start)
+            # 将开始日期的00:00:00转换为UTC
+            start_datetime_local = dt_datetime.combine(start, dt_time(0, 0, 0))
+            start_datetime_utc = parse_local_as_utc(start_datetime_local, LONDON)
+            query = query.where(models.ServiceTimeSlot.slot_start_datetime >= start_datetime_utc)
         except ValueError:
             raise HTTPException(status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD")
     
     if end_date:
         try:
             end = date.fromisoformat(end_date)
-            query = query.where(models.ServiceTimeSlot.slot_date <= end)
+            # 将结束日期的23:59:59转换为UTC
+            end_datetime_local = dt_datetime.combine(end, dt_time(23, 59, 59))
+            end_datetime_utc = parse_local_as_utc(end_datetime_local, LONDON)
+            query = query.where(models.ServiceTimeSlot.slot_start_datetime <= end_datetime_utc)
         except ValueError:
             raise HTTPException(status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD")
     
-    # 按日期和时间排序
+    # 按开始时间排序（使用UTC datetime）
     query = query.order_by(
-        models.ServiceTimeSlot.slot_date.asc(),
-        models.ServiceTimeSlot.start_time.asc()
+        models.ServiceTimeSlot.slot_start_datetime.asc()
     )
     
     result = await db.execute(query)
@@ -768,6 +789,79 @@ async def delete_service_time_slot(
     return {"message": "时间段已删除"}
 
 
+@task_expert_router.delete("/me/services/{service_id}/time-slots/by-date")
+async def delete_time_slots_by_date(
+    service_id: int,
+    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """删除指定日期的所有时间段（标记为手动删除，避免自动重新生成）"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 解析日期
+    try:
+        target_date_obj = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+    
+    # 将目标日期的开始和结束时间转换为UTC进行查询
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime, time as dt_time
+    
+    # 目标日期的00:00:00和23:59:59（英国时间）转换为UTC
+    start_local = dt_datetime.combine(target_date_obj, dt_time(0, 0, 0))
+    end_local = dt_datetime.combine(target_date_obj, dt_time(23, 59, 59))
+    start_utc = parse_local_as_utc(start_local, LONDON)
+    end_utc = parse_local_as_utc(end_local, LONDON)
+    
+    # 查找该日期的所有时间段
+    time_slots = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+        .where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
+        .where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
+        .where(models.ServiceTimeSlot.is_manually_deleted == False)  # 只删除未标记为手动删除的
+    )
+    time_slots = time_slots.scalars().all()
+    
+    if not time_slots:
+        return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
+    
+    # 检查是否有已申请的时间段
+    for slot in time_slots:
+        if slot.current_participants > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{target_date} 有已申请的时间段，无法删除"
+            )
+    
+    # 标记为手动删除（而不是真正删除，避免自动重新生成）
+    deleted_count = 0
+    for slot in time_slots:
+        slot.is_manually_deleted = True
+        slot.is_available = False
+        deleted_count += 1
+    
+    await db.commit()
+    
+    return {
+        "message": f"成功删除 {target_date} 的 {deleted_count} 个时间段",
+        "deleted_count": deleted_count,
+        "target_date": target_date
+    }
+
+
 @task_expert_router.post("/me/services/{service_id}/time-slots/batch-create")
 async def batch_create_service_time_slots(
     service_id: int,
@@ -796,10 +890,21 @@ async def batch_create_service_time_slots(
             status_code=400, detail="该服务未启用时间段功能"
         )
     
-    if not service.time_slot_start_time or not service.time_slot_end_time or not service.time_slot_duration_minutes or not service.participants_per_slot:
-        raise HTTPException(
-            status_code=400, detail="服务的时间段配置不完整"
-        )
+    # 检查配置：优先使用 weekly_time_slot_config，否则使用旧的 time_slot_start_time/time_slot_end_time
+    has_weekly_config = service.weekly_time_slot_config and isinstance(service.weekly_time_slot_config, dict)
+    
+    if not has_weekly_config:
+        # 使用旧的配置方式（向后兼容）
+        if not service.time_slot_start_time or not service.time_slot_end_time or not service.time_slot_duration_minutes or not service.participants_per_slot:
+            raise HTTPException(
+                status_code=400, detail="服务的时间段配置不完整"
+            )
+    else:
+        # 使用新的按周几配置
+        if not service.time_slot_duration_minutes or not service.participants_per_slot:
+            raise HTTPException(
+                status_code=400, detail="服务的时间段配置不完整（缺少时间段时长或参与者数量）"
+            )
     
     # 解析日期
     try:
@@ -816,11 +921,65 @@ async def batch_create_service_time_slots(
     
     created_slots = []
     current_date = start
-    slot_start_time = service.time_slot_start_time
-    slot_end_time = service.time_slot_end_time
     duration_minutes = service.time_slot_duration_minutes
     
+    # 周几名称映射（Python的weekday(): 0=Monday, 6=Sunday）
+    weekday_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    
     while current_date <= end:
+        # 获取当前日期是周几（0=Monday, 6=Sunday）
+        weekday = current_date.weekday()
+        weekday_name = weekday_names[weekday]
+        
+        # 确定该日期的时间段配置
+        if has_weekly_config:
+            # 使用按周几配置
+            day_config = service.weekly_time_slot_config.get(weekday_name, {})
+            if not day_config.get('enabled', False):
+                # 该周几未启用，跳过
+                current_date += timedelta(days=1)
+                continue
+            
+            slot_start_time_str = day_config.get('start_time', '09:00:00')
+            slot_end_time_str = day_config.get('end_time', '18:00:00')
+            
+            # 解析时间字符串
+            try:
+                slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+            except ValueError:
+                # 如果格式不对，尝试添加秒数
+                if len(slot_start_time_str) == 5:  # HH:MM
+                    slot_start_time_str += ':00'
+                if len(slot_end_time_str) == 5:  # HH:MM
+                    slot_end_time_str += ':00'
+                slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+        else:
+            # 使用旧的统一配置
+            slot_start_time = service.time_slot_start_time
+            slot_end_time = service.time_slot_end_time
+        
+        # 检查该日期是否被手动删除（跳过手动删除的日期）
+        start_local = dt_datetime.combine(current_date, dt_time(0, 0, 0))
+        end_local = dt_datetime.combine(current_date, dt_time(23, 59, 59))
+        start_utc = parse_local_as_utc(start_local, LONDON)
+        end_utc = parse_local_as_utc(end_local, LONDON)
+        
+        # 检查该日期是否有手动删除的时间段
+        deleted_check = await db.execute(
+            select(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.service_id == service_id)
+            .where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
+            .where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
+            .where(models.ServiceTimeSlot.is_manually_deleted == True)
+            .limit(1)
+        )
+        if deleted_check.scalar_one_or_none():
+            # 该日期已被手动删除，跳过
+            current_date += timedelta(days=1)
+            continue
+        
         # 计算该日期的时间段
         current_time = slot_start_time
         while current_time < slot_end_time:
@@ -836,7 +995,6 @@ async def batch_create_service_time_slots(
                 break  # 超出服务允许的结束时间
             
             # 将英国时间的日期+时间组合，然后转换为UTC
-            # 创建英国时区的datetime对象
             slot_start_local = dt_datetime.combine(current_date, current_time)
             slot_end_local = dt_datetime.combine(current_date, slot_end)
             
@@ -844,12 +1002,13 @@ async def batch_create_service_time_slots(
             slot_start_utc = parse_local_as_utc(slot_start_local, LONDON)
             slot_end_utc = parse_local_as_utc(slot_end_local, LONDON)
             
-            # 检查是否已存在（使用新的datetime字段）
+            # 检查是否已存在且未被手动删除
             existing = await db.execute(
                 select(models.ServiceTimeSlot)
                 .where(models.ServiceTimeSlot.service_id == service_id)
                 .where(models.ServiceTimeSlot.slot_start_datetime == slot_start_utc)
                 .where(models.ServiceTimeSlot.slot_end_datetime == slot_end_utc)
+                .where(models.ServiceTimeSlot.is_manually_deleted == False)
             )
             if not existing.scalar_one_or_none():
                 # 创建新时间段（使用UTC时间）
@@ -861,6 +1020,7 @@ async def batch_create_service_time_slots(
                     max_participants=service.participants_per_slot,
                     current_participants=0,
                     is_available=True,
+                    is_manually_deleted=False,
                 )
                 db.add(new_slot)
                 created_slots.append(new_slot)

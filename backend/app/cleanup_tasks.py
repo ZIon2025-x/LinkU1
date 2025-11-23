@@ -60,6 +60,12 @@ class CleanupTasks:
             # 清理未使用的临时图片（每天检查一次）
             await self._cleanup_unused_temp_images()
             
+            # 清理过期时间段（每天检查一次）
+            await self._cleanup_expired_time_slots()
+            
+            # 自动生成未来时间段（每天检查一次）
+            await self._auto_generate_future_time_slots()
+            
             logger.info("清理任务完成")
             
         except Exception as e:
@@ -282,6 +288,64 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理未使用临时图片失败: {e}")
+    
+    async def _cleanup_expired_time_slots(self):
+        """清理过期时间段（超过7天且没有参与者的时间段，每天检查一次）"""
+        try:
+            # 检查今天是否已经清理过
+            today = get_utc_time().date()
+            if not hasattr(self, 'last_time_slots_cleanup_date'):
+                self.last_time_slots_cleanup_date = None
+            if self.last_time_slots_cleanup_date == today:
+                # 今天已经清理过，跳过
+                return
+            
+            from app.deps import get_sync_db
+            from app.crud import cleanup_expired_time_slots
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用清理函数
+                cleaned_count = cleanup_expired_time_slots(db)
+                if cleaned_count > 0:
+                    logger.info(f"清理了 {cleaned_count} 个过期时间段")
+                # 更新最后清理日期
+                self.last_time_slots_cleanup_date = today
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"清理过期时间段失败: {e}")
+    
+    async def _auto_generate_future_time_slots(self):
+        """自动为所有启用了时间段功能的服务生成未来30天的时间段（每天检查一次）"""
+        try:
+            # 检查今天是否已经生成过
+            today = get_utc_time().date()
+            if not hasattr(self, 'last_time_slots_generation_date'):
+                self.last_time_slots_generation_date = None
+            if self.last_time_slots_generation_date == today:
+                # 今天已经生成过，跳过
+                return
+            
+            from app.deps import get_sync_db
+            from app.crud import auto_generate_future_time_slots
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 调用生成函数
+                generated_count = auto_generate_future_time_slots(db)
+                if generated_count > 0:
+                    logger.info(f"自动生成了 {generated_count} 个未来时间段")
+                # 更新最后生成日期
+                self.last_time_slots_generation_date = today
+            finally:
+                db.close()
+                
+        except Exception as e:
+            logger.error(f"自动生成时间段失败: {e}")
     
     def stop_cleanup_tasks(self):
         """停止清理任务"""

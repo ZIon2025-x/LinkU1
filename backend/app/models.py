@@ -1370,9 +1370,10 @@ class TaskExpertService(Base):
     # 时间段相关字段
     has_time_slots = Column(Boolean, default=False, nullable=False)  # 是否启用时间段
     time_slot_duration_minutes = Column(Integer, nullable=True)  # 每个时间段的时长（分钟）
-    time_slot_start_time = Column(Time, nullable=True)  # 时间段开始时间（每天）
-    time_slot_end_time = Column(Time, nullable=True)  # 时间段结束时间（每天）
+    time_slot_start_time = Column(Time, nullable=True)  # 时间段开始时间（每天，向后兼容）
+    time_slot_end_time = Column(Time, nullable=True)  # 时间段结束时间（每天，向后兼容）
     participants_per_slot = Column(Integer, nullable=True)  # 每个时间段最多参与者数量
+    weekly_time_slot_config = Column(JSONB, nullable=True)  # 按周几设置时间段配置（JSON格式）
     
     # 关系
     expert = relationship("TaskExpert", back_populates="services")
@@ -1398,6 +1399,7 @@ class ServiceTimeSlot(Base):
     max_participants = Column(Integer, nullable=False)  # 该时间段最多参与者数量
     current_participants = Column(Integer, default=0, nullable=False)  # 当前已报名参与者数量
     is_available = Column(Boolean, default=True, nullable=False)  # 是否可用（可手动关闭某个时间段）
+    is_manually_deleted = Column(Boolean, default=False, nullable=False)  # 是否手动删除（避免自动重新生成）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
