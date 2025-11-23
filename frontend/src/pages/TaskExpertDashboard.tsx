@@ -31,6 +31,7 @@ import {
   rejectExitRequest,
   completeTaskAndDistributeRewardsEqual,
   createExpertMultiParticipantTask,
+  getServiceTimeSlotsPublic,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -133,6 +134,8 @@ const TaskExpertDashboard: React.FC = () => {
     use_custom_discount: boolean;
     reward_applicants: boolean;
     currency: string;
+    selected_time_slot_id?: number;
+    selected_time_slot_date?: string;
   }>({
     service_id: undefined as number | undefined,
     title: '',
@@ -151,6 +154,8 @@ const TaskExpertDashboard: React.FC = () => {
     custom_discount: undefined as number | undefined,
     use_custom_discount: false,
     reward_applicants: false,
+    selected_time_slot_id: undefined as number | undefined,
+    selected_time_slot_date: undefined as string | undefined,
   });
   
   // 存储服务的时间段信息（临时方案，直到后端支持）
@@ -161,6 +166,32 @@ const TaskExpertDashboard: React.FC = () => {
     time_slot_end_time: string;
     participants_per_slot: number;
   }}>({});
+  
+  // 时间段相关状态（用于创建多人任务）
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<any[]>([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  
+  // 加载时间段列表（用于创建多人任务）
+  const loadTimeSlotsForCreateTask = async (serviceId: number) => {
+    setLoadingTimeSlots(true);
+    try {
+      const today = new Date();
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 30);
+      const params = {
+        start_date: today.toISOString().split('T')[0],
+        end_date: futureDate.toISOString().split('T')[0],
+      };
+      const slots = await getServiceTimeSlotsPublic(serviceId, params);
+      setAvailableTimeSlots(Array.isArray(slots) ? slots : []);
+    } catch (err: any) {
+      console.error('加载时间段失败:', err);
+      message.error('加载时间段失败');
+      setAvailableTimeSlots([]);
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -1430,7 +1461,21 @@ const TaskExpertDashboard: React.FC = () => {
                       discount_percentage: undefined, // 重置折扣
                       custom_discount: undefined,
                       use_custom_discount: false,
+                      // 重置时间段选择
+                      selected_time_slot_id: undefined,
+                      selected_time_slot_date: undefined,
+                      // 如果服务有时间段，限制最大参与者数
+                      max_participants: selectedService?.has_time_slots && selectedService?.participants_per_slot 
+                        ? Math.min(createMultiTaskForm.max_participants, selectedService.participants_per_slot)
+                        : createMultiTaskForm.max_participants,
                     });
+                    
+                    // 如果服务有时间段，加载时间段列表
+                    if (selectedService?.has_time_slots && e.target.value) {
+                      loadTimeSlotsForCreateTask(parseInt(e.target.value));
+                    } else {
+                      setAvailableTimeSlots([]);
+                    }
                   }}
                   style={{
                     width: '100%',
@@ -1537,25 +1582,167 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* 截止时间 */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  截止时间 <span style={{ color: '#dc3545' }}>*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={createMultiTaskForm.deadline}
-                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, deadline: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
-                  required
-                />
-              </div>
+              {/* 截止时间（仅当服务没有时间段时显示） */}
+              {!(() => {
+                const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                return selectedService?.has_time_slots;
+              })() && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    截止时间 <span style={{ color: '#dc3545' }}>*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={createMultiTaskForm.deadline}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, deadline: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    required
+                  />
+                </div>
+              )}
+
+              {/* 时间段选择（仅当服务有时间段时显示） */}
+              {(() => {
+                const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                return selectedService?.has_time_slots;
+              })() && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    选择时间段 <span style={{ color: '#dc3545' }}>*</span>
+                  </label>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#718096' }}>
+                      选择日期
+                    </label>
+                    <input
+                      type="date"
+                      value={createMultiTaskForm.selected_time_slot_date || ''}
+                      onChange={(e) => {
+                        const date = e.target.value;
+                        setCreateMultiTaskForm({ 
+                          ...createMultiTaskForm, 
+                          selected_time_slot_date: date,
+                          selected_time_slot_id: undefined, // 切换日期时重置时间段选择
+                        });
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                      required
+                    />
+                  </div>
+                  
+                  {createMultiTaskForm.selected_time_slot_date && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#718096' }}>
+                        选择时间段
+                      </label>
+                      {loadingTimeSlots ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
+                          加载时间段中...
+                        </div>
+                      ) : availableTimeSlots.filter((slot: any) => 
+                        slot.slot_date === createMultiTaskForm.selected_time_slot_date && slot.is_available
+                      ).length === 0 ? (
+                        <div style={{ 
+                          padding: '20px', 
+                          textAlign: 'center', 
+                          color: '#e53e3e',
+                          background: '#fef2f2',
+                          borderRadius: '8px',
+                          border: '1px solid #fecaca',
+                        }}>
+                          该日期暂无可用时间段
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
+                          gap: '12px',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                        }}>
+                          {availableTimeSlots
+                            .filter((slot: any) => 
+                              slot.slot_date === createMultiTaskForm.selected_time_slot_date && 
+                              slot.is_available
+                            )
+                            .map((slot: any) => {
+                              const isFull = slot.current_participants >= slot.max_participants;
+                              const isSelected = createMultiTaskForm.selected_time_slot_id === slot.id;
+                              const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                              
+                              return (
+                                <button
+                                  key={slot.id}
+                                  type="button"
+                                  onClick={() => !isFull && setCreateMultiTaskForm({ 
+                                    ...createMultiTaskForm, 
+                                    selected_time_slot_id: slot.id 
+                                  })}
+                                  disabled={isFull}
+                                  style={{
+                                    padding: '12px',
+                                    border: `2px solid ${isSelected ? '#3b82f6' : isFull ? '#e2e8f0' : '#cbd5e0'}`,
+                                    borderRadius: '8px',
+                                    background: isSelected ? '#eff6ff' : isFull ? '#f7fafc' : '#fff',
+                                    cursor: isFull ? 'not-allowed' : 'pointer',
+                                    textAlign: 'left',
+                                    transition: 'all 0.2s',
+                                    opacity: isFull ? 0.6 : 1,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isFull) {
+                                      e.currentTarget.style.borderColor = '#3b82f6';
+                                      e.currentTarget.style.background = '#eff6ff';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.borderColor = isFull ? '#e2e8f0' : '#cbd5e0';
+                                      e.currentTarget.style.background = isFull ? '#f7fafc' : '#fff';
+                                    }
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px', fontSize: '14px' }}>
+                                    {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#718096', marginBottom: '4px' }}>
+                                    {selectedService?.currency || 'GBP'} {slot.price_per_participant.toFixed(2)} / 人
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: isFull ? '#e53e3e' : '#48bb78' }}>
+                                    {isFull ? '已满' : `${slot.current_participants}/${slot.max_participants} 人`}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div style={{ 
+                    marginTop: '12px', 
+                    padding: '12px', 
+                    background: '#e0f2fe', 
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: '#0369a1',
+                  }}>
+                    ℹ️ 多人活动的最大参与者数不能超过所选时间段的最大参与者数
+                  </div>
+                </div>
+              )}
 
               {/* 位置和类型 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1808,21 +1995,51 @@ const TaskExpertDashboard: React.FC = () => {
                       message.error('请选择关联服务');
                       return;
                     }
-                    if (!createMultiTaskForm.title || !createMultiTaskForm.description || !createMultiTaskForm.deadline) {
+                    if (!createMultiTaskForm.title || !createMultiTaskForm.description) {
                       message.error('请填写完整信息');
                       return;
                     }
+                    
+                    const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                    if (!selectedService) {
+                      message.error('服务不存在');
+                      return;
+                    }
+                    
+                    // 验证时间段选择（如果服务有时间段）
+                    if (selectedService.has_time_slots) {
+                      if (!createMultiTaskForm.selected_time_slot_date) {
+                        message.error('请选择日期');
+                        return;
+                      }
+                      if (!createMultiTaskForm.selected_time_slot_id) {
+                        message.error('请选择时间段');
+                        return;
+                      }
+                      // 验证最大参与者数不能超过时间段的最大参与者数
+                      const selectedTimeSlot = availableTimeSlots.find(slot => slot.id === createMultiTaskForm.selected_time_slot_id);
+                      if (selectedTimeSlot && createMultiTaskForm.max_participants > selectedTimeSlot.max_participants) {
+                        message.error(`最多参与者数不能超过时间段的最大参与者数（${selectedTimeSlot.max_participants}人）`);
+                        return;
+                      }
+                      if (selectedService.participants_per_slot && createMultiTaskForm.max_participants > selectedService.participants_per_slot) {
+                        message.error(`最多参与者数不能超过服务的每个时间段最大参与者数（${selectedService.participants_per_slot}人）`);
+                        return;
+                      }
+                    } else {
+                      // 如果服务没有时间段，需要选择截至日期
+                      if (!createMultiTaskForm.deadline) {
+                        message.error('请选择截至日期');
+                        return;
+                      }
+                    }
+                    
                     if (createMultiTaskForm.min_participants > createMultiTaskForm.max_participants) {
                       message.error('最少参与者不能大于最多参与者');
                       return;
                     }
 
                     try {
-                      const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
-                      if (!selectedService) {
-                        message.error('服务不存在');
-                        return;
-                      }
                       
                       // 检查服务是否有时间段配置（从服务对象或本地状态中获取）
                       const timeSlotConfigFromService = selectedService.has_time_slots 
@@ -1859,7 +2076,6 @@ const TaskExpertDashboard: React.FC = () => {
                       const taskData: any = {
                         title: createMultiTaskForm.title,
                         description: createMultiTaskForm.description,
-                        deadline: new Date(createMultiTaskForm.deadline).toISOString(),
                         location: createMultiTaskForm.location,
                         task_type: createMultiTaskForm.task_type,
                         expert_service_id: createMultiTaskForm.service_id!,
@@ -1868,6 +2084,15 @@ const TaskExpertDashboard: React.FC = () => {
                         completion_rule: 'all',
                         ...timeSlotConfig,
                       };
+                      
+                      // 如果服务有时间段，使用时间段信息；否则使用截至日期
+                      if (selectedService.has_time_slots && createMultiTaskForm.selected_time_slot_id) {
+                        // 使用时间段创建任务，不需要截至日期
+                        // 时间段信息已经在 timeSlotConfig 中
+                      } else {
+                        // 使用截至日期
+                        taskData.deadline = new Date(createMultiTaskForm.deadline).toISOString();
+                      }
                       
                       // 如果勾选了"奖励申请者"，添加奖励相关字段
                       if (createMultiTaskForm.reward_applicants) {

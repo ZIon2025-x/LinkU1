@@ -115,9 +115,9 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       const data = await getTaskExpertServiceDetail(serviceId);
       setService(data);
       
-      // 如果服务启用了时间段，加载时间段列表
+      // 如果服务启用了时间段，加载时间段列表（加载未来30天）
       if (data.has_time_slots) {
-        loadTimeSlots(data.id);
+        loadTimeSlots(data.id, undefined); // 不传日期，加载未来30天
       }
       
       // 加载任务达人信息
@@ -201,17 +201,32 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   const handleSubmitApplication = async () => {
     if (!serviceId || !user) return;
     
-    // 验证截至日期
-    if (!isFlexible && !deadline) {
-      message.error('请选择截至日期或选择灵活模式');
-      return;
-    }
-
     setApplying(true);
     try {
-      // 格式化截至日期
+      // 如果服务启用了时间段，必须选择时间段
+      if (service?.has_time_slots) {
+        if (!selectedDate) {
+          message.error('请选择日期');
+          setApplying(false);
+          return;
+        }
+        if (!selectedTimeSlotId) {
+          message.error('请选择时间段');
+          setApplying(false);
+          return;
+        }
+      } else {
+        // 如果服务未启用时间段，验证截至日期
+        if (!isFlexible && !deadline) {
+          message.error('请选择截至日期或选择灵活模式');
+          setApplying(false);
+          return;
+        }
+      }
+
+      // 格式化截至日期（仅当服务未启用时间段时）
       let deadlineDate: string | undefined = undefined;
-      if (!isFlexible && deadline) {
+      if (!service?.has_time_slots && !isFlexible && deadline) {
         // 将日期时间字符串转换为 ISO 格式
         const date = new Date(deadline);
         if (isNaN(date.getTime())) {
@@ -220,13 +235,6 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
           return;
         }
         deadlineDate = date.toISOString();
-      }
-
-      // 如果服务启用了时间段，必须选择时间段
-      if (service?.has_time_slots && !selectedTimeSlotId) {
-        message.error('请选择时间段');
-        setApplying(false);
-        return;
       }
 
       await applyForService(serviceId, {
@@ -399,6 +407,161 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 </div>
               </div>
 
+              {/* 时间段信息（如果服务启用了时间段） */}
+              {service.has_time_slots && (
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{ marginBottom: '16px', color: '#2d3748', fontSize: '18px', fontWeight: 600 }}>
+                    ⏰ 可用时间段
+                  </h3>
+                  {loadingTimeSlots ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#718096' }}>
+                      加载时间段中...
+                    </div>
+                  ) : timeSlots.length === 0 ? (
+                    <div style={{ 
+                      padding: '20px', 
+                      textAlign: 'center', 
+                      background: '#fef3c7', 
+                      borderRadius: '8px',
+                      color: '#92400e',
+                      border: '1px solid #fde68a',
+                    }}>
+                      暂无可用时间段
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      maxHeight: '400px', 
+                      overflowY: 'auto',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '12px',
+                    }}>
+                      {/* 按日期分组显示时间段 */}
+                      {(() => {
+                        // 按日期分组
+                        const slotsByDate: { [key: string]: TimeSlot[] } = {};
+                        timeSlots
+                          .filter(slot => slot.is_available)
+                          .sort((a, b) => {
+                            // 先按日期排序
+                            if (a.slot_date !== b.slot_date) {
+                              return a.slot_date.localeCompare(b.slot_date);
+                            }
+                            // 同一天按开始时间排序
+                            return a.start_time.localeCompare(b.start_time);
+                          })
+                          .forEach(slot => {
+                            if (!slotsByDate[slot.slot_date]) {
+                              slotsByDate[slot.slot_date] = [];
+                            }
+                            slotsByDate[slot.slot_date].push(slot);
+                          });
+
+                        const dates = Object.keys(slotsByDate).sort();
+                        
+                        return dates.map(date => {
+                          const slots = slotsByDate[date];
+                          const dateObj = new Date(date);
+                          const formattedDate = dateObj.toLocaleDateString('zh-CN', { 
+                            month: 'long', 
+                            day: 'numeric',
+                            weekday: 'short'
+                          });
+                          
+                          return (
+                            <div key={date} style={{ marginBottom: '20px' }}>
+                              <div style={{ 
+                                fontSize: '14px', 
+                                fontWeight: 600, 
+                                color: '#1a202c', 
+                                marginBottom: '12px',
+                                paddingBottom: '8px',
+                                borderBottom: '2px solid #e2e8f0',
+                              }}>
+                                📅 {formattedDate}
+                              </div>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                                gap: '12px',
+                              }}>
+                                {slots.map((slot) => {
+                                  const isFull = slot.current_participants >= slot.max_participants;
+                                  const availableSpots = slot.max_participants - slot.current_participants;
+                                  
+                                  return (
+                                    <div
+                                      key={slot.id}
+                                      style={{
+                                        padding: '12px',
+                                        border: `2px solid ${isFull ? '#e2e8f0' : '#cbd5e0'}`,
+                                        borderRadius: '8px',
+                                        background: isFull ? '#f7fafc' : '#fff',
+                                        opacity: isFull ? 0.7 : 1,
+                                      }}
+                                    >
+                                      <div style={{ 
+                                        fontWeight: 600, 
+                                        color: '#1a202c', 
+                                        marginBottom: '6px',
+                                        fontSize: '14px',
+                                      }}>
+                                        {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: '13px', 
+                                        color: '#059669', 
+                                        marginBottom: '6px',
+                                        fontWeight: 600,
+                                      }}>
+                                        {service.currency} {slot.price_per_participant.toFixed(2)} / 人
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: '12px', 
+                                        color: isFull ? '#e53e3e' : '#48bb78',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}>
+                                        <span>👥</span>
+                                        <span>
+                                          {isFull ? (
+                                            <span style={{ fontWeight: 600 }}>已满 ({slot.current_participants}/{slot.max_participants})</span>
+                                          ) : (
+                                            <span>{slot.current_participants}/{slot.max_participants} 人 ({availableSpots} 个空位)</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                  {service.time_slot_duration_minutes && (
+                    <div style={{ 
+                      marginTop: '12px', 
+                      padding: '12px', 
+                      background: '#e0f2fe', 
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      color: '#0369a1',
+                    }}>
+                      ℹ️ 每个时间段时长：{service.time_slot_duration_minutes} 分钟
+                      {service.time_slot_start_time && service.time_slot_end_time && (
+                        <span style={{ marginLeft: '12px' }}>
+                          每日营业时间：{service.time_slot_start_time.substring(0, 5)} - {service.time_slot_end_time.substring(0, 5)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 申请按钮 */}
               {service.status === 'active' && (
                 <button
@@ -446,8 +609,10 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
               backgroundColor: '#fff',
               borderRadius: '16px',
               padding: '24px',
-              maxWidth: '500px',
+              maxWidth: service.has_time_slots ? '600px' : '500px',
               width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
               position: 'relative',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -463,6 +628,19 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 fontSize: '24px',
                 cursor: 'pointer',
                 color: '#666',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f0f0f0';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
               }}
             >
               ×
@@ -471,6 +649,21 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
             <h2 style={{ marginBottom: '24px', color: '#1a202c', fontSize: '20px', fontWeight: 600 }}>
               申请服务：{service.service_name}
             </h2>
+            
+            {/* 如果有时间段，显示提示 */}
+            {service.has_time_slots && (
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '12px', 
+                background: '#e0f2fe', 
+                borderRadius: '8px',
+                border: '1px solid #bae6fd',
+                fontSize: '14px',
+                color: '#0369a1',
+              }}>
+                ⏰ 此服务需要选择时间段，请先选择日期和时间段
+              </div>
+            )}
 
             {/* 申请留言 */}
             <div style={{ marginBottom: '20px' }}>
