@@ -1597,6 +1597,154 @@ class FleaMarketFavoriteListResponse(BaseModel):
     hasMore: bool
 
 
+# ==================== 多人任务相关Schemas ====================
+
+# 管理员创建官方多人任务
+class MultiParticipantTaskCreate(BaseModel):
+    title: str
+    description: str
+    deadline: Optional[datetime.datetime] = None
+    location: str
+    task_type: str
+    max_participants: int = Field(..., gt=0)
+    min_participants: int = Field(..., gt=0)
+    completion_rule: Literal["all", "min"] = "all"
+    reward_distribution: Literal["equal", "custom"] = "equal"
+    reward_type: Literal["cash", "points", "both"] = "cash"
+    reward: Optional[float] = None  # 现金奖励（reward_type包含cash时必填）
+    points_reward: Optional[int] = None  # 积分奖励（reward_type包含points时必填）
+    currency: str = "GBP"
+    images: Optional[List[str]] = None
+    is_public: bool = True
+    
+    @model_validator(mode='after')
+    def validate_reward_fields(self):
+        """验证奖励字段"""
+        if self.reward_type == "cash":
+            if self.reward is None or self.reward <= 0:
+                raise ValueError("reward must be > 0 when reward_type='cash'")
+            if self.points_reward is not None and self.points_reward > 0:
+                raise ValueError("points_reward must be None or 0 when reward_type='cash'")
+        elif self.reward_type == "points":
+            if self.points_reward is None or self.points_reward <= 0:
+                raise ValueError("points_reward must be > 0 when reward_type='points'")
+            if self.reward is not None and self.reward > 0:
+                raise ValueError("reward must be None when reward_type='points'")
+        elif self.reward_type == "both":
+            if self.reward is None or self.reward <= 0:
+                raise ValueError("reward must be > 0 when reward_type='both'")
+            if self.points_reward is None or self.points_reward <= 0:
+                raise ValueError("points_reward must be > 0 when reward_type='both'")
+        return self
+
+
+# 任务达人创建多人任务
+class ExpertMultiParticipantTaskCreate(BaseModel):
+    title: str
+    description: str
+    expert_service_id: int
+    deadline: Optional[datetime.datetime] = None
+    location: str
+    reward_type: Literal["cash", "points", "both"] = "cash"
+    reward: Optional[float] = None
+    points_reward: Optional[int] = None
+    currency: str = "GBP"
+    max_participants: int = Field(..., gt=0)
+    min_participants: int = Field(..., gt=0)
+    completion_rule: Literal["all", "min"] = "all"
+    reward_distribution: Literal["equal", "custom"] = "equal"
+    is_fixed_time_slot: bool = False
+    time_slot_duration_minutes: Optional[int] = None
+    time_slot_start_time: Optional[str] = None  # TIME格式 "HH:MM:SS"
+    time_slot_end_time: Optional[str] = None
+    participants_per_slot: Optional[int] = None
+    original_price_per_participant: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discounted_price_per_participant: Optional[float] = None
+    images: Optional[List[str]] = None
+    is_public: bool = True
+
+
+# 申请参与多人任务
+class TaskApplyRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=1, max_length=64)  # 必须携带
+    time_slot_id: Optional[int] = None  # 固定时间段服务必填
+    preferred_deadline: Optional[datetime.datetime] = None  # 非固定时间段服务
+    is_flexible_time: Optional[bool] = False  # 非固定时间段服务
+
+
+# 参与者信息
+class TaskParticipantOut(BaseModel):
+    id: int
+    task_id: int
+    user_id: str
+    status: str
+    time_slot_id: Optional[int] = None
+    preferred_deadline: Optional[datetime.datetime] = None
+    is_flexible_time: bool = False
+    planned_reward_amount: Optional[float] = None
+    planned_points_reward: int = 0
+    applied_at: datetime.datetime
+    accepted_at: Optional[datetime.datetime] = None
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+    exit_requested_at: Optional[datetime.datetime] = None
+    exit_reason: Optional[str] = None
+    completion_notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# 提交完成
+class TaskParticipantCompleteRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=1, max_length=64)  # 必须携带
+    completion_notes: Optional[str] = None
+
+
+# 申请退出
+class TaskParticipantExitRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=1, max_length=64)  # 必须携带
+    exit_reason: Optional[str] = None
+
+
+# 分配奖励（平均分配）
+class TaskRewardDistributeEqualRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=1, max_length=64)  # 必须携带
+
+
+# 分配奖励（自定义分配）
+class ParticipantRewardItem(BaseModel):
+    participant_id: int
+    reward_type: Literal["cash", "points", "both"]
+    reward_amount: Optional[float] = None
+    points_amount: Optional[int] = None
+
+
+class TaskRewardDistributeCustomRequest(BaseModel):
+    idempotency_key: str = Field(..., min_length=1, max_length=64)  # 必须携带
+    rewards: List[ParticipantRewardItem]
+
+
+# 奖励信息
+class TaskParticipantRewardOut(BaseModel):
+    id: int
+    task_id: int
+    participant_id: int
+    user_id: str
+    reward_type: str
+    reward_amount: Optional[float] = None
+    points_amount: Optional[int] = None
+    payment_status: str
+    points_status: str
+    paid_at: Optional[datetime.datetime] = None
+    points_credited_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
 # ==================== 商品举报相关Schemas ====================
 
 class FleaMarketReportCreate(BaseModel):

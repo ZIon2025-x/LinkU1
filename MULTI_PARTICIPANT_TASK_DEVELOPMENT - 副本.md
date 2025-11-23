@@ -22,7 +22,7 @@
 - **参与人数限制**：任务可以设置最大参与人数（如：需要7人完成）
 - **参与状态管理**：跟踪每个参与者的状态（已接受、进行中、已完成、退出申请中）
 - **任务完成判定**：可以设置完成条件（如：所有参与者完成、或达到最小完成人数）
-- **奖励机制**：多人任务支持现金、积分、现金+积分三种奖励组合，其中也可以只使用积分奖励，不强制使用现金
+- **积分奖励机制**：多人任务可以只使用积分奖励，不需要现金奖励
 - **退出申请机制**：参与者退出任务需要申请，等待管理员审核
 - **禁止议价**：多人任务不支持议价功能（`allow_negotiation=false`），用户不能对任务价格进行议价
 - **任务达人折扣功能**：虽然多人任务不支持议价，但任务达人可以在发布任务时设置折扣，用于推广服务或填补特定时间段空缺（如：原价10镑，现价8镑，打8折）
@@ -39,62 +39,51 @@
 
 ---
 
-## 🎯 功能范围说明
+## 🎯 MVP 范围说明（v1.0 必须实现）
 
-**版本说明**：当前版本 v1.5 同时支持官方多人任务与任务达人多人任务。所有相关功能（创建、审核、开始、分配奖励等）均已实现。当前版本同时支持现金奖励、积分奖励、现金+积分奖励，以及相应的支付和退款流程。
-
-### 必须实现的功能
+### 本次迭代必须实现的功能
 
 **核心功能**：
-- ✅ 管理员创建官方多人任务（支持现金奖励、积分奖励、现金+积分奖励）
-- ✅ 任务达人发布多人任务（支持固定时间段和非固定时间段服务）
-- ✅ 任务达人设置固定时间段固定人数服务（如麻将服务，每小时一个时间段，每个时间段4人）
-- ✅ 任务达人折扣功能（可以设置折扣推广服务或填补特定时间段空缺）
-- ✅ 用户申请参与（官方任务自动接受，任务达人任务需要审核）
+- ✅ 管理员创建官方多人任务（仅支持积分奖励）
+- ✅ 用户申请参与（官方任务自动接受）
 - ✅ 任务聊天室（申请后自动加入）
 - ✅ 参与者退出申请
-- ✅ 管理员/任务达人批准/拒绝退出申请
-- ✅ 管理员/任务达人踢出参与者
-- ✅ 管理员/任务达人手动开始任务
-- ⚠️ 自动开始功能（达到 min_participants 自动开始）**当前版本不支持，仅支持手动开始，见"任务开始方式"章节**
-- ✅ 条件性迟到加入功能（任务开始后，如果因退出导致当前参与人数 < min_participants，允许补人至 min_participants）
+- ✅ 管理员批准/拒绝退出申请
+- ✅ 管理员手动开始任务（不支持自动开始）
 - ✅ 参与者提交完成
-- ✅ 管理员/任务达人确认完成并分配奖励（支持平均分配和自定义分配）
-- ✅ 现金奖励分配（支持现金支付流程）
-- ✅ 积分奖励分配
-- ✅ 现金+积分奖励分配
-- ✅ 复杂取消和退款流程（支持真实退款/积分回退）
-- **奖励类型说明**：当前版本 v1.5 同时支持现金奖励、积分奖励、现金+积分奖励，以及相应的支付和退款流程
+- ✅ 管理员确认完成并分配奖励（仅支持平均分配积分）
 
 **数据库字段**：
-- ✅ 所有必要字段（包括任务达人相关字段和固定时间段相关字段）
-- ✅ `current_participants`：使用触发器自动维护，提升查询性能（**重要**：此字段是弱一致缓存字段，所有是否可申请/可迟到加入的决策必须使用 `COUNT(*)` 实时查询；`current_participants` 只用于列表展示或统计场景）
-- ✅ `planned_reward_amount` / `planned_points_reward`：在参与者表中存储计划奖励值
+- ✅ 所有必要字段（为未来扩展预留字段，但业务逻辑暂不使用）
+- ⚠️ `current_participants`：MVP阶段可以不存，实时 `COUNT(*)`
+- ⚠️ `planned_reward_amount` / `planned_points_reward`：MVP阶段可以不存，仅在奖励分配时计算
+
+**限制条件**：
+- ❌ 不支持现金奖励（仅支持积分奖励）
+- ❌ 不支持自定义奖励分配（仅支持平均分配）
+- ❌ 不支持迟到加入（任务开始后禁止新成员申请）
+- ❌ 不支持自动开始（仅管理员手动开始）
+- ❌ 不支持普通用户发布多人任务（仅管理员）
+
+### 未来扩展（不在本次迭代内）
+
+以下功能在文档中已设计，但**不在 v1.0 实现范围**：
+- 任务达人发布多人任务（v1.0 仅支持管理员发布）
+- 任务达人设置固定时间段固定人数服务（v1.0 暂不支持）
+- 自动开始功能（达到 min_participants 自动开始）
+- 迟到加入功能（任务进行中补招）
+- 现金奖励或现金+积分奖励
+- 自定义奖励分配
+- 复杂取消和退款流程（v1.0 仅支持基础取消）
+
+**实现建议**：
+- 数据库字段可以提前预留，但业务逻辑和测试优先只实现 MVP 功能
+- 这样可以大大减少第一次上线的状态组合，测试工作量也会小很多
+- 后续版本再逐步打开扩展功能
 
 ---
 
 ## 🗄️ 数据库模型设计
-
-**⚠️ 任务ID格式规范**：
-
-**数据库主键 vs 业务展示ID**：
-- **数据库主键**：`tasks.id` 为数据库自增主键（`INTEGER PRIMARY KEY`），所有任务统一使用整数ID（如：1234）
-- **业务展示ID**：前端展示和API返回时格式化为带前缀的字符串ID
-  - **官方任务（管理员发布）**：`O + 数字`（如：数据库ID 1234 → 展示ID `O1234`）
-  - **任务达人任务**：`E + 数字`（如：数据库ID 1234 → 展示ID `E1234`）
-  - **普通单人任务**：保持原有ID格式（纯数字，如：`1234`）
-
-**API接口中的task_id参数**：
-- **路径参数**：`/api/tasks/{task_id}` 中的 `{task_id}` 可以接受：
-  - 格式化ID（`O1234`、`E1234`）或纯数字ID（`1234`）
-  - 后端需要解析为数字ID进行数据库查询
-- **实现方式**：使用 `parse_task_id(task_id: str | int) -> int` 函数解析，提取数字部分
-
-**前端返回**：
-- 所有任务列表和详情接口返回时，使用 `format_task_id(db_id: int, is_official: bool, is_expert: bool) -> str` 函数格式化
-- 如：数据库ID 1234 → 前端返回 `O1234` 或 `E1234`
-
-**优势**：通过ID前缀可以快速识别任务类型，便于关联查询、调试和性能优化
 
 ### 1. 修改 Task 表
 
@@ -102,34 +91,19 @@
 
 **发布者和接收者处理**（重要业务逻辑）：
 - **任务达人发布的多人任务**（`created_by_expert=true`）：
-  - **商业服务任务**（`reward_type='cash'`）：
-    - **任务达人是接收者（taker_id）**：任务达人提供服务，用户付费，所以任务达人是收钱的一方
-    - **用户是参与者（task_participants）**：申请参与的用户是付费方，存储在 `task_participants` 表中
-    - **poster_id**：可以设置为系统用户ID或NULL（根据业务需求，任务达人作为服务提供者，不是传统意义上的"发布者"）
-    - **示例**：麻将服务，任务达人提供麻将桌和服务，用户付费参与，任务达人收钱
-  - **协作积分任务**（`reward_type='points'` 或 `reward_type='both'`）：
-    - **taker_id**：应设置为 NULL 或指定平台账户（此类任务是平台发奖励，达人帮平台完成任务）
-    - **用户是参与者（task_participants）**：完成任务后获得积分奖励，存储在 `task_participants` 表中
-    - **示例**：团队协作任务，平台发布积分奖励，任务达人组织用户完成任务，用户获得积分奖励
+  - **任务达人是接收者（taker_id）**：任务达人提供服务，用户付费，所以任务达人是收钱的一方
+  - **用户是参与者（task_participants）**：申请参与的用户是付费方，存储在 `task_participants` 表中
+  - **poster_id**：可以设置为系统用户ID或NULL（根据业务需求，任务达人作为服务提供者，不是传统意义上的"发布者"）
+  - **示例**：麻将服务，任务达人提供麻将桌和服务，用户付费参与，任务达人收钱
   
 - **管理员发布的多人任务**（`created_by_admin=true`）：
   - **根据任务类型决定角色**：
-    - **发钱任务**（平台/管理员付费给用户）：管理员是发布者（`poster_id`），用户是参与者（`task_participants`），`taker_id` 必须为 NULL
     - **收钱任务**（用户付费给平台/管理员）：管理员是接收者（`taker_id`），用户是参与者（`task_participants`）
-    - **判断依据**：根据任务的 `reward_type` 和业务逻辑判断是收钱还是发钱
-    - **资金流向映射表**：
-      
-      | 任务场景 | reward_type | 用户 → 平台现金流 | 平台 → 用户奖励 | taker_id |
-      |---------|-------------|-----------------|---------------|----------|
-      | 平台发钱任务（奖励） | cash | 无 | 有（现金） | NULL |
-      | 平台积分任务 | points | 无 | 有（积分） | NULL |
-      | 平台收钱活动 | cash | 有 | 无 | 平台/管理员 |
-      | 收钱+返积分活动 | both | 有 | 有（积分） | 平台/管理员 |
-      
-      **重要**：不能单纯依赖 `reward_type` 判断资金流向，需要结合业务逻辑和任务场景。未来可考虑添加 `is_pay_in`/`is_pay_out` 或 `payment_direction` 字段明确标识。
-    - **示例**：
-      - 发钱任务：平台发布的奖励任务，用户完成任务后获得积分/现金奖励，平台发奖励
-      - 收钱任务：平台组织的付费活动，用户付费参与，平台收钱
+    - **发钱任务**（平台/管理员付费给用户）：管理员是发布者（`poster_id`），用户是参与者（`task_participants`），`taker_id` 为 NULL
+  - **判断依据**：根据任务的 `reward_type` 和业务逻辑判断是收钱还是发钱
+  - **示例**：
+    - 收钱任务：平台组织的付费活动，用户付费参与，平台收钱
+    - 发钱任务：平台发布的奖励任务，用户完成任务后获得奖励，平台发钱
 
 - **参与者（task_participants）**：
   - 所有参与者信息存储在 `task_participants` 表中
@@ -147,9 +121,7 @@ ALTER TABLE tasks ADD COLUMN current_participants INTEGER DEFAULT 0;  -- 当前�
 ALTER TABLE tasks ADD COLUMN completion_rule VARCHAR(20) DEFAULT 'all';  -- 完成规则：all（所有人完成）、min（达到最小人数即可）
 ALTER TABLE tasks ADD COLUMN reward_distribution VARCHAR(20) DEFAULT 'equal';  -- 奖励分配方式：equal（平均分配）、custom（自定义）
 ALTER TABLE tasks ADD COLUMN reward_type VARCHAR(20) DEFAULT 'cash';  -- 奖励类型：cash（现金）、points（积分）、both（现金+积分）
-  -- ⚠️ 注意：历史任务可能 reward_type 为空或逻辑不同，迁移时需要给历史数据补 reward_type
 ALTER TABLE tasks ADD COLUMN points_reward BIGINT DEFAULT 0;  -- 积分奖励（如果reward_type包含points）
-  -- ⚠️ 注意：历史任务可能 points_reward 为空，迁移时需要给历史数据补 points_reward
 ALTER TABLE tasks ADD COLUMN auto_accept BOOLEAN DEFAULT false;  -- 是否自动接受申请（官方任务默认true）
 ALTER TABLE tasks ADD COLUMN allow_negotiation BOOLEAN DEFAULT true;  -- 是否允许议价（多人任务默认false）
 ALTER TABLE tasks ADD COLUMN created_by_admin BOOLEAN DEFAULT false;  -- 是否由管理员创建
@@ -166,41 +138,6 @@ ALTER TABLE tasks ADD COLUMN original_price_per_participant DECIMAL(12, 2);  -- 
 ALTER TABLE tasks ADD COLUMN discount_percentage DECIMAL(5, 2);  -- 折扣百分比（0-100，如20表示打8折，仅用于任务达人发布的多人任务）
 ALTER TABLE tasks ADD COLUMN discounted_price_per_participant DECIMAL(12, 2);  -- 折扣后价格（每人，仅用于任务达人发布的多人任务）
 
--- ⚠️ 重要：迁移步骤（必须在添加 CHECK 约束之前完成）
--- 1. 先补数据：给所有历史任务补齐 reward_type、reward、points_reward
---    UPDATE tasks SET reward_type = 'cash' WHERE reward_type IS NULL AND reward > 0;
---    UPDATE tasks SET reward_type = 'points' WHERE reward_type IS NULL AND points_reward > 0;
---    UPDATE tasks SET reward_type = 'both' WHERE reward_type IS NULL AND reward > 0 AND points_reward > 0;
---    UPDATE tasks SET reward_type = 'cash' WHERE reward_type IS NULL;  -- 默认值
---    -- reward_type='points' 时，reward 字段必须为 NULL，不需要设置为 0
---    UPDATE tasks SET points_reward = 0 WHERE points_reward IS NULL AND reward_type = 'cash';
---    -- ⚠️ 关键：reward_type='points' 或 'both' 时，reward 必须为 NULL（不接受 0）
---    UPDATE tasks SET reward = NULL WHERE reward_type = 'points';
---    -- 注意：reward_type='both' 时，reward 应 > 0，不需要设置为 NULL
--- 2. 补齐 max_participants 和 min_participants（必须在添加 CHECK 约束之前完成）
---    UPDATE tasks SET max_participants = 1 WHERE max_participants IS NULL OR max_participants < 1;
---    UPDATE tasks SET min_participants = 1 WHERE min_participants IS NULL OR min_participants < 1;
---    -- 确保 max_participants >= min_participants
---    UPDATE tasks SET min_participants = max_participants WHERE min_participants > max_participants;
--- 3. 回填 current_participants（对已有参与者的任务，按 COUNT(*) 回填，避免迁移后展示数据明显不对）
---    UPDATE tasks t
---    SET current_participants = (
---      SELECT COUNT(*) FROM task_participants tp
---      WHERE tp.task_id = t.id
---      AND tp.status IN ('pending', 'accepted', 'in_progress', 'exit_requested')
---    )
---    WHERE EXISTS (
---      SELECT 1 FROM task_participants tp
---      WHERE tp.task_id = t.id
---      AND tp.status IN ('pending', 'accepted', 'in_progress', 'exit_requested')
---    );
--- 4. 验证数据：确保所有任务都满足以下条件之一：
---    - reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)
---    - reward_type = 'points' AND points_reward > 0 AND reward IS NULL
---    - reward_type = 'both' AND reward > 0 AND points_reward > 0
--- 3. 再添加 CHECK 约束（见下面的 chk_tasks_reward_type_consistency）
--- 4. 在测试环境跑一遍迁移脚本 + 回滚脚本，确保无误后再在生产环境执行
-
 -- 添加数据库级CHECK约束（跨字段验证）
 ALTER TABLE tasks ADD CONSTRAINT chk_tasks_participants_range CHECK (
     max_participants >= min_participants AND min_participants >= 1
@@ -210,36 +147,19 @@ ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_non_negative CHECK (
 );
 ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
     (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
-    (reward_type = 'points' AND points_reward > 0 AND reward IS NULL) OR
+    (reward_type = 'points' AND points_reward > 0 AND (reward IS NULL OR reward = 0)) OR
     (reward_type = 'both' AND reward > 0 AND points_reward > 0)
+);
+-- MVP 限制约束（v1.0 仅支持官方多人积分任务 + 平均分配，未来可能移除）
+ALTER TABLE tasks ADD CONSTRAINT chk_mvp_official_multi_points_equal CHECK (
+    NOT is_multi_participant
+    OR NOT is_official_task
+    OR (reward_type = 'points' AND reward_distribution = 'equal')
 );
 -- 任务达人发布的多人任务必须关联达人服务
 ALTER TABLE tasks ADD CONSTRAINT chk_expert_task_service CHECK (
     NOT created_by_expert OR expert_service_id IS NOT NULL
 );
--- ⚠️ 重要：任务达人商业服务任务的 taker_id 约束（防止 taker_id 为 NULL 或错误）
-ALTER TABLE tasks ADD CONSTRAINT chk_expert_cash_taker CHECK (
-    NOT (created_by_expert AND reward_type='cash') OR taker_id = expert_creator_id
-);
-
--- ⚠️ 重要：为 tasks 表添加 updated_at 自动更新触发器
-CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_tasks_updated_at
-BEFORE UPDATE ON tasks
-FOR EACH ROW EXECUTE FUNCTION set_updated_at();
--- 官方任务和达人任务互斥约束（应用层必须强校验，数据库层提供兜底约束）
-ALTER TABLE tasks ADD CONSTRAINT chk_task_identity CHECK (
-    NOT (is_official_task AND created_by_expert)  -- 官方任务不能同时是达人任务
-);
--- 注意：官方任务和达人任务的完整规则（应用层必须强校验）：
--- 官方任务：is_official_task = true → created_by_admin = true, created_by_expert = false
--- 达人任务：created_by_expert = true → is_official_task = false, expert_service_id IS NOT NULL
 -- 固定时间段服务约束（如果is_fixed_time_slot=true，必须提供所有时间段相关字段；如果is_fixed_time_slot=false，时间段相关字段应为NULL）
 ALTER TABLE tasks ADD CONSTRAINT chk_fixed_time_slot_fields CHECK (
     (NOT is_fixed_time_slot AND time_slot_duration_minutes IS NULL AND time_slot_start_time IS NULL AND time_slot_end_time IS NULL AND participants_per_slot IS NULL)
@@ -272,9 +192,6 @@ ALTER TABLE tasks ADD CONSTRAINT chk_discount_fields CHECK (
 - `is_multi_participant`: 标识是否为多人任务（false表示单人任务，保持向后兼容）
 - `is_official_task`: 标识是否为官方任务（管理员发布的任务，所有人都可以看到和申请）
 - `max_participants`: 最大参与人数，默认1（单人任务）
-  - **固定时间段任务**：建议约定 `max_participants = participants_per_slot`，否则总人数可能远大于 `max_participants`
-  - **固定时间段任务语义**：`max_participants` 在固定时间段模式下主要用于展示，真正的容量以 `participants_per_slot * 时段数量` 为准
-  - **非固定时间段任务**：`max_participants` 表示全局最大参与人数
 - `min_participants`: 最小参与人数，仅用于判定任务是否可以开始。一旦任务开始，即使后续有人退出导致人数 < `min_participants`，任务仍可继续进行
 - `current_participants`: 当前已接受的参与人数（仅作为展示用缓存，业务决策使用实时COUNT(*)查询）
 - `completion_rule`: 
@@ -285,7 +202,7 @@ ALTER TABLE tasks ADD CONSTRAINT chk_discount_fields CHECK (
   - `custom`: 管理员可以自定义每个参与者的奖励
 - `reward_type`: 
   - `cash`: 仅现金奖励（`reward > 0`，`points_reward = 0` 或 NULL）
-  - `points`: 仅积分奖励（`points_reward > 0`，`reward` 必须为 NULL，不接受 0）
+  - `points`: 仅积分奖励（`points_reward > 0`，`reward = 0` 或 NULL）
   - `both`: 现金+积分奖励（`reward > 0` 且 `points_reward > 0`）
   - **重要说明**：当 `reward_type='both'` 时，任务级别同时有现金和积分奖励，但具体到某个参与者，可以只拿现金、只拿积分或两者都拿，按 `task_participant_rewards.reward_type` 为准
 - `points_reward`: 积分奖励数量（如果reward_type包含points）
@@ -326,10 +243,6 @@ CREATE TABLE task_participants (
     time_slot_id INTEGER,  -- 时间段ID（仅用于固定时间段服务，标识参与者申请的时间段）
     preferred_deadline TIMESTAMPTZ,  -- 申请人期望的截止日期（仅用于非固定时间段服务，申请人选择）
     is_flexible_time BOOLEAN DEFAULT false,  -- 是否为灵活时间（仅用于非固定时间段服务，申请人选择，true表示时间灵活，false表示有具体截止日期）
-    -- 性能优化字段（冗余字段，通过触发器或应用层维护，避免JOIN tasks表）
-    is_expert_task BOOLEAN DEFAULT false,  -- 是否为任务达人任务（冗余字段，从tasks.created_by_expert复制，用于加速查询）
-    is_official_task BOOLEAN DEFAULT false,  -- 是否为官方任务（冗余字段，从tasks.is_official_task复制，用于加速查询和ID格式化）
-    expert_creator_id VARCHAR(8),  -- 任务达人ID（冗余字段，从tasks.expert_creator_id复制，用于按任务达人查询参与者）
     planned_reward_amount DECIMAL(12, 2),  -- 该参与者计划应得的现金奖励（如果reward_distribution=custom，仅用于展示，实际值以task_participant_rewards表为准）
     planned_points_reward BIGINT DEFAULT 0,  -- 该参与者计划应得的积分奖励（仅用于展示，实际值以task_participant_rewards表为准）
     applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,  -- 申请时间
@@ -342,11 +255,18 @@ CREATE TABLE task_participants (
     cancelled_at TIMESTAMPTZ,  -- 取消时间（管理员取消）
     completion_notes TEXT,  -- 完成备注
     admin_notes TEXT,  -- 管理员备注
-    idempotency_key VARCHAR(64),  -- 幂等键（用于防止重复操作，注意：此字段用于记录最后一次操作的幂等键，同一参与者的不同操作应使用不同的key）
+    idempotency_key VARCHAR(64),  -- 幂等键（用于防止重复操作）
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_task_participant UNIQUE(task_id, user_id),  -- 确保同一用户不能重复申请同一任务（普通多人任务，time_slot_id为NULL时使用此约束）
-    -- 注意：时间信息验证（固定时间段需time_slot_id，非固定时间段需preferred_deadline或is_flexible_time）在应用层验证，数据库层不强制（因为需要关联tasks表）
+    -- 注意：对于固定时间段服务，需要在应用层验证同一用户不能重复申请同一时间段
+    -- 可以使用部分唯一索引：CREATE UNIQUE INDEX idx_task_participant_time_slot ON task_participants(task_id, user_id, time_slot_id) WHERE time_slot_id IS NOT NULL;
+    CONSTRAINT chk_participant_time_info CHECK (
+        -- 如果任务有固定时间段，必须提供time_slot_id
+        -- 如果任务没有固定时间段，必须提供preferred_deadline或is_flexible_time=true
+        -- 此约束在应用层验证，数据库层不强制（因为需要关联tasks表）
+    )
+    CONSTRAINT uq_participant_idempotency UNIQUE(idempotency_key),  -- 幂等键唯一约束
     CONSTRAINT chk_participant_status CHECK (
         status IN ('pending', 'accepted', 'in_progress', 'completed', 'exit_requested', 'exited', 'cancelled')
     )
@@ -358,32 +278,17 @@ CREATE TABLE task_participants (
 -- 3. 根据实际查询模式，保留以下索引：
 CREATE INDEX idx_task_participants_user ON task_participants(user_id);  -- 用户查询自己的任务
 CREATE INDEX idx_task_participants_status ON task_participants(status);  -- 状态过滤
-CREATE INDEX idx_task_participants_task_status_updated ON task_participants(task_id, status, updated_at DESC);  -- 管理页排序查询（覆盖 task_id 和 task_id+status 查询，支持按更新时间降序）
--- ⚠️ 重要：固定时间段服务的唯一约束（防止同一用户重复申请同一时间段，防止并发超卖）
-CREATE UNIQUE INDEX uq_user_per_time_slot ON task_participants(task_id, user_id, time_slot_id) WHERE time_slot_id IS NOT NULL;
+CREATE INDEX idx_task_participants_task_status_updated ON task_participants(task_id, status, updated_at);  -- 管理页排序查询（覆盖 task_id 和 task_id+status 查询）
+CREATE UNIQUE INDEX idx_task_participant_time_slot ON task_participants(task_id, user_id, time_slot_id) WHERE time_slot_id IS NOT NULL;  -- 固定时间段服务：确保同一用户不能重复申请同一时间段
 CREATE INDEX idx_task_participants_time_slot ON task_participants(task_id, time_slot_id, status) WHERE time_slot_id IS NOT NULL;  -- 固定时间段服务：查询某个时间段的参与者数量
--- ⚠️ 重要：幂等键复合唯一索引（防止跨用户、跨任务冲突）
-CREATE UNIQUE INDEX uq_participant_idempotency ON task_participants(task_id, user_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
--- 4. 性能优化索引（针对任务达人任务和官方任务查询优化，避免JOIN tasks表）：
-CREATE INDEX idx_task_participants_expert_task ON task_participants(is_expert_task, task_id, status) WHERE is_expert_task = true;  -- 任务达人任务参与者查询（部分索引）
-CREATE INDEX idx_task_participants_official_task ON task_participants(is_official_task, task_id, status) WHERE is_official_task = true;  -- 官方任务参与者查询（部分索引）
-CREATE INDEX idx_task_participants_expert_creator ON task_participants(expert_creator_id, status, updated_at) WHERE expert_creator_id IS NOT NULL;  -- 按任务达人查询其所有任务的参与者
-CREATE INDEX idx_task_participants_user_expert ON task_participants(user_id, is_expert_task, status) WHERE is_expert_task = true;  -- 用户参与的任务达人任务查询
-CREATE INDEX idx_task_participants_user_official ON task_participants(user_id, is_official_task, status) WHERE is_official_task = true;  -- 用户参与的官方任务查询
-
--- ⚠️ 重要：为 task_participants 表添加 updated_at 自动更新触发器
--- 注意：set_updated_at() 函数已在 tasks 表定义块中创建，此处仅创建触发器
-CREATE TRIGGER trg_task_participants_updated_at
-BEFORE UPDATE ON task_participants
-FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 **字段说明：**
 - `task_id`: 关联的任务ID
 - `user_id`: 参与者用户ID
 - `status`: 参与者状态
-  - `pending`: 待审核（`auto_accept=false` 的任务进入此状态；当前版本中官方任务默认 `auto_accept=true`，因此通常不会进入 pending）
-  - `accepted`: 已接受（`auto_accept=true` 的任务自动接受，用户申请后立即进入此状态；`auto_accept=false` 的任务经审核后进入此状态，可以进入聊天室）
+  - `pending`: 待审核（非官方任务需要等待管理员审核，官方任务不会进入此状态）
+  - `accepted`: 已接受（官方任务自动接受，用户申请后立即进入此状态，可以进入聊天室）
   - `in_progress`: 进行中（任务已开始，参与者正在工作）
   - `completed`: 已完成（参与者已完成自己的部分）
   - `exit_requested`: 退出申请中（参与者申请退出，等待管理员审核）
@@ -401,7 +306,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - **实际发放值**以 `task_participant_rewards` 表为准（`reward_amount` 和 `points_amount`）
 - 读接口应根据 `task_participant_rewards` 表做聚合，返回实际发放值
 - 如果计划值与实际值不一致，以实际值为准
-- **建议**：在参与者表中存储计划奖励值，便于提前展示和验证
+- **MVP阶段建议**：如果短期内只需要"平均分配积分"，可以不在参与者表存储计划值，仅在奖励分配时计算并写入 `task_participant_rewards` 表
 - `applied_at`: 申请时间
 - `accepted_at`: 接受时间（自动接受时等于applied_at，待审核时为NULL）
 - `started_at`: 开始时间（任务开始，参与者可以开始工作，初始为NULL）
@@ -413,9 +318,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - `completion_notes`: 完成备注（参与者提交完成时填写）
 - `admin_notes`: 管理员备注（管理员可以添加备注）
 - `idempotency_key`: 幂等键（用于防止重复操作，如重复申请、重复完成等）
-  - **重要说明**：此字段用于记录最后一次操作的幂等键。同一参与者的不同操作（申请参与、提交完成、申请退出）应使用不同的 `idempotency_key`
-  - **当前实现**：每个操作都会更新该字段，因此需要确保不同操作使用不同的 key，避免覆盖
-  - **未来优化建议**：可考虑为不同操作设置不同字段（如 `apply_idempotency_key`、`complete_idempotency_key`、`exit_idempotency_key`），或引入单独的幂等表
 
 ### 3. 创建 TaskParticipantReward 表
 
@@ -440,11 +342,10 @@ CREATE TABLE task_participant_rewards (
     idempotency_key VARCHAR(64),  -- 幂等键（用于防止重复支付/发放）
     external_txn_id VARCHAR(100),  -- 外部交易ID（支付网关返回的交易ID）
     reversal_reference VARCHAR(100),  -- 回退关联ID（用于关联原交易，用于积分/现金追回时的对账）
-    admin_operator_id VARCHAR(36) REFERENCES admin_users(id) ON DELETE SET NULL,  -- 操作的管理员ID（用于审计，官方任务）
-    expert_operator_id VARCHAR(8) REFERENCES users(id) ON DELETE SET NULL,  -- 操作的任务达人ID（用于审计，任务达人任务）
+    admin_operator_id VARCHAR(36) REFERENCES admin_users(id) ON DELETE SET NULL,  -- 操作的管理员ID（用于审计）
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    -- ⚠️ 重要：幂等键复合唯一索引（防止跨任务、跨参与者冲突）
+    CONSTRAINT uq_reward_idempotency UNIQUE(idempotency_key),  -- 幂等键唯一约束
     CONSTRAINT uq_reward_external_txn UNIQUE(external_txn_id),  -- 外部交易ID唯一约束（防止重复处理）
     CONSTRAINT chk_reward_payment_status CHECK (
         payment_status IN ('pending', 'paid', 'failed', 'refunded')
@@ -482,8 +383,6 @@ BEGIN
     IF task_reward_type = 'cash' AND NEW.reward_type != 'cash' THEN
         RAISE EXCEPTION 'Reward type mismatch: task is cash-only but reward type is %', NEW.reward_type;
     END IF;
-    -- 注意：当 task.reward_type='both' 时，允许 reward.reward_type 为 'cash' / 'points' / 'both'
-    -- 触发器不限制 'both' 任务下的奖励类型，符合业务逻辑（任务级别有现金+积分，但参与者可以只拿其中一种）
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -498,14 +397,6 @@ CREATE INDEX idx_participant_rewards_user ON task_participant_rewards(user_id);
 CREATE INDEX idx_participant_rewards_payment_status ON task_participant_rewards(payment_status);
 CREATE INDEX idx_participant_rewards_points_status ON task_participant_rewards(points_status);
 CREATE INDEX idx_participant_rewards_task_status ON task_participant_rewards(task_id, payment_status, points_status);  -- 用于查询任务奖励发放状态
--- ⚠️ 重要：幂等键复合唯一索引（防止跨任务、跨参与者冲突）
-CREATE UNIQUE INDEX uq_reward_idempotency ON task_participant_rewards(task_id, participant_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
-
--- ⚠️ 重要：为 task_participant_rewards 表添加 updated_at 自动更新触发器
--- 注意：set_updated_at() 函数已在 tasks 表定义块中创建，此处仅创建触发器
-CREATE TRIGGER trg_task_participant_rewards_updated_at
-BEFORE UPDATE ON task_participant_rewards
-FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 **字段说明：**
@@ -526,8 +417,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - `idempotency_key`: 幂等键（用于防止重复支付/发放，客户端生成）
 - `external_txn_id`: 外部交易ID（支付网关返回的交易ID，用于对账和重试）
 - `reversal_reference`: 回退关联ID（用于关联原交易，用于积分/现金追回时的对账）
-- `admin_operator_id`: 操作的管理员ID（用于审计，记录是谁发起的奖励分配，仅官方任务）
-- `expert_operator_id`: 操作的任务达人ID（用于审计，记录是谁发起的奖励分配，仅任务达人任务）
+- `admin_operator_id`: 操作的管理员ID（用于审计，记录是谁发起的奖励分配）
 
 ### 4. 创建 TaskAuditLog 表
 
@@ -629,25 +519,41 @@ CREATE INDEX idx_task_participants_task_status_completed ON task_participants(ta
 
 ### 7. 创建 updated_at 自动更新触发器
 
-**说明**：`updated_at` 自动更新触发器已在各表定义块中直接给出：
-- **tasks 表**：`trg_tasks_updated_at`（已在 tasks 表定义块中给出，包含 `set_updated_at()` 函数定义）
-- **task_participants 表**：`trg_task_participants_updated_at`（已在 task_participants 表定义块中给出）
-- **task_participant_rewards 表**：`trg_task_participant_rewards_updated_at`（已在 task_participant_rewards 表定义块中给出）
-
-**注意**：`set_updated_at()` 函数只需定义一次（在 tasks 表定义块中），其他表的触发器直接引用该函数即可。
-
-**chat_rooms 表的触发器**（如果该表存在 `updated_at` 字段）：
+为所有需要乐观锁的表添加 `updated_at` 自动更新触发器：
 
 ```sql
--- 为 chat_rooms 表添加触发器（如果该表存在 updated_at 字段）
+-- 创建触发器函数
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 为 tasks 表添加触发器
+CREATE TRIGGER trg_tasks_updated_at
+BEFORE UPDATE ON tasks
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 为 task_participants 表添加触发器
+CREATE TRIGGER trg_task_participants_updated_at
+BEFORE UPDATE ON task_participants
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 为 task_participant_rewards 表添加触发器
+CREATE TRIGGER trg_task_participant_rewards_updated_at
+BEFORE UPDATE ON task_participant_rewards
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 为 chat_rooms 表添加触发器
 CREATE TRIGGER trg_chat_rooms_updated_at
 BEFORE UPDATE ON chat_rooms
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- 注意：task_audit_logs 表通常不需要 updated_at 自动更新（审计日志只插入不更新）
 ```
 
 **说明**：这些触发器确保每次 UPDATE 操作时，`updated_at` 字段自动更新为当前时间，用于乐观锁机制。
-
-**注意**：`task_audit_logs` 表通常不需要 `updated_at` 自动更新（审计日志只插入不更新）。
 
 ---
 
@@ -679,16 +585,16 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 }
 ```
 
-**注意**：当 `reward_type="points"` 时，`reward` 字段应省略或为 NULL，数据库中的 `reward` 字段必须为 NULL（不接受 0）。
+**注意**：当 `reward_type="points"` 时，`reward` 字段应省略或为 0，且数据库中的 `reward` 字段应为 0 或 NULL。
 
 **响应**:
 ```json
 {
-  "id": "O123",  // 官方任务ID格式：O + 数字（数据库存储为整数123，前端返回时格式化为O123）
+  "id": 123,
   "title": "大型活动组织任务",
   "description": "需要多人协作完成的活动组织任务",
   "deadline": "2025-02-01T00:00:00Z",
-  "reward": null,
+  "reward": 0,
   "reward_type": "points",
   "points_reward": 5000,
   "currency": "GBP",
@@ -710,27 +616,19 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 }
 ```
 
-**注意**：当 `reward_type="points"` 时，响应中的 `reward` 字段为 NULL，数据库中的 `reward` 字段必须为 NULL（不接受 0）。
+**注意**：当 `reward_type="points"` 时，响应中的 `reward` 字段为 0，数据库中的 `reward` 字段应为 0 或 NULL。
 
-**业务逻辑（管理员接口）**:
-1. 验证管理员权限（仅用于官方任务）
+**业务逻辑**:
+1. 验证管理员权限
 2. 验证任务数据（max_participants >= min_participants >= 1）
-3. 验证奖励类型和分配方式：
-   - 如果 `reward_type='cash'`，验证 `reward` 必须 > 0
-   - 如果 `reward_type='points'`，验证 `points_reward` 必须 > 0
-   - 如果 `reward_type='both'`，验证 `reward` 和 `points_reward` 都必须 > 0
-   - 如果 `reward_distribution='custom'`，验证必须提供自定义分配方案
+3. 验证奖励类型和金额（如果reward_type包含points，points_reward必须>0）
 4. 创建任务记录，设置：
    - `is_multi_participant=true`
    - `is_official_task=true`（管理员发布的任务都是官方任务）
    - `created_by_admin=true`
-   - `reward_type`（根据请求设置，支持 cash、points、both）
-   - `reward_distribution`（根据请求设置，支持 equal、custom）
-   - `auto_accept=true`（**强制设置**：所有官方多人任务（`is_official_task=true`）必须 `auto_accept=true`，不可配置）
+   - `auto_accept=true`（官方任务自动接受申请）
    - `allow_negotiation=false`（多人任务不支持议价）
-5. 根据任务类型设置 `poster_id` 和 `taker_id`：
-   - **发钱任务**（reward_type 为 points 或 both，且用户获得奖励）：`poster_id` 为系统用户ID或管理员关联的用户ID，`taker_id` 为 NULL
-   - **收钱任务**（reward_type 为 cash，且用户付费）：`poster_id` 为系统用户ID或管理员关联的用户ID，`taker_id` 为系统用户ID或管理员关联的用户ID
+5. 设置 `poster_id` 为系统用户ID或管理员关联的用户ID（如果需要）
 6. 返回创建的任务信息
 
 ### 2. 任务达人创建多人任务（固定时间段服务）
@@ -816,7 +714,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 }
 ```
 
-**请求体（任务达人发布的非固定时间段服务，积分奖励）**:
+**请求体（普通多人任务，非固定时间段）**:
 ```json
 {
   "title": "团队协作任务",
@@ -831,23 +729,16 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   "min_participants": 3,
   "completion_rule": "min",
   "reward_distribution": "equal",
-  "expert_service_id": 125,  // 必须：关联的达人服务ID（任务达人发布的多人任务必须关联达人服务）
   "is_fixed_time_slot": false,
-  "images": ["url1", "url2"],  // 可选，如果不提供则使用达人服务的images
+  "images": ["url1", "url2"],
   "is_public": true
 }
 ```
 
-**注意**：任务达人发布的多人任务（`created_by_expert=true`）必须关联一个达人服务（`expert_service_id` 必须提供），这是数据库 CHECK 约束的要求。
-
-**重要说明**：任务达人发布的积分奖励任务（`reward_type='points'`）与商业服务任务（`reward_type='cash'`）的 `taker_id` 规则不同：
-- **商业服务任务**（`reward_type='cash'`）：`taker_id = expert_creator_id`（达人收钱）
-- **协作积分任务**（`reward_type='points'`）：`taker_id = NULL`（平台发奖励，达人帮平台完成任务）
-
 **响应（带折扣）**:
 ```json
 {
-  "id": "E124",  // 任务达人任务ID格式：E + 数字（数据库存储为整数124，前端返回时格式化为E124）
+  "id": 124,
   "title": "麻将服务",
   "description": "提供麻将娱乐服务，每小时一个时间段，每个时间段4人。1点到2点时间段缺人，特价优惠！",
   "deadline": "2025-02-01T00:00:00Z",
@@ -953,7 +844,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "message": "我有相关经验，希望参与此任务",
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请
 }
 ```
 
@@ -962,7 +853,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 {
   "message": "我想参与这个时间段",
   "time_slot_id": 1,  // 时间段ID（从任务详情的时间段列表中获取）
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请
 }
 ```
 
@@ -972,7 +863,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   "message": "我希望参与此服务",
   "is_flexible_time": false,  // 是否为灵活时间，false表示有具体截止日期，true表示时间灵活
   "preferred_deadline": "2025-02-15T18:00:00Z",  // 期望的截止日期（仅当is_flexible_time=false时提供）
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请
 }
 ```
 
@@ -981,7 +872,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 {
   "message": "我希望参与此服务，时间灵活",
   "is_flexible_time": true,  // 时间灵活，不需要具体截止日期
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请
 }
 ```
 
@@ -1012,44 +903,25 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
    - **重要**：申请人申请参与此任务时，实际上是在申请此达人服务
    - **价格说明**：价格以任务达人发布任务时设置的价格为准（基于达人服务的 `base_price`，可能包含折扣）
    - **业务含义**：申请人以任务达人发布任务的价格申请到此达人服务
-3. **任务状态验证**：
-   - **正常申请**：任务状态为 `open` 时，允许申请加入
-   - **条件性迟到加入**：任务状态为 `in_progress` 时，**仅在以下条件下允许申请**：
-     - 当前参与人数（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`，使用 `COUNT(*)` 查询）< `min_participants`
-     - 且未达到 `max_participants`
-     - **目的**：当任务进行中有人退出导致人数不足时，允许补人至 `min_participants`
-   - **其他情况**：任务状态为 `completed` 或 `cancelled` 时，禁止申请
-4. **并发控制**：开启数据库事务，对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定
-5. **占坑规则验证**（使用统一的占坑状态定义）：
-   - **占坑状态**：`pending`、`accepted`、`in_progress`、`exit_requested`（见"退出逻辑与占坑规则"章节的权威定义）
-   - **不占坑状态**：`completed`、`exited`、`cancelled`
-   - 使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者数量
-   - **条件性迟到加入验证**：如果任务状态为 `in_progress`，使用 `COUNT(*)` 查询当前参与人数（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`），检查是否 < `min_participants`，如果满足条件，允许申请；否则拒绝申请
-   - **重要**：任务开始后仅支持"条件性迟到加入"：只在当前参与人数 < `min_participants` 时允许新申请，补足到 `min_participants` 后即使未达 `max_participants` 也不再允许新申请
-6. **固定时间段验证**：如果任务 `is_fixed_time_slot=true`：
+3. 验证任务状态为 `open`（**重要**：任务开始后（`in_progress` 状态）不允许新成员申请加入，如需支持"迟到加入"，需要明确策略，见"迟到加入规则"章节）
+4. **固定时间段验证**：如果任务 `is_fixed_time_slot=true`：
    - 验证请求中包含 `time_slot_id`
    - 验证时间段是否存在且有效
    - 验证时间段是否已满（该时间段的参与者数量是否已达到 `participants_per_slot`）
    - 验证用户是否已申请该时间段（同一用户不能重复申请同一时间段）
-7. **非固定时间段验证**：如果任务 `is_fixed_time_slot=false` 且 `created_by_expert=true`（任务达人发布的服务）：
+5. **非固定时间段验证**：如果任务 `is_fixed_time_slot=false` 且 `created_by_expert=true`（任务达人发布的服务）：
    - 验证请求中包含 `is_flexible_time` 字段
    - 如果 `is_flexible_time=false`，验证请求中包含 `preferred_deadline` 且为有效的未来时间
    - 如果 `is_flexible_time=true`，`preferred_deadline` 应为 NULL
    - 验证 `preferred_deadline` 不早于当前时间（如果提供了）
-8. **实时计数验证**：
-   - 如果 `is_fixed_time_slot=true`：使用 `COUNT(*)` 查询指定时间段的参与者数量（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`），确认未达到 `participants_per_slot`
-   - 如果 `is_fixed_time_slot=false`：使用 `COUNT(*)` 查询 `task_participants` 表中状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者数量，确认未达到 `max_participants`
-9. 验证用户未重复申请（检查 `task_participants` 表，利用唯一约束；固定时间段服务需要额外验证同一时间段）
-10. **幂等性验证**：
-    - **要求**：`/api/tasks/{task_id}/apply` 接口必须携带 `idempotency_key`，防止用户"连点两次"
-    - **验证逻辑**：检查 `task_participants` 表中是否存在相同的 `idempotency_key` **且同时匹配 `user_id` 和 `task_id`**，如果存在则返回已有记录（幂等返回）
-    - **重要说明**：
-      - `task_participants.idempotency_key` 字段用于申请参与操作的幂等性。同一参与者的不同操作（申请、完成、退出）应使用不同的 `idempotency_key`
-      - **跨操作风险**：当前版本中，每个操作都会更新该字段，因此需要确保不同操作使用不同的 key，避免覆盖
-      - **跨用户风险**：幂等查找必须以 `(idempotency_key, user_id, task_id)` 为条件，不能只按 key 查，否则可能误返回其他用户的记录（严重安全问题）
-      - **当前实现限制**：使用单字段 `UNIQUE(idempotency_key)` 约束存在跨用户冲突风险，建议未来升级为 `UNIQUE(task_id, user_id, idempotency_key)` 或引入单独的幂等表
-11. 验证任务是否允许议价（多人任务不允许议价，如果用户尝试议价则拒绝）
-12. 创建 `task_participants` 记录：
+6. **并发控制**：开启数据库事务，对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定
+7. **实时计数验证**：
+   - 如果 `is_fixed_time_slot=true`：使用 `COUNT(*)` 查询指定时间段的参与者数量，确认未达到 `participants_per_slot`
+   - 如果 `is_fixed_time_slot=false`：使用 `COUNT(*)` 查询 `task_participants` 表中状态为 `pending`、`accepted`、`in_progress` 的参与者数量，确认未达到 `max_participants`
+8. 验证用户未重复申请（检查 `task_participants` 表，利用唯一约束；固定时间段服务需要额外验证同一时间段）
+9. **幂等性验证**：如果请求包含 `idempotency_key`，检查是否已存在相同键的记录，如果存在则返回已有记录
+10. 验证任务是否允许议价（多人任务不允许议价，如果用户尝试议价则拒绝）
+11. 创建 `task_participants` 记录：
     - 如果任务 `auto_accept=true`（官方任务），状态直接设为 `accepted`，`accepted_at` 等于 `applied_at`
     - 如果任务 `auto_accept=false`，状态设为 `pending`，`accepted_at` 为 NULL（等待管理员审核）
     - 如果 `is_fixed_time_slot=true`，记录 `time_slot_id`
@@ -1077,7 +949,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "exit_reason": "因个人原因无法继续参与",
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复申请退出
 }
 ```
 
@@ -1096,22 +968,15 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 **业务逻辑**:
 1. 验证用户是该任务的参与者
 2. 验证参与者状态为 `accepted` 或 `in_progress`（已完成或已退出的不能再次申请退出）
-3. **幂等性验证**：
-   - **要求**：`/api/tasks/{task_id}/participants/me/exit-request` 接口必须携带 `idempotency_key`，防止用户"连点两次"
-   - **验证逻辑**：检查 `task_participants` 表中是否存在相同的 `idempotency_key` **且同时匹配 `user_id` 和 `task_id`**，如果存在则返回已有记录（幂等返回）
-   - **重要说明**：
-     - `task_participants.idempotency_key` 字段用于退出申请操作的幂等性。同一参与者的不同操作（申请、完成、退出）应使用不同的 `idempotency_key`
-     - **跨操作风险**：当前版本中，每个操作都会更新该字段，因此需要确保不同操作使用不同的 key，避免覆盖
-     - **跨用户风险**：幂等查找必须以 `(idempotency_key, user_id, task_id)` 为条件，不能只按 key 查，否则可能误返回其他用户的记录（严重安全问题）
+3. **幂等性验证**：如果请求包含 `idempotency_key`，检查是否已存在相同键的退出申请
 4. 开启数据库事务
 5. 保存当前状态到 `previous_status` 字段
 6. 更新参与者状态为 `exit_requested`
 7. 设置 `exit_requested_at` 和 `exit_reason`
 8. **审计日志**：记录操作到 `task_audit_logs` 表
 9. 提交事务
-10. 发送通知给管理员/任务达人
+10. 发送通知给管理员
 11. 在聊天室发送系统消息（可选）
-12. **退出申请期间权限**：退出申请期间（`exit_requested`），用户仍保留聊天室读写权限；只有当状态变为 `exited`/`cancelled` 时才移除
 
 ### 4. 管理员/任务达人批准/拒绝退出申请
 
@@ -1214,11 +1079,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 1. 验证权限：
    - 管理员接口：验证管理员权限
    - 任务达人接口：验证用户是任务创建者（`expert_creator_id` 或 `taker_id`）
-2. **明确**：验证参与者状态为 `accepted`、`in_progress` 或 `exit_requested`
-   - **不允许踢出已完成（`completed`）的参与者**
-   - **不允许踢出已退出（`exited`）的参与者**
-   - 管理端按钮也不显示"踢出"（对 `completed` 状态的参与者）
-   - 真要处理极端违规，走账号层面的封禁/冻结，而不是事后篡改多人任务参与记录
+2. 验证参与者状态为 `accepted`、`in_progress` 或 `exit_requested`（不能踢出已完成或已退出的参与者）
 3. 开启数据库事务
 4. 更新参与者状态为 `cancelled`
 5. 设置 `cancelled_at` 时间
@@ -1237,16 +1098,13 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - 踢出操作不可逆（与退出申请不同，退出申请需要批准）
 - 被踢出的参与者状态变为 `cancelled`，不能再申请参与此任务
 - 如果任务已开始（`in_progress`），踢出参与者不会影响任务继续进行
-- **策略**：`completed` 状态不允许被踢出，如果要做"完成后撤销奖励"，应该是一个单独的风控/客服流程，而不是复用"踢出"接口
+- 如果任务已完成（`completed`），不能踢出已完成状态的参与者
 
-### 5. 管理员/任务达人开始多人任务
+### 5. 管理员开始多人任务
 
-**接口**: `POST /api/admin/tasks/{task_id}/start`（官方任务）
-**接口**: `POST /api/expert/tasks/{task_id}/start`（任务达人任务）
+**接口**: `POST /api/admin/tasks/{task_id}/start`
 
-**权限**: 
-- 管理员接口：需要管理员认证（仅用于官方任务）
-- 任务达人接口：需要用户认证，且用户必须是该任务的创建者（`expert_creator_id`）
+**权限**: 需要管理员认证
 
 **请求体**:
 ```json
@@ -1263,38 +1121,24 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 }
 ```
 
-**业务逻辑（管理员接口）**:
-1. 验证管理员权限（仅用于官方任务）
-2. **任务状态验证**：
-   - **开始任务接口只允许从 `open` → `in_progress`**
-   - **条件性迟到加入**：条件性迟到加入只是改变参与者数量，不会再调用开始任务接口
-   - **禁止开始**：任务状态为 `completed` 或 `cancelled` 时，禁止开始
-3. **占坑规则验证**（使用统一的占坑状态定义）：
-   - **占坑状态**：`pending`、`accepted`、`in_progress`、`exit_requested`（见"退出逻辑与占坑规则"章节的权威定义）
-   - **不占坑状态**：`completed`、`exited`、`cancelled`
-   - 使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者数量（占坑状态）
-   - **必须达到最小参与人数**：确认占坑人数 >= `min_participants`（**未达到 `min_participants` 不能开始任务**）
-   - **重要说明**：
-     - `min_participants` 用于"可开始"判定：任务开始时，必须达到 `min_participants` 才能开始
-     - 一旦任务已开始，即使后续有人退出导致人数 < `min_participants`，任务仍可继续进行
-     - **条件性迟到加入**：如果任务进行中有人退出导致当前参与人数（使用 `COUNT(*)` 查询）< `min_participants`，允许新成员申请加入补位至 `min_participants`
+**业务逻辑**:
+1. 验证管理员权限
+2. 验证任务状态为 `open`
+3. **实时计数验证**：使用 `COUNT(*)` 查询状态为 `accepted` 的参与者数量，确认 >= `min_participants`
+   - **重要说明**：`min_participants` 仅用于"可开始"判定，一旦任务开始，即使后续有人退出导致人数 < `min_participants`，任务仍可继续进行
 4. 开启数据库事务
-5. **并发控制**：对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定
-6. 更新任务状态为 `in_progress`
-7. 更新所有 `accepted` 状态的参与者为 `in_progress`
-8. 设置所有参与者的 `started_at` 时间
-9. **审计日志**：记录操作到 `task_audit_logs` 表，包含操作者ID（管理员ID或任务达人ID）
-10. 提交事务
-11. 发送通知给所有参与者
+5. 更新任务状态为 `in_progress`
+6. 更新所有 `accepted` 状态的参与者为 `in_progress`
+7. 设置所有参与者的 `started_at` 时间
+8. **审计日志**：记录操作到 `task_audit_logs` 表，包含 `admin_operator_id`
+9. 提交事务
+10. 发送通知给所有参与者
 
-**重要说明**：当前版本仅支持管理员/任务达人手动开始任务。虽然状态流转图中提到"达到 min_participants 自动开始"，但此功能暂未实现。如需实现自动开始功能，需要：
+**重要说明**：当前版本仅支持管理员手动开始任务。虽然状态流转图中提到"达到 min_participants 自动开始"，但此功能暂未实现。如需实现自动开始功能，需要：
 - 创建异步守护任务（Job），监听 `task_participants` 表的 `accepted` 状态计数变化
 - 当计数达到 `min_participants` 时，自动触发开始流程
-- 记录审计日志，标注为"自动开始"而非管理员/任务达人操作
+- 记录审计日志，标注为"自动开始"而非管理员操作
 - 考虑并发场景下的幂等性（防止重复触发）
-
-**业务逻辑（任务达人接口）**：
-与管理员接口逻辑相同，但权限验证改为：验证用户是任务创建者（`expert_creator_id`）
 
 ### 6. 参与者提交完成
 
@@ -1306,7 +1150,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```json
 {
   "completion_notes": "已完成我的部分工作",
-  "idempotency_key": "unique-request-id-12345"  // 必须携带，否则返回 400
+  "idempotency_key": "unique-request-id-12345"  // 建议携带，用于防止重复提交完成
 }
 ```
 
@@ -1323,14 +1167,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 **业务逻辑**:
 1. 验证用户是该任务的参与者
 2. 验证参与者状态为 `in_progress`
-3. **幂等性验证**：
-   - **必须携带 `idempotency_key`，否则返回 400**
-   - **验证逻辑**：检查 `task_participants` 表中是否存在相同的 `idempotency_key` **且同时匹配 `user_id` 和 `task_id`**，如果存在则返回已有记录（幂等返回，返回 200 OK）
-   - 防止用户"连点两次"导致重复提交完成
-   - **重要说明**：
-     - `task_participants.idempotency_key` 字段用于提交完成操作的幂等性。同一参与者的不同操作（申请、完成、退出）应使用不同的 `idempotency_key`
-     - **跨操作风险**：当前版本中，每个操作都会更新该字段，因此需要确保不同操作使用不同的 key，避免覆盖
-     - **跨用户风险**：幂等查找必须以 `(idempotency_key, user_id, task_id)` 为条件，不能只按 key 查，否则可能误返回其他用户的记录（严重安全问题）
+3. **幂等性验证**：如果请求包含 `idempotency_key`，检查是否已存在相同键的完成记录
 4. 开启数据库事务
 5. 更新参与者状态为 `completed`
 6. 设置 `completed_at` 时间
@@ -1339,29 +1176,25 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
    - 如果 `completion_rule=min`，检查已完成参与者数量是否 >= `min_participants`
 8. 如果满足完成条件：
    - 更新任务状态为 `completed`
-   - **重要说明**：任务 `status='completed'` **仅表示工作流程完成**，不代表奖励已分配。奖励是否发放需查看 `task_participant_rewards` 表是否有记录及状态
-   - 如果 `completion_rule=min`，未完成的参与者状态保持为 `in_progress`，但任务已标记为完成。这些参与者仍可提交完成，但不会影响任务完成状态。奖励分配时，仅已完成参与者参与分配（除非管理员手动调整）
+   - **重要说明**：如果 `completion_rule=min`，未完成的参与者状态保持为 `in_progress`，但任务已标记为完成。这些参与者仍可提交完成，但不会影响任务完成状态。奖励分配时，仅已完成参与者参与分配（除非管理员手动调整）
 9. **审计日志**：记录操作到 `task_audit_logs` 表
 10. 提交事务
 11. 发送通知给管理员/发布者
 
 ### 7. 管理员确认任务完成并分配奖励
 
-**接口**: `POST /api/admin/tasks/{task_id}/complete`（官方任务）
-**接口**: `POST /api/expert/tasks/{task_id}/complete`（任务达人任务）
+**接口**: `POST /api/admin/tasks/{task_id}/complete`
 
-**权限**: 
-- 管理员接口：需要管理员认证（仅用于官方任务）
-- 任务达人接口：需要用户认证，且用户必须是该任务的创建者（`expert_creator_id`）
+**权限**: 需要管理员认证
 
-**请求体（平均分配版本）**:
+**请求体（MVP版本，仅支持平均分配积分）**:
 ```json
 {
   "idempotency_key": "unique-request-id-12345"  // 必需，用于防止重复分配奖励
 }
 ```
 
-**请求体（自定义分配版本）**:
+**请求体（未来扩展版本，支持自定义分配）**:
 ```json
 {
   "participant_rewards": [
@@ -1402,44 +1235,35 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 }
 ```
 
-**业务逻辑（平均分配版本，管理员接口）**:
-1. 验证管理员权限（仅用于官方任务）
-2. **重复分配检查**：如果任务已经有 `task_participant_rewards` 记录，直接返回 409 Conflict 或 400 Bad Request，提示"已分配过奖励，如需补发/纠正请使用单独接口"
-   - 不允许重复分配，真正的"补发/纠正"使用单独接口（如 `/adjust-reward`）处理
-3. 验证任务状态为 `in_progress` 或已完成
-4. 验证任务奖励类型和分配方式（支持 cash、points、both 和 equal、custom）
-5. **幂等性验证**：
-   - **必须携带 `idempotency_key`，否则返回 400**
-   - 检查 `idempotency_key` 是否已存在，如果存在则返回已有记录（幂等返回，返回 200 OK）
-6. 开启数据库事务
-7. **并发控制**：对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定，对相关 `task_participants` 记录使用 `SELECT ... FOR UPDATE` 锁定，确保"判定任务状态 + 计算完成人数 + 创建奖励记录 + 更新任务状态"在同一事务内原子执行
-8. **自动计算平均分配**（仅针对状态为 `completed` 的参与者）：
-   - 查询所有状态为 `completed` 的参与者（使用 `WHERE status = 'completed'`）
-   - **明确**：仅对状态为 `completed` 的参与者进行分配；`in_progress` 的参与者不会获得积分
-   - 积分奖励计算：
-     - 每人基础积分：`floor(points_reward / N)`（N = 已完成参与者数量，向下取整）
-     - 余数处理：按 `completed_at` 时间排序，完成时间最早的参与者依次 +1，直到余数分配完
-     - **默认必须分完**：默认必须分完所有积分，仅因整数除不尽产生的 1-2 点误差才允许总和 < `points_reward`（甚至可直接要求相等）
-9. **完整性约束验证**：
-   - 验证所有参与者的 `points_amount` 总和 ≤ 任务 `points_reward`（默认必须相等，仅允许 1-2 点误差）
+**业务逻辑（MVP版本）**:
+1. 验证管理员权限
+2. 验证任务状态为 `in_progress` 或已完成
+3. 验证任务 `reward_type='points'` 且 `reward_distribution='equal'`（MVP限制）
+4. **幂等性验证**：检查 `idempotency_key` 是否已存在，如果存在则返回已有记录（幂等返回）
+5. 开启数据库事务
+6. **并发控制**：对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定，对相关 `task_participants` 记录使用 `SELECT ... FOR UPDATE` 锁定，确保"判定任务状态 + 计算完成人数 + 创建奖励记录 + 更新任务状态"在同一事务内原子执行
+7. **自动计算平均分配**（仅针对状态为 `completed` 的参与者）：
+   - 查询所有状态为 `completed` 的参与者
+   - 积分奖励：`总积分奖励 / 已完成参与者数量`（向下取整，余数分配给完成时间最早的参与者）
+8. **完整性约束验证**：
+   - 验证所有参与者的 `points_amount` 总和 <= 任务 `points_reward`
    - 验证所有 `reward_amount` 必须为 NULL（不接受 0）
-10. 创建 `task_participant_rewards` 记录，包含：
-    - `reward_type` 根据任务 `reward_type` 设置（支持 cash、points、both）
-    - `points_amount`（计算出的平均分配值）
-    - `idempotency_key`（客户端生成，强制要求）
-    - `admin_operator_id`（当前管理员ID，仅官方任务）
-    - `expert_operator_id`（当前任务达人ID，仅任务达人任务）
-11. 更新任务状态为 `completed`（如果尚未完成）
-12. **审计日志**：记录操作到 `task_audit_logs` 表，包含完整的分配方案和操作者ID（管理员ID或任务达人ID）
-13. 提交事务
-14. 发送通知给所有参与者
-15. 触发积分发放流程（使用 `idempotency_key` 确保幂等性）
+9. 创建 `task_participant_rewards` 记录，包含：
+   - `reward_type='points'`
+   - `points_amount`（计算出的平均分配值）
+   - `idempotency_key`（客户端生成）
+   - `admin_operator_id`（当前管理员ID）
+10. 更新任务状态为 `completed`（如果尚未完成）
+11. **审计日志**：记录操作到 `task_audit_logs` 表，包含完整的分配方案
+12. 提交事务
+13. 发送通知给所有参与者
+14. 触发积分发放流程（使用 `idempotency_key` 确保幂等性）
 
-**业务逻辑（自定义分配版本，管理员接口）**:
-1-4. 同平均分配版本（管理员接口）
+**业务逻辑（未来扩展版本，支持自定义分配）**:
+1-4. 同 MVP 版本
 5. 开启数据库事务
 6. 如果 `reward_distribution=equal`：
-   - 自动计算平均分配（同平均分配版本）
+   - 自动计算平均分配（同 MVP 版本）
 7. 如果 `reward_distribution=custom`，使用请求中的分配方案
 8. **完整性约束验证**：
    - 现金奖励：验证所有参与者的 `reward_amount` 总和 <= 任务 `reward`（如果 `reward_type` 包含 `cash`）
@@ -1447,8 +1271,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
    - 如果 `reward_type='points'`，验证所有 `reward_amount` 必须为 NULL（不接受 0）
    - 如果 `reward_type='cash'`，验证所有 `points_amount` 必须为 NULL（不接受 0）
    - 如果 `reward_type='both'`，验证所有 `reward_amount` 和 `points_amount` 都不为 NULL
-   - **重要说明**：`reward_type='both'` 时，管理员在自定义分配时可以为不同参与者选择不同的奖励类型（cash / points / both），但每个参与者的 `reward_amount` 和 `points_amount` 必须符合其选择的类型（不能都为 NULL）
-9-13. 同平均分配版本
+9-13. 同 MVP 版本
 
 ### 8. 获取任务参与者列表
 
@@ -1458,7 +1281,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 **查询参数**:
 - `status`: 过滤参与者状态（可选）
-- `time_slot_id`: 过滤时间段（仅固定时间段服务，可选）
 
 **响应**:
 ```json
@@ -1467,7 +1289,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   "max_participants": 5,
   "min_participants": 3,
   "current_participants": 4,
-  "is_expert_task": false,  // 是否为任务达人任务
   "participants": [
     {
       "id": 456,
@@ -1475,7 +1296,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
       "user_name": "张三",
       "user_avatar": "avatar_url",
       "status": "in_progress",
-      "time_slot_id": 1,  // 如果是固定时间段服务，显示时间段ID
       "reward_amount": 100.00,
       "applied_at": "2025-01-20T10:30:00Z",
       "accepted_at": "2025-01-20T11:00:00Z",
@@ -1485,113 +1305,6 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   ]
 }
 ```
-
-### 8. 获取任务详情（包含时间段列表）
-
-**接口**: `GET /api/tasks/{task_id}`
-
-**权限**: 需要用户认证（公开任务）或管理员认证
-
-**响应（固定时间段服务）**:
-```json
-{
-  "id": "E123",  // 任务达人任务ID格式：E + 数字（数据库存储为整数123，前端返回时格式化为E123）
-  "title": "麻将服务",
-  "description": "提供麻将娱乐服务，每小时一个时间段，每个时间段4人",
-  "status": "open",
-  "is_multi_participant": true,
-  "created_by_expert": true,
-  "expert_creator_id": "EXPERT12",
-  "expert_service_id": 123,
-  "is_fixed_time_slot": true,
-  "time_slot_duration_minutes": 60,
-  "time_slot_start_time": "12:00",
-  "time_slot_end_time": "22:00",
-  "participants_per_slot": 4,
-  "max_participants": 4,
-  "min_participants": 4,
-  "original_price_per_participant": 10.00,
-  "discount_percentage": 20.00,
-  "discounted_price_per_participant": 8.00,
-  "has_discount": true,
-  "reward_type": "cash",
-  "reward": 8.00,
-  "currency": "GBP",
-  "time_slots": [
-    {
-      "slot_id": 1,
-      "start_time": "12:00",
-      "end_time": "13:00",
-      "current_participants": 2,
-      "max_participants": 4,
-      "is_full": false,
-      "available_spots": 2
-    },
-    {
-      "slot_id": 2,
-      "start_time": "13:00",
-      "end_time": "14:00",
-      "current_participants": 4,
-      "max_participants": 4,
-      "is_full": true,
-      "available_spots": 0
-    },
-    {
-      "slot_id": 3,
-      "start_time": "14:00",
-      "end_time": "15:00",
-      "current_participants": 0,
-      "max_participants": 4,
-      "is_full": false,
-      "available_spots": 4
-    }
-    // ... 更多时间段（最多到22:00）
-  ],
-  "my_participant_status": null,  // 如果用户已申请，显示状态
-  "my_time_slot_id": null,  // 如果用户已申请固定时间段服务，显示申请的时间段ID
-  "created_at": "2025-01-20T10:00:00Z"
-}
-```
-
-**响应（非固定时间段服务）**:
-```json
-{
-  "id": "E124",  // 任务达人任务ID格式：E + 数字
-  "title": "摄影服务",
-  "description": "提供专业摄影服务，申请人可选择截止日期或灵活时间",
-  "status": "open",
-  "is_multi_participant": true,
-  "created_by_expert": true,
-  "expert_creator_id": "EXPERT12",
-  "expert_service_id": 124,
-  "is_fixed_time_slot": false,
-  "max_participants": 1,
-  "min_participants": 1,
-  "reward_type": "cash",
-  "reward": 150.00,
-  "currency": "GBP",
-  "my_participant_status": null,
-  "my_preferred_deadline": null,  // 如果用户已申请，显示期望的截止日期
-  "my_is_flexible_time": null,  // 如果用户已申请，显示是否灵活时间
-  "created_at": "2025-01-20T10:00:00Z"
-}
-```
-
-**业务逻辑**:
-1. 验证任务存在
-2. 如果任务 `is_fixed_time_slot=true`：
-   - 根据 `time_slot_start_time`、`time_slot_end_time` 和 `time_slot_duration_minutes` 计算所有时间段
-   - 对每个时间段，查询 `task_participants` 表中 `time_slot_id` 匹配且状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者数量
-   - 计算 `current_participants`、`is_full` 和 `available_spots`
-   - 生成时间段列表（`slot_id` 从1开始，按时间顺序递增）
-3. 如果用户已登录，查询用户是否已申请参与此任务：
-   - 如果已申请，返回 `my_participant_status`、`my_time_slot_id`（固定时间段）或 `my_preferred_deadline`、`my_is_flexible_time`（非固定时间段）
-4. 返回任务详情，包括时间段列表（如果有）
-
-**时间段生成规则**：
-- `slot_id` 从 1 开始，按时间顺序递增（第一个时间段为 1，第二个为 2，以此类推）
-- 时间段数量 = `(time_slot_end_time - time_slot_start_time) / time_slot_duration_minutes`
-- 每个时间段：`start_time = time_slot_start_time + (slot_id - 1) * time_slot_duration_minutes`，`end_time = start_time + time_slot_duration_minutes`
 
 ### 9. 获取用户参与的多人任务列表
 
@@ -1635,12 +1348,11 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - 最大参与人数选择器（如：7人）
   - 最小参与人数选择器（如：5人）
   - 完成规则选择（全部完成/最小人数完成）
-  - 奖励分配方式选择（支持"平均分配"和"自定义分配"）
-- **奖励设置**：
-  - 支持现金奖励、积分奖励、现金+积分奖励
-  - 仅显示"积分奖励"选项，现金相关 UI 隐藏或禁用
-  - 积分输入框（必填）
-  - 根据奖励类型显示相应的输入字段
+  - 奖励分配方式选择（平均分配/自定义）
+- 奖励设置：
+  - 奖励类型选择（现金/积分/现金+积分）
+  - 如果选择积分，显示积分输入框
+  - 如果选择现金，显示金额输入框
 - 自动设置：
   - `is_official_task=true`（管理员发布的任务自动标记为官方任务）
   - `auto_accept=true`（官方任务自动接受申请）
@@ -1725,24 +1437,18 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - **重要说明**：`status='completed'` 仅表示任务工作流程完成，不代表奖励已发放，需查看奖励状态
 - 显示参与者列表（如果用户是参与者或管理员）
 - **申请参与界面**（如果用户未申请且未达到最大人数）：
-  - **固定时间段服务**：
-    - 显示所有可用时间段列表（从任务详情API获取 `time_slots` 数组）
-    - 每个时间段显示：时间段（如"12:00-13:00"）、当前人数/最大人数（如"2/4"）、是否已满、可用名额
-    - 已满的时间段显示为禁用状态
-    - 用户选择时间段后，点击"申请参与"按钮
-    - 申请消息输入框（可选）
-  - **非固定时间段服务（任务达人发布）**：
-    - 显示时间选择表单
+  - **固定时间段服务**：显示所有可用时间段列表，用户选择时间段后申请
+  - **非固定时间段服务（任务达人发布）**：显示时间选择表单
     - 单选按钮或开关：选择"灵活时间"或"指定截止日期"
     - 如果选择"指定截止日期"：显示日期时间选择器，用户选择期望的截止日期
     - 如果选择"灵活时间"：显示提示信息"时间灵活，可与任务达人协商"
-    - 申请消息输入框（可选）
-    - 提交申请按钮
+  - 申请消息输入框（可选）
+  - 提交申请按钮
 - 参与状态显示（如果用户已申请/参与）
 - **进入聊天室按钮**（如果用户已接受/参与，可以立即进入任务聊天室）
   - 多人任务或达人多人服务都会进入多人任务聊天室
   - 在聊天室中，管理员和任务达人有权踢掉参与者
-  - 申请者也可以申请退出该任务的参与资格
+  - 申请者也可以申请退出取消此任务
 - **申请退出按钮**（如果用户已参与，可以申请退出）
   - 点击后弹出退出申请表单
   - 需要填写退出原因
@@ -1778,21 +1484,14 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - **管理权限**：管理员和任务达人（任务创建者）可以踢出参与者
 
 **聊天室权限规则**（必须严格执行）：
-
-| 参与者状态 | 可进入聊天室 | 可发送消息 | 备注 |
-|---------|-----------|----------|------|
-| `pending` | 否 | 否 | 非官方任务预留，官方任务不会用到 |
-| `accepted` | 是 | 是 | 申请后自动进入 |
-| `in_progress` | 是 | 是 | 任务进行中 |
-| `completed` | 是 | 是 | 允许继续交流、看历史记录 |
-| `exit_requested` | 是 | 是 | 审核期间仍保留读写权限 |
-| `exited` | 否 | 否 | 审核通过退出后移出聊天室 |
-| `cancelled` | 否 | 否 | 被踢出后禁止再次进入；是否保留历史消息仅影响"历史记录接口"，默认允许看到历史但不能再进聊天室页面 |
-
-**WebSocket 鉴权统一检查**：
-- 可进入聊天室：`status IN ('accepted','in_progress','completed','exit_requested')`
-- 可发送消息：`status IN ('accepted','in_progress','completed','exit_requested')`
-- 禁止访问：`status IN ('exited','cancelled')`
+- **允许进入聊天室的状态**：`accepted`、`in_progress`、`completed`
+- **允许发送消息的状态**：`accepted`、`in_progress`、`completed`
+- **禁止进入和发言的状态**：`pending`、`exit_requested`、`exited`、`cancelled`
+- **说明**：
+  - 已完成（`completed`）的参与者可以查看历史消息并继续发言
+  - 退出申请中（`exit_requested`）的参与者可以查看消息但不能发送消息（等待审核）
+  - 已退出（`exited`）或已取消（`cancelled`）的参与者不能进入聊天室
+  - 被踢出的参与者（`cancelled`）不能进入聊天室，根据业务需求决定是否允许查看历史消息
 
 **管理权限**：
 - **管理员**：可以踢出任何参与者（状态为 `accepted`、`in_progress` 或 `exit_requested`）
@@ -1807,7 +1506,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - WebSocket连接时，服务器端需要验证：
   1. 用户身份（JWT token）
   2. 用户是否为该任务的参与者（查询 `task_participants` 表）
-  3. 参与者状态是否为 `accepted`、`in_progress`、`completed` 或 `exit_requested`（按上述权限规则）
+  3. 参与者状态是否为 `accepted`、`in_progress` 或 `completed`（按上述权限规则）
 
 ### 4. 管理员任务管理页面
 
@@ -1822,17 +1521,14 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - 显示退出申请列表（如果有参与者申请退出）
 - 批准/拒绝退出申请按钮
 - 踢出参与者按钮（可以踢出违反规则的参与者）
-- 开始任务按钮（当达到最小参与人数后，管理员可以点击"开始任务"按钮，不会自动开始）（**注意**：此页面为官方任务管理页面，由管理员操作；任务达人任务由任务达人在 `/expert/tasks/{task_id}/manage` 页面操作）
+- 开始任务按钮（当达到最小参与人数时，或手动开始）
 - 参与者管理（查看、移除参与者）
-- 任务完成确认和奖励分配（支持现金、积分、现金+积分）
-  - **注意**：根据功能范围说明，当前版本支持现金奖励分配和现金支付流程，UI应显示相应选项
+- 任务完成确认和奖励分配（现金/积分）
 - 显示审计日志（可选）
 
 ### 4.1. 任务达人任务管理页面
 
 **路径**: `/expert/tasks/{task_id}/manage`
-
-**权限**: 仅任务达人（任务创建者）可以访问
 
 **功能**:
 - 显示任务详情（包括关联的达人服务信息）
@@ -1841,12 +1537,11 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - 对状态为 `accepted`、`in_progress` 的参与者显示"踢出"按钮
   - 对状态为 `exit_requested` 的参与者显示"批准退出"和"拒绝退出"按钮
 - 显示退出申请列表（如果有参与者申请退出）
-- 批准/拒绝退出申请按钮（任务达人审核）
+- 批准/拒绝退出申请按钮
 - 踢出参与者按钮（可以踢出违反规则的参与者）
-- 开始任务按钮（当达到最小参与人数后，任务达人可以点击"开始任务"按钮，不会自动开始）
+- 开始任务按钮（当达到最小参与人数时，或手动开始）
 - 参与者管理（查看、移除参与者）
-- 任务完成确认和奖励分配（支持现金、积分、现金+积分）
-  - **注意**：根据功能范围说明，当前版本支持现金奖励分配和现金支付流程，UI应显示相应选项
+- 任务完成确认和奖励分配
 - 显示审计日志（可选）
 
 ### 5. 用户我的多人任务页面
@@ -1864,25 +1559,16 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ### 1. 权限控制
 
-- **创建多人任务**: 
-  - 管理员可以创建官方多人任务
-  - 任务达人可以创建达人类型的多人任务（expert 任务）
+- **创建多人任务**: 仅管理员可以创建
 - **申请参与**: 所有认证用户都可以申请（官方任务所有人都可以看到）
 - **自动接受**: 官方任务自动接受申请，无需管理员审核
-- **进入聊天室**: 仅已接受的参与者可以进入和发送消息（状态为 `accepted`、`in_progress`、`completed` 或 `exit_requested`）
-- **开始任务**: 
-  - 官方任务：管理员可以操作
-  - 任务达人任务：任务达人（任务创建者）可以操作
-  - 当前版本不支持自动开始，达到min_participants时需管理员/任务达人手动开始
+- **进入聊天室**: 仅已接受的参与者可以进入和发送消息（状态为 `accepted`、`in_progress` 或 `completed`）
+- **开始任务**: 仅管理员可以操作（或达到min_participants自动开始）
 - **提交完成**: 仅参与者本人可以操作
-- **申请退出**: 仅参与者本人可以操作（申请者可以申请退出该任务的参与资格）
-- **批准/拒绝退出**: 
-  - 官方任务：管理员可以操作
-  - 任务达人任务：任务达人（任务创建者）可以操作，管理员保留兜底权限
+- **申请退出**: 仅参与者本人可以操作（申请者可以申请退出取消此任务）
+- **批准/拒绝退出**: 管理员和任务达人（任务创建者）可以操作
 - **踢出参与者**: 管理员和任务达人（任务创建者）可以操作（有权踢掉违反规则的参与者）
-- **确认完成和分配奖励**: 
-  - 官方任务：管理员可以操作
-  - 任务达人任务：任务达人（任务创建者）可以操作，管理员保留兜底权限
+- **确认完成和分配奖励**: 仅管理员可以操作
 
 ### 2. 数据验证
 
@@ -1891,7 +1577,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - 积分奖励 >= 0（如果reward_type包含points）
 - 奖励分配总额不能超过任务总奖励（现金或积分，在事务内实时验证）
 - 参与者不能重复申请同一任务（利用唯一约束）
-- 多人任务不允许议价（`allow_negotiation=false`，通过任务表的 `allow_negotiation` 字段验证）
+- 多人任务不允许议价（`reward_type` 和 `points_reward` 验证）
 - 任务状态流转验证（如：不能从未开始直接到完成）
 - 退出申请验证（已完成或已退出的不能再次申请退出）
 - 奖励类型完整性验证（`reward_type='points'` 时现金字段必须为 NULL，不接受 0；`reward_type='cash'` 时积分字段必须为 NULL，不接受 0）
@@ -1922,7 +1608,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 - **申请参与时的并发控制**：
   - 使用数据库事务确保数据一致性
   - 对 `tasks` 记录使用 `SELECT ... FOR UPDATE` 锁定，防止并发修改
-  - 使用实时 `COUNT(*)` 查询参与者数量（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`），而非依赖 `current_participants` 字段
+  - 使用实时 `COUNT(*)` 查询参与者数量（状态为 `pending`、`accepted`、`in_progress`），而非依赖 `current_participants` 字段
   - 使用唯一约束 `(task_id, user_id)` 防止重复申请
   - 使用幂等键防止重复请求
 - **状态更新时的并发控制**：
@@ -1935,36 +1621,13 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 ### 4. 幂等性策略
 
-**幂等性要求汇总表**：
-
-| 接口 | idempotency_key 要求 | 说明 |
-|------|---------------------|------|
-| `POST /api/tasks/{task_id}/apply` | **必须携带** | 防止用户"连点两次"重复申请，缺少时返回 400 |
-| `POST /api/tasks/{task_id}/participants/me/complete` | **必须携带** | 防止重复提交完成，缺少时返回 400 |
-| `POST /api/tasks/{task_id}/participants/me/exit-request` | **必须携带** | 防止重复提交退出申请，缺少时返回 400 |
-| `POST /api/admin/tasks/{task_id}/complete` | **必须携带** | 防止重复分配奖励，缺少时返回 400 |
-| `POST /api/admin/tasks/{task_id}/start` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/admin/tasks/{task_id}/participants/{participant_id}/kick` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/expert/tasks/{task_id}/participants/{participant_id}/kick` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/admin/tasks/{task_id}/participants/{participant_id}/approve-exit` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/admin/tasks/{task_id}/participants/{participant_id}/reject-exit` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/expert/tasks/{task_id}/participants/{participant_id}/approve-exit` | 建议携带 | 可选，但建议携带以支持幂等 |
-| `POST /api/expert/tasks/{task_id}/participants/{participant_id}/reject-exit` | 建议携带 | 可选，但建议携带以支持幂等 |
-
-**幂等性处理规则**：
-- **必须携带**的接口：如果请求中缺少 `idempotency_key`，直接返回 400 Bad Request
-- **建议携带**的接口：如果请求中缺少 `idempotency_key`，接口仍可正常处理，但不保证幂等性
-- 如果 `idempotency_key` 已存在（唯一键冲突），从数据库查询已有记录并返回 200 OK，而不是返回 4xx 错误
-- `idempotency_key` 建议使用 UUID 或时间戳+随机字符串，确保全局唯一
-
-**统一规则**（与上方汇总表一致）：
-- **必须携带**：申请参与、退出申请、提交完成、分配奖励、发起支付等关键操作（见上方汇总表）
-- 其他有 side-effect 的 POST 操作虽然表格里是"建议携带"，但推荐客户端全部带上，服务端只对表格中的"必须携带"接口作 400 强校验
+- **统一规则**：所有会产生 side-effect 的 POST 操作（尤其是可能被用户"连点两次"的）都应包含 `idempotency_key`
+  - **建议携带**：申请参与、退出申请、提交完成
+  - **强制要求**：奖励分配、发起支付等关键操作
 - **客户端生成幂等键**：客户端生成 UUID 格式的 `idempotency_key`
 - **服务端缓存**：在 Redis 或内存中缓存幂等键（5-15分钟），拒绝重复请求
 - **数据库唯一约束**：在相关表中添加 `idempotency_key` 唯一约束，作为最后一道防线
   - **全局唯一**：当前使用 `UNIQUE(idempotency_key)`，UUID 冲突概率几乎可以忽略
-  - **重要说明**：`UNIQUE(idempotency_key)` 约束只对非NULL值生效，多行NULL值是被允许的。未携带 `idempotency_key` 的请求不会被 UNIQUE 约束保护。对于"必须携带"的接口，服务端应该拒绝 `idempotency_key` 为空的请求（返回 400），把"逻辑约束 + DB 约束"拼起来才完整
   - **可选优化**：如果希望不同用户可以复用同一个 key，可改为 `UNIQUE(user_id, idempotency_key)`
 - **幂等返回规范**（必须严格执行）：
   - **原则**：当遇到 `UNIQUE(idempotency_key)` 冲突时，**不是返回 4xx 错误**，而是根据已有记录重放结果
@@ -1980,9 +1643,8 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ### 5. current_participants 字段说明
 
 - `current_participants` 字段仅作为**展示用缓存**，不应用于业务逻辑决策
-- **重要**：此字段是弱一致缓存字段，所有是否可申请/可迟到加入的决策必须使用 `COUNT(*)` 实时查询；`current_participants` 只用于列表展示或统计场景
 - 所有决策（如是否允许申请、是否达到最大人数）都应使用实时 `COUNT(*)` 查询
-- **推荐**：使用触发器自动维护 `current_participants`，提升查询性能
+- **MVP阶段建议**：可以完全不存 `current_participants`，所有地方实时 `COUNT(*)`
   - 对于人数上限较小的任务（7人级别），`COUNT(*)` 性能足够
   - 如果后续发现列表页 QPS 很高，且 profiling 显示 `COUNT(*)` 是瓶颈，再考虑添加缓存字段
 - **如果使用缓存字段**：
@@ -1990,95 +1652,9 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   - 触发器应使用增量更新（判断 old/new.status 是否从"占坑状态"变成"非占坑状态"再 ±1），而非每次都 `COUNT(*)` 全表计算
   - 如果发现不一致，以实时计数为准
 
-**触发器维护方案（推荐实现）**：
+**触发器维护方案（可选，MVP阶段不建议使用）**：
 
-**推荐实现**：使用数据库触发器自动维护 `current_participants` 缓存字段，提升查询性能。如果使用触发器，应用层代码中所有对 `current_participants` 的直接 UPDATE 操作都应移除，改为依赖触发器自动维护。
-
-**性能优化：维护 task_participants 表的冗余字段**（推荐实现）：
-
-为了加速任务达人任务的查询，避免每次查询都需要 JOIN tasks 表，可以在 `task_participants` 表中添加冗余字段 `is_expert_task` 和 `expert_creator_id`，并通过触发器自动维护：
-
-```sql
--- 创建触发器函数，在插入/更新 task_participants 时自动维护冗余字段
-CREATE OR REPLACE FUNCTION sync_task_participants_task_info() RETURNS trigger AS $$
-BEGIN
-    -- 从 tasks 表获取任务相关信息（任务达人任务和官方任务）
-    SELECT created_by_expert, is_official_task, expert_creator_id
-    INTO NEW.is_expert_task, NEW.is_official_task, NEW.expert_creator_id
-    FROM tasks
-    WHERE id = NEW.task_id;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 为 task_participants 表添加触发器
-CREATE TRIGGER trg_sync_task_participants_task_info
-BEFORE INSERT OR UPDATE OF task_id ON task_participants
-FOR EACH ROW EXECUTE FUNCTION sync_task_participants_task_info();
-```
-
-**性能提升**：
-- **查询任务达人发布的任务的参与者**：从 `JOIN tasks WHERE created_by_expert=true` 优化为 `WHERE is_expert_task=true`，避免JOIN操作
-- **查询官方任务的参与者**：从 `JOIN tasks WHERE is_official_task=true` 优化为 `WHERE is_official_task=true`，避免JOIN操作
-- **按任务达人查询其所有任务的参与者**：从 `JOIN tasks WHERE expert_creator_id=?` 优化为 `WHERE expert_creator_id=?`，避免JOIN操作
-- **预计性能提升**：在 task_participants 表数据量大时，查询速度可提升 50-80%
-
-**ID格式化实现建议**：
-```python
-def format_task_id(db_id: int, is_official: bool = False, is_expert: bool = False) -> str:
-    """
-    格式化任务ID
-    - 官方任务：O + 数字（如：O1234）
-    - 任务达人任务：E + 数字（如：E1234）
-    - 普通任务：纯数字（如：1234）
-    
-    注意：is_official 和 is_expert 不应该同时为 True（一个任务不能既是官方任务又是任务达人任务）
-    如果同时为 True，优先使用 is_official（官方任务优先级更高）
-    """
-    if is_official:
-        return f"O{db_id}"
-    elif is_expert:
-        return f"E{db_id}"
-    else:
-        return str(db_id)
-
-def parse_task_id(task_id: str | int) -> int:
-    """
-    解析任务ID（支持格式化ID和纯数字ID）
-    - 输入：O1234, E1234, 或 1234
-    - 输出：1234（整数）
-    """
-    if isinstance(task_id, int):
-        return task_id
-    if isinstance(task_id, str):
-        if task_id.startswith('O') or task_id.startswith('E'):
-            return int(task_id[1:])
-        return int(task_id)
-    raise ValueError(f"Invalid task_id format: {task_id}")
-```
-
-**数据一致性**：
-- 触发器在 INSERT 和 UPDATE `task_id` 时自动同步
-- 如果 tasks 表的 `created_by_expert`、`is_official_task` 或 `expert_creator_id` 被修改，需要手动更新相关 task_participants 记录（或添加 tasks 表的触发器）
-
-**ID格式化说明**：
-- **数据库存储**：所有任务ID在数据库中存储为整数（`INTEGER PRIMARY KEY`，自增）
-- **前端返回**：根据任务类型格式化为：
-  - 官方任务：`O + 数字`（如：数据库ID 1234 → 前端返回 `O1234`）
-  - 任务达人任务：`E + 数字`（如：数据库ID 1234 → 前端返回 `E1234`）
-  - 普通单人任务：纯数字（如：数据库ID 1234 → 前端返回 `1234`）
-- **API接收**：API可以接受格式化ID（`O1234`、`E1234`）或纯数字ID（`1234`），后端需要解析为数字ID进行数据库查询
-- **实现位置**：在序列化器（Serializer）或响应模型（Response Model）中格式化，在路由参数解析时解析
-
-**触发器实现方案**：使用数据库触发器自动维护 `current_participants` 缓存字段，提升查询性能。
-
-**实现说明**：
-- **推荐实现：增量更新版本**（见下方代码）：判断 old/new.status 是否从"占坑状态"变成"非占坑状态"再 ±1，减少数据库负载，适合高并发场景
-- **占坑状态定义**：`status IN ('pending', 'accepted', 'in_progress', 'exit_requested')`（见"退出逻辑与占坑规则"章节的权威定义）
-- **不占坑状态**：`completed`、`exited`、`cancelled`
-
-**推荐实现（增量更新版本）**：
+⚠️ **v1.0 不要实现本触发器，仅作为未来优化方案**。v1.0 阶段所有地方使用实时 `COUNT(*)` 查询，不维护 `current_participants` 缓存字段。如果实现触发器但上层逻辑仍用 `COUNT(*)` 做可信源，会导致两个值对不上。
 
 ```sql
 -- 创建触发器函数，自动维护 current_participants
@@ -2089,7 +1665,7 @@ BEGIN
     SET current_participants = (
       SELECT COUNT(*) FROM task_participants 
       WHERE task_id = NEW.task_id 
-      AND status IN ('pending', 'accepted', 'in_progress', 'exit_requested')
+      AND status IN ('pending', 'accepted', 'in_progress')
     )
     WHERE id = NEW.task_id;
     RETURN NEW;
@@ -2100,7 +1676,7 @@ BEGIN
       SET current_participants = (
         SELECT COUNT(*) FROM task_participants 
         WHERE task_id = NEW.task_id 
-        AND status IN ('pending', 'accepted', 'in_progress', 'exit_requested')
+        AND status IN ('pending', 'accepted', 'in_progress')
       )
       WHERE id = NEW.task_id;
     END IF;
@@ -2110,7 +1686,7 @@ BEGIN
     SET current_participants = (
       SELECT COUNT(*) FROM task_participants 
       WHERE task_id = OLD.task_id 
-      AND status IN ('pending', 'accepted', 'in_progress', 'exit_requested')
+      AND status IN ('pending', 'accepted', 'in_progress')
     )
     WHERE id = OLD.task_id;
     RETURN OLD;
@@ -2135,26 +1711,13 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 
 ```
 open (开放申请)
-  ↓ (管理员手动开始任务)
+  ↓ (管理员开始任务，或达到min_participants自动开始)
 in_progress (进行中)
   ↓ (满足完成条件)
 completed (已完成)
   ↓
 cancelled (已取消) [可发生在任何状态，管理员操作]
 ```
-
-**任务开始方式**：
-- **手动开始（当前版本）**：
-  - 官方任务：管理员可以手动点击"开始任务"按钮
-  - 任务达人任务：任务达人（任务创建者）可以手动点击"开始任务"按钮
-  - 任务进入 `in_progress` 状态
-- **自动开始（未来扩展）**：当任务达到 `min_participants` 人数时，系统自动将任务状态改为 `in_progress`，所有 `accepted` 状态的参与者自动变为 `in_progress`
-  - **当前版本不支持**：虽然状态流转图中提到"达到 min_participants 自动开始"，但此功能暂未实现
-  - **实现建议**：如需实现自动开始功能，需要：
-    - 创建异步 Job（如 cron + SQL 或消息队列）
-    - 定期检查 `open` 状态的任务，统计 `accepted` 状态的参与者数量
-    - 当计数达到 `min_participants` 时，自动触发开始流程
-    - 记录审计日志，标注为"自动开始"而非管理员操作
 
 **状态说明**：
 - `open`: 任务开放申请，参与者可以申请参与
@@ -2168,43 +1731,25 @@ cancelled (已取消) [可发生在任何状态，管理员操作]
 - `cancelled`: 任务已取消（可发生在任何状态，管理员操作）
 
 **重要规则**：
-- `min_participants` 用于"可开始"判定：任务开始时，必须达到 `min_participants` 才能开始
-- **条件性迟到加入**：任务进行中，如果有人退出导致当前参与人数（使用 `COUNT(*)` 查询）< `min_participants`，允许新成员申请加入补位
-- **任务继续规则**：一旦任务已开始，即使后续有人退出导致人数 < `min_participants`，任务仍可继续进行（但允许补人）
+- `min_participants` 仅用于"可开始"判定，一旦任务开始，即使后续有人退出导致人数 < `min_participants`，任务仍可继续进行
 - 任务取消时，需要处理退款/积分回退（见"取消策略矩阵"章节）
 
 ---
 
 ## 📋 迟到加入规则
 
-**⚠️ 重要说明**：下文所有"当前参与人数"均指使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的人数，以"退出逻辑与占坑规则"章节的权威定义为唯一计算口径。所有是否可申请/可迟到加入的决策必须使用 `COUNT(*)` 实时查询，不能使用 `current_participants` 字段。
+### 当前策略
 
-### 当前实现（条件性迟到加入）
+**策略A（当前实现）**：任务开始后（`in_progress` 状态）**禁止**新成员申请加入。
 
-**当前版本实现**：支持**条件性迟到加入**。
+**理由**：
+- 简化状态管理，避免复杂的计时和奖励分配逻辑
+- 确保所有参与者有相同的开始时间和工作周期
+- 避免因新成员加入导致的任务完成条件重新计算
 
-**规则**：
-- **正常申请**：任务状态为 `open` 时，允许申请加入（需满足当前参与人数（使用 `COUNT(*)` 查询）< `max_participants`）
-- **条件性迟到加入**：任务状态为 `in_progress` 时，**仅在以下条件下允许申请**：
-  - 当前参与人数（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`）< `min_participants`
-  - 且未达到 `max_participants`
-  - **目的**：当任务进行中有人退出导致人数不足 `min_participants` 时，允许补人至 `min_participants`，确保任务可以正常完成
-  - **重要**：任务开始后仅支持"条件性迟到加入"：只在当前参与人数 < `min_participants` 时允许新申请，补足到 `min_participants` 后即使未达 `max_participants` 也不再允许新申请
-- **禁止申请**：任务状态为 `completed` 或 `cancelled` 时，禁止申请
+### 可选策略（未来扩展）
 
-**业务逻辑**：
-1. 任务开始时，必须达到 `min_participants` 才能开始
-2. 任务进行中，如果有人退出导致当前参与人数（使用 `COUNT(*)` 查询）< `min_participants`，允许新成员申请加入
-3. 一旦补人至 `min_participants`，即使未达到 `max_participants`，也不再接受新申请（除非再次降到 `min_participants` 以下）
-
-**实现要求**：
-- 申请接口需要验证：如果任务状态为 `in_progress`，使用 `COUNT(*)` 查询当前参与人数（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`），检查是否 < `min_participants`
-- 前端应显示"任务进行中，人数不足，可申请补位"的提示（当满足条件时）
-- **重要**：所有提到"只要 < max_participants 就可以申请"的老描述均为历史版本，当前版本仅支持条件性迟到加入（补到 min_participants 为止）
-
-### 未来扩展（策略B，完全开放迟到加入）
-
-**策略B（v2.0 未来扩展，v1.5 不实现）**：允许任务开始后补招至 `max_participants`（无 `min_participants` 限制）。
+**策略B（可选）**：允许任务开始后补招至 `max_participants`。
 
 **需要明确的规则**：
 1. **新成员初始状态**：
@@ -2224,14 +1769,12 @@ cancelled (已取消) [可发生在任何状态，管理员操作]
    - 方案1：包含新成员（新成员也需要完成才能满足最小人数）
    - 方案2：不包含新成员（仅计算任务开始时的参与者）
 
-5. **申请条件**（v2.0 未来扩展，v1.5 不实现）：
+5. **申请条件**：
    - 任务状态仍为 `in_progress`
    - 当前参与人数 < `max_participants`
    - 任务未完成
 
-**⚠️ 历史设计说明（v1.0，已废弃）**：曾考虑允许任务开始后任意补到 `max_participants`，v1.5 已改为仅支持"条件性迟到加入"（只补到 `min_participants`）。
-
-**实现建议**（v2.0 未来扩展）：
+**实现建议**：
 - 如果采用策略B，需要在申请接口中移除"任务状态必须为 `open`"的限制
 - 添加"迟到加入"标识，便于前端显示和统计
 - 在审计日志中记录"迟到加入"操作
@@ -2239,14 +1782,17 @@ cancelled (已取消) [可发生在任何状态，管理员操作]
 
 ### 退出逻辑与占坑规则
 
-**占坑规则（权威定义）**：
-- **占坑状态**：`pending`、`accepted`、`in_progress`、`exit_requested`（防止超卖，确保退出申请期间名额被占用）
-- **不占坑状态**：`completed`（已完成者释放名额，允许补人，但补位仍然遵守条件性迟到加入规则：只补到 `min_participants`）、`exited`、`cancelled`
-- **申请参与时计算人数**：使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者数量
-- **条件性迟到加入支持**：
-  - 任务状态为 `in_progress` 时，使用 `COUNT(*)` 查询当前参与人数（状态为 `pending`、`accepted`、`in_progress`、`exit_requested`），如果 < `min_participants`，允许新成员申请加入
-  - 一旦补人至 `min_participants`，即使未达到 `max_participants`，也不再接受新申请（除非再次降到 `min_participants` 以下）
-  - **重要**：退出申请审批通过后，参与者状态变为 `exited`，此时才真正释放坑位，触发补位逻辑
+**当前策略（策略A）**：
+- 申请参与时计算人数：状态为 `pending`、`accepted`、`in_progress` 的参与者
+- `exit_requested` 状态**不占坑**（因为当前策略下任务开始后不允许新成员加入，不会出现超卖问题）
+- `completed` 状态**不占坑**（已完成者不占用参与名额）
+
+**未来扩展（策略B，迟到加入）**：
+- 如果开放"迟到加入"，需要将 `exit_requested` 状态也计入占坑人数，防止超卖
+- 需要明确 `completed` 状态是否占坑：
+  - 如果 `completed` 占坑：已完成者仍占用名额，新成员无法加入（除非有人退出）
+  - 如果 `completed` 不占坑：已完成者释放名额，新成员可以补位
+- **建议**：`completed` 不占坑，允许已完成者释放名额给新成员
 
 ---
 
@@ -2259,10 +1805,9 @@ accepted (已接受，可进入聊天室)
   ↓ (管理员开始任务)
 in_progress (进行中)
   ↓ (参与者提交完成)
-completed (已完成) [⚠️ 已完成状态不可再申请退出，无法发起 exit-request]
-
-accepted (已接受) → exit_requested (退出申请中) [仅可发生在 accepted 或 in_progress 状态]
-in_progress (进行中) → exit_requested (退出申请中) [仅可发生在 accepted 或 in_progress 状态]
+completed (已完成) [⚠️ 已完成状态不可再申请退出]
+  ↓
+exit_requested (退出申请中) [仅可发生在 accepted 或 in_progress 状态]
   ↓ (管理员批准)
 exited (已退出)
   ↓ (管理员拒绝)
@@ -2276,29 +1821,29 @@ cancelled (已取消) [管理员可取消参与者资格，可发生在任何状
 - `completed` 状态**不可**再申请退出（已完成者不能退出）
 - `exited` 或 `cancelled` 状态**不可**再次申请退出
 
-**任务达人任务状态流转**：
+**非官方任务状态流转（暂不支持，预留）**：
 ```
 用户申请
   ↓
 pending (待审核)
-  ↓ (任务达人审核通过)
+  ↓ (管理员审核通过)
 accepted (已接受)
-  ↓ (任务达人审核拒绝)
-[记录被删除或状态为 rejected]
+  ↓ (管理员审核拒绝)
+[记录被删除或状态为 rejected，当前不实现]
 ```
 
 **状态说明**：
-- `pending`: 待审核（`auto_accept=false` 的任务进入此状态；当前版本中官方任务默认 `auto_accept=true`，任务达人任务默认 `auto_accept=false`）
-- `accepted`: 已接受（`auto_accept=true` 的任务自动接受，用户申请后立即进入此状态；`auto_accept=false` 的任务经审核后进入此状态，可以进入聊天室）
+- `pending`: 待审核（非官方任务需要等待管理员审核，官方任务不会进入此状态）
+- `accepted`: 已接受（官方任务自动接受，用户申请后立即进入此状态，可以进入聊天室）
 - `in_progress`: 进行中（任务已开始，参与者正在工作）
 - `completed`: 已完成（参与者已完成自己的部分）
-- `exit_requested`: 退出申请中（参与者申请退出，等待管理员/任务达人审核，此时 `previous_status` 保存前一个状态）
-- `exited`: 已退出（管理员/任务达人批准退出）
-- `cancelled`: 已取消（管理员/任务达人取消参与者资格，可发生在任何状态）
+- `exit_requested`: 退出申请中（参与者申请退出，等待管理员审核，此时 `previous_status` 保存前一个状态）
+- `exited`: 已退出（管理员批准退出）
+- `cancelled`: 已取消（管理员取消参与者资格，可发生在任何状态）
 
 **重要规则**：
 - 官方任务（`auto_accept=true`）：用户申请后立即进入 `accepted` 状态，无需等待管理员审核
-- 任务达人任务（`auto_accept=false`）：用户申请后需要等待任务达人审核，审核通过后进入 `accepted` 状态
+- 非官方任务（`auto_accept=false`）：用户申请后需要等待管理员审核（此功能暂不实现，当前仅支持官方任务）
 - 参与者**仅可**在 `accepted` 或 `in_progress` 状态申请退出，`completed`、`exited`、`cancelled` 状态不可再申请退出
 - 退出申请被拒绝时，从 `previous_status` 恢复之前的状态
 - 管理员可以随时取消参与者资格（状态变为 `cancelled`）
@@ -2308,11 +1853,7 @@ accepted (已接受)
 
 ## 📋 取消策略矩阵
 
-**重要说明**：取消操作需要实现完整的退款/积分回退逻辑，包括：
-- 状态变更和审计日志记录
-- 支付网关对接（现金退款）
-- 积分系统对接（积分回退）
-- 根据任务状态和参与者状态计算退款/回退金额
+⚠️ **重要说明**：本节为未来扩展设计，v1.0 仅实现「状态变更 + 审计日志」，不实现真实退款/积分回退逻辑。v1.0 的取消操作仅更新状态和记录审计日志，不涉及支付网关对接和积分扣除。
 
 ### 任务取消场景
 
@@ -2327,8 +1868,8 @@ accepted (已接受)
 | 取消时机 | 发起者 | 退款/回退策略 | 通知对象 | 状态变更 |
 |---------|--------|--------------|---------|---------|
 | 申请阶段（pending） | 管理员 | 无需处理 | 参与者 | 参与者状态 → cancelled |
-| 已接受（accepted） | 管理员 | 无需退款（尚未开始工作） | 参与者 | 参与者状态 → cancelled（人数统计使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者） |
-| 进行中（in_progress） | 管理员 | 按完成度部分退款/积分回退 | 参与者 | 参与者状态 → cancelled（人数统计使用 `COUNT(*)` 查询状态为 `pending`、`accepted`、`in_progress`、`exit_requested` 的参与者） |
+| 已接受（accepted） | 管理员 | 无需退款（尚未开始工作） | 参与者 | 参与者状态 → cancelled（人数统计逻辑见"current_participants 字段说明"章节） |
+| 进行中（in_progress） | 管理员 | 按完成度部分退款/积分回退 | 参与者 | 参与者状态 → cancelled（人数统计逻辑见"current_participants 字段说明"章节） |
 | 已完成（completed） | 管理员 | 已发放奖励需追回（退款/积分扣除） | 参与者、财务部门 | 参与者状态 → cancelled，奖励记录标记为 refunded |
 
 ### 取消操作流程
@@ -2367,18 +1908,14 @@ accepted (已接受)
 
 ### 2. 集成测试
 
-- 管理员创建官方多人任务流程（支持现金奖励、积分奖励、现金+积分奖励）
-- 任务达人创建多人任务流程（支持固定时间段和非固定时间段服务）
-- 用户申请参与流程（官方任务自动接受，任务达人任务需要审核）
+- 管理员创建官方多人任务流程（支持积分奖励）
+- 用户申请参与流程（自动接受，立即进入聊天室）
 - 任务聊天室功能测试（消息发送、接收、权限控制）
 - 参与者退出申请流程
-- 管理员/任务达人批准/拒绝退出申请流程
-- 任务开始流程（管理员开始官方任务，任务达人开始达人任务）
+- 管理员批准/拒绝退出申请流程
+- 任务开始流程
 - 参与者完成流程
-- 任务完成和奖励分配流程（支持现金奖励、积分奖励、现金+积分奖励）
-- 现金支付流程测试（支持现金支付流程）
-- 现金退款流程测试（支持真实退款）
-- 积分回退流程测试
+- 任务完成和奖励分配流程（支持积分奖励）
 - 议价功能验证（多人任务禁止议价）
 
 ### 3. 边界测试
@@ -2418,35 +1955,28 @@ accepted (已接受)
 
 ### 阶段二：后端API开发（4-6天）
 
-1. 实现管理员创建官方多人任务API（支持现金奖励、积分奖励、现金+积分奖励）
-2. 实现任务达人创建多人任务API（支持固定时间段和非固定时间段服务）
-3. 实现用户申请参与API（官方任务自动接受，任务达人任务需要审核）
-4. 实现任务聊天室集成（用户申请后自动加入聊天室）
-5. 实现参与者退出申请API
-6. 实现管理员/任务达人批准/拒绝退出申请API
-7. 实现管理员/任务达人开始任务API
-8. 实现参与者完成API
-9. 实现管理员/任务达人确认完成和奖励分配API（支持现金奖励、积分奖励、现金+积分奖励）
-10. 实现现金支付流程集成（支付网关对接）
-11. 实现现金退款和积分回退流程
-12. 实现查询API（参与者列表、用户任务列表等）
-13. 实现议价验证（多人任务禁止议价）
+1. 实现管理员创建多人任务API（支持积分奖励）
+2. 实现用户申请参与API（官方任务自动接受）
+3. 实现任务聊天室集成（用户申请后自动加入聊天室）
+4. 实现参与者退出申请API
+5. 实现管理员批准/拒绝退出申请API
+6. 实现管理员开始任务API
+7. 实现参与者完成API
+8. 实现管理员确认完成和奖励分配API（支持积分奖励）
+9. 实现查询API（参与者列表、用户任务列表等）
+10. 实现议价验证（多人任务禁止议价）
 
 ### 阶段三：前端开发（4-6天）
 
-1. 开发管理员发布官方多人任务页面（支持现金奖励、积分奖励、现金+积分奖励设置）
-2. 开发任务达人发布多人任务页面（支持固定时间段和非固定时间段服务，支持折扣设置）
-3. 修改任务详情页面支持多人任务（显示官方标识、任务达人标识、参与人数、奖励类型等）
-4. 开发任务聊天室页面（集成现有聊天功能）
-5. 实现申请后自动跳转到聊天室功能
-6. 开发退出申请功能
-7. 开发管理员任务管理页面（退出申请审核、奖励分配）
-8. 开发任务达人任务管理页面（退出申请审核、奖励分配）
-9. 开发用户我的多人任务页面
-10. 实现现金奖励配置UI（奖励类型选择、金额输入）
-11. 实现退款/回退状态展示
-12. 添加相关翻译文本
-13. 添加官方任务和任务达人任务标识UI
+1. 开发管理员发布多人任务页面（支持积分奖励设置）
+2. 修改任务详情页面支持多人任务（显示官方标识、参与人数、积分奖励等）
+3. 开发任务聊天室页面（集成现有聊天功能）
+4. 实现申请后自动跳转到聊天室功能
+5. 开发退出申请功能
+6. 开发管理员任务管理页面（退出申请审核）
+7. 开发用户我的多人任务页面
+8. 添加相关翻译文本
+9. 添加官方任务标识UI
 
 ### 阶段四：测试和优化（2-3天）
 
@@ -2473,10 +2003,6 @@ accepted (已接受)
 - `max_participants=1` 保持单人任务逻辑
 - 现有的 `taker_id` 字段继续使用（单人任务）
 - 现有的任务查询和显示逻辑不受影响
-- **历史数据迁移**：
-  - 历史单人任务：`is_multi_participant=false`，不需要 `task_participants` 记录
-  - 但如果之后希望用 `task_participants` 作为"统一参与者表"（哪怕只有一人），要有"单人任务回填脚本"的计划
-  - 历史任务需要补齐 `reward_type`、`reward`、`points_reward` 字段，确保 CHECK 约束不报错
 
 ### 1.1. 多人任务与单人任务的字段使用差异
 
@@ -2494,10 +2020,6 @@ accepted (已接受)
   - **任务达人发布**：**必须设置为任务达人的用户ID**（任务达人提供服务，收钱）
   - **管理员发布（收钱任务）**：**必须设置为系统用户ID或管理员关联的用户ID**（管理员收钱）
   - **管理员发布（发钱任务）**：**必须为 NULL**（管理员发钱，不是接收者）
-- **重要说明**：当前版本通过 `reward_type` 和业务逻辑判断任务是"发钱"还是"收钱"：
-  - **发钱任务**：`reward_type` 为 `points` 或 `both`，且用户完成任务后获得奖励（平台/管理员付费给用户）
-  - **收钱任务**：`reward_type` 为 `cash`，且用户付费参与（用户付费给平台/管理员）
-  - **未来扩展**：如需在数据库层明确标识，可添加 `payment_direction` 字段（`pay_in`/`pay_out`）或 `is_pay_in`/`is_pay_out` 布尔字段
 - `task_participants` 表：存储所有参与者信息
   - 通过 `task_participants.task_id` 关联查询所有参与者
   - 每个参与者一条记录，包含状态、时间偏好等信息
@@ -2509,33 +2031,13 @@ accepted (已接受)
 **查询示例**：
 ```sql
 -- 查询多人任务的所有参与者（付费方或奖励接收方）
--- 性能优化：直接使用 task_participants 表，无需 JOIN tasks 表
 SELECT tp.*, u.name, u.avatar
 FROM task_participants tp
 JOIN users u ON tp.user_id = u.id
 WHERE tp.task_id = 123
   AND tp.status IN ('accepted', 'in_progress', 'completed');
 
--- 查询任务达人发布的任务的所有参与者（性能优化版本，使用冗余字段避免JOIN）
-SELECT tp.*, u.name, u.avatar
-FROM task_participants tp
-JOIN users u ON tp.user_id = u.id
-WHERE tp.is_expert_task = true
-  AND tp.task_id = 123
-  AND tp.status IN ('accepted', 'in_progress', 'completed');
--- 使用 idx_task_participants_expert_task 部分索引，性能优于 JOIN tasks 表
-
--- 按任务达人查询其所有任务的参与者（性能优化版本）
-SELECT tp.*, u.name, u.avatar, t.title AS task_title
-FROM task_participants tp
-JOIN users u ON tp.user_id = u.id
-JOIN tasks t ON tp.task_id = t.id
-WHERE tp.expert_creator_id = 'EXPERT12'
-  AND tp.status IN ('accepted', 'in_progress', 'completed')
-ORDER BY tp.updated_at DESC;
--- 使用 idx_task_participants_expert_creator 索引，先过滤 task_participants，再 JOIN tasks（只需 JOIN 少量任务）
-
--- 查询任务达人发布的多人任务的接收者（商业服务任务：任务达人收钱；协作积分任务：taker_id为NULL）
+-- 查询任务达人发布的多人任务的接收者（任务达人，收钱方）
 SELECT t.*, u.name, u.avatar
 FROM tasks t
 JOIN users u ON t.taker_id = u.id
@@ -2562,11 +2064,9 @@ WHERE t.id = 456
 
 **数据一致性规则**：
 1. **多人任务**：`is_multi_participant=true` 时
-   - **任务达人发布**：
-     - **商业服务任务**（`reward_type='cash'`）：`taker_id` 必须设置为任务达人的用户ID（`expert_creator_id`）
-     - **协作积分任务**（`reward_type='points'` 或 `reward_type='both'`）：`taker_id` 应为 NULL（平台发奖励）
-   - **管理员发布（发钱任务）**：`taker_id` 必须为 NULL（管理员发奖励，不是接收者）
+   - **任务达人发布**：`taker_id` 必须设置为任务达人的用户ID（`expert_creator_id`）
    - **管理员发布（收钱任务）**：`taker_id` 必须设置为系统用户ID或管理员关联的用户ID
+   - **管理员发布（发钱任务）**：`taker_id` 必须为 NULL（管理员发钱，不是接收者）
    - 参与者信息必须存储在 `task_participants` 表中
    - 查询参与者时，必须从 `task_participants` 表查询
    - 查询接收者时，使用 `taker_id` 字段（如果设置了）
@@ -2575,9 +2075,7 @@ WHERE t.id = 456
    - `task_participants` 表不使用（或仅用于历史记录）
    - 查询接收者时，使用 `taker_id` 字段
 3. **数据验证**：应用层应验证
-   - 如果 `is_multi_participant=true` 且 `created_by_expert=true`：
-     - **商业服务任务**（`reward_type='cash'`）：`taker_id` 必须等于 `expert_creator_id`（达人收钱）
-     - **协作积分任务**（`reward_type='points'` 或 `reward_type='both'`）：`taker_id` 应为 NULL（平台发奖励）
+   - 如果 `is_multi_participant=true` 且 `created_by_expert=true`，则 `taker_id` 必须等于 `expert_creator_id`
    - 如果 `is_multi_participant=true` 且 `created_by_admin=true`，根据任务类型（收钱/发钱）验证 `taker_id`
    - 如果 `is_multi_participant=false`，则 `taker_id` 在任务被接受后不应为 NULL
 
@@ -2695,98 +2193,104 @@ WHERE t.id = 456
   - API 版本兼容（支持旧版本客户端）
   - 快速回滚流程（5分钟内完成）
 
-## 🚀 其他扩展功能
+## 🚀 未来扩展
 
-### 1. 普通用户发布多人任务
+### 1. 任务达人发布多人任务
+
+- **功能概述**：允许任务达人（具有特定服务技能的用户）创建多人任务
+- **权限要求**：用户需要被标记为"任务达人"（expert），具有特定服务技能认证
+- **与管理员任务的区别**：
+  - 任务达人发布的任务不是"官方任务"（`is_official_task=false`）
+  - 任务达人发布的任务可能需要审核（`auto_accept=false`，或根据平台策略设置）
+  - 任务达人可以设置固定时间段固定人数的服务
+
+### 2. 任务达人固定时间段固定人数服务
+
+- **功能概述**：任务达人可以为特定服务设置固定时间段和每个时间段的人数限制
+- **应用场景**：
+  - **固定时间段服务示例**：麻将达人可以设置一个时间段为1小时，从中午12:00到晚上22:00，每个时间段4人
+    - 每个时间段独立，用户需要选择具体的时间段进行申请
+    - 每个时间段最多允许指定人数申请（如麻将需要4人）
+  - **非固定时间段服务示例**：摄影达人可以发布摄影服务，不设置固定时间段
+    - 申请人可以选择期望的截止日期（如：希望在2月15日前完成）
+    - 或者选择灵活时间（时间灵活，可与任务达人协商）
+    - 任务达人可以根据申请人的时间偏好进行审核和安排
+  - **折扣应用场景**：
+    - 特定时间段缺人时，可以设置折扣吸引用户（如：1点到2点时间段缺人，原价10镑，现价8镑，打8折）
+    - 推广新服务时，可以设置折扣吸引用户尝试
+    - 淡季或非热门时间段，可以设置折扣提高上座率
+- **数据库字段**：
+  - `is_fixed_time_slot`: 标识是否为固定时间段服务
+  - `time_slot_duration_minutes`: 时间段时长（分钟），如60表示1小时
+  - `time_slot_start_time`: 时间段开始时间（TIME类型），如12:00
+  - `time_slot_end_time`: 时间段结束时间（TIME类型），如22:00
+  - `participants_per_slot`: 每个时间段的人数限制，如4人
+  - `original_price_per_participant`: 原价（每人），如10镑
+  - `discount_percentage`: 折扣百分比（0-100），如20表示打8折
+  - `discounted_price_per_participant`: 折扣后价格（每人），如8镑
+- **业务逻辑**：
+  - 系统根据 `time_slot_start_time`、`time_slot_end_time` 和 `time_slot_duration_minutes` 自动生成所有可用时间段
+  - 例如：12:00-22:00，每60分钟一个时间段，会生成10个时间段（12:00-13:00, 13:00-14:00, ..., 21:00-22:00）
+  - 用户申请时，需要选择具体的时间段
+  - 每个时间段独立计算参与人数，达到 `participants_per_slot` 后停止接受该时间段的申请
+  - 不同时间段之间互不影响，可以同时进行多个时间段的申请
+- **前端展示**：
+  - **固定时间段服务**：
+    - 显示所有可用时间段列表
+    - 每个时间段显示当前申请人数/最大人数（如：2/4）
+    - 已满的时间段显示"已满"标识，禁止申请
+    - 用户可以选择一个时间段进行申请
+  - **非固定时间段服务**：
+    - 显示时间选择表单
+    - 单选按钮或开关：选择"灵活时间"或"指定截止日期"
+    - 如果选择"指定截止日期"：显示日期时间选择器
+    - 如果选择"灵活时间"：显示提示信息
+  - **折扣信息展示**（如果任务设置了折扣）：
+    - 在任务详情页面顶部或奖励信息区域显示折扣信息
+    - 显示原价（带删除线）和现价（突出显示）
+    - 显示折扣百分比或节省金额
+    - 使用醒目的视觉样式（如红色、橙色标签）吸引用户注意
+- **API设计**：
+  - 创建任务时，如果 `is_fixed_time_slot=true`，必须提供时间段相关字段
+  - 申请参与时，需要指定 `time_slot` 参数（时间段标识或时间范围）
+  - 查询任务详情时，返回所有时间段及其当前申请人数
+- **数据验证**：
+  - `time_slot_duration_minutes` 必须 > 0
+  - `time_slot_end_time` 必须 > `time_slot_start_time`
+  - `participants_per_slot` 必须 >= 1 且 <= `max_participants`
+  - 时间段总数 = (结束时间 - 开始时间) / 时间段时长，必须为整数
+  - **折扣验证**（如果设置了折扣）：
+    - `original_price_per_participant` 必须 > 0
+    - `discount_percentage` 必须在 0-100 之间
+    - `discounted_price_per_participant` 必须 > 0 且 <= `original_price_per_participant`
+    - `discounted_price_per_participant` 必须等于 `original_price_per_participant * (1 - discount_percentage / 100)`（允许浮点数精度误差）
+    - 任务的 `reward` 字段应等于 `discounted_price_per_participant`（或根据奖励分配方式计算总奖励）
+
+### 3. 普通用户发布多人任务
 
 - 允许普通用户创建多人任务（需要权限验证）
 - 添加发布费用机制
 
-### 2. 任务分组和子任务
+### 4. 任务分组和子任务
 
 - 支持将大型任务分解为子任务
 - 支持任务分组管理
 
-### 3. 参与者评价系统
+### 5. 参与者评价系统
 
 - 参与者之间可以互相评价
 - 管理员可以评价参与者
 
-### 4. 动态奖励分配
+### 6. 动态奖励分配
 
 - 根据参与者贡献度自动分配奖励
 - 支持按完成质量分配奖励
 
-### 5. 任务协作工具
+### 7. 任务协作工具
 
 - 任务内聊天功能（已有基础）
 - 文件共享功能
 - 进度跟踪功能
-
-### 6. current_participants 缓存字段优化（已实现）
-
-**功能概述**：使用数据库触发器自动维护 `current_participants` 缓存字段，提升查询性能。
-
-**实现方案**：
-
-```sql
--- 创建触发器函数，自动维护 current_participants（增量更新版本，推荐）
-CREATE OR REPLACE FUNCTION update_task_participants_count() RETURNS trigger AS $$
-DECLARE
-  old_is_occupying BOOLEAN;
-  new_is_occupying BOOLEAN;
-BEGIN
-  -- 定义占坑状态
-  old_is_occupying := (OLD.status IN ('pending', 'accepted', 'in_progress', 'exit_requested'));
-  new_is_occupying := (NEW.status IN ('pending', 'accepted', 'in_progress', 'exit_requested'));
-  
-  IF TG_OP = 'INSERT' THEN
-    -- 新插入：如果状态是占坑状态，+1
-    IF new_is_occupying THEN
-      UPDATE tasks 
-      SET current_participants = COALESCE(current_participants, 0) + 1
-      WHERE id = NEW.task_id;
-    END IF;
-    RETURN NEW;
-  ELSIF TG_OP = 'UPDATE' THEN
-    -- 状态变更：判断是否从占坑→非占坑或非占坑→占坑
-    IF OLD.status != NEW.status THEN
-      IF old_is_occupying AND NOT new_is_occupying THEN
-        -- 从占坑状态变为非占坑状态：-1
-        UPDATE tasks 
-        SET current_participants = GREATEST(COALESCE(current_participants, 0) - 1, 0)
-        WHERE id = NEW.task_id;
-      ELSIF NOT old_is_occupying AND new_is_occupying THEN
-        -- 从非占坑状态变为占坑状态：+1
-        UPDATE tasks 
-        SET current_participants = COALESCE(current_participants, 0) + 1
-        WHERE id = NEW.task_id;
-      END IF;
-    END IF;
-    RETURN NEW;
-  ELSIF TG_OP = 'DELETE' THEN
-    -- 删除：如果删除的是占坑状态，-1
-    IF old_is_occupying THEN
-      UPDATE tasks 
-      SET current_participants = GREATEST(COALESCE(current_participants, 0) - 1, 0)
-      WHERE id = OLD.task_id;
-    END IF;
-    RETURN OLD;
-  END IF;
-  RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- 为 task_participants 表添加触发器
-CREATE TRIGGER trg_update_task_participants_count
-AFTER INSERT OR UPDATE OR DELETE ON task_participants
-FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
-```
-
-**注意事项**：
-- 如果使用触发器方案，应用层代码中所有对 `current_participants` 的直接 UPDATE 操作都应移除，改为依赖触发器自动维护
-- **已使用增量更新版本**：判断 old/new.status 是否从"占坑状态"变成"非占坑状态"再 ±1，避免每次都 `COUNT(*)` 全表计算，适合高并发场景
-- 如果发现不一致，以实时计数为准
 
 ---
 
@@ -2808,38 +2312,31 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 - [ ] 数据库迁移脚本测试
 
 ### 后端API
-- [ ] 管理员创建官方多人任务API（支持现金奖励、积分奖励、现金+积分奖励）
-- [ ] 任务达人创建多人任务API（支持固定时间段和非固定时间段服务）
-- [ ] 用户申请参与API（官方任务自动接受，任务达人任务需要审核）
+- [ ] 管理员创建多人任务API（支持积分奖励）
+- [ ] 用户申请参与API（官方任务自动接受）
 - [ ] 任务聊天室集成（申请后自动加入）
 - [ ] 参与者退出申请API
-- [ ] 管理员/任务达人批准/拒绝退出申请API
-- [ ] 管理员/任务达人开始任务API
+- [ ] 管理员批准/拒绝退出申请API
+- [ ] 管理员开始任务API
 - [ ] 参与者完成API
-- [ ] 管理员/任务达人确认完成和奖励分配API（支持现金奖励、积分奖励、现金+积分奖励）
-- [ ] 现金支付流程集成（支付网关对接）
-- [ ] 现金退款和积分回退流程
-- [ ] 查询API（参与者列表、用户任务列表等）
+- [ ] 管理员确认完成和奖励分配API（支持积分奖励）
+- [ ] 查询API（参与者列表、用户任务列表）
 - [ ] 议价验证（多人任务禁止议价）
 - [ ] 权限验证
 - [ ] 数据验证
 - [ ] 错误处理
 
 ### 前端
-- [ ] 管理员发布官方多人任务页面（支持现金奖励、积分奖励、现金+积分奖励设置）
-- [ ] 任务达人发布多人任务页面（支持固定时间段和非固定时间段服务，支持折扣设置）
-- [ ] 任务详情页面支持多人任务（官方标识、任务达人标识、参与人数、奖励类型等）
+- [ ] 管理员发布多人任务页面（支持积分奖励设置）
+- [ ] 任务详情页面支持多人任务（官方标识、参与人数、积分奖励等）
 - [ ] 任务聊天室页面（集成聊天功能）
 - [ ] 申请后自动跳转到聊天室
 - [ ] 退出申请功能
-- [ ] 管理员任务管理页面（退出申请审核、奖励分配）
-- [ ] 任务达人任务管理页面（退出申请审核、奖励分配）
+- [ ] 管理员任务管理页面（退出申请审核）
 - [ ] 用户我的多人任务页面
-- [ ] 现金奖励配置UI（奖励类型选择、金额输入）
-- [ ] 退款/回退状态展示
 - [ ] 翻译文本
 - [ ] UI/UX优化
-- [ ] 官方任务和任务达人任务标识显示
+- [ ] 官方任务标识显示
 
 ### 测试
 - [ ] 单元测试
@@ -2858,98 +2355,6 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 **文档维护者**: 开发团队  
 **版本**: v1.5
 
----
-
-## 🎯 Happy Path：从创建到发奖的完整流程（官方多人任务，积分奖励，平均分配）
-
-以下流程可以作为开发/测试的基准用例：
-
-### 步骤 0：管理员创建官方多人任务
-
-**调用**: `POST /api/admin/tasks/multi-participant`
-
-**后端强制设置**（无视前端传入值）：
-- `is_multi_participant = true`
-- `is_official_task = true`
-- `created_by_admin = true`
-- `reward_type = 'points'`（根据请求设置）
-- `reward_distribution = 'equal'`（根据请求设置）
-- `auto_accept = true`
-- `allow_negotiation = false`
-- `taker_id = NULL`（**本示例是平台发积分的官方任务，不使用 `taker_id`；达人收钱/平台收钱的多人任务仍使用 `taker_id`，详见"数据一致性规则"章节**）
-
-**任务初始状态**: `status = 'open'`
-
-### 步骤 1：用户 A / B 申请参与
-
-**调用**: `POST /api/tasks/{task_id}/apply`（**必须带 `idempotency_key`，否则返回 400**）
-- `task_id` 可以是格式化后的ID（如：`O123`、`E123`）或数据库原始ID（如：`123`），后端需要解析
-
-**后端流程**（简化版）：
-1. 解析 `task_id`：如果是格式化ID（O/E开头），提取数字部分；如果是纯数字，直接使用
-2. `SELECT * FROM tasks WHERE id=? FOR UPDATE;`（锁定任务行，使用解析后的数字ID）
-2. 确认任务 `status='open'`，且是多人任务
-3. 统计 `task_participants` 中状态 ∈ `{pending,accepted,in_progress,exit_requested}` 的人数 < `max_participants`（占坑状态，见"退出逻辑与占坑规则"章节的权威定义）
-4. 检查 `idempotency_key` 是否已存在（有则直接返回旧记录，返回 200 OK）
-5. 插入 `task_participants`：
-   - `status='accepted'`
-   - `applied_at=now`, `accepted_at=now`
-6. 创建/加入聊天室，返回 `room_code`
-
-**此时状态**：
-- Task 还是 `open`
-- A、B 的参与者状态：`accepted`
-
-### 步骤 2：管理员开始任务
-
-当人数 ≥ `min_participants` 时，管理员在后台点击"开始任务"。
-
-**调用**: `POST /api/admin/tasks/{task_id}/start`
-
-**关键逻辑**：
-1. 锁定任务行：`SELECT ... FOR UPDATE`
-2. 再次统计占坑人数（`pending`、`accepted`、`in_progress`、`exit_requested`）≥ `min_participants`（占坑状态，见"退出逻辑与占坑规则"章节的权威定义）
-3. `tasks.status` 改为 `in_progress`，写 `started_at`
-4. 所有 `accepted` 的参与者状态改为 `in_progress`，写各自 `started_at`
-
-**此时状态**：
-- Task 状态：`in_progress`
-- A、B 状态：`in_progress`
-
-### 步骤 3：参与者完成自己的部分
-
-**用户 A 完成后调用**: `POST /api/tasks/{task_id}/participants/me/complete`（**必须带 `idempotency_key`，否则返回 400**）
-- `task_id` 可以是格式化后的ID（如：`O123`）或数据库原始ID（如：`123`），后端需要解析
-
-**后端流程**：
-1. 验证当前用户是参与者，且 `status='in_progress'`
-2. 幂等检查（`idempotency_key` 已存在则返回旧记录）
-3. 把该参与者状态改为 `completed`，写 `completed_at`
-4. 根据 `completion_rule` 判断任务是否可以标记为 `completed`：
-   - `all`：所有 `in_progress` 都完成
-   - `min`：`completed` 数量 ≥ `min_participants` → 任务 `status='completed'`，未完成的人仍保持 `in_progress`
-
-**用户 B 之后也走同样流程**
-
-### 步骤 4：管理员确认并发放积分
-
-**调用**: `POST /api/admin/tasks/{task_id}/complete`（**必须带 `idempotency_key`，否则返回 400**）
-- `task_id` 可以是格式化后的ID（如：`O123`）或数据库原始ID（如：`123`），后端需要解析
-
-**关键逻辑**：
-1. **重复分配检查**：如果任务已经有 `task_participant_rewards` 记录，直接返回 409 Conflict，提示"已分配过奖励"
-2. 锁任务 + 锁相关参与者（`SELECT ... FOR UPDATE`）
-3. 验证任务 `reward_type='points'` & `reward_distribution='equal'`
-4. 查询所有 `status='completed'` 的参与者列表
-5. 计算平均积分：
-   - 每人基础积分：`floor(points_reward / N)`（N = 已完成参与者数量）
-   - 余数处理：按 `completed_at` 时间排序，完成时间最早的参与者依次 +1，直到余数分配完
-6. 为每个参与者插入 `task_participant_rewards` 记录（`reward_type='points'`，`points_amount>0`）
-7. 更新任务 `status` 保持 `completed`（如果之前还是 `in_progress`，在这里顺便标记为 `completed`）
-8. 写审计日志
-
-**之后积分系统异步把 `points_status` 从 `pending` 更新为 `credited`，前端即可区分"任务执行完成"和"奖励结算完成"**
-
 ## 📝 版本变更日志
 
 ### v1.5 (2025-01-20)
@@ -2958,18 +2363,18 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 1. ✅ 确认 TaskParticipant 表 DDL 只有一套版本（使用 `planned_reward_amount` / `planned_points_reward`）
 2. ✅ 确认 TaskParticipantReward 表 DDL 只有一套版本（包含完整约束和触发器）
 3. ✅ 确认 TaskAuditLog 表只有一套语义（允许代理场景同时记录 user_id + admin_id）
-4. ✅ 确认 /complete 接口支持平均分配和自定义分配两个版本
+4. ✅ 确认 /complete 接口只有 MVP 和未来扩展两个版本
 5. ✅ 确认 Task 表的 CHECK 约束只有严格版本（`reward > 0` 和 `points_reward > 0`）
 
 **数据库约束增强**：
 1. ✅ 添加 `chk_reward_positive_amount` 约束（不允许 0 金额记录）
-2. ✅ 移除 MVP 限制约束（支持所有奖励类型和分配方式）
+2. ✅ 添加 `chk_mvp_official_multi_points_equal` 约束（MVP 限制：官方多人任务必须使用积分+平均分配）
 3. ✅ 明确奖励金额字段说明（不允许为 0，必须为 NULL 或 > 0）
 
 **业务逻辑优化**：
 1. ✅ 在 /complete 接口添加并发控制说明（使用 `SELECT ... FOR UPDATE` 锁定）
 2. ✅ 在前端任务详情页面添加奖励状态显示规范（区分任务状态和奖励状态）
-3. ✅ 在触发器章节说明推荐实现方案
+3. ✅ 在触发器章节添加 v1.0 不实现的醒目警告
 
 ### v1.4 (2025-01-20)
 
@@ -2984,8 +2389,8 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 2. ✅ 明确 `reward_type='both'` 的实际含义（任务级别有现金+积分，但参与者可以只拿其中一种）
 
 **业务逻辑优化**：
-1. ✅ 完成接口支持平均分配和自定义分配两种模式
-2. ✅ 在取消矩阵说明需要实现完整的退款/积分回退逻辑
+1. ✅ 简化 MVP 下的完成接口（移除 `participant_rewards` 请求体，服务端自动计算平均分配）
+2. ✅ 在取消矩阵显式标注「v1.0 不实现真实退款/积分回退逻辑」
 3. ✅ 明确聊天室权限规则（允许进入/发言的状态：`accepted`、`in_progress`、`completed`）
 4. ✅ 完善幂等键策略的落地规范（添加明确的实现示例：申请参与、提交完成、分配奖励）
 
@@ -2999,13 +2404,13 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 5. ✅ 优化字段命名（`reward_amount` → `planned_reward_amount`，`points_reward` → `planned_points_reward`）
 6. ✅ 添加奖励表与任务表的 `reward_type` 一致性验证触发器
 7. ✅ 优化索引（删除冗余索引，保留必要索引）
-8. ✅ 优化 `current_participants` 策略（使用触发器自动维护）
+8. ✅ 优化 `current_participants` 策略（MVP阶段建议不存，实时 `COUNT(*)`）
 
 **中优先优化**：
 1. ✅ 统一幂等键使用规则（所有 side-effect 操作建议携带，关键操作强制要求）
-2. ✅ 明确退出逻辑与占坑规则（支持迟到加入）
+2. ✅ 明确退出逻辑与占坑规则（当前策略和未来扩展策略）
 3. ✅ 明确聊天室路由策略（推荐使用 `/rooms/{room_code}`）
-4. ✅ 添加功能范围说明（明确所有必须实现的功能）
+4. ✅ 添加 MVP 范围说明（明确 v1.0 必须实现的功能和未来扩展）
 
 **低优先改进**：
 1. ✅ 更新 API 接口中的幂等键说明（从"可选"改为"建议携带"）
@@ -3025,7 +2430,7 @@ FOR EACH ROW EXECUTE FUNCTION update_task_participants_count();
 
 **中优先优化**：
 1. ✅ 明确 `current_participants` 字段的维护策略（推荐使用触发器）
-2. ✅ 明确"迟到加入"规则（v1.5 支持条件性迟到加入：任务开始后，如果因退出导致当前参与人数 < min_participants，允许补人至 min_participants）
+2. ✅ 明确"迟到加入"规则（当前不允许任务开始后申请）
 3. ✅ 明确奖励字段定位（参与者表为计划值，奖励表为实际值）
 4. ✅ 添加 `reward_type` 字段的 CHECK 约束
 5. ✅ 说明 `user_id` 长度统一问题（建议与 users 表保持一致）

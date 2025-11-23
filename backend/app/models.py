@@ -17,6 +17,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Date,
+    Time,
     JSON,
     func,
 )
@@ -195,12 +196,42 @@ class Task(Base):
     visibility = Column(String(20), default="public")  # public, private
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
     points_reward = Column(BigInteger, nullable=True)  # 任务完成奖励积分（可选，如果设置则覆盖系统默认值）
+    
+    # 多人任务相关字段
+    is_multi_participant = Column(Boolean, default=False, nullable=False)
+    is_official_task = Column(Boolean, default=False, nullable=False)
+    max_participants = Column(Integer, default=1, nullable=False)
+    min_participants = Column(Integer, default=1, nullable=False)
+    current_participants = Column(Integer, default=0, nullable=False)
+    completion_rule = Column(String(20), default="all", nullable=False)  # all, min
+    reward_distribution = Column(String(20), default="equal", nullable=False)  # equal, custom
+    reward_type = Column(String(20), default="cash", nullable=False)  # cash, points, both
+    auto_accept = Column(Boolean, default=False, nullable=False)
+    allow_negotiation = Column(Boolean, default=True, nullable=False)
+    created_by_admin = Column(Boolean, default=False, nullable=False)
+    admin_creator_id = Column(String(36), ForeignKey("admin_users.id"), nullable=True)
+    created_by_expert = Column(Boolean, default=False, nullable=False)
+    expert_creator_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
+    is_fixed_time_slot = Column(Boolean, default=False, nullable=False)
+    time_slot_duration_minutes = Column(Integer, nullable=True)
+    time_slot_start_time = Column(Time, nullable=True)
+    time_slot_end_time = Column(Time, nullable=True)
+    participants_per_slot = Column(Integer, nullable=True)
+    original_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
+    discount_percentage = Column(DECIMAL(5, 2), nullable=True)
+    discounted_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
     # 关系
     poster = relationship(
         "User", back_populates="tasks_posted", foreign_keys=[poster_id]
     )
     taker = relationship("User", back_populates="tasks_taken", foreign_keys=[taker_id])
     reviews = relationship("Review", back_populates="task")
+    participants = relationship("TaskParticipant", back_populates="task", cascade="all, delete-orphan")
+    participant_rewards = relationship("TaskParticipantReward", back_populates="task", cascade="all, delete-orphan")
+    audit_logs = relationship("TaskAuditLog", back_populates="task", cascade="all, delete-orphan")
 
 
 class Review(Base):
@@ -1501,4 +1532,130 @@ class FleaMarketPurchaseRequest(Base):
         Index("idx_flea_market_purchase_requests_status", status),
         Index("idx_flea_market_purchase_requests_created_at", created_at),
         CheckConstraint("status IN ('pending', 'seller_negotiating', 'accepted', 'rejected')", name="check_status_valid"),
+    )
+
+
+# ===========================================
+# 多人任务相关模型
+# ===========================================
+
+class TaskParticipant(Base):
+    """任务参与者表"""
+    __tablename__ = "task_participants"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)
+    previous_status = Column(String(20), nullable=True)
+    time_slot_id = Column(Integer, nullable=True)
+    preferred_deadline = Column(DateTime(timezone=True), nullable=True)
+    is_flexible_time = Column(Boolean, default=False, nullable=False)
+    # 性能优化字段（冗余字段）
+    is_expert_task = Column(Boolean, default=False, nullable=False)
+    is_official_task = Column(Boolean, default=False, nullable=False)
+    expert_creator_id = Column(String(8), nullable=True)
+    planned_reward_amount = Column(DECIMAL(12, 2), nullable=True)
+    planned_points_reward = Column(BigInteger, default=0, nullable=False)
+    applied_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    exit_requested_at = Column(DateTime(timezone=True), nullable=True)
+    exit_reason = Column(Text, nullable=True)
+    exited_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    completion_notes = Column(Text, nullable=True)
+    admin_notes = Column(Text, nullable=True)
+    idempotency_key = Column(String(64), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    task = relationship("Task", back_populates="participants")
+    user = relationship("User")
+    rewards = relationship("TaskParticipantReward", back_populates="participant", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint("task_id", "user_id", name="uq_task_participant"),
+        CheckConstraint(
+            "status IN ('pending', 'accepted', 'in_progress', 'completed', 'exit_requested', 'exited', 'cancelled')",
+            name="chk_participant_status"
+        ),
+    )
+
+
+class TaskParticipantReward(Base):
+    """任务参与者奖励表"""
+    __tablename__ = "task_participant_rewards"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    participant_id = Column(BigInteger, ForeignKey("task_participants.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reward_type = Column(String(20), default="cash", nullable=False)
+    reward_amount = Column(DECIMAL(12, 2), nullable=True)
+    points_amount = Column(BigInteger, nullable=True)
+    currency = Column(String(3), default="GBP", nullable=False)
+    payment_status = Column(String(20), default="pending", nullable=False)
+    points_status = Column(String(20), default="pending", nullable=False)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    points_credited_at = Column(DateTime(timezone=True), nullable=True)
+    payment_method = Column(String(50), nullable=True)
+    payment_reference = Column(String(100), nullable=True)
+    idempotency_key = Column(String(64), nullable=True)
+    external_txn_id = Column(String(100), nullable=True)
+    reversal_reference = Column(String(100), nullable=True)
+    admin_operator_id = Column(String(36), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    expert_operator_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    task = relationship("Task", back_populates="participant_rewards")
+    participant = relationship("TaskParticipant", back_populates="rewards")
+    user = relationship("User")
+    
+    __table_args__ = (
+        UniqueConstraint("external_txn_id", name="uq_reward_external_txn"),
+        CheckConstraint(
+            "payment_status IN ('pending', 'paid', 'failed', 'refunded')",
+            name="chk_reward_payment_status"
+        ),
+        CheckConstraint(
+            "points_status IN ('pending', 'credited', 'failed', 'refunded')",
+            name="chk_reward_points_status"
+        ),
+        CheckConstraint(
+            "reward_type IN ('cash', 'points', 'both')",
+            name="chk_reward_type_values"
+        ),
+    )
+
+
+class TaskAuditLog(Base):
+    """任务审计日志表"""
+    __tablename__ = "task_audit_logs"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    participant_id = Column(BigInteger, ForeignKey("task_participants.id", ondelete="CASCADE"), nullable=True)
+    action_type = Column(String(50), nullable=False)
+    action_description = Column(Text, nullable=True)
+    admin_id = Column(String(36), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    old_status = Column(String(20), nullable=True)
+    new_status = Column(String(20), nullable=True)
+    metadata = Column(JSONB, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    
+    # 关系
+    task = relationship("Task", back_populates="audit_logs")
+    participant = relationship("TaskParticipant")
+    
+    __table_args__ = (
+        CheckConstraint(
+            "(user_id IS NOT NULL) OR (admin_id IS NOT NULL)",
+            name="chk_audit_user_or_admin"
+        ),
     )

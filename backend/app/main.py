@@ -215,6 +215,10 @@ app.include_router(admin_task_expert_router)
 from app.flea_market_routes import flea_market_router
 app.include_router(flea_market_router)
 
+# 多人任务路由
+from app.multi_participant_routes import router as multi_participant_router
+app.include_router(multi_participant_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
