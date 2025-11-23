@@ -1311,6 +1311,7 @@ class TaskExpert(Base):
     approver = relationship("AdminUser", backref="approved_experts")
     services = relationship("TaskExpertService", back_populates="expert", cascade="all, delete-orphan")
     profile_update_requests = relationship("TaskExpertProfileUpdateRequest", back_populates="expert", cascade="all, delete-orphan")
+    closed_dates = relationship("ExpertClosedDate", back_populates="expert", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_task_experts_status", status),
@@ -1434,6 +1435,27 @@ class ServiceTimeSlot(Base):
         Index("ix_service_time_slots_slot_start_datetime", slot_start_datetime),
         Index("ix_service_time_slots_service_start", service_id, slot_start_datetime),
         UniqueConstraint("service_id", "slot_start_datetime", "slot_end_datetime", name="uq_service_time_slot"),
+    )
+
+
+class ExpertClosedDate(Base):
+    """任务达人关门日期表 - 存储任务达人的休息日"""
+    __tablename__ = "expert_closed_dates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    closed_date = Column(Date, nullable=False)  # 关门日期（不包含时间）
+    reason = Column(String(200), nullable=True)  # 关门原因（可选）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    expert = relationship("TaskExpert", back_populates="closed_dates")
+    
+    __table_args__ = (
+        Index("ix_expert_closed_dates_expert_id", expert_id),
+        Index("ix_expert_closed_dates_closed_date", closed_date),
+        UniqueConstraint("expert_id", "closed_date", name="uq_expert_closed_date"),
     )
 
 

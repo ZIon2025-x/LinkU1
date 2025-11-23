@@ -1520,6 +1520,27 @@ class ServiceTimeSlotOut(BaseModel):
     is_manually_deleted: bool  # 是否手动删除
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+
+# ==================== 任务达人关门日期相关Schemas ====================
+
+class ExpertClosedDateCreate(BaseModel):
+    """创建关门日期"""
+    closed_date: str  # 日期格式：YYYY-MM-DD
+    reason: Optional[str] = None  # 关门原因（可选）
+
+
+class ExpertClosedDateOut(BaseModel):
+    """关门日期输出"""
+    id: int
+    expert_id: str
+    closed_date: str  # 日期格式：YYYY-MM-DD
+    reason: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
     
     @classmethod
     def from_orm(cls, obj):

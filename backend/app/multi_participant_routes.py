@@ -563,6 +563,7 @@ def create_expert_multi_participant_task(
     if not task.expert_service_id:
         raise HTTPException(status_code=400, detail="必须关联一个服务")
     
+    # 查询服务
     service = db.query(TaskExpertService).filter(
         and_(
             TaskExpertService.id == task.expert_service_id,
@@ -570,8 +571,21 @@ def create_expert_multi_participant_task(
             TaskExpertService.status == "active"
         )
     ).first()
+    
     if not service:
-        raise HTTPException(status_code=404, detail="Service not found or not accessible")
+        # 检查服务是否存在但可能不属于该用户或状态不对
+        service_exists = db.query(TaskExpertService).filter(
+            TaskExpertService.id == task.expert_service_id
+        ).first()
+        
+        if not service_exists:
+            raise HTTPException(status_code=404, detail=f"服务不存在 (ID: {task.expert_service_id})")
+        elif service_exists.expert_id != current_user.id:
+            raise HTTPException(status_code=403, detail="该服务不属于当前任务达人")
+        elif service_exists.status != "active":
+            raise HTTPException(status_code=400, detail=f"服务状态为 {service_exists.status}，无法关联。请确保服务已上架")
+        else:
+            raise HTTPException(status_code=404, detail="Service not found or not accessible")
     
     # 验证 min_participants <= max_participants
     if task.min_participants > task.max_participants:

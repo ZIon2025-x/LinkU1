@@ -35,6 +35,13 @@ import {
   getServiceTimeSlotsPublic,
   batchCreateServiceTimeSlots,
   deleteTimeSlotsByDate,
+  getExpertDashboardStats,
+  getExpertSchedule,
+  deleteServiceTimeSlot,
+  createClosedDate,
+  getClosedDates,
+  deleteClosedDate,
+  deleteClosedDateByDate,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -84,7 +91,7 @@ const TaskExpertDashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [expert, setExpert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'services' | 'applications' | 'multi-tasks'>('services');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'services' | 'applications' | 'multi-tasks' | 'schedule'>('dashboard');
   
   // 服务管理相关
   const [services, setServices] = useState<Service[]>([]);
@@ -182,6 +189,16 @@ const TaskExpertDashboard: React.FC = () => {
   const [loadingTimeSlotManagement, setLoadingTimeSlotManagement] = useState(false);
   const [timeSlotManagementDate, setTimeSlotManagementDate] = useState<string>('');
   
+  // 仪表盘相关状态
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [loadingDashboardStats, setLoadingDashboardStats] = useState(false);
+  
+  // 时刻表相关状态
+  const [scheduleData, setScheduleData] = useState<any>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [scheduleStartDate, setScheduleStartDate] = useState<string>('');
+  const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
+  
   // 加载时间段列表（用于创建多人任务）
   const loadTimeSlotsForCreateTask = async (serviceId: number) => {
     setLoadingTimeSlots(true);
@@ -244,6 +261,10 @@ const TaskExpertDashboard: React.FC = () => {
       loadServices();
     } else if (activeTab === 'applications') {
       loadApplications();
+    } else if (activeTab === 'dashboard') {
+      loadDashboardStats();
+    } else if (activeTab === 'schedule') {
+      loadSchedule();
     }
   }, [activeTab]);
 
@@ -266,6 +287,52 @@ const TaskExpertDashboard: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDashboardStats = async () => {
+    setLoadingDashboardStats(true);
+    try {
+      const stats = await getExpertDashboardStats();
+      setDashboardStats(stats);
+    } catch (err: any) {
+      console.error('加载仪表盘数据失败:', err);
+      message.error('加载仪表盘数据失败');
+    } finally {
+      setLoadingDashboardStats(false);
+    }
+  };
+
+  const loadSchedule = async () => {
+    setLoadingSchedule(true);
+    try {
+      const today = new Date();
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + 30);
+      
+      const startDate = scheduleStartDate || today.toISOString().split('T')[0];
+      const endDate = scheduleEndDate || futureDate.toISOString().split('T')[0];
+      
+      // 更新状态中的日期（如果还没有设置）
+      if (!scheduleStartDate) {
+        setScheduleStartDate(startDate);
+      }
+      if (!scheduleEndDate) {
+        setScheduleEndDate(endDate);
+      }
+      
+      const [scheduleDataResult, closedDatesResult] = await Promise.all([
+        getExpertSchedule({ start_date: startDate, end_date: endDate }),
+        getClosedDates({ start_date: startDate, end_date: endDate })
+      ]);
+      
+      setScheduleData(scheduleDataResult);
+      setClosedDates(Array.isArray(closedDatesResult) ? closedDatesResult : []);
+    } catch (err: any) {
+      console.error('加载时刻表数据失败:', err);
+      message.error('加载时刻表数据失败');
+    } finally {
+      setLoadingSchedule(false);
     }
   };
 
@@ -834,7 +901,22 @@ const TaskExpertDashboard: React.FC = () => {
         )}
 
         {/* 标签页 */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              padding: '12px 24px',
+              background: activeTab === 'dashboard' ? '#3b82f6' : '#fff',
+              color: activeTab === 'dashboard' ? '#fff' : '#333',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            📊 仪表盘
+          </button>
           <button
             onClick={() => setActiveTab('services')}
             style={{
@@ -876,6 +958,20 @@ const TaskExpertDashboard: React.FC = () => {
             }}
           >
             多人任务
+          </button>
+          <button
+            onClick={() => setActiveTab('schedule')}
+            style={{
+              padding: '12px 24px',
+              background: activeTab === 'schedule' ? '#3b82f6' : '#fff',
+              color: activeTab === 'schedule' ? '#fff' : '#333',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            📅 时刻表
           </button>
         </div>
 
@@ -1475,6 +1571,305 @@ const TaskExpertDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* 时刻表 */}
+        {activeTab === 'schedule' && (
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>时刻表</h2>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="date"
+                  value={scheduleStartDate || new Date().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    setScheduleStartDate(e.target.value);
+                    if (e.target.value && (scheduleEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])) {
+                      loadSchedule();
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+                <span style={{ color: '#718096' }}>至</span>
+                <input
+                  type="date"
+                  value={scheduleEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    setScheduleEndDate(e.target.value);
+                    if ((scheduleStartDate || new Date().toISOString().split('T')[0]) && e.target.value) {
+                      loadSchedule();
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+                <button
+                  onClick={loadSchedule}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                  }}
+                >
+                  刷新
+                </button>
+              </div>
+            </div>
+
+            {loadingSchedule ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+            ) : scheduleData && scheduleData.items && scheduleData.items.length > 0 ? (
+              <div>
+                {/* 按日期分组显示 */}
+                {(() => {
+                  const groupedByDate: { [key: string]: any[] } = {};
+                  scheduleData.items.forEach((item: any) => {
+                    const date = item.date;
+                    if (!groupedByDate[date]) {
+                      groupedByDate[date] = [];
+                    }
+                    groupedByDate[date].push(item);
+                  });
+
+                  const sortedDates = Object.keys(groupedByDate).sort();
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                      {sortedDates.map((date) => {
+                        const items = groupedByDate[date];
+                        const dateObj = new Date(date);
+                        const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dateObj.getDay()];
+                        
+                        return (
+                          <div key={date} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                            <div style={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              padding: '16px 20px',
+                              color: '#fff',
+                              fontWeight: 600,
+                              fontSize: '16px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}>
+                              <span>{date} ({dayName})</span>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {(() => {
+                                  const isClosed = closedDates.some(cd => cd.closed_date === date);
+                                  return (
+                                    <>
+                                      {!item.is_task && items.some((i: any) => !i.is_task) && (
+                                        <button
+                                          onClick={async () => {
+                                            if (!window.confirm(`确定要删除 ${date} 的所有时间段吗？`)) return;
+                                            try {
+                                              // 找到该日期的所有服务ID
+                                              const serviceIds = new Set(items.filter((i: any) => !i.is_task).map((i: any) => i.service_id));
+                                              for (const serviceId of serviceIds) {
+                                                await deleteTimeSlotsByDate(serviceId, date);
+                                              }
+                                              message.success('已删除该日期的所有时间段');
+                                              await loadSchedule();
+                                            } catch (err: any) {
+                                              message.error(err.response?.data?.detail || '删除失败');
+                                            }
+                                          }}
+                                          style={{
+                                            padding: '6px 12px',
+                                            background: 'rgba(255,255,255,0.2)',
+                                            color: '#fff',
+                                            border: '1px solid rgba(255,255,255,0.3)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          删除该日期的所有时间段
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={async () => {
+                                          if (isClosed) {
+                                            // 取消关门
+                                            if (!window.confirm(`确定要取消 ${date} 的关门设置吗？`)) return;
+                                            try {
+                                              const closedDate = closedDates.find(cd => cd.closed_date === date);
+                                              if (closedDate) {
+                                                await deleteClosedDate(closedDate.id);
+                                              } else {
+                                                await deleteClosedDateByDate(date);
+                                              }
+                                              message.success('已取消关门设置');
+                                              await loadSchedule();
+                                            } catch (err: any) {
+                                              message.error(err.response?.data?.detail || '操作失败');
+                                            }
+                                          } else {
+                                            // 设置关门
+                                            setSelectedDateForClose(date);
+                                            setCloseDateReason('');
+                                            setShowCloseDateModal(true);
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: isClosed ? '#dc3545' : 'rgba(255,255,255,0.2)',
+                                          color: '#fff',
+                                          border: '1px solid rgba(255,255,255,0.3)',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {isClosed ? '已关门 - 点击取消' : '设置关门'}
+                                      </button>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                            <div style={{ padding: '16px' }}>
+                              {items.map((item: any) => (
+                                <div
+                                  key={item.id}
+                                  style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    padding: '16px',
+                                    marginBottom: '12px',
+                                    background: item.is_task ? '#f0f9ff' : '#fff',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                        {item.service_name}
+                                      </div>
+                                      {item.start_time && item.end_time && (
+                                        <div style={{ fontSize: '14px', color: '#4a5568' }}>
+                                          ⏰ {item.start_time} - {item.end_time}
+                                        </div>
+                                      )}
+                                      {item.deadline && (
+                                        <div style={{ fontSize: '14px', color: '#4a5568' }}>
+                                          📅 截止: {new Date(item.deadline).toLocaleString('zh-CN')}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                      <div style={{
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        background: item.is_expired ? '#fee2e2' :
+                                                   item.current_participants >= item.max_participants ? '#fef3c7' :
+                                                   '#d1fae5',
+                                        color: item.is_expired ? '#991b1b' :
+                                               item.current_participants >= item.max_participants ? '#92400e' :
+                                               '#065f46',
+                                      }}>
+                                        {item.is_expired ? '已过期' :
+                                         item.current_participants >= item.max_participants ? '已满' :
+                                         '可预约'}
+                                      </div>
+                                      {item.task_status && (
+                                        <div style={{
+                                          padding: '4px 8px',
+                                          borderRadius: '6px',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                          background: item.task_status === 'in_progress' ? '#dbeafe' : '#f3f4f6',
+                                          color: item.task_status === 'in_progress' ? '#1e40af' : '#4a5568',
+                                        }}>
+                                          {item.task_status === 'open' ? '开放中' :
+                                           item.task_status === 'in_progress' ? '进行中' : item.task_status}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                                    <div style={{ fontSize: '14px', color: '#4a5568' }}>
+                                      👥 参与者: {item.current_participants} / {item.max_participants}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                      {!item.is_task && (
+                                        <button
+                                          onClick={async () => {
+                                            if (!window.confirm('确定要删除这个时间段吗？')) return;
+                                            try {
+                                              await deleteServiceTimeSlot(item.service_id, item.id);
+                                              message.success('时间段已删除');
+                                              await loadSchedule();
+                                            } catch (err: any) {
+                                              message.error(err.response?.data?.detail || '删除失败');
+                                            }
+                                          }}
+                                          style={{
+                                            padding: '6px 12px',
+                                            background: '#dc3545',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          删除
+                                        </button>
+                                      )}
+                                      {item.is_task && (
+                                        <button
+                                          onClick={() => navigate(`/tasks/${item.id.replace('task_', '')}`)}
+                                          style={{
+                                            padding: '6px 12px',
+                                            background: '#3b82f6',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          查看任务
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+                暂无时间段安排
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 创建多人任务弹窗 */}
@@ -1532,45 +1927,53 @@ const TaskExpertDashboard: React.FC = () => {
                 <select
                   value={createMultiTaskForm.service_id || ''}
                   onChange={(e) => {
-                    const selectedService = services.find(s => s.id === parseInt(e.target.value));
-                    setCreateMultiTaskForm({
-                      ...createMultiTaskForm,
-                      service_id: e.target.value ? parseInt(e.target.value) : undefined,
-                      title: selectedService ? selectedService.service_name : createMultiTaskForm.title,
-                      description: selectedService ? selectedService.description : createMultiTaskForm.description,
-                      base_reward: selectedService ? selectedService.base_price : createMultiTaskForm.base_reward,
-                      currency: selectedService ? selectedService.currency : createMultiTaskForm.currency,
-                      discount_percentage: undefined, // 重置折扣
-                      custom_discount: undefined,
-                      use_custom_discount: false,
-                      // 重置时间段选择
-                      selected_time_slot_id: undefined,
-                      selected_time_slot_date: undefined,
-                      // 如果服务有时间段，限制最大参与者数
-                      max_participants: selectedService?.has_time_slots && selectedService?.participants_per_slot 
-                        ? Math.min(createMultiTaskForm.max_participants, selectedService.participants_per_slot)
-                        : createMultiTaskForm.max_participants,
+                    const serviceId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedService = serviceId ? services.find(s => s.id === serviceId) : undefined;
+                    // 使用函数式更新确保状态一致性
+                    setCreateMultiTaskForm(prev => {
+                      const newServiceId = serviceId;
+                      return {
+                        ...prev,
+                        service_id: newServiceId,
+                        title: selectedService ? selectedService.service_name : prev.title,
+                        description: selectedService ? selectedService.description : prev.description,
+                        base_reward: selectedService ? selectedService.base_price : prev.base_reward,
+                        currency: selectedService ? selectedService.currency : prev.currency,
+                        discount_percentage: undefined, // 重置折扣
+                        custom_discount: undefined,
+                        use_custom_discount: false,
+                        // 重置时间段选择
+                        selected_time_slot_id: undefined,
+                        selected_time_slot_date: undefined,
+                        // 如果服务有时间段，限制最大参与者数
+                        max_participants: selectedService?.has_time_slots && selectedService?.participants_per_slot 
+                          ? Math.min(prev.max_participants, selectedService.participants_per_slot)
+                          : prev.max_participants,
+                      };
                     });
                     
                     // 如果服务有时间段，加载时间段列表并设置默认日期
-                    if (selectedService?.has_time_slots && e.target.value) {
-                      const serviceId = parseInt(e.target.value);
+                    if (selectedService?.has_time_slots && serviceId) {
                       // 设置默认日期为今天
                       const today = new Date().toISOString().split('T')[0];
-                      setCreateMultiTaskForm({
-                        ...createMultiTaskForm,
+                      // 使用函数式更新确保service_id不会丢失
+                      setCreateMultiTaskForm(prev => ({
+                        ...prev,
+                        service_id: serviceId, // 确保service_id被保留
                         selected_time_slot_date: today,
                         selected_time_slot_id: undefined, // 重置时间段选择
-                      });
+                      }));
                       // 加载时间段列表
                       loadTimeSlotsForCreateTask(serviceId);
                     } else {
                       setAvailableTimeSlots([]);
-                      setCreateMultiTaskForm({
-                        ...createMultiTaskForm,
+                      // 使用函数式更新确保service_id不会丢失
+                      setCreateMultiTaskForm(prev => ({
+                        ...prev,
+                        service_id: serviceId, // 确保service_id被保留
                         selected_time_slot_date: undefined,
                         selected_time_slot_id: undefined,
-                      });
+                      }));
                     }
                   }}
                   style={{
@@ -2185,6 +2588,11 @@ const TaskExpertDashboard: React.FC = () => {
                     }
 
                     try {
+                      // 再次验证service_id（防止在异步操作过程中丢失）
+                      if (!createMultiTaskForm.service_id || !selectedService) {
+                        message.error('请选择关联服务');
+                        return;
+                      }
                       
                       // 检查服务是否有时间段配置（从服务对象或本地状态中获取）
                       const timeSlotConfigFromService = selectedService.has_time_slots 
@@ -2223,12 +2631,20 @@ const TaskExpertDashboard: React.FC = () => {
                         description: createMultiTaskForm.description,
                         location: createMultiTaskForm.location,
                         task_type: createMultiTaskForm.task_type,
-                        expert_service_id: createMultiTaskForm.service_id!,
+                        expert_service_id: createMultiTaskForm.service_id, // 确保使用正确的service_id
                         max_participants: createMultiTaskForm.max_participants,
                         min_participants: createMultiTaskForm.min_participants,
                         completion_rule: 'all',
                         ...timeSlotConfig,
                       };
+                      
+                      // 调试日志
+                      console.log('创建多人任务 - 任务数据:', {
+                        expert_service_id: taskData.expert_service_id,
+                        service_id: createMultiTaskForm.service_id,
+                        selectedService: selectedService,
+                        taskData: taskData
+                      });
                       
                       // 如果服务有时间段，使用时间段信息；否则使用截至日期
                       if (selectedService.has_time_slots && createMultiTaskForm.selected_time_slot_id) {
@@ -2276,7 +2692,15 @@ const TaskExpertDashboard: React.FC = () => {
                       await loadMultiTasks();
                       await loadRecentActivities(); // 刷新最近活动
                     } catch (err: any) {
-                      message.error(err.response?.data?.detail || '创建失败');
+                      console.error('创建多人任务失败:', err);
+                      console.error('错误详情:', {
+                        response: err.response?.data,
+                        taskData: taskData,
+                        service_id: createMultiTaskForm.service_id,
+                        selectedService: selectedService
+                      });
+                      const errorMessage = err.response?.data?.detail || err.message || '创建失败';
+                      message.error(errorMessage);
                     }
                   }}
                   style={{
@@ -3643,6 +4067,127 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         </div>
       </div>
     </div>
+
+      {/* 设置关门日期弹窗 */}
+      {showCloseDateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowCloseDateModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '500px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600 }}>设置关门日期</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                日期
+              </label>
+              <input
+                type="date"
+                value={selectedDateForClose}
+                disabled
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  background: '#f3f4f6',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                关门原因（可选）
+              </label>
+              <textarea
+                value={closeDateReason}
+                onChange={(e) => setCloseDateReason(e.target.value)}
+                placeholder="例如：休息日、节假日等"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCloseDateModal(false);
+                  setSelectedDateForClose('');
+                  setCloseDateReason('');
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#f3f4f6',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  if (!selectedDateForClose) {
+                    message.error('请选择日期');
+                    return;
+                  }
+                  try {
+                    await createClosedDate({
+                      closed_date: selectedDateForClose,
+                      reason: closeDateReason || undefined,
+                    });
+                    message.success('已设置关门日期');
+                    setShowCloseDateModal(false);
+                    setSelectedDateForClose('');
+                    setCloseDateReason('');
+                    await loadSchedule();
+                  } catch (err: any) {
+                    message.error(err.response?.data?.detail || '设置失败');
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                确定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
   );
 };
 

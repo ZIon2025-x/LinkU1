@@ -1114,8 +1114,41 @@ async def get_service_time_slots_public(
     result = await db.execute(query)
     time_slots = result.scalars().all()
     
+    # 查询任务达人的关门日期
+    closed_dates_query = select(models.ExpertClosedDate).where(
+        models.ExpertClosedDate.expert_id == service.expert_id
+    )
+    if start_date:
+        try:
+            start_date_obj = date.fromisoformat(start_date)
+            closed_dates_query = closed_dates_query.where(
+                models.ExpertClosedDate.closed_date >= start_date_obj
+            )
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end_date_obj = date.fromisoformat(end_date)
+            closed_dates_query = closed_dates_query.where(
+                models.ExpertClosedDate.closed_date <= end_date_obj
+            )
+        except ValueError:
+            pass
+    
+    closed_dates_result = await db.execute(closed_dates_query)
+    closed_dates = closed_dates_result.scalars().all()
+    closed_date_set = {cd.closed_date for cd in closed_dates}
+    
+    # 过滤掉关门日期的时间段
+    filtered_slots = []
+    for slot in time_slots:
+        # 将UTC时间转换为英国时间，然后获取日期
+        slot_date_local = slot.slot_start_datetime.astimezone(LONDON).date()
+        if slot_date_local not in closed_date_set:
+            filtered_slots.append(slot)
+    
     # 转换为输出格式
-    return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in time_slots]
+    return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in filtered_slots]
 
 
 @task_expert_router.get("/services/{service_id}", response_model=schemas.TaskExpertServiceOut)
@@ -1740,6 +1773,425 @@ async def approve_service_application(
         "task_id": new_task.id,
         "task": new_task,
     }
+
+
+# ==================== 任务达人仪表盘和时刻表 ====================
+
+@task_expert_router.get("/me/dashboard/stats")
+async def get_expert_dashboard_stats(
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务达人仪表盘统计数据"""
+    expert_id = current_expert.id
+    
+    # 统计服务数量
+    services_count = await db.execute(
+        select(func.count(models.TaskExpertService.id))
+        .where(models.TaskExpertService.expert_id == expert_id)
+    )
+    total_services = services_count.scalar() or 0
+    
+    active_services_count = await db.execute(
+        select(func.count(models.TaskExpertService.id))
+        .where(
+            and_(
+                models.TaskExpertService.expert_id == expert_id,
+                models.TaskExpertService.status == "active"
+            )
+        )
+    )
+    active_services = active_services_count.scalar() or 0
+    
+    # 统计申请数量
+    applications_count = await db.execute(
+        select(func.count(models.ServiceApplication.id))
+        .join(models.TaskExpertService)
+        .where(models.TaskExpertService.expert_id == expert_id)
+    )
+    total_applications = applications_count.scalar() or 0
+    
+    pending_applications_count = await db.execute(
+        select(func.count(models.ServiceApplication.id))
+        .join(models.TaskExpertService)
+        .where(
+            and_(
+                models.TaskExpertService.expert_id == expert_id,
+                models.ServiceApplication.status == "pending"
+            )
+        )
+    )
+    pending_applications = pending_applications_count.scalar() or 0
+    
+    # 统计多人任务数量
+    multi_tasks_count = await db.execute(
+        select(func.count(models.Task.id))
+        .where(
+            and_(
+                models.Task.expert_creator_id == expert_id,
+                models.Task.is_multi_participant == True
+            )
+        )
+    )
+    total_multi_tasks = multi_tasks_count.scalar() or 0
+    
+    in_progress_multi_tasks_count = await db.execute(
+        select(func.count(models.Task.id))
+        .where(
+            and_(
+                models.Task.expert_creator_id == expert_id,
+                models.Task.is_multi_participant == True,
+                models.Task.status == "in_progress"
+            )
+        )
+    )
+    in_progress_multi_tasks = in_progress_multi_tasks_count.scalar() or 0
+    
+    # 统计参与者数量
+    participants_count = await db.execute(
+        select(func.count(models.TaskParticipant.id))
+        .join(models.Task)
+        .where(
+            and_(
+                models.Task.expert_creator_id == expert_id,
+                models.Task.is_multi_participant == True
+            )
+        )
+    )
+    total_participants = participants_count.scalar() or 0
+    
+    # 统计时间段数量（未来30天）
+    from datetime import datetime, timedelta
+    from app.utils.time_utils import get_utc_time
+    now = get_utc_time()
+    future_date = now + timedelta(days=30)
+    
+    time_slots_count = await db.execute(
+        select(func.count(models.ServiceTimeSlot.id))
+        .join(models.TaskExpertService)
+        .where(
+            and_(
+                models.TaskExpertService.expert_id == expert_id,
+                models.ServiceTimeSlot.slot_start_datetime >= now,
+                models.ServiceTimeSlot.slot_start_datetime <= future_date
+            )
+        )
+    )
+    upcoming_time_slots = time_slots_count.scalar() or 0
+    
+    # 统计有参与者的时间段数量
+    time_slots_with_participants_count = await db.execute(
+        select(func.count(models.ServiceTimeSlot.id))
+        .join(models.TaskExpertService)
+        .where(
+            and_(
+                models.TaskExpertService.expert_id == expert_id,
+                models.ServiceTimeSlot.slot_start_datetime >= now,
+                models.ServiceTimeSlot.current_participants > 0
+            )
+        )
+    )
+    time_slots_with_participants = time_slots_with_participants_count.scalar() or 0
+    
+    return {
+        "total_services": total_services,
+        "active_services": active_services,
+        "total_applications": total_applications,
+        "pending_applications": pending_applications,
+        "total_multi_tasks": total_multi_tasks,
+        "in_progress_multi_tasks": in_progress_multi_tasks,
+        "total_participants": total_participants,
+        "upcoming_time_slots": upcoming_time_slots,
+        "time_slots_with_participants": time_slots_with_participants,
+    }
+
+
+@task_expert_router.get("/me/schedule")
+async def get_expert_schedule(
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取任务达人时刻表数据（时间段服务安排）"""
+    expert_id = current_expert.id
+    
+    from datetime import datetime, timedelta
+    from app.utils.time_utils import get_utc_time, parse_local_as_utc, LONDON
+    
+    # 如果没有提供日期，默认查询未来30天
+    now = get_utc_time()
+    if not start_date:
+        start_date_obj = now.date()
+    else:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+    
+    if not end_date:
+        end_date_obj = (now + timedelta(days=30)).date()
+    else:
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+    
+    # 转换为UTC时间范围
+    start_datetime = parse_local_as_utc(
+        datetime.combine(start_date_obj, dt_time.min), LONDON
+    )
+    end_datetime = parse_local_as_utc(
+        datetime.combine(end_date_obj, dt_time.max), LONDON
+    )
+    
+    # 查询时间段数据
+    query = (
+        select(
+            models.ServiceTimeSlot,
+            models.TaskExpertService.service_name,
+            models.TaskExpertService.id.label("service_id")
+        )
+        .join(models.TaskExpertService)
+        .where(
+            and_(
+                models.TaskExpertService.expert_id == expert_id,
+                models.ServiceTimeSlot.slot_start_datetime >= start_datetime,
+                models.ServiceTimeSlot.slot_start_datetime <= end_datetime
+            )
+        )
+        .order_by(models.ServiceTimeSlot.slot_start_datetime.asc())
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    # 组织数据
+    schedule_items = []
+    for row in rows:
+        slot = row.ServiceTimeSlot
+        service_name = row.service_name
+        service_id = row.service_id
+        
+        # 转换为本地时间显示
+        slot_start_local = slot.slot_start_datetime.astimezone(LONDON)
+        slot_end_local = slot.slot_end_datetime.astimezone(LONDON)
+        
+        schedule_items.append({
+            "id": slot.id,
+            "service_id": service_id,
+            "service_name": service_name,
+            "slot_start_datetime": slot.slot_start_datetime.isoformat(),
+            "slot_end_datetime": slot.slot_end_datetime.isoformat(),
+            "date": slot_start_local.strftime("%Y-%m-%d"),
+            "start_time": slot_start_local.strftime("%H:%M"),
+            "end_time": slot_end_local.strftime("%H:%M"),
+            "current_participants": slot.current_participants,
+            "max_participants": slot.max_participants,
+            "is_available": slot.is_available,
+            "is_expired": slot.slot_start_datetime < now,
+        })
+    
+    # 查询多人任务（非固定时间段）
+    multi_tasks_query = (
+        select(models.Task)
+        .where(
+            and_(
+                models.Task.expert_creator_id == expert_id,
+                models.Task.is_multi_participant == True,
+                models.Task.is_fixed_time_slot == False,
+                models.Task.status.in_(["open", "in_progress"]),
+                models.Task.deadline >= start_datetime,
+                models.Task.deadline <= end_datetime
+            )
+        )
+        .order_by(models.Task.deadline.asc())
+    )
+    
+    multi_tasks_result = await db.execute(multi_tasks_query)
+    multi_tasks = multi_tasks_result.scalars().all()
+    
+    # 添加多人任务到时刻表
+    for task in multi_tasks:
+        deadline_local = task.deadline.astimezone(LONDON) if task.deadline else None
+        if deadline_local:
+            schedule_items.append({
+                "id": f"task_{task.id}",
+                "service_id": task.expert_service_id,
+                "service_name": task.title,
+                "slot_start_datetime": None,
+                "slot_end_datetime": None,
+                "date": deadline_local.strftime("%Y-%m-%d"),
+                "start_time": None,
+                "end_time": None,
+                "deadline": deadline_local.isoformat(),
+                "current_participants": task.current_participants,
+                "max_participants": task.max_participants,
+                "task_status": task.status,
+                "is_task": True,
+            })
+    
+    # 按日期和时间排序
+    schedule_items.sort(key=lambda x: (
+        x["date"],
+        x["start_time"] if x.get("start_time") else "99:99"
+    ))
+    
+    return {
+        "items": schedule_items,
+        "start_date": start_date_obj.isoformat(),
+        "end_date": end_date_obj.isoformat(),
+    }
+
+
+# ==================== 任务达人关门日期管理 ====================
+
+@task_expert_router.post("/me/closed-dates", response_model=schemas.ExpertClosedDateOut)
+async def create_closed_date(
+    closed_date_data: schemas.ExpertClosedDateCreate,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """添加关门日期"""
+    expert_id = current_expert.id
+    
+    # 解析日期
+    try:
+        closed_date_obj = date.fromisoformat(closed_date_data.closed_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+    
+    # 检查日期不能是过去的日期
+    from app.utils.time_utils import get_utc_time
+    today = get_utc_time().date()
+    if closed_date_obj < today:
+        raise HTTPException(status_code=400, detail="不能设置过去的日期为关门日期")
+    
+    # 检查是否已存在
+    existing = await db.execute(
+        select(models.ExpertClosedDate)
+        .where(models.ExpertClosedDate.expert_id == expert_id)
+        .where(models.ExpertClosedDate.closed_date == closed_date_obj)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="该日期已设置为关门日期")
+    
+    # 创建关门日期记录
+    closed_date = models.ExpertClosedDate(
+        expert_id=expert_id,
+        closed_date=closed_date_obj,
+        reason=closed_date_data.reason
+    )
+    
+    db.add(closed_date)
+    await db.commit()
+    await db.refresh(closed_date)
+    
+    return schemas.ExpertClosedDateOut(
+        id=closed_date.id,
+        expert_id=closed_date.expert_id,
+        closed_date=closed_date.closed_date.isoformat(),
+        reason=closed_date.reason,
+        created_at=closed_date.created_at,
+        updated_at=closed_date.updated_at,
+    )
+
+
+@task_expert_router.get("/me/closed-dates", response_model=List[schemas.ExpertClosedDateOut])
+async def get_closed_dates(
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取关门日期列表"""
+    expert_id = current_expert.id
+    
+    query = select(models.ExpertClosedDate).where(
+        models.ExpertClosedDate.expert_id == expert_id
+    )
+    
+    if start_date:
+        try:
+            start_date_obj = date.fromisoformat(start_date)
+            query = query.where(models.ExpertClosedDate.closed_date >= start_date_obj)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD")
+    
+    if end_date:
+        try:
+            end_date_obj = date.fromisoformat(end_date)
+            query = query.where(models.ExpertClosedDate.closed_date <= end_date_obj)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD")
+    
+    query = query.order_by(models.ExpertClosedDate.closed_date.asc())
+    
+    result = await db.execute(query)
+    closed_dates = result.scalars().all()
+    
+    return [
+        schemas.ExpertClosedDateOut(
+            id=cd.id,
+            expert_id=cd.expert_id,
+            closed_date=cd.closed_date.isoformat(),
+            reason=cd.reason,
+            created_at=cd.created_at,
+            updated_at=cd.updated_at,
+        )
+        for cd in closed_dates
+    ]
+
+
+@task_expert_router.delete("/me/closed-dates/{closed_date_id}")
+async def delete_closed_date(
+    closed_date_id: int,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """删除关门日期"""
+    expert_id = current_expert.id
+    
+    # 查找关门日期
+    closed_date = await db.execute(
+        select(models.ExpertClosedDate)
+        .where(models.ExpertClosedDate.id == closed_date_id)
+        .where(models.ExpertClosedDate.expert_id == expert_id)
+    )
+    closed_date = closed_date.scalar_one_or_none()
+    
+    if not closed_date:
+        raise HTTPException(status_code=404, detail="关门日期不存在")
+    
+    await db.delete(closed_date)
+    await db.commit()
+    
+    return {"message": "关门日期已删除"}
+
+
+@task_expert_router.delete("/me/closed-dates/by-date")
+async def delete_closed_date_by_date(
+    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """按日期删除关门日期"""
+    expert_id = current_expert.id
+    
+    try:
+        target_date_obj = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+    
+    # 查找关门日期
+    closed_date = await db.execute(
+        select(models.ExpertClosedDate)
+        .where(models.ExpertClosedDate.expert_id == expert_id)
+        .where(models.ExpertClosedDate.closed_date == target_date_obj)
+    )
+    closed_date = closed_date.scalar_one_or_none()
+    
+    if not closed_date:
+        raise HTTPException(status_code=404, detail="该日期未设置为关门日期")
+    
+    await db.delete(closed_date)
+    await db.commit()
+    
+    return {"message": f"{target_date} 的关门日期已删除"}
 
 
 @task_expert_router.post("/applications/{application_id}/reject")

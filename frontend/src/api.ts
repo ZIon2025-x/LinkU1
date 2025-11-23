@@ -1567,6 +1567,18 @@ export const getMyTaskExpertServices = async (params?: { status?: string; limit?
   return res.data;
 };
 
+// 获取任务达人仪表盘统计数据
+export const getExpertDashboardStats = async () => {
+  const res = await api.get('/api/task-experts/me/dashboard/stats');
+  return res.data;
+};
+
+// 获取任务达人时刻表数据
+export const getExpertSchedule = async (params?: { start_date?: string; end_date?: string }) => {
+  const res = await api.get('/api/task-experts/me/schedule', { params });
+  return res.data;
+};
+
 export const updateTaskExpertService = async (serviceId: number, serviceData: {
   service_name?: string;
   description?: string;
@@ -1630,6 +1642,29 @@ export const batchCreateServiceTimeSlots = async (serviceId: number, params: {
 
 export const deleteTimeSlotsByDate = async (serviceId: number, targetDate: string) => {
   const res = await api.delete(`/api/task-experts/me/services/${serviceId}/time-slots/by-date`, {
+    params: { target_date: targetDate }
+  });
+  return res.data;
+};
+
+// 关门日期管理
+export const createClosedDate = async (closedDateData: { closed_date: string; reason?: string }) => {
+  const res = await api.post('/api/task-experts/me/closed-dates', closedDateData);
+  return res.data;
+};
+
+export const getClosedDates = async (params?: { start_date?: string; end_date?: string }) => {
+  const res = await api.get('/api/task-experts/me/closed-dates', { params });
+  return res.data;
+};
+
+export const deleteClosedDate = async (closedDateId: number) => {
+  const res = await api.delete(`/api/task-experts/me/closed-dates/${closedDateId}`);
+  return res.data;
+};
+
+export const deleteClosedDateByDate = async (targetDate: string) => {
+  const res = await api.delete('/api/task-experts/me/closed-dates/by-date', {
     params: { target_date: targetDate }
   });
   return res.data;
