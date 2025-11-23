@@ -123,8 +123,6 @@ const TaskExpertDashboard: React.FC = () => {
   const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loadingRecentActivities, setLoadingRecentActivities] = useState(false);
   
   // 创建多人活动相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
@@ -282,7 +280,6 @@ const TaskExpertDashboard: React.FC = () => {
   useEffect(() => {
     loadData();
     loadPendingRequest();
-    loadRecentActivities();
   }, []);
   
   const loadPendingRequest = async () => {
@@ -596,37 +593,6 @@ const TaskExpertDashboard: React.FC = () => {
     }
   };
 
-  // 加载最近达人活动（最近发布的多人活动）
-  const loadRecentActivities = async () => {
-    if (!user) return;
-    setLoadingRecentActivities(true);
-    try {
-      // 获取任务达人创建的最新的多人活动（最近5个）
-      // 注意：后端可能不支持 order_by 参数，我们获取所有任务后在前端排序
-      const response = await api.get('/api/tasks', {
-        params: {
-          expert_creator_id: user.id,
-          is_multi_participant: true,
-          limit: 20  // 获取更多任务，然后在前端排序和限制
-        }
-      });
-      const tasks = response.data.tasks || response.data || [];
-      // 按创建时间降序排序，取前5个
-      const sortedTasks = tasks
-        .sort((a: any, b: any) => {
-          const dateA = new Date(a.created_at || 0).getTime();
-          const dateB = new Date(b.created_at || 0).getTime();
-          return dateB - dateA;
-        })
-        .slice(0, 5);
-      setRecentActivities(sortedTasks);
-    } catch (err: any) {
-      console.error('加载最近达人活动失败:', err);
-      // 不显示错误消息，因为这不是关键功能
-    } finally {
-      setLoadingRecentActivities(false);
-    }
-  };
 
   // 加载多人任务列表
   const loadMultiTasks = async () => {
@@ -842,122 +808,6 @@ const TaskExpertDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* 最近达人活动 */}
-        {recentActivities.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
-              最近达人活动
-            </h2>
-            {loadingRecentActivities ? (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>加载中...</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                {recentActivities.map((task: any) => {
-                  const statusColors: { [key: string]: string } = {
-                    open: '#3b82f6',
-                    in_progress: '#10b981',
-                    completed: '#6b7280',
-                    cancelled: '#ef4444',
-                  };
-                  const statusTexts: { [key: string]: string } = {
-                    open: '进行中',
-                    in_progress: '进行中',
-                    completed: '已完成',
-                    cancelled: '已取消',
-                  };
-                  return (
-                    <div
-                      key={task.id}
-                      onClick={() => navigate(`/tasks/${task.id}`)}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        background: '#fff',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#3b82f6';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1a202c', flex: 1 }}>
-                          {task.title}
-                        </h3>
-                        <span
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            background: `${statusColors[task.status] || '#6b7280'}20`,
-                            color: statusColors[task.status] || '#6b7280',
-                          }}
-                        >
-                          {statusTexts[task.status] || task.status}
-                        </span>
-                      </div>
-                      <p
-                        style={{
-                          margin: '0 0 12px 0',
-                          fontSize: '14px',
-                          color: '#718096',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {task.description}
-                      </p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#4a5568' }}>
-                        <div>
-                          <span style={{ fontWeight: 500 }}>参与者: </span>
-                          {task.current_participants || 0} / {task.max_participants}
-                        </div>
-                        {task.reward && task.reward > 0 && (
-                          <div style={{ fontWeight: 600, color: '#059669' }}>
-                            {task.currency || 'GBP'} {task.reward.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                      {task.deadline && (
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#9ca3af' }}>
-                          截止: {new Date(task.deadline).toLocaleDateString('zh-CN')}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {recentActivities.length > 0 && (
-              <div style={{ marginTop: '16px', textAlign: 'right' }}>
-                <button
-                  onClick={() => setActiveTab('multi-tasks')}
-                  style={{
-                    padding: '8px 16px',
-                    background: 'transparent',
-                    color: '#3b82f6',
-                    border: '1px solid #3b82f6',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                  }}
-                >
-                  查看全部多人活动 →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* 标签页 */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -2887,7 +2737,6 @@ const TaskExpertDashboard: React.FC = () => {
                       message.success('多人活动创建成功');
                       setShowCreateMultiTaskModal(false);
                       await loadMultiTasks();
-                      await loadRecentActivities(); // 刷新最近活动
                     } catch (err: any) {
                       console.error('创建多人活动失败:', err);
                       console.error('错误详情:', {

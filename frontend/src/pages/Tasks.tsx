@@ -754,6 +754,10 @@ const Tasks: React.FC = () => {
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   
+  // 活动详情弹窗状态（用于达人发布的多人活动）
+  const [showActivityDetailModal, setShowActivityDetailModal] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  
   // 已申请任务状态
   const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
   
@@ -1269,6 +1273,24 @@ const Tasks: React.FC = () => {
     }
   };
 
+  // 判断任务是否是达人发布的多人活动
+  // 判断条件：
+  // 1. 通过 expert_creator_id 判断（有达人创建者ID）
+  // 2. 通过任务等级判断（expert 等级且是多人活动）
+  const isExpertMultiParticipantActivity = useCallback((task: any) => {
+    if (task.is_multi_participant !== true) {
+      return false;
+    }
+    
+    // 方式1：通过 expert_creator_id 判断
+    const isExpertCreated = task.expert_creator_id && task.expert_creator_id !== null;
+    
+    // 方式2：通过任务等级判断（expert 等级且是多人活动）
+    const isExpertLevel = task.task_level === 'expert' && task.is_multi_participant === true;
+    
+    return isExpertCreated || isExpertLevel;
+  }, []);
+
   // 处理任务详情查看
   const handleViewTask = useCallback((taskId: number | string) => {
     // 如果是固定卡片，跳转到跳蚤市场页面
@@ -1280,6 +1302,12 @@ const Tasks: React.FC = () => {
     setSelectedTaskId(taskId as number);
     setShowTaskDetailModal(true);
   }, [language, navigate]);
+
+  // 处理活动详情查看（达人发布的多人活动）
+  const handleViewActivity = useCallback((activity: any) => {
+    setSelectedActivity(activity);
+    setShowActivityDetailModal(true);
+  }, []);
 
   // 处理联系发布者（跳转到任务聊天页面）
   const handleContactPoster = (taskId: number) => {
@@ -1328,6 +1356,203 @@ const Tasks: React.FC = () => {
     }
   }, [t]);
 
+  // 渲染活动卡片（达人发布的多人活动）
+  const renderActivityCard = useCallback((activity: any) => {
+    // 获取活动图片
+    const activityImage = activity.images && activity.images.length > 0 
+      ? activity.images[0] 
+      : activity.service_images && activity.service_images.length > 0
+      ? activity.service_images[0]
+      : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
+    
+    // 格式化价格显示
+    const priceText = activity.reward && activity.reward > 0 
+      ? `${activity.currency || 'GBP'}${activity.reward.toFixed(2)}/人`
+      : '免费';
+    
+    // 格式化日期显示
+    const dateText = activity.deadline 
+      ? new Date(activity.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+      : '';
+    const timeText = activity.deadline 
+      ? new Date(activity.deadline).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+      : '';
+    
+    return (
+      <div
+        onClick={() => handleViewActivity(activity)}
+        style={{
+          background: '#fff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          padding: 0,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          overflow: 'hidden',
+          position: 'relative',
+          minHeight: isMobile ? '200px' : '240px',
+          height: '100%',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#3b82f6';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#e2e8f0';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+      >
+        {/* 背景图片层 */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            zIndex: 0,
+          }}
+        >
+          <img
+            src={activityImage}
+            alt={activity.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.85,
+            }}
+          />
+          {/* 渐变遮罩层，确保文字可读性 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)',
+            }}
+          />
+        </div>
+        
+        {/* 内容层 */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            padding: '16px',
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: isMobile ? '200px' : '240px',
+            height: '100%',
+          }}
+        >
+          {/* 顶部：活动标签和价格 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(10px)',
+                color: 'white',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '10px',
+                fontWeight: 600,
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              🎯 活动
+            </div>
+            {activity.reward && activity.reward > 0 && (
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  color: '#059669',
+                  padding: '3px 8px',
+                  borderRadius: '14px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                }}
+              >
+                {priceText}
+              </div>
+            )}
+          </div>
+          
+          {/* 中间：标题和描述 */}
+          <div style={{ flex: 1 }}>
+            <h3
+              style={{
+                margin: '0 0 6px 0',
+                fontSize: isMobile ? '14px' : '16px',
+                fontWeight: 700,
+                color: 'white',
+                lineHeight: 1.3,
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              {activity.title}
+            </h3>
+            <p
+              style={{
+                margin: '0 0 12px 0',
+                fontSize: isMobile ? '11px' : '12px',
+                color: 'rgba(255, 255, 255, 0.95)',
+                lineHeight: 1.4,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+              }}
+            >
+              {activity.description}
+            </p>
+          </div>
+          
+          {/* 底部：参与信息和时间 */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+              }}
+            >
+              <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 500 }}>
+                <span style={{ opacity: 0.9 }}>参与者: </span>
+                <span style={{ fontWeight: 700 }}>
+                  {activity.current_participants || 0} / {activity.max_participants}
+                </span>
+              </div>
+              {(dateText || timeText) && (
+                <div
+                  style={{
+                    fontSize: '10px',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    padding: '3px 6px',
+                    borderRadius: '6px',
+                  }}
+                >
+                  📅 {dateText} {timeText}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }, [isMobile, handleViewActivity]);
+
   // Grid 单元格渲染函数（必须在所有依赖的函数定义之后）
   const Cell = useCallback(({ columnIndex, rowIndex, style, ...props }: { columnIndex: number; rowIndex: number; style: React.CSSProperties; [key: string]: any }) => {
     const index = rowIndex * columnCount + columnIndex;
@@ -1343,6 +1568,15 @@ const Tasks: React.FC = () => {
       return (
         <div style={{ ...style, padding: `${gap / 2}px` }}>
           <FleaMarketCard isMobile={isMobile} />
+        </div>
+      );
+    }
+    
+    // 如果是达人发布的多人活动，使用活动卡片样式
+    if (isExpertMultiParticipantActivity(task)) {
+      return (
+        <div style={{ ...style, padding: `${gap / 2}px` }}>
+          {renderActivityCard(task)}
         </div>
       );
     }
@@ -1365,7 +1599,7 @@ const Tasks: React.FC = () => {
         />
       </div>
     );
-  }, [displayTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t]);
+  }, [displayTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t, isExpertMultiParticipantActivity, renderActivityCard]);
 
   return (
     <div className={styles.pageContainer}>
@@ -1662,6 +1896,14 @@ const Tasks: React.FC = () => {
                       <FleaMarketCard key={task.id} isMobile={isMobile} />
                     );
                   }
+                  // 如果是达人发布的多人活动，使用活动卡片样式
+                  if (isExpertMultiParticipantActivity(task)) {
+                    return (
+                      <div key={task.id}>
+                        {renderActivityCard(task)}
+                      </div>
+                    );
+                  }
                   return (
                     <TaskCard
                       key={task.id}
@@ -1880,6 +2122,333 @@ const Tasks: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+      
+      {/* 活动详情弹窗（达人发布的多人活动） */}
+      {showActivityDetailModal && selectedActivity && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            overflowY: 'auto',
+          }}
+          onClick={() => {
+            setShowActivityDetailModal(false);
+            setSelectedActivity(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowActivityDetailModal(false);
+                setSelectedActivity(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'rgba(0, 0, 0, 0.5)',
+                color: '#fff',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                zIndex: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ×
+            </button>
+            
+            {/* 活动图片 */}
+            <div
+              style={{
+                width: '100%',
+                height: '200px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <img
+                src={selectedActivity.images && selectedActivity.images.length > 0 
+                  ? selectedActivity.images[0] 
+                  : selectedActivity.service_images && selectedActivity.service_images.length > 0
+                  ? selectedActivity.service_images[0]
+                  : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop'}
+                alt={selectedActivity.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  backdropFilter: 'blur(10px)',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                🎯 活动
+              </div>
+            </div>
+
+            {/* 活动内容 */}
+            <div style={{ padding: '24px' }}>
+              {/* 标题 */}
+              <h2
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  color: '#1a202c',
+                  lineHeight: 1.3,
+                }}
+              >
+                {selectedActivity.title}
+              </h2>
+
+              {/* 价格和参与者信息 */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '16px',
+                  marginBottom: '20px',
+                  padding: '16px',
+                  background: '#f0f9ff',
+                  borderRadius: '12px',
+                  border: '1px solid #bae6fd',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', color: '#0369a1', marginBottom: '6px', fontWeight: 500 }}>
+                    参与费用
+                  </div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#0284c7' }}>
+                    <span>
+                      {selectedActivity.reward && selectedActivity.reward > 0
+                        ? `${selectedActivity.currency || 'GBP'}${selectedActivity.reward.toFixed(2)}`
+                        : '免费'}
+                    </span>
+                    {selectedActivity.reward && selectedActivity.reward > 0 && (
+                      <span style={{ fontSize: '14px', fontWeight: 400, color: '#0369a1' }}> / 人</span>
+                    )}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    width: '1px',
+                    background: '#bae6fd',
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', color: '#0369a1', marginBottom: '6px', fontWeight: 500 }}>
+                    参与者
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#0284c7' }}>
+                    <span>{selectedActivity.current_participants || 0}</span> /{' '}
+                    <span>{selectedActivity.max_participants}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#0369a1', marginTop: '4px' }}>
+                    <span>
+                      {(selectedActivity.max_participants || 0) - (selectedActivity.current_participants || 0)}
+                    </span>{' '}
+                    个空位
+                  </div>
+                </div>
+              </div>
+
+              {/* 活动描述 */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3
+                  style={{
+                    margin: '0 0 8px 0',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: '#2d3748',
+                  }}
+                >
+                  活动描述
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    color: '#4a5568',
+                    lineHeight: 1.7,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {selectedActivity.description}
+                </p>
+              </div>
+
+              {/* 时间段信息 */}
+              {selectedActivity.deadline && (
+                <div
+                  style={{
+                    marginBottom: '20px',
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: '#2d3748',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span>⏰</span>
+                    <span>活动时间</span>
+                  </h3>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '15px',
+                      color: '#1a202c',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span>📅</span>
+                    <span>
+                      {new Date(selectedActivity.deadline).toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                    {selectedActivity.deadline && (
+                      <>
+                        <span style={{ color: '#cbd5e0' }}>|</span>
+                        <span>
+                          {new Date(selectedActivity.deadline).toLocaleTimeString('zh-CN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          })}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setShowActivityDetailModal(false);
+                    setSelectedActivity(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px',
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#e5e7eb';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = '#f3f4f6';
+                  }}
+                >
+                  关闭
+                </button>
+                <button
+                  onClick={() => {
+                    navigate(`/tasks/${selectedActivity.id}`);
+                    setShowActivityDetailModal(false);
+                    setSelectedActivity(null);
+                  }}
+                  style={{
+                    flex: 2,
+                    padding: '14px',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                  }}
+                >
+                  立即申请参与
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 移动端响应式样式 */}
       <style>

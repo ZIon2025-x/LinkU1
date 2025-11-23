@@ -378,6 +378,8 @@ class AsyncTaskCRUD:
         status: Optional[str] = None,
         keyword: Optional[str] = None,
         sort_by: Optional[str] = "latest",
+        expert_creator_id: Optional[str] = None,
+        is_multi_participant: Optional[bool] = None,
     ) -> tuple[List[models.Task], int]:
         """
         获取任务列表 + 总数（使用缓存 + 精确 count，不用 reltuples 估算）
@@ -398,17 +400,27 @@ class AsyncTaskCRUD:
             
             # 1. 构建 base_query（列表 & 总数共用）
             actual_status = status or "open"
-            base_query = select(models.Task).where(
-                or_(
-                    models.Task.status == "open",
-                    models.Task.status == "taken"
+            
+            # 如果指定了 expert_creator_id，不过滤状态和截止日期（显示所有状态的活动）
+            # 否则只显示开放中的任务
+            if expert_creator_id:
+                # 达人查看自己的活动时，显示所有状态
+                base_query = select(models.Task)
+                if status:
+                    base_query = base_query.where(models.Task.status == status)
+            else:
+                # 公开任务列表：只显示开放中的任务
+                base_query = select(models.Task).where(
+                    or_(
+                        models.Task.status == "open",
+                        models.Task.status == "taken"
+                    )
+                ).where(
+                    or_(
+                        models.Task.deadline > now_utc,  # 有截止日期且未过期
+                        models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                    )
                 )
-            ).where(
-                or_(
-                    models.Task.deadline > now_utc,  # 有截止日期且未过期
-                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
-                )
-            )
 
             # 任务类型筛选
             if task_type and task_type not in ["全部类型", "全部", "all"]:
@@ -439,6 +451,14 @@ class AsyncTaskCRUD:
                     )
                     ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
                     base_query = base_query.where(ts_vector.op("@@")(ts_query))
+            
+            # 达人创建者筛选
+            if expert_creator_id:
+                base_query = base_query.where(models.Task.expert_creator_id == expert_creator_id)
+            
+            # 多人任务筛选
+            if is_multi_participant is not None:
+                base_query = base_query.where(models.Task.is_multi_participant == is_multi_participant)
             
             # 2. 先算 total（缓存 + 精确 count）
             cache_key = get_tasks_count_cache_key(
@@ -535,6 +555,8 @@ class AsyncTaskCRUD:
         location: Optional[str] = None,
         keyword: Optional[str] = None,
         sort_by: str = "latest",  # 只支持 latest / oldest
+        expert_creator_id: Optional[str] = None,
+        is_multi_participant: Optional[bool] = None,
     ) -> tuple[List[models.Task], Optional[str]]:
         """
         使用游标分页获取任务列表。
@@ -554,22 +576,29 @@ class AsyncTaskCRUD:
         from app.utils.time_utils import get_utc_time
         now_utc = get_utc_time()
         
-        query = (
-            select(models.Task)
-            .options(selectinload(models.Task.poster))
-            .where(
-                or_(
-                    models.Task.status == "open",
-                    models.Task.status == "taken"
+        # 如果指定了 expert_creator_id，不过滤状态和截止日期（显示所有状态的活动）
+        if expert_creator_id:
+            query = (
+                select(models.Task)
+                .options(selectinload(models.Task.poster))
+            )
+        else:
+            query = (
+                select(models.Task)
+                .options(selectinload(models.Task.poster))
+                .where(
+                    or_(
+                        models.Task.status == "open",
+                        models.Task.status == "taken"
+                    )
+                )
+                .where(
+                    or_(
+                        models.Task.deadline > now_utc,  # 有截止日期且未过期
+                        models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                    )
                 )
             )
-            .where(
-                or_(
-                    models.Task.deadline > now_utc,  # 有截止日期且未过期
-                    models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
-                )
-            )
-        )
         
         # 筛选条件：和 /tasks 保持一致
         if task_type and task_type not in ["全部类型", "全部", "all"]:
@@ -596,6 +625,14 @@ class AsyncTaskCRUD:
                 )
                 ts_query = func.plainto_tsquery(Config.SEARCH_LANGUAGE, keyword)
                 query = query.where(ts_vector.op("@@")(ts_query))
+        
+        # 达人创建者筛选
+        if expert_creator_id:
+            query = query.where(models.Task.expert_creator_id == expert_creator_id)
+        
+        # 多人任务筛选
+        if is_multi_participant is not None:
+            query = query.where(models.Task.is_multi_participant == is_multi_participant)
         
         # 2. 应用游标条件（基于 created_at + id）
         if cursor:

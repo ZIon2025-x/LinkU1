@@ -104,6 +104,8 @@ async def get_tasks(
     status: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
     sort_by: Optional[str] = Query("latest"),
+    expert_creator_id: Optional[str] = Query(None),
+    is_multi_participant: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
@@ -123,9 +125,56 @@ async def get_tasks(
             location=location,
             keyword=keyword,
             sort_by=sort_by,
+            expert_creator_id=expert_creator_id,
+            is_multi_participant=is_multi_participant,
         )
+        
+        # 格式化任务列表（与下面的格式化逻辑保持一致）
+        formatted_tasks = []
+        for task in tasks:
+            images_list = []
+            if task.images:
+                try:
+                    if isinstance(task.images, str):
+                        images_list = json.loads(task.images)
+                    elif isinstance(task.images, list):
+                        images_list = task.images
+                except (json.JSONDecodeError, TypeError):
+                    images_list = []
+            
+            task_data = {
+                "id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "deadline": format_iso_utc(task.deadline) if task.deadline else None,
+                "is_flexible": task.is_flexible or 0,
+                "reward": float(task.agreed_reward) if task.agreed_reward is not None else float(task.base_reward) if task.base_reward is not None else 0.0,
+                "base_reward": float(task.base_reward) if task.base_reward else None,
+                "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
+                "currency": task.currency or "GBP",
+                "location": task.location,
+                "task_type": task.task_type,
+                "poster_id": task.poster_id,
+                "taker_id": task.taker_id,
+                "status": task.status,
+                "task_level": task.task_level,
+                "created_at": format_iso_utc(task.created_at) if task.created_at else None,
+                "is_public": int(task.is_public) if task.is_public is not None else 1,
+                "images": images_list,
+                "points_reward": int(task.points_reward) if task.points_reward else None,
+                # 多人任务相关字段
+                "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
+                "max_participants": int(task.max_participants) if hasattr(task, 'max_participants') and task.max_participants else None,
+                "min_participants": int(task.min_participants) if hasattr(task, 'min_participants') and task.min_participants else None,
+                "current_participants": int(task.current_participants) if hasattr(task, 'current_participants') and task.current_participants is not None else 0,
+                "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
+                "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
+                "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
+            }
+            formatted_tasks.append(task_data)
+        
         return {
-            "tasks": tasks,
+            "tasks": formatted_tasks,
             "next_cursor": next_cursor,
         }
     
@@ -144,6 +193,8 @@ async def get_tasks(
         status=status,
         keyword=keyword,
         sort_by=sort_by,
+        expert_creator_id=expert_creator_id,
+        is_multi_participant=is_multi_participant,
     )
     
     # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
@@ -183,6 +234,14 @@ async def get_tasks(
             "is_public": int(task.is_public) if task.is_public is not None else 1,
             "images": images_list,
             "points_reward": int(task.points_reward) if task.points_reward else None,
+            # 多人任务相关字段
+            "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
+            "max_participants": int(task.max_participants) if hasattr(task, 'max_participants') and task.max_participants else None,
+            "min_participants": int(task.min_participants) if hasattr(task, 'min_participants') and task.min_participants else None,
+            "current_participants": int(task.current_participants) if hasattr(task, 'current_participants') and task.current_participants is not None else 0,
+            "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
+            "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
+            "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
         }
         formatted_tasks.append(task_data)
     
