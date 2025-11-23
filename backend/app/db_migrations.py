@@ -168,11 +168,15 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 
                 # 执行每个语句（每个语句独立事务）
                 for i, statement in enumerate(statements, 1):
-                    if statement:
-                        # 每个语句在独立事务中执行
-                        trans = conn.begin()
+                    if not statement:
+                        continue
+                    
+                    # 每个语句在独立事务中执行
+                    # 使用新的连接确保事务隔离
+                    with engine.connect() as stmt_conn:
+                        trans = stmt_conn.begin()
                         try:
-                            conn.execute(text(statement))
+                            stmt_conn.execute(text(statement))
                             trans.commit()
                         except Exception as e:
                             trans.rollback()
@@ -182,12 +186,19 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                             if any(keyword in error_msg for keyword in [
                                 "already exists", "duplicate", "does not exist",
                                 "already has", "relation already exists",
-                                "constraint.*already exists", "already exists"
+                                "constraint.*already exists", "already exists",
+                                "column.*already exists"
                             ]):
                                 logger.debug(f"语句已存在或已删除，跳过 ({i}/{len(statements)}): {statement[:50]}...")
                             elif "current transaction is aborted" in error_msg:
                                 # 事务中止错误，已回滚，继续执行下一个
                                 logger.warning(f"事务中止，已回滚，继续 ({i}/{len(statements)}): {statement[:50]}...")
+                                continue
+                            elif "check constraint" in error_msg and "is violated" in error_msg:
+                                # 约束违反错误，记录详细错误但继续执行
+                                logger.warning(f"约束违反（继续执行） ({i}/{len(statements)}): {e}")
+                                logger.debug(f"问题语句: {statement[:100]}...")
+                                # 继续执行下一个语句
                                 continue
                             else:
                                 # 记录错误但继续执行

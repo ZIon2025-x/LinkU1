@@ -135,19 +135,56 @@ BEGIN
         AND conrelid = 'tasks'::regclass
     ) THEN
         -- 在添加约束前，确保所有数据符合约束条件
-        -- 修复不符合约束的数据
-        UPDATE tasks SET reward_type = 'cash', points_reward = 0 
+        -- 修复不符合约束的数据（更彻底的修复逻辑）
+        
+        -- 1. 修复 reward_type='cash' 但 reward <= 0 的数据
+        --    如果 reward <= 0，设置为 points（如果有 points_reward）或保持 cash 但设置 reward = 1
+        UPDATE tasks 
+        SET reward = 1, points_reward = COALESCE(points_reward, 0)
         WHERE reward_type = 'cash' AND (reward IS NULL OR reward <= 0);
         
-        UPDATE tasks SET reward_type = 'points', reward = NULL 
+        -- 2. 修复 reward_type='points' 但 points_reward <= 0 的数据
+        --    如果 points_reward <= 0，设置为 cash（如果有 reward）或 points_reward = 1
+        UPDATE tasks 
+        SET points_reward = 1, reward = NULL
         WHERE reward_type = 'points' AND (points_reward IS NULL OR points_reward <= 0);
         
-        UPDATE tasks SET reward_type = 'both' 
+        -- 3. 修复 reward_type='both' 但数据不完整的数据
+        --    如果 reward <= 0，设置为 1；如果 points_reward <= 0，设置为 1
+        UPDATE tasks 
+        SET reward = COALESCE(NULLIF(reward, 0), 1),
+            points_reward = COALESCE(NULLIF(points_reward, 0), 1)
         WHERE reward_type = 'both' AND (reward IS NULL OR reward <= 0 OR points_reward IS NULL OR points_reward <= 0);
         
-        -- 如果 reward_type 为空或无效，设置为 cash
-        UPDATE tasks SET reward_type = 'cash', points_reward = COALESCE(points_reward, 0)
+        -- 4. 修复 reward_type 为空或无效的数据
+        --    根据实际数据设置合适的 reward_type
+        UPDATE tasks 
+        SET reward_type = CASE
+            WHEN reward > 0 AND (points_reward IS NULL OR points_reward = 0) THEN 'cash'
+            WHEN (reward IS NULL OR reward = 0) AND points_reward > 0 THEN 'points'
+            WHEN reward > 0 AND points_reward > 0 THEN 'both'
+            ELSE 'cash'
+        END,
+        reward = COALESCE(NULLIF(reward, 0), 1),
+        points_reward = CASE
+            WHEN reward > 0 AND (points_reward IS NULL OR points_reward = 0) THEN 0
+            WHEN (reward IS NULL OR reward = 0) AND points_reward > 0 THEN points_reward
+            WHEN reward > 0 AND points_reward > 0 THEN points_reward
+            ELSE 0
+        END
         WHERE reward_type IS NULL OR reward_type NOT IN ('cash', 'points', 'both');
+        
+        -- 5. 最终验证：确保所有数据都符合约束
+        --    对于仍然不符合的数据，强制设置为 cash
+        UPDATE tasks 
+        SET reward_type = 'cash',
+            reward = COALESCE(NULLIF(reward, 0), 1),
+            points_reward = 0
+        WHERE NOT (
+            (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
+            (reward_type = 'points' AND points_reward > 0 AND reward IS NULL) OR
+            (reward_type = 'both' AND reward > 0 AND points_reward > 0)
+        );
         
         ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
             (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
