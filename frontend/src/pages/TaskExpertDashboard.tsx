@@ -32,6 +32,7 @@ import {
   rejectExitRequest,
   completeTaskAndDistributeRewardsEqual,
   createExpertMultiParticipantTask,
+  getServiceTimeSlots,
   getServiceTimeSlotsPublic,
   batchCreateServiceTimeSlots,
   deleteTimeSlotsByDate,
@@ -215,7 +216,8 @@ const TaskExpertDashboard: React.FC = () => {
         end_date: futureDate.toISOString().split('T')[0],
       };
       console.log('请求时间段参数:', params); // 调试日志
-      const slots = await getServiceTimeSlotsPublic(serviceId, params);
+      // 任务达人创建任务时，使用认证接口（需要登录）
+      const slots = await getServiceTimeSlots(serviceId, params);
       console.log('加载的时间段数据:', slots); // 调试日志
       console.log('时间段数量:', Array.isArray(slots) ? slots.length : 0); // 调试日志
       const slotsArray = Array.isArray(slots) ? slots : [];
