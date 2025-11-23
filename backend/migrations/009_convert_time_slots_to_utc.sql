@@ -83,14 +83,19 @@ BEGIN
         END IF;
     END IF;
 
-    -- 4. 删除旧字段（可选，如果需要保留向后兼容性可以注释掉）
+    -- 4. 删除旧字段
     -- 注意：删除前确保所有代码都已更新
-    /*
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'service_time_slots' 
         AND column_name = 'slot_date'
     ) THEN
+        -- 先删除依赖这些字段的约束和索引（如果存在）
+        ALTER TABLE service_time_slots DROP CONSTRAINT IF EXISTS uq_service_time_slot_old;
+        DROP INDEX IF EXISTS ix_service_time_slots_slot_date;
+        DROP INDEX IF EXISTS ix_service_time_slots_service_date;
+        DROP INDEX IF EXISTS ix_service_time_slots_service_id_slot_date;
+        
         ALTER TABLE service_time_slots DROP COLUMN slot_date;
         RAISE NOTICE '已删除字段: service_time_slots.slot_date';
     END IF;
@@ -112,7 +117,6 @@ BEGIN
         ALTER TABLE service_time_slots DROP COLUMN end_time;
         RAISE NOTICE '已删除字段: service_time_slots.end_time';
     END IF;
-    */
 
     -- 5. 更新索引和约束
     -- 删除旧索引
