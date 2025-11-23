@@ -118,7 +118,7 @@ const TaskExpertDashboard: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   
-  // 多人任务管理相关
+  // 多人活动管理相关
   const [multiTasks, setMultiTasks] = useState<any[]>([]);
   const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
@@ -126,7 +126,7 @@ const TaskExpertDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loadingRecentActivities, setLoadingRecentActivities] = useState(false);
   
-  // 创建多人任务相关
+  // 创建多人活动相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
   const [createMultiTaskForm, setCreateMultiTaskForm] = useState<{
     service_id?: number;
@@ -179,7 +179,7 @@ const TaskExpertDashboard: React.FC = () => {
     participants_per_slot: number;
   }}>({});
   
-  // 时间段相关状态（用于创建多人任务）
+  // 时间段相关状态（用于创建多人活动）
   const [availableTimeSlots, setAvailableTimeSlots] = useState<any[]>([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   
@@ -204,7 +204,7 @@ const TaskExpertDashboard: React.FC = () => {
   const [selectedDateForClose, setSelectedDateForClose] = useState<string>('');
   const [closeDateReason, setCloseDateReason] = useState<string>('');
   
-  // 加载时间段列表（用于创建多人任务）
+  // 加载时间段列表（用于创建多人活动）
   const loadTimeSlotsForCreateTask = async (serviceId: number) => {
     setLoadingTimeSlots(true);
     try {
@@ -216,7 +216,7 @@ const TaskExpertDashboard: React.FC = () => {
         end_date: futureDate.toISOString().split('T')[0],
       };
       console.log('请求时间段参数:', params); // 调试日志
-      // 任务达人创建任务时，使用认证接口（需要登录）
+      // 任务达人创建活动时，使用认证接口（需要登录）
       const slots = await getServiceTimeSlots(serviceId, params);
       console.log('加载的时间段数据:', slots); // 调试日志
       console.log('时间段数量:', Array.isArray(slots) ? slots.length : 0); // 调试日志
@@ -274,10 +274,10 @@ const TaskExpertDashboard: React.FC = () => {
     }
   }, [activeTab]);
 
-  // 当打开创建多人任务模态框时，确保服务列表已加载
+  // 当打开创建多人活动模态框时，确保服务列表已加载
   useEffect(() => {
     if (showCreateMultiTaskModal && services.length === 0 && !loadingServices) {
-      console.log('打开创建多人任务模态框，但服务列表为空，开始加载服务列表...');
+      console.log('打开创建多人活动模态框，但服务列表为空，开始加载服务列表...');
       loadServices();
     }
   }, [showCreateMultiTaskModal]);
@@ -561,12 +561,12 @@ const TaskExpertDashboard: React.FC = () => {
     }
   };
 
-  // 加载最近达人活动（最近发布的多人任务）
+  // 加载最近达人活动（最近发布的多人活动）
   const loadRecentActivities = async () => {
     if (!user) return;
     setLoadingRecentActivities(true);
     try {
-      // 获取任务达人创建的最新的多人任务（最近5个）
+      // 获取任务达人创建的最新的多人活动（最近5个）
       // 注意：后端可能不支持 order_by 参数，我们获取所有任务后在前端排序
       const response = await api.get('/api/tasks', {
         params: {
@@ -598,7 +598,7 @@ const TaskExpertDashboard: React.FC = () => {
     if (!user) return;
     setLoadingMultiTasks(true);
     try {
-      // 获取任务达人创建的所有多人任务
+      // 获取任务达人创建的所有多人活动
       const response = await api.get('/api/tasks', {
         params: {
           expert_creator_id: user.id,
@@ -624,8 +624,8 @@ const TaskExpertDashboard: React.FC = () => {
       );
       setTaskParticipants(participantsMap);
     } catch (err: any) {
-      message.error('加载多人任务列表失败');
-      console.error('加载多人任务失败:', err);
+                      message.error('加载多人活动列表失败');
+                      console.error('加载多人活动失败:', err);
     } finally {
       setLoadingMultiTasks(false);
     }
@@ -917,7 +917,7 @@ const TaskExpertDashboard: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  查看全部多人任务 →
+                  查看全部多人活动 →
                 </button>
               </div>
             )}
@@ -981,7 +981,7 @@ const TaskExpertDashboard: React.FC = () => {
               fontWeight: 600,
             }}
           >
-            多人任务
+            多人活动
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
@@ -1268,11 +1268,11 @@ const TaskExpertDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* 多人任务管理 */}
+        {/* 多人活动管理 */}
         {activeTab === 'multi-tasks' && (
           <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>我的多人任务</h2>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>我的多人活动</h2>
               <button
                 onClick={() => {
                   setCreateMultiTaskForm({
@@ -1306,7 +1306,7 @@ const TaskExpertDashboard: React.FC = () => {
                   fontWeight: 600,
                 }}
               >
-                + 创建多人任务
+                + 创建多人活动
               </button>
             </div>
 
@@ -1314,7 +1314,7 @@ const TaskExpertDashboard: React.FC = () => {
               <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
             ) : multiTasks.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
-                暂无多人任务
+                暂无多人活动
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1897,7 +1897,7 @@ const TaskExpertDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* 创建多人任务弹窗 */}
+      {/* 创建多人活动弹窗 */}
       {showCreateMultiTaskModal && (
         <div
           style={{
@@ -1927,7 +1927,7 @@ const TaskExpertDashboard: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>创建多人任务</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>创建多人活动</h3>
               <button
                 onClick={() => setShowCreateMultiTaskModal(false)}
                 style={{
@@ -2034,10 +2034,10 @@ const TaskExpertDashboard: React.FC = () => {
                 )}
               </div>
 
-              {/* 任务标题 */}
+              {/* 活动标题 */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  任务标题 <span style={{ color: '#dc3545' }}>*</span>
+                  活动标题 <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -2054,10 +2054,10 @@ const TaskExpertDashboard: React.FC = () => {
                 />
               </div>
 
-              {/* 任务描述 */}
+              {/* 活动描述 */}
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  任务描述 <span style={{ color: '#dc3545' }}>*</span>
+                  活动描述 <span style={{ color: '#dc3545' }}>*</span>
                 </label>
                 <textarea
                   value={createMultiTaskForm.description}
@@ -2158,8 +2158,8 @@ const TaskExpertDashboard: React.FC = () => {
                       ℹ️ 固定时间段服务
                     </div>
                     <div style={{ fontSize: '13px', color: '#075985', lineHeight: '1.5' }}>
-                      此服务为固定时间段服务。任务创建后，系统会根据服务配置自动生成所有时间段。
-                      用户申请参与任务时，将选择具体的时间段。
+                      此服务为固定时间段服务。活动创建后，系统会根据服务配置自动生成所有时间段。
+                      用户申请参与活动时，将选择具体的时间段。
                     </div>
                     {(() => {
                       const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
@@ -2239,19 +2239,47 @@ const TaskExpertDashboard: React.FC = () => {
                         // 过滤匹配选中日期的时间段
                         const filteredSlots = availableTimeSlots.filter((slot: any) => {
                           // 使用UTC时间转换为英国时间进行日期匹配
-                          const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                          // 优先使用 slot_start_datetime（ISO格式字符串），否则使用 slot_date + start_time 组合
+                          let slotStartStr: string;
+                          if (slot.slot_start_datetime) {
+                            // 如果已经是ISO格式字符串，直接使用
+                            slotStartStr = slot.slot_start_datetime;
+                            // 确保是UTC格式（以Z结尾或包含时区信息）
+                            if (!slotStartStr.includes('Z') && !slotStartStr.includes('+') && !slotStartStr.includes('-', 10)) {
+                              slotStartStr = slotStartStr + 'Z';
+                            }
+                          } else if (slot.slot_date && slot.start_time) {
+                            // 组合日期和时间
+                            slotStartStr = slot.slot_date + 'T' + slot.start_time;
+                            if (!slotStartStr.includes('Z') && !slotStartStr.includes('+') && !slotStartStr.includes('-', 10)) {
+                              slotStartStr = slotStartStr + 'Z';
+                            }
+                          } else {
+                            // 如果都没有，跳过这个时间段
+                            return false;
+                          }
+                          
+                          // 转换为英国时间的日期字符串
                           const slotDateUK = TimeHandlerV2.formatUtcToLocal(
-                            slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+                            slotStartStr,
                             'YYYY-MM-DD',
                             'Europe/London'
                           );
-                          const selectedDateStr = createMultiTaskForm.selected_time_slot_date ? createMultiTaskForm.selected_time_slot_date.split('T')[0] : '';
+                          
+                          // 获取选中的日期（确保格式为 YYYY-MM-DD）
+                          const selectedDateStr = createMultiTaskForm.selected_time_slot_date 
+                            ? createMultiTaskForm.selected_time_slot_date.split('T')[0] 
+                            : '';
+                          
                           const isDateMatch = slotDateUK === selectedDateStr;
+                          
                           // 注意：不再过滤is_available，让已满的时间段也能显示
-                          console.log('时间段过滤（创建任务）:', {
+                          console.log('时间段过滤（创建活动）:', {
                             slot_id: slot.id,
                             slot_start_datetime: slot.slot_start_datetime,
                             slot_date: slot.slot_date,
+                            start_time: slot.start_time,
+                            slotStartStr,
                             slotDateUK,
                             selectedDate: createMultiTaskForm.selected_time_slot_date,
                             selectedDateStr,
@@ -2407,7 +2435,7 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                    任务类型
+                    活动类型
                   </label>
                   <select
                     value={createMultiTaskForm.task_type}
@@ -2646,7 +2674,7 @@ const TaskExpertDashboard: React.FC = () => {
                     // 验证参与者数量（如果服务有时间段）
                     if (selectedService.has_time_slots) {
                       // 固定时间段服务：验证最大参与者数不能超过服务的每个时间段最大参与者数
-                      // 注意：任务达人创建任务时不需要选择具体时间段，时间段由用户申请时选择
+                      // 注意：任务达人创建活动时不需要选择具体时间段，时间段由用户申请时选择
                       if (selectedService.participants_per_slot && createMultiTaskForm.max_participants > selectedService.participants_per_slot) {
                         message.error(`最多参与者数不能超过服务的每个时间段最大参与者数（${selectedService.participants_per_slot}人）`);
                         return;
@@ -2716,7 +2744,7 @@ const TaskExpertDashboard: React.FC = () => {
                       };
                       
                       // 调试日志
-                      console.log('创建多人任务 - 任务数据:', {
+                      console.log('创建多人活动 - 活动数据:', {
                         expert_service_id: taskData.expert_service_id,
                         service_id: createMultiTaskForm.service_id,
                         selectedService: selectedService,
@@ -2726,7 +2754,7 @@ const TaskExpertDashboard: React.FC = () => {
                       // 如果服务有时间段，使用时间段配置；否则使用截至日期
                       if (selectedService.has_time_slots) {
                         // 固定时间段服务：不需要截至日期，时间段信息已经在 timeSlotConfig 中
-                        // 注意：任务达人创建任务时不需要选择具体时间段，系统会根据服务配置自动生成所有时间段
+                        // 注意：任务达人创建活动时不需要选择具体时间段，系统会根据服务配置自动生成所有时间段
                         // 用户申请时才会选择具体的时间段
                       } else {
                         // 非固定时间段服务：使用截至日期
@@ -2765,12 +2793,12 @@ const TaskExpertDashboard: React.FC = () => {
                       }
                       
                       await createExpertMultiParticipantTask(taskData);
-                      message.success('多人任务创建成功');
+                      message.success('多人活动创建成功');
                       setShowCreateMultiTaskModal(false);
                       await loadMultiTasks();
                       await loadRecentActivities(); // 刷新最近活动
                     } catch (err: any) {
-                      console.error('创建多人任务失败:', err);
+                      console.error('创建多人活动失败:', err);
                       console.error('错误详情:', {
                         response: err.response?.data,
                         service_id: createMultiTaskForm.service_id,
@@ -3661,7 +3689,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         }
       }
       
-      // 更新本地状态中的时间段配置（用于创建多人任务时快速获取）
+      // 更新本地状态中的时间段配置（用于创建多人活动时快速获取）
       if (setServiceTimeSlotConfigs) {
         if (formData.has_time_slots && savedServiceId) {
           setServiceTimeSlotConfigs((prev: {[key: number]: {

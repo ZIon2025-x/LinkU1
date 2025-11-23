@@ -439,44 +439,66 @@ async def update_service(
         service.has_time_slots = service_data.has_time_slots
         if service_data.has_time_slots:
             # 启用时间段时，验证必填字段
-            if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
-                raise HTTPException(
-                    status_code=400,
-                    detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
-                )
-            # 验证时间格式
-            try:
-                start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
-                end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
-                if start_time >= end_time:
-                    raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
-                service.time_slot_start_time = start_time
-                service.time_slot_end_time = end_time
-            except ValueError:
-                raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+            # 检查是否使用按周几配置
+            has_weekly_config = service_data.weekly_time_slot_config and isinstance(service_data.weekly_time_slot_config, dict)
+            
+            if has_weekly_config:
+                # 使用按周几配置：只需要时间段时长和参与者数量
+                if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="启用时间段时，必须提供时间段时长和参与者数量"
+                    )
+            else:
+                # 使用统一时间配置：需要时间段时长、开始时间、结束时间和参与者数量
+                if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
+                    )
+                # 验证时间格式
+                try:
+                    start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+                    end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+                    if start_time >= end_time:
+                        raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
+                    service.time_slot_start_time = start_time
+                    service.time_slot_end_time = end_time
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
         else:
             # 禁用时间段时，清除相关字段
             service.time_slot_duration_minutes = None
             service.time_slot_start_time = None
             service.time_slot_end_time = None
             service.participants_per_slot = None
+            service.weekly_time_slot_config = None
     
+    # 更新其他时间段相关字段（如果单独提供）
     if service_data.time_slot_duration_minutes is not None:
         service.time_slot_duration_minutes = service_data.time_slot_duration_minutes
-    if service_data.time_slot_start_time is not None:
-        try:
-            service.time_slot_start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="开始时间格式错误，应为HH:MM:SS")
-    if service_data.time_slot_end_time is not None:
-        try:
-            service.time_slot_end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="结束时间格式错误，应为HH:MM:SS")
     if service_data.participants_per_slot is not None:
         service.participants_per_slot = service_data.participants_per_slot
+    
+    # 处理 weekly_time_slot_config 和 time_slot_start_time/time_slot_end_time 的互斥关系
     if service_data.weekly_time_slot_config is not None:
         service.weekly_time_slot_config = service_data.weekly_time_slot_config
+        # 如果使用按周几配置，清除统一时间配置
+        if service_data.weekly_time_slot_config:
+            service.time_slot_start_time = None
+            service.time_slot_end_time = None
+    elif service_data.time_slot_start_time is not None or service_data.time_slot_end_time is not None:
+        # 如果提供了统一时间配置，且没有提供 weekly_time_slot_config，则使用统一时间
+        if service_data.time_slot_start_time is not None:
+            try:
+                service.time_slot_start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="开始时间格式错误，应为HH:MM:SS")
+        if service_data.time_slot_end_time is not None:
+            try:
+                service.time_slot_end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="结束时间格式错误，应为HH:MM:SS")
     if service_data.currency is not None:
         service.currency = service_data.currency
     if service_data.status is not None:
