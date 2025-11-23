@@ -110,6 +110,8 @@ const TaskExpertDashboard: React.FC = () => {
   const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [loadingRecentActivities, setLoadingRecentActivities] = useState(false);
   
   // 创建多人任务相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
@@ -163,6 +165,7 @@ const TaskExpertDashboard: React.FC = () => {
   useEffect(() => {
     loadData();
     loadPendingRequest();
+    loadRecentActivities();
   }, []);
   
   const loadPendingRequest = async () => {
@@ -351,6 +354,31 @@ const TaskExpertDashboard: React.FC = () => {
       loadApplications();
     } catch (err: any) {
       message.error(err.response?.data?.detail || '提交议价失败');
+    }
+  };
+
+  // 加载最近达人活动（最近发布的多人任务）
+  const loadRecentActivities = async () => {
+    if (!user) return;
+    setLoadingRecentActivities(true);
+    try {
+      // 获取任务达人创建的最新的多人任务（最近5个）
+      const response = await api.get('/api/tasks', {
+        params: {
+          expert_creator_id: user.id,
+          is_multi_participant: true,
+          limit: 5,
+          order_by: 'created_at',
+          order: 'desc'
+        }
+      });
+      const tasks = response.data.tasks || response.data || [];
+      setRecentActivities(tasks);
+    } catch (err: any) {
+      console.error('加载最近达人活动失败:', err);
+      // 不显示错误消息，因为这不是关键功能
+    } finally {
+      setLoadingRecentActivities(false);
     }
   };
 
@@ -567,6 +595,123 @@ const TaskExpertDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* 最近达人活动 */}
+        {recentActivities.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
+              最近达人活动
+            </h2>
+            {loadingRecentActivities ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>加载中...</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                {recentActivities.map((task: any) => {
+                  const statusColors: { [key: string]: string } = {
+                    open: '#3b82f6',
+                    in_progress: '#10b981',
+                    completed: '#6b7280',
+                    cancelled: '#ef4444',
+                  };
+                  const statusTexts: { [key: string]: string } = {
+                    open: '进行中',
+                    in_progress: '进行中',
+                    completed: '已完成',
+                    cancelled: '已取消',
+                  };
+                  return (
+                    <div
+                      key={task.id}
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        background: '#fff',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1a202c', flex: 1 }}>
+                          {task.title}
+                        </h3>
+                        <span
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            background: `${statusColors[task.status] || '#6b7280'}20`,
+                            color: statusColors[task.status] || '#6b7280',
+                          }}
+                        >
+                          {statusTexts[task.status] || task.status}
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          margin: '0 0 12px 0',
+                          fontSize: '14px',
+                          color: '#718096',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {task.description}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#4a5568' }}>
+                        <div>
+                          <span style={{ fontWeight: 500 }}>参与者: </span>
+                          {task.current_participants || 0} / {task.max_participants}
+                        </div>
+                        {task.reward && task.reward > 0 && (
+                          <div style={{ fontWeight: 600, color: '#059669' }}>
+                            {task.currency || 'GBP'} {task.reward.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                      {task.deadline && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#9ca3af' }}>
+                          截止: {new Date(task.deadline).toLocaleDateString('zh-CN')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {recentActivities.length > 0 && (
+              <div style={{ marginTop: '16px', textAlign: 'right' }}>
+                <button
+                  onClick={() => setActiveTab('multi-tasks')}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'transparent',
+                    color: '#3b82f6',
+                    border: '1px solid #3b82f6',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                  }}
+                >
+                  查看全部多人任务 →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 标签页 */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
@@ -1452,11 +1597,11 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* 折扣设置（仅当选择服务且reward_type包含cash时显示） */}
-              {createMultiTaskForm.service_id && createMultiTaskForm.reward_type !== 'points' && (
+              {/* 折扣设置（仅当选择服务时显示） */}
+              {createMultiTaskForm.service_id && (
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                    折扣设置
+                    折扣设置（可选）
                   </label>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
                     {[10, 15, 20].map((discount) => (
@@ -1549,53 +1694,8 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* 奖励设置 */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  奖励类型
-                </label>
-                <select
-                  value={createMultiTaskForm.reward_type}
-                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_type: e.target.value as 'cash' | 'points' | 'both' })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
-                >
-                  <option value="cash">现金奖励</option>
-                  <option value="points">积分奖励</option>
-                  <option value="both">现金+积分</option>
-                </select>
-              </div>
-
-              {/* 积分奖励设置（当reward_type包含points时显示） */}
-              {(createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                    积分奖励数量
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={createMultiTaskForm.points_reward}
-                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, points_reward: parseInt(e.target.value) || 0 })}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                    }}
-                    placeholder="输入积分数量"
-                  />
-                </div>
-              )}
-
               {/* 是否奖励申请者 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <input
                   type="checkbox"
                   id="reward_applicants"
@@ -1608,26 +1708,76 @@ const TaskExpertDashboard: React.FC = () => {
                 </label>
               </div>
 
-              {/* 奖励分配方式 */}
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  奖励分配方式
-                </label>
-                <select
-                  value={createMultiTaskForm.reward_distribution}
-                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_distribution: e.target.value as 'equal' | 'custom' })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
-                >
-                  <option value="equal">平均分配</option>
-                  <option value="custom">自定义分配</option>
-                </select>
-              </div>
+              {/* 奖励设置（仅当勾选"奖励申请者"时显示） */}
+              {createMultiTaskForm.reward_applicants && (
+                <>
+                  {/* 奖励类型 */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                      奖励类型
+                    </label>
+                    <select
+                      value={createMultiTaskForm.reward_type}
+                      onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_type: e.target.value as 'cash' | 'points' | 'both' })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="cash">现金奖励</option>
+                      <option value="points">积分奖励</option>
+                      <option value="both">现金+积分</option>
+                    </select>
+                  </div>
+
+                  {/* 积分奖励设置（当reward_type包含points时显示） */}
+                  {(createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                        积分奖励数量
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={createMultiTaskForm.points_reward}
+                        onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, points_reward: parseInt(e.target.value) || 0 })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                        placeholder="输入积分数量"
+                      />
+                    </div>
+                  )}
+
+                  {/* 奖励分配方式 */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                      奖励分配方式
+                    </label>
+                    <select
+                      value={createMultiTaskForm.reward_distribution}
+                      onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_distribution: e.target.value as 'equal' | 'custom' })}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="equal">平均分配</option>
+                      <option value="custom">自定义分配</option>
+                    </select>
+                  </div>
+                </>
+              )}
 
               {/* 提交按钮 */}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
@@ -1689,7 +1839,17 @@ const TaskExpertDashboard: React.FC = () => {
                         is_fixed_time_slot: false,
                       };
                       
-                      await createExpertMultiParticipantTask({
+                      // 计算折扣
+                      const discount = createMultiTaskForm.use_custom_discount 
+                        ? (createMultiTaskForm.custom_discount || 0)
+                        : (createMultiTaskForm.discount_percentage || 0);
+                      
+                      // 计算最终价格
+                      const originalPrice = selectedService.base_price;
+                      const discountedPrice = discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
+                      
+                      // 构建任务数据
+                      const taskData: any = {
                         title: createMultiTaskForm.title,
                         description: createMultiTaskForm.description,
                         deadline: new Date(createMultiTaskForm.deadline).toISOString(),
@@ -1698,17 +1858,46 @@ const TaskExpertDashboard: React.FC = () => {
                         expert_service_id: createMultiTaskForm.service_id!,
                         max_participants: createMultiTaskForm.max_participants,
                         min_participants: createMultiTaskForm.min_participants,
-                        reward_type: createMultiTaskForm.reward_type,
-                        reward: createMultiTaskForm.base_reward,
-                        points_reward: createMultiTaskForm.points_reward || 0,
                         completion_rule: 'all',
-                        reward_distribution: createMultiTaskForm.reward_distribution,
-                        auto_accept: false, // 任务达人任务需要手动审核
                         ...timeSlotConfig,
-                      });
+                      };
+                      
+                      // 如果勾选了"奖励申请者"，添加奖励相关字段
+                      if (createMultiTaskForm.reward_applicants) {
+                        taskData.reward_type = createMultiTaskForm.reward_type;
+                        taskData.reward_distribution = createMultiTaskForm.reward_distribution;
+                        
+                        // 添加价格和折扣信息（如果reward_type包含cash）
+                        if (createMultiTaskForm.reward_type !== 'points') {
+                          taskData.original_price_per_participant = originalPrice;
+                          if (discount > 0) {
+                            taskData.discount_percentage = discount;
+                            taskData.discounted_price_per_participant = discountedPrice;
+                          }
+                          taskData.reward = discountedPrice;
+                        }
+                        
+                        // 添加积分奖励（如果reward_type包含points）
+                        if (createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') {
+                          taskData.points_reward = createMultiTaskForm.points_reward || 0;
+                        }
+                      } else {
+                        // 如果没有勾选"奖励申请者"，使用默认值（商业服务任务，达人收钱）
+                        taskData.reward_type = 'cash';
+                        taskData.original_price_per_participant = originalPrice;
+                        if (discount > 0) {
+                          taskData.discount_percentage = discount;
+                          taskData.discounted_price_per_participant = discountedPrice;
+                        }
+                        taskData.reward = discountedPrice;
+                        taskData.reward_distribution = 'equal';
+                      }
+                      
+                      await createExpertMultiParticipantTask(taskData);
                       message.success('多人任务创建成功');
                       setShowCreateMultiTaskModal(false);
                       await loadMultiTasks();
+                      await loadRecentActivities(); // 刷新最近活动
                     } catch (err: any) {
                       message.error(err.response?.data?.detail || '创建失败');
                     }
@@ -2493,6 +2682,108 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
             <option value="active">上架</option>
             <option value="inactive">下架</option>
           </select>
+        </div>
+
+        {/* 时间段设置 */}
+        <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f9fafb' }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+            <input
+              type="checkbox"
+              id="has_time_slots"
+              checked={formData.has_time_slots}
+              onChange={(e) => setFormData({ ...formData, has_time_slots: e.target.checked })}
+              style={{ width: '18px', height: '18px', cursor: 'pointer', marginRight: '8px' }}
+            />
+            <label htmlFor="has_time_slots" style={{ fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+              启用时间段功能
+            </label>
+          </div>
+          
+          {formData.has_time_slots && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                    开始时间
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.time_slot_start_time}
+                    onChange={(e) => setFormData({ ...formData, time_slot_start_time: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                    结束时间
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.time_slot_end_time}
+                    onChange={(e) => setFormData({ ...formData, time_slot_end_time: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                    时间段时长（分钟）
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.time_slot_duration_minutes}
+                    onChange={(e) => setFormData({ ...formData, time_slot_duration_minutes: parseInt(e.target.value) || 60 })}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    placeholder="60"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                    每个时间段最多参与者
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.participants_per_slot}
+                    onChange={(e) => setFormData({ ...formData, participants_per_slot: parseInt(e.target.value) || 1 })}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              
+              <div style={{ fontSize: '12px', color: '#718096', marginTop: '8px' }}>
+                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。您可以在服务创建后批量创建时间段。
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
