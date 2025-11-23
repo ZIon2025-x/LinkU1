@@ -1262,10 +1262,18 @@ const TaskExpertDashboard: React.FC = () => {
                   const isTaskManager = activity.expert_id === user?.id;
                   
                   // 计算当前参与者数量（从所有任务的参与者中统计）
-                  const currentParticipantsCount = Object.values(participantsByTask).reduce(
-                    (total: number, participants: any) => total + (Array.isArray(participants) ? participants.length : 0),
-                    0
-                  );
+                  // 对于多人任务，统计参与者数量；对于单个任务，每个任务算1个参与者
+                  const currentParticipantsCount = tasks.reduce((total: number, task: any) => {
+                    const taskParticipants = participantsByTask[task.id] || [];
+                    const isMultiParticipant = task.is_multi_participant === true;
+                    if (isMultiParticipant) {
+                      // 多人任务：统计参与者数量
+                      return total + (Array.isArray(taskParticipants) ? taskParticipants.length : 0);
+                    } else {
+                      // 单个任务：每个任务算1个参与者
+                      return total + 1;
+                    }
+                  }, 0);
                   
                   return (
                     <div
@@ -1386,8 +1394,12 @@ const TaskExpertDashboard: React.FC = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {tasks.map((task: any) => {
                               const taskParticipants = participantsByTask[task.id] || [];
-                              if (taskParticipants.length === 0) {
-                                return null; // 跳过没有参与者的任务
+                              const isMultiParticipant = task.is_multi_participant === true;
+                              
+                              // 对于多人任务，必须有参与者才显示
+                              // 对于单个任务，即使没有参与者也要显示（显示任务发布者）
+                              if (isMultiParticipant && taskParticipants.length === 0) {
+                                return null; // 多人任务但没有参与者，跳过
                               }
                               
                               return (
@@ -1403,11 +1415,18 @@ const TaskExpertDashboard: React.FC = () => {
                                   <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>
                                     任务 #{task.id} - {task.title || '未命名任务'}
                                     <span style={{ marginLeft: '8px', fontSize: '12px', color: '#718096', fontWeight: 400 }}>
-                                      ({taskParticipants.length} 个参与者)
+                                      {isMultiParticipant ? `(${taskParticipants.length} 个参与者)` : '(单个任务)'}
                                     </span>
+                                    {/* 显示时间段信息（如果有） */}
+                                    {(task.time_slot_id || (task.time_slot_relations && task.time_slot_relations.length > 0)) && (
+                                      <span style={{ marginLeft: '8px', fontSize: '11px', color: '#059669', fontWeight: 500 }}>
+                                        ⏰ 时间段 {task.time_slot_id || (task.time_slot_relations?.[0]?.time_slot_id)}
+                                      </span>
+                                    )}
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {taskParticipants.map((participant: any) => (
+                                    {/* 多人任务：显示参与者列表 */}
+                                    {isMultiParticipant && taskParticipants.map((participant: any) => (
                                       <div
                                         key={participant.id}
                                         style={{
@@ -1543,6 +1562,42 @@ const TaskExpertDashboard: React.FC = () => {
                                         </div>
                                       </div>
                                     ))}
+                                    {/* 单个任务：显示任务发布者信息 */}
+                                    {!isMultiParticipant && (
+                                      <div
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
+                                          padding: '10px',
+                                          background: '#fff',
+                                          borderRadius: '6px',
+                                          border: '1px solid #e2e8f0',
+                                        }}
+                                      >
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                            {task.poster_name || task.poster?.name || '申请人'}
+                                          </div>
+                                          <div style={{ fontSize: '12px', color: '#718096' }}>
+                                            任务状态: {task.status === 'open' ? '待接受' :
+                                                      task.status === 'taken' ? '已接受' :
+                                                      task.status === 'in_progress' ? '进行中' :
+                                                      task.status === 'completed' ? '已完成' :
+                                                      task.status === 'cancelled' ? '已取消' :
+                                                      task.status}
+                                            {(task.time_slot_id || (task.time_slot_relations && task.time_slot_relations.length > 0)) && (
+                                              <span style={{ marginLeft: '8px' }}>
+                                                | 时间段ID: {task.time_slot_id || (task.time_slot_relations?.[0]?.time_slot_id)}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                          {/* 单个任务的操作按钮可以在这里添加 */}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -1720,30 +1775,60 @@ const TaskExpertDashboard: React.FC = () => {
                                         <button
                                           onClick={async () => {
                                             if (!window.confirm(`确定要删除 ${date} 的所有时间段吗？`)) return;
+                                            
+                                            // 找到该日期的所有服务ID
+                                            const serviceIds = Array.from(new Set(items.filter((i: any) => !i.is_task).map((i: any) => i.service_id)));
+                                            
+                                            if (serviceIds.length === 0) {
+                                              message.warning('没有找到可删除的时间段');
+                                              return;
+                                            }
+                                            
+                                            // 显示加载状态
+                                            const hideLoading = message.loading(`正在删除 ${date} 的所有时间段...`, 0);
+                                            
                                             try {
-                                              // 找到该日期的所有服务ID
-                                              const serviceIds = Array.from(new Set(items.filter((i: any) => !i.is_task).map((i: any) => i.service_id)));
-                                              for (const serviceId of serviceIds) {
-                                                await deleteTimeSlotsByDate(serviceId, date);
+                                              // 并行删除所有服务的时间段，提高效率
+                                              const deletePromises = serviceIds.map(serviceId => 
+                                                deleteTimeSlotsByDate(serviceId, date).catch(err => {
+                                                  console.error(`删除服务 ${serviceId} 的时间段失败:`, err);
+                                                  throw err;
+                                                })
+                                              );
+                                              
+                                              const results = await Promise.all(deletePromises);
+                                              const totalDeleted = results.reduce((sum, result) => sum + (result.deleted_count || 0), 0);
+                                              
+                                              hideLoading();
+                                              
+                                              if (totalDeleted > 0) {
+                                                message.success(`已删除 ${date} 的 ${totalDeleted} 个时间段`);
+                                              } else {
+                                                message.info(`${date} 没有可删除的时间段`);
                                               }
-                                              message.success('已删除该日期的所有时间段');
+                                              
+                                              // 重新加载时刻表
                                               await loadSchedule();
                                             } catch (err: any) {
-                                              message.error(err.response?.data?.detail || '删除失败');
+                                              hideLoading();
+                                              console.error('删除时间段失败:', err);
+                                              message.error(err.response?.data?.detail || err.message || '删除失败，请重试');
                                             }
                                           }}
+                                          disabled={loadingSchedule}
                                           style={{
                                             padding: '6px 12px',
-                                            background: 'rgba(255,255,255,0.2)',
+                                            background: loadingSchedule ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
                                             color: '#fff',
                                             border: '1px solid rgba(255,255,255,0.3)',
                                             borderRadius: '6px',
-                                            cursor: 'pointer',
+                                            cursor: loadingSchedule ? 'not-allowed' : 'pointer',
                                             fontSize: '12px',
                                             fontWeight: 600,
+                                            opacity: loadingSchedule ? 0.6 : 1,
                                           }}
                                         >
-                                          删除该日期的所有时间段
+                                          {loadingSchedule ? '删除中...' : '删除该日期的所有时间段'}
                                         </button>
                                       )}
                                       <button

@@ -489,6 +489,40 @@ const TaskExperts: React.FC = () => {
     setShowServiceListModal(true);
   };
 
+  // 处理活动详情查看（达人发布的多人活动）
+  const handleViewActivity = async (activity: any) => {
+    setSelectedActivity(activity);
+    setShowActivityDetailModal(true);
+    setSelectedTimeSlotId(null); // 重置选中的时间段
+    
+    // 如果是时间段服务，加载时间段列表
+    if (activity.has_time_slots && activity.expert_service_id) {
+      setLoadingActivityTimeSlots(true);
+      try {
+        const { getServiceTimeSlotsPublic } = await import('../api');
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + 60); // 加载未来60天的时间段
+        const slots = await getServiceTimeSlotsPublic(activity.expert_service_id, {
+          start_date: today.toISOString().split('T')[0],
+          end_date: futureDate.toISOString().split('T')[0],
+        });
+        // 只显示与该活动关联的时间段（通过activity_id匹配）
+        const activitySlots = Array.isArray(slots) 
+          ? slots.filter((slot: any) => slot.has_activity && slot.activity_id === activity.id)
+          : [];
+        setActivityTimeSlots(activitySlots);
+      } catch (err: any) {
+        console.error('加载活动时间段失败:', err);
+        setActivityTimeSlots([]);
+      } finally {
+        setLoadingActivityTimeSlots(false);
+      }
+    } else {
+      setActivityTimeSlots([]);
+    }
+  };
+
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -1286,8 +1320,7 @@ const TaskExperts: React.FC = () => {
                           <div
                             key={activity.id}
                             onClick={() => {
-                              setSelectedActivity(activity);
-                              setShowActivityDetailModal(true);
+                              handleViewActivity(activity);
                             }}
                             style={{
                               background: '#fff',
@@ -1413,7 +1446,7 @@ const TaskExperts: React.FC = () => {
                                 )}
                               </div>
                               
-                              {/* 中间：标题和描述 */}
+                              {/* 中间：标题 */}
                               <div style={{ flex: 1 }}>
                                 <h3
                                   style={{
@@ -1427,21 +1460,6 @@ const TaskExperts: React.FC = () => {
                                 >
                                   {activity.title}
                                 </h3>
-                                <p
-                                  style={{
-                                    margin: '0 0 12px 0',
-                                    fontSize: '12px',
-                                    color: 'rgba(255, 255, 255, 0.95)',
-                                    lineHeight: 1.4,
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                  }}
-                                >
-                                  {activity.description}
-                                </p>
                               </div>
                               
                               {/* 底部：参与信息和时间 */}
@@ -1449,16 +1467,20 @@ const TaskExperts: React.FC = () => {
                                 <div
                                   style={{
                                     display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    padding: '8px',
+                                    flexDirection: 'column',
+                                    gap: '6px',
+                                    padding: '10px',
                                     background: 'rgba(255, 255, 255, 0.15)',
                                     backdropFilter: 'blur(10px)',
                                     borderRadius: '8px',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                   }}
                                 >
-                                  <div style={{ fontSize: '12px', fontWeight: 500 }}>
+                                  <div style={{ 
+                                    fontSize: '11px', 
+                                    fontWeight: 500,
+                                    width: '100%',
+                                  }}>
                                     <span style={{ opacity: 0.9 }}>参与者: </span>
                                     <span style={{ fontWeight: 700 }}>
                                       {activity.current_participants || 0} / {activity.max_participants}
@@ -1467,11 +1489,14 @@ const TaskExperts: React.FC = () => {
                                   {activity.has_time_slots ? (
                                     <div
                                       style={{
-                                        fontSize: '10px',
+                                        fontSize: '9px',
                                         background: 'rgba(16, 185, 129, 0.25)',
-                                        padding: '3px 6px',
+                                        padding: '4px 8px',
                                         borderRadius: '6px',
                                         fontWeight: 500,
+                                        whiteSpace: 'normal',
+                                        wordBreak: 'break-word',
+                                        width: '100%',
                                       }}
                                     >
                                       ⏰ {dateText}
@@ -1479,10 +1504,12 @@ const TaskExperts: React.FC = () => {
                                   ) : (dateText || timeText) ? (
                                     <div
                                       style={{
-                                        fontSize: '10px',
+                                        fontSize: '9px',
                                         background: 'rgba(255, 255, 255, 0.25)',
-                                        padding: '3px 6px',
+                                        padding: '4px 8px',
                                         borderRadius: '6px',
+                                        whiteSpace: 'normal',
+                                        width: '100%',
                                       }}
                                     >
                                       📅 {dateText} {timeText}

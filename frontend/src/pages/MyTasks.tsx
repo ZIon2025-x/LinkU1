@@ -244,11 +244,26 @@ const MyTasks: React.FC = () => {
     setLoading(true);
     try {
       // 如果需要强制刷新，添加时间戳参数
-      const tasksData = forceRefresh 
+      const response = forceRefresh 
         ? await api.get('/api/users/my-tasks', { 
             params: { _t: Date.now() } 
-          }).then((res: any) => res.data)
-        : await getMyTasks();
+          })
+        : await api.get('/api/users/my-tasks');
+      
+      // 确保返回的数据是数组格式
+      let tasksData = response.data;
+      if (!Array.isArray(tasksData)) {
+        console.error('返回的数据格式不正确:', tasksData);
+        // 尝试从可能的嵌套结构中提取数组
+        if (tasksData && Array.isArray(tasksData.tasks)) {
+          tasksData = tasksData.tasks;
+        } else if (tasksData && Array.isArray(tasksData.data)) {
+          tasksData = tasksData.data;
+        } else {
+          console.error('无法从响应中提取任务列表');
+          tasksData = [];
+        }
+      }
         
       setTasks(tasksData);
       setTotalTasks(tasksData.length);
@@ -288,8 +303,22 @@ const MyTasks: React.FC = () => {
       }).catch(() => {
         // 静默处理错误
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取任务失败:', error);
+      // 显示错误信息给用户
+      if (error.response) {
+        console.error('错误响应:', error.response.data);
+        message.error(error.response.data?.detail || '加载任务失败，请刷新页面重试');
+      } else if (error.request) {
+        console.error('请求失败:', error.request);
+        message.error('网络错误，请检查网络连接');
+      } else {
+        console.error('错误:', error.message);
+        message.error('加载任务失败，请刷新页面重试');
+      }
+      // 设置空数组，避免显示错误
+      setTasks([]);
+      setTotalTasks(0);
     } finally {
       setLoading(false);
     }

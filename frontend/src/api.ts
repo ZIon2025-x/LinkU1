@@ -818,7 +818,21 @@ export async function updateTaskVisibility(taskId: number, isPublic: number) {
 // 获取我的任务
 export async function getMyTasks() {
   const res = await api.get('/api/users/my-tasks');
-  return res.data;
+  // 确保返回的是数组格式
+  const data = res.data;
+  if (Array.isArray(data)) {
+    return data;
+  }
+  // 如果返回的不是数组，尝试从嵌套结构中提取
+  if (data && Array.isArray(data.tasks)) {
+    return data.tasks;
+  }
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  // 如果都不匹配，返回空数组并记录错误
+  console.error('getMyTasks: 返回的数据格式不正确:', data);
+  return [];
 }
 
 // 完成任务

@@ -905,36 +905,48 @@ async def delete_time_slots_by_date(
         )
     
     # 标记为手动删除（而不是真正删除，避免自动重新生成）
-    deleted_count = 0
-    slot_ids = []
+    slot_ids = [slot.id for slot in time_slots]
+    deleted_count = len(slot_ids)
+    
+    if deleted_count == 0:
+        return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
+    
+    logger.info(f"准备标记 {deleted_count} 个时间段为已删除: {slot_ids}")
+    
     try:
-        for slot in time_slots:
-            slot.is_manually_deleted = True
-            slot.is_available = False
-            slot_ids.append(slot.id)
-            deleted_count += 1
+        # 使用批量更新，提高效率
+        update_stmt = (
+            update(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id.in_(slot_ids))
+            .where(models.ServiceTimeSlot.service_id == service_id)
+            .values(
+                is_manually_deleted=True,
+                is_available=False
+            )
+        )
         
-        logger.info(f"准备标记 {deleted_count} 个时间段为已删除: {slot_ids}")
+        result = await db.execute(update_stmt)
+        updated_count = result.rowcount
         
-        # 确保所有修改都被添加到会话中
-        await db.flush()  # 先刷新，确保修改被跟踪
-        await db.commit()  # 提交事务
+        logger.info(f"批量更新结果: {updated_count} 个时间段被标记为已删除")
+        
+        if updated_count != deleted_count:
+            logger.warning(f"更新数量不匹配: 期望 {deleted_count} 个，实际更新 {updated_count} 个")
+            # 如果更新数量不匹配，回滚并抛出错误
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"删除失败: 期望删除 {deleted_count} 个时间段，实际只更新了 {updated_count} 个"
+            )
+        
+        # 提交事务
+        await db.commit()
         
         logger.info(f"成功删除 {target_date} 的 {deleted_count} 个时间段: {slot_ids}")
         
-        # 验证删除是否成功
-        verify_query = select(models.ServiceTimeSlot).where(
-            models.ServiceTimeSlot.id.in_(slot_ids)
-        ).where(
-            models.ServiceTimeSlot.is_manually_deleted == True
-        )
-        verify_result = await db.execute(verify_query)
-        verified_slots = verify_result.scalars().all()
-        logger.info(f"验证删除结果: {len(verified_slots)}/{deleted_count} 个时间段已成功标记为删除")
-        
-        if len(verified_slots) != deleted_count:
-            logger.error(f"删除验证失败: 期望 {deleted_count} 个，实际 {len(verified_slots)} 个")
-        
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
     except Exception as e:
         logger.error(f"删除时间段时发生错误: {e}", exc_info=True)
         await db.rollback()

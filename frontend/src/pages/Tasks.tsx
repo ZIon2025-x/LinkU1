@@ -1578,7 +1578,7 @@ const Tasks: React.FC = () => {
             )}
           </div>
           
-          {/* 中间：标题和描述 */}
+          {/* 中间：标题 */}
           <div style={{ flex: 1 }}>
             <h3
               style={{
@@ -1592,21 +1592,6 @@ const Tasks: React.FC = () => {
             >
               {activity.title}
             </h3>
-            <p
-              style={{
-                margin: '0 0 12px 0',
-                fontSize: isMobile ? '11px' : '12px',
-                color: 'rgba(255, 255, 255, 0.95)',
-                lineHeight: 1.4,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-              }}
-            >
-              {activity.description}
-            </p>
           </div>
           
           {/* 底部：参与信息和时间 */}
@@ -1614,16 +1599,23 @@ const Tasks: React.FC = () => {
             <div
               style={{
                 display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
                 justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                gap: isMobile ? '6px' : '0',
+                padding: isMobile ? '10px' : '8px',
                 background: 'rgba(255, 255, 255, 0.15)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '8px',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
-              <div style={{ fontSize: isMobile ? '11px' : '12px', fontWeight: 500 }}>
+              <div style={{ 
+                fontSize: isMobile ? '11px' : '12px', 
+                fontWeight: 500,
+                flex: isMobile ? 'none' : '1',
+                minWidth: 0, // 允许收缩
+              }}>
                 <span style={{ opacity: 0.9 }}>参与者: </span>
                 <span style={{ fontWeight: 700 }}>
                   {activity.current_participants || 0} / {activity.max_participants}
@@ -1633,11 +1625,14 @@ const Tasks: React.FC = () => {
               {activity.has_time_slots ? (
                 <div
                   style={{
-                    fontSize: '10px',
+                    fontSize: isMobile ? '9px' : '10px',
                     background: 'rgba(16, 185, 129, 0.25)',
-                    padding: '3px 6px',
+                    padding: isMobile ? '4px 8px' : '3px 6px',
                     borderRadius: '6px',
                     fontWeight: 500,
+                    whiteSpace: isMobile ? 'normal' : 'nowrap',
+                    wordBreak: isMobile ? 'break-word' : 'normal',
+                    flexShrink: 0,
                   }}
                 >
                   ⏰ {dateText}
@@ -1645,10 +1640,12 @@ const Tasks: React.FC = () => {
               ) : (dateText || timeText) ? (
                 <div
                   style={{
-                    fontSize: '10px',
+                    fontSize: isMobile ? '9px' : '10px',
                     background: 'rgba(255, 255, 255, 0.25)',
-                    padding: '3px 6px',
+                    padding: isMobile ? '4px 8px' : '3px 6px',
                     borderRadius: '6px',
+                    whiteSpace: isMobile ? 'normal' : 'nowrap',
+                    flexShrink: 0,
                   }}
                 >
                   📅 {dateText} {timeText}

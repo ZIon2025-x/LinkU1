@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic } from '../api';
+import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic, applyToActivity } from '../api';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -228,6 +228,39 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
         }
         if (!selectedTimeSlotId) {
           message.error('请选择时间段');
+          setApplying(false);
+          return;
+        }
+        
+        // 检查选中的时间段是否有活动
+        const selectedSlot = timeSlots.find((slot: any) => slot.id === selectedTimeSlotId);
+        if (selectedSlot && selectedSlot.has_activity && selectedSlot.activity_id) {
+          // 如果有活动，使用活动申请API
+          const idempotencyKey = `${user.id}_${selectedSlot.activity_id}_${selectedTimeSlotId}_${Date.now()}`;
+          await applyToActivity(selectedSlot.activity_id, {
+            idempotency_key: idempotencyKey,
+            time_slot_id: selectedTimeSlotId,
+            is_multi_participant: true,
+            max_participants: 1,
+            min_participants: 1,
+          });
+          message.success('活动申请已提交！');
+          setShowApplyModal(false);
+          setApplyMessage('');
+          setNegotiatedPrice(undefined);
+          setIsNegotiateChecked(false);
+          setIsFlexible(false);
+          setDeadline('');
+          setSelectedTimeSlotId(null);
+          setSelectedDate('');
+          setTimeSlots([]);
+          
+          // 重新加载服务详情（更新申请次数）
+          await loadServiceDetail();
+          
+          if (onApplySuccess) {
+            onApplySuccess();
+          }
           setApplying(false);
           return;
         }
