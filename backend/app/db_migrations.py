@@ -179,11 +179,71 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                                 continue
             
         execution_time = int((time.time() - start_time) * 1000)
+        
+        # 验证迁移是否真正成功（对于 007 迁移，检查关键字段是否存在）
+        if sql_file.name == "007_add_multi_participant_tasks.sql":
+            if not verify_migration_007(engine):
+                logger.error(f"迁移执行后验证失败: {sql_file.name}")
+                return False, execution_time
+        
         return True, execution_time
         
     except Exception as e:
         logger.error(f"执行 SQL 文件失败 {sql_file.name}: {e}")
         return False, int((time.time() - start_time) * 1000)
+
+
+def verify_migration_007(engine: Engine) -> bool:
+    """验证迁移 007 是否真正成功执行"""
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        
+        # 检查关键字段是否存在
+        tasks_columns = [col['name'] for col in inspector.get_columns('tasks')]
+        required_columns = ['is_multi_participant', 'is_official_task', 'max_participants', 'min_participants']
+        
+        for col in required_columns:
+            if col not in tasks_columns:
+                logger.error(f"迁移验证失败: 缺少字段 {col}")
+                return False
+        
+        # 检查新表是否存在
+        all_tables = inspector.get_table_names()
+        required_tables = ['task_participants', 'task_participant_rewards', 'task_audit_logs']
+        
+        for table in required_tables:
+            if table not in all_tables:
+                logger.error(f"迁移验证失败: 缺少表 {table}")
+                return False
+        
+        logger.info("✅ 迁移 007 验证通过")
+        return True
+    except Exception as e:
+        logger.warning(f"迁移验证时出错: {e}，假设成功")
+        return True  # 验证失败不影响迁移，假设成功
+
+
+def check_and_fix_broken_migrations(engine: Engine):
+    """检查并修复错误标记的迁移（迁移记录存在但实际未执行）"""
+    try:
+        # 检查迁移 007
+        migration_name = "007_add_multi_participant_tasks.sql"
+        if is_migration_executed(engine, migration_name):
+            # 验证迁移是否真正成功
+            if not verify_migration_007(engine):
+                logger.warning(f"⚠️  检测到错误标记的迁移: {migration_name}")
+                logger.info(f"🔄 删除错误记录并重新执行迁移...")
+                # 删除错误记录
+                with engine.connect() as conn:
+                    conn.execute(
+                        text(f"DELETE FROM {MIGRATION_TABLE} WHERE migration_name = :name"),
+                        {"name": migration_name}
+                    )
+                    conn.commit()
+                logger.info(f"✅ 已删除错误记录，迁移将在下次执行")
+    except Exception as e:
+        logger.warning(f"检查迁移状态时出错: {e}")
 
 
 def run_migrations(engine: Engine, force: bool = False):
@@ -200,6 +260,9 @@ def run_migrations(engine: Engine, force: bool = False):
     
     # 确保迁移记录表存在
     ensure_migration_table(engine)
+    
+    # 检查并修复错误标记的迁移（迁移记录存在但实际未执行）
+    check_and_fix_broken_migrations(engine)
     
     # 获取所有 SQL 文件，按文件名排序
     sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
@@ -245,13 +308,27 @@ def run_specific_migration(engine: Engine, migration_name: str, force: bool = Fa
     Args:
         engine: SQLAlchemy 引擎
         migration_name: 迁移文件名（如 "fix_conversation_key.sql"）
-        force: 是否强制重新执行
+        force: 是否强制重新执行（如果为 True，会删除现有记录并重新执行）
     """
     sql_file = MIGRATIONS_DIR / migration_name
     
     if not sql_file.exists():
         logger.error(f"迁移文件不存在: {migration_name}")
         return False
+    
+    # 如果强制执行，删除现有记录
+    if force:
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text(f"DELETE FROM {MIGRATION_TABLE} WHERE migration_name = :name"),
+                    {"name": migration_name}
+                )
+                conn.commit()
+                if result.rowcount > 0:
+                    logger.info(f"已删除迁移记录: {migration_name}")
+        except Exception as e:
+            logger.warning(f"删除迁移记录时出错: {e}")
     
     if not force and is_migration_executed(engine, migration_name):
         logger.info(f"迁移已执行: {migration_name}")
