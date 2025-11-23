@@ -881,6 +881,65 @@ async def batch_create_service_time_slots(
 
 # 注意：更具体的路由必须放在通用路由之前
 # 否则 FastAPI 可能会将 /services/123 匹配到 /{expert_id}/services
+
+# 公开接口：获取服务的时间段列表（无需认证）
+@task_expert_router.get("/services/{service_id}/time-slots", response_model=List[schemas.ServiceTimeSlotOut])
+async def get_service_time_slots_public(
+    service_id: int,
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取服务的公开时间段列表（无需认证）"""
+    # 验证服务是否存在
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.status == "active")  # 只返回上架的服务
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在或未上架"
+        )
+    
+    # 验证服务是否启用了时间段
+    if not service.has_time_slots:
+        return []  # 如果服务未启用时间段，返回空列表
+    
+    # 构建查询
+    query = select(models.ServiceTimeSlot).where(
+        models.ServiceTimeSlot.service_id == service_id,
+        models.ServiceTimeSlot.is_available == True  # 只返回可用的时间段
+    )
+    
+    if start_date:
+        try:
+            start = date.fromisoformat(start_date)
+            query = query.where(models.ServiceTimeSlot.slot_date >= start)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD")
+    
+    if end_date:
+        try:
+            end = date.fromisoformat(end_date)
+            query = query.where(models.ServiceTimeSlot.slot_date <= end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD")
+    
+    # 按日期和时间排序
+    query = query.order_by(
+        models.ServiceTimeSlot.slot_date.asc(),
+        models.ServiceTimeSlot.start_time.asc()
+    )
+    
+    result = await db.execute(query)
+    time_slots = result.scalars().all()
+    
+    # 转换为输出格式
+    return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in time_slots]
+
+
 @task_expert_router.get("/services/{service_id}", response_model=schemas.TaskExpertServiceOut)
 async def get_service_detail(
     service_id: int,

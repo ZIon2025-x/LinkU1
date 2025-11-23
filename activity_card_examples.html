@@ -31,6 +31,68 @@
             padding-bottom: 10px;
             border-bottom: 2px solid #e2e8f0;
         }
+        /* 活动详情弹窗样式 */
+        .activity-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .activity-modal-overlay.active {
+            display: flex;
+        }
+        .activity-modal {
+            background: #fff;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .activity-modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #4a5568;
+            z-index: 10;
+            transition: all 0.2s;
+        }
+        .activity-modal-close:hover {
+            background: rgba(0, 0, 0, 0.15);
+            transform: rotate(90deg);
+        }
     </style>
 </head>
 <body>
@@ -733,6 +795,461 @@
             </div>
         </div>
     </div>
+
+    <!-- 示例10: 图片作为背景的活动卡片 -->
+    <h2>示例10: 图片背景活动卡片（沉浸式设计）</h2>
+    <div class="container">
+        <div style="
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+            position: relative;
+            min-height: 200px;
+        " onmouseenter="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 8px 24px rgba(59, 130, 246, 0.2)'" 
+           onmouseleave="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
+            <!-- 背景图片层 -->
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                z-index: 0;
+            ">
+                <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop" 
+                     alt="麻将房" 
+                     style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85;">
+                <!-- 渐变遮罩层，确保文字可读性 -->
+                <div style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%);
+                "></div>
+            </div>
+            
+            <!-- 内容层 -->
+            <div style="
+                position: relative;
+                z-index: 1;
+                padding: 20px;
+                color: white;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 200px;
+            ">
+                <!-- 顶部：活动标签 -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="
+                        background: rgba(255, 255, 255, 0.25);
+                        backdrop-filter: blur(10px);
+                        color: white;
+                        padding: 6px 12px;
+                        border-radius: 20px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        border: 1px solid rgba(255, 255, 255, 0.3);
+                    ">🎯 活动</div>
+                    <div style="
+                        background: rgba(255, 255, 255, 0.9);
+                        color: #059669;
+                        padding: 4px 10px;
+                        border-radius: 16px;
+                        font-size: 12px;
+                        font-weight: 700;
+                    ">£15/人</div>
+                </div>
+                
+                <!-- 中间：标题和描述 -->
+                <div style="flex: 1;">
+                    <h3 style="
+                        margin: 0 0 8px 0;
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: white;
+                        line-height: 1.3;
+                        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    ">
+                        麻将房体验活动
+                    </h3>
+                    <p style="
+                        margin: 0 0 16px 0;
+                        font-size: 13px;
+                        color: rgba(255, 255, 255, 0.95);
+                        line-height: 1.5;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+                    ">
+                        周末麻将房体验，4人一组，每小时£15/人，包含茶水和零食
+                    </p>
+                </div>
+                
+                <!-- 底部：参与信息和时间 -->
+                <div>
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 12px;
+                        padding: 10px;
+                        background: rgba(255, 255, 255, 0.15);
+                        backdrop-filter: blur(10px);
+                        border-radius: 8px;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                    ">
+                        <div style="font-size: 13px; font-weight: 500;">
+                            <span style="opacity: 0.9;">参与者: </span>
+                            <span style="font-weight: 700;">2 / 4</span>
+                        </div>
+                        <div style="
+                            font-size: 11px;
+                            background: rgba(255, 255, 255, 0.25);
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                        ">
+                            📅 11-25 14:00
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 活动详情弹窗 -->
+    <div id="activityModal" class="activity-modal-overlay" onclick="if(event.target === this) closeActivityModal()">
+        <div class="activity-modal" onclick="event.stopPropagation()">
+            <button class="activity-modal-close" onclick="closeActivityModal()">×</button>
+            
+            <!-- 活动图片（如果有） -->
+            <div style="
+                width: 100%;
+                height: 200px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                position: relative;
+                overflow: hidden;
+            ">
+                <img id="modalActivityImage" 
+                     src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop" 
+                     alt="活动图片" 
+                     style="width: 100%; height: 100%; object-fit: cover;">
+                <div style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%);
+                "></div>
+                <div style="
+                    position: absolute;
+                    top: 16px;
+                    left: 16px;
+                    background: rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(10px);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                ">🎯 活动</div>
+            </div>
+
+            <!-- 活动内容 -->
+            <div style="padding: 24px;">
+                <!-- 标题 -->
+                <h2 id="modalActivityTitle" style="
+                    margin: 0 0 12px 0;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1a202c;
+                    line-height: 1.3;
+                ">麻将房体验活动</h2>
+
+                <!-- 价格和参与者信息 -->
+                <div style="
+                    display: flex;
+                    gap: 16px;
+                    margin-bottom: 20px;
+                    padding: 16px;
+                    background: #f0f9ff;
+                    border-radius: 12px;
+                    border: 1px solid #bae6fd;
+                ">
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #0369a1; margin-bottom: 6px; font-weight: 500;">参与费用</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #0284c7;">
+                            <span id="modalActivityPrice">£15</span>
+                            <span style="font-size: 14px; font-weight: 400; color: #0369a1;"> / 人</span>
+                        </div>
+                    </div>
+                    <div style="
+                        width: 1px;
+                        background: #bae6fd;
+                    "></div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #0369a1; margin-bottom: 6px; font-weight: 500;">参与者</div>
+                        <div style="font-size: 20px; font-weight: 700; color: #0284c7;">
+                            <span id="modalActivityParticipants">2</span> / <span id="modalActivityMaxParticipants">4</span>
+                        </div>
+                        <div style="font-size: 11px; color: #0369a1; margin-top: 4px;">
+                            <span id="modalActivityAvailable">2</span> 个空位
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 活动描述 -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="
+                        margin: 0 0 8px 0;
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #2d3748;
+                    ">活动描述</h3>
+                    <p id="modalActivityDescription" style="
+                        margin: 0;
+                        font-size: 14px;
+                        color: #4a5568;
+                        line-height: 1.7;
+                        white-space: pre-wrap;
+                    ">周末麻将房体验，4人一组，每小时£15/人，包含茶水和零食。适合喜欢麻将的朋友们一起娱乐放松。</p>
+                </div>
+
+                <!-- 时间段信息 -->
+                <div style="
+                    margin-bottom: 20px;
+                    padding: 16px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+                ">
+                    <h3 style="
+                        margin: 0 0 12px 0;
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #2d3748;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    ">
+                        <span>⏰</span>
+                        <span>活动时间</span>
+                    </h3>
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        font-size: 15px;
+                        color: #1a202c;
+                        font-weight: 500;
+                    ">
+                        <span>📅</span>
+                        <span id="modalActivityDate">2024年11月25日</span>
+                        <span style="color: #cbd5e0;">|</span>
+                        <span id="modalActivityTime">14:00 - 16:00</span>
+                    </div>
+                </div>
+
+                <!-- 活动详情 -->
+                <div style="
+                    margin-bottom: 20px;
+                    padding: 16px;
+                    background: #fff;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+                ">
+                    <h3 style="
+                        margin: 0 0 12px 0;
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: #2d3748;
+                    ">活动详情</h3>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 14px; color: #718096;">活动类型</span>
+                            <span style="font-size: 14px; font-weight: 500; color: #1a202c;">服务体验</span>
+                        </div>
+                        <div style="height: 1px; background: #e2e8f0;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 14px; color: #718096;">最少参与者</span>
+                            <span style="font-size: 14px; font-weight: 500; color: #1a202c;" id="modalActivityMinParticipants">2 人</span>
+                        </div>
+                        <div style="height: 1px; background: #e2e8f0;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 14px; color: #718096;">活动时长</span>
+                            <span style="font-size: 14px; font-weight: 500; color: #1a202c;" id="modalActivityDuration">2 小时</span>
+                        </div>
+                        <div style="height: 1px; background: #e2e8f0;"></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 14px; color: #718096;">活动地点</span>
+                            <span style="font-size: 14px; font-weight: 500; color: #1a202c;" id="modalActivityLocation">London</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="closeActivityModal()" style="
+                        flex: 1;
+                        padding: 14px;
+                        background: #f3f4f6;
+                        color: #374151;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    " onmouseover="this.style.background='#e5e7eb'" 
+                       onmouseout="this.style.background='#f3f4f6'">
+                        关闭
+                    </button>
+                    <button onclick="alert('申请功能需要登录')" style="
+                        flex: 2;
+                        padding: 14px;
+                        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'" 
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+                        立即申请参与
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 活动数据示例
+        const activityData = {
+            title: '麻将房体验活动',
+            description: '周末麻将房体验，4人一组，每小时£15/人，包含茶水和零食。适合喜欢麻将的朋友们一起娱乐放松。',
+            price: 15,
+            currency: '£',
+            currentParticipants: 2,
+            maxParticipants: 4,
+            minParticipants: 2,
+            date: '2024年11月25日',
+            time: '14:00 - 16:00',
+            duration: '2 小时',
+            location: 'London',
+            image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop'
+        };
+
+        // 打开活动详情弹窗
+        function openActivityModal(activity) {
+            const modal = document.getElementById('activityModal');
+            if (!modal) return;
+
+            // 填充活动数据
+            if (activity) {
+                document.getElementById('modalActivityTitle').textContent = activity.title || activityData.title;
+                document.getElementById('modalActivityDescription').textContent = activity.description || activityData.description;
+                document.getElementById('modalActivityPrice').textContent = (activity.currency || activityData.currency) + (activity.price || activityData.price);
+                document.getElementById('modalActivityParticipants').textContent = activity.currentParticipants || activityData.currentParticipants;
+                document.getElementById('modalActivityMaxParticipants').textContent = activity.maxParticipants || activityData.maxParticipants;
+                const available = (activity.maxParticipants || activityData.maxParticipants) - (activity.currentParticipants || activityData.currentParticipants);
+                document.getElementById('modalActivityAvailable').textContent = available;
+                document.getElementById('modalActivityMinParticipants').textContent = (activity.minParticipants || activityData.minParticipants) + ' 人';
+                document.getElementById('modalActivityDate').textContent = activity.date || activityData.date;
+                document.getElementById('modalActivityTime').textContent = activity.time || activityData.time;
+                document.getElementById('modalActivityDuration').textContent = activity.duration || activityData.duration;
+                document.getElementById('modalActivityLocation').textContent = activity.location || activityData.location;
+                if (activity.image) {
+                    document.getElementById('modalActivityImage').src = activity.image;
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭活动详情弹窗
+        function closeActivityModal() {
+            const modal = document.getElementById('activityModal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 为所有活动卡片添加点击事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 找到所有活动卡片容器
+            const containers = document.querySelectorAll('.container');
+            containers.forEach(container => {
+                const cards = container.querySelectorAll('div[style*="cursor: pointer"]');
+                cards.forEach(card => {
+                    card.addEventListener('click', function() {
+                        // 从卡片中提取活动信息
+                        const titleElement = card.querySelector('h3');
+                        const title = titleElement ? titleElement.textContent.trim() : '活动';
+                        
+                        // 尝试提取价格信息
+                        const priceText = card.textContent.match(/£\d+/);
+                        const price = priceText ? parseInt(priceText[0].replace('£', '')) : 15;
+                        
+                        // 尝试提取参与者信息
+                        const participantsMatch = card.textContent.match(/(\d+)\s*\/\s*(\d+)/);
+                        const currentParticipants = participantsMatch ? parseInt(participantsMatch[1]) : 2;
+                        const maxParticipants = participantsMatch ? parseInt(participantsMatch[2]) : 4;
+                        
+                        // 尝试提取日期时间
+                        const dateTimeMatch = card.textContent.match(/(\d{4}-\d{2}-\d{2}|\d{2}-\d{2})\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+                        const date = dateTimeMatch ? dateTimeMatch[1] : '2024-11-25';
+                        const time = dateTimeMatch ? `${dateTimeMatch[2]} - ${dateTimeMatch[3]}` : '14:00 - 16:00';
+                        
+                        // 尝试提取描述
+                        const descElement = card.querySelector('p');
+                        const description = descElement ? descElement.textContent.trim() : '活动详情';
+                        
+                        // 尝试提取图片
+                        const imgElement = card.querySelector('img');
+                        const image = imgElement ? imgElement.src : activityData.image;
+
+                        openActivityModal({
+                            title: title,
+                            description: description,
+                            price: price,
+                            currency: '£',
+                            currentParticipants: currentParticipants,
+                            maxParticipants: maxParticipants,
+                            minParticipants: 2,
+                            date: date,
+                            time: time,
+                            duration: '2 小时',
+                            location: 'London',
+                            image: image
+                        });
+                    });
+                });
+            });
+        });
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeActivityModal();
+            }
+        });
+    </script>
 
 </body>
 </html>

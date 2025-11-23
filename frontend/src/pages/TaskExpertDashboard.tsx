@@ -32,6 +32,7 @@ import {
   completeTaskAndDistributeRewardsEqual,
   createExpertMultiParticipantTask,
   getServiceTimeSlotsPublic,
+  batchCreateServiceTimeSlots,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -2584,6 +2585,26 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         const result = await createTaskExpertService(submitData);
         savedServiceId = result.id || result.service?.id;
         message.success('服务已创建');
+      }
+      
+      // 如果启用了时间段，自动批量创建未来30天的时间段
+      if (formData.has_time_slots && savedServiceId) {
+        try {
+          const today = new Date();
+          const futureDate = new Date(today);
+          futureDate.setDate(today.getDate() + 30);
+          
+          await batchCreateServiceTimeSlots(savedServiceId, {
+            start_date: today.toISOString().split('T')[0],
+            end_date: futureDate.toISOString().split('T')[0],
+            price_per_participant: formData.base_price,
+          });
+          message.success('时间段已自动创建（未来30天）');
+        } catch (err: any) {
+          console.error('批量创建时间段失败:', err);
+          // 不阻止服务保存，只提示警告
+          message.warning('服务已保存，但时间段创建失败，请稍后手动创建时间段');
+        }
       }
       
       // 更新本地状态中的时间段配置（用于创建多人任务时快速获取）
