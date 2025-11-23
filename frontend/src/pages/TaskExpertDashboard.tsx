@@ -2355,24 +2355,10 @@ const TaskExpertDashboard: React.FC = () => {
                       })()}
                     </div>
                   )}
-                    </div>
-                  </details>
-                </div>
-              )}
-
-              {/* 其他表单字段 */}
-              <div style={{ 
-                    marginTop: '12px', 
-                    padding: '12px', 
-                    background: '#e0f2fe', 
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    color: '#0369a1',
-                  }}>
-                    ℹ️ 多人活动的最大参与者数不能超过所选时间段的最大参与者数
                   </div>
-                </div>
-              )}
+                </details>
+              </div>
+            )}
 
               {/* 位置和类型 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
