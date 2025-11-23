@@ -28,7 +28,7 @@
 # Resend配置
 USE_RESEND=true
 RESEND_API_KEY=your-resend-api-key-here
-EMAIL_FROM=zixiong316@gmail.com
+EMAIL_FROM=your-email@example.com
 
 # 其他邮件配置
 EMAIL_VERIFICATION_EXPIRE_HOURS=24
@@ -80,7 +80,7 @@ def send_email(to_email, subject, body):
 # Resend配置
 USE_RESEND=true
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-EMAIL_FROM=zixiong316@gmail.com
+EMAIL_FROM=your-email@example.com
 ```
 
 ### 可选的环境变量

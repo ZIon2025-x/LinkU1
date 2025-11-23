@@ -26,10 +26,11 @@ def final_mobile_test():
     
     session = requests.Session()
     
-    # 使用您提供的凭据
+    # 从环境变量读取测试凭据，如果没有则使用占位符
+    import os
     user_creds = {
-        "email": "zixiong316@gmail.com",
-        "password": "123123"
+        "email": os.getenv("TEST_EMAIL", "test@example.com"),
+        "password": os.getenv("TEST_PASSWORD", "test-password")
     }
     
     print("=" * 60)

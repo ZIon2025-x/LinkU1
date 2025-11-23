@@ -3,6 +3,7 @@
 诊断邮件发送问题
 """
 
+import os
 import requests
 import json
 import smtplib
@@ -18,8 +19,8 @@ def test_direct_smtp_connection():
     try:
         print("测试Gmail SMTP连接...")
         
-        # 使用您的邮箱
-        test_email = "zixiong316@gmail.com"
+        # 使用环境变量或占位符
+        test_email = os.getenv("TEST_EMAIL", "test@example.com")
         
         # 创建测试邮件
         msg = MIMEText("这是一封测试邮件，用于验证SMTP连接。", "plain", "utf-8")
@@ -83,10 +84,11 @@ def check_railway_logs():
     # 2. 测试忘记密码功能
     try:
         forgot_password_url = f"{base_url}/api/users/forgot_password"
+        test_email = os.getenv("TEST_EMAIL", "test@example.com")
         
         response = requests.post(
             forgot_password_url,
-            data={"email": "zixiong316@gmail.com"},
+            data={"email": test_email},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=10
         )
@@ -163,10 +165,10 @@ def analyze_email_issue():
     print("  2. 选择您的项目")
     print("  3. 点击 'Variables' 标签")
     print("  4. 确认以下环境变量已设置:")
-    print("     EMAIL_FROM=zixiong316@gmail.com")
+    print("     EMAIL_FROM=your-email@example.com")
     print("     SMTP_SERVER=smtp.gmail.com")
     print("     SMTP_PORT=587")
-    print("     SMTP_USER=zixiong316@gmail.com")
+    print("     SMTP_USER=your-email@example.com")
     print("     SMTP_PASS=your-16-digit-app-password")
     print("     SMTP_USE_TLS=true")
     print("     SMTP_USE_SSL=false")
@@ -195,10 +197,11 @@ def test_email_sending_with_debug():
     try:
         forgot_password_url = f"{base_url}/api/users/forgot_password"
         
+        test_email = os.getenv("TEST_EMAIL", "test@example.com")
         print("发送忘记密码请求...")
         response = requests.post(
             forgot_password_url,
-            data={"email": "zixiong316@gmail.com"},
+            data={"email": test_email},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=10
         )

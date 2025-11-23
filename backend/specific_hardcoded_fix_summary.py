@@ -8,12 +8,12 @@ def specific_hardcoded_fix_summary():
     print("🔧 特定硬编码修复总结")
     print("=" * 60)
     
-    print("🔍 发现的硬编码问题:")
-    print("  1. DATABASE_URL中的硬编码密码 (postgres:123123)")
-    print("  2. EMAIL_FROM中的硬编码邮箱 (zixiong316@gmail.com)")
-    print("  3. SMTP_SERVER中的硬编码服务器 (smtp.gmail.com)")
-    print("  4. SMTP_PORT中的硬编码端口 (465)")
-    print("  5. SMTP_PASS中的硬编码密码 (ksnmkitvacpyscfc)")
+    print("🔍 发现的硬编码问题 (已修复):")
+    print("  1. DATABASE_URL中的硬编码密码 (postgres:password) - 已修复")
+    print("  2. EMAIL_FROM中的硬编码邮箱 (your-email@example.com) - 已修复")
+    print("  3. SMTP_SERVER中的硬编码服务器 (smtp.gmail.com) - 已修复")
+    print("  4. SMTP_PORT中的硬编码端口 (465) - 已修复")
+    print("  5. SMTP_PASS中的硬编码密码 (your-app-password) - 已修复")
     print()
     
     print("🔧 修复的硬编码问题:")
@@ -28,7 +28,7 @@ def specific_hardcoded_fix_summary():
     
     print("🔧 修复详情:")
     print("  1. database.py:")
-    print("     - 修复硬编码的数据库密码 (postgres:123123 -> postgres:password)")
+    print("     - 修复硬编码的数据库密码 (已改为从环境变量读取)")
     print("     - 修复硬编码的异步数据库密码")
     print("     - 使用安全的默认值")
     print()

@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: linku_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -33,8 +33,8 @@ services:
     build: .
     container_name: linku-backend
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres:123123@postgres:5432/linku_db
-      - ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:123123@postgres:5432/linku_db
+      - DATABASE_URL=postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/linku_db
+      - ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/linku_db
       - REDIS_URL=redis://redis:6379/0
       - USE_REDIS=true
       - SECRET_KEY=production-secret-key-change-this

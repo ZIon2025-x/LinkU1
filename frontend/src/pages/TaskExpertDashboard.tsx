@@ -347,36 +347,42 @@ const TaskExpertDashboard: React.FC = () => {
       // API返回的数据结构可能是 { items: [...] } 或直接是数组
       const servicesList = Array.isArray(data) ? data : (data.items || []);
       
-      // 从服务描述或扩展字段中解析时间段信息
-      // 注意：目前时间段信息可能存储在前端，需要与后端同步
+      // 从后端返回的服务数据中提取时间段信息
+      // 后端直接返回 has_time_slots 等字段，不需要嵌套在 time_slot_config 中
       const servicesWithTimeSlots = servicesList.map((service: any) => {
-        // 如果服务有time_slot_config字段，解析它
-        if (service.time_slot_config) {
+        // 后端直接返回时间段相关字段
+        const hasTimeSlots = service.has_time_slots || false;
+        const timeSlotDuration = service.time_slot_duration_minutes || 60;
+        const timeSlotStart = service.time_slot_start_time || '09:00';
+        const timeSlotEnd = service.time_slot_end_time || '18:00';
+        const participantsPerSlot = service.participants_per_slot || 1;
+        const weeklyConfig = service.weekly_time_slot_config || null;
+        
+        // 如果服务有时间段配置，保存到本地状态（用于快速访问）
+        if (hasTimeSlots) {
           const config = {
-            has_time_slots: service.time_slot_config.has_time_slots || false,
-            time_slot_duration_minutes: service.time_slot_config.time_slot_duration_minutes || 60,
-            time_slot_start_time: service.time_slot_config.time_slot_start_time || '09:00',
-            time_slot_end_time: service.time_slot_config.time_slot_end_time || '18:00',
-            participants_per_slot: service.time_slot_config.participants_per_slot || 1,
+            has_time_slots: hasTimeSlots,
+            time_slot_duration_minutes: timeSlotDuration,
+            time_slot_start_time: timeSlotStart,
+            time_slot_end_time: timeSlotEnd,
+            participants_per_slot: participantsPerSlot,
           };
-          // 保存到本地状态
           setServiceTimeSlotConfigs(prev => ({
             ...prev,
             [service.id]: config
           }));
-          return {
-            ...service,
-            ...config,
-          };
         }
-        // 如果本地状态中有时间段配置，使用它
-        if (serviceTimeSlotConfigs[service.id]) {
-          return {
-            ...service,
-            ...serviceTimeSlotConfigs[service.id],
-          };
-        }
-        return service;
+        
+        // 返回包含时间段信息的服务对象
+        return {
+          ...service,
+          has_time_slots: hasTimeSlots,
+          time_slot_duration_minutes: timeSlotDuration,
+          time_slot_start_time: timeSlotStart,
+          time_slot_end_time: timeSlotEnd,
+          participants_per_slot: participantsPerSlot,
+          weekly_time_slot_config: weeklyConfig,
+        };
       });
       
       setServices(servicesWithTimeSlots);
@@ -1959,6 +1965,11 @@ const TaskExpertDashboard: React.FC = () => {
                     
                     // 如果服务有时间段，加载时间段列表并设置默认日期
                     if (selectedService?.has_time_slots && serviceId) {
+                      console.log('服务有时间段，开始加载时间段数据:', {
+                        serviceId,
+                        has_time_slots: selectedService.has_time_slots,
+                        service: selectedService
+                      }); // 调试日志
                       // 设置默认日期为今天
                       const today = new Date().toISOString().split('T')[0];
                       // 使用函数式更新确保service_id不会丢失
@@ -1971,6 +1982,11 @@ const TaskExpertDashboard: React.FC = () => {
                       // 加载时间段列表
                       loadTimeSlotsForCreateTask(serviceId);
                     } else {
+                      console.log('服务没有时间段:', {
+                        serviceId,
+                        has_time_slots: selectedService?.has_time_slots,
+                        selectedService
+                      }); // 调试日志
                       setAvailableTimeSlots([]);
                       // 使用函数式更新确保service_id不会丢失
                       setCreateMultiTaskForm(prev => ({
@@ -2156,43 +2172,60 @@ const TaskExpertDashboard: React.FC = () => {
                         <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
                           加载时间段中...
                         </div>
-                      ) : availableTimeSlots.filter((slot: any) => {
-                        // 使用UTC时间转换为英国时间进行日期匹配
-                        const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
-                        const slotDateUK = TimeHandlerV2.formatUtcToLocal(
-                          slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
-                          'YYYY-MM-DD',
-                          'Europe/London'
-                        );
-                        const selectedDateStr = createMultiTaskForm.selected_time_slot_date ? createMultiTaskForm.selected_time_slot_date.split('T')[0] : '';
-                        const isDateMatch = slotDateUK === selectedDateStr;
-                        // 注意：不再过滤is_available，让已满的时间段也能显示
-                        console.log('时间段过滤（创建任务）:', {
-                          slot_id: slot.id,
-                          slot_start_datetime: slot.slot_start_datetime,
-                          slot_date: slot.slot_date,
-                          slotDateUK,
-                          selectedDate: createMultiTaskForm.selected_time_slot_date,
-                          selectedDateStr,
-                          isDateMatch,
-                          is_available: slot.is_available,
-                          current_participants: slot.current_participants,
-                          max_participants: slot.max_participants,
-                          passed: isDateMatch
+                      ) : (() => {
+                        // 过滤匹配选中日期的时间段
+                        const filteredSlots = availableTimeSlots.filter((slot: any) => {
+                          // 使用UTC时间转换为英国时间进行日期匹配
+                          const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                          const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+                            slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+                            'YYYY-MM-DD',
+                            'Europe/London'
+                          );
+                          const selectedDateStr = createMultiTaskForm.selected_time_slot_date ? createMultiTaskForm.selected_time_slot_date.split('T')[0] : '';
+                          const isDateMatch = slotDateUK === selectedDateStr;
+                          // 注意：不再过滤is_available，让已满的时间段也能显示
+                          console.log('时间段过滤（创建任务）:', {
+                            slot_id: slot.id,
+                            slot_start_datetime: slot.slot_start_datetime,
+                            slot_date: slot.slot_date,
+                            slotDateUK,
+                            selectedDate: createMultiTaskForm.selected_time_slot_date,
+                            selectedDateStr,
+                            isDateMatch,
+                            is_available: slot.is_available,
+                            current_participants: slot.current_participants,
+                            max_participants: slot.max_participants,
+                            passed: isDateMatch,
+                            total_slots: availableTimeSlots.length
+                          }); // 调试日志
+                          return isDateMatch;
+                        });
+                        
+                        console.log('时间段过滤结果:', {
+                          total_slots: availableTimeSlots.length,
+                          filtered_count: filteredSlots.length,
+                          selected_date: createMultiTaskForm.selected_time_slot_date,
+                          service_id: createMultiTaskForm.service_id
                         }); // 调试日志
-                        return isDateMatch;
-                      }).length === 0 ? (
-                        <div style={{ 
-                          padding: '20px', 
-                          textAlign: 'center', 
-                          color: '#e53e3e',
-                          background: '#fef2f2',
-                          borderRadius: '8px',
-                          border: '1px solid #fecaca',
-                        }}>
-                          该日期暂无可用时间段
-                        </div>
-                      ) : (
+                        
+                        return filteredSlots.length === 0 ? (
+                          <div style={{ 
+                            padding: '20px', 
+                            textAlign: 'center', 
+                            color: '#e53e3e',
+                            background: '#fef2f2',
+                            borderRadius: '8px',
+                            border: '1px solid #fecaca',
+                          }}>
+                            该日期暂无可用时间段
+                            {availableTimeSlots.length > 0 && (
+                              <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                                提示：共有 {availableTimeSlots.length} 个时间段，但当前日期没有匹配的时间段
+                              </div>
+                            )}
+                          </div>
+                        ) : (
                         <div style={{ 
                           display: 'grid', 
                           gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
@@ -2200,21 +2233,7 @@ const TaskExpertDashboard: React.FC = () => {
                           maxHeight: '200px',
                           overflowY: 'auto',
                         }}>
-                          {availableTimeSlots
-                            .filter((slot: any) => {
-                              // 使用UTC时间转换为英国时间进行日期匹配
-                              const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
-                              const slotDateUK = TimeHandlerV2.formatUtcToLocal(
-                                slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
-                                'YYYY-MM-DD',
-                                'Europe/London'
-                              );
-                              const selectedDateStr = createMultiTaskForm.selected_time_slot_date ? createMultiTaskForm.selected_time_slot_date.split('T')[0] : '';
-                              const isDateMatch = slotDateUK === selectedDateStr;
-                              // 注意：不再过滤is_available，让已满的时间段也能显示
-                              return isDateMatch;
-                            })
-                            .map((slot: any) => {
+                          {filteredSlots.map((slot: any) => {
                               const isFull = slot.current_participants >= slot.max_participants;
                               const isExpired = slot.is_expired === true; // 时间段已过期
                               const isDisabled = isFull || isExpired; // 已满或已过期都不可选
@@ -2281,7 +2300,8 @@ const TaskExpertDashboard: React.FC = () => {
                               );
                             })}
                         </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
                   <div style={{ 

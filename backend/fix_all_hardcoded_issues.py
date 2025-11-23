@@ -26,11 +26,16 @@ def fix_all_hardcoded_issues():
         # 检查硬编码问题
         hardcoded_issues = []
         
-        # 检查硬编码的默认值
+        # 检查硬编码的默认值（注意：这里检查的是不安全的硬编码值）
         if '"your-secret-key-change-in-production"' in content:
             hardcoded_issues.append("硬编码的SECRET_KEY默认值")
+        # 检查是否包含不安全的硬编码密码（历史检查，已修复）
         if '"postgresql+psycopg2://postgres:123123@localhost:5432/linku_db"' in content:
-            hardcoded_issues.append("硬编码的DATABASE_URL默认值")
+            hardcoded_issues.append("⚠️ 发现不安全的硬编码数据库密码 (123123)，请立即修复！")
+        # 检查是否使用安全的默认值（这是可以接受的）
+        if '"postgresql+psycopg2://postgres:password@localhost:5432/linku_db"' in content:
+            # 这是安全的默认值，从环境变量读取，不需要修复
+            pass
         if '"redis://localhost:6379/0"' in content:
             hardcoded_issues.append("硬编码的REDIS_URL默认值")
         if '"localhost"' in content:

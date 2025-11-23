@@ -84,8 +84,8 @@ ENVIRONMENT=development
 DEBUG=true
 
 # 数据库配置
-DATABASE_URL=postgresql+psycopg2://postgres:123123@localhost:5432/linku_db
-ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:123123@localhost:5432/linku_db
+DATABASE_URL=postgresql+psycopg2://postgres:your-database-password@localhost:5432/linku_db
+ASYNC_DATABASE_URL=postgresql+asyncpg://postgres:your-database-password@localhost:5432/linku_db
 
 # 安全配置
 SECRET_KEY=your-secret-key-change-in-production

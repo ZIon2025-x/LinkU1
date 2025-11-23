@@ -30,9 +30,10 @@ def test_mobile_login():
     print(f"   Response: {csrf_response.text[:200]}")
     
     print("\n2. 测试登录...")
+    import os
     login_data = {
-        "email": "zixiong316@gmail.com",
-        "password": "123456"
+        "email": os.getenv("TEST_EMAIL", "test@example.com"),
+        "password": os.getenv("TEST_PASSWORD", "test-password")
     }
     
     login_response = session.post(

@@ -62,12 +62,12 @@ SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.163.com")         # 硬编码SMTP�
 ### 3. **硬编码的数据库配置** 🟡 中风险
 
 ```python
-# backend/app/config.py
+# backend/app/config.py (已修复)
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:123123@localhost:5432/linku_db"
+    "DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db"
 )
 ASYNC_DATABASE_URL = os.getenv(
-    "ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:123123@localhost:5432/linku_db"
+    "ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/linku_db"
 )
 ```
 

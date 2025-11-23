@@ -84,10 +84,11 @@ def diagnose_redis_session_issue():
     print("2️⃣ 测试会话创建和存储")
     print("-" * 40)
     
-    # 真实用户凭据
+    # 从环境变量读取测试凭据，如果没有则使用占位符
+    import os
     test_credentials = {
-        "email": "zixiong316@gmail.com",
-        "password": "123123"
+        "email": os.getenv("TEST_EMAIL", "test@example.com"),
+        "password": os.getenv("TEST_PASSWORD", "test-password")
     }
     
     try:

@@ -16,9 +16,9 @@ os.environ["COOKIE_SAMESITE"] = "lax"
 os.environ["USE_REDIS"] = "false"  # 本地开发可以禁用Redis
 os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000,http://localhost:8080"
 
-# 数据库配置
-os.environ["DATABASE_URL"] = "postgresql+psycopg2://postgres:123123@localhost:5432/linku_db"
-os.environ["ASYNC_DATABASE_URL"] = "postgresql+asyncpg://postgres:123123@localhost:5432/linku_db"
+# 数据库配置 - 从环境变量读取，如果没有则使用默认值
+os.environ["DATABASE_URL"] = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/linku_db")
+os.environ["ASYNC_DATABASE_URL"] = os.getenv("ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/linku_db")
 
 # JWT配置
 os.environ["SECRET_KEY"] = "your-secret-key-change-in-production"
