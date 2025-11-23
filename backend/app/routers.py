@@ -2150,9 +2150,9 @@ def update_profile(
                 # 清空手机号（解绑），不需要验证码
                 update_data["phone"] = None
         
-        # 如果没有要更新的字段，返回错误（但名字不变时不更新名字字段是正常的）
+        # 如果没有要更新的字段，直接返回成功（允许只更新任务偏好而不更新个人资料）
         if not update_data:
-            raise HTTPException(status_code=400, detail="没有提供要更新的字段")
+            return {"message": "没有需要更新的个人资料字段"}
         
         
         # 更新数据库

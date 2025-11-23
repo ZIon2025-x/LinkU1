@@ -210,12 +210,17 @@ const Settings: React.FC = () => {
         updatePayload.name = formData.name;
       }
       
-      // 常住城市：总是发送（允许更新为空）
+      // 常住城市：只在改变时更新（允许更新为空）
       if (formData.residence_city !== user?.residence_city) {
-        updatePayload.residence_city = formData.residence_city || null;
+        // 处理空字符串和null的情况
+        const newCity = formData.residence_city?.trim() || null;
+        const currentCity = user?.residence_city?.trim() || null;
+        if (newCity !== currentCity) {
+          updatePayload.residence_city = newCity;
+        }
       }
       
-      // 语言偏好：总是发送（允许更新）
+      // 语言偏好：只在改变时更新
       if (formData.language_preference !== user?.language_preference) {
         updatePayload.language_preference = formData.language_preference || 'en';
       }
