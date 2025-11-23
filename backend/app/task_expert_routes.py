@@ -425,6 +425,10 @@ async def update_service(
             status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
         )
     
+    # 保存旧配置，用于后续比较
+    old_weekly_config = service.weekly_time_slot_config if service.weekly_time_slot_config else None
+    old_has_time_slots = service.has_time_slots
+    
     if service_data.service_name is not None:
         service.service_name = service_data.service_name
     if service_data.description is not None:
@@ -507,6 +511,102 @@ async def update_service(
         service.display_order = service_data.display_order
     
     service.updated_at = models.get_utc_time()
+    
+    # 如果时间段配置发生变化，需要清理不符合新配置的时间段
+    # 检查是否从统一时间改为按周几配置，或按周几配置发生了变化
+    config_changed = False
+    
+    if service_data.weekly_time_slot_config is not None:
+        # 如果提供了新的按周几配置
+        if old_weekly_config != service_data.weekly_time_slot_config:
+            config_changed = True
+    elif service_data.has_time_slots is not None and service_data.has_time_slots:
+        # 如果从按周几配置改为统一时间配置
+        if old_weekly_config:
+            config_changed = True
+    
+    if config_changed and service.has_time_slots:
+        # 需要清理不符合新配置的时间段
+        from datetime import datetime as dt_datetime
+        from app.utils.time_utils import LONDON, to_user_timezone
+        
+        # 获取当前服务的最新配置（已更新但未提交）
+        current_weekly_config = service.weekly_time_slot_config if service.weekly_time_slot_config else None
+        
+        # 获取所有未来的时间段（未过期且未手动删除的）
+        current_utc = models.get_utc_time()
+        future_slots = await db.execute(
+            select(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.service_id == service_id)
+            .where(models.ServiceTimeSlot.slot_start_datetime >= current_utc)
+            .where(models.ServiceTimeSlot.is_manually_deleted == False)
+        )
+        future_slots = future_slots.scalars().all()
+        
+        # 周几名称映射（Python的weekday(): 0=Monday, 6=Sunday）
+        weekday_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        
+        deleted_count = 0
+        for slot in future_slots:
+            # 将UTC时间转换为英国时间获取日期和星期几
+            slot_uk = to_user_timezone(slot.slot_start_datetime, LONDON)
+            slot_date = slot_uk.date()
+            weekday = slot_date.weekday()
+            weekday_name = weekday_names[weekday]
+            
+            # 检查该时间段是否符合新配置
+            should_delete = False
+            
+            if current_weekly_config:
+                # 使用按周几配置：检查该周几是否启用
+                day_config = current_weekly_config.get(weekday_name, {})
+                if not day_config.get('enabled', False):
+                    # 该周几未启用，应该删除
+                    should_delete = True
+                else:
+                    # 检查时间段是否在配置的时间范围内
+                    slot_start_time_str = day_config.get('start_time', '09:00:00')
+                    slot_end_time_str = day_config.get('end_time', '18:00:00')
+                    
+                    # 解析时间字符串
+                    try:
+                        if len(slot_start_time_str) == 5:
+                            slot_start_time_str += ':00'
+                        if len(slot_end_time_str) == 5:
+                            slot_end_time_str += ':00'
+                        config_start_time = dt_time.fromisoformat(slot_start_time_str)
+                        config_end_time = dt_time.fromisoformat(slot_end_time_str)
+                    except ValueError:
+                        config_start_time = dt_time(9, 0, 0)
+                        config_end_time = dt_time(18, 0, 0)
+                    
+                    # 获取时间段的时间部分（英国时间）
+                    slot_time = slot_uk.time()
+                    
+                    # 如果时间段不在配置的时间范围内，应该删除
+                    if slot_time < config_start_time or slot_time >= config_end_time:
+                        should_delete = True
+            else:
+                # 使用统一时间配置：检查时间段是否在配置的时间范围内
+                if service.time_slot_start_time and service.time_slot_end_time:
+                    slot_time = slot_uk.time()
+                    if slot_time < service.time_slot_start_time or slot_time >= service.time_slot_end_time:
+                        should_delete = True
+            
+            # 如果时间段不符合新配置，且没有参与者，则标记为手动删除
+            if should_delete:
+                if slot.current_participants == 0:
+                    slot.is_manually_deleted = True
+                    slot.is_available = False
+                    deleted_count += 1
+                # 如果有参与者，保留时间段但标记为不可用（不删除，避免影响已申请的参与者）
+                else:
+                    slot.is_available = False
+        
+        if deleted_count > 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"服务 {service_id} 配置更新后，删除了 {deleted_count} 个不符合新配置的时间段")
     
     await db.commit()
     await db.refresh(service)
@@ -814,11 +914,12 @@ async def delete_service_time_slot(
 @task_expert_router.delete("/me/services/{service_id}/time-slots/by-date")
 async def delete_time_slots_by_date(
     service_id: int,
-    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
+    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD", alias="target_date"),
     current_expert: models.TaskExpert = Depends(get_current_expert),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """删除指定日期的所有时间段（标记为手动删除，避免自动重新生成）"""
+    logger.info(f"删除时间段请求: service_id={service_id}, target_date={target_date}")
     # 验证服务是否存在且属于当前任务达人
     service = await db.execute(
         select(models.TaskExpertService)
