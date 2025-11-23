@@ -832,6 +832,83 @@ async def get_service_time_slots(
     return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in time_slots]
 
 
+# 注意：更具体的路由必须放在通用路由之前
+# 否则 FastAPI 可能会将 /by-date 匹配到 /{time_slot_id}
+
+@task_expert_router.delete("/me/services/{service_id}/time-slots/by-date")
+async def delete_time_slots_by_date(
+    service_id: int,
+    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """删除指定日期的所有时间段（标记为手动删除，避免自动重新生成）"""
+    logger.info(f"删除时间段请求: service_id={service_id}, target_date={target_date}")
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 解析日期
+    try:
+        target_date_obj = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+    
+    # 将目标日期的开始和结束时间转换为UTC进行查询
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime, time as dt_time
+    
+    # 目标日期的00:00:00和23:59:59（英国时间）转换为UTC
+    start_local = dt_datetime.combine(target_date_obj, dt_time(0, 0, 0))
+    end_local = dt_datetime.combine(target_date_obj, dt_time(23, 59, 59))
+    start_utc = parse_local_as_utc(start_local, LONDON)
+    end_utc = parse_local_as_utc(end_local, LONDON)
+    
+    # 查找该日期的所有时间段
+    time_slots = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+        .where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
+        .where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
+        .where(models.ServiceTimeSlot.is_manually_deleted == False)  # 只删除未标记为手动删除的
+    )
+    time_slots = time_slots.scalars().all()
+    
+    if not time_slots:
+        return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
+    
+    # 检查是否有已申请的时间段
+    for slot in time_slots:
+        if slot.current_participants > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{target_date} 有已申请的时间段，无法删除"
+            )
+    
+    # 标记为手动删除（而不是真正删除，避免自动重新生成）
+    deleted_count = 0
+    for slot in time_slots:
+        slot.is_manually_deleted = True
+        slot.is_available = False
+        deleted_count += 1
+    
+    await db.commit()
+    
+    return {
+        "message": f"成功删除 {target_date} 的 {deleted_count} 个时间段",
+        "deleted_count": deleted_count,
+        "target_date": target_date
+    }
+
+
 @task_expert_router.put("/me/services/{service_id}/time-slots/{time_slot_id}", response_model=schemas.ServiceTimeSlotOut)
 async def update_service_time_slot(
     service_id: int,
@@ -926,80 +1003,6 @@ async def delete_service_time_slot(
     await db.commit()
     
     return {"message": "时间段已删除"}
-
-
-@task_expert_router.delete("/me/services/{service_id}/time-slots/by-date")
-async def delete_time_slots_by_date(
-    service_id: int,
-    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
-    current_expert: models.TaskExpert = Depends(get_current_expert),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """删除指定日期的所有时间段（标记为手动删除，避免自动重新生成）"""
-    logger.info(f"删除时间段请求: service_id={service_id}, target_date={target_date}")
-    # 验证服务是否存在且属于当前任务达人
-    service = await db.execute(
-        select(models.TaskExpertService)
-        .where(models.TaskExpertService.id == service_id)
-        .where(models.TaskExpertService.expert_id == current_expert.id)
-    )
-    service = service.scalar_one_or_none()
-    if not service:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
-        )
-    
-    # 解析日期
-    try:
-        target_date_obj = date.fromisoformat(target_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
-    
-    # 将目标日期的开始和结束时间转换为UTC进行查询
-    from app.utils.time_utils import parse_local_as_utc, LONDON
-    from datetime import datetime as dt_datetime, time as dt_time
-    
-    # 目标日期的00:00:00和23:59:59（英国时间）转换为UTC
-    start_local = dt_datetime.combine(target_date_obj, dt_time(0, 0, 0))
-    end_local = dt_datetime.combine(target_date_obj, dt_time(23, 59, 59))
-    start_utc = parse_local_as_utc(start_local, LONDON)
-    end_utc = parse_local_as_utc(end_local, LONDON)
-    
-    # 查找该日期的所有时间段
-    time_slots = await db.execute(
-        select(models.ServiceTimeSlot)
-        .where(models.ServiceTimeSlot.service_id == service_id)
-        .where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
-        .where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
-        .where(models.ServiceTimeSlot.is_manually_deleted == False)  # 只删除未标记为手动删除的
-    )
-    time_slots = time_slots.scalars().all()
-    
-    if not time_slots:
-        return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
-    
-    # 检查是否有已申请的时间段
-    for slot in time_slots:
-        if slot.current_participants > 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{target_date} 有已申请的时间段，无法删除"
-            )
-    
-    # 标记为手动删除（而不是真正删除，避免自动重新生成）
-    deleted_count = 0
-    for slot in time_slots:
-        slot.is_manually_deleted = True
-        slot.is_available = False
-        deleted_count += 1
-    
-    await db.commit()
-    
-    return {
-        "message": f"成功删除 {target_date} 的 {deleted_count} 个时间段",
-        "deleted_count": deleted_count,
-        "target_date": target_date
-    }
 
 
 @task_expert_router.post("/me/services/{service_id}/time-slots/batch-create")
