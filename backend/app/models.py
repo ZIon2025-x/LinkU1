@@ -1443,6 +1443,7 @@ class ServiceApplication(Base):
     applicant = relationship("User", foreign_keys=[applicant_id], backref="service_applications")
     expert = relationship("TaskExpert", foreign_keys=[expert_id])
     task = relationship("Task", backref="service_application")
+    time_slot = relationship("ServiceTimeSlot", back_populates="applications", foreign_keys=[time_slot_id])
     
     __table_args__ = (
         Index("ix_service_applications_service_id", service_id),

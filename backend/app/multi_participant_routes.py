@@ -559,7 +559,10 @@ def create_expert_multi_participant_task(
     if not expert or expert.status != "active":
         raise HTTPException(status_code=403, detail="User is not an active task expert")
     
-    # 验证服务是否属于该任务达人
+    # 验证服务是否属于该任务达人（必须关联服务）
+    if not task.expert_service_id:
+        raise HTTPException(status_code=400, detail="必须关联一个服务")
+    
     service = db.query(TaskExpertService).filter(
         and_(
             TaskExpertService.id == task.expert_service_id,
@@ -587,13 +590,30 @@ def create_expert_multi_participant_task(
     
     # 计算价格（基于服务base_price，考虑折扣）
     reward_amount = None
+    original_price = float(service.base_price)
+    discount_percentage = task.discount_percentage or 0.0
+    discounted_price = None
+    
     if task.reward_type in ("cash", "both"):
-        if task.discounted_price_per_participant:
+        # 如果提供了折扣百分比，计算折扣后的价格
+        if discount_percentage > 0:
+            discounted_price = original_price * (1 - discount_percentage / 100)
+            reward_amount = discounted_price
+        # 如果直接提供了折扣后的价格，使用它
+        elif task.discounted_price_per_participant:
             reward_amount = task.discounted_price_per_participant
+            # 反向计算折扣百分比
+            if original_price > 0:
+                discount_percentage = (1 - reward_amount / original_price) * 100
+        # 如果提供了原始价格和折扣百分比
         elif task.original_price_per_participant and task.discount_percentage:
             reward_amount = task.original_price_per_participant * (1 - task.discount_percentage / 100)
+            discounted_price = reward_amount
         else:
-            reward_amount = float(service.base_price)
+            # 默认使用服务基础价格
+            reward_amount = original_price
+            discount_percentage = 0.0
+            discounted_price = original_price
     
     # 设置taker_id（商业服务任务：达人收钱）
     taker_id = current_user.id if task.reward_type == "cash" else None

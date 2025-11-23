@@ -113,7 +113,25 @@ const TaskExpertDashboard: React.FC = () => {
   
   // 创建多人任务相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
-  const [createMultiTaskForm, setCreateMultiTaskForm] = useState({
+  const [createMultiTaskForm, setCreateMultiTaskForm] = useState<{
+    service_id?: number;
+    title: string;
+    description: string;
+    deadline: string;
+    location: string;
+    task_type: string;
+    max_participants: number;
+    min_participants: number;
+    reward_type: 'cash' | 'points' | 'both';
+    base_reward: number;
+    points_reward: number;
+    reward_distribution: 'equal' | 'custom';
+    discount_percentage?: number;
+    custom_discount?: number;
+    use_custom_discount: boolean;
+    reward_applicants: boolean;
+    currency: string;
+  }>({
     service_id: undefined as number | undefined,
     title: '',
     description: '',
@@ -126,7 +144,11 @@ const TaskExpertDashboard: React.FC = () => {
     reward_type: 'cash' as 'cash' | 'points' | 'both',
     base_reward: 0,
     points_reward: 0,
-    currency: 'GBP'
+    currency: 'GBP',
+    discount_percentage: undefined as number | undefined,
+    custom_discount: undefined as number | undefined,
+    use_custom_discount: false,
+    reward_applicants: false,
   });
   
   // 存储服务的时间段信息（临时方案，直到后端支持）
@@ -881,7 +903,11 @@ const TaskExpertDashboard: React.FC = () => {
                     reward_type: 'cash',
                     base_reward: 0,
                     points_reward: 0,
-                    currency: 'GBP'
+                    currency: 'GBP',
+                    discount_percentage: undefined,
+                    custom_discount: undefined,
+                    use_custom_discount: false,
+                    reward_applicants: false,
                   });
                   setShowCreateMultiTaskModal(true);
                 }}
@@ -1249,6 +1275,9 @@ const TaskExpertDashboard: React.FC = () => {
                       description: selectedService ? selectedService.description : createMultiTaskForm.description,
                       base_reward: selectedService ? selectedService.base_price : createMultiTaskForm.base_reward,
                       currency: selectedService ? selectedService.currency : createMultiTaskForm.currency,
+                      discount_percentage: undefined, // 重置折扣
+                      custom_discount: undefined,
+                      use_custom_discount: false,
                     });
                   }}
                   style={{
@@ -1421,6 +1450,162 @@ const TaskExpertDashboard: React.FC = () => {
                     <option value="Other">Other</option>
                   </select>
                 </div>
+              </div>
+
+              {/* 折扣设置（仅当选择服务且reward_type包含cash时显示） */}
+              {createMultiTaskForm.service_id && createMultiTaskForm.reward_type !== 'points' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    折扣设置
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    {[10, 15, 20].map((discount) => (
+                      <button
+                        key={discount}
+                        type="button"
+                        onClick={() => setCreateMultiTaskForm({
+                          ...createMultiTaskForm,
+                          discount_percentage: discount,
+                          use_custom_discount: false,
+                          custom_discount: undefined,
+                        })}
+                        style={{
+                          padding: '8px 16px',
+                          border: `1px solid ${createMultiTaskForm.discount_percentage === discount && !createMultiTaskForm.use_custom_discount ? '#3b82f6' : '#e2e8f0'}`,
+                          borderRadius: '6px',
+                          background: createMultiTaskForm.discount_percentage === discount && !createMultiTaskForm.use_custom_discount ? '#e0f2fe' : '#fff',
+                          color: createMultiTaskForm.discount_percentage === discount && !createMultiTaskForm.use_custom_discount ? '#3b82f6' : '#374151',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: createMultiTaskForm.discount_percentage === discount && !createMultiTaskForm.use_custom_discount ? 600 : 400,
+                        }}
+                      >
+                        {discount}%
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCreateMultiTaskForm({
+                        ...createMultiTaskForm,
+                        use_custom_discount: true,
+                        discount_percentage: undefined,
+                      })}
+                      style={{
+                        padding: '8px 16px',
+                        border: `1px solid ${createMultiTaskForm.use_custom_discount ? '#3b82f6' : '#e2e8f0'}`,
+                        borderRadius: '6px',
+                        background: createMultiTaskForm.use_custom_discount ? '#e0f2fe' : '#fff',
+                        color: createMultiTaskForm.use_custom_discount ? '#3b82f6' : '#374151',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: createMultiTaskForm.use_custom_discount ? 600 : 400,
+                      }}
+                    >
+                      自定义
+                    </button>
+                  </div>
+                  {createMultiTaskForm.use_custom_discount && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={createMultiTaskForm.custom_discount || ''}
+                        onChange={(e) => setCreateMultiTaskForm({
+                          ...createMultiTaskForm,
+                          custom_discount: e.target.value ? parseFloat(e.target.value) : undefined,
+                        })}
+                        placeholder="输入折扣百分比"
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                      />
+                      <span style={{ fontSize: '14px', color: '#718096' }}>%</span>
+                    </div>
+                  )}
+                  {createMultiTaskForm.service_id && (() => {
+                    const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                    const originalPrice = selectedService?.base_price || 0;
+                    const discount = createMultiTaskForm.use_custom_discount 
+                      ? (createMultiTaskForm.custom_discount || 0)
+                      : (createMultiTaskForm.discount_percentage || 0);
+                    const discountedPrice = discount > 0 ? originalPrice * (1 - discount / 100) : originalPrice;
+                    return discount > 0 ? (
+                      <div style={{ marginTop: '8px', padding: '10px', background: '#f0f9ff', borderRadius: '6px', fontSize: '14px' }}>
+                        <div style={{ color: '#374151' }}>
+                          原价: <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{selectedService?.currency} {originalPrice.toFixed(2)}</span>
+                        </div>
+                        <div style={{ color: '#059669', fontWeight: 600, marginTop: '4px' }}>
+                          折扣价: {selectedService?.currency} {discountedPrice.toFixed(2)} (优惠 {discount}%)
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+
+              {/* 奖励设置 */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  奖励类型
+                </label>
+                <select
+                  value={createMultiTaskForm.reward_type}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_type: e.target.value as 'cash' | 'points' | 'both' })}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="cash">现金奖励</option>
+                  <option value="points">积分奖励</option>
+                  <option value="both">现金+积分</option>
+                </select>
+              </div>
+
+              {/* 积分奖励设置（当reward_type包含points时显示） */}
+              {(createMultiTaskForm.reward_type === 'points' || createMultiTaskForm.reward_type === 'both') && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    积分奖励数量
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={createMultiTaskForm.points_reward}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, points_reward: parseInt(e.target.value) || 0 })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    placeholder="输入积分数量"
+                  />
+                </div>
+              )}
+
+              {/* 是否奖励申请者 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  id="reward_applicants"
+                  checked={createMultiTaskForm.reward_applicants}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_applicants: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="reward_applicants" style={{ fontSize: '14px', cursor: 'pointer', color: '#374151' }}>
+                  奖励申请者（完成任务后给予申请者额外奖励）
+                </label>
               </div>
 
               {/* 奖励分配方式 */}
