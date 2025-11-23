@@ -1585,6 +1585,49 @@ export const deleteTaskExpertService = async (serviceId: number) => {
   return res.data;
 };
 
+// 服务时间段管理
+export const createServiceTimeSlot = async (serviceId: number, timeSlotData: {
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  price_per_participant: number;
+  max_participants: number;
+}) => {
+  const res = await api.post(`/api/task-experts/me/services/${serviceId}/time-slots`, timeSlotData);
+  return res.data;
+};
+
+export const getServiceTimeSlots = async (serviceId: number, params?: {
+  start_date?: string;
+  end_date?: string;
+}) => {
+  const res = await api.get(`/api/task-experts/me/services/${serviceId}/time-slots`, { params });
+  return res.data;
+};
+
+export const updateServiceTimeSlot = async (serviceId: number, timeSlotId: number, timeSlotData: {
+  price_per_participant?: number;
+  max_participants?: number;
+  is_available?: boolean;
+}) => {
+  const res = await api.put(`/api/task-experts/me/services/${serviceId}/time-slots/${timeSlotId}`, timeSlotData);
+  return res.data;
+};
+
+export const deleteServiceTimeSlot = async (serviceId: number, timeSlotId: number) => {
+  const res = await api.delete(`/api/task-experts/me/services/${serviceId}/time-slots/${timeSlotId}`);
+  return res.data;
+};
+
+export const batchCreateServiceTimeSlots = async (serviceId: number, params: {
+  start_date: string;
+  end_date: string;
+  price_per_participant: number;
+}) => {
+  const res = await api.post(`/api/task-experts/me/services/${serviceId}/time-slots/batch-create`, null, { params });
+  return res.data;
+};
+
 export const getTaskExpertServices = async (expertId: string, status?: string) => {
   const params = status ? { status } : {};
   const res = await api.get(`/api/task-experts/${expertId}/services`, { params });
@@ -1596,6 +1639,15 @@ export const getTaskExpertServiceDetail = async (serviceId: number) => {
   return res.data;
 };
 
+// 获取服务时间段列表（公开接口）
+export const getServiceTimeSlotsPublic = async (serviceId: number, params?: {
+  start_date?: string;
+  end_date?: string;
+}) => {
+  const res = await api.get(`/api/task-experts/services/${serviceId}/time-slots`, { params });
+  return res.data;
+};
+
 // 服务申请相关
 export const applyForService = async (serviceId: number, applicationData: {
   application_message?: string;
@@ -1603,6 +1655,7 @@ export const applyForService = async (serviceId: number, applicationData: {
   currency?: string;
   deadline?: string;  // ISO 格式的日期时间字符串
   is_flexible?: number;  // 1=灵活，无截至日期；0=有截至日期
+  time_slot_id?: number;  // 选择的时间段ID
 }) => {
   const res = await api.post(`/api/task-experts/services/${serviceId}/apply`, applicationData);
   return res.data;

@@ -1367,14 +1367,50 @@ class TaskExpertService(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
+    # 时间段相关字段
+    has_time_slots = Column(Boolean, default=False, nullable=False)  # 是否启用时间段
+    time_slot_duration_minutes = Column(Integer, nullable=True)  # 每个时间段的时长（分钟）
+    time_slot_start_time = Column(Time, nullable=True)  # 时间段开始时间（每天）
+    time_slot_end_time = Column(Time, nullable=True)  # 时间段结束时间（每天）
+    participants_per_slot = Column(Integer, nullable=True)  # 每个时间段最多参与者数量
+    
     # 关系
     expert = relationship("TaskExpert", back_populates="services")
     applications = relationship("ServiceApplication", back_populates="service", cascade="all, delete-orphan")
+    time_slots = relationship("ServiceTimeSlot", back_populates="service", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_task_expert_services_expert_id", expert_id),
         Index("ix_task_expert_services_status", status),
         Index("ix_task_expert_services_expert_status", expert_id, status),
+    )
+
+
+class ServiceTimeSlot(Base):
+    """服务时间段表 - 存储具体的日期时间段和价格"""
+    __tablename__ = "service_time_slots"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
+    slot_date = Column(Date, nullable=False)  # 日期（如2024-10-01）
+    start_time = Column(Time, nullable=False)  # 开始时间（如13:00:00）
+    end_time = Column(Time, nullable=False)  # 结束时间（如14:00:00）
+    price_per_participant = Column(DECIMAL(12, 2), nullable=False)  # 每个参与者的价格
+    max_participants = Column(Integer, nullable=False)  # 该时间段最多参与者数量
+    current_participants = Column(Integer, default=0, nullable=False)  # 当前已报名参与者数量
+    is_available = Column(Boolean, default=True, nullable=False)  # 是否可用（可手动关闭某个时间段）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    service = relationship("TaskExpertService", back_populates="time_slots")
+    applications = relationship("ServiceApplication", back_populates="time_slot", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("ix_service_time_slots_service_id", service_id),
+        Index("ix_service_time_slots_slot_date", slot_date),
+        Index("ix_service_time_slots_service_date", service_id, slot_date),
+        UniqueConstraint("service_id", "slot_date", "start_time", "end_time", name="uq_service_time_slot"),
     )
 
 
@@ -1386,6 +1422,7 @@ class ServiceApplication(Base):
     service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="CASCADE"), nullable=False)
     applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     expert_id = Column(String(8), ForeignKey("task_experts.id", ondelete="CASCADE"), nullable=False)
+    time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="SET NULL"), nullable=True)  # 选择的时间段ID
     application_message = Column(Text, nullable=True)
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 用户提出的议价价格
     expert_counter_price = Column(DECIMAL(12, 2), nullable=True)  # 任务达人提出的再次议价价格

@@ -4,7 +4,7 @@
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date, time as dt_time
 from decimal import Decimal
 from typing import List, Optional
 
@@ -316,6 +316,24 @@ async def create_service(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """任务达人创建服务"""
+    from datetime import time as dt_time
+    
+    # 验证时间段相关字段
+    if service_data.has_time_slots:
+        if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
+            raise HTTPException(
+                status_code=400,
+                detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
+            )
+        # 验证时间格式
+        try:
+            start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+            end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+            if start_time >= end_time:
+                raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+    
     new_service = models.TaskExpertService(
         expert_id=current_expert.id,
         service_name=service_data.service_name,
@@ -325,6 +343,11 @@ async def create_service(
         currency=service_data.currency,
         display_order=service_data.display_order,
         status="active",
+        has_time_slots=service_data.has_time_slots,
+        time_slot_duration_minutes=service_data.time_slot_duration_minutes,
+        time_slot_start_time=dt_time.fromisoformat(service_data.time_slot_start_time) if service_data.time_slot_start_time else None,
+        time_slot_end_time=dt_time.fromisoformat(service_data.time_slot_end_time) if service_data.time_slot_end_time else None,
+        participants_per_slot=service_data.participants_per_slot,
     )
     db.add(new_service)
     
@@ -388,6 +411,8 @@ async def update_service(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """任务达人更新服务"""
+    from datetime import time as dt_time
+    
     service = await db.execute(
         select(models.TaskExpertService)
         .where(models.TaskExpertService.id == service_id)
@@ -407,6 +432,48 @@ async def update_service(
         service.images = service_data.images
     if service_data.base_price is not None:
         service.base_price = service_data.base_price
+    
+    # 更新时间段相关字段
+    if service_data.has_time_slots is not None:
+        service.has_time_slots = service_data.has_time_slots
+        if service_data.has_time_slots:
+            # 启用时间段时，验证必填字段
+            if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
+                raise HTTPException(
+                    status_code=400,
+                    detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
+                )
+            # 验证时间格式
+            try:
+                start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+                end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+                if start_time >= end_time:
+                    raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
+                service.time_slot_start_time = start_time
+                service.time_slot_end_time = end_time
+            except ValueError:
+                raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+        else:
+            # 禁用时间段时，清除相关字段
+            service.time_slot_duration_minutes = None
+            service.time_slot_start_time = None
+            service.time_slot_end_time = None
+            service.participants_per_slot = None
+    
+    if service_data.time_slot_duration_minutes is not None:
+        service.time_slot_duration_minutes = service_data.time_slot_duration_minutes
+    if service_data.time_slot_start_time is not None:
+        try:
+            service.time_slot_start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="开始时间格式错误，应为HH:MM:SS")
+    if service_data.time_slot_end_time is not None:
+        try:
+            service.time_slot_end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="结束时间格式错误，应为HH:MM:SS")
+    if service_data.participants_per_slot is not None:
+        service.participants_per_slot = service_data.participants_per_slot
     if service_data.currency is not None:
         service.currency = service_data.currency
     if service_data.status is not None:
@@ -465,6 +532,351 @@ async def delete_service(
             logger.warning(f"删除服务图片失败: {e}")
     
     return {"message": "服务已删除"}
+
+
+# ==================== 服务时间段管理接口 ====================
+
+@task_expert_router.post("/me/services/{service_id}/time-slots", response_model=schemas.ServiceTimeSlotOut)
+async def create_service_time_slot(
+    service_id: int,
+    time_slot_data: schemas.ServiceTimeSlotCreate,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """任务达人创建服务时间段"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 验证服务是否启用了时间段
+    if not service.has_time_slots:
+        raise HTTPException(
+            status_code=400, detail="该服务未启用时间段功能"
+        )
+    
+    # 解析日期和时间
+    try:
+        slot_date = date.fromisoformat(time_slot_data.slot_date)
+        start_time = dt_time.fromisoformat(time_slot_data.start_time)
+        end_time = dt_time.fromisoformat(time_slot_data.end_time)
+        
+        if start_time >= end_time:
+            raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
+        
+        # 验证时间段是否在服务的允许时间范围内
+        if service.time_slot_start_time and service.time_slot_end_time:
+            if start_time < service.time_slot_start_time or end_time > service.time_slot_end_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"时间段必须在 {service.time_slot_start_time.strftime('%H:%M')} 到 {service.time_slot_end_time.strftime('%H:%M')} 之间"
+                )
+        
+        # 验证时间段时长是否符合设置
+        if service.time_slot_duration_minutes:
+            duration_minutes = (end_time.hour * 60 + end_time.minute) - (start_time.hour * 60 + start_time.minute)
+            if duration_minutes != service.time_slot_duration_minutes:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"时间段时长必须为 {service.time_slot_duration_minutes} 分钟"
+                )
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"日期或时间格式错误: {str(e)}")
+    
+    # 检查是否已存在相同的时间段
+    existing_slot = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+        .where(models.ServiceTimeSlot.slot_date == slot_date)
+        .where(models.ServiceTimeSlot.start_time == start_time)
+        .where(models.ServiceTimeSlot.end_time == end_time)
+    )
+    if existing_slot.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="该时间段已存在")
+    
+    # 创建时间段
+    new_time_slot = models.ServiceTimeSlot(
+        service_id=service_id,
+        slot_date=slot_date,
+        start_time=start_time,
+        end_time=end_time,
+        price_per_participant=time_slot_data.price_per_participant,
+        max_participants=time_slot_data.max_participants,
+        current_participants=0,
+        is_available=True,
+    )
+    db.add(new_time_slot)
+    await db.commit()
+    await db.refresh(new_time_slot)
+    return schemas.ServiceTimeSlotOut.from_orm(new_time_slot)
+
+
+@task_expert_router.get("/me/services/{service_id}/time-slots", response_model=List[schemas.ServiceTimeSlotOut])
+async def get_service_time_slots(
+    service_id: int,
+    start_date: Optional[str] = Query(None, description="开始日期，格式：YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期，格式：YYYY-MM-DD"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取服务的时间段列表"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 构建查询
+    query = select(models.ServiceTimeSlot).where(
+        models.ServiceTimeSlot.service_id == service_id
+    )
+    
+    if start_date:
+        try:
+            start = date.fromisoformat(start_date)
+            query = query.where(models.ServiceTimeSlot.slot_date >= start)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD")
+    
+    if end_date:
+        try:
+            end = date.fromisoformat(end_date)
+            query = query.where(models.ServiceTimeSlot.slot_date <= end)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD")
+    
+    # 按日期和时间排序
+    query = query.order_by(
+        models.ServiceTimeSlot.slot_date.asc(),
+        models.ServiceTimeSlot.start_time.asc()
+    )
+    
+    result = await db.execute(query)
+    time_slots = result.scalars().all()
+    
+    # 转换为输出格式
+    return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in time_slots]
+
+
+@task_expert_router.put("/me/services/{service_id}/time-slots/{time_slot_id}", response_model=schemas.ServiceTimeSlotOut)
+async def update_service_time_slot(
+    service_id: int,
+    time_slot_id: int,
+    time_slot_data: schemas.ServiceTimeSlotUpdate,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """更新服务时间段"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 验证时间段是否存在且属于该服务
+    time_slot = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.id == time_slot_id)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+    )
+    time_slot = time_slot.scalar_one_or_none()
+    if not time_slot:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="时间段不存在"
+        )
+    
+    # 更新字段
+    if time_slot_data.price_per_participant is not None:
+        time_slot.price_per_participant = time_slot_data.price_per_participant
+    if time_slot_data.max_participants is not None:
+        if time_slot_data.max_participants < time_slot.current_participants:
+            raise HTTPException(
+                status_code=400,
+                detail=f"最多参与者数量不能小于当前参与者数量（{time_slot.current_participants}）"
+            )
+        time_slot.max_participants = time_slot_data.max_participants
+    if time_slot_data.is_available is not None:
+        time_slot.is_available = time_slot_data.is_available
+    
+    await db.commit()
+    await db.refresh(time_slot)
+    return schemas.ServiceTimeSlotOut.from_orm(time_slot)
+
+
+@task_expert_router.delete("/me/services/{service_id}/time-slots/{time_slot_id}")
+async def delete_service_time_slot(
+    service_id: int,
+    time_slot_id: int,
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """删除服务时间段"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 验证时间段是否存在且属于该服务
+    time_slot = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.id == time_slot_id)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+    )
+    time_slot = time_slot.scalar_one_or_none()
+    if not time_slot:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="时间段不存在"
+        )
+    
+    # 检查是否有已申请的参与者
+    if time_slot.current_participants > 0:
+        raise HTTPException(
+            status_code=400,
+            detail="该时间段已有参与者，无法删除"
+        )
+    
+    await db.delete(time_slot)
+    await db.commit()
+    
+    return {"message": "时间段已删除"}
+
+
+@task_expert_router.post("/me/services/{service_id}/time-slots/batch-create")
+async def batch_create_service_time_slots(
+    service_id: int,
+    start_date: str = Query(..., description="开始日期，格式：YYYY-MM-DD"),
+    end_date: str = Query(..., description="结束日期，格式：YYYY-MM-DD"),
+    price_per_participant: Decimal = Query(..., description="每个参与者的价格"),
+    current_expert: models.TaskExpert = Depends(get_current_expert),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """批量创建服务时间段（根据服务的设置自动生成）"""
+    # 验证服务是否存在且属于当前任务达人
+    service = await db.execute(
+        select(models.TaskExpertService)
+        .where(models.TaskExpertService.id == service_id)
+        .where(models.TaskExpertService.expert_id == current_expert.id)
+    )
+    service = service.scalar_one_or_none()
+    if not service:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+        )
+    
+    # 验证服务是否启用了时间段
+    if not service.has_time_slots:
+        raise HTTPException(
+            status_code=400, detail="该服务未启用时间段功能"
+        )
+    
+    if not service.time_slot_start_time or not service.time_slot_end_time or not service.time_slot_duration_minutes or not service.participants_per_slot:
+        raise HTTPException(
+            status_code=400, detail="服务的时间段配置不完整"
+        )
+    
+    # 解析日期
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+        if start > end:
+            raise HTTPException(status_code=400, detail="开始日期必须早于或等于结束日期")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+    
+    # 生成时间段
+    created_slots = []
+    current_date = start
+    slot_start_time = service.time_slot_start_time
+    slot_end_time = service.time_slot_end_time
+    duration_minutes = service.time_slot_duration_minutes
+    
+    while current_date <= end:
+        # 计算该日期的时间段
+        current_time = slot_start_time
+        while current_time < slot_end_time:
+            # 计算结束时间
+            total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+            end_hour = total_minutes // 60
+            end_minute = total_minutes % 60
+            if end_hour >= 24:
+                break  # 超出一天，跳过
+            
+            slot_end = dt_time(end_hour, end_minute)
+            if slot_end > slot_end_time:
+                break  # 超出服务允许的结束时间
+            
+            # 检查是否已存在
+            existing = await db.execute(
+                select(models.ServiceTimeSlot)
+                .where(models.ServiceTimeSlot.service_id == service_id)
+                .where(models.ServiceTimeSlot.slot_date == current_date)
+                .where(models.ServiceTimeSlot.start_time == current_time)
+                .where(models.ServiceTimeSlot.end_time == slot_end)
+            )
+            if not existing.scalar_one_or_none():
+                # 创建新时间段
+                new_slot = models.ServiceTimeSlot(
+                    service_id=service_id,
+                    slot_date=current_date,
+                    start_time=current_time,
+                    end_time=slot_end,
+                    price_per_participant=price_per_participant,
+                    max_participants=service.participants_per_slot,
+                    current_participants=0,
+                    is_available=True,
+                )
+                db.add(new_slot)
+                created_slots.append(new_slot)
+            
+            # 移动到下一个时间段
+            total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+            next_hour = total_minutes // 60
+            next_minute = total_minutes % 60
+            if next_hour >= 24:
+                break
+            current_time = dt_time(next_hour, next_minute)
+        
+        # 移动到下一天
+        current_date += timedelta(days=1)
+    
+    await db.commit()
+    
+    # 刷新所有创建的时间段
+    for slot in created_slots:
+        await db.refresh(slot)
+    
+    return {
+        "message": f"成功创建 {len(created_slots)} 个时间段",
+        "created_count": len(created_slots),
+        "time_slots": [schemas.ServiceTimeSlotOut.from_orm(s) for s in created_slots]
+    }
 
 
 # 注意：更具体的路由必须放在通用路由之前
@@ -593,23 +1005,53 @@ async def apply_for_service(
                 detail=f"议价价格不能低于基础价格的50%（最低{min_price}）"
             )
     
-    # 6. 校验截至日期
-    if application_data.is_flexible == 1:
-        # 灵活模式，不需要截至日期
-        deadline = None
-    elif application_data.deadline is None:
-        raise HTTPException(status_code=400, detail="非灵活模式必须提供截至日期")
-    else:
-        # 验证截至日期不能早于当前时间
-        if application_data.deadline < models.get_utc_time():
-            raise HTTPException(status_code=400, detail="截至日期不能早于当前时间")
-        deadline = application_data.deadline
+    # 6. 如果服务启用了时间段，验证时间段
+    time_slot = None
+    if service.has_time_slots:
+        if not application_data.time_slot_id:
+            raise HTTPException(status_code=400, detail="该服务需要选择时间段")
+        
+        # 验证时间段是否存在且属于该服务
+        time_slot = await db.execute(
+            select(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id == application_data.time_slot_id)
+            .where(models.ServiceTimeSlot.service_id == service_id)
+        )
+        time_slot = time_slot.scalar_one_or_none()
+        
+        if not time_slot:
+            raise HTTPException(status_code=404, detail="时间段不存在")
+        
+        # 验证时间段是否可用
+        if not time_slot.is_available:
+            raise HTTPException(status_code=400, detail="该时间段不可用")
+        
+        # 验证时间段是否已满
+        if time_slot.current_participants >= time_slot.max_participants:
+            raise HTTPException(status_code=400, detail="该时间段已满")
     
-    # 7. 创建申请记录
+    # 7. 校验截至日期（如果服务未启用时间段）
+    if not service.has_time_slots:
+        if application_data.is_flexible == 1:
+            # 灵活模式，不需要截至日期
+            deadline = None
+        elif application_data.deadline is None:
+            raise HTTPException(status_code=400, detail="非灵活模式必须提供截至日期")
+        else:
+            # 验证截至日期不能早于当前时间
+            if application_data.deadline < models.get_utc_time():
+                raise HTTPException(status_code=400, detail="截至日期不能早于当前时间")
+            deadline = application_data.deadline
+    else:
+        # 如果服务启用了时间段，不需要截至日期（时间段已经包含了日期信息）
+        deadline = None
+    
+    # 8. 创建申请记录
     new_application = models.ServiceApplication(
         service_id=service_id,
         applicant_id=current_user.id,
         expert_id=service.expert_id,
+        time_slot_id=application_data.time_slot_id,
         application_message=application_data.application_message,
         negotiated_price=application_data.negotiated_price,
         currency=application_data.currency,
@@ -619,7 +1061,15 @@ async def apply_for_service(
     )
     db.add(new_application)
     
-    # 8. 更新服务统计：申请时+1（原子更新，避免并发丢失）
+    # 9. 如果选择了时间段，更新时间段的参与者数量（在提交前更新，避免并发问题）
+    if time_slot:
+        await db.execute(
+            update(models.ServiceTimeSlot)
+            .where(models.ServiceTimeSlot.id == time_slot.id)
+            .values(current_participants=models.ServiceTimeSlot.current_participants + 1)
+        )
+    
+    # 10. 更新服务统计：申请时+1（原子更新，避免并发丢失）
     try:
         await db.execute(
             update(models.TaskExpertService)
@@ -645,7 +1095,7 @@ async def apply_for_service(
             detail="您已申请过此服务，请等待处理（并发冲突）"
         )
     
-    # 9. 发送通知给任务达人
+    # 11. 发送通知给任务达人
     from app.task_notifications import send_service_application_notification
     try:
         await send_service_application_notification(
@@ -673,6 +1123,7 @@ async def apply_for_service(
         new_application.service_id,
         new_application.applicant_id,
         new_application.expert_id,
+        new_application.time_slot_id,
         new_application.application_message,
         new_application.negotiated_price,
         new_application.expert_counter_price,

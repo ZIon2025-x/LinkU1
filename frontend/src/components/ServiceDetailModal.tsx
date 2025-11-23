@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser } from '../api';
+import { getTaskExpertServiceDetail, applyForService, fetchCurrentUser, getServiceTimeSlotsPublic } from '../api';
 import LoginModal from './LoginModal';
 import { MODAL_OVERLAY_STYLE } from './TaskDetailModal.styles';
 
@@ -29,6 +29,23 @@ interface ServiceDetail {
   view_count: number;
   application_count: number;
   created_at: string;
+  has_time_slots?: boolean;
+  time_slot_duration_minutes?: number;
+  time_slot_start_time?: string;
+  time_slot_end_time?: string;
+  participants_per_slot?: number;
+}
+
+interface TimeSlot {
+  id: number;
+  service_id: number;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  price_per_participant: number;
+  max_participants: number;
+  current_participants: number;
+  is_available: boolean;
 }
 
 interface ExpertInfo {
@@ -62,6 +79,11 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   const [deadline, setDeadline] = useState<string>('');
   const [applying, setApplying] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+  // 时间段相关状态
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   // 加载服务详情
   useEffect(() => {
@@ -78,6 +100,9 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       setIsNegotiateChecked(false);
       setIsFlexible(false);
       setDeadline('');
+      setTimeSlots([]);
+      setSelectedTimeSlotId(null);
+      setSelectedDate('');
     }
   }, [isOpen, serviceId]);
 
@@ -89,6 +114,11 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     try {
       const data = await getTaskExpertServiceDetail(serviceId);
       setService(data);
+      
+      // 如果服务启用了时间段，加载时间段列表
+      if (data.has_time_slots) {
+        loadTimeSlots(data.id);
+      }
       
       // 加载任务达人信息
       if (data.expert_id) {
@@ -104,6 +134,32 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       message.error(err.response?.data?.detail || '加载服务详情失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTimeSlots = async (serviceId: number, date?: string) => {
+    setLoadingTimeSlots(true);
+    try {
+      const params: any = {};
+      if (date) {
+        // 加载指定日期的时间段
+        params.start_date = date;
+        params.end_date = date;
+      } else {
+        // 加载未来30天的时间段
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + 30);
+        params.start_date = today.toISOString().split('T')[0];
+        params.end_date = futureDate.toISOString().split('T')[0];
+      }
+      const slots = await getServiceTimeSlotsPublic(serviceId, params);
+      setTimeSlots(Array.isArray(slots) ? slots : []);
+    } catch (err: any) {
+      console.error('加载时间段失败:', err);
+      message.error('加载时间段失败');
+    } finally {
+      setLoadingTimeSlots(false);
     }
   };
 
@@ -126,6 +182,17 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     if (service && expert && expert.id === user.id) {
       message.warning('不能申请自己的服务');
       return;
+    }
+    
+    // 如果服务启用了时间段，需要先选择日期
+    if (service?.has_time_slots) {
+      // 设置默认日期为今天
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
+      // 加载今天的时间段
+      if (service.id) {
+        loadTimeSlots(service.id, today);
+      }
     }
     
     setShowApplyModal(true);
@@ -155,12 +222,20 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
         deadlineDate = date.toISOString();
       }
 
+      // 如果服务启用了时间段，必须选择时间段
+      if (service?.has_time_slots && !selectedTimeSlotId) {
+        message.error('请选择时间段');
+        setApplying(false);
+        return;
+      }
+
       await applyForService(serviceId, {
         application_message: applyMessage || undefined,
         negotiated_price: isNegotiateChecked && negotiatedPrice ? negotiatedPrice : undefined,
         currency: service?.currency || 'GBP',
         deadline: deadlineDate,
         is_flexible: isFlexible ? 1 : 0,
+        time_slot_id: selectedTimeSlotId || undefined,
       });
       
       message.success('申请已提交，等待任务达人处理');
@@ -170,6 +245,9 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       setIsNegotiateChecked(false);
       setIsFlexible(false);
       setDeadline('');
+      setSelectedTimeSlotId(null);
+      setSelectedDate('');
+      setTimeSlots([]);
       
       // 重新加载服务详情（更新申请次数）
       await loadServiceDetail();
@@ -471,62 +549,169 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
               )}
             </div>
 
-            {/* 截至日期或灵活选项 */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
+            {/* 时间段选择（如果服务启用了时间段） */}
+            {service.has_time_slots && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: '#2d3748', fontWeight: 500 }}>
+                  选择日期 *
+                </label>
                 <input
-                  type="checkbox"
-                  checked={isFlexible}
+                  type="date"
+                  value={selectedDate}
                   onChange={(e) => {
-                    setIsFlexible(e.target.checked);
-                    if (e.target.checked) {
-                      setDeadline('');
+                    const date = e.target.value;
+                    setSelectedDate(date);
+                    setSelectedTimeSlotId(null);
+                    if (date && service.id) {
+                      loadTimeSlots(service.id, date);
                     }
                   }}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box',
+                    marginBottom: '12px',
+                  }}
                 />
-                <span style={{ color: '#2d3748', fontWeight: 500 }}>灵活（无截至日期）</span>
-              </label>
-              
-              {!isFlexible && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#2d3748', fontWeight: 500 }}>
-                    任务截至日期
-                  </label>
+                
+                {selectedDate && (
+                  <>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#2d3748', fontWeight: 500 }}>
+                      选择时间段 *
+                    </label>
+                    {loadingTimeSlots ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
+                        加载时间段中...
+                      </div>
+                    ) : timeSlots.length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#e53e3e' }}>
+                        该日期暂无可用时间段
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                        gap: '12px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                      }}>
+                        {timeSlots
+                          .filter(slot => slot.slot_date === selectedDate && slot.is_available)
+                          .map((slot) => {
+                            const isFull = slot.current_participants >= slot.max_participants;
+                            const isSelected = selectedTimeSlotId === slot.id;
+                            return (
+                              <button
+                                key={slot.id}
+                                onClick={() => !isFull && setSelectedTimeSlotId(slot.id)}
+                                disabled={isFull}
+                                style={{
+                                  padding: '12px',
+                                  border: `2px solid ${isSelected ? '#3b82f6' : isFull ? '#e2e8f0' : '#cbd5e0'}`,
+                                  borderRadius: '8px',
+                                  background: isSelected ? '#eff6ff' : isFull ? '#f7fafc' : '#fff',
+                                  cursor: isFull ? 'not-allowed' : 'pointer',
+                                  textAlign: 'left',
+                                  transition: 'all 0.2s',
+                                  opacity: isFull ? 0.6 : 1,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isFull) {
+                                    e.currentTarget.style.borderColor = '#3b82f6';
+                                    e.currentTarget.style.background = '#eff6ff';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.borderColor = isFull ? '#e2e8f0' : '#cbd5e0';
+                                    e.currentTarget.style.background = isFull ? '#f7fafc' : '#fff';
+                                  }
+                                }}
+                              >
+                                <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                  {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#718096' }}>
+                                  {service.currency} {slot.price_per_participant.toFixed(2)} / 人
+                                </div>
+                                <div style={{ fontSize: '12px', color: isFull ? '#e53e3e' : '#48bb78', marginTop: '4px' }}>
+                                  {isFull ? '已满' : `${slot.current_participants}/${slot.max_participants} 人`}
+                                </div>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* 截至日期或灵活选项（如果服务未启用时间段） */}
+            {!service.has_time_slots && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '12px' }}>
                   <input
-                    type="datetime-local"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      transition: 'border-color 0.2s',
-                      boxSizing: 'border-box',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#3b82f6';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    type="checkbox"
+                    checked={isFlexible}
+                    onChange={(e) => {
+                      setIsFlexible(e.target.checked);
+                      if (e.target.checked) {
+                        setDeadline('');
+                      }
                     }}
                   />
-                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#718096' }}>
-                    请选择任务的截至日期和时间
+                  <span style={{ color: '#2d3748', fontWeight: 500 }}>灵活（无截至日期）</span>
+                </label>
+                
+                {!isFlexible && (
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', color: '#2d3748', fontWeight: 500 }}>
+                      任务截至日期
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        transition: 'border-color 0.2s',
+                        boxSizing: 'border-box',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
+                    />
+                    <div style={{ marginTop: '4px', fontSize: '12px', color: '#718096' }}>
+                      请选择任务的截至日期和时间
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* 提交按钮 */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleSubmitApplication}
-                disabled={applying || (isNegotiateChecked && (!negotiatedPrice || negotiatedPrice < service.base_price * 0.5)) || (!isFlexible && !deadline)}
+                disabled={applying || (isNegotiateChecked && (!negotiatedPrice || negotiatedPrice < service.base_price * 0.5)) || (service.has_time_slots ? !selectedTimeSlotId : (!isFlexible && !deadline))}
                 style={{
                   flex: 1,
                   padding: '12px',

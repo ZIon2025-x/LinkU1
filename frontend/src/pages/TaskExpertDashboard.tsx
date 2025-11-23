@@ -48,6 +48,12 @@ interface Service {
   view_count: number;
   application_count: number;
   created_at: string;
+  // 时间段相关字段（可选）
+  has_time_slots?: boolean;
+  time_slot_duration_minutes?: number;
+  time_slot_start_time?: string;
+  time_slot_end_time?: string;
+  participants_per_slot?: number;
 }
 
 interface Application {
@@ -122,6 +128,15 @@ const TaskExpertDashboard: React.FC = () => {
     points_reward: 0,
     currency: 'GBP'
   });
+  
+  // 存储服务的时间段信息（临时方案，直到后端支持）
+  const [serviceTimeSlotConfigs, setServiceTimeSlotConfigs] = useState<{[key: number]: {
+    has_time_slots: boolean;
+    time_slot_duration_minutes: number;
+    time_slot_start_time: string;
+    time_slot_end_time: string;
+    participants_per_slot: number;
+  }}>({});
 
   useEffect(() => {
     loadData();
@@ -175,7 +190,41 @@ const TaskExpertDashboard: React.FC = () => {
     try {
       const data = await getMyTaskExpertServices();
       // API返回的数据结构可能是 { items: [...] } 或直接是数组
-      setServices(Array.isArray(data) ? data : (data.items || []));
+      const servicesList = Array.isArray(data) ? data : (data.items || []);
+      
+      // 从服务描述或扩展字段中解析时间段信息
+      // 注意：目前时间段信息可能存储在前端，需要与后端同步
+      const servicesWithTimeSlots = servicesList.map((service: any) => {
+        // 如果服务有time_slot_config字段，解析它
+        if (service.time_slot_config) {
+          const config = {
+            has_time_slots: service.time_slot_config.has_time_slots || false,
+            time_slot_duration_minutes: service.time_slot_config.time_slot_duration_minutes || 60,
+            time_slot_start_time: service.time_slot_config.time_slot_start_time || '09:00',
+            time_slot_end_time: service.time_slot_config.time_slot_end_time || '18:00',
+            participants_per_slot: service.time_slot_config.participants_per_slot || 1,
+          };
+          // 保存到本地状态
+          setServiceTimeSlotConfigs(prev => ({
+            ...prev,
+            [service.id]: config
+          }));
+          return {
+            ...service,
+            ...config,
+          };
+        }
+        // 如果本地状态中有时间段配置，使用它
+        if (serviceTimeSlotConfigs[service.id]) {
+          return {
+            ...service,
+            ...serviceTimeSlotConfigs[service.id],
+          };
+        }
+        return service;
+      });
+      
+      setServices(servicesWithTimeSlots);
     } catch (err: any) {
       message.error('加载服务列表失败');
     } finally {
@@ -1428,6 +1477,33 @@ const TaskExpertDashboard: React.FC = () => {
 
                     try {
                       const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                      if (!selectedService) {
+                        message.error('服务不存在');
+                        return;
+                      }
+                      
+                      // 检查服务是否有时间段配置（从服务对象或本地状态中获取）
+                      const timeSlotConfigFromService = selectedService.has_time_slots 
+                        ? {
+                            has_time_slots: true,
+                            time_slot_duration_minutes: selectedService.time_slot_duration_minutes || 60,
+                            time_slot_start_time: selectedService.time_slot_start_time || '09:00',
+                            time_slot_end_time: selectedService.time_slot_end_time || '18:00',
+                            participants_per_slot: selectedService.participants_per_slot || 1,
+                          }
+                        : serviceTimeSlotConfigs[selectedService.id] || null;
+                      
+                      const serviceHasTimeSlots = timeSlotConfigFromService?.has_time_slots || false;
+                      const timeSlotConfig = serviceHasTimeSlots && timeSlotConfigFromService ? {
+                        is_fixed_time_slot: true,
+                        time_slot_duration_minutes: timeSlotConfigFromService.time_slot_duration_minutes,
+                        time_slot_start_time: timeSlotConfigFromService.time_slot_start_time + ':00',
+                        time_slot_end_time: timeSlotConfigFromService.time_slot_end_time + ':00',
+                        participants_per_slot: timeSlotConfigFromService.participants_per_slot,
+                      } : {
+                        is_fixed_time_slot: false,
+                      };
+                      
                       await createExpertMultiParticipantTask({
                         title: createMultiTaskForm.title,
                         description: createMultiTaskForm.description,
@@ -1443,6 +1519,7 @@ const TaskExpertDashboard: React.FC = () => {
                         completion_rule: 'all',
                         reward_distribution: createMultiTaskForm.reward_distribution,
                         auto_accept: false, // 任务达人任务需要手动审核
+                        ...timeSlotConfig,
                       });
                       message.success('多人任务创建成功');
                       setShowCreateMultiTaskModal(false);
@@ -1472,15 +1549,16 @@ const TaskExpertDashboard: React.FC = () => {
       {/* 服务编辑弹窗 */}
       {showServiceModal && (
         <ServiceEditModal
+          setServiceTimeSlotConfigs={setServiceTimeSlotConfigs}
           service={editingService}
           onClose={() => {
             setShowServiceModal(false);
             setEditingService(null);
           }}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowServiceModal(false);
             setEditingService(null);
-            loadServices();
+            await loadServices(); // 重新加载服务列表以获取最新的时间段信息
           }}
         />
       )}
@@ -1749,9 +1827,16 @@ interface ServiceEditModalProps {
   service: Service | null;
   onClose: () => void;
   onSuccess: () => void;
+  setServiceTimeSlotConfigs?: React.Dispatch<React.SetStateAction<{[key: number]: {
+    has_time_slots: boolean;
+    time_slot_duration_minutes: number;
+    time_slot_start_time: string;
+    time_slot_end_time: string;
+    participants_per_slot: number;
+  }}>>;
 }
 
-const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, onSuccess }) => {
+const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, onSuccess, setServiceTimeSlotConfigs }) => {
   const [formData, setFormData] = useState({
     service_name: '',
     description: '',
@@ -1759,6 +1844,12 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     currency: 'GBP',
     status: 'active',
     images: [] as string[],
+    // 时间段相关字段（可选）
+    has_time_slots: false,
+    time_slot_duration_minutes: 60,
+    time_slot_start_time: '09:00',
+    time_slot_end_time: '18:00',
+    participants_per_slot: 1,
   });
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
@@ -1766,6 +1857,18 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
 
   useEffect(() => {
     if (service) {
+      // 从服务对象中获取时间段信息（后端已支持）
+      const hasTimeSlots = service.has_time_slots || false;
+      const timeSlotDuration = service.time_slot_duration_minutes || 60;
+      // 后端返回的时间格式可能是 "HH:MM:SS"，需要转换为 "HH:MM" 用于 input[type="time"]
+      const timeSlotStart = service.time_slot_start_time 
+        ? service.time_slot_start_time.substring(0, 5) 
+        : '09:00';
+      const timeSlotEnd = service.time_slot_end_time 
+        ? service.time_slot_end_time.substring(0, 5) 
+        : '18:00';
+      const participantsPerSlot = service.participants_per_slot || 1;
+      
       setFormData({
         service_name: service.service_name,
         description: service.description || '',
@@ -1773,6 +1876,26 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         currency: service.currency,
         status: service.status,
         images: service.images || [],
+        has_time_slots: hasTimeSlots,
+        time_slot_duration_minutes: timeSlotDuration,
+        time_slot_start_time: timeSlotStart,
+        time_slot_end_time: timeSlotEnd,
+        participants_per_slot: participantsPerSlot,
+      });
+    } else {
+      // 新建服务时重置时间段字段
+      setFormData({
+        service_name: '',
+        description: '',
+        base_price: 0,
+        currency: 'GBP',
+        status: 'active',
+        images: [],
+        has_time_slots: false,
+        time_slot_duration_minutes: 60,
+        time_slot_start_time: '09:00',
+        time_slot_end_time: '18:00',
+        participants_per_slot: 1,
       });
     }
   }, [service]);
@@ -1795,16 +1918,103 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       message.warning('请填写完整信息');
       return;
     }
+    
+    // 验证时间段设置
+    if (formData.has_time_slots) {
+      if (!formData.time_slot_start_time || !formData.time_slot_end_time) {
+        message.warning('请设置时间段的开始和结束时间');
+        return;
+      }
+      if (formData.time_slot_duration_minutes <= 0) {
+        message.warning('时间段时长必须大于0');
+        return;
+      }
+      if (formData.participants_per_slot <= 0) {
+        message.warning('每个时间段的参与者数量必须大于0');
+        return;
+      }
+      
+      // 验证开始时间早于结束时间
+      const startTime = formData.time_slot_start_time.split(':').map(Number);
+      const endTime = formData.time_slot_end_time.split(':').map(Number);
+      const startMinutes = startTime[0] * 60 + startTime[1];
+      const endMinutes = endTime[0] * 60 + endTime[1];
+      if (startMinutes >= endMinutes) {
+        message.warning('开始时间必须早于结束时间');
+        return;
+      }
+    }
 
     setSaving(true);
     try {
+      // 准备提交数据（后端已支持时间段字段）
+      const submitData: any = {
+        service_name: formData.service_name,
+        description: formData.description,
+        base_price: formData.base_price,
+        currency: formData.currency,
+        status: formData.status,
+        images: formData.images,
+      };
+      
+      // 添加时间段信息（如果启用）
+      if (formData.has_time_slots) {
+        submitData.has_time_slots = true;
+        submitData.time_slot_duration_minutes = formData.time_slot_duration_minutes;
+        // 将时间格式转换为 "HH:MM:SS"
+        submitData.time_slot_start_time = formData.time_slot_start_time + ':00';
+        submitData.time_slot_end_time = formData.time_slot_end_time + ':00';
+        submitData.participants_per_slot = formData.participants_per_slot;
+      } else {
+        submitData.has_time_slots = false;
+      }
+      
+      let savedServiceId: number;
       if (service) {
-        await updateTaskExpertService(service.id, formData);
+        await updateTaskExpertService(service.id, submitData);
+        savedServiceId = service.id;
         message.success('服务已更新');
       } else {
-        await createTaskExpertService(formData);
+        const result = await createTaskExpertService(submitData);
+        savedServiceId = result.id || result.service?.id;
         message.success('服务已创建');
       }
+      
+      // 更新本地状态中的时间段配置（用于创建多人任务时快速获取）
+      if (setServiceTimeSlotConfigs) {
+        if (formData.has_time_slots && savedServiceId) {
+          setServiceTimeSlotConfigs((prev: {[key: number]: {
+            has_time_slots: boolean;
+            time_slot_duration_minutes: number;
+            time_slot_start_time: string;
+            time_slot_end_time: string;
+            participants_per_slot: number;
+          }}) => ({
+            ...prev,
+            [savedServiceId]: {
+              has_time_slots: true,
+              time_slot_duration_minutes: formData.time_slot_duration_minutes,
+              time_slot_start_time: formData.time_slot_start_time,
+              time_slot_end_time: formData.time_slot_end_time,
+              participants_per_slot: formData.participants_per_slot,
+            }
+          }));
+        } else if (savedServiceId) {
+          // 如果取消时间段，清除配置
+          setServiceTimeSlotConfigs((prev: {[key: number]: {
+            has_time_slots: boolean;
+            time_slot_duration_minutes: number;
+            time_slot_start_time: string;
+            time_slot_end_time: string;
+            participants_per_slot: number;
+          }}) => {
+            const newConfigs = { ...prev };
+            delete newConfigs[savedServiceId];
+            return newConfigs;
+          });
+        }
+      }
+      
       onSuccess();
     } catch (err: any) {
       message.error(err.response?.data?.detail || '保存失败');

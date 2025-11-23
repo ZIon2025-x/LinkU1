@@ -1374,6 +1374,12 @@ class TaskExpertServiceCreate(BaseModel):
     base_price: condecimal(gt=0, max_digits=12, decimal_places=2)  # 使用condecimal与DB的DECIMAL一致
     currency: Literal["GBP"] = "GBP"  # 统一为Literal类型
     display_order: int = 0
+    # 时间段相关字段
+    has_time_slots: bool = False
+    time_slot_duration_minutes: Optional[int] = None  # 每个时间段的时长（分钟）
+    time_slot_start_time: Optional[str] = None  # 时间段开始时间（格式：HH:MM:SS）
+    time_slot_end_time: Optional[str] = None  # 时间段结束时间（格式：HH:MM:SS）
+    participants_per_slot: Optional[int] = None  # 每个时间段最多参与者数量
 
 
 class TaskExpertServiceUpdate(BaseModel):
@@ -1384,6 +1390,12 @@ class TaskExpertServiceUpdate(BaseModel):
     currency: Optional[Literal["GBP"]] = None  # 统一为Literal类型
     status: Optional[str] = None
     display_order: Optional[int] = None
+    # 时间段相关字段
+    has_time_slots: Optional[bool] = None
+    time_slot_duration_minutes: Optional[int] = None
+    time_slot_start_time: Optional[str] = None
+    time_slot_end_time: Optional[str] = None
+    participants_per_slot: Optional[int] = None
 
 
 class TaskExpertServiceOut(BaseModel):
@@ -1399,6 +1411,65 @@ class TaskExpertServiceOut(BaseModel):
     view_count: int
     application_count: int
     created_at: datetime.datetime
+    # 时间段相关字段
+    has_time_slots: bool = False
+    time_slot_duration_minutes: Optional[int] = None
+    time_slot_start_time: Optional[str] = None
+    time_slot_end_time: Optional[str] = None
+    participants_per_slot: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ServiceTimeSlotCreate(BaseModel):
+    """创建服务时间段"""
+    slot_date: str  # 日期格式：YYYY-MM-DD
+    start_time: str  # 时间格式：HH:MM:SS
+    end_time: str  # 时间格式：HH:MM:SS
+    price_per_participant: condecimal(gt=0, max_digits=12, decimal_places=2)
+    max_participants: int = Field(..., gt=0)
+
+
+class ServiceTimeSlotUpdate(BaseModel):
+    """更新服务时间段"""
+    price_per_participant: Optional[condecimal(gt=0, max_digits=12, decimal_places=2)] = None
+    max_participants: Optional[int] = Field(None, gt=0)
+    is_available: Optional[bool] = None
+
+
+class ServiceTimeSlotOut(BaseModel):
+    """服务时间段输出"""
+    id: int
+    service_id: int
+    slot_date: str  # 日期格式：YYYY-MM-DD
+    start_time: str  # 时间格式：HH:MM:SS
+    end_time: str  # 时间格式：HH:MM:SS
+    price_per_participant: float
+    max_participants: int
+    current_participants: int
+    is_available: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """自定义ORM转换，处理日期和时间字段"""
+        from datetime import date, time
+        data = {
+            "id": obj.id,
+            "service_id": obj.service_id,
+            "slot_date": obj.slot_date.isoformat() if isinstance(obj.slot_date, date) else str(obj.slot_date),
+            "start_time": obj.start_time.isoformat() if isinstance(obj.start_time, time) else str(obj.start_time),
+            "end_time": obj.end_time.isoformat() if isinstance(obj.end_time, time) else str(obj.end_time),
+            "price_per_participant": float(obj.price_per_participant),
+            "max_participants": obj.max_participants,
+            "current_participants": obj.current_participants,
+            "is_available": obj.is_available,
+            "created_at": obj.created_at,
+            "updated_at": obj.updated_at,
+        }
+        return cls(**data)
     
     class Config:
         from_attributes = True
@@ -1409,6 +1480,7 @@ class ServiceApplicationOut(BaseModel):
     service_id: int
     applicant_id: str
     expert_id: str
+    time_slot_id: Optional[int] = None  # 选择的时间段ID
     application_message: Optional[str]
     negotiated_price: Optional[float]  # 输出时保持float，输入时使用condecimal
     expert_counter_price: Optional[float]
@@ -1433,6 +1505,7 @@ class ServiceApplicationCreate(BaseModel):
     currency: Literal["GBP"] = "GBP"
     deadline: Optional[datetime.datetime] = None  # 任务截至日期（如果is_flexible为False）
     is_flexible: Optional[int] = 0  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
+    time_slot_id: Optional[int] = None  # 选择的时间段ID（如果服务启用了时间段）
 
 
 class CounterOfferRequest(BaseModel):
