@@ -163,6 +163,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         errors.append({"field": field, "message": message})
     
     logger.warning(f"验证错误: {len(errors)}个错误 - {request.url}")
+    logger.warning(f"验证错误详情: {errors}")  # 添加详细错误信息
     
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

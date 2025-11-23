@@ -931,7 +931,7 @@ async def delete_service_time_slot(
 @task_expert_router.delete("/me/services/{service_id}/time-slots/by-date")
 async def delete_time_slots_by_date(
     service_id: int,
-    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD", alias="target_date"),
+    target_date: str = Query(..., description="要删除的日期，格式：YYYY-MM-DD"),
     current_expert: models.TaskExpert = Depends(get_current_expert),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
