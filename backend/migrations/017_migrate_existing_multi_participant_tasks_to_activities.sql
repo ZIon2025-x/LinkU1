@@ -70,9 +70,19 @@ SELECT
     END AS status,
     COALESCE(t.is_public = 1, true) AS is_public,
     COALESCE(t.visibility, 'public') AS visibility,
-    t.deadline,
-    NULL AS activity_end_date,  -- 暂时设为NULL，后续可根据需要更新
-    t.images,
+      t.deadline,
+      NULL AS activity_end_date,  -- 暂时设为NULL，后续可根据需要更新
+      -- 转换 images 字段：如果已经是 jsonb 则直接使用，如果是 text 则尝试转换为 jsonb
+      CASE 
+        WHEN t.images IS NULL THEN NULL::jsonb
+        WHEN pg_typeof(t.images)::text = 'jsonb' THEN t.images::jsonb
+        WHEN pg_typeof(t.images)::text = 'text' AND t.images::text != '' THEN 
+          CASE 
+            WHEN t.images::text ~ '^(\[|\{)' THEN t.images::text::jsonb
+            ELSE NULL::jsonb
+          END
+        ELSE NULL::jsonb
+      END AS images,
     COALESCE(
         EXISTS(
             SELECT 1 FROM activity_time_slot_relations atsr 
@@ -190,5 +200,8 @@ END $$;
 -- 提交事务
 COMMIT;
 
-RAISE NOTICE '迁移 017 执行完成: 已将现有多人任务迁移到活动表';
+DO $$
+BEGIN
+    RAISE NOTICE '迁移 017 执行完成: 已将现有多人任务迁移到活动表';
+END $$;
 

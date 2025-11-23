@@ -20,14 +20,39 @@ ALTER TABLE tasks
 DROP CONSTRAINT IF EXISTS fk_parent_activity;
 
 -- 步骤2: 添加新的外键约束（ON DELETE RESTRICT）
-ALTER TABLE tasks 
-ADD CONSTRAINT fk_tasks_parent_activity_id 
-FOREIGN KEY (parent_activity_id) REFERENCES activities(id) ON DELETE RESTRICT;
+-- 先检查是否已存在（可能由016迁移创建）
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_tasks_parent_activity_id'
+    ) THEN
+        ALTER TABLE tasks 
+        ADD CONSTRAINT fk_tasks_parent_activity_id 
+        FOREIGN KEY (parent_activity_id) REFERENCES activities(id) ON DELETE RESTRICT;
+    ELSE
+        -- 如果已存在，删除并重新创建（改为 RESTRICT）
+        ALTER TABLE tasks 
+        DROP CONSTRAINT fk_tasks_parent_activity_id;
+        
+        ALTER TABLE tasks 
+        ADD CONSTRAINT fk_tasks_parent_activity_id 
+        FOREIGN KEY (parent_activity_id) REFERENCES activities(id) ON DELETE RESTRICT;
+    END IF;
+END $$;
 
 -- 步骤2.1: 为 activity_time_slot_relations 表添加外键约束（activities表已在015迁移中创建）
-ALTER TABLE activity_time_slot_relations 
-ADD CONSTRAINT IF NOT EXISTS fk_activity_time_slot_relations_activity_id 
-FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_activity_time_slot_relations_activity_id'
+    ) THEN
+        ALTER TABLE activity_time_slot_relations 
+        ADD CONSTRAINT fk_activity_time_slot_relations_activity_id 
+        FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- 步骤3: 添加固定时间段唯一约束（防止时间段冲突）
 -- 注意：PostgreSQL 的部分唯一索引语法
@@ -40,9 +65,17 @@ ALTER TABLE task_participants
 ADD COLUMN IF NOT EXISTS activity_id INTEGER;
 
 -- 添加外键约束
-ALTER TABLE task_participants 
-ADD CONSTRAINT IF NOT EXISTS fk_task_participants_activity_id 
-FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_task_participants_activity_id'
+    ) THEN
+        ALTER TABLE task_participants 
+        ADD CONSTRAINT fk_task_participants_activity_id 
+        FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 添加索引
 CREATE INDEX IF NOT EXISTS ix_task_participants_activity_id 
@@ -53,9 +86,17 @@ ALTER TABLE tasks
 ADD COLUMN IF NOT EXISTS originating_user_id VARCHAR(8);
 
 -- 添加外键约束
-ALTER TABLE tasks 
-ADD CONSTRAINT IF NOT EXISTS fk_tasks_originating_user_id 
-FOREIGN KEY (originating_user_id) REFERENCES users(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_tasks_originating_user_id'
+    ) THEN
+        ALTER TABLE tasks 
+        ADD CONSTRAINT fk_tasks_originating_user_id 
+        FOREIGN KEY (originating_user_id) REFERENCES users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 添加索引
 CREATE INDEX IF NOT EXISTS ix_tasks_originating_user_id 
@@ -82,5 +123,8 @@ COMMENT ON COLUMN tasks.originating_user_id IS '记录实际申请人（如果�
 
 COMMIT;
 
-RAISE NOTICE '迁移 018 执行完成: 已修复外键约束并添加数据库约束';
+DO $$
+BEGIN
+    RAISE NOTICE '迁移 018 执行完成: 已修复外键约束并添加数据库约束';
+END $$;
 

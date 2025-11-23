@@ -93,5 +93,8 @@ CREATE TRIGGER trigger_update_activities_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_activities_updated_at();
 
-RAISE NOTICE '迁移 015 执行完成: 已创建活动表';
+DO $$
+BEGIN
+    RAISE NOTICE '迁移 015 执行完成: 已创建活动表';
+END $$;
 

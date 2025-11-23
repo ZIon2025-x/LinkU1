@@ -23,5 +23,8 @@ CREATE INDEX IF NOT EXISTS ix_tasks_parent_activity_id ON tasks(parent_activity_
 -- 添加注释
 COMMENT ON COLUMN tasks.parent_activity_id IS '关联的多人活动ID（如果此任务是从活动申请创建的）';
 
-RAISE NOTICE '迁移 014 执行完成: 已添加 parent_activity_id 字段到 tasks 表';
+DO $$
+BEGIN
+    RAISE NOTICE '迁移 014 执行完成: 已添加 parent_activity_id 字段到 tasks 表';
+END $$;
 

@@ -70,5 +70,8 @@ CREATE TRIGGER trigger_update_activity_time_slot_relations_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_activity_time_slot_relations_updated_at();
 
-RAISE NOTICE '迁移 013 执行完成: 已创建活动与时间段的关联表 (activity_time_slot_relations)';
+DO $$
+BEGIN
+    RAISE NOTICE '迁移 013 执行完成: 已创建活动与时间段的关联表 (activity_time_slot_relations)';
+END $$;
 
