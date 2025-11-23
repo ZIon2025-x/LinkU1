@@ -89,7 +89,7 @@ UPDATE tasks SET reward_type = 'both' WHERE reward_type IS NULL AND reward > 0 A
 UPDATE tasks SET reward_type = 'cash' WHERE reward_type IS NULL;  -- 默认值
 
 -- 2.2 处理 reward_type='points' 时 reward 必须为 NULL
-UPDATE tasks SET reward = NULL WHERE reward_type = 'points' AND reward = 0;
+UPDATE tasks SET reward = NULL WHERE reward_type = 'points' AND (reward IS NULL OR reward = 0);
 
 -- 2.3 补齐 points_reward
 UPDATE tasks SET points_reward = 0 WHERE points_reward IS NULL AND reward_type = 'cash';
@@ -134,6 +134,21 @@ BEGIN
         WHERE conname = 'chk_tasks_reward_type_consistency' 
         AND conrelid = 'tasks'::regclass
     ) THEN
+        -- 在添加约束前，确保所有数据符合约束条件
+        -- 修复不符合约束的数据
+        UPDATE tasks SET reward_type = 'cash', points_reward = 0 
+        WHERE reward_type = 'cash' AND (reward IS NULL OR reward <= 0);
+        
+        UPDATE tasks SET reward_type = 'points', reward = NULL 
+        WHERE reward_type = 'points' AND (points_reward IS NULL OR points_reward <= 0);
+        
+        UPDATE tasks SET reward_type = 'both' 
+        WHERE reward_type = 'both' AND (reward IS NULL OR reward <= 0 OR points_reward IS NULL OR points_reward <= 0);
+        
+        -- 如果 reward_type 为空或无效，设置为 cash
+        UPDATE tasks SET reward_type = 'cash', points_reward = COALESCE(points_reward, 0)
+        WHERE reward_type IS NULL OR reward_type NOT IN ('cash', 'points', 'both');
+        
         ALTER TABLE tasks ADD CONSTRAINT chk_tasks_reward_type_consistency CHECK (
             (reward_type = 'cash' AND reward > 0 AND (points_reward IS NULL OR points_reward = 0)) OR
             (reward_type = 'points' AND points_reward > 0 AND reward IS NULL) OR

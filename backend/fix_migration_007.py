@@ -34,10 +34,11 @@ def execute_migration():
     # 读取 SQL 文件内容
     sql_content = MIGRATION_FILE.read_text(encoding='utf-8')
     
-    # 解析 SQL 语句（正确处理 DO $$ ... END $$; 块）
+    # 解析 SQL 语句（正确处理 DO $$ ... END $$; 块和函数定义）
     statements = []
     current_statement = []
     in_do_block = False
+    in_function = False
     
     for line in sql_content.split('\n'):
         stripped = line.strip()
@@ -46,11 +47,29 @@ def execute_migration():
         if not stripped or stripped.startswith('--'):
             continue
         
+        # 检测函数定义开始 (CREATE ... FUNCTION ... AS $$)
+        if not in_function and not in_do_block:
+            if ('CREATE' in stripped.upper() or 'CREATE OR REPLACE' in stripped.upper()) and \
+               'FUNCTION' in stripped.upper() and 'AS $$' in stripped.upper():
+                in_function = True
+        
         # 检测 DO $$ 块开始
-        if 'DO $$' in stripped.upper() and not in_do_block:
+        if 'DO $$' in stripped.upper() and not in_do_block and not in_function:
             in_do_block = True
         
         current_statement.append(line)
+        
+        # 检测函数定义结束 ($$ LANGUAGE plpgsql;)
+        if in_function:
+            if '$$ LANGUAGE' in stripped.upper() and stripped.endswith(';'):
+                in_function = False
+                # 函数定义结束，保存整个函数
+                statement = '\n'.join(current_statement).strip()
+                if statement:
+                    statements.append(statement)
+                current_statement = []
+            # 在函数定义内，不按分号分割
+            continue
         
         # 检测 DO $$ 块结束
         if in_do_block:
@@ -65,7 +84,7 @@ def execute_migration():
             # 在 DO 块内，不按分号分割
             continue
         
-        # 不在 DO 块内，按分号分割
+        # 不在特殊块内，按分号分割
         if stripped.endswith(';'):
             statement = '\n'.join(current_statement).strip()
             if statement:

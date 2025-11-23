@@ -101,11 +101,11 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                 # 如果 psycopg2 方式失败，记录错误并使用 SQLAlchemy 方式
                 logger.debug(f"psycopg2 执行失败，使用 SQLAlchemy 方式: {e}")
                 # 如果不是 psycopg2 连接，回退到 SQLAlchemy 方式
-                # 改进的 SQL 解析：正确处理 DO $$ ... END $$; 块
+                # 改进的 SQL 解析：正确处理 DO $$ ... END $$; 块和函数定义
                 statements = []
                 current_statement = []
                 in_do_block = False
-                do_block_depth = 0  # 跟踪 DO $$ 块的嵌套深度
+                in_function = False
                 
                 for line in sql_content.split('\n'):
                     stripped = line.strip()
@@ -114,19 +114,37 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                     if not stripped or stripped.startswith('--'):
                         continue
                     
+                    # 检测函数定义开始 (CREATE ... FUNCTION ... AS $$)
+                    # 函数定义格式：CREATE OR REPLACE FUNCTION ... AS $$
+                    if not in_function and not in_do_block:
+                        stripped_upper = stripped.upper()
+                        # 检查是否包含 FUNCTION 和 AS $$（可能在同一行或不同行）
+                        if 'FUNCTION' in stripped_upper and 'AS $$' in stripped_upper:
+                            in_function = True
+                    
                     # 检测 DO $$ 块开始
-                    if 'DO $$' in stripped.upper() and not in_do_block:
+                    if 'DO $$' in stripped.upper() and not in_do_block and not in_function:
                         in_do_block = True
-                        do_block_depth = 1
                     
                     current_statement.append(line)
+                    
+                    # 检测函数定义结束 ($$ LANGUAGE plpgsql;)
+                    if in_function:
+                        if '$$ LANGUAGE' in stripped.upper() and stripped.endswith(';'):
+                            in_function = False
+                            # 函数定义结束，保存整个函数
+                            statement = '\n'.join(current_statement).strip()
+                            if statement:
+                                statements.append(statement)
+                            current_statement = []
+                        # 在函数定义内，不按分号分割
+                        continue
                     
                     # 检测 DO $$ 块结束
                     if in_do_block:
                         # 检查是否包含 END $$;
                         if 'END $$;' in stripped.upper():
                             in_do_block = False
-                            do_block_depth = 0
                             # DO 块结束，保存整个块
                             statement = '\n'.join(current_statement).strip()
                             if statement:
@@ -135,7 +153,7 @@ def execute_sql_file(engine: Engine, sql_file: Path) -> tuple[bool, int]:
                         # 在 DO 块内，不按分号分割
                         continue
                     
-                    # 不在 DO 块内，按分号分割
+                    # 不在特殊块内，按分号分割
                     if stripped.endswith(';'):
                         statement = '\n'.join(current_statement).strip()
                         if statement:
