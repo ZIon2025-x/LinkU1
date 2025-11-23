@@ -380,6 +380,7 @@ class AsyncTaskCRUD:
         sort_by: Optional[str] = "latest",
         expert_creator_id: Optional[str] = None,
         is_multi_participant: Optional[bool] = None,
+        parent_activity_id: Optional[int] = None,
     ) -> tuple[List[models.Task], int]:
         """
         获取任务列表 + 总数（使用缓存 + 精确 count，不用 reltuples 估算）
@@ -459,6 +460,9 @@ class AsyncTaskCRUD:
             # 多人任务筛选
             if is_multi_participant is not None:
                 base_query = base_query.where(models.Task.is_multi_participant == is_multi_participant)
+            
+            if parent_activity_id is not None:
+                base_query = base_query.where(models.Task.parent_activity_id == parent_activity_id)
             
             # 2. 先算 total（缓存 + 精确 count）
             cache_key = get_tasks_count_cache_key(
@@ -557,6 +561,7 @@ class AsyncTaskCRUD:
         sort_by: str = "latest",  # 只支持 latest / oldest
         expert_creator_id: Optional[str] = None,
         is_multi_participant: Optional[bool] = None,
+        parent_activity_id: Optional[int] = None,
     ) -> tuple[List[models.Task], Optional[str]]:
         """
         使用游标分页获取任务列表。
@@ -633,6 +638,10 @@ class AsyncTaskCRUD:
         # 多人任务筛选
         if is_multi_participant is not None:
             query = query.where(models.Task.is_multi_participant == is_multi_participant)
+        
+        # 活动关联筛选
+        if parent_activity_id is not None:
+            query = query.where(models.Task.parent_activity_id == parent_activity_id)
         
         # 2. 应用游标条件（基于 created_at + id）
         if cursor:

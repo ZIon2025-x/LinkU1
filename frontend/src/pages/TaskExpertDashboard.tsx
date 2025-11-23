@@ -43,6 +43,7 @@ import {
   getClosedDates,
   deleteClosedDate,
   deleteClosedDateByDate,
+  deleteActivity,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -122,7 +123,10 @@ const TaskExpertDashboard: React.FC = () => {
   const [multiTasks, setMultiTasks] = useState<any[]>([]);
   const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
+  // 按活动ID和任务ID分组存储参与者：{activityId: {taskId: [participants]}}
+  const [taskParticipants, setTaskParticipants] = useState<{[activityId: number]: {[taskId: number]: any[]}}>({});
+  // 存储活动关联的任务列表：{activityId: [tasks]}
+  const [activityTasks, setActivityTasks] = useState<{[activityId: number]: any[]}>({});
   
   // 创建多人活动相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
@@ -144,6 +148,15 @@ const TaskExpertDashboard: React.FC = () => {
     use_custom_discount: boolean;
     reward_applicants: boolean;
     currency: string;
+    // 时间段选择相关
+    time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
+    selected_time_slot_ids?: number[];
+    recurring_daily_time_ranges?: Array<{start: string, end: string}>;
+    recurring_weekly_weekdays?: number[];
+    recurring_weekly_time_ranges?: Array<{start: string, end: string}>;
+    auto_add_new_slots: boolean;
+    activity_end_date?: string;
+    // 向后兼容的旧字段
     selected_time_slot_id?: number;
     selected_time_slot_date?: string;
   }>({
@@ -164,6 +177,13 @@ const TaskExpertDashboard: React.FC = () => {
     custom_discount: undefined as number | undefined,
     use_custom_discount: false,
     reward_applicants: false,
+    time_slot_selection_mode: undefined,
+    selected_time_slot_ids: [],
+    recurring_daily_time_ranges: [],
+    recurring_weekly_weekdays: [],
+    recurring_weekly_time_ranges: [],
+    auto_add_new_slots: true,
+    activity_end_date: undefined,
     selected_time_slot_id: undefined as number | undefined,
     selected_time_slot_date: undefined as string | undefined,
   });
@@ -303,8 +323,10 @@ const TaskExpertDashboard: React.FC = () => {
       loadDashboardStats();
     } else if (activeTab === 'schedule') {
       loadSchedule();
+    } else if (activeTab === 'multi-tasks') {
+      loadMultiTasks();
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   // 当打开创建多人活动模态框时，确保服务列表已加载
   useEffect(() => {
@@ -596,34 +618,64 @@ const TaskExpertDashboard: React.FC = () => {
 
   // 加载多人任务列表
   const loadMultiTasks = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('loadMultiTasks: 用户未加载，跳过');
+      return;
+    }
+    console.log('loadMultiTasks: 开始加载多人活动，用户ID:', user.id);
     setLoadingMultiTasks(true);
     try {
-      // 获取任务达人创建的所有多人活动
-      const response = await api.get('/api/tasks', {
+      // 获取任务达人创建的所有活动
+      const response = await api.get('/api/activities', {
         params: {
-          expert_creator_id: user.id,
-          is_multi_participant: true,
+          expert_id: user.id,
           limit: 100
         }
       });
-      const tasks = response.data.tasks || response.data || [];
-      setMultiTasks(tasks);
+      const activities = response.data || [];
+      console.log('loadMultiTasks: 加载到', activities.length, '个活动', activities);
+      setMultiTasks(activities);
       
-      // 并行加载所有任务的参与者列表
-      const participantsMap: {[key: number]: any[]} = {};
+      // 并行加载所有活动关联的任务的参与者列表（按任务分组）
+      const participantsMap: {[activityId: number]: {[taskId: number]: any[]}} = {};
+      const tasksMap: {[activityId: number]: any[]} = {};
+      
       await Promise.all(
-        tasks.map(async (task: any) => {
+        activities.map(async (activity: any) => {
           try {
-            const participantsData = await getTaskParticipants(task.id);
-            participantsMap[task.id] = participantsData.participants || [];
+            // 查找关联的任务
+            const tasksResponse = await api.get('/api/tasks', {
+              params: {
+                parent_activity_id: activity.id,
+                limit: 100
+              }
+            });
+            const relatedTasks = tasksResponse.data.tasks || tasksResponse.data || [];
+            tasksMap[activity.id] = relatedTasks;
+            
+            // 为每个任务加载参与者（按任务分组）
+            if (!participantsMap[activity.id]) {
+              participantsMap[activity.id] = {};
+            }
+            
+            for (const task of relatedTasks) {
+              try {
+                const participantsData = await getTaskParticipants(task.id);
+                participantsMap[activity.id][task.id] = participantsData.participants || [];
+              } catch (error) {
+                console.error(`加载任务 ${task.id} 的参与者失败:`, error);
+                participantsMap[activity.id][task.id] = [];
+              }
+            }
           } catch (error) {
-            console.error(`加载任务 ${task.id} 的参与者失败:`, error);
-            participantsMap[task.id] = [];
+            console.error(`加载活动 ${activity.id} 的关联任务失败:`, error);
+            participantsMap[activity.id] = {};
+            tasksMap[activity.id] = [];
           }
         })
       );
       setTaskParticipants(participantsMap);
+      setActivityTasks(tasksMap);
     } catch (err: any) {
                       message.error('加载多人活动列表失败');
                       console.error('加载多人活动失败:', err);
@@ -1178,6 +1230,7 @@ const TaskExpertDashboard: React.FC = () => {
                     custom_discount: undefined,
                     use_custom_discount: false,
                     reward_applicants: false,
+                    auto_add_new_slots: true,
                   });
                   setShowCreateMultiTaskModal(true);
                 }}
@@ -1203,13 +1256,20 @@ const TaskExpertDashboard: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {multiTasks.map((task: any) => {
-                  const participants = taskParticipants[task.id] || [];
-                  const isTaskManager = task.created_by_expert && task.expert_creator_id === user?.id;
+                {multiTasks.map((activity: any) => {
+                  const tasks = activityTasks[activity.id] || [];
+                  const participantsByTask = taskParticipants[activity.id] || {};
+                  const isTaskManager = activity.expert_id === user?.id;
+                  
+                  // 计算当前参与者数量（从所有任务的参与者中统计）
+                  const currentParticipantsCount = Object.values(participantsByTask).reduce(
+                    (total: number, participants: any) => total + (Array.isArray(participants) ? participants.length : 0),
+                    0
+                  );
                   
                   return (
                     <div
-                      key={task.id}
+                      key={activity.id}
                       style={{
                         border: '1px solid #e2e8f0',
                         borderRadius: '12px',
@@ -1220,258 +1280,333 @@ const TaskExpertDashboard: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                         <div style={{ flex: 1 }}>
                           <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
-                            {task.title}
+                            {activity.title}
                           </h3>
+                          {/* 活动描述（简短） */}
+                          {activity.description && (
+                            <p style={{ 
+                              margin: '0 0 8px 0', 
+                              fontSize: '13px', 
+                              color: '#718096',
+                              lineHeight: 1.5,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}>
+                              {activity.description}
+                            </p>
+                          )}
                           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
                             <span style={{
                               padding: '4px 8px',
                               borderRadius: '6px',
                               fontSize: '12px',
                               fontWeight: 600,
-                              background: task.status === 'open' ? '#dbeafe' :
-                                         task.status === 'in_progress' ? '#d1fae5' :
-                                         task.status === 'completed' ? '#d1fae5' :
+                              background: activity.status === 'open' ? '#dbeafe' :
+                                         activity.status === 'in_progress' ? '#d1fae5' :
+                                         activity.status === 'completed' ? '#d1fae5' :
                                          '#fee2e2',
-                              color: task.status === 'open' ? '#1e40af' :
-                                     task.status === 'in_progress' ? '#065f46' :
-                                     task.status === 'completed' ? '#065f46' :
+                              color: activity.status === 'open' ? '#1e40af' :
+                                     activity.status === 'in_progress' ? '#065f46' :
+                                     activity.status === 'completed' ? '#065f46' :
                                      '#991b1b',
                             }}>
-                              {task.status === 'open' ? '开放中' :
-                               task.status === 'in_progress' ? '进行中' :
-                               task.status === 'completed' ? '已完成' :
+                              {activity.status === 'open' ? '开放中' :
+                               activity.status === 'in_progress' ? '进行中' :
+                               activity.status === 'completed' ? '已完成' :
                                '已取消'}
                             </span>
                             <span style={{ fontSize: '14px', color: '#4a5568' }}>
-                              👥 {task.current_participants || 0} / {task.max_participants || 1}
+                              👥 {currentParticipantsCount} / {activity.max_participants || 1}
                             </span>
+                            {/* 活动类型标识 */}
+                            {activity.has_time_slots && (
+                              <span style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                background: '#e0f2fe',
+                                color: '#0369a1',
+                              }}>
+                                ⏰ 多时间段
+                              </span>
+                            )}
+                            {/* 价格信息 */}
+                            {(() => {
+                              const hasDiscount = activity.discount_percentage && activity.discount_percentage > 0;
+                              const originalPrice = activity.original_price_per_participant;
+                              const currentPrice = activity.discounted_price_per_participant || activity.original_price_per_participant;
+                              const currency = activity.currency || 'GBP';
+                              
+                              if (!currentPrice || currentPrice <= 0) {
+                                return (
+                                  <span style={{ fontSize: '14px', color: '#059669', fontWeight: 600 }}>
+                                    💰 免费
+                                  </span>
+                                );
+                              }
+                              
+                              return (
+                                <span style={{ fontSize: '14px', color: '#059669', fontWeight: 600 }}>
+                                  💰 {hasDiscount && originalPrice && originalPrice > currentPrice ? (
+                                    <>
+                                      <span style={{ textDecoration: 'line-through', color: '#9ca3af', marginRight: '4px' }}>
+                                        {currency}{originalPrice.toFixed(2)}
+                                      </span>
+                                      <span>{currency}{currentPrice.toFixed(2)}</span>
+                                      <span style={{ 
+                                        marginLeft: '4px', 
+                                        fontSize: '11px', 
+                                        background: '#fee2e2', 
+                                        color: '#dc2626',
+                                        padding: '2px 4px',
+                                        borderRadius: '4px',
+                                      }}>
+                                        -{activity.discount_percentage.toFixed(0)}%
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span>{currency}{currentPrice.toFixed(2)}</span>
+                                  )} / 人
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
 
-                      {/* 参与者列表 */}
-                      {participants.length > 0 && (
+                      {/* 参与者列表（按任务分组显示） */}
+                      {tasks.length > 0 && (
                         <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                           <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: '#4a5568' }}>
-                            参与者列表 ({participants.length})
+                            参与者列表（按任务分组）
                           </h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {participants.map((participant: any) => (
-                              <div
-                                key={participant.id}
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  padding: '12px',
-                                  background: '#f7fafc',
-                                  borderRadius: '8px',
-                                }}
-                              >
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
-                                    {participant.user_name || 'Unknown'}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {tasks.map((task: any) => {
+                              const taskParticipants = participantsByTask[task.id] || [];
+                              if (taskParticipants.length === 0) {
+                                return null; // 跳过没有参与者的任务
+                              }
+                              
+                              return (
+                                <div
+                                  key={task.id}
+                                  style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    background: '#f9fafb',
+                                  }}
+                                >
+                                  <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>
+                                    任务 #{task.id} - {task.title || '未命名任务'}
+                                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#718096', fontWeight: 400 }}>
+                                      ({taskParticipants.length} 个参与者)
+                                    </span>
                                   </div>
-                                  <div style={{ fontSize: '12px', color: '#718096' }}>
-                                    状态: {participant.status === 'pending' ? '待审核' :
-                                           participant.status === 'accepted' ? '已接受' :
-                                           participant.status === 'in_progress' ? '进行中' :
-                                           participant.status === 'completed' ? '已完成' :
-                                           participant.status === 'exit_requested' ? '退出申请中' :
-                                           '已退出'}
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {taskParticipants.map((participant: any) => (
+                                      <div
+                                        key={participant.id}
+                                        style={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'center',
+                                          padding: '10px',
+                                          background: '#fff',
+                                          borderRadius: '6px',
+                                          border: '1px solid #e2e8f0',
+                                        }}
+                                      >
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                            {participant.user_name || 'Unknown'}
+                                          </div>
+                                          <div style={{ fontSize: '12px', color: '#718096' }}>
+                                            状态: {participant.status === 'pending' ? '待审核' :
+                                                   participant.status === 'accepted' ? '已接受' :
+                                                   participant.status === 'in_progress' ? '进行中' :
+                                                   participant.status === 'completed' ? '已完成' :
+                                                   participant.status === 'exit_requested' ? '退出申请中' :
+                                                   '已退出'}
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                          {/* 审核申请 */}
+                                          {isTaskManager && participant.status === 'pending' && activity.status === 'open' && participant.task_id && (
+                                            <>
+                                              <button
+                                                onClick={async () => {
+                                                  if (!window.confirm('确定要批准这个参与者吗？')) return;
+                                                  try {
+                                                    await approveParticipant(participant.task_id, participant.id, false);
+                                                    message.success('批准成功');
+                                                    await loadMultiTasks();
+                                                  } catch (err: any) {
+                                                    message.error(err.response?.data?.detail || '批准失败');
+                                                  }
+                                                }}
+                                                style={{
+                                                  padding: '6px 12px',
+                                                  background: '#28a745',
+                                                  color: '#fff',
+                                                  border: 'none',
+                                                  borderRadius: '6px',
+                                                  cursor: 'pointer',
+                                                  fontSize: '12px',
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                批准
+                                              </button>
+                                              <button
+                                                onClick={async () => {
+                                                  if (!window.confirm('确定要拒绝这个参与者吗？')) return;
+                                                  try {
+                                                    await rejectParticipant(participant.task_id, participant.id, false);
+                                                    message.success('已拒绝');
+                                                    await loadMultiTasks();
+                                                  } catch (err: any) {
+                                                    message.error(err.response?.data?.detail || '操作失败');
+                                                  }
+                                                }}
+                                                style={{
+                                                  padding: '6px 12px',
+                                                  background: '#dc3545',
+                                                  color: '#fff',
+                                                  border: 'none',
+                                                  borderRadius: '6px',
+                                                  cursor: 'pointer',
+                                                  fontSize: '12px',
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                拒绝
+                                              </button>
+                                            </>
+                                          )}
+                                          {/* 处理退出申请 */}
+                                          {isTaskManager && participant.status === 'exit_requested' && participant.task_id && (
+                                            <>
+                                              <button
+                                                onClick={async () => {
+                                                  if (!window.confirm('确定要批准退出申请吗？')) return;
+                                                  try {
+                                                    await approveExitRequest(participant.task_id, participant.id, false);
+                                                    message.success('退出申请已批准');
+                                                    await loadMultiTasks();
+                                                  } catch (err: any) {
+                                                    message.error(err.response?.data?.detail || '操作失败');
+                                                  }
+                                                }}
+                                                style={{
+                                                  padding: '6px 12px',
+                                                  background: '#28a745',
+                                                  color: '#fff',
+                                                  border: 'none',
+                                                  borderRadius: '6px',
+                                                  cursor: 'pointer',
+                                                  fontSize: '12px',
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                批准退出
+                                              </button>
+                                              <button
+                                                onClick={async () => {
+                                                  if (!window.confirm('确定要拒绝退出申请吗？')) return;
+                                                  try {
+                                                    await rejectExitRequest(participant.task_id, participant.id, false);
+                                                    message.success('退出申请已拒绝');
+                                                    await loadMultiTasks();
+                                                  } catch (err: any) {
+                                                    message.error(err.response?.data?.detail || '操作失败');
+                                                  }
+                                                }}
+                                                style={{
+                                                  padding: '6px 12px',
+                                                  background: '#dc3545',
+                                                  color: '#fff',
+                                                  border: 'none',
+                                                  borderRadius: '6px',
+                                                  cursor: 'pointer',
+                                                  fontSize: '12px',
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                拒绝退出
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                  {/* 审核申请 */}
-                                  {isTaskManager && participant.status === 'pending' && task.status === 'open' && (
-                                    <>
-                                      <button
-                                        onClick={async () => {
-                                          if (!window.confirm('确定要批准这个参与者吗？')) return;
-                                          try {
-                                            await approveParticipant(task.id, participant.id, false);
-                                            message.success('批准成功');
-                                            await loadMultiTasks();
-                                          } catch (err: any) {
-                                            message.error(err.response?.data?.detail || '批准失败');
-                                          }
-                                        }}
-                                        style={{
-                                          padding: '6px 12px',
-                                          background: '#28a745',
-                                          color: '#fff',
-                                          border: 'none',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        批准
-                                      </button>
-                                      <button
-                                        onClick={async () => {
-                                          if (!window.confirm('确定要拒绝这个参与者吗？')) return;
-                                          try {
-                                            await rejectParticipant(task.id, participant.id, false);
-                                            message.success('已拒绝');
-                                            await loadMultiTasks();
-                                          } catch (err: any) {
-                                            message.error(err.response?.data?.detail || '操作失败');
-                                          }
-                                        }}
-                                        style={{
-                                          padding: '6px 12px',
-                                          background: '#dc3545',
-                                          color: '#fff',
-                                          border: 'none',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        拒绝
-                                      </button>
-                                    </>
-                                  )}
-                                  {/* 处理退出申请 */}
-                                  {isTaskManager && participant.status === 'exit_requested' && (
-                                    <>
-                                      <button
-                                        onClick={async () => {
-                                          if (!window.confirm('确定要批准退出申请吗？')) return;
-                                          try {
-                                            await approveExitRequest(task.id, participant.id, false);
-                                            message.success('退出申请已批准');
-                                            await loadMultiTasks();
-                                          } catch (err: any) {
-                                            message.error(err.response?.data?.detail || '操作失败');
-                                          }
-                                        }}
-                                        style={{
-                                          padding: '6px 12px',
-                                          background: '#28a745',
-                                          color: '#fff',
-                                          border: 'none',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        批准退出
-                                      </button>
-                                      <button
-                                        onClick={async () => {
-                                          if (!window.confirm('确定要拒绝退出申请吗？')) return;
-                                          try {
-                                            await rejectExitRequest(task.id, participant.id, false);
-                                            message.success('退出申请已拒绝');
-                                            await loadMultiTasks();
-                                          } catch (err: any) {
-                                            message.error(err.response?.data?.detail || '操作失败');
-                                          }
-                                        }}
-                                        style={{
-                                          padding: '6px 12px',
-                                          background: '#dc3545',
-                                          color: '#fff',
-                                          border: 'none',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        拒绝退出
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
 
                       {/* 操作按钮 */}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                        {isTaskManager && task.status === 'open' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '14px', color: '#718096' }}>
+                            活动状态: {activity.status} | 关联任务数: {tasks.length} | 总参与者数: {currentParticipantsCount}
+                          </span>
+                          {/* 活动时间信息 */}
+                          {activity.has_time_slots ? (
+                            <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              ⏰ 多时间段活动 {activity.activity_end_date ? `(截止: ${new Date(activity.activity_end_date).toLocaleDateString('zh-CN')})` : ''}
+                            </span>
+                          ) : activity.deadline ? (
+                            <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                              📅 截止时间: {new Date(activity.deadline).toLocaleString('zh-CN')}
+                            </span>
+                          ) : null}
+                        </div>
+                        {/* 删除活动按钮（只有活动创建者可以删除） */}
+                        {isTaskManager && activity.status !== 'completed' && activity.status !== 'cancelled' && (
                           <button
                             onClick={async () => {
-                              if (!window.confirm('确定要开始这个任务吗？')) return;
+                              if (!window.confirm(`确定要删除活动"${activity.title}"吗？\n\n删除后：\n- 活动将被取消\n- 所有未开始的任务将被自动取消\n- 已开始的任务不受影响`)) {
+                                return;
+                              }
                               try {
-                                await startMultiParticipantTask(task.id, false);
-                                message.success('任务已开始');
+                                await deleteActivity(activity.id);
+                                message.success('活动已删除');
                                 await loadMultiTasks();
                               } catch (err: any) {
-                                message.error(err.response?.data?.detail || '开始任务失败');
+                                console.error('删除活动失败:', err);
+                                message.error(err.response?.data?.detail || '删除失败，请重试');
                               }
                             }}
                             style={{
                               padding: '8px 16px',
-                              background: '#007bff',
+                              background: '#dc3545',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '6px',
                               cursor: 'pointer',
                               fontSize: '14px',
                               fontWeight: 600,
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.background = '#c82333';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.background = '#dc3545';
+                              e.currentTarget.style.transform = 'translateY(0)';
                             }}
                           >
-                            🚀 开始任务
+                            🗑️ 删除活动
                           </button>
                         )}
-                        {isTaskManager && task.status === 'completed' && (
-                          <button
-                            onClick={async () => {
-                              if (!window.confirm('确定要分配奖励吗？')) return;
-                              try {
-                                const idempotencyKey = `${user.id}_${task.id}_distribute_${Date.now()}`;
-                                if (task.reward_distribution === 'equal') {
-                                  await completeTaskAndDistributeRewardsEqual(task.id, {
-                                    idempotency_key: idempotencyKey
-                                  });
-                                  message.success('奖励已平均分配');
-                                } else {
-                                  message.info('自定义分配功能需要在管理后台完成');
-                                  return;
-                                }
-                                await loadMultiTasks();
-                              } catch (err: any) {
-                                message.error(err.response?.data?.detail || '分配奖励失败');
-                              }
-                            }}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#28a745',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            💰 分配奖励
-                          </button>
-                        )}
-                        <button
-                          onClick={() => navigate(`/tasks/${task.id}`)}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#3b82f6',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          查看详情
-                        </button>
                       </div>
                     </div>
                   );
@@ -2026,7 +2161,7 @@ const TaskExpertDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* 固定时间段服务提示（仅当服务有时间段时显示） */}
+              {/* 时间段选择（仅当服务有时间段时显示） */}
               {(() => {
                 const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
                 return selectedService?.has_time_slots;
@@ -2040,11 +2175,44 @@ const TaskExpertDashboard: React.FC = () => {
                     borderRadius: '8px' 
                   }}>
                     <div style={{ fontSize: '14px', fontWeight: 500, color: '#0369a1', marginBottom: '4px' }}>
-                      ℹ️ 固定时间段服务
+                      ⏰ 时间段服务 - 必须选择时间段
                     </div>
-                    <div style={{ fontSize: '13px', color: '#075985', lineHeight: '1.5' }}>
-                      此服务为固定时间段服务。活动创建后，系统会根据服务配置自动生成所有时间段。
-                      用户申请参与活动时，将选择具体的时间段。
+                    <div style={{ fontSize: '13px', color: '#075985', lineHeight: '1.5', marginBottom: '12px' }}>
+                      此服务为时间段服务，必须选择时间段才能创建活动。您可以选择固定时间段或重复模式。
+                    </div>
+                    
+                    {/* 时间段选择模式 */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                        选择模式 <span style={{ color: '#dc3545' }}>*</span>
+                      </label>
+                      <select
+                        value={createMultiTaskForm.time_slot_selection_mode || ''}
+                        onChange={(e) => {
+                          const mode = e.target.value as 'fixed' | 'recurring_daily' | 'recurring_weekly' | '';
+                          setCreateMultiTaskForm({
+                            ...createMultiTaskForm,
+                            time_slot_selection_mode: mode || undefined,
+                            selected_time_slot_ids: [],
+                            recurring_daily_time_ranges: [],
+                            recurring_weekly_weekdays: [],
+                            recurring_weekly_time_ranges: [],
+                          });
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                        required
+                      >
+                        <option value="">请选择模式</option>
+                        <option value="fixed">固定时间段（选择具体的时间段）</option>
+                        <option value="recurring_daily">每天重复（每天固定时间段）</option>
+                        <option value="recurring_weekly">每周重复（每周几的固定时间段）</option>
+                      </select>
                     </div>
                     {(() => {
                       const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
@@ -2066,6 +2234,569 @@ const TaskExpertDashboard: React.FC = () => {
                       return null;
                     })()}
                   </div>
+                  
+                  {/* 固定模式：多选时间段 */}
+                  {createMultiTaskForm.time_slot_selection_mode === 'fixed' && (
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
+                        选择时间段 <span style={{ color: '#dc3545' }}>*</span>
+                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
+                          （可多选，一个时间段只能被一个活动使用）
+                        </span>
+                      </label>
+                      
+                      {/* 日期选择器 */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#718096' }}>
+                          选择日期范围
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <input
+                            type="date"
+                            value={createMultiTaskForm.selected_time_slot_date || ''}
+                            onChange={async (e) => {
+                              const date = e.target.value;
+                              setCreateMultiTaskForm({ 
+                                ...createMultiTaskForm, 
+                                selected_time_slot_date: date,
+                                selected_time_slot_ids: [],
+                              });
+                              if (date && createMultiTaskForm.service_id && availableTimeSlots.length === 0) {
+                                await loadTimeSlotsForCreateTask(createMultiTaskForm.service_id);
+                              }
+                            }}
+                            min={new Date().toISOString().split('T')[0]}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                          />
+                          <span style={{ color: '#718096' }}>至</span>
+                          <input
+                            type="date"
+                            value={(() => {
+                              if (!createMultiTaskForm.selected_time_slot_date) return '';
+                              const startDate = new Date(createMultiTaskForm.selected_time_slot_date);
+                              const endDate = new Date(startDate);
+                              endDate.setDate(startDate.getDate() + 30);
+                              return endDate.toISOString().split('T')[0];
+                            })()}
+                            onChange={(e) => {
+                              // 结束日期用于显示，实际加载未来30天的时间段
+                            }}
+                            min={createMultiTaskForm.selected_time_slot_date || new Date().toISOString().split('T')[0]}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                            disabled
+                          />
+                        </div>
+                        <div style={{ marginTop: '4px', fontSize: '12px', color: '#718096' }}>
+                          将显示未来30天内的所有可用时间段
+                        </div>
+                      </div>
+                      
+                      {/* 时间段列表（多选） */}
+                      {createMultiTaskForm.service_id && (
+                        <div>
+                          {loadingTimeSlots ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#718096' }}>
+                              加载时间段中...
+                            </div>
+                          ) : (() => {
+                            // 过滤可用时间段（未过期、未满、未被其他活动使用）
+                            const availableSlots = availableTimeSlots.filter((slot: any) => {
+                              if (slot.is_manually_deleted) return false;
+                              if (slot.current_participants >= slot.max_participants) return false;
+                              // 检查是否过期（时间段开始时间已过）
+                              if (slot.slot_start_datetime) {
+                                const slotStart = new Date(slot.slot_start_datetime);
+                                if (slotStart < new Date()) return false;
+                              }
+                              return true;
+                            });
+                            
+                            if (availableSlots.length === 0) {
+                              return (
+                                <div style={{ 
+                                  padding: '20px', 
+                                  textAlign: 'center', 
+                                  color: '#e53e3e',
+                                  background: '#fef2f2',
+                                  borderRadius: '8px',
+                                  border: '1px solid #fecaca',
+                                }}>
+                                  {availableTimeSlots.length === 0 ? (
+                                    <>
+                                      该服务还没有生成时间段
+                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                                        提示：请先在"服务管理"页面批量创建时间段
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      暂无可用时间段
+                                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#718096' }}>
+                                        所有时间段都已过期、已满或被其他活动使用
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            }
+                            
+                            // 按日期分组
+                            const slotsByDate: {[key: string]: any[]} = {};
+                            availableSlots.forEach((slot: any) => {
+                              const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                              let dateStr = '';
+                              try {
+                                dateStr = TimeHandlerV2.formatUtcToLocal(slotStartStr, 'YYYY-MM-DD', 'Europe/London');
+                                if (dateStr.includes(' (GMT)') || dateStr.includes(' (BST)')) {
+                                  dateStr = dateStr.replace(' (GMT)', '').replace(' (BST)', '');
+                                }
+                              } catch {
+                                dateStr = slot.slot_date || '';
+                              }
+                              
+                              if (!slotsByDate[dateStr]) {
+                                slotsByDate[dateStr] = [];
+                              }
+                              slotsByDate[dateStr].push(slot);
+                            });
+                            
+                            return (
+                              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px' }}>
+                                {Object.keys(slotsByDate).sort().map((dateStr) => (
+                                  <div key={dateStr} style={{ marginBottom: '16px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                                      📅 {dateStr}
+                                    </div>
+                                    <div style={{ 
+                                      display: 'grid', 
+                                      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+                                      gap: '8px',
+                                    }}>
+                                      {slotsByDate[dateStr].map((slot: any) => {
+                                        const isSelected = createMultiTaskForm.selected_time_slot_ids?.includes(slot.id) || false;
+                                        const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                                        const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                                        const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                          startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                                          'HH:mm',
+                                          'Europe/London'
+                                        );
+                                        const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                          endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                                          'HH:mm',
+                                          'Europe/London'
+                                        );
+                                        
+                                        return (
+                                          <button
+                                            key={slot.id}
+                                            type="button"
+                                            onClick={() => {
+                                              const currentIds = createMultiTaskForm.selected_time_slot_ids || [];
+                                              const newIds = isSelected
+                                                ? currentIds.filter(id => id !== slot.id)
+                                                : [...currentIds, slot.id];
+                                              setCreateMultiTaskForm({
+                                                ...createMultiTaskForm,
+                                                selected_time_slot_ids: newIds,
+                                              });
+                                            }}
+                                            style={{
+                                              padding: '10px',
+                                              border: `2px solid ${isSelected ? '#3b82f6' : '#cbd5e0'}`,
+                                              borderRadius: '6px',
+                                              background: isSelected ? '#eff6ff' : '#fff',
+                                              cursor: 'pointer',
+                                              transition: 'all 0.2s',
+                                              textAlign: 'left',
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              if (!isSelected) {
+                                                e.currentTarget.style.borderColor = '#3b82f6';
+                                                e.currentTarget.style.background = '#f0f9ff';
+                                              }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              if (!isSelected) {
+                                                e.currentTarget.style.borderColor = '#cbd5e0';
+                                                e.currentTarget.style.background = '#fff';
+                                              }
+                                            }}
+                                          >
+                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1f2937' }}>
+                                              {startTimeUK} - {endTimeUK}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                                              {slot.current_participants}/{slot.max_participants} 人
+                                            </div>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                                {createMultiTaskForm.selected_time_slot_ids && createMultiTaskForm.selected_time_slot_ids.length > 0 && (
+                                  <div style={{ marginTop: '12px', padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#0369a1' }}>
+                                      已选择 {createMultiTaskForm.selected_time_slot_ids.length} 个时间段
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 每天重复模式 */}
+                  {createMultiTaskForm.time_slot_selection_mode === 'recurring_daily' && (
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
+                        每天的时间段范围 <span style={{ color: '#dc3545' }}>*</span>
+                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
+                          （可添加多个时间段范围）
+                        </span>
+                      </label>
+                      
+                      {(createMultiTaskForm.recurring_daily_time_ranges || []).map((range, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                          <input
+                            type="time"
+                            value={range.start}
+                            onChange={(e) => {
+                              const newRanges = [...(createMultiTaskForm.recurring_daily_time_ranges || [])];
+                              newRanges[index].start = e.target.value;
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_daily_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                          />
+                          <span style={{ color: '#718096' }}>至</span>
+                          <input
+                            type="time"
+                            value={range.end}
+                            onChange={(e) => {
+                              const newRanges = [...(createMultiTaskForm.recurring_daily_time_ranges || [])];
+                              newRanges[index].end = e.target.value;
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_daily_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newRanges = (createMultiTaskForm.recurring_daily_time_ranges || []).filter((_, i) => i !== index);
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_daily_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              padding: '10px 16px',
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateMultiTaskForm({
+                            ...createMultiTaskForm,
+                            recurring_daily_time_ranges: [
+                              ...(createMultiTaskForm.recurring_daily_time_ranges || []),
+                              { start: '09:00', end: '12:00' }
+                            ],
+                          });
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#3b82f6',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                        }}
+                      >
+                        + 添加时间段范围
+                      </button>
+                      
+                      {/* 活动截至日期（可选） */}
+                      <div style={{ marginTop: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                          活动截至日期（可选）
+                          <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
+                            留空则活动一直有效，直到您手动取消
+                          </span>
+                        </label>
+                        <input
+                          type="date"
+                          value={createMultiTaskForm.activity_end_date || ''}
+                          onChange={(e) => {
+                            setCreateMultiTaskForm({
+                              ...createMultiTaskForm,
+                              activity_end_date: e.target.value || undefined,
+                            });
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                          }}
+                        />
+                      </div>
+                      
+                      {/* 自动添加新时间段选项 */}
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={createMultiTaskForm.auto_add_new_slots}
+                            onChange={(e) => {
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                auto_add_new_slots: e.target.checked,
+                              });
+                            }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '13px', color: '#374151' }}>
+                            自动添加新匹配的时间段（当服务生成新的时间段时，如果匹配规则，会自动添加到活动中）
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* 每周重复模式 */}
+                  {createMultiTaskForm.time_slot_selection_mode === 'recurring_weekly' && (
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
+                        选择星期几 <span style={{ color: '#dc3545' }}>*</span>
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((day, index) => {
+                          const isSelected = createMultiTaskForm.recurring_weekly_weekdays?.includes(index) || false;
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => {
+                                const currentWeekdays = createMultiTaskForm.recurring_weekly_weekdays || [];
+                                const newWeekdays = isSelected
+                                  ? currentWeekdays.filter(w => w !== index)
+                                  : [...currentWeekdays, index];
+                                setCreateMultiTaskForm({
+                                  ...createMultiTaskForm,
+                                  recurring_weekly_weekdays: newWeekdays,
+                                });
+                              }}
+                              style={{
+                                padding: '8px 16px',
+                                border: `2px solid ${isSelected ? '#3b82f6' : '#cbd5e0'}`,
+                                borderRadius: '6px',
+                                background: isSelected ? '#eff6ff' : '#fff',
+                                color: isSelected ? '#3b82f6' : '#374151',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: isSelected ? 600 : 400,
+                                transition: 'all 0.2s',
+                              }}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
+                        时间段范围 <span style={{ color: '#dc3545' }}>*</span>
+                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
+                          （可添加多个时间段范围）
+                        </span>
+                      </label>
+                      
+                      {(createMultiTaskForm.recurring_weekly_time_ranges || []).map((range, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                          <input
+                            type="time"
+                            value={range.start}
+                            onChange={(e) => {
+                              const newRanges = [...(createMultiTaskForm.recurring_weekly_time_ranges || [])];
+                              newRanges[index].start = e.target.value;
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_weekly_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                          />
+                          <span style={{ color: '#718096' }}>至</span>
+                          <input
+                            type="time"
+                            value={range.end}
+                            onChange={(e) => {
+                              const newRanges = [...(createMultiTaskForm.recurring_weekly_time_ranges || [])];
+                              newRanges[index].end = e.target.value;
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_weekly_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newRanges = (createMultiTaskForm.recurring_weekly_time_ranges || []).filter((_, i) => i !== index);
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                recurring_weekly_time_ranges: newRanges,
+                              });
+                            }}
+                            style={{
+                              padding: '10px 16px',
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateMultiTaskForm({
+                            ...createMultiTaskForm,
+                            recurring_weekly_time_ranges: [
+                              ...(createMultiTaskForm.recurring_weekly_time_ranges || []),
+                              { start: '09:00', end: '12:00' }
+                            ],
+                          });
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#3b82f6',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                        }}
+                      >
+                        + 添加时间段范围
+                      </button>
+                      
+                      {/* 活动截至日期（可选） */}
+                      <div style={{ marginTop: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                          活动截至日期（可选）
+                          <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
+                            留空则活动一直有效，直到您手动取消
+                          </span>
+                        </label>
+                        <input
+                          type="date"
+                          value={createMultiTaskForm.activity_end_date || ''}
+                          onChange={(e) => {
+                            setCreateMultiTaskForm({
+                              ...createMultiTaskForm,
+                              activity_end_date: e.target.value || undefined,
+                            });
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                          }}
+                        />
+                      </div>
+                      
+                      {/* 自动添加新时间段选项 */}
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={createMultiTaskForm.auto_add_new_slots}
+                            onChange={(e) => {
+                              setCreateMultiTaskForm({
+                                ...createMultiTaskForm,
+                                auto_add_new_slots: e.target.checked,
+                              });
+                            }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '13px', color: '#374151' }}>
+                            自动添加新匹配的时间段（当服务生成新的时间段时，如果匹配规则，会自动添加到活动中）
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* 可选：预览时间段（不强制选择，仅用于查看） */}
                   <details style={{ marginBottom: '12px' }}>
@@ -2692,11 +3423,50 @@ const TaskExpertDashboard: React.FC = () => {
                         taskData: taskData
                       });
                       
-                      // 如果服务有时间段，使用时间段配置；否则使用截至日期
+                      // 如果服务有时间段，必须选择时间段
                       if (selectedService.has_time_slots) {
-                        // 固定时间段服务：不需要截至日期，时间段信息已经在 timeSlotConfig 中
-                        // 注意：任务达人创建活动时不需要选择具体时间段，系统会根据服务配置自动生成所有时间段
-                        // 用户申请时才会选择具体的时间段
+                        // 验证必须选择时间段
+                        if (!createMultiTaskForm.time_slot_selection_mode) {
+                          message.error('时间段服务必须选择时间段');
+                          return;
+                        }
+                        
+                        // 添加时间段选择信息
+                        taskData.time_slot_selection_mode = createMultiTaskForm.time_slot_selection_mode;
+                        
+                        if (createMultiTaskForm.time_slot_selection_mode === 'fixed') {
+                          // 固定模式：必须选择至少一个时间段
+                          if (!createMultiTaskForm.selected_time_slot_ids || createMultiTaskForm.selected_time_slot_ids.length === 0) {
+                            message.error('固定模式必须选择至少一个时间段');
+                            return;
+                          }
+                          taskData.selected_time_slot_ids = createMultiTaskForm.selected_time_slot_ids;
+                        } else if (createMultiTaskForm.time_slot_selection_mode === 'recurring_daily') {
+                          // 每天重复模式：必须指定时间段范围
+                          if (!createMultiTaskForm.recurring_daily_time_ranges || createMultiTaskForm.recurring_daily_time_ranges.length === 0) {
+                            message.error('每天重复模式必须指定至少一个时间段范围');
+                            return;
+                          }
+                          taskData.recurring_daily_time_ranges = createMultiTaskForm.recurring_daily_time_ranges;
+                        } else if (createMultiTaskForm.time_slot_selection_mode === 'recurring_weekly') {
+                          // 每周重复模式：必须指定星期几和时间段范围
+                          if (!createMultiTaskForm.recurring_weekly_weekdays || createMultiTaskForm.recurring_weekly_weekdays.length === 0) {
+                            message.error('每周重复模式必须选择至少一个星期几');
+                            return;
+                          }
+                          if (!createMultiTaskForm.recurring_weekly_time_ranges || createMultiTaskForm.recurring_weekly_time_ranges.length === 0) {
+                            message.error('每周重复模式必须指定至少一个时间段范围');
+                            return;
+                          }
+                          taskData.recurring_weekly_weekdays = createMultiTaskForm.recurring_weekly_weekdays;
+                          taskData.recurring_weekly_time_ranges = createMultiTaskForm.recurring_weekly_time_ranges;
+                        }
+                        
+                        // 添加自动添加新时间段选项和活动截至日期
+                        taskData.auto_add_new_slots = createMultiTaskForm.auto_add_new_slots;
+                        if (createMultiTaskForm.activity_end_date) {
+                          taskData.activity_end_date = createMultiTaskForm.activity_end_date;
+                        }
                       } else {
                         // 非固定时间段服务：使用截至日期
                         taskData.deadline = new Date(createMultiTaskForm.deadline).toISOString();

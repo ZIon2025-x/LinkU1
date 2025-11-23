@@ -50,6 +50,13 @@ interface TimeSlot {
   current_participants: number;
   is_available: boolean;
   is_expired?: boolean;  // 时间段是否已过期
+  // 活动相关字段（如果时间段被活动使用）
+  has_activity?: boolean;
+  activity_id?: number;
+  activity_title?: string;
+  activity_price?: number;
+  activity_original_price?: number;
+  activity_discount_percentage?: number;
 }
 
 interface ExpertInfo {
@@ -547,14 +554,60 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                                         {startTimeUK} - {endTimeUK}
                                         {isExpired && <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ef4444' }}>(已过期)</span>}
                                       </div>
-                                      <div style={{ 
-                                        fontSize: '13px', 
-                                        color: '#059669', 
-                                        marginBottom: '6px',
-                                        fontWeight: 600,
-                                      }}>
-                                        {service.currency} {slot.price_per_participant.toFixed(2)} / 人
-                                      </div>
+                                      {/* 活动标识和价格 */}
+                                      {slot.has_activity && slot.activity_id ? (
+                                        <div style={{ marginBottom: '6px' }}>
+                                          <div style={{ 
+                                            display: 'inline-block',
+                                            padding: '2px 6px',
+                                            background: '#fef3c7',
+                                            color: '#92400e',
+                                            borderRadius: '4px',
+                                            fontSize: '11px',
+                                            fontWeight: 600,
+                                            marginBottom: '4px',
+                                          }}>
+                                            🎯 活动价
+                                          </div>
+                                          <div style={{ 
+                                            fontSize: '13px', 
+                                            color: '#dc2626', 
+                                            fontWeight: 600,
+                                          }}>
+                                            {service.currency} {slot.activity_price?.toFixed(2) || slot.price_per_participant.toFixed(2)} / 人
+                                            {slot.activity_original_price && slot.activity_original_price > (slot.activity_price || slot.price_per_participant) && (
+                                              <span style={{ 
+                                                marginLeft: '6px',
+                                                fontSize: '11px',
+                                                color: '#9ca3af',
+                                                textDecoration: 'line-through',
+                                                fontWeight: 400,
+                                              }}>
+                                                {service.currency} {slot.activity_original_price.toFixed(2)}
+                                              </span>
+                                            )}
+                                            {slot.activity_discount_percentage && slot.activity_discount_percentage > 0 && (
+                                              <span style={{ 
+                                                marginLeft: '6px',
+                                                fontSize: '11px',
+                                                color: '#dc2626',
+                                                fontWeight: 600,
+                                              }}>
+                                                省{slot.activity_discount_percentage.toFixed(0)}%
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div style={{ 
+                                          fontSize: '13px', 
+                                          color: '#059669', 
+                                          marginBottom: '6px',
+                                          fontWeight: 600,
+                                        }}>
+                                          {service.currency} {slot.price_per_participant.toFixed(2)} / 人
+                                        </div>
+                                      )}
                                       <div style={{ 
                                         fontSize: '12px', 
                                         color: isFull ? '#e53e3e' : '#48bb78',

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
@@ -757,6 +757,13 @@ const Tasks: React.FC = () => {
   // 活动详情弹窗状态（用于达人发布的多人活动）
   const [showActivityDetailModal, setShowActivityDetailModal] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]); // 活动列表
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  // 活动时间段列表（用于时间段服务）
+  const [activityTimeSlots, setActivityTimeSlots] = useState<any[]>([]);
+  const [loadingActivityTimeSlots, setLoadingActivityTimeSlots] = useState(false);
+  // 选中的时间段ID（用于多时间段活动）
+  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState<number | null>(null);
   
   // 已申请任务状态
   const [appliedTasks, setAppliedTasks] = useState<Set<number>>(new Set());
@@ -964,6 +971,8 @@ const Tasks: React.FC = () => {
     if (filters.cityInitialized) {
       // 使用 ref 来调用，避免依赖 loadTasks 导致循环
       loadTasksRef.current(false); // 初始加载，不是加载更多
+      // 同时加载活动列表
+      loadActivities();
     }
   }, [filters.type, filters.city, filters.debouncedKeyword, filters.cityInitialized]); // 移除 loadTasks 依赖，使用 ref 避免循环触发
   
@@ -1021,12 +1030,21 @@ const Tasks: React.FC = () => {
 
   // 显示的任务列表（包含固定卡片）
   const displayTasks = useMemo(() => {
+    // 合并活动和任务列表
+    // 过滤活动：排除已经有任务关联的活动（避免重复显示）
+    const activitiesWithoutTasks = activities.filter(activity => {
+      return !filteredTasks.some(task => task.parent_activity_id === activity.id);
+    });
+    
+    // 合并列表：先显示活动，再显示任务
+    const combined = [...activitiesWithoutTasks, ...filteredTasks];
+    
     // 如果选择了二手任务类型，在第一个位置插入固定卡片
     if (filters.type === TaskType.SecondHandAndRental) {
-      return [fleaMarketCard, ...filteredTasks];
+      return [fleaMarketCard, ...combined];
     }
-    return filteredTasks;
-  }, [filteredTasks, filters.type, fleaMarketCard]);
+    return combined;
+  }, [filteredTasks, activities, filters.type, fleaMarketCard]);
 
   // 动态判断是否使用虚拟滚动（任务数超过 50 时启用）
   const shouldUseVirtualList = displayTasks.length > 50;
@@ -1275,21 +1293,38 @@ const Tasks: React.FC = () => {
 
   // 判断任务是否是达人发布的多人活动
   // 判断条件：
-  // 1. 通过 expert_creator_id 判断（有达人创建者ID）
-  // 2. 通过任务等级判断（expert 等级且是多人活动）
-  const isExpertMultiParticipantActivity = useCallback((task: any) => {
-    if (task.is_multi_participant !== true) {
-      return false;
+  // 加载活动列表
+  const loadActivities = useCallback(async () => {
+    setLoadingActivities(true);
+    try {
+      const activitiesData = await getActivities({
+        status: 'open',
+        limit: 100, // 获取所有开放的活动
+      });
+      setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+    } catch (error) {
+      console.error('加载活动列表失败:', error);
+      setActivities([]);
+    } finally {
+      setLoadingActivities(false);
     }
-    
-    // 方式1：通过 expert_creator_id 判断
-    const isExpertCreated = task.expert_creator_id && task.expert_creator_id !== null;
-    
-    // 方式2：通过任务等级判断（expert 等级且是多人活动）
-    const isExpertLevel = task.task_level === 'expert' && task.is_multi_participant === true;
-    
-    return isExpertCreated || isExpertLevel;
   }, []);
+
+  // 判断是否是活动（通过活动ID列表）
+  const isActivity = useCallback((item: any) => {
+    return activities.some(activity => activity.id === item.id);
+  }, [activities]);
+
+  // 判断任务是否关联到活动（通过 parent_activity_id）
+  const isTaskFromActivity = useCallback((task: any) => {
+    return task.parent_activity_id && task.parent_activity_id !== null;
+  }, []);
+
+  // 获取任务关联的活动
+  const getActivityForTask = useCallback((task: any) => {
+    if (!task.parent_activity_id) return null;
+    return activities.find(activity => activity.id === task.parent_activity_id);
+  }, [activities]);
 
   // 处理任务详情查看
   const handleViewTask = useCallback((taskId: number | string) => {
@@ -1304,9 +1339,37 @@ const Tasks: React.FC = () => {
   }, [language, navigate]);
 
   // 处理活动详情查看（达人发布的多人活动）
-  const handleViewActivity = useCallback((activity: any) => {
+  const handleViewActivity = useCallback(async (activity: any) => {
     setSelectedActivity(activity);
     setShowActivityDetailModal(true);
+    setSelectedTimeSlotId(null); // 重置选中的时间段
+    
+    // 如果是时间段服务，加载时间段列表
+    if (activity.has_time_slots && activity.expert_service_id) {
+      setLoadingActivityTimeSlots(true);
+      try {
+        const { getServiceTimeSlotsPublic } = await import('../api');
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + 60); // 加载未来60天的时间段
+        const slots = await getServiceTimeSlotsPublic(activity.expert_service_id, {
+          start_date: today.toISOString().split('T')[0],
+          end_date: futureDate.toISOString().split('T')[0],
+        });
+        // 只显示与该活动关联的时间段（通过activity_id匹配）
+        const activitySlots = Array.isArray(slots) 
+          ? slots.filter((slot: any) => slot.has_activity && slot.activity_id === activity.id)
+          : [];
+        setActivityTimeSlots(activitySlots);
+      } catch (err: any) {
+        console.error('加载活动时间段失败:', err);
+        setActivityTimeSlots([]);
+      } finally {
+        setLoadingActivityTimeSlots(false);
+      }
+    } else {
+      setActivityTimeSlots([]);
+    }
   }, []);
 
   // 处理联系发布者（跳转到任务聊天页面）
@@ -1365,18 +1428,24 @@ const Tasks: React.FC = () => {
       ? activity.service_images[0]
       : 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop';
     
-    // 格式化价格显示
-    const priceText = activity.reward && activity.reward > 0 
-      ? `${activity.currency || 'GBP'}${activity.reward.toFixed(2)}/人`
-      : '免费';
+    // 格式化价格显示（支持折扣）
+    const hasDiscount = activity.discount_percentage && activity.discount_percentage > 0;
+    const originalPrice = activity.original_price_per_participant || activity.reward;
+    const currentPrice = activity.discounted_price_per_participant || activity.reward;
+    const currency = activity.currency || 'GBP';
     
     // 格式化日期显示
-    const dateText = activity.deadline 
-      ? new Date(activity.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-      : '';
-    const timeText = activity.deadline 
-      ? new Date(activity.deadline).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-      : '';
+    // 对于多时间段活动，不显示单个日期，而是显示提示
+    let dateText = '';
+    let timeText = '';
+    if (!activity.has_time_slots && activity.deadline) {
+      dateText = new Date(activity.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+      timeText = new Date(activity.deadline).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    } else if (activity.has_time_slots) {
+      // 多时间段活动显示提示
+      dateText = '多个时间段可选';
+      timeText = '';
+    }
     
     return (
       <div
@@ -1467,7 +1536,7 @@ const Tasks: React.FC = () => {
             >
               🎯 活动
             </div>
-            {activity.reward && activity.reward > 0 && (
+            {currentPrice && currentPrice > 0 && (
               <div
                 style={{
                   background: 'rgba(255, 255, 255, 0.9)',
@@ -1476,9 +1545,35 @@ const Tasks: React.FC = () => {
                   borderRadius: '14px',
                   fontSize: '11px',
                   fontWeight: 700,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  gap: '2px',
                 }}
               >
-                {priceText}
+                {hasDiscount && originalPrice && originalPrice > currentPrice ? (
+                  <>
+                    <div
+                      style={{
+                        fontSize: '9px',
+                        color: '#6b7280',
+                        textDecoration: 'line-through',
+                        opacity: 0.8,
+                      }}
+                    >
+                      {currency}{originalPrice.toFixed(2)}
+                    </div>
+                    <div style={{ color: '#059669' }}>
+                      {currency}{currentPrice.toFixed(2)}/人
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#059669' }}>
+                    {currentPrice && currentPrice > 0 
+                      ? `${currency}${currentPrice.toFixed(2)}/人`
+                      : '免费'}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1533,8 +1628,21 @@ const Tasks: React.FC = () => {
                 <span style={{ fontWeight: 700 }}>
                   {activity.current_participants || 0} / {activity.max_participants}
                 </span>
+                {/* 注意：current_participants 需要从关联任务计算，这里暂时显示0，后续可以从后端返回 */}
               </div>
-              {(dateText || timeText) && (
+              {activity.has_time_slots ? (
+                <div
+                  style={{
+                    fontSize: '10px',
+                    background: 'rgba(16, 185, 129, 0.25)',
+                    padding: '3px 6px',
+                    borderRadius: '6px',
+                    fontWeight: 500,
+                  }}
+                >
+                  ⏰ {dateText}
+                </div>
+              ) : (dateText || timeText) ? (
                 <div
                   style={{
                     fontSize: '10px',
@@ -1545,7 +1653,7 @@ const Tasks: React.FC = () => {
                 >
                   📅 {dateText} {timeText}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -1572,8 +1680,18 @@ const Tasks: React.FC = () => {
       );
     }
     
-    // 如果是达人发布的多人活动，使用活动卡片样式
-    if (isExpertMultiParticipantActivity(task)) {
+    // 如果是任务关联到活动，使用活动卡片样式
+    const relatedActivity = getActivityForTask(task);
+    if (relatedActivity) {
+      return (
+        <div style={{ ...style, padding: `${gap / 2}px` }}>
+          {renderActivityCard(relatedActivity)}
+        </div>
+      );
+    }
+    
+    // 如果是活动（在活动列表中），使用活动卡片样式
+    if (isActivity(task)) {
       return (
         <div style={{ ...style, padding: `${gap / 2}px` }}>
           {renderActivityCard(task)}
@@ -1599,7 +1717,7 @@ const Tasks: React.FC = () => {
         />
       </div>
     );
-  }, [displayTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t, isExpertMultiParticipantActivity, renderActivityCard]);
+  }, [displayTasks, columnCount, gap, isMobile, language, handleViewTask, getTaskTypeLabel, getRemainTime, isExpired, isExpiringSoon, getTaskLevelColor, getTaskLevelLabel, t, isActivity, getActivityForTask, renderActivityCard]);
 
   return (
     <div className={styles.pageContainer}>
@@ -1896,11 +2014,21 @@ const Tasks: React.FC = () => {
                       <FleaMarketCard key={task.id} isMobile={isMobile} />
                     );
                   }
-                  // 如果是达人发布的多人活动，使用活动卡片样式
-                  if (isExpertMultiParticipantActivity(task)) {
+                  // 如果是活动（在活动列表中），使用活动卡片样式
+                  if (isActivity(task)) {
                     return (
                       <div key={task.id}>
                         {renderActivityCard(task)}
+                      </div>
+                    );
+                  }
+                  
+                  // 如果是任务关联到活动，使用活动卡片样式
+                  const relatedActivity = getActivityForTask(task);
+                  if (relatedActivity) {
+                    return (
+                      <div key={task.id}>
+                        {renderActivityCard(relatedActivity)}
                       </div>
                     );
                   }
@@ -2269,14 +2397,44 @@ const Tasks: React.FC = () => {
                     参与费用
                   </div>
                   <div style={{ fontSize: '24px', fontWeight: 700, color: '#0284c7' }}>
-                    <span>
-                      {selectedActivity.reward && selectedActivity.reward > 0
-                        ? `${selectedActivity.currency || 'GBP'}${selectedActivity.reward.toFixed(2)}`
-                        : '免费'}
-                    </span>
-                    {selectedActivity.reward && selectedActivity.reward > 0 && (
-                      <span style={{ fontSize: '14px', fontWeight: 400, color: '#0369a1' }}> / 人</span>
-                    )}
+                    {(() => {
+                      const hasDiscount = selectedActivity.discount_percentage && selectedActivity.discount_percentage > 0;
+                      const originalPrice = selectedActivity.original_price_per_participant || selectedActivity.reward;
+                      const currentPrice = selectedActivity.discounted_price_per_participant || selectedActivity.reward;
+                      const currency = selectedActivity.currency || 'GBP';
+                      
+                      if (!currentPrice || currentPrice <= 0) {
+                        return <span>免费</span>;
+                      }
+                      
+                      if (hasDiscount && originalPrice && originalPrice > currentPrice) {
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ textDecoration: 'line-through', fontSize: '18px', color: '#9ca3af', fontWeight: 400 }}>
+                                {currency}{originalPrice.toFixed(2)}
+                              </span>
+                              <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 600, background: '#fee2e2', padding: '2px 6px', borderRadius: '4px' }}>
+                                -{selectedActivity.discount_percentage.toFixed(0)}%
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: '#0284c7' }}>
+                                {currency}{currentPrice.toFixed(2)}
+                              </span>
+                              <span style={{ fontSize: '14px', fontWeight: 400, color: '#0369a1' }}> / 人</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <>
+                          <span>{currency}{currentPrice.toFixed(2)}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 400, color: '#0369a1' }}> / 人</span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div
@@ -2299,6 +2457,7 @@ const Tasks: React.FC = () => {
                     </span>{' '}
                     个空位
                   </div>
+                  {/* 注意：current_participants 需要从关联任务计算，这里暂时显示0，后续可以从后端返回 */}
                 </div>
               </div>
 
@@ -2328,7 +2487,196 @@ const Tasks: React.FC = () => {
               </div>
 
               {/* 时间段信息 */}
-              {selectedActivity.deadline && (
+              {selectedActivity.has_time_slots ? (
+                // 时间段服务：显示时间段列表
+                <div
+                  style={{
+                    marginBottom: '20px',
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: '#2d3748',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span>⏰</span>
+                    <span>可选时间段</span>
+                  </h3>
+                  {loadingActivityTimeSlots ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>
+                      加载时间段中...
+                    </div>
+                  ) : activityTimeSlots.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>
+                      暂无可用时间段
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      maxHeight: '300px', 
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}>
+                      {(() => {
+                        // 按日期分组显示时间段
+                        const { TimeHandlerV2 } = require('../utils/timeUtils');
+                        const slotsByDate: { [key: string]: any[] } = {};
+                        activityTimeSlots
+                          .sort((a, b) => {
+                            const aStart = a.slot_start_datetime || (a.slot_date + 'T' + a.start_time + 'Z');
+                            const bStart = b.slot_start_datetime || (b.slot_date + 'T' + b.start_time + 'Z');
+                            return aStart.localeCompare(bStart);
+                          })
+                          .forEach((slot: any) => {
+                            const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                            const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+                              slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+                              'YYYY-MM-DD',
+                              'Europe/London'
+                            );
+                            if (!slotsByDate[slotDateUK]) {
+                              slotsByDate[slotDateUK] = [];
+                            }
+                            slotsByDate[slotDateUK].push(slot);
+                          });
+
+                        const dates = Object.keys(slotsByDate).sort();
+                        
+                        return dates.map(date => {
+                          const slots = slotsByDate[date];
+                          const firstSlot = slots[0];
+                          const dateStr = firstSlot.slot_start_datetime || firstSlot.slot_date;
+                          const formattedDate = TimeHandlerV2.formatUtcToLocal(
+                            dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00Z`,
+                            'YYYY年MM月DD日 ddd',
+                            'Europe/London'
+                          );
+                          
+                          return (
+                            <div key={date} style={{ marginBottom: '12px' }}>
+                              <div style={{ 
+                                fontSize: '13px', 
+                                fontWeight: 600, 
+                                color: '#1a202c', 
+                                marginBottom: '8px',
+                                paddingBottom: '6px',
+                                borderBottom: '1px solid #e2e8f0',
+                              }}>
+                                📅 {formattedDate}
+                              </div>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+                                gap: '8px',
+                              }}>
+                                {slots.map((slot: any) => {
+                                  const isFull = slot.current_participants >= slot.max_participants;
+                                  const isExpired = slot.is_expired === true;
+                                  const availableSpots = slot.max_participants - slot.current_participants;
+                                  
+                                  const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                                  const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                                  const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                    startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                                    'HH:mm',
+                                    'Europe/London'
+                                  );
+                                  const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                                    endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                                    'HH:mm',
+                                    'Europe/London'
+                                  );
+                                  
+                                  const isSelected = selectedTimeSlotId === slot.id;
+                                  const isClickable = !isExpired && !isFull;
+                                  
+                                  return (
+                                    <div
+                                      key={slot.id}
+                                      onClick={() => {
+                                        if (isClickable) {
+                                          setSelectedTimeSlotId(slot.id);
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '10px',
+                                        border: `2px solid ${isSelected ? '#3b82f6' : (isExpired || isFull ? '#e2e8f0' : '#cbd5e0')}`,
+                                        borderRadius: '8px',
+                                        background: isSelected ? '#eff6ff' : (isExpired || isFull ? '#f7fafc' : '#fff'),
+                                        opacity: isExpired || isFull ? 0.7 : 1,
+                                        cursor: isClickable ? 'pointer' : 'not-allowed',
+                                        transition: 'all 0.2s',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (isClickable && !isSelected) {
+                                          e.currentTarget.style.borderColor = '#3b82f6';
+                                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.2)';
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (isClickable && !isSelected) {
+                                          e.currentTarget.style.borderColor = '#cbd5e0';
+                                          e.currentTarget.style.boxShadow = 'none';
+                                        }
+                                      }}
+                                    >
+                                      <div style={{ 
+                                        fontWeight: 600, 
+                                        color: isExpired ? '#9ca3af' : (isSelected ? '#3b82f6' : '#1a202c'), 
+                                        marginBottom: '4px',
+                                        fontSize: '13px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                      }}>
+                                        <span>{startTimeUK} - {endTimeUK}</span>
+                                        {isSelected && (
+                                          <span style={{ 
+                                            fontSize: '11px', 
+                                            color: '#3b82f6',
+                                            fontWeight: 600,
+                                          }}>✓ 已选择</span>
+                                        )}
+                                        {isExpired && <span style={{ marginLeft: '4px', fontSize: '11px', color: '#ef4444' }}>(已过期)</span>}
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: '12px', 
+                                        color: '#059669', 
+                                        marginBottom: '4px',
+                                        fontWeight: 600,
+                                      }}>
+                                        {selectedActivity.currency || 'GBP'} {slot.activity_price?.toFixed(2) || slot.price_per_participant.toFixed(2)} / 人
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: '11px', 
+                                        color: isFull ? '#e53e3e' : '#48bb78',
+                                      }}>
+                                        {isFull ? `已满 (${slot.current_participants}/${slot.max_participants})` : `${slot.current_participants}/${slot.max_participants} 人 (${availableSpots} 个空位)`}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </div>
+              ) : selectedActivity.deadline ? (
+                // 非时间段服务：显示截止日期
                 <div
                   style={{
                     marginBottom: '20px',
@@ -2384,7 +2732,7 @@ const Tasks: React.FC = () => {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* 操作按钮 */}
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -2392,6 +2740,7 @@ const Tasks: React.FC = () => {
                   onClick={() => {
                     setShowActivityDetailModal(false);
                     setSelectedActivity(null);
+                    setActivityTimeSlots([]);
                   }}
                   style={{
                     flex: 1,
@@ -2415,34 +2764,104 @@ const Tasks: React.FC = () => {
                   关闭
                 </button>
                 <button
-                  onClick={() => {
-                    navigate(`/tasks/${selectedActivity.id}`);
-                    setShowActivityDetailModal(false);
-                    setSelectedActivity(null);
+                  onClick={async () => {
+                    if (!user) {
+                      setShowLoginModal(true);
+                      return;
+                    }
+                    
+                    // 如果是时间段服务，需要选择时间段
+                    if (selectedActivity.has_time_slots) {
+                      // 检查是否已选择时间段
+                      if (!selectedTimeSlotId) {
+                        message.warning('请先选择一个时间段');
+                        return;
+                      }
+                      // 验证选中的时间段是否仍然可用
+                      const selectedSlot = activityTimeSlots.find((slot: any) => slot.id === selectedTimeSlotId);
+                      if (!selectedSlot) {
+                        message.warning('选中的时间段不存在');
+                        return;
+                      }
+                      if (selectedSlot.is_expired || selectedSlot.current_participants >= selectedSlot.max_participants) {
+                        message.warning('选中的时间段已不可用，请重新选择');
+                        setSelectedTimeSlotId(null);
+                        return;
+                      }
+                      try {
+                        const idempotencyKey = `${user.id}_${selectedActivity.id}_${Date.now()}`;
+                        await applyToActivity(selectedActivity.id, {
+                          idempotency_key: idempotencyKey,
+                          time_slot_id: selectedTimeSlotId,
+                          is_multi_participant: false, // 默认创建单个任务
+                        });
+                        message.success('申请成功！已为您创建任务');
+                        setShowActivityDetailModal(false);
+                        setSelectedActivity(null);
+                        setActivityTimeSlots([]);
+                        setSelectedTimeSlotId(null);
+                        // 重新加载任务列表以显示新创建的任务
+                        loadTasksRef.current(false);
+                      } catch (err: any) {
+                        console.error('申请活动失败:', err);
+                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                      }
+                    } else {
+                      // 非时间段服务
+                      try {
+                        const idempotencyKey = `${user.id}_${selectedActivity.id}_${Date.now()}`;
+                        await applyToActivity(selectedActivity.id, {
+                          idempotency_key: idempotencyKey,
+                          is_multi_participant: false, // 默认创建单个任务
+                        });
+                        message.success('申请成功！已为您创建任务');
+                        setShowActivityDetailModal(false);
+                        setSelectedActivity(null);
+                        setActivityTimeSlots([]);
+                        setSelectedTimeSlotId(null);
+                        // 重新加载任务列表以显示新创建的任务
+                        loadTasksRef.current(false);
+                      } catch (err: any) {
+                        console.error('申请活动失败:', err);
+                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                      }
+                    }
                   }}
+                  disabled={selectedActivity.has_time_slots && !selectedTimeSlotId}
                   style={{
                     flex: 2,
                     padding: '14px',
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    background: selectedActivity.has_time_slots && !selectedTimeSlotId 
+                      ? 'linear-gradient(135deg, #9ca3af, #6b7280)' 
+                      : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '15px',
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: selectedActivity.has_time_slots && !selectedTimeSlotId ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s',
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                    boxShadow: selectedActivity.has_time_slots && !selectedTimeSlotId 
+                      ? 'none' 
+                      : '0 4px 12px rgba(59, 130, 246, 0.3)',
+                    opacity: selectedActivity.has_time_slots && !selectedTimeSlotId ? 0.6 : 1,
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                    if (!(selectedActivity.has_time_slots && !selectedTimeSlotId)) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                    }
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                    if (!(selectedActivity.has_time_slots && !selectedTimeSlotId)) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                    }
                   }}
                 >
-                  立即申请参与
+                  {selectedActivity.has_time_slots 
+                    ? (selectedTimeSlotId ? '立即申请参与' : '请先选择一个时间段')
+                    : '立即申请参与'}
                 </button>
               </div>
             </div>

@@ -796,8 +796,97 @@
         </div>
     </div>
 
-    <!-- 示例10: 图片作为背景的活动卡片 -->
-    <h2>示例10: 图片背景活动卡片（沉浸式设计）</h2>
+    <!-- 示例10: 多时间段活动卡片 -->
+    <h2>示例10: 多时间段活动卡片（多个时间段可选）</h2>
+    <div class="container">
+        <div style="
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+        " onmouseenter="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.15)'" 
+           onmouseleave="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
+            <!-- 服务图片 -->
+            <div style="
+                width: 100%;
+                height: 160px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                position: relative;
+                overflow: hidden;
+            ">
+                <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop" 
+                     alt="麻将房" 
+                     style="width: 100%; height: 100%; object-fit: cover;">
+                <div style="
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    color: #667eea;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 600;
+                ">活动</div>
+                <div style="
+                    position: absolute;
+                    top: 12px;
+                    left: 12px;
+                    background: rgba(16, 185, 129, 0.9);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 600;
+                ">⏰ 多个时间段可选</div>
+            </div>
+            <div style="padding: 16px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1a202c; line-height: 1.4;">
+                    麻将房体验活动
+                </h3>
+                <p style="
+                    margin: 0 0 12px 0;
+                    font-size: 13px;
+                    color: #718096;
+                    line-height: 1.5;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                ">
+                    周末麻将房体验，4人一组，每小时£15/人，包含茶水和零食。多个时间段可选，灵活安排。
+                </p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="font-size: 12px; color: #4a5568;">
+                        <span style="font-weight: 500;">参与者: </span>
+                        2 / 4
+                    </div>
+                    <div style="font-size: 15px; font-weight: 700; color: #059669;">
+                        £15/人
+                    </div>
+                </div>
+                <div style="
+                    font-size: 12px;
+                    color: #10b981;
+                    padding: 8px;
+                    background: #f0fdf4;
+                    border-radius: 6px;
+                    border: 1px solid #bbf7d0;
+                    text-align: center;
+                    font-weight: 500;
+                ">
+                    📅 点击查看所有可选时间段
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例11: 图片作为背景的活动卡片 -->
+    <h2>示例11: 图片背景活动卡片（沉浸式设计）</h2>
     <div class="container">
         <div style="
             background: #fff;
@@ -926,6 +1015,25 @@
         </div>
     </div>
 
+    <!-- 多时间段活动详情示例 -->
+    <h2>多时间段活动详情模态框示例</h2>
+    <div style="margin-bottom: 40px;">
+        <button onclick="openActivityModal(multiTimeSlotActivityData)" style="
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'" 
+           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+            点击查看多时间段活动详情
+        </button>
+    </div>
+
     <!-- 活动详情弹窗 -->
     <div id="activityModal" class="activity-modal-overlay" onclick="if(event.target === this) closeActivityModal()">
         <div class="activity-modal" onclick="event.stopPropagation()">
@@ -1027,7 +1135,7 @@
                 </div>
 
                 <!-- 时间段信息 -->
-                <div style="
+                <div id="modalTimeSlotSection" style="
                     margin-bottom: 20px;
                     padding: 16px;
                     background: #f8fafc;
@@ -1044,9 +1152,10 @@
                         gap: 8px;
                     ">
                         <span>⏰</span>
-                        <span>活动时间</span>
+                        <span id="modalTimeSlotTitle">活动时间</span>
                     </h3>
-                    <div style="
+                    <!-- 单时间段显示 -->
+                    <div id="modalSingleTimeSlot" style="
                         display: flex;
                         align-items: center;
                         gap: 12px;
@@ -1058,6 +1167,170 @@
                         <span id="modalActivityDate">2024年11月25日</span>
                         <span style="color: #cbd5e0;">|</span>
                         <span id="modalActivityTime">14:00 - 16:00</span>
+                    </div>
+                    <!-- 多时间段显示（按日期分组） -->
+                    <div id="modalMultiTimeSlots" style="display: none;">
+                        <div style="
+                            maxHeight: 300px;
+                            overflow-y: auto;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 8px;
+                        ">
+                            <!-- 日期分组示例 -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    color: #1a202c;
+                                    margin-bottom: 8px;
+                                    padding-bottom: 6px;
+                                    border-bottom: 1px solid #e2e8f0;
+                                ">
+                                    📅 2024年11月25日 周一
+                                </div>
+                                <div style="
+                                    display: grid;
+                                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                                    gap: 8px;
+                                ">
+                                    <div style="
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        background: #fff;
+                                    ">
+                                        <div style="
+                                            fontWeight: 600;
+                                            color: #1a202c;
+                                            margin-bottom: 4px;
+                                            fontSize: 13px;
+                                        ">14:00 - 16:00</div>
+                                        <div style="
+                                            fontSize: 12px;
+                                            color: #059669;
+                                            margin-bottom: 4px;
+                                            fontWeight: 600;
+                                        ">£15 / 人</div>
+                                        <div style="
+                                            fontSize: 11px;
+                                            color: #48bb78;
+                                        ">1/4 人 (3 个空位)</div>
+                                    </div>
+                                    <div style="
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        background: #fff;
+                                    ">
+                                        <div style="
+                                            fontWeight: 600;
+                                            color: #1a202c;
+                                            margin-bottom: 4px;
+                                            fontSize: 13px;
+                                        ">18:00 - 20:00</div>
+                                        <div style="
+                                            fontSize: 12px;
+                                            color: #059669;
+                                            margin-bottom: 4px;
+                                            fontWeight: 600;
+                                        ">£15 / 人</div>
+                                        <div style="
+                                            fontSize: 11px;
+                                            color: #48bb78;
+                                        ">0/4 人 (4 个空位)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    color: #1a202c;
+                                    margin-bottom: 8px;
+                                    padding-bottom: 6px;
+                                    border-bottom: 1px solid #e2e8f0;
+                                ">
+                                    📅 2024年11月26日 周二
+                                </div>
+                                <div style="
+                                    display: grid;
+                                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                                    gap: 8px;
+                                ">
+                                    <div style="
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        background: #fff;
+                                    ">
+                                        <div style="
+                                            fontWeight: 600;
+                                            color: #1a202c;
+                                            margin-bottom: 4px;
+                                            fontSize: 13px;
+                                        ">10:00 - 12:00</div>
+                                        <div style="
+                                            fontSize: 12px;
+                                            color: #059669;
+                                            margin-bottom: 4px;
+                                            fontWeight: 600;
+                                        ">£15 / 人</div>
+                                        <div style="
+                                            fontSize: 11px;
+                                            color: #48bb78;
+                                        ">2/4 人 (2 个空位)</div>
+                                    </div>
+                                    <div style="
+                                        padding: 10px;
+                                        border: 2px solid #e2e8f0;
+                                        border-radius: 8px;
+                                        background: #f7fafc;
+                                        opacity: 0.7;
+                                    ">
+                                        <div style="
+                                            fontWeight: 600;
+                                            color: #9ca3af;
+                                            margin-bottom: 4px;
+                                            fontSize: 13px;
+                                        ">14:00 - 16:00 <span style="margin-left: 4px; fontSize: 11px; color: #ef4444;">(已满)</span></div>
+                                        <div style="
+                                            fontSize: 12px;
+                                            color: #9ca3af;
+                                            margin-bottom: 4px;
+                                            fontWeight: 600;
+                                        ">£15 / 人</div>
+                                        <div style="
+                                            fontSize: 11px;
+                                            color: #e53e3e;
+                                        ">已满 (4/4)</div>
+                                    </div>
+                                    <div style="
+                                        padding: 10px;
+                                        border: 2px solid #cbd5e0;
+                                        border-radius: 8px;
+                                        background: #fff;
+                                    ">
+                                        <div style="
+                                            fontWeight: 600;
+                                            color: #1a202c;
+                                            margin-bottom: 4px;
+                                            fontSize: 13px;
+                                        ">18:00 - 20:00</div>
+                                        <div style="
+                                            fontSize: 12px;
+                                            color: #059669;
+                                            margin-bottom: 4px;
+                                            fontWeight: 600;
+                                        ">£15 / 人</div>
+                                        <div style="
+                                            fontSize: 11px;
+                                            color: #48bb78;
+                                        ">0/4 人 (4 个空位)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1115,7 +1388,7 @@
                        onmouseout="this.style.background='#f3f4f6'">
                         关闭
                     </button>
-                    <button onclick="alert('申请功能需要登录')" style="
+                    <button id="modalApplyButton" onclick="alert('申请功能需要登录')" style="
                         flex: 2;
                         padding: 14px;
                         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
@@ -1150,7 +1423,23 @@
             time: '14:00 - 16:00',
             duration: '2 小时',
             location: 'London',
-            image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop'
+            image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop',
+            hasTimeSlots: false // 是否有多时间段
+        };
+        
+        // 多时间段活动数据示例
+        const multiTimeSlotActivityData = {
+            title: '麻将房体验活动',
+            description: '周末麻将房体验，4人一组，每小时£15/人，包含茶水和零食。多个时间段可选，灵活安排。',
+            price: 15,
+            currency: '£',
+            currentParticipants: 2,
+            maxParticipants: 4,
+            minParticipants: 2,
+            duration: '2 小时',
+            location: 'London',
+            image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=400&fit=crop',
+            hasTimeSlots: true // 多时间段活动
         };
 
         // 打开活动详情弹窗
@@ -1158,23 +1447,40 @@
             const modal = document.getElementById('activityModal');
             if (!modal) return;
 
+            // 使用传入的活动数据或默认数据
+            const activityInfo = activity || activityData;
+            const hasTimeSlots = activityInfo.hasTimeSlots || false;
+
             // 填充活动数据
-            if (activity) {
-                document.getElementById('modalActivityTitle').textContent = activity.title || activityData.title;
-                document.getElementById('modalActivityDescription').textContent = activity.description || activityData.description;
-                document.getElementById('modalActivityPrice').textContent = (activity.currency || activityData.currency) + (activity.price || activityData.price);
-                document.getElementById('modalActivityParticipants').textContent = activity.currentParticipants || activityData.currentParticipants;
-                document.getElementById('modalActivityMaxParticipants').textContent = activity.maxParticipants || activityData.maxParticipants;
-                const available = (activity.maxParticipants || activityData.maxParticipants) - (activity.currentParticipants || activityData.currentParticipants);
-                document.getElementById('modalActivityAvailable').textContent = available;
-                document.getElementById('modalActivityMinParticipants').textContent = (activity.minParticipants || activityData.minParticipants) + ' 人';
-                document.getElementById('modalActivityDate').textContent = activity.date || activityData.date;
-                document.getElementById('modalActivityTime').textContent = activity.time || activityData.time;
-                document.getElementById('modalActivityDuration').textContent = activity.duration || activityData.duration;
-                document.getElementById('modalActivityLocation').textContent = activity.location || activityData.location;
-                if (activity.image) {
-                    document.getElementById('modalActivityImage').src = activity.image;
-                }
+            document.getElementById('modalActivityTitle').textContent = activityInfo.title || activityData.title;
+            document.getElementById('modalActivityDescription').textContent = activityInfo.description || activityData.description;
+            document.getElementById('modalActivityPrice').textContent = (activityInfo.currency || activityData.currency) + (activityInfo.price || activityData.price);
+            document.getElementById('modalActivityParticipants').textContent = activityInfo.currentParticipants || activityData.currentParticipants;
+            document.getElementById('modalActivityMaxParticipants').textContent = activityInfo.maxParticipants || activityData.maxParticipants;
+            const available = (activityInfo.maxParticipants || activityData.maxParticipants) - (activityInfo.currentParticipants || activityData.currentParticipants);
+            document.getElementById('modalActivityAvailable').textContent = available;
+            document.getElementById('modalActivityMinParticipants').textContent = (activityInfo.minParticipants || activityData.minParticipants) + ' 人';
+            document.getElementById('modalActivityDuration').textContent = activityInfo.duration || activityData.duration;
+            document.getElementById('modalActivityLocation').textContent = activityInfo.location || activityData.location;
+            if (activityInfo.image) {
+                document.getElementById('modalActivityImage').src = activityInfo.image;
+            }
+
+            // 根据是否有多个时间段显示不同的内容
+            if (hasTimeSlots) {
+                // 多时间段模式
+                document.getElementById('modalTimeSlotTitle').textContent = '可选时间段';
+                document.getElementById('modalSingleTimeSlot').style.display = 'none';
+                document.getElementById('modalMultiTimeSlots').style.display = 'block';
+                document.getElementById('modalApplyButton').textContent = '立即申请参与（选择第一个可用时间段）';
+            } else {
+                // 单时间段模式
+                document.getElementById('modalTimeSlotTitle').textContent = '活动时间';
+                document.getElementById('modalSingleTimeSlot').style.display = 'flex';
+                document.getElementById('modalMultiTimeSlots').style.display = 'none';
+                document.getElementById('modalActivityDate').textContent = activityInfo.date || activityData.date;
+                document.getElementById('modalActivityTime').textContent = activityInfo.time || activityData.time;
+                document.getElementById('modalApplyButton').textContent = '立即申请参与';
             }
 
             modal.classList.add('active');
@@ -1223,6 +1529,9 @@
                         // 尝试提取图片
                         const imgElement = card.querySelector('img');
                         const image = imgElement ? imgElement.src : activityData.image;
+                        
+                        // 检查是否是多时间段活动（通过卡片内容判断）
+                        const hasTimeSlots = card.textContent.includes('多个时间段可选') || card.textContent.includes('查看所有可选时间段');
 
                         openActivityModal({
                             title: title,
@@ -1236,7 +1545,8 @@
                             time: time,
                             duration: '2 小时',
                             location: 'London',
-                            image: image
+                            image: image,
+                            hasTimeSlots: hasTimeSlots
                         });
                     });
                 });

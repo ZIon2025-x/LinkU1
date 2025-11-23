@@ -1520,6 +1520,13 @@ class ServiceTimeSlotOut(BaseModel):
     is_manually_deleted: bool  # 是否手动删除
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    # 活动相关信息（如果时间段被活动使用）
+    activity_id: Optional[int] = None  # 关联的活动ID
+    activity_title: Optional[str] = None  # 活动标题
+    activity_price: Optional[float] = None  # 活动价格（折扣后的价格）
+    activity_original_price: Optional[float] = None  # 活动原价
+    activity_discount_percentage: Optional[float] = None  # 折扣百分比
+    has_activity: bool = False  # 是否有活动
     
     class Config:
         from_attributes = True
@@ -1550,6 +1557,41 @@ class ServiceTimeSlotOut(BaseModel):
         current_utc = get_utc_time()
         is_expired = slot_start_utc < current_utc
         
+        # 查询关联的活动信息（如果时间段被活动使用）
+        activity_id = None
+        activity_title = None
+        activity_price = None
+        activity_original_price = None
+        activity_discount_percentage = None
+        has_activity = False
+        
+        # 检查是否有活动关联（通过ActivityTimeSlotRelation）
+        # 只返回状态为open的活动
+        if hasattr(obj, 'activity_relations') and obj.activity_relations:
+            # 查找固定模式的活动关联，且活动状态为open
+            fixed_relation = next(
+                (rel for rel in obj.activity_relations 
+                 if rel.relation_mode == 'fixed' 
+                 and rel.activity_id 
+                 and rel.activity 
+                 and rel.activity.status == 'open'),
+                None
+            )
+            if fixed_relation and fixed_relation.activity:
+                activity = fixed_relation.activity
+                activity_id = activity.id
+                activity_title = activity.title
+                has_activity = True
+                # 活动价格（优先使用折扣后的价格）
+                if activity.discounted_price_per_participant:
+                    activity_price = float(activity.discounted_price_per_participant)
+                elif activity.original_price_per_participant:
+                    activity_price = float(activity.original_price_per_participant)
+                if activity.original_price_per_participant:
+                    activity_original_price = float(activity.original_price_per_participant)
+                if activity.discount_percentage:
+                    activity_discount_percentage = float(activity.discount_percentage)
+        
         data = {
             "id": obj.id,
             "service_id": obj.service_id,
@@ -1567,6 +1609,13 @@ class ServiceTimeSlotOut(BaseModel):
             "is_manually_deleted": obj.is_manually_deleted,
             "created_at": obj.created_at,
             "updated_at": obj.updated_at,
+            # 活动信息
+            "activity_id": activity_id,
+            "activity_title": activity_title,
+            "activity_price": activity_price,
+            "activity_original_price": activity_original_price,
+            "activity_discount_percentage": activity_discount_percentage,
+            "has_activity": has_activity,
         }
         return cls(**data)
 
@@ -1828,7 +1877,128 @@ class MultiParticipantTaskCreate(BaseModel):
         return self
 
 
-# 任务达人创建多人任务
+# ===========================================
+# 活动相关Schemas
+# ===========================================
+
+class ActivityCreate(BaseModel):
+    """创建活动"""
+    title: str
+    description: str
+    expert_service_id: int
+    deadline: Optional[datetime.datetime] = None
+    location: str
+    task_type: str
+    reward_type: Literal["cash", "points", "both"] = "cash"
+    original_price_per_participant: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discounted_price_per_participant: Optional[float] = None
+    currency: str = "GBP"
+    points_reward: Optional[int] = None
+    max_participants: int = Field(..., gt=0)
+    min_participants: int = Field(..., gt=0)
+    completion_rule: Literal["all", "min"] = "all"
+    reward_distribution: Literal["equal", "custom"] = "equal"
+    images: Optional[List[str]] = None
+    is_public: bool = True
+    # 时间段选择相关字段
+    selected_time_slot_ids: Optional[List[int]] = None
+    time_slot_selection_mode: Optional[Literal["fixed", "recurring_daily", "recurring_weekly"]] = None
+    recurring_daily_time_ranges: Optional[List[Dict[str, str]]] = None
+    recurring_weekly_weekdays: Optional[List[int]] = None
+    recurring_weekly_time_ranges: Optional[List[Dict[str, str]]] = None
+    auto_add_new_slots: bool = True
+    activity_end_date: Optional[datetime.date] = None
+
+
+class ActivityOut(BaseModel):
+    """活动输出"""
+    id: int
+    title: str
+    description: str
+    expert_id: str
+    expert_service_id: int
+    location: str
+    task_type: str
+    reward_type: str
+    original_price_per_participant: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discounted_price_per_participant: Optional[float] = None
+    currency: str
+    points_reward: Optional[int] = None
+    max_participants: int
+    min_participants: int
+    current_participants: Optional[int] = 0  # 当前参与者数量（从关联任务计算）
+    completion_rule: str
+    reward_distribution: str
+    status: str
+    is_public: bool
+    visibility: str
+    deadline: Optional[datetime.datetime] = None
+    activity_end_date: Optional[datetime.date] = None
+    images: Optional[List[str]] = None
+    service_images: Optional[List[str]] = None  # 关联服务的图片（用于前端显示）
+    has_time_slots: bool
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+    
+    @classmethod
+    def from_orm_with_participants(cls, obj, current_participants: int = 0):
+        """从ORM对象创建，包含参与者数量"""
+        # 获取关联服务的图片
+        service_images = None
+        if hasattr(obj, 'service') and obj.service and obj.service.images:
+            service_images = obj.service.images
+        
+        data = {
+            "id": obj.id,
+            "title": obj.title,
+            "description": obj.description,
+            "expert_id": obj.expert_id,
+            "expert_service_id": obj.expert_service_id,
+            "location": obj.location,
+            "task_type": obj.task_type,
+            "reward_type": obj.reward_type,
+            "original_price_per_participant": float(obj.original_price_per_participant) if obj.original_price_per_participant else None,
+            "discount_percentage": float(obj.discount_percentage) if obj.discount_percentage else None,
+            "discounted_price_per_participant": float(obj.discounted_price_per_participant) if obj.discounted_price_per_participant else None,
+            "currency": obj.currency,
+            "points_reward": obj.points_reward,
+            "max_participants": obj.max_participants,
+            "min_participants": obj.min_participants,
+            "current_participants": current_participants,
+            "completion_rule": obj.completion_rule,
+            "reward_distribution": obj.reward_distribution,
+            "status": obj.status,
+            "is_public": obj.is_public,
+            "visibility": obj.visibility,
+            "deadline": obj.deadline,
+            "activity_end_date": obj.activity_end_date,
+            "images": obj.images,
+            "service_images": service_images,
+            "has_time_slots": obj.has_time_slots,
+            "created_at": obj.created_at,
+            "updated_at": obj.updated_at,
+        }
+        return cls(**data)
+
+
+class ActivityApplyRequest(BaseModel):
+    """申请参与活动"""
+    idempotency_key: str = Field(..., min_length=1, max_length=64)
+    time_slot_id: Optional[int] = None  # 时间段服务必填
+    preferred_deadline: Optional[datetime.datetime] = None  # 非时间段服务可选
+    is_flexible_time: Optional[bool] = False  # 非时间段服务
+    # 如果是多人任务，这些字段用于创建TaskParticipant
+    is_multi_participant: bool = False  # 是否创建多人任务
+    max_participants: Optional[int] = None  # 多人任务的最大参与者数
+    min_participants: Optional[int] = None  # 多人任务的最小参与者数
+
+
+# 任务达人创建多人任务（保留向后兼容，但改为创建Activity）
 class ExpertMultiParticipantTaskCreate(BaseModel):
     title: str
     description: str
@@ -1853,6 +2023,14 @@ class ExpertMultiParticipantTaskCreate(BaseModel):
     discounted_price_per_participant: Optional[float] = None
     images: Optional[List[str]] = None
     is_public: bool = True
+    # 时间段选择相关字段
+    selected_time_slot_ids: Optional[List[int]] = None  # 固定模式：选择的具体时间段ID列表
+    time_slot_selection_mode: Optional[Literal["fixed", "recurring_daily", "recurring_weekly"]] = None  # 选择模式
+    recurring_daily_time_ranges: Optional[List[Dict[str, str]]] = None  # 每天的时间段范围，例如：[{"start": "10:00", "end": "12:00"}]
+    recurring_weekly_weekdays: Optional[List[int]] = None  # 每周几，0=周一，6=周日
+    recurring_weekly_time_ranges: Optional[List[Dict[str, str]]] = None  # 每周的时间段范围
+    auto_add_new_slots: bool = True  # 是否自动添加新匹配的时间段
+    activity_end_date: Optional[datetime.date] = None  # 活动截至日期（可选）
 
 
 # 申请参与多人任务

@@ -20,6 +20,7 @@ from sqlalchemy import (
     Time,
     JSON,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, INET
 from sqlalchemy.ext.asyncio import AsyncAttrs
@@ -221,6 +222,10 @@ class Task(Base):
     original_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
     discount_percentage = Column(DECIMAL(5, 2), nullable=True)
     discounted_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
+    # 关联的活动ID（如果此任务是从活动申请创建的）
+    parent_activity_id = Column(Integer, ForeignKey("activities.id", ondelete="RESTRICT"), nullable=True)
+    # 记录实际申请人（如果任务是从活动申请创建的）
+    originating_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
     # 关系
@@ -232,6 +237,7 @@ class Task(Base):
     participants = relationship("TaskParticipant", back_populates="task", cascade="all, delete-orphan")
     participant_rewards = relationship("TaskParticipantReward", back_populates="task", cascade="all, delete-orphan")
     audit_logs = relationship("TaskAuditLog", back_populates="task", cascade="all, delete-orphan")
+    parent_activity = relationship("Activity", back_populates="created_tasks", foreign_keys=[parent_activity_id])
 
 
 class Review(Base):
@@ -1380,6 +1386,7 @@ class TaskExpertService(Base):
     expert = relationship("TaskExpert", back_populates="services")
     applications = relationship("ServiceApplication", back_populates="service", cascade="all, delete-orphan")
     time_slots = relationship("ServiceTimeSlot", back_populates="service", cascade="all, delete-orphan")
+    activities = relationship("Activity", back_populates="service", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_task_expert_services_expert_id", expert_id),
@@ -1629,6 +1636,8 @@ class TaskParticipant(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # 冗余字段：关联的活动ID（从任务的parent_activity_id获取，用于性能优化）
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="SET NULL"), nullable=True)
     status = Column(String(20), default="pending", nullable=False)
     previous_status = Column(String(20), nullable=True)
     time_slot_id = Column(Integer, nullable=True)
@@ -1713,6 +1722,152 @@ class TaskParticipantReward(Base):
         CheckConstraint(
             "reward_type IN ('cash', 'points', 'both')",
             name="chk_reward_type_values"
+        ),
+    )
+
+
+class TaskTimeSlotRelation(Base):
+    """活动与时间段的关联表"""
+    __tablename__ = "task_time_slot_relations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="CASCADE"), nullable=True)
+    # 关联模式：'fixed' = 固定时间段，'recurring' = 重复模式
+    relation_mode = Column(String(20), nullable=False, default='fixed')
+    # 重复规则（JSON格式，仅用于recurring模式）
+    recurring_rule = Column(JSONB, nullable=True)
+    # 是否自动添加新匹配的时间段
+    auto_add_new_slots = Column(Boolean, default=True, nullable=False)
+    # 活动截至日期（可选，如果设置则在此时活动自动结束）
+    activity_end_date = Column(Date, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    task = relationship("Task", backref="time_slot_relations")
+    time_slot = relationship("ServiceTimeSlot", backref="task_relations")
+    
+    __table_args__ = (
+        Index("ix_task_time_slot_relations_task_id", task_id),
+        Index("ix_task_time_slot_relations_time_slot_id", time_slot_id),
+        Index("ix_task_time_slot_relations_mode", relation_mode),
+        Index("ix_task_time_slot_relations_end_date", activity_end_date),
+        # 注意：部分唯一索引（一个时间段只能被一个活动使用）在数据库迁移中创建
+        # 约束：固定模式必须有time_slot_id，重复模式必须有recurring_rule
+        CheckConstraint(
+            "(relation_mode = 'fixed' AND time_slot_id IS NOT NULL) OR (relation_mode = 'recurring' AND recurring_rule IS NOT NULL)",
+            name="chk_relation_mode"
+        ),
+    )
+
+
+class Activity(Base):
+    """活动表 - 存储任务达人发布的多人活动"""
+    __tablename__ = "activities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    expert_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=False)
+    location = Column(String(100), nullable=False)
+    task_type = Column(String(50), nullable=False)
+    # 价格相关
+    reward_type = Column(String(20), nullable=False, default='cash')  # cash, points, both
+    original_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
+    discount_percentage = Column(DECIMAL(5, 2), nullable=True)
+    discounted_price_per_participant = Column(DECIMAL(12, 2), nullable=True)
+    currency = Column(String(3), default="GBP")
+    points_reward = Column(BigInteger, nullable=True)
+    # 参与者相关
+    max_participants = Column(Integer, nullable=False, default=1)
+    min_participants = Column(Integer, nullable=False, default=1)
+    completion_rule = Column(String(20), nullable=False, default='all')  # all, min
+    reward_distribution = Column(String(20), nullable=False, default='equal')  # equal, custom
+    # 活动状态
+    status = Column(String(20), nullable=False, default='open')  # open, closed, cancelled, completed
+    is_public = Column(Boolean, default=True, nullable=False)
+    visibility = Column(String(20), default="public")  # public, private
+    # 截止日期（非时间段服务使用）
+    deadline = Column(DateTime(timezone=True), nullable=True)
+    # 活动截至日期（时间段服务使用，可选）
+    activity_end_date = Column(Date, nullable=True)
+    # 图片
+    images = Column(JSONB, nullable=True)
+    # 时间段相关（如果关联时间段服务）
+    has_time_slots = Column(Boolean, default=False, nullable=False)
+    # 创建时间
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    expert = relationship("User", foreign_keys=[expert_id])
+    service = relationship("TaskExpertService", back_populates="activities")
+    time_slot_relations = relationship("ActivityTimeSlotRelation", back_populates="activity", cascade="all, delete-orphan")
+    created_tasks = relationship("Task", back_populates="parent_activity", foreign_keys="Task.parent_activity_id")
+    
+    __table_args__ = (
+        Index("ix_activities_expert_id", expert_id),
+        Index("ix_activities_expert_service_id", expert_service_id),
+        Index("ix_activities_status", status),
+        Index("ix_activities_deadline", deadline),
+        Index("ix_activities_activity_end_date", activity_end_date),
+        Index("ix_activities_has_time_slots", has_time_slots),
+        CheckConstraint(
+            "status IN ('open', 'closed', 'cancelled', 'completed')",
+            name="chk_activity_status"
+        ),
+        CheckConstraint(
+            "reward_type IN ('cash', 'points', 'both')",
+            name="chk_activity_reward_type"
+        ),
+        CheckConstraint(
+            "completion_rule IN ('all', 'min')",
+            name="chk_activity_completion_rule"
+        ),
+        CheckConstraint(
+            "reward_distribution IN ('equal', 'custom')",
+            name="chk_activity_reward_distribution"
+        ),
+        CheckConstraint(
+            "min_participants > 0 AND max_participants >= min_participants",
+            name="chk_activity_participants"
+        ),
+    )
+
+
+class ActivityTimeSlotRelation(Base):
+    """活动与时间段的关联表"""
+    __tablename__ = "activity_time_slot_relations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    activity_id = Column(Integer, ForeignKey("activities.id", ondelete="CASCADE"), nullable=False)
+    time_slot_id = Column(Integer, ForeignKey("service_time_slots.id", ondelete="CASCADE"), nullable=True)
+    # 关联模式：'fixed' = 固定时间段，'recurring' = 重复模式
+    relation_mode = Column(String(20), nullable=False, default='fixed')
+    # 重复规则（JSON格式，仅用于recurring模式）
+    recurring_rule = Column(JSONB, nullable=True)
+    # 是否自动添加新匹配的时间段
+    auto_add_new_slots = Column(Boolean, default=True, nullable=False)
+    # 活动截至日期（可选，如果设置则在此时活动自动结束）
+    activity_end_date = Column(Date, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    activity = relationship("Activity", back_populates="time_slot_relations")
+    time_slot = relationship("ServiceTimeSlot", backref="activity_relations")
+    
+    __table_args__ = (
+        Index("ix_activity_time_slot_relations_activity_id", activity_id),
+        Index("ix_activity_time_slot_relations_time_slot_id", time_slot_id),
+        Index("ix_activity_time_slot_relations_mode", relation_mode),
+        Index("ix_activity_time_slot_relations_end_date", activity_end_date),
+        # 约束：固定模式必须有time_slot_id，重复模式必须有recurring_rule
+        CheckConstraint(
+            "(relation_mode = 'fixed' AND time_slot_id IS NOT NULL) OR (relation_mode = 'recurring' AND recurring_rule IS NOT NULL)",
+            name="chk_activity_relation_mode"
         ),
     )
 

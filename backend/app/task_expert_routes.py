@@ -791,9 +791,12 @@ async def get_service_time_slots(
             status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
         )
     
-    # 构建查询
+    # 构建查询（加载活动关联信息）
+    from sqlalchemy.orm import selectinload
     query = select(models.ServiceTimeSlot).where(
         models.ServiceTimeSlot.service_id == service_id
+    ).options(
+        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity)
     )
     
     # 日期过滤：将输入的日期转换为UTC datetime范围进行查询
@@ -873,39 +876,78 @@ async def delete_time_slots_by_date(
     end_utc = parse_local_as_utc(end_local, LONDON)
     
     # 查找该日期的所有时间段
-    time_slots = await db.execute(
-        select(models.ServiceTimeSlot)
-        .where(models.ServiceTimeSlot.service_id == service_id)
-        .where(models.ServiceTimeSlot.slot_start_datetime >= start_utc)
-        .where(models.ServiceTimeSlot.slot_start_datetime <= end_utc)
-        .where(models.ServiceTimeSlot.is_manually_deleted == False)  # 只删除未标记为手动删除的
+    time_slots_query = select(models.ServiceTimeSlot).where(
+        models.ServiceTimeSlot.service_id == service_id
+    ).where(
+        models.ServiceTimeSlot.slot_start_datetime >= start_utc
+    ).where(
+        models.ServiceTimeSlot.slot_start_datetime <= end_utc
+    ).where(
+        models.ServiceTimeSlot.is_manually_deleted == False  # 只删除未标记为手动删除的
     )
-    time_slots = time_slots.scalars().all()
+    
+    result = await db.execute(time_slots_query)
+    time_slots = result.scalars().all()
+    
+    logger.info(f"找到 {len(time_slots)} 个时间段需要删除 (service_id={service_id}, target_date={target_date}, start_utc={start_utc}, end_utc={end_utc})")
     
     if not time_slots:
+        logger.info(f"没有找到可删除的时间段 (service_id={service_id}, target_date={target_date})")
         return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
     
     # 检查是否有已申请的时间段
-    for slot in time_slots:
-        if slot.current_participants > 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{target_date} 有已申请的时间段，无法删除"
-            )
+    slots_with_participants = [slot for slot in time_slots if slot.current_participants > 0]
+    if slots_with_participants:
+        logger.warning(f"有 {len(slots_with_participants)} 个时间段已有参与者，无法删除")
+        raise HTTPException(
+            status_code=400,
+            detail=f"{target_date} 有已申请的时间段，无法删除"
+        )
     
     # 标记为手动删除（而不是真正删除，避免自动重新生成）
     deleted_count = 0
-    for slot in time_slots:
-        slot.is_manually_deleted = True
-        slot.is_available = False
-        deleted_count += 1
-    
-    await db.commit()
+    slot_ids = []
+    try:
+        for slot in time_slots:
+            slot.is_manually_deleted = True
+            slot.is_available = False
+            slot_ids.append(slot.id)
+            deleted_count += 1
+        
+        logger.info(f"准备标记 {deleted_count} 个时间段为已删除: {slot_ids}")
+        
+        # 确保所有修改都被添加到会话中
+        await db.flush()  # 先刷新，确保修改被跟踪
+        await db.commit()  # 提交事务
+        
+        logger.info(f"成功删除 {target_date} 的 {deleted_count} 个时间段: {slot_ids}")
+        
+        # 验证删除是否成功
+        verify_query = select(models.ServiceTimeSlot).where(
+            models.ServiceTimeSlot.id.in_(slot_ids)
+        ).where(
+            models.ServiceTimeSlot.is_manually_deleted == True
+        )
+        verify_result = await db.execute(verify_query)
+        verified_slots = verify_result.scalars().all()
+        logger.info(f"验证删除结果: {len(verified_slots)}/{deleted_count} 个时间段已成功标记为删除")
+        
+        if len(verified_slots) != deleted_count:
+            logger.error(f"删除验证失败: 期望 {deleted_count} 个，实际 {len(verified_slots)} 个")
+        
+    except Exception as e:
+        logger.error(f"删除时间段时发生错误: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"删除时间段失败: {str(e)}"
+        )
     
     return {
         "message": f"成功删除 {target_date} 的 {deleted_count} 个时间段",
         "deleted_count": deleted_count,
-        "target_date": target_date
+        "target_date": target_date,
+        "slot_ids": slot_ids
     }
 
 
@@ -1185,10 +1227,416 @@ async def batch_create_service_time_slots(
     for slot in created_slots:
         await db.refresh(slot)
     
+    # 自动添加匹配的时间段到活动中
+    if created_slots:
+        await auto_add_time_slots_to_activities(db, service_id, created_slots)
+    
     return {
         "message": f"成功创建 {len(created_slots)} 个时间段",
         "created_count": len(created_slots),
         "time_slots": [schemas.ServiceTimeSlotOut.from_orm(s) for s in created_slots]
+    }
+
+
+# ===========================================
+# 辅助函数：自动添加时间段到活动
+# ===========================================
+
+async def auto_add_time_slots_to_activities(
+    db: AsyncSession,
+    service_id: int,
+    new_slots: List[models.ServiceTimeSlot]
+):
+    """
+    自动将新创建的时间段添加到匹配重复规则的活动
+    
+    参数:
+        db: 数据库会话
+        service_id: 服务ID
+        new_slots: 新创建的时间段列表
+    """
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    from datetime import datetime as dt_datetime
+    
+    if not new_slots:
+        return
+    
+    # 查询该服务的所有活动的重复规则
+    recurring_relations = await db.execute(
+        select(models.ActivityTimeSlotRelation)
+        .join(models.Activity)
+        .where(models.Activity.expert_service_id == service_id)
+        .where(models.ActivityTimeSlotRelation.relation_mode == "recurring")
+        .where(models.ActivityTimeSlotRelation.auto_add_new_slots == True)
+        .where(models.Activity.status == "open")  # 只处理开放中的活动
+    )
+    recurring_relations = recurring_relations.scalars().all()
+    
+    if not recurring_relations:
+        return
+    
+    added_count = 0
+    
+    for relation in recurring_relations:
+        # 检查活动是否已结束（通过截至日期）
+        if relation.activity_end_date:
+            today = date.today()
+            if today > relation.activity_end_date:
+                # 活动已超过截至日期，不再添加时间段
+                continue
+        
+        recurring_rule = relation.recurring_rule
+        if not recurring_rule:
+            continue
+        
+        rule_type = recurring_rule.get("type")
+        
+        # 处理每天重复模式
+        if rule_type == "daily":
+            time_ranges = recurring_rule.get("time_ranges", [])
+            if not time_ranges:
+                continue
+            
+            for slot in new_slots:
+                # 检查时间段是否已被其他活动使用（固定模式）
+                existing_relation = await db.execute(
+                    select(models.ActivityTimeSlotRelation)
+                    .where(models.ActivityTimeSlotRelation.time_slot_id == slot.id)
+                    .where(models.ActivityTimeSlotRelation.relation_mode == "fixed")
+                )
+                if existing_relation.scalar_one_or_none():
+                    continue  # 时间段已被使用
+                
+                # 检查时间段是否已在当前活动中
+                existing_in_activity = await db.execute(
+                    select(models.ActivityTimeSlotRelation)
+                    .where(models.ActivityTimeSlotRelation.activity_id == relation.activity_id)
+                    .where(models.ActivityTimeSlotRelation.time_slot_id == slot.id)
+                )
+                if existing_in_activity.scalar_one_or_none():
+                    continue  # 已在活动中
+                
+                # 获取时间段的时间（英国时间）
+                slot_start_utc = slot.slot_start_datetime
+                slot_end_utc = slot.slot_end_datetime
+                
+                # 转换为英国时间
+                from app.utils.time_utils import format_utc_to_local
+                slot_start_local_str = format_utc_to_local(
+                    slot_start_utc.isoformat(),
+                    'HH:mm',
+                    'Europe/London'
+                )
+                slot_end_local_str = format_utc_to_local(
+                    slot_end_utc.isoformat(),
+                    'HH:mm',
+                    'Europe/London'
+                )
+                
+                slot_start_time = dt_time.fromisoformat(slot_start_local_str)
+                slot_end_time = dt_time.fromisoformat(slot_end_local_str)
+                
+                # 检查是否匹配任何一个时间范围
+                matched = False
+                for time_range in time_ranges:
+                    range_start = dt_time.fromisoformat(time_range["start"])
+                    range_end = dt_time.fromisoformat(time_range["end"])
+                    
+                    # 时间段开始时间在范围内，或时间段包含范围
+                    if (range_start <= slot_start_time < range_end) or (slot_start_time <= range_start < slot_end_time):
+                        matched = True
+                        break
+                
+                if matched:
+                    # 检查时间段是否超过活动截至日期
+                    if relation.activity_end_date:
+                        slot_date = slot.slot_start_datetime.date()
+                        if slot_date > relation.activity_end_date:
+                            # 时间段超过截至日期，不添加
+                            continue
+                    
+                    # 创建固定关联（用于重复模式的匹配时间段）
+                    fixed_relation = models.ActivityTimeSlotRelation(
+                        activity_id=relation.activity_id,
+                        time_slot_id=slot.id,
+                        relation_mode="fixed",
+                        auto_add_new_slots=False
+                    )
+                    db.add(fixed_relation)
+                    added_count += 1
+        
+        # 处理每周重复模式
+        elif rule_type == "weekly":
+            weekdays = recurring_rule.get("weekdays", [])
+            time_ranges = recurring_rule.get("time_ranges", [])
+            
+            if not weekdays or not time_ranges:
+                continue
+            
+            for slot in new_slots:
+                # 检查时间段是否已被其他活动使用（固定模式）
+                existing_relation = await db.execute(
+                    select(models.ActivityTimeSlotRelation)
+                    .where(models.ActivityTimeSlotRelation.time_slot_id == slot.id)
+                    .where(models.ActivityTimeSlotRelation.relation_mode == "fixed")
+                )
+                if existing_relation.scalar_one_or_none():
+                    continue  # 时间段已被使用
+                
+                # 检查时间段是否已在当前活动中
+                existing_in_activity = await db.execute(
+                    select(models.ActivityTimeSlotRelation)
+                    .where(models.ActivityTimeSlotRelation.activity_id == relation.activity_id)
+                    .where(models.ActivityTimeSlotRelation.time_slot_id == slot.id)
+                )
+                if existing_in_activity.scalar_one_or_none():
+                    continue  # 已在活动中
+                
+                # 获取时间段的日期和星期几
+                slot_start_utc = slot.slot_start_datetime
+                slot_date = slot_start_utc.date()
+                slot_weekday = slot_date.weekday()  # 0=Monday, 6=Sunday
+                
+                # 检查星期几是否匹配
+                if slot_weekday not in weekdays:
+                    continue
+                
+                # 获取时间段的时间（英国时间）
+                from app.utils.time_utils import format_utc_to_local
+                slot_start_local_str = format_utc_to_local(
+                    slot_start_utc.isoformat(),
+                    'HH:mm',
+                    'Europe/London'
+                )
+                slot_end_local_str = format_utc_to_local(
+                    slot.slot_end_datetime.isoformat(),
+                    'HH:mm',
+                    'Europe/London'
+                )
+                
+                slot_start_time = dt_time.fromisoformat(slot_start_local_str)
+                slot_end_time = dt_time.fromisoformat(slot_end_local_str)
+                
+                # 检查时间范围是否匹配
+                matched = False
+                for time_range in time_ranges:
+                    range_start = dt_time.fromisoformat(time_range["start"])
+                    range_end = dt_time.fromisoformat(time_range["end"])
+                    
+                    # 时间段开始时间在范围内，或时间段包含范围
+                    if (range_start <= slot_start_time < range_end) or (slot_start_time <= range_start < slot_end_time):
+                        matched = True
+                        break
+                
+                if matched:
+                    # 检查时间段是否超过活动截至日期
+                    if relation.activity_end_date:
+                        slot_date = slot.slot_start_datetime.date()
+                        if slot_date > relation.activity_end_date:
+                            # 时间段超过截至日期，不添加
+                            continue
+                    
+                    # 创建固定关联（用于重复模式的匹配时间段）
+                    fixed_relation = models.ActivityTimeSlotRelation(
+                        activity_id=relation.activity_id,
+                        time_slot_id=slot.id,
+                        relation_mode="fixed",
+                        auto_add_new_slots=False
+                    )
+                    db.add(fixed_relation)
+                    added_count += 1
+    
+    if added_count > 0:
+        await db.commit()
+        logger.info(f"自动添加了 {added_count} 个时间段到活动中")
+
+
+# ===========================================
+# 辅助函数：检查并结束活动
+# ===========================================
+
+async def check_and_end_activities(db: AsyncSession):
+    """
+    检查活动是否应该结束（最后一个时间段结束或达到截至日期），并自动结束活动
+    
+    应该在定时任务中定期调用
+    """
+    from datetime import datetime as dt_datetime
+    from app.utils.time_utils import get_utc_time
+    
+    # 查询所有开放中的活动
+    open_activities = await db.execute(
+        select(models.Activity)
+        .where(models.Activity.status == "open")
+    )
+    open_activities = open_activities.scalars().all()
+    
+    ended_count = 0
+    current_time = dt_datetime.now(timezone.utc)
+    
+    for activity in open_activities:
+        should_end = False
+        end_reason = ""
+        
+        # 查询活动的所有时间段关联
+        relations = await db.execute(
+            select(models.ActivityTimeSlotRelation)
+            .where(models.ActivityTimeSlotRelation.activity_id == activity.id)
+            .where(models.ActivityTimeSlotRelation.relation_mode == "fixed")
+        )
+        fixed_relations = relations.scalars().all()
+        
+        # 查询重复规则关联
+        recurring_relation = await db.execute(
+            select(models.ActivityTimeSlotRelation)
+            .where(models.ActivityTimeSlotRelation.activity_id == activity.id)
+            .where(models.ActivityTimeSlotRelation.relation_mode == "recurring")
+            .limit(1)
+        )
+        recurring_relation = recurring_relation.scalar_one_or_none()
+        
+        # 检查是否达到截至日期
+        if recurring_relation and recurring_relation.activity_end_date:
+            today = date.today()
+            if today > recurring_relation.activity_end_date:
+                should_end = True
+                end_reason = f"已达到活动截至日期 {recurring_relation.activity_end_date}"
+        
+        # 检查最后一个时间段是否已结束
+        if not should_end and fixed_relations:
+            # 获取所有关联的时间段
+            time_slot_ids = [r.time_slot_id for r in fixed_relations if r.time_slot_id]
+            if time_slot_ids:
+                time_slots = await db.execute(
+                    select(models.ServiceTimeSlot)
+                    .where(models.ServiceTimeSlot.id.in_(time_slot_ids))
+                    .order_by(models.ServiceTimeSlot.slot_end_datetime.desc())
+                )
+                time_slots = time_slots.scalars().all()
+                
+                if time_slots:
+                    # 获取最后一个时间段
+                    last_slot = time_slots[0]
+                    
+                    # 检查最后一个时间段是否已结束
+                    if last_slot.slot_end_datetime < current_time:
+                        # 如果活动有重复规则且auto_add_new_slots为True，不结束活动
+                        if recurring_relation and recurring_relation.auto_add_new_slots:
+                            # 检查是否还有未到期的匹配时间段（未来30天内）
+                            from app.utils.time_utils import parse_local_as_utc, LONDON
+                            future_date = date.today() + timedelta(days=30)
+                            future_utc = parse_local_as_utc(
+                                dt_datetime.combine(future_date, dt_time(23, 59, 59)),
+                                LONDON
+                            )
+                            
+                            # 查询服务是否有未来的时间段
+                            service = await db.execute(
+                                select(models.TaskExpertService)
+                                .where(models.TaskExpertService.id == activity.expert_service_id)
+                            )
+                            service = service.scalar_one_or_none()
+                            
+                            if service:
+                                future_slots = await db.execute(
+                                    select(models.ServiceTimeSlot)
+                                    .where(models.ServiceTimeSlot.service_id == service.id)
+                                    .where(models.ServiceTimeSlot.slot_start_datetime > current_time)
+                                    .where(models.ServiceTimeSlot.slot_start_datetime <= future_utc)
+                                    .where(models.ServiceTimeSlot.is_manually_deleted == False)
+                                    .limit(1)
+                                )
+                                if not future_slots.scalar_one_or_none():
+                                    # 没有未来的时间段，结束活动
+                                    should_end = True
+                                    end_reason = "最后一个时间段已结束，且没有未来的匹配时间段"
+                        else:
+                            # 没有重复规则或auto_add_new_slots为False，最后一个时间段结束就结束活动
+                            should_end = True
+                            end_reason = f"最后一个时间段已结束（{last_slot.slot_end_datetime}）"
+        
+        # 非时间段服务：检查截止日期
+        if not should_end and not activity.has_time_slots and activity.deadline:
+            if current_time > activity.deadline:
+                should_end = True
+                end_reason = f"已达到活动截止日期 {activity.deadline}"
+        
+        # 如果活动应该结束，更新状态
+        if should_end:
+            # 更新活动状态为已完成
+            await db.execute(
+                update(models.Activity)
+                .where(models.Activity.id == activity.id)
+                .values(status="completed", updated_at=get_utc_time())
+            )
+            
+            # 自动处理关联的任务状态
+            # 查询所有关联到此活动的任务（状态为open或taken）
+            related_tasks_query = await db.execute(
+                select(models.Task)
+                .where(models.Task.parent_activity_id == activity.id)
+                .where(models.Task.status.in_(["open", "taken"]))
+            )
+            related_tasks = related_tasks_query.scalars().all()
+            
+            for task in related_tasks:
+                # 将未开始的任务标记为已取消
+                old_status = task.status
+                await db.execute(
+                    update(models.Task)
+                    .where(models.Task.id == task.id)
+                    .values(status="cancelled", updated_at=get_utc_time())
+                )
+                
+                # 记录审计日志
+                task_audit_log = models.TaskAuditLog(
+                    task_id=task.id,
+                    action_type="task_cancelled",
+                    action_description=f"活动已结束，任务自动取消",
+                    user_id=None,
+                    old_status=old_status,
+                    new_status="cancelled",
+                )
+                db.add(task_audit_log)
+            
+            # 记录活动审计日志
+            audit_log = models.TaskAuditLog(
+                task_id=None,  # 活动没有task_id
+                action_type="activity_completed",
+                action_description=f"活动自动结束: {end_reason}",
+                user_id=None,
+                old_status="open",
+                new_status="completed",
+            )
+            db.add(audit_log)
+            
+            ended_count += 1
+            logger.info(f"活动 {activity.id} 自动结束：{end_reason}")
+    
+    if ended_count > 0:
+        await db.commit()
+        logger.info(f"自动结束了 {ended_count} 个活动")
+    
+    return ended_count
+
+
+# ===========================================
+# API端点：手动触发活动结束检查（管理员或系统调用）
+# ===========================================
+
+@task_expert_router.post("/admin/check-and-end-activities")
+async def check_and_end_activities_endpoint(
+    current_admin=Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """
+    手动触发活动结束检查（管理员接口）
+    应该在定时任务中定期调用
+    """
+    ended_count = await check_and_end_activities(db)
+    return {
+        "message": f"检查完成，结束了 {ended_count} 个活动",
+        "ended_count": ended_count
     }
 
 
@@ -1224,9 +1672,13 @@ async def get_service_time_slots_public(
     from app.utils.time_utils import parse_local_as_utc, LONDON
     from datetime import datetime as dt_datetime, time as dt_time
     
+    # 构建查询（加载活动关联信息）
+    from sqlalchemy.orm import selectinload
     query = select(models.ServiceTimeSlot).where(
         models.ServiceTimeSlot.service_id == service_id
         # 注意：不再过滤is_available，让已满的时间段也能显示
+    ).options(
+        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity)
     )
     
     if start_date:

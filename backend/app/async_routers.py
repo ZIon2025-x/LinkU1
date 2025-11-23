@@ -106,6 +106,7 @@ async def get_tasks(
     sort_by: Optional[str] = Query("latest"),
     expert_creator_id: Optional[str] = Query(None),
     is_multi_participant: Optional[bool] = Query(None),
+    parent_activity_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
@@ -127,6 +128,7 @@ async def get_tasks(
             sort_by=sort_by,
             expert_creator_id=expert_creator_id,
             is_multi_participant=is_multi_participant,
+            parent_activity_id=parent_activity_id,
         )
         
         # 格式化任务列表（与下面的格式化逻辑保持一致）
@@ -170,6 +172,10 @@ async def get_tasks(
                 "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
                 "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
                 "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
+                # 折扣相关字段
+                "original_price_per_participant": float(task.original_price_per_participant) if hasattr(task, 'original_price_per_participant') and task.original_price_per_participant is not None else None,
+                "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
+                "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
             }
             formatted_tasks.append(task_data)
         
@@ -195,6 +201,7 @@ async def get_tasks(
         sort_by=sort_by,
         expert_creator_id=expert_creator_id,
         is_multi_participant=is_multi_participant,
+        parent_activity_id=parent_activity_id,
     )
     
     # 格式化任务列表，确保所有时间字段使用 format_iso_utc()
@@ -242,6 +249,10 @@ async def get_tasks(
             "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False,
             "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
             "expert_service_id": int(task.expert_service_id) if hasattr(task, 'expert_service_id') and task.expert_service_id else None,
+            # 折扣相关字段
+            "original_price_per_participant": float(task.original_price_per_participant) if hasattr(task, 'original_price_per_participant') and task.original_price_per_participant is not None else None,
+            "discount_percentage": float(task.discount_percentage) if hasattr(task, 'discount_percentage') and task.discount_percentage is not None else None,
+            "discounted_price_per_participant": float(task.discounted_price_per_participant) if hasattr(task, 'discounted_price_per_participant') and task.discounted_price_per_participant is not None else None,
         }
         formatted_tasks.append(task_data)
     

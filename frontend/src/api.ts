@@ -1911,11 +1911,44 @@ export const createOfficialMultiParticipantTask = async (taskData: {
   return res.data;
 };
 
-// 任务达人：创建多人任务
+// 任务达人：创建活动（新API）
+export const createExpertActivity = async (activityData: {
+  title: string;
+  description: string;
+  deadline?: string;
+  location: string;
+  task_type: string;
+  expert_service_id: number;
+  max_participants: number;
+  min_participants: number;
+  reward_type: 'cash' | 'points' | 'both';
+  original_price_per_participant?: number;
+  discount_percentage?: number;
+  discounted_price_per_participant?: number;
+  currency?: string;
+  points_reward?: number;
+  completion_rule: 'all' | 'min';
+  reward_distribution: 'equal' | 'custom';
+  images?: string[];
+  is_public?: boolean;
+  // 时间段选择相关字段
+  time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
+  selected_time_slot_ids?: number[];
+  recurring_daily_time_ranges?: Array<{start: string, end: string}>;
+  recurring_weekly_weekdays?: number[];
+  recurring_weekly_time_ranges?: Array<{start: string, end: string}>;
+  auto_add_new_slots?: boolean;
+  activity_end_date?: string;
+}) => {
+  const res = await api.post('/api/expert/activities', activityData);
+  return res.data;
+};
+
+// 任务达人：创建多人任务（保留向后兼容）
 export const createExpertMultiParticipantTask = async (taskData: {
   title: string;
   description: string;
-  deadline: string;
+  deadline?: string;
   location: string;
   task_type: string;
   expert_service_id: number;
@@ -1935,12 +1968,66 @@ export const createExpertMultiParticipantTask = async (taskData: {
   original_price_per_participant?: number;
   discount_percentage?: number;
   images?: string[];
+  // 时间段选择相关字段
+  time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
+  selected_time_slot_ids?: number[];
+  recurring_daily_time_ranges?: Array<{start: string, end: string}>;
+  recurring_weekly_weekdays?: number[];
+  recurring_weekly_time_ranges?: Array<{start: string, end: string}>;
+  auto_add_new_slots?: boolean;
+  activity_end_date?: string;
 }) => {
-  const res = await api.post('/api/expert/tasks/multi-participant', taskData);
+  // 转换为新的活动API格式
+  const activityData = {
+    title: taskData.title,
+    description: taskData.description,
+    deadline: taskData.deadline,
+    location: taskData.location,
+    task_type: taskData.task_type,
+    expert_service_id: taskData.expert_service_id,
+    max_participants: taskData.max_participants,
+    min_participants: taskData.min_participants,
+    reward_type: taskData.reward_type,
+    original_price_per_participant: taskData.original_price_per_participant,
+    discount_percentage: taskData.discount_percentage,
+    discounted_price_per_participant: taskData.original_price_per_participant && taskData.discount_percentage
+      ? taskData.original_price_per_participant * (1 - taskData.discount_percentage / 100)
+      : taskData.original_price_per_participant,
+    currency: 'GBP',
+    points_reward: taskData.points_reward,
+    completion_rule: (taskData.completion_rule === 'any' ? 'min' : 'all') as 'all' | 'min',
+    reward_distribution: taskData.reward_distribution,
+    images: taskData.images,
+    is_public: true,
+    time_slot_selection_mode: taskData.time_slot_selection_mode,
+    selected_time_slot_ids: taskData.selected_time_slot_ids,
+    recurring_daily_time_ranges: taskData.recurring_daily_time_ranges,
+    recurring_weekly_weekdays: taskData.recurring_weekly_weekdays,
+    recurring_weekly_time_ranges: taskData.recurring_weekly_time_ranges,
+    auto_add_new_slots: taskData.auto_add_new_slots,
+    activity_end_date: taskData.activity_end_date,
+  };
+  return createExpertActivity(activityData);
+};
+
+// 用户：申请参与活动（新API）
+export const applyToActivity = async (
+  activityId: number,
+  data: {
+    idempotency_key: string;
+    time_slot_id?: number;
+    preferred_deadline?: string;
+    is_flexible_time?: boolean;
+    is_multi_participant?: boolean;
+    max_participants?: number;
+    min_participants?: number;
+  }
+) => {
+  const res = await api.post(`/api/activities/${activityId}/apply`, data);
   return res.data;
 };
 
-// 用户：申请参与多人任务
+// 用户：申请参与多人任务（保留向后兼容）
 export const applyToMultiParticipantTask = async (
   taskId: string | number,
   data: {
@@ -1951,6 +2038,29 @@ export const applyToMultiParticipantTask = async (
   }
 ) => {
   const res = await api.post(`/api/tasks/${taskId}/apply`, data);
+  return res.data;
+};
+
+// 获取活动列表
+export const getActivities = async (params?: {
+  expert_id?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const res = await api.get('/api/activities', { params });
+  return res.data;
+};
+
+// 获取活动详情
+export const getActivityDetail = async (activityId: number) => {
+  const res = await api.get(`/api/activities/${activityId}`);
+  return res.data;
+};
+
+// 删除活动（任务达人）
+export const deleteActivity = async (activityId: number) => {
+  const res = await api.delete(`/api/expert/activities/${activityId}`);
   return res.data;
 };
 
