@@ -1791,4 +1791,190 @@ export const getPointsTransactions = async (params?: {
   return res.data;
 };
 
+// ===========================================
+// 多人任务相关API
+// ===========================================
+
+// 管理员：创建官方多人任务
+export const createOfficialMultiParticipantTask = async (taskData: {
+  title: string;
+  description: string;
+  deadline: string;
+  location: string;
+  task_type: string;
+  max_participants: number;
+  min_participants: number;
+  reward_type: 'cash' | 'points' | 'both';
+  reward?: number;
+  points_reward?: number;
+  completion_rule: 'all' | 'any';
+  reward_distribution: 'equal' | 'custom';
+  auto_accept: boolean;
+  images?: string[];
+}) => {
+  const res = await api.post('/api/admin/tasks/multi-participant', taskData);
+  return res.data;
+};
+
+// 任务达人：创建多人任务
+export const createExpertMultiParticipantTask = async (taskData: {
+  title: string;
+  description: string;
+  deadline: string;
+  location: string;
+  task_type: string;
+  expert_service_id: number;
+  max_participants: number;
+  min_participants: number;
+  reward_type: 'cash' | 'points' | 'both';
+  reward?: number;
+  points_reward?: number;
+  completion_rule: 'all' | 'any';
+  reward_distribution: 'equal' | 'custom';
+  auto_accept: boolean;
+  is_fixed_time_slot?: boolean;
+  time_slot_duration_minutes?: number;
+  time_slot_start_time?: string;
+  time_slot_end_time?: string;
+  participants_per_slot?: number;
+  original_price_per_participant?: number;
+  discount_percentage?: number;
+  images?: string[];
+}) => {
+  const res = await api.post('/api/expert/tasks/multi-participant', taskData);
+  return res.data;
+};
+
+// 用户：申请参与多人任务
+export const applyToMultiParticipantTask = async (
+  taskId: string | number,
+  data: {
+    idempotency_key: string;
+    time_slot_id?: number;
+    preferred_deadline?: string;
+    is_flexible_time?: boolean;
+  }
+) => {
+  const res = await api.post(`/api/tasks/${taskId}/apply`, data);
+  return res.data;
+};
+
+// 获取任务参与者列表
+export const getTaskParticipants = async (taskId: string | number) => {
+  const res = await api.get(`/api/tasks/${taskId}/participants`);
+  return res.data;
+};
+
+// 用户：提交任务完成
+export const completeMultiParticipantTask = async (
+  taskId: string | number,
+  data: {
+    idempotency_key: string;
+    completion_proof?: string;
+  }
+) => {
+  const res = await api.post(`/api/tasks/${taskId}/participants/me/complete`, data);
+  return res.data;
+};
+
+// 用户：申请退出任务
+export const requestExitFromTask = async (
+  taskId: string | number,
+  data: {
+    idempotency_key: string;
+    reason?: string;
+  }
+) => {
+  const res = await api.post(`/api/tasks/${taskId}/participants/me/exit-request`, data);
+  return res.data;
+};
+
+// 管理员/任务达人：开始任务
+export const startMultiParticipantTask = async (taskId: string | number, isAdmin: boolean = false) => {
+  const endpoint = isAdmin 
+    ? `/api/admin/tasks/${taskId}/start`
+    : `/api/expert/tasks/${taskId}/start`;
+  const res = await api.post(endpoint);
+  return res.data;
+};
+
+// 管理员/任务达人：批准参与者申请
+export const approveParticipant = async (
+  taskId: string | number,
+  participantId: number,
+  isAdmin: boolean = false
+) => {
+  const endpoint = isAdmin
+    ? `/api/admin/tasks/${taskId}/participants/${participantId}/approve`
+    : `/api/expert/tasks/${taskId}/participants/${participantId}/approve`;
+  const res = await api.post(endpoint);
+  return res.data;
+};
+
+// 管理员/任务达人：拒绝参与者申请
+export const rejectParticipant = async (
+  taskId: string | number,
+  participantId: number,
+  isAdmin: boolean = false
+) => {
+  const endpoint = isAdmin
+    ? `/api/admin/tasks/${taskId}/participants/${participantId}/reject`
+    : `/api/expert/tasks/${taskId}/participants/${participantId}/reject`;
+  const res = await api.post(endpoint);
+  return res.data;
+};
+
+// 管理员/任务达人：批准退出申请
+export const approveExitRequest = async (
+  taskId: string | number,
+  participantId: number,
+  isAdmin: boolean = false
+) => {
+  const endpoint = isAdmin
+    ? `/api/admin/tasks/${taskId}/participants/${participantId}/exit/approve`
+    : `/api/expert/tasks/${taskId}/participants/${participantId}/exit/approve`;
+  const res = await api.post(endpoint);
+  return res.data;
+};
+
+// 管理员/任务达人：拒绝退出申请
+export const rejectExitRequest = async (
+  taskId: string | number,
+  participantId: number,
+  isAdmin: boolean = false
+) => {
+  const endpoint = isAdmin
+    ? `/api/admin/tasks/${taskId}/participants/${participantId}/exit/reject`
+    : `/api/expert/tasks/${taskId}/participants/${participantId}/exit/reject`;
+  const res = await api.post(endpoint);
+  return res.data;
+};
+
+// 管理员：完成任务并分配奖励（平均分配）
+export const completeTaskAndDistributeRewardsEqual = async (
+  taskId: string | number,
+  data: {
+    idempotency_key: string;
+  }
+) => {
+  const res = await api.post(`/api/admin/tasks/${taskId}/complete`, data);
+  return res.data;
+};
+
+// 管理员：完成任务并分配奖励（自定义分配）
+export const completeTaskAndDistributeRewardsCustom = async (
+  taskId: string | number,
+  data: {
+    idempotency_key: string;
+    rewards: Array<{
+      participant_id: number;
+      reward_amount?: number;
+      points_amount?: number;
+    }>;
+  }
+) => {
+  const res = await api.post(`/api/admin/tasks/${taskId}/complete/custom`, data);
+  return res.data;
+};
+
 export default api; 

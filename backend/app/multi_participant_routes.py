@@ -3,7 +3,7 @@
 包括管理员、任务达人和用户的多人任务操作
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 from typing import List, Optional
@@ -23,7 +23,7 @@ from app.schemas import (
 )
 from app.utils.task_id_utils import parse_task_id, format_task_id
 from app.deps import get_current_user_secure_sync_csrf
-from app.separate_auth_deps import get_current_admin
+from app.separate_auth_deps import get_current_admin, get_current_user_optional
 from app.utils.time_utils import get_utc_time
 from app.models import TaskExpertService, TaskExpert
 
@@ -105,6 +105,64 @@ def create_official_multi_participant_task(
         "max_participants": db_task.max_participants,
         "min_participants": db_task.min_participants,
         "reward_type": db_task.reward_type,
+    }
+
+
+# ===========================================
+# 用户API：获取任务参与者列表
+# ===========================================
+
+@router.get("/tasks/{task_id}/participants")
+def get_task_participants(
+    task_id: str,
+    request: Request,
+    current_user=Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+):
+    """
+    获取任务参与者列表（所有人可见，可选认证）
+    """
+    parsed_task_id = parse_task_id(task_id)
+    
+    db_task = db.query(Task).filter(Task.id == parsed_task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if not db_task.is_multi_participant:
+        raise HTTPException(status_code=400, detail="This is not a multi-participant task")
+    
+    # 获取所有参与者
+    participants = db.query(TaskParticipant).filter(
+        TaskParticipant.task_id == parsed_task_id
+    ).order_by(TaskParticipant.applied_at.asc()).all()
+    
+    # 获取用户信息
+    participant_list = []
+    for participant in participants:
+        user = db.query(User).filter(User.id == participant.user_id).first()
+        participant_data = {
+            "id": participant.id,
+            "task_id": participant.task_id,
+            "user_id": participant.user_id,
+            "user_name": user.name if user else "Unknown",
+            "user_avatar": user.avatar if user else None,
+            "status": participant.status,
+            "time_slot_id": participant.time_slot_id,
+            "preferred_deadline": participant.preferred_deadline.isoformat() if participant.preferred_deadline else None,
+            "is_flexible_time": participant.is_flexible_time,
+            "applied_at": participant.applied_at.isoformat() if participant.applied_at else None,
+            "accepted_at": participant.accepted_at.isoformat() if participant.accepted_at else None,
+            "started_at": participant.started_at.isoformat() if participant.started_at else None,
+            "completed_at": participant.completed_at.isoformat() if participant.completed_at else None,
+            "exit_requested_at": participant.exit_requested_at.isoformat() if participant.exit_requested_at else None,
+            "exit_reason": participant.exit_reason,
+            "completion_notes": participant.completion_notes,
+        }
+        participant_list.append(participant_data)
+    
+    return {
+        "participants": participant_list,
+        "total": len(participant_list)
     }
 
 

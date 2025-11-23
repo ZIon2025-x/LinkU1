@@ -23,6 +23,14 @@ import {
   counterOfferServiceApplication,
   submitProfileUpdateRequest,
   getMyProfileUpdateRequest,
+  getTaskParticipants,
+  startMultiParticipantTask,
+  approveParticipant,
+  rejectParticipant,
+  approveExitRequest,
+  rejectExitRequest,
+  completeTaskAndDistributeRewardsEqual,
+  createExpertMultiParticipantTask,
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
@@ -65,7 +73,7 @@ const TaskExpertDashboard: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [expert, setExpert] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'services' | 'applications'>('services');
+  const [activeTab, setActiveTab] = useState<'services' | 'applications' | 'multi-tasks'>('services');
   
   // 服务管理相关
   const [services, setServices] = useState<Service[]>([]);
@@ -90,6 +98,30 @@ const TaskExpertDashboard: React.FC = () => {
   const [pendingRequest, setPendingRequest] = useState<any>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  
+  // 多人任务管理相关
+  const [multiTasks, setMultiTasks] = useState<any[]>([]);
+  const [loadingMultiTasks, setLoadingMultiTasks] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
+  
+  // 创建多人任务相关
+  const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
+  const [createMultiTaskForm, setCreateMultiTaskForm] = useState({
+    service_id: undefined as number | undefined,
+    title: '',
+    description: '',
+    max_participants: 1,
+    min_participants: 1,
+    reward_distribution: 'equal' as 'equal' | 'custom',
+    deadline: '',
+    location: 'Online',
+    task_type: 'Skill Service',
+    reward_type: 'cash' as 'cash' | 'points' | 'both',
+    base_reward: 0,
+    points_reward: 0,
+    currency: 'GBP'
+  });
 
   useEffect(() => {
     loadData();
@@ -248,6 +280,44 @@ const TaskExpertDashboard: React.FC = () => {
       loadApplications();
     } catch (err: any) {
       message.error(err.response?.data?.detail || '提交议价失败');
+    }
+  };
+
+  // 加载多人任务列表
+  const loadMultiTasks = async () => {
+    if (!user) return;
+    setLoadingMultiTasks(true);
+    try {
+      // 获取任务达人创建的所有多人任务
+      const response = await api.get('/api/tasks', {
+        params: {
+          expert_creator_id: user.id,
+          is_multi_participant: true,
+          limit: 100
+        }
+      });
+      const tasks = response.data.tasks || response.data || [];
+      setMultiTasks(tasks);
+      
+      // 并行加载所有任务的参与者列表
+      const participantsMap: {[key: number]: any[]} = {};
+      await Promise.all(
+        tasks.map(async (task: any) => {
+          try {
+            const participantsData = await getTaskParticipants(task.id);
+            participantsMap[task.id] = participantsData.participants || [];
+          } catch (error) {
+            console.error(`加载任务 ${task.id} 的参与者失败:`, error);
+            participantsMap[task.id] = [];
+          }
+        })
+      );
+      setTaskParticipants(participantsMap);
+    } catch (err: any) {
+      message.error('加载多人任务列表失败');
+      console.error('加载多人任务失败:', err);
+    } finally {
+      setLoadingMultiTasks(false);
     }
   };
 
@@ -456,6 +526,20 @@ const TaskExpertDashboard: React.FC = () => {
             }}
           >
             申请管理
+          </button>
+          <button
+            onClick={() => setActiveTab('multi-tasks')}
+            style={{
+              padding: '12px 24px',
+              background: activeTab === 'multi-tasks' ? '#3b82f6' : '#fff',
+              color: activeTab === 'multi-tasks' ? '#fff' : '#333',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            多人任务
           </button>
         </div>
 
@@ -727,7 +811,663 @@ const TaskExpertDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* 多人任务管理 */}
+        {activeTab === 'multi-tasks' && (
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>我的多人任务</h2>
+              <button
+                onClick={() => {
+                  setCreateMultiTaskForm({
+                    service_id: undefined,
+                    title: '',
+                    description: '',
+                    max_participants: 1,
+                    min_participants: 1,
+                    reward_distribution: 'equal',
+                    deadline: '',
+                    location: 'Online',
+                    task_type: 'Skill Service',
+                    reward_type: 'cash',
+                    base_reward: 0,
+                    points_reward: 0,
+                    currency: 'GBP'
+                  });
+                  setShowCreateMultiTaskModal(true);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                + 创建多人任务
+              </button>
+            </div>
+
+            {loadingMultiTasks ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+            ) : multiTasks.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+                暂无多人任务
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {multiTasks.map((task: any) => {
+                  const participants = taskParticipants[task.id] || [];
+                  const isTaskManager = task.created_by_expert && task.expert_creator_id === user?.id;
+                  
+                  return (
+                    <div
+                      key={task.id}
+                      style={{
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        background: '#fff',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
+                            {task.title}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              background: task.status === 'open' ? '#dbeafe' :
+                                         task.status === 'in_progress' ? '#d1fae5' :
+                                         task.status === 'completed' ? '#d1fae5' :
+                                         '#fee2e2',
+                              color: task.status === 'open' ? '#1e40af' :
+                                     task.status === 'in_progress' ? '#065f46' :
+                                     task.status === 'completed' ? '#065f46' :
+                                     '#991b1b',
+                            }}>
+                              {task.status === 'open' ? '开放中' :
+                               task.status === 'in_progress' ? '进行中' :
+                               task.status === 'completed' ? '已完成' :
+                               '已取消'}
+                            </span>
+                            <span style={{ fontSize: '14px', color: '#4a5568' }}>
+                              👥 {task.current_participants || 0} / {task.max_participants || 1}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 参与者列表 */}
+                      {participants.length > 0 && (
+                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: '#4a5568' }}>
+                            参与者列表 ({participants.length})
+                          </h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {participants.map((participant: any) => (
+                              <div
+                                key={participant.id}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '12px',
+                                  background: '#f7fafc',
+                                  borderRadius: '8px',
+                                }}
+                              >
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                    {participant.user_name || 'Unknown'}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#718096' }}>
+                                    状态: {participant.status === 'pending' ? '待审核' :
+                                           participant.status === 'accepted' ? '已接受' :
+                                           participant.status === 'in_progress' ? '进行中' :
+                                           participant.status === 'completed' ? '已完成' :
+                                           participant.status === 'exit_requested' ? '退出申请中' :
+                                           '已退出'}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  {/* 审核申请 */}
+                                  {isTaskManager && participant.status === 'pending' && task.status === 'open' && (
+                                    <>
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('确定要批准这个参与者吗？')) return;
+                                          try {
+                                            await approveParticipant(task.id, participant.id, false);
+                                            message.success('批准成功');
+                                            await loadMultiTasks();
+                                          } catch (err: any) {
+                                            message.error(err.response?.data?.detail || '批准失败');
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#28a745',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        批准
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('确定要拒绝这个参与者吗？')) return;
+                                          try {
+                                            await rejectParticipant(task.id, participant.id, false);
+                                            message.success('已拒绝');
+                                            await loadMultiTasks();
+                                          } catch (err: any) {
+                                            message.error(err.response?.data?.detail || '操作失败');
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#dc3545',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        拒绝
+                                      </button>
+                                    </>
+                                  )}
+                                  {/* 处理退出申请 */}
+                                  {isTaskManager && participant.status === 'exit_requested' && (
+                                    <>
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('确定要批准退出申请吗？')) return;
+                                          try {
+                                            await approveExitRequest(task.id, participant.id, false);
+                                            message.success('退出申请已批准');
+                                            await loadMultiTasks();
+                                          } catch (err: any) {
+                                            message.error(err.response?.data?.detail || '操作失败');
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#28a745',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        批准退出
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          if (!window.confirm('确定要拒绝退出申请吗？')) return;
+                                          try {
+                                            await rejectExitRequest(task.id, participant.id, false);
+                                            message.success('退出申请已拒绝');
+                                            await loadMultiTasks();
+                                          } catch (err: any) {
+                                            message.error(err.response?.data?.detail || '操作失败');
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '6px 12px',
+                                          background: '#dc3545',
+                                          color: '#fff',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        拒绝退出
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 操作按钮 */}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                        {isTaskManager && task.status === 'open' && (
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('确定要开始这个任务吗？')) return;
+                              try {
+                                await startMultiParticipantTask(task.id, false);
+                                message.success('任务已开始');
+                                await loadMultiTasks();
+                              } catch (err: any) {
+                                message.error(err.response?.data?.detail || '开始任务失败');
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#007bff',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            🚀 开始任务
+                          </button>
+                        )}
+                        {isTaskManager && task.status === 'completed' && (
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('确定要分配奖励吗？')) return;
+                              try {
+                                const idempotencyKey = `${user.id}_${task.id}_distribute_${Date.now()}`;
+                                if (task.reward_distribution === 'equal') {
+                                  await completeTaskAndDistributeRewardsEqual(task.id, {
+                                    idempotency_key: idempotencyKey
+                                  });
+                                  message.success('奖励已平均分配');
+                                } else {
+                                  message.info('自定义分配功能需要在管理后台完成');
+                                  return;
+                                }
+                                await loadMultiTasks();
+                              } catch (err: any) {
+                                message.error(err.response?.data?.detail || '分配奖励失败');
+                              }
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#28a745',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            💰 分配奖励
+                          </button>
+                        )}
+                        <button
+                          onClick={() => navigate(`/tasks/${task.id}`)}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#3b82f6',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          查看详情
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* 创建多人任务弹窗 */}
+      {showCreateMultiTaskModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowCreateMultiTaskModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '600px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>创建多人任务</h3>
+              <button
+                onClick={() => setShowCreateMultiTaskModal(false)}
+                style={{
+                  padding: '6px 12px',
+                  border: 'none',
+                  background: '#dc3545',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                关闭
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* 选择服务（必填） */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  关联服务 <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <select
+                  value={createMultiTaskForm.service_id || ''}
+                  onChange={(e) => {
+                    const selectedService = services.find(s => s.id === parseInt(e.target.value));
+                    setCreateMultiTaskForm({
+                      ...createMultiTaskForm,
+                      service_id: e.target.value ? parseInt(e.target.value) : undefined,
+                      title: selectedService ? selectedService.service_name : createMultiTaskForm.title,
+                      description: selectedService ? selectedService.description : createMultiTaskForm.description,
+                      base_reward: selectedService ? selectedService.base_price : createMultiTaskForm.base_reward,
+                      currency: selectedService ? selectedService.currency : createMultiTaskForm.currency,
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                  required
+                >
+                  <option value="">请选择服务</option>
+                  {services.filter(s => s.status === 'active').map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.service_name} - £{service.base_price.toFixed(2)} {service.currency}
+                    </option>
+                  ))}
+                </select>
+                {services.filter(s => s.status === 'active').length === 0 && (
+                  <div style={{ marginTop: '8px', color: '#dc3545', fontSize: '12px' }}>
+                    您还没有上架的服务，请先创建并上架服务
+                  </div>
+                )}
+              </div>
+
+              {/* 任务标题 */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  任务标题 <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={createMultiTaskForm.title}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, title: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                  required
+                />
+              </div>
+
+              {/* 任务描述 */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  任务描述 <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <textarea
+                  value={createMultiTaskForm.description}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    minHeight: '100px',
+                  }}
+                  required
+                />
+              </div>
+
+              {/* 参与者数量 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    最少参与者 <span style={{ color: '#dc3545' }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={createMultiTaskForm.min_participants}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, min_participants: parseInt(e.target.value) || 1 })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    最多参与者 <span style={{ color: '#dc3545' }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={createMultiTaskForm.max_participants}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, max_participants: parseInt(e.target.value) || 1 })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 截止时间 */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  截止时间 <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={createMultiTaskForm.deadline}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, deadline: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                  required
+                />
+              </div>
+
+              {/* 位置和类型 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    位置
+                  </label>
+                  <select
+                    value={createMultiTaskForm.location}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, location: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="Online">Online</option>
+                    <option value="London">London</option>
+                    <option value="Edinburgh">Edinburgh</option>
+                    <option value="Manchester">Manchester</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                    任务类型
+                  </label>
+                  <select
+                    value={createMultiTaskForm.task_type}
+                    onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, task_type: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="Skill Service">Skill Service</option>
+                    <option value="Housekeeping">Housekeeping</option>
+                    <option value="Campus Life">Campus Life</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 奖励分配方式 */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  奖励分配方式
+                </label>
+                <select
+                  value={createMultiTaskForm.reward_distribution}
+                  onChange={(e) => setCreateMultiTaskForm({ ...createMultiTaskForm, reward_distribution: e.target.value as 'equal' | 'custom' })}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="equal">平均分配</option>
+                  <option value="custom">自定义分配</option>
+                </select>
+              </div>
+
+              {/* 提交按钮 */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button
+                  onClick={() => setShowCreateMultiTaskModal(false)}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!createMultiTaskForm.service_id) {
+                      message.error('请选择关联服务');
+                      return;
+                    }
+                    if (!createMultiTaskForm.title || !createMultiTaskForm.description || !createMultiTaskForm.deadline) {
+                      message.error('请填写完整信息');
+                      return;
+                    }
+                    if (createMultiTaskForm.min_participants > createMultiTaskForm.max_participants) {
+                      message.error('最少参与者不能大于最多参与者');
+                      return;
+                    }
+
+                    try {
+                      const selectedService = services.find(s => s.id === createMultiTaskForm.service_id);
+                      await createExpertMultiParticipantTask({
+                        title: createMultiTaskForm.title,
+                        description: createMultiTaskForm.description,
+                        deadline: new Date(createMultiTaskForm.deadline).toISOString(),
+                        location: createMultiTaskForm.location,
+                        task_type: createMultiTaskForm.task_type,
+                        expert_service_id: createMultiTaskForm.service_id!,
+                        max_participants: createMultiTaskForm.max_participants,
+                        min_participants: createMultiTaskForm.min_participants,
+                        reward_type: createMultiTaskForm.reward_type,
+                        reward: createMultiTaskForm.base_reward,
+                        points_reward: createMultiTaskForm.points_reward || 0,
+                        completion_rule: 'all',
+                        reward_distribution: createMultiTaskForm.reward_distribution,
+                        auto_accept: false, // 任务达人任务需要手动审核
+                      });
+                      message.success('多人任务创建成功');
+                      setShowCreateMultiTaskModal(false);
+                      await loadMultiTasks();
+                    } catch (err: any) {
+                      message.error(err.response?.data?.detail || '创建失败');
+                    }
+                  }}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  创建
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 服务编辑弹窗 */}
       {showServiceModal && (

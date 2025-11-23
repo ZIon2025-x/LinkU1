@@ -6,7 +6,14 @@ import {
   deleteAdminTask,
   batchUpdateAdminTasks,
   batchDeleteAdminTasks,
-  updateTaskPointsReward
+  updateTaskPointsReward,
+  getTaskParticipants,
+  startMultiParticipantTask,
+  approveParticipant,
+  rejectParticipant,
+  approveExitRequest,
+  rejectExitRequest,
+  completeTaskAndDistributeRewardsEqual,
 } from '../api';
 import dayjs from 'dayjs';
 import { TimeHandlerV2 } from '../utils/timeUtils';
@@ -70,6 +77,10 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
     limit: 20,
     total: 0
   });
+
+  // 多人任务相关状态
+  const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any[]}>({});
+  const [loadingParticipants, setLoadingParticipants] = useState<number | null>(null);
 
   const loadTasks = async () => {
     try {
@@ -526,6 +537,26 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
 
 // 任务详情组件
 const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, onClose }) => {
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  
+  // 如果是多人任务，加载参与者列表
+  useEffect(() => {
+    if ((task as any).is_multi_participant) {
+      setLoadingParticipants(true);
+      getTaskParticipants(task.id)
+        .then((data: any) => {
+          setParticipants(data.participants || []);
+        })
+        .catch((error) => {
+          console.error('加载参与者列表失败:', error);
+        })
+        .finally(() => {
+          setLoadingParticipants(false);
+        });
+    }
+  }, [task]);
+
   return (
     <div style={{
       position: 'fixed',

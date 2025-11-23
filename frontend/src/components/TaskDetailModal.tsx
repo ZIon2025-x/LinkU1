@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useTransition } from 'react';
-import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage } from '../api';
+import api, { fetchCurrentUser, applyForTask, completeTask, confirmTaskCompletion, createReview, getTaskReviews, approveTaskTaker, rejectTaskTaker, getTaskApplications, acceptApplication, rejectApplication, getUserApplications, sendApplicationMessage, applyToMultiParticipantTask, getTaskParticipants, completeMultiParticipantTask, requestExitFromTask, startMultiParticipantTask, approveParticipant, rejectParticipant, approveExitRequest, rejectExitRequest, completeTaskAndDistributeRewardsEqual } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -67,6 +67,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [messageContent, setMessageContent] = useState('');
   const [messageNegotiatedPrice, setMessageNegotiatedPrice] = useState<number | undefined>();
   const [isMessageNegotiateChecked, setIsMessageNegotiateChecked] = useState(false);
+  // 多人任务相关状态
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [userParticipant, setUserParticipant] = useState<any>(null);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -238,13 +242,48 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
     
     try {
-      const userApplications = await getUserApplications();
-      const userApp = userApplications.find((app: any) => app.task_id === task.id);
-      setUserApplication(userApp);
+      // 如果是多人任务，检查参与者状态
+      if (task.is_multi_participant) {
+        const participantsData = await getTaskParticipants(taskId!);
+        setParticipants(participantsData.participants || []);
+        const userPart = participantsData.participants?.find((p: any) => p.user_id === user.id);
+        setUserParticipant(userPart);
+      } else {
+        const userApplications = await getUserApplications();
+        const userApp = userApplications.find((app: any) => app.task_id === task.id);
+        setUserApplication(userApp);
+      }
     } catch (error) {
       console.error('检查用户申请状态失败:', error);
     }
   };
+
+  // 加载参与者列表（多人任务，所有人可见）
+  const loadParticipants = useCallback(async () => {
+    if (!task || !task.is_multi_participant || !taskId) return;
+    
+    setLoadingParticipants(true);
+    try {
+      const participantsData = await getTaskParticipants(taskId);
+      setParticipants(participantsData.participants || []);
+      // 检查当前用户的参与者状态
+      if (user) {
+        const userPart = participantsData.participants?.find((p: any) => p.user_id === user.id);
+        setUserParticipant(userPart);
+      }
+    } catch (error) {
+      console.error('加载参与者列表失败:', error);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  }, [task, taskId, user]);
+
+  // 当任务加载后，如果是多人任务，加载参与者列表
+  useEffect(() => {
+    if (task && task.is_multi_participant && taskId) {
+      loadParticipants();
+    }
+  }, [task, taskId, loadParticipants]);
 
   // P0 优化：使用 useMemo 缓存复杂计算
   // 检查用户等级是否满足任务等级要求
@@ -344,8 +383,37 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   
   // P0 优化：提交申请 - 乐观更新（立即反馈）+ 输入验证增强
   const handleSubmitApplication = useCallback(async () => {
-    if (!taskId || !task) return;
+    if (!taskId || !task || !user) return;
     
+    // 多人任务申请
+    if (task.is_multi_participant) {
+      setActionLoading(true);
+      try {
+        const idempotencyKey = `${user.id}_${task.id}_${Date.now()}`;
+        await applyToMultiParticipantTask(task.id, {
+          idempotency_key: idempotencyKey,
+          preferred_deadline: undefined,
+          is_flexible_time: true
+        });
+        alert(language === 'zh' 
+          ? '申请成功！\n\n您已成功申请参与此多人任务。' + (task.auto_accept ? '任务已自动接受，您可以开始执行了！' : '请等待审核。')
+          : 'Application successful!\n\nYou have successfully applied for this multi-participant task.' + (task.auto_accept ? ' Task has been auto-accepted, you can start now!' : ' Please wait for approval.'));
+        setShowApplyModal(false);
+        setApplyMessage('');
+        const res = await api.get(`/api/tasks/${taskId}`);
+        setTask(res.data);
+        await checkUserApplication();
+        await loadParticipants();
+      } catch (error: any) {
+        console.error('申请多人任务失败:', error);
+        alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
+    
+    // 普通任务申请（原有逻辑）
     // P0 优化：输入验证增强 - 验证申请消息长度
     const MAX_MESSAGE_LENGTH = 1000; // 最大长度限制
     if (applyMessage && applyMessage.length > MAX_MESSAGE_LENGTH) {
@@ -425,7 +493,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     } finally {
       setActionLoading(false);
     }
-  }, [taskId, task, isNegotiateChecked, negotiatedPrice, applyMessage, hasApplied, t]);
+  }, [taskId, task, user, isNegotiateChecked, negotiatedPrice, applyMessage, hasApplied, t, language, checkUserApplication, loadParticipants]);
 
   // P0 优化：使用 useCallback 缓存函数
   const handleCompleteTask = useCallback(async () => {
@@ -1176,6 +1244,25 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 </span>
               )}
             </div>
+            {/* 多人任务：显示奖励类型 */}
+            {task.is_multi_participant && task.reward_type && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                {task.reward_type === 'cash' ? '💷 现金奖励' :
+                 task.reward_type === 'points' ? '⭐ 积分奖励' :
+                 task.reward_type === 'both' ? '💷⭐ 现金+积分' : ''}
+              </div>
+            )}
+            {/* 多人任务：参与者信息 */}
+            {task.is_multi_participant && (
+              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                👥 {task.current_participants || 0} / {task.max_participants || 1} {language === 'zh' ? '参与者' : 'Participants'}
+                {task.min_participants && (
+                  <span style={{ marginLeft: '8px' }}>
+                    ({language === 'zh' ? '最少' : 'Min'} {task.min_participants})
+                  </span>
+                )}
+              </div>
+            )}
             {task.agreed_reward && task.agreed_reward !== task.base_reward && (
               <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
                 原价: {task.base_reward?.toFixed(2) || '0.00'} {task.currency || 'CNY'}
@@ -1449,8 +1536,82 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             </button>
           )}
 
-          {/* 显示申请状态 */}
-          {user && user.id !== task.poster_id && userApplication && (
+          {/* 多人任务：显示参与者状态 */}
+          {task.is_multi_participant && user && user.id !== task.poster_id && userParticipant && (
+            <div style={{
+              background: userParticipant.status === 'pending' 
+                ? 'linear-gradient(135deg, #fef3c7, #fde68a)' 
+                : userParticipant.status === 'accepted'
+                ? 'linear-gradient(135deg, #d1fae5, #a7f3d0)'
+                : userParticipant.status === 'in_progress'
+                ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)'
+                : userParticipant.status === 'exit_requested'
+                ? 'linear-gradient(135deg, #fef3c7, #fde68a)'
+                : 'linear-gradient(135deg, #fee2e2, #fecaca)',
+              border: userParticipant.status === 'pending'
+                ? '2px solid #f59e0b'
+                : userParticipant.status === 'accepted'
+                ? '2px solid #10b981'
+                : userParticipant.status === 'in_progress'
+                ? '2px solid #3b82f6'
+                : userParticipant.status === 'exit_requested'
+                ? '2px solid #f59e0b'
+                : '2px solid #ef4444',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              color: userParticipant.status === 'pending'
+                ? '#92400e'
+                : userParticipant.status === 'accepted'
+                ? '#065f46'
+                : userParticipant.status === 'in_progress'
+                ? '#1e40af'
+                : userParticipant.status === 'exit_requested'
+                ? '#92400e'
+                : '#991b1b',
+              fontSize: '16px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              maxWidth: '600px',
+              margin: '0 auto 20px auto',
+              boxShadow: userParticipant.status === 'pending'
+                ? '0 4px 12px rgba(245, 158, 11, 0.2)'
+                : userParticipant.status === 'accepted'
+                ? '0 4px 12px rgba(16, 185, 129, 0.2)'
+                : userParticipant.status === 'in_progress'
+                ? '0 4px 12px rgba(59, 130, 246, 0.2)'
+                : userParticipant.status === 'exit_requested'
+                ? '0 4px 12px rgba(245, 158, 11, 0.2)'
+                : '0 4px 12px rgba(239, 68, 68, 0.2)'
+            }}>
+              <div style={{fontSize: '32px'}}>
+                {userParticipant.status === 'pending' ? '⏳' : 
+                 userParticipant.status === 'accepted' ? '✅' :
+                 userParticipant.status === 'in_progress' ? '🚀' :
+                 userParticipant.status === 'exit_requested' ? '🚪' : '❌'}
+              </div>
+              <div>
+                <div style={{fontWeight: 'bold', marginBottom: '8px', fontSize: '18px'}}>
+                  {userParticipant.status === 'pending' ? (language === 'zh' ? '等待审核' : 'Pending Approval') :
+                   userParticipant.status === 'accepted' ? (language === 'zh' ? '已接受' : 'Accepted') :
+                   userParticipant.status === 'in_progress' ? (language === 'zh' ? '进行中' : 'In Progress') :
+                   userParticipant.status === 'exit_requested' ? (language === 'zh' ? '退出申请中' : 'Exit Requested') :
+                   (language === 'zh' ? '已退出' : 'Exited')}
+                </div>
+                <div style={{fontSize: '14px', fontWeight: 'normal', lineHeight: 1.5}}>
+                  {userParticipant.status === 'pending' ? (language === 'zh' ? '您已申请参与此多人任务，请等待审核。' : 'You have applied for this multi-participant task, please wait for approval.') :
+                   userParticipant.status === 'accepted' ? (language === 'zh' ? '您的申请已通过，等待任务开始。' : 'Your application has been approved, waiting for task to start.') :
+                   userParticipant.status === 'in_progress' ? (language === 'zh' ? '任务正在进行中，请尽快完成。' : 'Task is in progress, please complete it soon.') :
+                   userParticipant.status === 'exit_requested' ? (language === 'zh' ? '您已申请退出，等待审核。' : 'You have requested to exit, waiting for approval.') :
+                   (language === 'zh' ? '您已退出此任务。' : 'You have exited this task.')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 显示申请状态（普通任务） */}
+          {!task.is_multi_participant && user && user.id !== task.poster_id && userApplication && (
             <div style={{
               background: userApplication.status === 'pending' 
                 ? 'linear-gradient(135deg, #fef3c7, #fde68a)' 
@@ -1552,8 +1713,252 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             </div>
           )}
 
-          {/* 申请者列表 - 仅任务发布者可见 */}
-          {isTaskPoster && (task.status === 'taken' || task.status === 'open') && (
+          {/* 多人任务：参与者列表 - 所有人可见 */}
+          {task.is_multi_participant && (
+            <div style={{
+              marginTop: '20px',
+              padding: '20px',
+              background: '#f8f9fa',
+              borderRadius: '12px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+                {language === 'zh' ? `参与者列表 (${participants.length}/${task.max_participants || 1})` : `Participants (${participants.length}/${task.max_participants || 1})`}
+              </h3>
+              
+              {loadingParticipants ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  {language === 'zh' ? '加载中...' : 'Loading...'}
+                </div>
+              ) : participants.length === 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '20px', 
+                  color: '#666',
+                  background: '#fff',
+                  borderRadius: '8px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  {language === 'zh' ? '暂无参与者' : 'No participants yet'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {participants.map((participant: any) => {
+                    const isTaskManager = task.is_multi_participant && user && (
+                      (task.is_official_task) || 
+                      (task.created_by_expert && task.expert_creator_id === user.id)
+                    );
+                    
+                    return (
+                      <div key={participant.id} style={{
+                        background: '#fff',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ fontWeight: '600', color: '#333', fontSize: '16px' }}>
+                              {participant.user_name || 'Unknown'}
+                            </div>
+                            <div style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              background: participant.status === 'pending' ? '#fef3c7' :
+                                         participant.status === 'accepted' ? '#d1fae5' :
+                                         participant.status === 'in_progress' ? '#dbeafe' :
+                                         participant.status === 'completed' ? '#d1fae5' :
+                                         participant.status === 'exit_requested' ? '#fef3c7' :
+                                         '#fee2e2',
+                              color: participant.status === 'pending' ? '#92400e' :
+                                     participant.status === 'accepted' ? '#065f46' :
+                                     participant.status === 'in_progress' ? '#1e40af' :
+                                     participant.status === 'completed' ? '#065f46' :
+                                     participant.status === 'exit_requested' ? '#92400e' :
+                                     '#991b1b'
+                            }}>
+                              {participant.status === 'pending' ? (language === 'zh' ? '待审核' : 'Pending') :
+                               participant.status === 'accepted' ? (language === 'zh' ? '已接受' : 'Accepted') :
+                               participant.status === 'in_progress' ? (language === 'zh' ? '进行中' : 'In Progress') :
+                               participant.status === 'completed' ? (language === 'zh' ? '已完成' : 'Completed') :
+                               participant.status === 'exit_requested' ? (language === 'zh' ? '退出申请中' : 'Exit Requested') :
+                               (language === 'zh' ? '已退出' : 'Exited')}
+                            </div>
+                          </div>
+                          {participant.applied_at && (
+                            <div style={{ color: '#999', fontSize: '12px' }}>
+                              {language === 'zh' ? '申请时间' : 'Applied at'}: {TimeHandlerV2.formatUtcToLocal(participant.applied_at)}
+                            </div>
+                          )}
+                          {participant.exit_reason && (
+                            <div style={{ color: '#f59e0b', fontSize: '12px', marginTop: '4px' }}>
+                              {language === 'zh' ? '退出原因' : 'Exit reason'}: {participant.exit_reason}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {/* 管理员/任务达人操作按钮 */}
+                          {isTaskManager && participant.status === 'pending' && task.status === 'open' && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(language === 'zh' ? '确定要批准这个参与者吗？' : 'Are you sure you want to approve this participant?')) {
+                                    return;
+                                  }
+                                  setActionLoading(true);
+                                  try {
+                                    await approveParticipant(task.id, participant.id, task.is_official_task || false);
+                                    alert(language === 'zh' ? '批准成功！' : 'Approved successfully!');
+                                    await loadParticipants();
+                                    const res = await api.get(`/api/tasks/${taskId}`);
+                                    setTask(res.data);
+                                  } catch (error: any) {
+                                    console.error('批准参与者失败:', error);
+                                    alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                style={{
+                                  background: '#28a745',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px 16px',
+                                  fontWeight: '600',
+                                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                                  opacity: actionLoading ? 0.6 : 1,
+                                  fontSize: '14px'
+                                }}
+                              >
+                                {language === 'zh' ? '批准' : 'Approve'}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(language === 'zh' ? '确定要拒绝这个参与者吗？' : 'Are you sure you want to reject this participant?')) {
+                                    return;
+                                  }
+                                  setActionLoading(true);
+                                  try {
+                                    await rejectParticipant(task.id, participant.id, task.is_official_task || false);
+                                    alert(language === 'zh' ? '已拒绝' : 'Rejected');
+                                    await loadParticipants();
+                                    const res = await api.get(`/api/tasks/${taskId}`);
+                                    setTask(res.data);
+                                  } catch (error: any) {
+                                    console.error('拒绝参与者失败:', error);
+                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                style={{
+                                  background: '#dc3545',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px 16px',
+                                  fontWeight: '600',
+                                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                                  opacity: actionLoading ? 0.6 : 1,
+                                  fontSize: '14px'
+                                }}
+                              >
+                                {language === 'zh' ? '拒绝' : 'Reject'}
+                              </button>
+                            </>
+                          )}
+                          {/* 处理退出申请 */}
+                          {isTaskManager && participant.status === 'exit_requested' && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(language === 'zh' ? '确定要批准退出申请吗？' : 'Are you sure you want to approve the exit request?')) {
+                                    return;
+                                  }
+                                  setActionLoading(true);
+                                  try {
+                                    await approveExitRequest(task.id, participant.id, task.is_official_task || false);
+                                    alert(language === 'zh' ? '退出申请已批准' : 'Exit request approved');
+                                    await loadParticipants();
+                                    const res = await api.get(`/api/tasks/${taskId}`);
+                                    setTask(res.data);
+                                  } catch (error: any) {
+                                    console.error('批准退出申请失败:', error);
+                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                style={{
+                                  background: '#28a745',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px 16px',
+                                  fontWeight: '600',
+                                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                                  opacity: actionLoading ? 0.6 : 1,
+                                  fontSize: '14px'
+                                }}
+                              >
+                                {language === 'zh' ? '批准退出' : 'Approve Exit'}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm(language === 'zh' ? '确定要拒绝退出申请吗？' : 'Are you sure you want to reject the exit request?')) {
+                                    return;
+                                  }
+                                  setActionLoading(true);
+                                  try {
+                                    await rejectExitRequest(task.id, participant.id, task.is_official_task || false);
+                                    alert(language === 'zh' ? '退出申请已拒绝' : 'Exit request rejected');
+                                    await loadParticipants();
+                                    const res = await api.get(`/api/tasks/${taskId}`);
+                                    setTask(res.data);
+                                  } catch (error: any) {
+                                    console.error('拒绝退出申请失败:', error);
+                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                style={{
+                                  background: '#dc3545',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px 16px',
+                                  fontWeight: '600',
+                                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                                  opacity: actionLoading ? 0.6 : 1,
+                                  fontSize: '14px'
+                                }}
+                              >
+                                {language === 'zh' ? '拒绝退出' : 'Reject Exit'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 申请者列表 - 仅任务发布者可见（非多人任务） */}
+          {isTaskPoster && (task.status === 'taken' || task.status === 'open') && !task.is_multi_participant && (
             <div style={{
               marginTop: '20px',
               padding: '20px',
@@ -1714,8 +2119,162 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             </div>
           )}
 
+          {/* 多人任务：管理员/任务达人开始任务按钮 */}
+          {task.is_multi_participant && (() => {
+            const isTaskManager = task.is_multi_participant && user && (
+              (task.is_official_task) || 
+              (task.created_by_expert && task.expert_creator_id === user.id)
+            );
+            return isTaskManager && task.status === 'open' && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(language === 'zh' ? '确定要开始这个任务吗？开始后参与者将进入进行中状态。' : 'Are you sure you want to start this task? Participants will enter in-progress status.')) {
+                    return;
+                  }
+                  setActionLoading(true);
+                  try {
+                    await startMultiParticipantTask(task.id, task.is_official_task || false);
+                    alert(language === 'zh' ? '任务已开始！' : 'Task started!');
+                    const res = await api.get(`/api/tasks/${taskId}`);
+                    setTask(res.data);
+                    await loadParticipants();
+                  } catch (error: any) {
+                    console.error('开始任务失败:', error);
+                    alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading}
+                style={{
+                  background: '#007bff',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 32px',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                  marginRight: '16px'
+                }}
+              >
+                {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '🚀 开始任务' : '🚀 Start Task')}
+              </button>
+            );
+          })()}
+
+          {/* 多人任务：参与者退出申请按钮 */}
+          {task.is_multi_participant && userParticipant && 
+           (userParticipant.status === 'accepted' || userParticipant.status === 'in_progress') && 
+           userParticipant.status !== 'exit_requested' && (
+            <button
+              onClick={async () => {
+                const reason = window.prompt(language === 'zh' ? '请输入退出原因（可选）' : 'Please enter exit reason (optional)');
+                if (reason === null) return;
+                
+                setActionLoading(true);
+                try {
+                  const idempotencyKey = `${user.id}_${task.id}_exit_${Date.now()}`;
+                  await requestExitFromTask(task.id, {
+                    idempotency_key: idempotencyKey,
+                    reason: reason || undefined
+                  });
+                  alert(language === 'zh' ? '退出申请已提交，等待审核。' : 'Exit request submitted, waiting for approval.');
+                  await checkUserApplication();
+                  await loadParticipants();
+                  const res = await api.get(`/api/tasks/${taskId}`);
+                  setTask(res.data);
+                } catch (error: any) {
+                  console.error('提交退出申请失败:', error);
+                  alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
+                } finally {
+                  setActionLoading(false);
+                }
+              }}
+              disabled={actionLoading}
+              style={{
+                background: '#ffc107',
+                color: '#000',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 32px',
+                fontWeight: 700,
+                fontSize: 18,
+                cursor: actionLoading ? 'not-allowed' : 'pointer',
+                opacity: actionLoading ? 0.6 : 1,
+                marginRight: '16px'
+              }}
+            >
+              {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '🚪 申请退出' : '🚪 Request Exit')}
+            </button>
+          )}
+
+          {/* 多人任务：管理员分配奖励按钮 */}
+          {task.is_multi_participant && task.status === 'completed' && (() => {
+            const isTaskManager = task.is_multi_participant && user && (
+              (task.is_official_task) || 
+              (task.created_by_expert && task.expert_creator_id === user.id)
+            );
+            return isTaskManager && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(language === 'zh' ? '确定要分配奖励吗？' : 'Are you sure you want to distribute rewards?')) {
+                    return;
+                  }
+                  
+                  setActionLoading(true);
+                  try {
+                    const idempotencyKey = `${user.id}_${task.id}_distribute_${Date.now()}`;
+                    
+                    if (task.reward_distribution === 'equal') {
+                      await completeTaskAndDistributeRewardsEqual(task.id, {
+                        idempotency_key: idempotencyKey
+                      });
+                      alert(language === 'zh' ? '奖励已平均分配！' : 'Rewards distributed equally!');
+                    } else {
+                      const completedParticipants = participants.filter((p: any) => p.status === 'completed');
+                      if (completedParticipants.length === 0) {
+                        alert(language === 'zh' ? '没有已完成的参与者' : 'No completed participants');
+                        return;
+                      }
+                      alert(language === 'zh' 
+                        ? '自定义分配功能需要在管理后台完成。\n\n已完成参与者数量: ' + completedParticipants.length
+                        : 'Custom distribution needs to be done in admin panel.\n\nCompleted participants: ' + completedParticipants.length);
+                      return;
+                    }
+                    
+                    const res = await api.get(`/api/tasks/${taskId}`);
+                    setTask(res.data);
+                    await loadParticipants();
+                  } catch (error: any) {
+                    console.error('分配奖励失败:', error);
+                    alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading}
+                style={{
+                  background: '#28a745',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 32px',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                  marginRight: '16px'
+                }}
+              >
+                {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '💰 分配奖励' : '💰 Distribute Rewards')}
+              </button>
+            );
+          })()}
+
           {/* 其他操作按钮 */}
-          {task.status === 'in_progress' && isTaskTaker && (
+          {task.status === 'in_progress' && isTaskTaker && !task.is_multi_participant && (
             <button
               onClick={handleCompleteTask}
               disabled={actionLoading}
