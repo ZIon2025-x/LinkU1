@@ -1614,7 +1614,8 @@ class TaskParticipantReward(Base):
     # 关系
     task = relationship("Task", back_populates="participant_rewards")
     participant = relationship("TaskParticipant", back_populates="rewards")
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])  # 明确指定使用 user_id 外键
+    expert_operator = relationship("User", foreign_keys=[expert_operator_id])  # 操作的任务达人
     
     __table_args__ = (
         UniqueConstraint("external_txn_id", name="uq_reward_external_txn"),
