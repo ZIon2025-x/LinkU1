@@ -1429,9 +1429,9 @@ class ServiceTimeSlot(Base):
     
     __table_args__ = (
         Index("ix_service_time_slots_service_id", service_id),
-        Index("ix_service_time_slots_slot_date", slot_date),
-        Index("ix_service_time_slots_service_date", service_id, slot_date),
-        UniqueConstraint("service_id", "slot_date", "start_time", "end_time", name="uq_service_time_slot"),
+        Index("ix_service_time_slots_slot_start_datetime", slot_start_datetime),
+        Index("ix_service_time_slots_service_start", service_id, slot_start_datetime),
+        UniqueConstraint("service_id", "slot_start_datetime", "slot_end_datetime", name="uq_service_time_slot"),
     )
 
 
