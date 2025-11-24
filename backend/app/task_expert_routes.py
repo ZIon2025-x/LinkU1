@@ -976,14 +976,27 @@ async def delete_time_slots_by_date(
         logger.info(f"没有找到可删除的时间段 (service_id={service_id}, target_date={target_date})")
         return {"message": f"{target_date} 没有可删除的时间段", "deleted_count": 0}
     
-    # 检查是否有已申请的时间段
-    slots_with_participants = [slot for slot in time_slots if slot.current_participants > 0]
-    if slots_with_participants:
-        logger.warning(f"有 {len(slots_with_participants)} 个时间段已有参与者，无法删除")
+    # 检查是否有未过期但已有参与者的时间段
+    from app.utils.time_utils import get_utc_time
+    current_utc = get_utc_time()
+    
+    # 分离过期和未过期的时间段
+    expired_slots = [slot for slot in time_slots if slot.slot_start_datetime < current_utc]
+    future_slots = [slot for slot in time_slots if slot.slot_start_datetime >= current_utc]
+    
+    # 检查未过期的时间段是否有参与者
+    future_slots_with_participants = [slot for slot in future_slots if slot.current_participants > 0]
+    if future_slots_with_participants:
+        logger.warning(f"有 {len(future_slots_with_participants)} 个未过期的时间段已有参与者，无法删除")
         raise HTTPException(
             status_code=400,
-            detail=f"{target_date} 有已申请的时间段，无法删除"
+            detail=f"{target_date} 有未过期且已申请的时间段，无法删除"
         )
+    
+    # 记录过期但有参与者的时间段（用于日志，但不阻止删除）
+    expired_slots_with_participants = [slot for slot in expired_slots if slot.current_participants > 0]
+    if expired_slots_with_participants:
+        logger.info(f"有 {len(expired_slots_with_participants)} 个过期的时间段有参与者，但仍会删除（因为已过期）")
     
     # 标记为手动删除（而不是真正删除，避免自动重新生成）
     slot_ids = [slot.id for slot in time_slots]
