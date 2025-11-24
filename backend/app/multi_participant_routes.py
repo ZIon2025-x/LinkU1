@@ -184,8 +184,13 @@ def apply_to_activity(
     - 如果活动关联的是非时间段服务：创建新任务，用户是发布人，达人是接收人
     - 如果活动关联的是时间段服务：创建新任务，包含时间段信息，如果是多人任务则在TaskParticipant表中创建记录
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     from app.models import TaskExpertService, ServiceTimeSlot
     from datetime import datetime, timezone as tz
+    
+    logger.info(f"用户 {current_user.id} 申请活动 {activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={request.is_multi_participant}")
     
     # 查询活动
     db_activity = db.query(Activity).filter(Activity.id == activity_id).with_for_update().first()
@@ -285,6 +290,7 @@ def apply_to_activity(
     db.refresh(new_task)
     
     # 如果是多人任务，创建TaskParticipant记录
+    participant = None
     if request.is_multi_participant:
         # 对于有时间段的活动申请，参与者状态直接设为"accepted"，不需要审核
         participant_status = "accepted" if db_activity.has_time_slots else "pending"
@@ -310,6 +316,7 @@ def apply_to_activity(
     # 如果是时间段服务，验证时间段
     if db_activity.has_time_slots:
         if not request.time_slot_id:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段服务必须选择时间段")
             raise HTTPException(status_code=400, detail="时间段服务必须选择时间段")
         
         # 验证时间段是否存在且属于该服务（使用行锁防止并发问题）
@@ -322,6 +329,7 @@ def apply_to_activity(
         ).with_for_update().first()
         
         if not time_slot:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 不存在或已被删除")
             raise HTTPException(status_code=404, detail="时间段不存在或已被删除")
         
         # 验证时间段是否属于当前活动
@@ -334,6 +342,7 @@ def apply_to_activity(
         ).first()
         
         if not activity_relation:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 不属于此活动")
             raise HTTPException(status_code=400, detail="该时间段不属于此活动")
         
         # 检查时间段是否已被其他活动使用（额外验证）
@@ -346,16 +355,19 @@ def apply_to_activity(
         ).first()
         
         if other_relation:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已被其他活动 {other_relation.activity_id} 使用")
             raise HTTPException(status_code=400, detail="该时间段已被其他活动使用")
         
         # 检查时间段是否已满（在锁定的情况下检查，防止并发超卖）
         if time_slot.current_participants >= time_slot.max_participants:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已满 (当前: {time_slot.current_participants}, 最大: {time_slot.max_participants})")
             raise HTTPException(status_code=400, detail="该时间段已满")
         
         # 检查时间段是否已过期
         from app.utils.time_utils import get_utc_time
         current_time = get_utc_time()
         if time_slot.slot_start_datetime < current_time:
+            logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已过期 (开始时间: {time_slot.slot_start_datetime}, 当前时间: {current_time})")
             raise HTTPException(status_code=400, detail="该时间段已过期")
         
         # 更新时间段的参与者数量（活动申请成功后，在锁定状态下更新）

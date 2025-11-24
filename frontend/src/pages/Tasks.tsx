@@ -1602,8 +1602,8 @@ const Tasks: React.FC = () => {
                 flexDirection: 'row',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '8px',
-                padding: isMobile ? '10px 12px' : '10px 12px',
+                gap: '6px',
+                padding: '8px 10px',
                 background: 'rgba(255, 255, 255, 0.15)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '8px',
@@ -1613,19 +1613,20 @@ const Tasks: React.FC = () => {
               <div style={{ 
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
                 fontSize: isMobile ? '11px' : '12px', 
                 fontWeight: 500,
                 flex: 1,
                 minWidth: 0,
+                overflow: 'hidden',
               }}>
                 <span style={{ 
-                  fontSize: isMobile ? '13px' : '14px',
-                  opacity: 0.9 
+                  fontSize: isMobile ? '12px' : '13px',
+                  opacity: 0.9,
+                  flexShrink: 0,
                 }}>👥</span>
-                <span style={{ opacity: 0.9 }}>参与者: </span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>
-                  {activity.current_participants || 0} / {activity.max_participants}
+                <span style={{ fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
+                  {activity.current_participants || 0}/{activity.max_participants}
                 </span>
               </div>
               {activity.has_time_slots ? (
@@ -1633,17 +1634,17 @@ const Tasks: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: isMobile ? '10px' : '11px',
+                    gap: '3px',
+                    fontSize: isMobile ? '9px' : '10px',
                     background: 'rgba(16, 185, 129, 0.3)',
-                    padding: '4px 8px',
+                    padding: '3px 6px',
                     borderRadius: '6px',
                     fontWeight: 500,
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                   }}
                 >
-                  <span>⏰</span>
+                  <span style={{ fontSize: isMobile ? '10px' : '11px' }}>⏰</span>
                   <span>{dateText}</span>
                 </div>
               ) : (dateText || timeText) ? (
@@ -1651,16 +1652,16 @@ const Tasks: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: isMobile ? '10px' : '11px',
+                    gap: '3px',
+                    fontSize: isMobile ? '9px' : '10px',
                     background: 'rgba(255, 255, 255, 0.25)',
-                    padding: '4px 8px',
+                    padding: '3px 6px',
                     borderRadius: '6px',
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                   }}
                 >
-                  <span>📅</span>
+                  <span style={{ fontSize: isMobile ? '10px' : '11px' }}>📅</span>
                   <span>{dateText} {timeText}</span>
                 </div>
               ) : null}
