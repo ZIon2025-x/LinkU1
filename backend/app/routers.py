@@ -6495,12 +6495,40 @@ def create_task_expert(
     db: Session = Depends(get_db),
 ):
     """创建任务达人（管理员）"""
-    # 确保 expert_data 包含 user_id，并且 id 和 user_id 相同
+    from sqlalchemy.exc import IntegrityError
+    
+    # 1. 确保 expert_data 包含 user_id，并且 id 和 user_id 相同
     if 'user_id' not in expert_data:
         raise HTTPException(status_code=400, detail="必须提供 user_id")
     
+    user_id = expert_data['user_id']
+    
+    # 2. 验证 user_id 格式（应该是8位字符串）
+    if not isinstance(user_id, str) or len(user_id) != 8:
+        raise HTTPException(status_code=400, detail="user_id 必须是8位字符串")
+    
+    # 3. 验证用户是否存在
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 4. 检查用户是否已经是基础任务达人（TaskExpert）
+    existing_task_expert = db.query(models.TaskExpert).filter(
+        models.TaskExpert.id == user_id
+    ).first()
+    if not existing_task_expert:
+        raise HTTPException(status_code=400, detail="该用户还不是任务达人，请先批准任务达人申请")
+    
+    # 5. 检查用户是否已经是特色任务达人（FeaturedTaskExpert）
+    existing_featured = db.query(models.FeaturedTaskExpert).filter(
+        models.FeaturedTaskExpert.id == user_id
+    ).first()
+    if existing_featured:
+        raise HTTPException(status_code=400, detail="该用户已经是特色任务达人")
+    
     # 设置 id 为 user_id
-    expert_data['id'] = expert_data['user_id']
+    expert_data['id'] = user_id
+    
     try:
         # 将数组字段转换为 JSON
         for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
@@ -6524,6 +6552,13 @@ def create_task_expert(
                 "name": new_expert.name,
             }
         }
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"创建任务达人失败（完整性错误）: {e}")
+        # 检查是否是主键冲突
+        if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+            raise HTTPException(status_code=409, detail="该用户已经是特色任务达人（并发冲突）")
+        raise HTTPException(status_code=400, detail=f"数据完整性错误: {str(e)}")
     except Exception as e:
         logger.error(f"创建任务达人失败: {e}")
         db.rollback()
@@ -6538,6 +6573,8 @@ def update_task_expert(
     db: Session = Depends(get_db),
 ):
     """更新任务达人（管理员）"""
+    from sqlalchemy.exc import IntegrityError
+    
     try:
         expert = db.query(models.FeaturedTaskExpert).filter(
             models.FeaturedTaskExpert.id == expert_id
@@ -6546,25 +6583,31 @@ def update_task_expert(
         if not expert:
             raise HTTPException(status_code=404, detail="任务达人不存在")
         
+        # 1. 禁止修改 user_id 和 id（主键不能修改）
+        if 'user_id' in expert_data and expert_data['user_id'] != expert.user_id:
+            raise HTTPException(status_code=400, detail="不允许修改 user_id，如需更换用户请删除后重新创建")
+        
+        if 'id' in expert_data and expert_data['id'] != expert.id:
+            raise HTTPException(status_code=400, detail="不允许修改 id（主键），如需更换用户请删除后重新创建")
+        
+        # 2. 如果提供了 user_id，验证用户是否存在
+        if 'user_id' in expert_data:
+            user_id = expert_data['user_id']
+            if not isinstance(user_id, str) or len(user_id) != 8:
+                raise HTTPException(status_code=400, detail="user_id 必须是8位字符串")
+            
+            user = db.query(models.User).filter(models.User.id == user_id).first()
+            if not user:
+                raise HTTPException(status_code=404, detail="用户不存在")
+        
         # 将数组字段转换为 JSON
         for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
             if field in expert_data and isinstance(expert_data[field], list):
                 expert_data[field] = json.dumps(expert_data[field])
         
-        # 如果 user_id 被修改，确保 id 也同步更新
-        if 'user_id' in expert_data and expert_data['user_id'] != expert.user_id:
-            expert_data['id'] = expert_data['user_id']
-            logger.info(f"检测到 user_id 更改，同步更新 id: {expert_data['user_id']}")
-        
-        # 确保 id 和 user_id 始终一致
-        if 'id' in expert_data and 'user_id' in expert_data:
-            if expert_data['id'] != expert_data['user_id']:
-                expert_data['id'] = expert_data['user_id']
-                logger.info(f"检测到 id 和 user_id 不一致，将 id 同步为 user_id: {expert_data['user_id']}")
-        elif 'user_id' in expert_data:
-            expert_data['id'] = expert_data['user_id']
-        elif 'id' in expert_data:
-            expert_data['user_id'] = expert_data['id']
+        # 从 expert_data 中移除 id 和 user_id（不允许更新）
+        expert_data.pop('id', None)
+        expert_data.pop('user_id', None)
         
         # 保存旧头像URL，用于后续删除
         old_avatar_url = expert.avatar if 'avatar' in expert_data and expert_data['avatar'] else None

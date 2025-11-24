@@ -1024,6 +1024,8 @@ def delete_expert_activity(
     - 删除活动时，会取消关联的未开始任务
     """
     from app.models import TaskExpert, Task, TaskAuditLog
+    import logging
+    logger = logging.getLogger(__name__)
     
     # 验证用户是否为任务达人
     expert = db.query(TaskExpert).filter(TaskExpert.id == current_user.id).first()
@@ -1073,10 +1075,26 @@ def delete_expert_activity(
         )
     ).all()
     
+    from app.models import TaskParticipant
+    
     for task in pending_tasks:
         old_task_status = task.status  # 保存旧状态
         task.status = "cancelled"
         task.updated_at = get_utc_time()
+        
+        # 对于多人任务，取消所有参与者的状态（pending、accepted、in_progress）
+        if task.is_multi_participant:
+            participants = db.query(TaskParticipant).filter(
+                TaskParticipant.task_id == task.id,
+                TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
+            ).all()
+            
+            for participant in participants:
+                old_participant_status = participant.status
+                participant.status = "cancelled"
+                participant.cancelled_at = get_utc_time()
+                participant.updated_at = get_utc_time()
+                logger.info(f"活动取消：参与者 {participant.user_id} 的状态从 {old_participant_status} 变更为 cancelled")
         
         # 记录审计日志
         audit_log = TaskAuditLog(

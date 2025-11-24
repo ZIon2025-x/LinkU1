@@ -1209,7 +1209,8 @@ const TaskExpertDashboard: React.FC = () => {
                 {multiTasks.map((activity: any) => {
                   const tasks = activityTasks[activity.id] || [];
                   const participantsByTask = taskParticipants[activity.id] || {};
-                  const isTaskManager = activity.expert_id === user?.id;
+                  // 使用字符串比较，确保类型一致（expert_id 是字符串类型）
+                  const isTaskManager = String(activity.expert_id) === String(user?.id);
                   
                   // 计算当前参与者数量（从所有任务的参与者中统计）
                   // 对于多人任务，统计参与者数量；对于单个任务，每个任务算1个参与者

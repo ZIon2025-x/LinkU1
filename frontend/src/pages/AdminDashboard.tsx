@@ -2062,15 +2062,27 @@ const AdminDashboard: React.FC = () => {
                       }
                       
                       if (taskExpertForm.id) {
+                        // 更新任务达人
                         await updateTaskExpert(taskExpertForm.id, dataToSend);
+                        message.success('任务达人更新成功');
                       } else {
+                        // 创建任务达人：必须提供 user_id
+                        if (!dataToSend.user_id) {
+                          message.error('创建任务达人时必须提供 user_id，请从已批准的申请中选择创建');
+                          return;
+                        }
                         await createTaskExpert(dataToSend);
+                        message.success('任务达人创建成功');
                       }
                       setShowTaskExpertModal(false);
                       await loadDashboardData();
+                    } else {
+                      message.error('请输入任务达人名称');
                     }
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error('保存失败:', error);
+                    const errorMsg = error.response?.data?.detail || '操作失败，请重试';
+                    message.error(errorMsg);
                   }
                 }}
                 disabled={!taskExpertForm.name}

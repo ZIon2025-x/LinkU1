@@ -736,6 +736,35 @@ async def delete_service(
     service_images = service.images if hasattr(service, 'images') and service.images else []
     expert_id = current_expert.id
     
+    # 1. 查找所有相关的 ServiceTimeSlot IDs
+    time_slots_result = await db.execute(
+        select(models.ServiceTimeSlot.id)
+        .where(models.ServiceTimeSlot.service_id == service_id)
+    )
+    time_slot_ids = [row[0] for row in time_slots_result.fetchall()]
+    
+    if time_slot_ids:
+        # 2. 删除所有 TaskTimeSlotRelation 记录（fixed 模式，因为 time_slot_id 会被设置为 NULL）
+        task_relations_result = await db.execute(
+            select(models.TaskTimeSlotRelation)
+            .where(models.TaskTimeSlotRelation.time_slot_id.in_(time_slot_ids))
+            .where(models.TaskTimeSlotRelation.relation_mode == 'fixed')
+        )
+        task_relations = task_relations_result.scalars().all()
+        for relation in task_relations:
+            await db.delete(relation)
+        
+        # 3. 删除所有 ActivityTimeSlotRelation 记录（fixed 模式，因为 time_slot_id 会被设置为 NULL）
+        activity_relations_result = await db.execute(
+            select(models.ActivityTimeSlotRelation)
+            .where(models.ActivityTimeSlotRelation.time_slot_id.in_(time_slot_ids))
+            .where(models.ActivityTimeSlotRelation.relation_mode == 'fixed')
+        )
+        activity_relations = activity_relations_result.scalars().all()
+        for relation in activity_relations:
+            await db.delete(relation)
+    
+    # 4. 现在安全地删除服务（cascades 到 ServiceTimeSlot）
     await db.delete(service)
     current_expert.total_services = max(0, current_expert.total_services - 1)
     await db.commit()

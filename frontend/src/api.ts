@@ -1527,13 +1527,13 @@ export const createTaskExpert = async (expertData: any) => {
 };
 
 // 管理员 API - 更新任务达人
-export const updateTaskExpert = async (expertId: number, expertData: any) => {
+export const updateTaskExpert = async (expertId: string, expertData: any) => {
   const res = await api.put(`/api/admin/task-expert/${expertId}`, expertData);
   return res.data;
 };
 
 // 管理员 API - 删除任务达人
-export const deleteTaskExpert = async (expertId: number) => {
+export const deleteTaskExpert = async (expertId: string) => {
   const res = await api.delete(`/api/admin/task-expert/${expertId}`);
   return res.data;
 };
