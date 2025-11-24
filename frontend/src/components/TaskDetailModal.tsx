@@ -95,11 +95,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     if (!user || !task || !taskId) {
       return;
     }
-    // 多人任务：只有任务达人（expert_creator_id）或发布者可以查看申请列表
+    
+    // 多人任务：使用参与者列表，而不是申请者列表
+    // 因为多人任务使用的是 TaskParticipant 表，而不是 TaskApplication 表
+    if (task.is_multi_participant) {
+      // 多人任务不加载申请者列表，而是使用参与者列表（已在 loadParticipants 中加载）
+      setApplications([]);
+      return;
+    }
+    
     // 单人任务：只有发布者可以查看申请列表
-    const canViewApplications = task.is_multi_participant 
-      ? (task.expert_creator_id === user.id || (task.poster_id && task.poster_id === user.id))
-      : (task.poster_id && task.poster_id === user.id);
+    const canViewApplications = task.poster_id && task.poster_id === user.id;
     if (!canViewApplications) {
       return;
     }
@@ -232,14 +238,17 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     };
   }, [enlargedImage, task, currentImageIndex]);
 
-  // 当用户信息加载后，如果是任务发布者或任务达人，加载申请者列表
+  // 当用户信息加载后，如果是任务发布者，加载申请者列表（仅单人任务）
+  // 多人任务使用参与者列表，不加载申请者列表
   useEffect(() => {
     if (user && task) {
-      // 多人任务：任务达人（expert_creator_id）或发布者可以查看申请列表
+      // 多人任务不加载申请者列表（使用参与者列表）
+      if (task.is_multi_participant) {
+        return;
+      }
+      
       // 单人任务：只有发布者可以查看申请列表
-      const canViewApplications = task.is_multi_participant 
-        ? (task.expert_creator_id === user.id || (task.poster_id && task.poster_id === user.id))
-        : (task.poster_id && task.poster_id === user.id);
+      const canViewApplications = task.poster_id && task.poster_id === user.id;
       if (canViewApplications) {
         loadApplications();
       }

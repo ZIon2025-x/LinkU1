@@ -582,8 +582,10 @@ async def get_task_applications(
         # 权限检查
         is_poster = task.poster_id == current_user.id
         is_taker = task.taker_id == current_user.id
+        # 多人任务：任务达人也可以查看申请列表
+        is_expert_creator = getattr(task, 'is_multi_participant', False) and getattr(task, 'expert_creator_id', None) == current_user.id
         
-        if not is_poster and not is_taker:
+        if not is_poster and not is_taker and not is_expert_creator:
             # 检查是否是申请者
             application_check = select(models.TaskApplication).where(
                 and_(

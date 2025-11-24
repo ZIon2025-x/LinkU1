@@ -719,8 +719,12 @@ async def get_task_applications(
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
-        if task.poster_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Only task poster can view applications")
+        # 权限检查：发布者或多人任务的任务达人可以查看申请列表
+        is_poster = task.poster_id == current_user.id
+        is_expert_creator = getattr(task, 'is_multi_participant', False) and getattr(task, 'expert_creator_id', None) == current_user.id
+        
+        if not is_poster and not is_expert_creator:
+            raise HTTPException(status_code=403, detail="Only task poster or expert creator can view applications")
         
         # 使用 selectinload 预加载申请者信息，避免N+1查询
         applications_query = (
