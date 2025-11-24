@@ -794,7 +794,7 @@ def list_all_tasks(db: Session, skip: int = 0, limit: int = 1000):
 
 def get_task(db: Session, task_id: int):
     """获取任务详情 - 优化 N+1 查询问题"""
-    from app.models import Task, User
+    from app.models import Task, User, TaskTimeSlotRelation
     from sqlalchemy.orm import selectinload
 
     # 使用 selectinload 预加载关联数据，避免 N+1 查询
@@ -804,6 +804,7 @@ def get_task(db: Session, task_id: int):
             selectinload(Task.poster),  # 预加载发布者信息
             selectinload(Task.taker),   # 预加载接受者信息（如果存在）
             selectinload(Task.participants),  # 预加载参与者信息，用于动态计算current_participants
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联，用于获取时间段信息
         )
         .filter(Task.id == task_id)
         .first()

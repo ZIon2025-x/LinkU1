@@ -177,7 +177,8 @@ def init_scheduler():
         cleanup_long_inactive_chats
     )
     from app.database import SessionLocal
-    from app.crud import cancel_expired_tasks, update_all_users_statistics, update_all_task_experts_bio
+    from app.main import cancel_expired_tasks, update_all_users_statistics
+    from app.crud import update_all_task_experts_bio
     
     scheduler = get_scheduler()
     

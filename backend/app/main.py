@@ -645,8 +645,9 @@ async def startup_event():
                     redis_client = redis.from_url(REDIS_URL)
                     redis_client.ping()
                     # Redis 连接成功，检查 Worker 是否在线
+                    # 增加超时时间，因为 Worker 可能启动得比较慢
                     try:
-                        inspect = celery_app.control.inspect(timeout=2.0)  # 2秒超时
+                        inspect = celery_app.control.inspect(timeout=5.0)  # 5秒超时，给 Worker 更多时间启动
                         active_workers = inspect.active()
                         if active_workers:
                             use_celery = True
@@ -657,6 +658,10 @@ async def startup_event():
                         else:
                             use_celery = False
                             logger.warning("⚠️  Redis 连接成功，但 Celery Worker 未在线，将回退到 TaskScheduler")
+                            logger.info("   可能的原因：")
+                            logger.info("   1. Celery Worker 服务未启动")
+                            logger.info("   2. Worker 启动时间较慢（请等待几秒后重试）")
+                            logger.info("   3. Worker 和主服务使用不同的 Redis 配置")
                             logger.info("   如需使用 Celery，请启动 Worker：")
                             logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
                             logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
@@ -664,6 +669,10 @@ async def startup_event():
                         # Worker 检查失败，回退到 TaskScheduler
                         use_celery = False
                         logger.warning(f"⚠️  Redis 连接成功，但无法检查 Celery Worker 状态，将回退到 TaskScheduler: {inspect_error}")
+                        logger.info("   可能的原因：")
+                        logger.info("   1. Worker 未启动或启动时间较慢")
+                        logger.info("   2. Worker 和主服务使用不同的 Redis URL")
+                        logger.info("   3. 网络连接问题")
                         logger.info("   如需使用 Celery，请启动 Worker：")
                         logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
                         logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
@@ -1521,7 +1530,7 @@ async def health_check():
         if USE_REDIS:
             # 尝试检查 Celery Worker 是否在线（设置超时避免阻塞）
             try:
-                inspect = celery_app.control.inspect(timeout=2.0)  # 2秒超时
+                inspect = celery_app.control.inspect(timeout=5.0)  # 5秒超时，给 Worker 更多时间响应
                 active_workers = inspect.active()
                 if active_workers:
                     health_status["checks"]["celery_worker"] = f"ok ({len(active_workers)} workers)"
