@@ -373,6 +373,10 @@ active_connections = {}
 # 用户级连接锁，确保原子替换
 connection_locks = defaultdict(asyncio.Lock)
 
+# 全局变量：保存后台任务引用，用于优雅关闭
+_background_cleanup_task = None
+_shutdown_flag = False
+
 
 async def close_old_connection(old_websocket: WebSocket, user_id: str):
     """异步关闭旧连接，使用正常关闭码和固定reason"""
@@ -497,10 +501,11 @@ def update_all_users_statistics():
 def run_background_task():
     """运行后台任务循环"""
     import datetime
+    global _shutdown_flag
     task_counter = 0
     last_bio_update_date = None  # 记录上次更新 bio 的日期
     
-    while True:
+    while not _shutdown_flag:
         try:
             # 取消过期任务（每分钟执行）
             cancel_expired_tasks()
@@ -527,7 +532,8 @@ def run_background_task():
 
 def run_session_cleanup_task():
     """运行会话清理任务"""
-    while True:
+    global _shutdown_flag
+    while not _shutdown_flag:
         try:
             from app.secure_auth import SecureAuthManager
             SecureAuthManager.cleanup_expired_sessions()
@@ -551,12 +557,22 @@ async def startup_event():
     
     def run_tasks_periodically():
         """每5分钟执行一次定时任务"""
-        while True:
+        global _shutdown_flag
+        while not _shutdown_flag:
             try:
                 run_scheduled_tasks()
             except Exception as e:
+                # 如果是关闭时的错误，只记录调试信息
+                if _shutdown_flag and ("Event loop is closed" in str(e) or "loop is closed" in str(e)):
+                    logger.debug(f"定时任务在关闭时跳过: {e}")
+                    break
                 logger.error(f"定时任务执行失败: {e}", exc_info=True)
-            time.sleep(300)  # 5分钟
+            
+            # 使用可中断的睡眠
+            for _ in range(300):  # 5分钟 = 300秒
+                if _shutdown_flag:
+                    break
+                time.sleep(1)
     
     # 启动后台线程
     scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
@@ -635,10 +651,76 @@ async def startup_event():
     logger.info("启动定期清理任务")
     try:
         from app.cleanup_tasks import start_background_cleanup
-        asyncio.create_task(start_background_cleanup())
+        global _background_cleanup_task
+        _background_cleanup_task = asyncio.create_task(start_background_cleanup())
         logger.info("定期清理任务已启动")
     except Exception as e:
         logger.error(f"启动定期清理任务失败: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭时清理资源"""
+    global _shutdown_flag, _background_cleanup_task
+    
+    logger.info("应用正在关闭，清理资源...")
+    _shutdown_flag = True
+    
+    # 1. 停止异步清理任务
+    try:
+        from app.cleanup_tasks import stop_background_cleanup
+        stop_background_cleanup()
+        logger.info("已停止异步清理任务")
+        
+        # 取消异步任务（如果还在运行）
+        if _background_cleanup_task and not _background_cleanup_task.done():
+            _background_cleanup_task.cancel()
+            try:
+                await _background_cleanup_task
+            except asyncio.CancelledError:
+                logger.debug("异步清理任务已取消")
+            except Exception as e:
+                logger.warning(f"取消异步清理任务时出错: {e}")
+    except Exception as e:
+        logger.warning(f"停止清理任务时出错: {e}")
+    
+    # 2. 关闭所有活跃的 WebSocket 连接
+    try:
+        logger.info(f"正在关闭 {len(active_connections)} 个活跃的 WebSocket 连接...")
+        close_tasks = []
+        for user_id, websocket in list(active_connections.items()):
+            try:
+                if websocket.client_state != WebSocketState.DISCONNECTED:
+                    close_tasks.append(websocket.close(code=1001, reason="Server shutting down"))
+            except Exception as e:
+                logger.debug(f"关闭 WebSocket 连接 {user_id} 时出错: {e}")
+        
+        # 等待所有关闭操作完成（最多等待2秒）
+        if close_tasks:
+            try:
+                await asyncio.wait_for(asyncio.gather(*close_tasks, return_exceptions=True), timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.warning("WebSocket 关闭超时，强制继续")
+        
+        active_connections.clear()
+        logger.info("WebSocket 连接已关闭")
+    except Exception as e:
+        logger.warning(f"关闭 WebSocket 连接时出错: {e}")
+    
+    # 3. 等待一小段时间，让正在进行的数据库操作完成
+    try:
+        await asyncio.sleep(0.5)
+    except Exception:
+        pass
+    
+    # 4. 关闭数据库连接池
+    try:
+        from app.database import close_database_pools
+        await close_database_pools()
+    except Exception as e:
+        logger.warning(f"关闭数据库连接池时出错: {e}")
+    
+    logger.info("资源清理完成")
 
 
 @app.websocket("/ws/chat/{user_id}")

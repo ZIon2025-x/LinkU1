@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
@@ -185,3 +186,35 @@ async def get_pool_status():
         "overflow": pool.overflow(),
         "invalid": pool.invalid(),
     }
+
+
+# 安全关闭数据库连接池
+async def close_database_pools():
+    """安全关闭所有数据库连接池"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # 关闭异步连接池
+    if ASYNC_AVAILABLE and async_engine:
+        try:
+            # 等待一小段时间，让正在进行的操作完成
+            await asyncio.sleep(0.5)
+            # 关闭连接池
+            await async_engine.dispose()
+            logger.info("异步数据库连接池已安全关闭")
+        except RuntimeError as e:
+            # 如果事件循环已关闭，这是正常的
+            if "Event loop is closed" in str(e) or "loop is closed" in str(e):
+                logger.debug("事件循环已关闭，跳过异步连接池关闭")
+            else:
+                logger.warning(f"关闭异步连接池时出错: {e}")
+        except Exception as e:
+            logger.warning(f"关闭异步连接池时出错: {e}")
+    
+    # 关闭同步连接池
+    if sync_engine:
+        try:
+            sync_engine.dispose()
+            logger.info("同步数据库连接池已安全关闭")
+        except Exception as e:
+            logger.warning(f"关闭同步连接池时出错: {e}")

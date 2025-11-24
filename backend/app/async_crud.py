@@ -553,7 +553,13 @@ class AsyncTaskCRUD:
             return tasks, total
         except RuntimeError as e:
             # 处理事件循环相关的错误（连接池关闭时的常见问题）
-            if "different loop" in str(e) or "attached to a different loop" in str(e):
+            error_str = str(e)
+            # 检查是否是事件循环关闭的错误（应用正在关闭）
+            if "Event loop is closed" in error_str or "loop is closed" in error_str:
+                logger.debug(f"事件循环已关闭，跳过查询（应用正在关闭）: {e}")
+                return [], 0
+            # 检查是否是事件循环冲突的错误
+            elif "different loop" in error_str or "attached to a different loop" in error_str:
                 logger.warning(f"数据库连接池事件循环冲突（可忽略）: {e}")
                 # 尝试重新执行查询
                 try:
@@ -576,12 +582,21 @@ class AsyncTaskCRUD:
                     total = count_result.scalar() or 0
                     return tasks, total
                 except Exception as retry_error:
+                    # 检查重试时是否也是事件循环关闭错误
+                    if "Event loop is closed" in str(retry_error) or "loop is closed" in str(retry_error):
+                        logger.debug("事件循环已关闭，跳过重试查询")
+                        return [], 0
                     logger.error(f"重试查询失败: {retry_error}")
                     return [], 0
             else:
                 logger.error(f"Error getting tasks with total: {e}")
                 return [], 0
         except Exception as e:
+            # 检查是否是事件循环关闭的错误
+            error_str = str(e)
+            if "Event loop is closed" in error_str or "loop is closed" in error_str:
+                logger.debug(f"事件循环已关闭，跳过查询（应用正在关闭）: {e}")
+                return [], 0
             logger.error(f"Error getting tasks with total: {e}")
             return [], 0
 

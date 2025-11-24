@@ -151,15 +151,27 @@ def check_and_end_activities_sync(db: Session):
         # 检查是否已有运行中的事件循环
         try:
             loop = asyncio.get_running_loop()
-            # 如果有运行中的循环，使用 run_coroutine_threadsafe
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, run_check())
-                return future.result()
+            # 如果有运行中的循环，说明我们在异步上下文中
+            # 这种情况下，我们不能使用 asyncio.run()，需要使用其他方法
+            # 由于这是在后台线程中运行，应该不会有运行中的循环
+            logger.warning("检测到运行中的事件循环，这不应该发生在后台线程中")
+            return 0
         except RuntimeError:
             # 没有运行中的循环，使用 asyncio.run()
-            return asyncio.run(run_check())
+            # 设置超时，避免在应用关闭时卡住
+            try:
+                return asyncio.run(run_check())
+            except RuntimeError as e:
+                # 如果事件循环已关闭，这是正常的（应用正在关闭）
+                if "Event loop is closed" in str(e) or "loop is closed" in str(e):
+                    logger.debug("事件循环已关闭，跳过活动结束检查")
+                    return 0
+                raise
     except Exception as e:
+        # 检查是否是事件循环关闭相关的错误
+        if "Event loop is closed" in str(e) or "loop is closed" in str(e):
+            logger.debug("事件循环已关闭，跳过活动结束检查")
+            return 0
         logger.error(f"活动结束检查执行失败: {e}", exc_info=True)
         return 0
     

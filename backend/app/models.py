@@ -135,7 +135,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String(8), primary_key=True, index=True)  # 8位数字格式
     name = Column(String(50), unique=True, nullable=False)  # 用户名唯一
-    email = Column(String(120), unique=True, nullable=True)  # 邮箱唯一，可为空（手机号登录时为空）
+    email = Column(String(255), unique=True, nullable=True)  # 邮箱唯一，可为空（手机号登录时为空），RFC 5321标准最大254字符
     hashed_password = Column(String(128), nullable=False)
     phone = Column(String(20), unique=True, nullable=True)  # 手机号唯一，可为空（邮箱登录时为空）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
@@ -353,7 +353,7 @@ class CustomerService(Base):
     __tablename__ = "customer_service"
     id = Column(String(6), primary_key=True)  # CS + 4位数字格式
     name = Column(String(50), nullable=False)
-    email = Column(String(120), unique=True, nullable=False)  # 客服邮箱
+    email = Column(String(255), unique=True, nullable=False)  # 客服邮箱，RFC 5321标准最大254字符
     hashed_password = Column(String(128), nullable=False)  # 客服登录密码
     is_online = Column(Integer, default=0)  # 1=在线, 0=离线
     avg_rating = Column(Float, default=0.0)  # 平均评分
@@ -398,7 +398,7 @@ class AdminUser(Base):
     id = Column(String(5), primary_key=True)  # A + 4位数字格式
     name = Column(String(50), nullable=False)  # 管理员姓名
     username = Column(String(50), unique=True, nullable=False)  # 登录用户名
-    email = Column(String(120), unique=True, nullable=False)  # 邮箱
+    email = Column(String(255), unique=True, nullable=False)  # 邮箱，RFC 5321标准最大254字符
     hashed_password = Column(String(128), nullable=False)  # 登录密码
     is_active = Column(Integer, default=1)  # 1=激活, 0=禁用
     is_super_admin = Column(Integer, default=0)  # 1=超级管理员, 0=普通管理员
@@ -569,7 +569,7 @@ class PendingUser(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), nullable=False)
-    email = Column(String(120), unique=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False)  # 待验证用户邮箱，RFC 5321标准最大254字符
     hashed_password = Column(String(128), nullable=False)
     phone = Column(String(20), nullable=True)
     verification_token = Column(String(255), unique=True, nullable=False)  # 增加到255以支持JWT token
