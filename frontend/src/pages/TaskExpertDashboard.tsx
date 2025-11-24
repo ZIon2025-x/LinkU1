@@ -321,11 +321,10 @@ const TaskExpertDashboard: React.FC = () => {
       loadApplications();
     } else if (activeTab === 'dashboard') {
       loadDashboardStats();
-    } else if (activeTab === 'schedule') {
-      loadSchedule();
     } else if (activeTab === 'multi-tasks') {
       loadMultiTasks();
     }
+    // schedule 标签页的加载由下面的 useEffect 处理，避免重复调用
   }, [activeTab, user]);
 
   // 时刻表页面定时刷新（每10秒刷新一次，确保参与者数量实时更新）
@@ -406,16 +405,27 @@ const TaskExpertDashboard: React.FC = () => {
         setScheduleEndDate(endDate);
       }
       
-      const [scheduleDataResult, closedDatesResult] = await Promise.all([
-        getExpertSchedule({ start_date: startDate, end_date: endDate }),
-        getClosedDates({ start_date: startDate, end_date: endDate })
-      ]);
+      // 分别处理两个请求，避免一个失败导致全部失败
+      try {
+        const scheduleDataResult = await getExpertSchedule({ start_date: startDate, end_date: endDate });
+        setScheduleData(scheduleDataResult);
+      } catch (err: any) {
+        console.error('加载时刻表数据失败:', err);
+        message.error('加载时刻表数据失败');
+        setScheduleData(null);
+      }
       
-      setScheduleData(scheduleDataResult);
-      setClosedDates(Array.isArray(closedDatesResult) ? closedDatesResult : []);
+      try {
+        const closedDatesResult = await getClosedDates({ start_date: startDate, end_date: endDate });
+        setClosedDates(Array.isArray(closedDatesResult) ? closedDatesResult : []);
+      } catch (err: any) {
+        console.error('加载关门日期失败:', err);
+        // 关门日期加载失败不影响时刻表显示，只记录错误
+        setClosedDates([]);
+      }
     } catch (err: any) {
-      console.error('加载时刻表数据失败:', err);
-      message.error('加载时刻表数据失败');
+      console.error('加载时刻表失败:', err);
+      message.error('加载时刻表失败');
     } finally {
       setLoadingSchedule(false);
     }

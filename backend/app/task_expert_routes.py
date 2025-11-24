@@ -2665,7 +2665,7 @@ async def get_expert_schedule(
     expert_id = current_expert.id
     
     from datetime import datetime, timedelta
-    from app.utils.time_utils import get_utc_time, parse_local_as_utc, LONDON
+    from app.utils.time_utils import get_utc_time, parse_local_as_utc, format_iso_utc, LONDON
     
     # 如果没有提供日期，默认查询未来30天
     now = get_utc_time()
@@ -2961,14 +2961,16 @@ async def get_closed_dates(
     result = await db.execute(query)
     closed_dates = result.scalars().all()
     
+    from app.utils.time_utils import format_iso_utc
+    
     return [
         schemas.ExpertClosedDateOut(
             id=cd.id,
             expert_id=cd.expert_id,
             closed_date=cd.closed_date.isoformat(),
             reason=cd.reason,
-            created_at=cd.created_at,
-            updated_at=cd.updated_at,
+            created_at=format_iso_utc(cd.created_at) if cd.created_at else None,
+            updated_at=format_iso_utc(cd.updated_at) if cd.updated_at else None,
         )
         for cd in closed_dates
     ]
