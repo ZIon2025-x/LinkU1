@@ -184,11 +184,12 @@ if CELERY_AVAILABLE:
         """自动完成已过期时间段的任务 - Celery任务包装"""
         start_time = time.time()
         task_name = 'auto_complete_expired_time_slot_tasks_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
         db = SessionLocal()
         try:
             completed_count = auto_complete_expired_time_slot_tasks(db)
             duration = time.time() - start_time
-            logger.info(f"自动完成过期时间段任务完成，完成了 {completed_count} 个任务 (耗时: {duration:.2f}秒)")
+            logger.info(f"✅ 自动完成过期时间段任务执行完成，完成了 {completed_count} 个任务 (耗时: {duration:.2f}秒)")
             _record_task_metrics(task_name, "success", duration)
             return {"status": "success", "message": f"Completed {completed_count} expired time slot tasks", "completed_count": completed_count}
         except Exception as e:

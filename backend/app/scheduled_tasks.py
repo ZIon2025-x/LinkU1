@@ -142,7 +142,7 @@ def auto_complete_expired_time_slot_tasks(db: Session):
     自动完成已过期时间段的任务
     只处理达人类型的任务（expert_service_id 不为空）且有时间段的任务
     
-    如果时间段已过期且任务状态为 in_progress 或 taken，则自动标记为 completed
+    如果时间段已过期且任务状态为 in_progress、taken 或 pending_confirmation，则自动标记为 completed
     
     支持两种情况：
     1. 单个任务：通过 TaskTimeSlotRelation 直接关联时间段
@@ -154,34 +154,56 @@ def auto_complete_expired_time_slot_tasks(db: Session):
         current_time = get_utc_time()
         completed_count = 0
         
-        # 查询所有状态为 in_progress 或 taken 的达人类型任务（expert_service_id 不为空）
+        logger.info("开始检查已过期时间段的达人任务...")
+        
+        # 查询所有状态为 in_progress、taken 或 pending_confirmation 的达人类型任务（expert_service_id 不为空）
         # 加载时间段关联和父活动关联
         tasks_query = db.query(models.Task).filter(
-            models.Task.status.in_(["in_progress", "taken"]),
+            models.Task.status.in_(["in_progress", "taken", "pending_confirmation"]),
             models.Task.expert_service_id.isnot(None)  # 只处理达人类型的任务
         ).options(
-            selectinload(models.Task.time_slot_relations),
-            selectinload(models.Task.parent_activity).selectinload(models.Activity.time_slot_relations)
+            selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
+            selectinload(models.Task.parent_activity).selectinload(models.Activity.time_slot_relations).selectinload(models.ActivityTimeSlotRelation.time_slot)
         )
         
         tasks = tasks_query.all()
+        logger.info(f"找到 {len(tasks)} 个状态为 in_progress、taken 或 pending_confirmation 的达人任务")
         
         for task in tasks:
             max_end_time = None
             
-            # 情况1：检查任务直接关联的时间段（TaskTimeSlotRelation）
+            # 优先检查：任务直接关联的时间段（TaskTimeSlotRelation）
+            # TaskTimeSlotRelation 表中有冗余字段 slot_end_datetime，优先使用
+            # 如果没有，则通过 time_slot_id 关联到 ServiceTimeSlot 表获取
             if task.time_slot_relations and len(task.time_slot_relations) > 0:
                 for relation in task.time_slot_relations:
+                    end_time = None
+                    # 优先使用冗余字段
                     if relation.slot_end_datetime:
-                        if max_end_time is None or relation.slot_end_datetime > max_end_time:
-                            max_end_time = relation.slot_end_datetime
+                        end_time = relation.slot_end_datetime
+                    # 如果冗余字段为空，尝试从关联的 ServiceTimeSlot 获取
+                    elif relation.time_slot_id and relation.time_slot:
+                        end_time = relation.time_slot.slot_end_datetime
+                    
+                    if end_time:
+                        if max_end_time is None or end_time > max_end_time:
+                            max_end_time = end_time
             
-            # 情况2：检查父活动关联的时间段（ActivityTimeSlotRelation）
-            if task.parent_activity and task.parent_activity.time_slot_relations:
+            # 备用检查：只有在任务直接关联的时间段不存在时，才检查父活动关联的时间段
+            # 这样可以确保优先使用任务自己的时间段，而不是父活动的时间段
+            if max_end_time is None and task.parent_activity and task.parent_activity.time_slot_relations:
                 for relation in task.parent_activity.time_slot_relations:
+                    end_time = None
+                    # 优先使用冗余字段
                     if relation.slot_end_datetime:
-                        if max_end_time is None or relation.slot_end_datetime > max_end_time:
-                            max_end_time = relation.slot_end_datetime
+                        end_time = relation.slot_end_datetime
+                    # 如果冗余字段为空，尝试从关联的 ServiceTimeSlot 获取
+                    elif relation.time_slot_id and relation.time_slot:
+                        end_time = relation.time_slot.slot_end_datetime
+                    
+                    if end_time:
+                        if max_end_time is None or end_time > max_end_time:
+                            max_end_time = end_time
             
             # 如果找到了时间段结束时间，且已过期，则自动完成
             if max_end_time and max_end_time < current_time:
@@ -192,9 +214,9 @@ def auto_complete_expired_time_slot_tasks(db: Session):
         
         if completed_count > 0:
             db.commit()
-            logger.info(f"自动完成了 {completed_count} 个已过期时间段的达人任务")
+            logger.info(f"✅ 自动完成了 {completed_count} 个已过期时间段的达人任务")
         else:
-            logger.debug("没有需要自动完成的达人任务")
+            logger.info(f"✓ 检查完成，没有需要自动完成的达人任务（共检查了 {len(tasks)} 个任务）")
         
         return completed_count
         
