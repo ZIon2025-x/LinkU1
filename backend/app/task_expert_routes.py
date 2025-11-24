@@ -320,19 +320,31 @@ async def create_service(
     
     # 验证时间段相关字段
     if service_data.has_time_slots:
-        if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
-            raise HTTPException(
-                status_code=400,
-                detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
-            )
-        # 验证时间格式
-        try:
-            start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
-            end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
-            if start_time >= end_time:
-                raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
-        except ValueError:
-            raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+        # 检查是否使用按周几配置
+        has_weekly_config = service_data.weekly_time_slot_config and isinstance(service_data.weekly_time_slot_config, dict)
+        
+        if has_weekly_config:
+            # 使用按周几配置：只需要时间段时长和参与者数量
+            if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+                raise HTTPException(
+                    status_code=400,
+                    detail="启用时间段时，必须提供时间段时长和参与者数量"
+                )
+        else:
+            # 使用统一时间配置：需要时间段时长、开始时间、结束时间和参与者数量
+            if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
+                raise HTTPException(
+                    status_code=400,
+                    detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
+                )
+            # 验证时间格式
+            try:
+                start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
+                end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
+                if start_time >= end_time:
+                    raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
+            except ValueError:
+                raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
     
     new_service = models.TaskExpertService(
         expert_id=current_expert.id,
