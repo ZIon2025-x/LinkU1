@@ -1773,28 +1773,38 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               borderRadius: '12px',
               border: '1px solid #e9ecef'
             }}>
-              <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
-                {language === 'zh' ? `参与者列表 (${participants.length}/${task.max_participants || 1})` : `Participants (${participants.length}/${task.max_participants || 1})`}
-              </h3>
-              
-              {loadingParticipants ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>
-                  {language === 'zh' ? '加载中...' : 'Loading...'}
-                </div>
-              ) : participants.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '20px', 
-                  color: '#666',
-                  background: '#fff',
-                  borderRadius: '8px',
-                  border: '1px solid #e9ecef'
-                }}>
-                  {language === 'zh' ? '暂无参与者' : 'No participants yet'}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {participants.map((participant: any) => {
+              {(() => {
+                // 过滤出有效状态的参与者（accepted, in_progress, completed）
+                const validParticipants = participants.filter((p: any) => 
+                  ['accepted', 'in_progress', 'completed'].includes(p.status)
+                );
+                const validCount = validParticipants.length;
+                const maxParticipants = task.max_participants || 1;
+                
+                return (
+                  <>
+                    <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '18px' }}>
+                      {language === 'zh' ? `参与者列表 (${validCount}/${maxParticipants})` : `Participants (${validCount}/${maxParticipants})`}
+                    </h3>
+                    
+                    {loadingParticipants ? (
+                      <div style={{ textAlign: 'center', padding: '20px' }}>
+                        {language === 'zh' ? '加载中...' : 'Loading...'}
+                      </div>
+                    ) : validParticipants.length === 0 ? (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        padding: '20px', 
+                        color: '#666',
+                        background: '#fff',
+                        borderRadius: '8px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        {language === 'zh' ? '暂无参与者' : 'No participants yet'}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {validParticipants.map((participant: any) => {
                     const isTaskManager = task.is_multi_participant && user && (
                       (task.is_official_task) || 
                       (task.created_by_expert && task.expert_creator_id === user.id)
@@ -2003,8 +2013,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       </div>
                     );
                   })}
-                </div>
-              )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 

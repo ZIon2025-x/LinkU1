@@ -356,6 +356,25 @@ class TaskOut(TaskBase):
             self.reward = float(self.reward)
         return self
     
+    @staticmethod
+    def _calculate_current_participants(obj):
+        """计算当前参与者数量（只统计有效状态的参与者）"""
+        # 如果不是多人任务，返回数据库字段值
+        if not getattr(obj, 'is_multi_participant', False):
+            return getattr(obj, 'current_participants', 0) or 0
+        
+        # 如果是多人任务，动态计算：只统计状态为accepted, in_progress, completed的参与者
+        # 检查是否有participants关系（可能未加载）
+        if hasattr(obj, 'participants') and obj.participants is not None:
+            # 如果participants已加载，直接计算
+            valid_statuses = ["accepted", "in_progress", "completed"]
+            count = sum(1 for p in obj.participants if p.status in valid_statuses)
+            return count
+        else:
+            # 如果participants未加载，使用数据库字段（可能不准确，但避免额外查询）
+            # 注意：这种情况下可能不准确，但为了性能考虑，暂时使用数据库字段
+            return getattr(obj, 'current_participants', 0) or 0
+    
     @classmethod
     def from_orm(cls, obj):
         """自定义ORM转换，处理时间字段和images字段"""
@@ -404,7 +423,9 @@ class TaskOut(TaskBase):
             "expert_creator_id": getattr(obj, 'expert_creator_id', None),
             "max_participants": getattr(obj, 'max_participants', None),
             "min_participants": getattr(obj, 'min_participants', None),
-            "current_participants": getattr(obj, 'current_participants', 0) or 0,
+            # 动态计算current_participants：如果是多人任务，只统计有效状态的参与者
+            # 有效状态：accepted, in_progress, completed（排除pending, exit_requested, exited, rejected等）
+            "current_participants": cls._calculate_current_participants(obj),
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if hasattr(obj, 'time_slot_start_time') and isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if hasattr(obj, 'time_slot_start_time') and obj.time_slot_start_time else None),
             "time_slot_end_time": obj.time_slot_end_time.isoformat() if hasattr(obj, 'time_slot_end_time') and isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if hasattr(obj, 'time_slot_end_time') and obj.time_slot_end_time else None),
             # 从TaskTimeSlotRelation获取时间段信息

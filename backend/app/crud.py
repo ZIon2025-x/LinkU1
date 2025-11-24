@@ -742,6 +742,7 @@ def get_task(db: Session, task_id: int):
         .options(
             selectinload(Task.poster),  # 预加载发布者信息
             selectinload(Task.taker),   # 预加载接受者信息（如果存在）
+            selectinload(Task.participants),  # 预加载参与者信息，用于动态计算current_participants
         )
         .filter(Task.id == task_id)
         .first()

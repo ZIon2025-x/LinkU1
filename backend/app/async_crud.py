@@ -154,6 +154,7 @@ class AsyncTaskCRUD:
                 .options(selectinload(models.Task.poster))
                 .options(selectinload(models.Task.taker))
                 .options(selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot))
+                .options(selectinload(models.Task.participants))  # 加载参与者关系，用于动态计算current_participants
                 .where(models.Task.id == task_id)
             )
             return result.scalar_one_or_none()
