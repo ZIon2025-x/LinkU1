@@ -350,7 +350,7 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 
 def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
-    from app.models import Task, TaskTimeSlotRelation
+    from app.models import Task, TaskTimeSlotRelation, TaskParticipant
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from datetime import datetime, timedelta, timezone
@@ -363,13 +363,15 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
     now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
-    tasks = (
+    # 1. 查询作为发布者或接受者的任务
+    tasks_query = (
         db.query(Task)
         .options(
             selectinload(Task.poster),  # 预加载发布者
             selectinload(Task.taker),   # 预加载接受者
             selectinload(Task.reviews),   # 预加载评论
-            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot)  # 预加载时间段关联
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联
+            selectinload(Task.participants)  # 预加载参与者，用于动态计算current_participants
         )
         .filter(
             or_(Task.poster_id == user_id, Task.taker_id == user_id),
@@ -383,11 +385,51 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
                 )
             )
         )
-        .order_by(Task.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
     )
+    
+    # 2. 查询作为多人任务参与者的任务
+    participant_tasks_query = (
+        db.query(Task)
+        .join(TaskParticipant, Task.id == TaskParticipant.task_id)
+        .options(
+            selectinload(Task.poster),  # 预加载发布者
+            selectinload(Task.taker),   # 预加载接受者
+            selectinload(Task.reviews),   # 预加载评论
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot),  # 预加载时间段关联
+            selectinload(Task.participants)  # 预加载参与者，用于动态计算current_participants
+        )
+        .filter(
+            and_(
+                TaskParticipant.user_id == user_id,
+                Task.is_multi_participant == True,
+                # 过滤掉已完成超过3天的任务
+                or_(
+                    Task.status != "completed",
+                    and_(
+                        Task.status == "completed",
+                        Task.completed_at.isnot(None),
+                        Task.completed_at > three_days_ago.replace(tzinfo=None) if three_days_ago.tzinfo else Task.completed_at > three_days_ago
+                    )
+                )
+            )
+        )
+    )
+    
+    # 合并两个查询结果，去重
+    tasks_from_poster_taker = tasks_query.all()
+    tasks_from_participant = participant_tasks_query.all()
+    
+    # 使用字典去重（按任务ID）
+    tasks_dict = {}
+    for task in tasks_from_poster_taker + tasks_from_participant:
+        tasks_dict[task.id] = task
+    
+    # 转换为列表并排序
+    tasks = list(tasks_dict.values())
+    tasks.sort(key=lambda t: t.created_at, reverse=True)
+    
+    # 应用分页
+    tasks = tasks[offset:offset + limit]
     
     return tasks
 

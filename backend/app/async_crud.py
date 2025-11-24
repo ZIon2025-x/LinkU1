@@ -728,7 +728,8 @@ class AsyncTaskCRUD:
                 .options(
                     selectinload(models.Task.poster),
                     selectinload(models.Task.taker),
-                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot)
+                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
+                    selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
                 )
                 .where(models.Task.poster_id == user_id)
             )
@@ -739,9 +740,28 @@ class AsyncTaskCRUD:
                 .options(
                     selectinload(models.Task.poster),
                     selectinload(models.Task.taker),
-                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot)
+                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
+                    selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
                 )
                 .where(models.Task.taker_id == user_id)
+            )
+            
+            # 构建多人任务参与者查询
+            participant_query = (
+                select(models.Task)
+                .join(models.TaskParticipant, models.Task.id == models.TaskParticipant.task_id)
+                .options(
+                    selectinload(models.Task.poster),
+                    selectinload(models.Task.taker),
+                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot),
+                    selectinload(models.Task.participants)  # 预加载参与者，用于动态计算current_participants
+                )
+                .where(
+                    and_(
+                        models.TaskParticipant.user_id == user_id,
+                        models.Task.is_multi_participant == True
+                    )
+                )
             )
             
             # 列表接口默认不加载 reviews（详情接口才需要）
@@ -765,20 +785,47 @@ class AsyncTaskCRUD:
                           .offset(taken_skip)
                           .limit(taken_limit)
             )
+            participant_result = await db.execute(
+                participant_query.order_by(models.Task.created_at.desc())
+            )
             
             posted_tasks = list(posted_result.scalars().all())
             taken_tasks = list(taken_result.scalars().all())
+            participant_tasks = list(participant_result.scalars().all())
+            
+            # 合并taken_tasks和participant_tasks，去重（按任务ID）
+            taken_task_ids = {task.id for task in taken_tasks}
+            for task in participant_tasks:
+                if task.id not in taken_task_ids:
+                    taken_tasks.append(task)
+                    taken_task_ids.add(task.id)
+            
+            # 重新排序taken_tasks
+            taken_tasks.sort(key=lambda t: t.created_at, reverse=True)
+            # 应用分页
+            taken_tasks = taken_tasks[taken_skip:taken_skip + taken_limit]
             
             # 获取总数（可选，如果前端需要）
             from sqlalchemy import func
             posted_count_query = select(func.count()).select_from(
                 posted_query.subquery()
             )
-            taken_count_query = select(func.count()).select_from(
-                taken_query.subquery()
+            # taken总数需要包含participant任务，但要去重
+            # 先获取所有taken和participant任务的ID集合
+            all_taken_result = await db.execute(
+                taken_query.order_by(models.Task.created_at.desc())
             )
+            all_participant_result = await db.execute(
+                participant_query.order_by(models.Task.created_at.desc())
+            )
+            all_taken_tasks = list(all_taken_result.scalars().all())
+            all_participant_tasks = list(all_participant_result.scalars().all())
+            taken_task_ids_set = {task.id for task in all_taken_tasks}
+            for task in all_participant_tasks:
+                taken_task_ids_set.add(task.id)
+            taken_total = len(taken_task_ids_set)
+            
             posted_total = (await db.execute(posted_count_query)).scalar() or 0
-            taken_total = (await db.execute(taken_count_query)).scalar() or 0
             
             return {
                 "posted": posted_tasks,
