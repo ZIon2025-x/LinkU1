@@ -22,11 +22,14 @@
   min-height: 100vh;
   background: var(--te-background);
   padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .contentWrapper {
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 }
 
 /* 头部卡片 */
@@ -70,6 +73,7 @@
   gap: 12px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 .tabButton {
@@ -82,6 +86,8 @@
   transition: all 0.2s;
   background: #fff;
   color: #333;
+  touch-action: manipulation; /* 优化触摸响应 */
+  -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
 }
 
 .tabButton:hover {
@@ -120,6 +126,8 @@
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+  touch-action: manipulation; /* 优化触摸响应 */
+  -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
 }
 
 .buttonPrimary {
@@ -275,16 +283,80 @@
   line-height: 1.5;
 }
 
+.servicePriceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .servicePrice {
   font-size: 20px;
   font-weight: 600;
   color: var(--te-primary-color);
-  margin-bottom: 16px;
+}
+
+.serviceApplicationCount {
+  font-size: 14px;
+  color: var(--te-text-secondary);
 }
 
 .serviceActions {
   display: flex;
   gap: 8px;
+}
+
+.serviceCardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sectionContainer {
+  background: var(--te-card-background);
+  border-radius: var(--te-border-radius);
+  padding: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboardSection {
+  background: var(--te-card-background);
+  border-radius: var(--te-border-radius);
+  padding: 24px;
+}
+
+.sectionTitle {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+}
+
+.createServiceButton {
+  padding: 10px 20px;
+  background: var(--te-primary-color);
+  color: #fff;
+  border: none;
+  border-radius: var(--te-border-radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.createServiceButton:hover {
+  background: var(--te-primary-hover);
+}
+
+.flexBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* 申请列表 */
@@ -867,41 +939,412 @@
     padding: 12px;
   }
   
+  .contentWrapper {
+    max-width: 100%;
+  }
+  
+  .headerCard {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
   .headerContent {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
   
+  .title {
+    font-size: 20px;
+  }
+  
+  .subtitle {
+    font-size: 14px;
+  }
+  
   .tabsContainer {
     gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    padding-bottom: 4px;
+  }
+  
+  .tabsContainer::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
   }
   
   .tabButton {
     padding: 10px 16px;
     font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .tabButtonIcon {
+    display: none; /* 移动端隐藏图标，节省空间 */
+  }
+  
+  .contentCard {
+    padding: 16px;
+  }
+  
+  .cardTitle {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  
+  .sectionTitle {
+    font-size: 18px;
   }
   
   .statsGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .statCard {
+    padding: 16px;
+  }
+  
+  .statTitle {
+    font-size: 13px;
+  }
+  
+  .statValue {
+    font-size: 24px;
   }
   
   .servicesGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .serviceCard {
+    padding: 16px;
+  }
+  
+  .serviceCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .serviceName {
+    font-size: 16px;
+  }
+  
+  .serviceDescription {
+    font-size: 13px;
+  }
+  
+  .servicePriceRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .serviceCardActions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .applicationCard {
+    padding: 16px;
   }
   
   .applicationHeader {
     flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
   
-  .serviceActions {
+  .applicationTitle {
+    font-size: 16px;
+  }
+  
+  .applicationPriceInfo {
     flex-direction: column;
+    gap: 4px;
+  }
+  
+  .applicationActions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .applicationActions .button {
+    width: 100%;
+  }
+  
+  .activityCard {
+    padding: 16px;
+  }
+  
+  .activityHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .activityTitle {
+    font-size: 16px;
+  }
+  
+  .activityTags {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .taskGroup {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  .taskItem {
+    padding: 12px;
+  }
+  
+  .participantCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .participantActions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .participantActions .button {
+    width: 100%;
+  }
+  
+  .scheduleHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .scheduleControls {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .scheduleDateInput {
+    width: 100%;
+  }
+  
+  .scheduleRefreshButton {
+    width: 100%;
+  }
+  
+  .scheduleDateHeader {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .scheduleDateTitle {
+    font-size: 16px;
+  }
+  
+  .scheduleDateActions {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .scheduleDateActionButton {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .scheduleDateContent {
+    padding: 12px;
+  }
+  
+  .scheduleItem {
+    padding: 12px;
+  }
+  
+  .scheduleItemHeader {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .scheduleItemTitle {
+    font-size: 15px;
+  }
+  
+  .scheduleItemStatus {
+    align-items: flex-start;
+    width: 100%;
+  }
+  
+  .scheduleItemFooter {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .scheduleItemActions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .scheduleItemActions .button {
+    width: 100%;
+  }
+  
+  .flexBetween {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .createServiceButton {
+    width: 100%;
+  }
+  
+  .loading {
+    padding: 30px 20px;
+    font-size: 14px;
+  }
+  
+  .empty {
+    padding: 40px 20px;
+    font-size: 14px;
   }
   
   .modalContent {
     width: 95%;
+    max-width: 95%;
     padding: 16px;
+    margin: 10px;
+  }
+}
+
+/* 超小屏幕（手机竖屏） */
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+  }
+  
+  .headerCard {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 18px;
+  }
+  
+  .tabButton {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .contentCard {
+    padding: 12px;
+  }
+  
+  .cardTitle {
+    font-size: 16px;
+  }
+  
+  .statCard {
+    padding: 12px;
+  }
+  
+  .statValue {
+    font-size: 20px;
+  }
+  
+  .serviceCard {
+    padding: 12px;
+  }
+  
+  .applicationCard {
+    padding: 12px;
+  }
+  
+  .activityCard {
+    padding: 12px;
+  }
+  
+  .scheduleDateHeader {
+    padding: 10px 12px;
+  }
+  
+  .scheduleDateContent {
+    padding: 10px;
+  }
+  
+  .scheduleItem {
+    padding: 10px;
+  }
+  
+  .button {
+    min-height: 44px; /* 触摸友好的最小高度 */
+  }
+  
+  .tabButton {
+    min-height: 44px; /* 触摸友好的最小高度 */
+  }
+  
+  .servicePrice {
+    font-size: 18px;
+  }
+  
+  .serviceApplicationCount {
+    font-size: 12px;
+  }
+  
+  .statSubText {
+    font-size: 11px;
+  }
+  
+  .applicationMessage {
+    font-size: 13px;
+    padding: 10px;
+  }
+  
+  .taskItemHeader {
+    font-size: 12px;
+  }
+  
+  .participantName {
+    font-size: 14px;
+  }
+  
+  .participantStatus {
+    font-size: 11px;
+  }
+}
+
+/* 中等屏幕（平板横屏） */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .servicesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tabsContainer {
+    gap: 10px;
+  }
+  
+  .tabButton {
+    padding: 10px 18px;
   }
 }
 

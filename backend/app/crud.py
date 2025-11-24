@@ -1040,8 +1040,24 @@ def create_review(
     if task.status != "completed":
         return None
 
-    # 检查用户是否是任务的参与者（发布者或接受者）
-    if task.poster_id != user_id and task.taker_id != user_id:
+    # 检查用户是否是任务的参与者
+    # 对于单人任务：检查是否是发布者或接受者
+    # 对于多人任务：检查是否是发布者、接受者或 task_participants 表中的参与者
+    is_participant = False
+    if task.poster_id == user_id or task.taker_id == user_id:
+        is_participant = True
+    elif task.is_multi_participant:
+        # 检查是否是 task_participants 表中的参与者
+        from app.models import TaskParticipant
+        participant = db.query(TaskParticipant).filter(
+            TaskParticipant.task_id == task_id,
+            TaskParticipant.user_id == user_id,
+            TaskParticipant.status.in_(['accepted', 'in_progress', 'completed'])
+        ).first()
+        if participant:
+            is_participant = True
+    
+    if not is_participant:
         return None
 
     # 检查用户是否已经评价过这个任务

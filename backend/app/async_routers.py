@@ -1065,8 +1065,26 @@ async def create_review_async(
         if task.status != "completed":
             raise HTTPException(status_code=400, detail="Task must be completed to create review")
         
-        # 检查用户是否是任务的参与者（发布者或接受者）
-        if task.poster_id != current_user.id and task.taker_id != current_user.id:
+        # 检查用户是否是任务的参与者
+        # 对于单人任务：检查是否是发布者或接受者
+        # 对于多人任务：检查是否是发布者、接受者或 task_participants 表中的参与者
+        is_participant = False
+        if task.poster_id == current_user.id or task.taker_id == current_user.id:
+            is_participant = True
+        elif task.is_multi_participant:
+            # 检查是否是 task_participants 表中的参与者
+            from sqlalchemy import select
+            participant_query = select(models.TaskParticipant).where(
+                models.TaskParticipant.task_id == task_id,
+                models.TaskParticipant.user_id == current_user.id,
+                models.TaskParticipant.status.in_(['accepted', 'in_progress', 'completed'])
+            )
+            participant_result = await db.execute(participant_query)
+            participant = participant_result.scalar_one_or_none()
+            if participant:
+                is_participant = True
+        
+        if not is_participant:
             raise HTTPException(status_code=403, detail="Only task participants can create reviews")
         
         # 检查用户是否已经评价过这个任务

@@ -24,7 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.separate_auth_deps import get_current_admin
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -152,22 +152,68 @@ async def get_my_application(
 
 @task_expert_router.get("", response_model=List[schemas.TaskExpertOut])
 async def get_experts_list(
+    category: Optional[str] = Query(None, description="分类筛选"),
     status_filter: Optional[str] = Query("active", alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取任务达人列表（公开接口）"""
+    """获取任务达人列表（公开接口）
+    
+    优先从 FeaturedTaskExpert 表获取精选任务达人，如果没有则从 TaskExpert 表获取
+    """
+    import json
+    
+    # 首先尝试从 FeaturedTaskExpert 表获取（精选任务达人）
+    featured_query = select(models.FeaturedTaskExpert).where(
+        models.FeaturedTaskExpert.is_active == 1
+    )
+    
+    if category:
+        featured_query = featured_query.where(
+            models.FeaturedTaskExpert.category == category
+        )
+    
+    featured_query = featured_query.order_by(
+        models.FeaturedTaskExpert.display_order,
+        models.FeaturedTaskExpert.created_at.desc()
+    ).offset(offset).limit(limit)
+    
+    featured_result = await db.execute(featured_query)
+    featured_experts = featured_result.scalars().all()
+    
+    # 如果有精选任务达人，返回它们
+    if featured_experts:
+        items = []
+        for expert in featured_experts:
+            # 从 FeaturedTaskExpert 转换为前端需要的格式
+            expert_dict = {
+                "id": expert.id,  # id 就是 user_id
+                "name": expert.name,
+                "avatar": expert.avatar,
+                "user_level": expert.user_level,
+                "avg_rating": expert.avg_rating or 0,
+                "completed_tasks": expert.completed_tasks or 0,
+                "total_tasks": expert.total_tasks or 0,
+                "completion_rate": round(expert.completion_rate or 0, 1),
+                "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+                "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+                "achievements": json.loads(expert.achievements) if expert.achievements else [],
+                "is_verified": bool(expert.is_verified),
+                "bio": expert.bio or "",
+                "response_time": expert.response_time or "",
+                "success_rate": expert.success_rate or 0,
+                "location": expert.location or "Online",
+                "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
+                "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
+            }
+            items.append(expert_dict)
+        return items
+    
+    # 如果没有精选任务达人，从 TaskExpert 表获取
     query = select(models.TaskExpert).where(
         models.TaskExpert.status == status_filter
     )
-    
-    # 获取总数
-    count_query = select(func.count(models.TaskExpert.id)).where(
-        models.TaskExpert.status == status_filter
-    )
-    total_result = await db.execute(count_query)
-    total = total_result.scalar()
     
     # 分页查询
     query = query.order_by(
@@ -185,6 +231,8 @@ async def get_experts_list(
         from app import async_crud
         user = await async_crud.async_user_crud.get_user_by_id(db, expert.id)
         if user:
+            expert_dict["name"] = user.name
+            expert_dict["avatar"] = user.avatar
             expert_dict["user_name"] = user.name
             expert_dict["user_avatar"] = user.avatar
         items.append(expert_dict)

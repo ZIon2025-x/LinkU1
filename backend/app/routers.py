@@ -6517,14 +6517,31 @@ def update_task_expert(
         # 保存旧头像URL，用于后续删除
         old_avatar_url = expert.avatar if 'avatar' in expert_data and expert_data['avatar'] else None
         
-        # 更新字段
+        # 记录要更新的字段（用于调试）
+        logger.info(f"更新任务达人 {expert_id}，接收到的字段: {list(expert_data.keys())}")
+        if 'location' in expert_data:
+            logger.info(f"location 字段值: {expert_data['location']}")
+        
+        # 更新字段（排除主键 id，因为它不应该被更新）
+        # 注意：id 和 user_id 的同步已经在上面处理过了，这里只需要更新其他字段
+        excluded_fields = {'id', 'user_id'}  # 主键和关联字段不应该通过循环更新
+        updated_fields = []
         for key, value in expert_data.items():
-            if hasattr(expert, key):
-                setattr(expert, key, value)
+            if key not in excluded_fields and hasattr(expert, key):
+                # 跳过只读字段或不应该更新的字段
+                if key not in ['created_at', 'created_by']:  # 创建时间和创建者不应该被更新
+                    old_value = getattr(expert, key, None)
+                    setattr(expert, key, value)
+                    updated_fields.append(f"{key}: {old_value} -> {value}")
+        
+        logger.info(f"更新的字段: {updated_fields}")
         
         expert.updated_at = get_utc_time()
         db.commit()
         db.refresh(expert)
+        
+        # 验证 location 是否已更新
+        logger.info(f"更新后的 location 值: {expert.location}")
         
         # 如果更换了头像，删除旧头像
         if old_avatar_url and 'avatar' in expert_data and old_avatar_url != expert_data['avatar']:
