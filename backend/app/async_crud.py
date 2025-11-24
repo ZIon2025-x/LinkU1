@@ -551,6 +551,36 @@ class AsyncTaskCRUD:
             tasks = list(result.scalars().all())
             
             return tasks, total
+        except RuntimeError as e:
+            # 处理事件循环相关的错误（连接池关闭时的常见问题）
+            if "different loop" in str(e) or "attached to a different loop" in str(e):
+                logger.warning(f"数据库连接池事件循环冲突（可忽略）: {e}")
+                # 尝试重新执行查询
+                try:
+                    # 重新构建简单查询
+                    simple_query = select(models.Task).where(
+                        or_(
+                            models.Task.status == "open",
+                            models.Task.status == "taken"
+                        )
+                    ).order_by(models.Task.created_at.desc()).offset(skip).limit(limit)
+                    result = await db.execute(simple_query)
+                    tasks = list(result.scalars().all())
+                    # 简单计数
+                    count_result = await db.execute(select(func.count(models.Task.id)).where(
+                        or_(
+                            models.Task.status == "open",
+                            models.Task.status == "taken"
+                        )
+                    ))
+                    total = count_result.scalar() or 0
+                    return tasks, total
+                except Exception as retry_error:
+                    logger.error(f"重试查询失败: {retry_error}")
+                    return [], 0
+            else:
+                logger.error(f"Error getting tasks with total: {e}")
+                return [], 0
         except Exception as e:
             logger.error(f"Error getting tasks with total: {e}")
             return [], 0

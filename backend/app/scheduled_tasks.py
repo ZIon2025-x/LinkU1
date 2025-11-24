@@ -146,14 +146,19 @@ def check_and_end_activities_sync(db: Session):
                 return 0
     
     # 在同步函数中运行异步函数
+    # 使用 asyncio.run() 创建新的事件循环，避免事件循环冲突
     try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    
-    try:
-        return loop.run_until_complete(run_check())
+        # 检查是否已有运行中的事件循环
+        try:
+            loop = asyncio.get_running_loop()
+            # 如果有运行中的循环，使用 run_coroutine_threadsafe
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, run_check())
+                return future.result()
+        except RuntimeError:
+            # 没有运行中的循环，使用 asyncio.run()
+            return asyncio.run(run_check())
     except Exception as e:
         logger.error(f"活动结束检查执行失败: {e}", exc_info=True)
         return 0

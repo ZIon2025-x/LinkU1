@@ -58,6 +58,8 @@ if ASYNC_AVAILABLE:
         pool_timeout=POOL_TIMEOUT,
         pool_recycle=POOL_RECYCLE,
         pool_pre_ping=POOL_PRE_PING,
+        # 优化连接池关闭行为，减少事件循环冲突
+        pool_reset_on_return='commit',  # 在返回连接池时重置连接状态
         connect_args={
             "command_timeout": QUERY_TIMEOUT,
             "server_settings": {

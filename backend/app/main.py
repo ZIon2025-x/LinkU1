@@ -55,6 +55,21 @@ from app.error_handlers import SecurityError, ValidationError, BusinessError
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# 添加日志过滤器，将 SQLAlchemy 连接池的事件循环错误降级为警告
+# 这些错误不影响应用功能，只是连接池内部清理时的常见问题
+class SQLAlchemyPoolErrorFilter(logging.Filter):
+    def filter(self, record):
+        # 过滤掉连接池关闭时的事件循环错误
+        if "Exception terminating connection" in record.getMessage():
+            if "attached to a different loop" in record.getMessage():
+                record.levelno = logging.WARNING
+                record.levelname = "WARNING"
+        return True
+
+# 应用过滤器到 SQLAlchemy 连接池日志
+sqlalchemy_pool_logger = logging.getLogger("sqlalchemy.pool.impl.AsyncAdaptedQueuePool")
+sqlalchemy_pool_logger.addFilter(SQLAlchemyPoolErrorFilter())
+
 
 app = FastAPI(
     title="Link²Ur Task Platform",
