@@ -808,7 +808,8 @@ async def get_service_time_slots(
     query = select(models.ServiceTimeSlot).where(
         models.ServiceTimeSlot.service_id == service_id
     ).options(
-        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity)
+        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity),
+        selectinload(models.ServiceTimeSlot.task_relations)  # 加载任务关联，用于动态计算参与者数量
     )
     
     # 日期过滤：将输入的日期转换为UTC datetime范围进行查询
@@ -842,6 +843,73 @@ async def get_service_time_slots(
     
     result = await db.execute(query)
     time_slots = result.scalars().all()
+    
+    # 动态计算每个时间段的实际参与者数量（排除已取消的任务）
+    # 使用批量查询避免N+1问题
+    from app.models import Task, TaskParticipant, TaskTimeSlotRelation
+    from sqlalchemy import func
+    
+    if time_slots:
+        slot_ids = [slot.id for slot in time_slots]
+        
+        # 批量查询所有时间段关联的任务（排除已取消的任务）
+        related_tasks_query = select(
+            TaskTimeSlotRelation,
+            Task
+        ).join(
+            Task, TaskTimeSlotRelation.task_id == Task.id
+        ).where(
+            TaskTimeSlotRelation.time_slot_id.in_(slot_ids),
+            Task.status != "cancelled"
+        )
+        related_tasks_result = await db.execute(related_tasks_query)
+        all_relations = related_tasks_result.all()
+        
+        # 按时间段ID分组任务
+        tasks_by_slot: dict[int, list] = {}
+        for relation_row in all_relations:
+            # 处理不同的返回格式
+            if hasattr(relation_row, 'TaskTimeSlotRelation'):
+                slot_id = relation_row.TaskTimeSlotRelation.time_slot_id
+                task = relation_row.Task
+            else:
+                # 如果返回的是元组格式
+                slot_id = relation_row[0].time_slot_id
+                task = relation_row[1]
+            if slot_id not in tasks_by_slot:
+                tasks_by_slot[slot_id] = []
+            tasks_by_slot[slot_id].append(task)
+        
+        # 批量查询多人任务的参与者数量
+        multi_task_ids = [task.id for tasks in tasks_by_slot.values() for task in tasks if task.is_multi_participant]
+        participants_count_by_task: dict[int, int] = {}
+        if multi_task_ids:
+            participants_count_query = select(
+                TaskParticipant.task_id,
+                func.count(TaskParticipant.id).label('count')
+            ).where(
+                TaskParticipant.task_id.in_(multi_task_ids),
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+            ).group_by(TaskParticipant.task_id)
+            participants_count_result = await db.execute(participants_count_query)
+            for row in participants_count_result:
+                participants_count_by_task[row.task_id] = row.count
+        
+        # 为每个时间段计算实际参与者数量
+        for slot in time_slots:
+            actual_participants = 0
+            tasks = tasks_by_slot.get(slot.id, [])
+            for task in tasks:
+                if task.is_multi_participant:
+                    # 多人任务：使用批量查询的结果
+                    actual_participants += participants_count_by_task.get(task.id, 0)
+                else:
+                    # 单个任务：如果状态为open、taken、in_progress，计数为1
+                    if task.status in ["open", "taken", "in_progress"]:
+                        actual_participants += 1
+            
+            # 更新slot对象的current_participants（临时修改，不影响数据库）
+            slot.current_participants = actual_participants
     
     # 转换为输出格式
     return [schemas.ServiceTimeSlotOut.from_orm(slot) for slot in time_slots]
@@ -1690,7 +1758,8 @@ async def get_service_time_slots_public(
         models.ServiceTimeSlot.service_id == service_id
         # 注意：不再过滤is_available，让已满的时间段也能显示
     ).options(
-        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity)
+        selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity),
+        selectinload(models.ServiceTimeSlot.task_relations)  # 加载任务关联，用于动态计算参与者数量
     )
     
     if start_date:
@@ -1720,6 +1789,73 @@ async def get_service_time_slots_public(
     
     result = await db.execute(query)
     time_slots = result.scalars().all()
+    
+    # 动态计算每个时间段的实际参与者数量（排除已取消的任务）
+    # 使用批量查询避免N+1问题
+    from app.models import Task, TaskParticipant, TaskTimeSlotRelation
+    from sqlalchemy import func
+    
+    if time_slots:
+        slot_ids = [slot.id for slot in time_slots]
+        
+        # 批量查询所有时间段关联的任务（排除已取消的任务）
+        related_tasks_query = select(
+            TaskTimeSlotRelation,
+            Task
+        ).join(
+            Task, TaskTimeSlotRelation.task_id == Task.id
+        ).where(
+            TaskTimeSlotRelation.time_slot_id.in_(slot_ids),
+            Task.status != "cancelled"
+        )
+        related_tasks_result = await db.execute(related_tasks_query)
+        all_relations = related_tasks_result.all()
+        
+        # 按时间段ID分组任务
+        tasks_by_slot: dict[int, list] = {}
+        for relation_row in all_relations:
+            # 处理不同的返回格式
+            if hasattr(relation_row, 'TaskTimeSlotRelation'):
+                slot_id = relation_row.TaskTimeSlotRelation.time_slot_id
+                task = relation_row.Task
+            else:
+                # 如果返回的是元组格式
+                slot_id = relation_row[0].time_slot_id
+                task = relation_row[1]
+            if slot_id not in tasks_by_slot:
+                tasks_by_slot[slot_id] = []
+            tasks_by_slot[slot_id].append(task)
+        
+        # 批量查询多人任务的参与者数量
+        multi_task_ids = [task.id for tasks in tasks_by_slot.values() for task in tasks if task.is_multi_participant]
+        participants_count_by_task: dict[int, int] = {}
+        if multi_task_ids:
+            participants_count_query = select(
+                TaskParticipant.task_id,
+                func.count(TaskParticipant.id).label('count')
+            ).where(
+                TaskParticipant.task_id.in_(multi_task_ids),
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+            ).group_by(TaskParticipant.task_id)
+            participants_count_result = await db.execute(participants_count_query)
+            for row in participants_count_result:
+                participants_count_by_task[row.task_id] = row.count
+        
+        # 为每个时间段计算实际参与者数量
+        for slot in time_slots:
+            actual_participants = 0
+            tasks = tasks_by_slot.get(slot.id, [])
+            for task in tasks:
+                if task.is_multi_participant:
+                    # 多人任务：使用批量查询的结果
+                    actual_participants += participants_count_by_task.get(task.id, 0)
+                else:
+                    # 单个任务：如果状态为open、taken、in_progress，计数为1
+                    if task.status in ["open", "taken", "in_progress"]:
+                        actual_participants += 1
+            
+            # 更新slot对象的current_participants（临时修改，不影响数据库）
+            slot.current_participants = actual_participants
     
     # 查询任务达人的关门日期
     closed_dates_query = select(models.ExpertClosedDate).where(

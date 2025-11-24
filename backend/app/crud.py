@@ -851,7 +851,50 @@ def cancel_task(db: Session, task_id: int, user_id: str, is_admin_review: bool =
 
     # 更新任务状态为已取消
     task.status = "cancelled"
-
+    
+    # 更新时间段服务的参与者数量（如果任务有关联的时间段）
+    from app.models import ServiceTimeSlot, TaskTimeSlotRelation, TaskParticipant
+    
+    # 检查任务是否通过TaskTimeSlotRelation关联了时间段
+    task_time_slot_relation = db.query(TaskTimeSlotRelation).filter(
+        TaskTimeSlotRelation.task_id == task_id
+    ).first()
+    
+    if task_time_slot_relation and task_time_slot_relation.time_slot_id:
+        # 如果是单个任务，直接减少时间段的参与者数量
+        if not task.is_multi_participant:
+            time_slot = db.query(ServiceTimeSlot).filter(
+                ServiceTimeSlot.id == task_time_slot_relation.time_slot_id
+            ).with_for_update().first()
+            if time_slot and time_slot.current_participants > 0:
+                time_slot.current_participants -= 1
+                # 如果时间段现在有空位，确保is_available为True
+                if time_slot.current_participants < time_slot.max_participants:
+                    time_slot.is_available = True
+                db.add(time_slot)
+        else:
+            # 如果是多人任务，需要检查所有参与者
+            # 只统计状态为accepted或in_progress的参与者（这些参与者占用了时间段）
+            participants = db.query(TaskParticipant).filter(
+                TaskParticipant.task_id == task_id,
+                TaskParticipant.status.in_(["accepted", "in_progress"])
+            ).all()
+            
+            # 统计需要减少的参与者数量
+            participants_to_decrement = len(participants)
+            
+            if participants_to_decrement > 0:
+                time_slot = db.query(ServiceTimeSlot).filter(
+                    ServiceTimeSlot.id == task_time_slot_relation.time_slot_id
+                ).with_for_update().first()
+                if time_slot:
+                    # 减少对应数量的参与者
+                    time_slot.current_participants = max(0, time_slot.current_participants - participants_to_decrement)
+                    # 如果时间段现在有空位，确保is_available为True
+                    if time_slot.current_participants < time_slot.max_participants:
+                        time_slot.is_available = True
+                    db.add(time_slot)
+    
     # 记录任务历史
     if is_admin_review:
         add_task_history(db, task.id, user_id, "cancelled", "管理员审核通过后取消")

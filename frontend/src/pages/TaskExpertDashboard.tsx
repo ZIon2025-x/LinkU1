@@ -1278,15 +1278,31 @@ const TaskExpertDashboard: React.FC = () => {
                   
                   // 计算当前参与者数量（从所有任务的参与者中统计）
                   // 对于多人任务，统计参与者数量；对于单个任务，每个任务算1个参与者
+                  // 排除已取消的任务和已退出的参与者
                   const currentParticipantsCount = tasks.reduce((total: number, task: any) => {
+                    // 排除已取消的任务
+                    if (task.status === 'cancelled') {
+                      return total;
+                    }
+                    
                     const taskParticipants = participantsByTask[task.id] || [];
                     const isMultiParticipant = task.is_multi_participant === true;
                     if (isMultiParticipant) {
-                      // 多人任务：统计参与者数量
-                      return total + (Array.isArray(taskParticipants) ? taskParticipants.length : 0);
+                      // 多人任务：只统计状态为 accepted、in_progress、completed 的参与者
+                      const validParticipants = Array.isArray(taskParticipants) 
+                        ? taskParticipants.filter((p: any) => 
+                            p.status === 'accepted' || 
+                            p.status === 'in_progress' || 
+                            p.status === 'completed'
+                          )
+                        : [];
+                      return total + validParticipants.length;
                     } else {
-                      // 单个任务：每个任务算1个参与者
-                      return total + 1;
+                      // 单个任务：只统计状态为 open、taken、in_progress 的任务（每个任务算1个参与者）
+                      if (task.status === 'open' || task.status === 'taken' || task.status === 'in_progress') {
+                        return total + 1;
+                      }
+                      return total;
                     }
                   }, 0);
                   

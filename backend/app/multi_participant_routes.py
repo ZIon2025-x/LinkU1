@@ -908,15 +908,18 @@ def get_activities(
     for activity in activities:
         # 统计该活动关联的任务中，状态为 accepted, in_progress, completed 的参与者数量
         # 1. 多人任务的参与者（通过TaskParticipant表）
+        # 只统计任务状态不是cancelled的任务中的参与者
         multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
             Task, TaskParticipant.task_id == Task.id
         ).filter(
             Task.parent_activity_id == activity.id,
             Task.is_multi_participant == True,
+            Task.status != "cancelled",  # 排除已取消的任务
             TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
         ).scalar() or 0
         
         # 2. 单个任务（非多人任务，直接计数为1）
+        # 只统计状态为open、taken、in_progress的任务（已排除cancelled）
         single_task_count = db.query(func.count(Task.id)).filter(
             Task.parent_activity_id == activity.id,
             Task.is_multi_participant == False,
@@ -953,15 +956,18 @@ def get_activity_detail(
     
     # 计算当前参与者数量
     # 1. 多人任务的参与者（通过TaskParticipant表）
+    # 只统计任务状态不是cancelled的任务中的参与者
     multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
         Task, TaskParticipant.task_id == Task.id
     ).filter(
         Task.parent_activity_id == activity.id,
         Task.is_multi_participant == True,
+        Task.status != "cancelled",  # 排除已取消的任务
         TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
     ).scalar() or 0
     
     # 2. 单个任务（非多人任务，直接计数为1）
+    # 只统计状态为open、taken、in_progress的任务（已排除cancelled）
     single_task_count = db.query(func.count(Task.id)).filter(
         Task.parent_activity_id == activity.id,
         Task.is_multi_participant == False,

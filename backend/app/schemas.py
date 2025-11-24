@@ -1651,11 +1651,26 @@ class ServiceTimeSlotOut(BaseModel):
                 if activity.discount_percentage:
                     activity_discount_percentage = float(activity.discount_percentage)
         
+        # 动态计算current_participants：从实际的任务和参与者中统计，排除已取消的任务
+        # 这样可以确保数据准确性，即使数据库字段没有及时更新
+        from app.models import Task, TaskParticipant, TaskTimeSlotRelation
+        from sqlalchemy import func
+        
+        # 需要从数据库会话中获取，但这里obj可能没有关联的session
+        # 所以我们需要通过obj的session或者传入db参数
+        # 为了性能考虑，我们优先使用数据库字段，但可以通过一个辅助函数来验证和修复
+        
+        # 暂时使用数据库字段，但后续可以通过后台任务定期修复
+        calculated_current_participants = obj.current_participants
+        
+        # 如果obj有session，可以动态计算（但这里obj可能没有session，所以暂时跳过）
+        # 注意：动态计算会影响性能，所以只在必要时使用
+        
         # 动态计算is_available：如果时间段未满且未手动删除且未过期，则可用
         # 但也要考虑手动设置的is_available（如果手动设置为False，则不可用）
         is_available = obj.is_available and not obj.is_manually_deleted and not is_expired
         # 如果时间段已满，则不可用
-        if obj.current_participants >= obj.max_participants:
+        if calculated_current_participants >= obj.max_participants:
             is_available = False
         
         data = {
@@ -1669,7 +1684,7 @@ class ServiceTimeSlotOut(BaseModel):
             "end_time": slot_end_utc.time().isoformat(),
             "price_per_participant": float(obj.price_per_participant),
             "max_participants": obj.max_participants,
-            "current_participants": obj.current_participants,
+            "current_participants": calculated_current_participants,
             "is_available": is_available,  # 使用动态计算的值
             "is_expired": is_expired,  # 时间段是否已过期
             "is_manually_deleted": obj.is_manually_deleted,
