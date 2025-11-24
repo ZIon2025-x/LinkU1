@@ -197,19 +197,60 @@ async def close_database_pools():
     # 关闭异步连接池
     if ASYNC_AVAILABLE and async_engine:
         try:
+            # 检查事件循环是否仍然可用
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_closed():
+                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
+                    return
+            except RuntimeError:
+                # 没有运行中的事件循环，可能已经关闭
+                logger.debug("没有运行中的事件循环，跳过异步连接池关闭")
+                return
+            
             # 等待一小段时间，让正在进行的操作完成
-            await asyncio.sleep(0.5)
-            # 关闭连接池
-            await async_engine.dispose()
-            logger.info("异步数据库连接池已安全关闭")
-        except RuntimeError as e:
-            # 如果事件循环已关闭，这是正常的
-            if "Event loop is closed" in str(e) or "loop is closed" in str(e):
+            try:
+                await asyncio.sleep(0.5)
+            except RuntimeError:
+                # 事件循环可能在等待期间关闭
+                logger.debug("等待期间事件循环关闭，跳过异步连接池关闭")
+                return
+            
+            # 先尝试关闭所有活跃连接
+            try:
+                pool = async_engine.pool
+                # 获取所有已签出的连接并关闭它们
+                checked_out = pool.checkedout()
+                if checked_out > 0:
+                    logger.debug(f"正在关闭 {checked_out} 个活跃的异步连接...")
+                    # 强制关闭所有连接
+                    await async_engine.dispose(close=True)
+                else:
+                    await async_engine.dispose()
+                logger.info("异步数据库连接池已安全关闭")
+            except RuntimeError as e:
+                # 如果事件循环已关闭，这是正常的
+                if "Event loop is closed" in str(e) or "loop is closed" in str(e):
+                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
+                else:
+                    logger.warning(f"关闭异步连接池时出错: {e}")
+            except Exception as e:
+                # 捕获所有其他异常，包括 asyncpg 的连接取消警告
+                error_msg = str(e)
+                if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
+                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
+                elif "coroutine" in error_msg and "was never awaited" in error_msg:
+                    # asyncpg 连接取消的警告，可以忽略
+                    logger.debug("检测到未等待的协程（连接关闭时的正常情况）")
+                else:
+                    logger.warning(f"关闭异步连接池时出错: {e}")
+        except Exception as e:
+            # 最外层异常处理
+            error_msg = str(e)
+            if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
                 logger.debug("事件循环已关闭，跳过异步连接池关闭")
             else:
                 logger.warning(f"关闭异步连接池时出错: {e}")
-        except Exception as e:
-            logger.warning(f"关闭异步连接池时出错: {e}")
     
     # 关闭同步连接池
     if sync_engine:

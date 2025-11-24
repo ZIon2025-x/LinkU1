@@ -55,12 +55,22 @@ const LoginModal: React.FC<LoginModalProps> = ({
       }
     };
   }, []);
-  const [passwordValidation, setPasswordValidation] = useState({
+  const [passwordValidation, setPasswordValidation] = useState<{
+    is_valid: boolean;
+    score: number;
+    strength: string;
+    bars: number;
+    errors: string[];
+    suggestions: string[];
+    missing_requirements: string[];
+  }>({
     is_valid: false,
     score: 0,
     strength: 'weak',
+    bars: 1,
     errors: [],
-    suggestions: []
+    suggestions: [],
+    missing_requirements: []
   });
   const navigate = useNavigate();
 
@@ -124,6 +134,99 @@ const LoginModal: React.FC<LoginModalProps> = ({
   // 密码验证防抖定时器
   const passwordValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // 前端密码强度验证函数（当后端不可用时使用）
+  const validatePasswordFrontend = React.useCallback((password: string, username?: string, email?: string) => {
+    const errors: string[] = [];
+    const missing_requirements: string[] = [];
+    let score = 0;
+
+    // 基本长度检查
+    const min_length = 12;
+    if (password.length < min_length) {
+      errors.push(`密码长度至少需要${min_length}个字符`);
+      missing_requirements.push(`至少${min_length}个字符`);
+      score -= 20;
+    } else if (password.length >= 16) {
+      score += 10;
+    }
+
+    // 字符类型检查
+    const has_upper = /[A-Z]/.test(password);
+    const has_lower = /[a-z]/.test(password);
+    const has_digit = /\d/.test(password);
+    // 检查特殊字符（包括Unicode特殊字符，排除中文字符范围）
+    const has_special = /[^\w\s\u4e00-\u9fff]/.test(password);
+
+    // 收集缺少的要求
+    if (!has_upper) {
+      errors.push("密码必须包含至少一个大写字母");
+      missing_requirements.push("大写字母 (例如: A, B, C)");
+      score -= 15;
+    }
+
+    if (!has_lower) {
+      errors.push("密码必须包含至少一个小写字母");
+      missing_requirements.push("小写字母 (例如: a, b, c)");
+      score -= 15;
+    }
+
+    if (!has_digit) {
+      errors.push("密码必须包含至少一个数字");
+      missing_requirements.push("数字 (例如: 0, 1, 2, 3)");
+      score -= 15;
+    }
+
+    if (!has_special) {
+      errors.push("密码必须包含至少一个特殊字符");
+      missing_requirements.push("特殊字符 (例如: !@#$%^&*()_+-=...)");
+      score -= 15;
+    }
+
+    // 字符类型奖励
+    const char_types = [has_upper, has_lower, has_digit, has_special].filter(Boolean).length;
+    score += char_types * 5;
+
+    // 计算最终分数
+    score = Math.max(0, Math.min(100, score));
+
+    // 计算bars和strength（基于新的三条横线规则）
+    const has_letter = has_upper || has_lower;
+
+    let strength: string;
+    let bars: number;
+
+    // 三条横线：强（有大小写字母、数字和特殊字符）
+    if (has_upper && has_lower && has_digit && has_special) {
+      strength = "strong";
+      bars = 3;
+    }
+    // 两条横线：中（有数字和字母，或者有数字和特殊字符）
+    else if ((has_digit && has_letter) || (has_digit && has_special)) {
+      strength = "medium";
+      bars = 2;
+    }
+    // 一条横线：弱（只有数字）
+    else if (has_digit && !has_letter && !has_special) {
+      strength = "weak";
+      bars = 1;
+    }
+    // 其他情况归为弱
+    else {
+      strength = "weak";
+      bars = 1;
+    }
+
+    return {
+      is_valid: errors.length === 0,
+      score,
+      strength,
+      bars,
+      errors,
+      suggestions: [],
+      missing_requirements
+    };
+  }, []);
+
   // 密码验证函数
   const validatePassword = React.useCallback(async (password: string) => {
     if (!password || password.length === 0) {
@@ -131,8 +234,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
         is_valid: false,
         score: 0,
         strength: 'weak',
+        bars: 1,
         errors: [],
-        suggestions: []
+        suggestions: [],
+        missing_requirements: []
       });
       return;
     }
@@ -146,28 +251,67 @@ const LoginModal: React.FC<LoginModalProps> = ({
       
       // 确保返回的数据格式正确
       if (response.data) {
-        setPasswordValidation({
+        const validationData = {
           is_valid: response.data.is_valid || false,
           score: response.data.score || 0,
           strength: response.data.strength || 'weak',
+          bars: response.data.bars !== undefined ? response.data.bars : 1,  // 确保bars字段存在
           errors: response.data.errors || [],
-          suggestions: response.data.suggestions || []
+          suggestions: response.data.suggestions || [],
+          missing_requirements: response.data.missing_requirements || []
+        };
+        console.log('密码验证结果:', { 
+          password: password.substring(0, 5) + '...', 
+          bars: validationData.bars, 
+          strength: validationData.strength,
+          has_bars_field: 'bars' in response.data,
+          response_data: response.data
         });
+        setPasswordValidation(validationData);
       }
     } catch (error: any) {
       console.error('密码验证失败:', error);
+      
+      // 如果是网络错误（后端不可用），使用前端验证作为后备
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        console.log('后端不可用，使用前端验证');
+        const frontendValidation = validatePasswordFrontend(
+          password,
+          formData.username,
+          formData.email
+        );
+        console.log('前端密码验证结果:', {
+          password: password.substring(0, 5) + '...',
+          bars: frontendValidation.bars,
+          strength: frontendValidation.strength,
+          missing_requirements: frontendValidation.missing_requirements
+        });
+        setPasswordValidation(frontendValidation);
+        return;
+      }
+      
       // 验证失败时，至少显示错误信息
       if (error?.response?.data?.errors) {
         setPasswordValidation({
           is_valid: false,
           score: 0,
           strength: 'weak',
+          bars: 1,
           errors: error.response.data.errors,
-          suggestions: error.response.data.suggestions || []
+          suggestions: error.response.data.suggestions || [],
+          missing_requirements: error.response.data.missing_requirements || []
         });
+      } else {
+        // 如果没有任何错误信息，使用前端验证
+        const frontendValidation = validatePasswordFrontend(
+          password,
+          formData.username,
+          formData.email
+        );
+        setPasswordValidation(frontendValidation);
       }
     }
-  }, [formData.username, formData.email]);
+  }, [formData.username, formData.email, validatePasswordFrontend]);
 
   // 触发密码验证（带防抖）
   const triggerPasswordValidation = React.useCallback((password: string) => {
@@ -182,8 +326,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
         is_valid: false,
         score: 0,
         strength: 'weak',
+        bars: 1,
         errors: [],
-        suggestions: []
+        suggestions: [],
+        missing_requirements: []
       });
       return;
     }
@@ -1243,36 +1389,55 @@ const LoginModal: React.FC<LoginModalProps> = ({
                 borderRadius: '6px',
                 border: '1px solid #e9ecef'
               }}>
-                <div style={{ marginBottom: '6px' }}>
+                <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ 
-                    color: passwordValidation.score >= 80 ? '#52c41a' : 
-                           passwordValidation.score >= 60 ? '#faad14' : '#ff4d4f',
-                    fontWeight: 'bold',
-                    fontSize: '13px'
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#666'
                   }}>
-                    {t('auth.passwordStrength')}: {passwordValidation.strength === 'weak' ? t('auth.weak') : 
-                           passwordValidation.strength === 'medium' ? t('auth.medium') :
-                           passwordValidation.strength === 'strong' ? t('auth.strong') : t('auth.veryStrong')} 
-                    ({passwordValidation.score}/100)
+                    {t('auth.passwordStrength')}:
                   </span>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    {/* 密码强度横线显示 */}
+                    {[1, 2, 3].map((bar) => {
+                      const bars = passwordValidation.bars !== undefined ? passwordValidation.bars : 1;
+                      const isActive = bar <= bars;
+                      let barColor = '#d9d9d9'; // 默认灰色
+                      
+                      if (bars === 1) {
+                        barColor = isActive ? '#ff4d4f' : '#d9d9d9'; // 弱：红色
+                      } else if (bars === 2) {
+                        barColor = isActive ? '#faad14' : '#d9d9d9'; // 中：橙色
+                      } else if (bars === 3) {
+                        barColor = isActive ? '#52c41a' : '#d9d9d9'; // 强：绿色
+                      }
+                      
+                      return (
+                        <div
+                          key={bar}
+                          style={{
+                            width: '24px',
+                            height: '4px',
+                            backgroundColor: barColor,
+                            borderRadius: '2px',
+                            transition: 'background-color 0.3s'
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
                 
-                {passwordValidation.errors.length > 0 && (
-                  <div style={{ color: '#ff4d4f', marginBottom: '6px', fontSize: '12px' }}>
-                    {passwordValidation.errors.map((error, index) => (
-                      <div key={index}>• {translatePasswordError(error)}</div>
+                {/* 实时提示：缺少什么 */}
+                {passwordValidation.missing_requirements && passwordValidation.missing_requirements.length > 0 && (
+                  <div style={{ color: '#ff9800', marginBottom: '6px', fontSize: '12px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>缺少：</div>
+                    {passwordValidation.missing_requirements.map((req, index) => (
+                      <div key={index} style={{ marginBottom: '2px' }}>• {req}</div>
                     ))}
                   </div>
                 )}
                 
-                {passwordValidation.suggestions.length > 0 && (
-                  <div style={{ color: '#1890ff', fontSize: '12px' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{t('auth.suggestions')}:</div>
-                    {passwordValidation.suggestions.map((suggestion, index) => (
-                      <div key={index}>• {translatePasswordSuggestion(suggestion)}</div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
             

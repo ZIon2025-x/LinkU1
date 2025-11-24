@@ -120,8 +120,10 @@ def validate_password_strength(
         "is_valid": validation_result.is_valid,
         "score": validation_result.score,
         "strength": validation_result.strength,
+        "bars": validation_result.bars,  # 密码强度横线数：1=弱，2=中，3=强
         "errors": validation_result.errors,
         "suggestions": validation_result.suggestions,
+        "missing_requirements": getattr(validation_result, 'missing_requirements', []),  # 缺少的要求（带例子）
         "requirements": password_validator.get_password_requirements()
     }
 
@@ -775,16 +777,27 @@ def forgot_password(
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
 ):
-    user = crud.get_user_by_email(db, email)
+    """忘记密码 - 发送重置链接到邮箱"""
+    # 验证邮箱格式和长度
+    from app.validators import StringValidator
+    try:
+        validated_email = StringValidator.validate_email(email)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    
+    user = crud.get_user_by_email(db, validated_email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    token = generate_reset_token(email)
+    token = generate_reset_token(validated_email)
     # 尝试获取用户语言偏好
     from app.email_templates import get_user_language
-    user = crud.get_user_by_email(db, email)
+    user = crud.get_user_by_email(db, validated_email)
     language = get_user_language(user) if user else 'en'
     
-    send_reset_email(background_tasks, email, token, language)
+    send_reset_email(background_tasks, validated_email, token, language)
     return {"message": "Password reset email sent."}
 
 

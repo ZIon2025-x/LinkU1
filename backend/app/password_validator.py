@@ -15,7 +15,9 @@ class PasswordValidationResult:
     score: int  # 0-100
     errors: List[str]
     suggestions: List[str]
-    strength: str  # weak, medium, strong, very_strong
+    strength: str  # weak, medium, strong
+    bars: int = 1  # 密码强度横线数：1=弱，2=中，3=强
+    missing_requirements: List[str] = None  # 缺少的要求（带例子）
 
 class PasswordValidator:
     """密码验证器"""
@@ -32,8 +34,8 @@ class PasswordValidator:
         self.require_special_chars = True
         self.max_length = 128
         
-        # 特殊字符集
-        self.special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        # 特殊字符集（包含常见的中文和英文特殊字符）
+        self.special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?~`\"'\\/￥£€¥"
     
     def _load_common_passwords(self) -> set:
         """加载常见弱密码列表"""
@@ -77,23 +79,42 @@ class PasswordValidator:
         has_upper = bool(re.search(r'[A-Z]', password))
         has_lower = bool(re.search(r'[a-z]', password))
         has_digit = bool(re.search(r'\d', password))
-        has_special = bool(re.search(f'[{re.escape(self.special_chars)}]', password))
+        # 检查特殊字符（包括中文字符）
+        # 先检查英文特殊字符（转义特殊字符）
+        has_special_en = bool(re.search(f'[{re.escape(self.special_chars)}]', password))
+        # 检查常见的中文货币符号和其他Unicode标点符号
+        # 使用简单的非字母数字空格检查（排除中文字符范围）
+        has_special_unicode = bool(re.search(r'[^\w\s\u4e00-\u9fff]', password))
+        has_special = has_special_en or has_special_unicode
+        
+        # 收集缺少的要求（用于实时提示）
+        missing_requirements = []
         
         if self.require_uppercase and not has_upper:
             errors.append("密码必须包含至少一个大写字母")
+            missing_requirements.append("大写字母 (例如: A, B, C)")
             score -= 15
         
         if self.require_lowercase and not has_lower:
             errors.append("密码必须包含至少一个小写字母")
+            missing_requirements.append("小写字母 (例如: a, b, c)")
             score -= 15
         
         if self.require_digits and not has_digit:
             errors.append("密码必须包含至少一个数字")
+            missing_requirements.append("数字 (例如: 0, 1, 2, 3)")
             score -= 15
         
         if self.require_special_chars and not has_special:
+            # 显示特殊字符例子
+            special_examples = "!@#$%^&*()_+-=[]{}|;:,.<>?"
             errors.append("密码必须包含至少一个特殊字符")
+            missing_requirements.append(f"特殊字符 (例如: {special_examples[:15]}...)")
             score -= 15
+        
+        # 长度检查（如果长度不够，也添加到缺少的要求中）
+        if len(password) < self.min_length:
+            missing_requirements.append(f"至少{self.min_length}个字符")
         
         # 字符类型奖励
         char_types = sum([has_upper, has_lower, has_digit, has_special])
@@ -137,22 +158,40 @@ class PasswordValidator:
         #         "添加更多特殊字符"
         #     ])
         
-        # 确定强度等级
-        if score < 30:
-            strength = "weak"
-        elif score < 60:
-            strength = "medium"
-        elif score < 80:
+        # 确定强度等级（基于新的三条横线规则）
+        # 一条横线：弱（只有数字）
+        # 两条横线：中（有数字和字母，或者有数字和字符）
+        # 三条横线：强（有大小写字母、数字和特殊字符）
+        
+        # 使用前面已经检查的字符类型
+        has_letter = has_upper or has_lower  # 有字母（大小写都可以）
+        
+        # 根据新的规则判断强度（不考虑密码长度，只根据字符类型）
+        # 三条横线：强（有大小写字母、数字和特殊字符）
+        if has_upper and has_lower and has_digit and has_special:
             strength = "strong"
+            bars = 3
+        # 两条横线：中（有数字和字母，或者有数字和特殊字符）
+        elif (has_digit and has_letter) or (has_digit and has_special):
+            strength = "medium"
+            bars = 2
+        # 一条横线：弱（只有数字）
+        elif has_digit and not has_letter and not has_special:
+            strength = "weak"
+            bars = 1
+        # 其他情况（只有字母、只有特殊字符、空等）归为弱
         else:
-            strength = "very_strong"
+            strength = "weak"
+            bars = 1
         
         return PasswordValidationResult(
             is_valid=len(errors) == 0,
             score=score,
             errors=errors,
             suggestions=suggestions,
-            strength=strength
+            strength=strength,
+            bars=bars,
+            missing_requirements=missing_requirements if missing_requirements else []
         )
     
     def _has_repeating_chars(self, password: str) -> bool:

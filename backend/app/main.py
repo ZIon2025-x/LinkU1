@@ -59,16 +59,36 @@ logger = logging.getLogger(__name__)
 # 这些错误不影响应用功能，只是连接池内部清理时的常见问题
 class SQLAlchemyPoolErrorFilter(logging.Filter):
     def filter(self, record):
+        msg = record.getMessage()
         # 过滤掉连接池关闭时的事件循环错误
-        if "Exception terminating connection" in record.getMessage():
-            if "attached to a different loop" in record.getMessage():
-                record.levelno = logging.WARNING
-                record.levelname = "WARNING"
+        if "Exception terminating connection" in msg:
+            # 检查是否是事件循环关闭相关的错误
+            if any(keyword in msg for keyword in [
+                "Event loop is closed",
+                "loop is closed",
+                "attached to a different loop",
+                "RuntimeError"
+            ]):
+                # 降级为 DEBUG，因为这些是应用关闭时的正常情况
+                record.levelno = logging.DEBUG
+                record.levelname = "DEBUG"
+                return True
+        # 过滤掉 asyncpg 的协程未等待警告
+        if "coroutine" in msg and "was never awaited" in msg:
+            if "Connection._cancel" in msg:
+                # 这是连接关闭时的正常情况，降级为 DEBUG
+                record.levelno = logging.DEBUG
+                record.levelname = "DEBUG"
+                return True
         return True
 
 # 应用过滤器到 SQLAlchemy 连接池日志
 sqlalchemy_pool_logger = logging.getLogger("sqlalchemy.pool.impl.AsyncAdaptedQueuePool")
 sqlalchemy_pool_logger.addFilter(SQLAlchemyPoolErrorFilter())
+
+# 也过滤 asyncpg 的警告
+asyncpg_logger = logging.getLogger("asyncpg")
+asyncpg_logger.addFilter(SQLAlchemyPoolErrorFilter())
 
 
 app = FastAPI(
@@ -709,16 +729,37 @@ async def shutdown_event():
     
     # 3. 等待一小段时间，让正在进行的数据库操作完成
     try:
-        await asyncio.sleep(0.5)
-    except Exception:
-        pass
-    
-    # 4. 关闭数据库连接池
-    try:
-        from app.database import close_database_pools
-        await close_database_pools()
+        # 检查事件循环是否仍然可用
+        try:
+            loop = asyncio.get_running_loop()
+            if not loop.is_closed():
+                await asyncio.sleep(0.5)
+        except RuntimeError:
+            # 事件循环已关闭，跳过等待
+            logger.debug("事件循环已关闭，跳过等待")
     except Exception as e:
-        logger.warning(f"关闭数据库连接池时出错: {e}")
+        logger.debug(f"等待期间出错: {e}")
+    
+    # 4. 关闭数据库连接池（在事件循环关闭之前）
+    try:
+        # 检查事件循环是否仍然可用
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_closed():
+                logger.debug("事件循环已关闭，跳过数据库连接池关闭")
+            else:
+                from app.database import close_database_pools
+                await close_database_pools()
+        except RuntimeError:
+            # 没有运行中的事件循环
+            logger.debug("没有运行中的事件循环，跳过数据库连接池关闭")
+    except Exception as e:
+        # 捕获所有异常，包括事件循环关闭相关的错误
+        error_msg = str(e)
+        if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
+            logger.debug("事件循环已关闭，跳过数据库连接池关闭")
+        else:
+            logger.warning(f"关闭数据库连接池时出错: {e}")
     
     logger.info("资源清理完成")
 

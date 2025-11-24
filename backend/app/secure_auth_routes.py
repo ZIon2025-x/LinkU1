@@ -56,7 +56,7 @@ def secure_login(
         logger.info(f"安全登录请求: email={user_credentials.email}, password_length={len(user_credentials.password)}")
         
         # 查找用户
-        username = user_credentials.email
+        username = user_credentials.email.strip().lower()  # 转小写以匹配数据库存储格式
         user = None
         
         # 首先尝试作为ID查找（8位数字）

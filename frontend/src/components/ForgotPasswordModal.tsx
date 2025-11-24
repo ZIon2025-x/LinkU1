@@ -12,16 +12,56 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  // 邮箱验证函数
+  const validateEmail = (emailValue: string): boolean => {
+    if (!emailValue.trim()) {
+      setEmailError('邮箱是必填项');
+      return false;
+    }
+
+    // 检查长度（RFC 5321标准：最大254字符）
+    if (emailValue.length > 254) {
+      setEmailError('邮箱长度不能超过254个字符');
+      return false;
+    }
+
+    // 检查格式
+    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailPattern.test(emailValue.trim())) {
+      setEmailError('请输入有效的邮箱地址');
+      return false;
+    }
+
+    setEmailError('');
+    return true;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    // 实时验证（仅在用户输入后）
+    if (value && emailError) {
+      validateEmail(value);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    // 验证邮箱
+    if (!validateEmail(email)) {
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post(
         '/api/users/forgot_password',
-        new URLSearchParams({ email }),
+        new URLSearchParams({ email: email.trim().toLowerCase() }),
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
       setSuccess(true);
@@ -274,25 +314,37 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
+                onBlur={(e) => {
+                  e.target.style.borderColor = emailError ? '#ef4444' : '#ddd';
+                  validateEmail(email);
+                }}
                 placeholder="请输入您的邮箱地址"
                 required
+                maxLength={254}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '1px solid #ddd',
+                  border: `1px solid ${emailError ? '#ef4444' : '#ddd'}`,
                   borderRadius: '8px',
                   fontSize: '16px',
                   boxSizing: 'border-box',
                   transition: 'border-color 0.2s'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#ddd';
+                  e.target.style.borderColor = emailError ? '#ef4444' : '#3b82f6';
                 }}
               />
+              {emailError && (
+                <div style={{
+                  color: '#ef4444',
+                  fontSize: '12px',
+                  marginTop: '4px',
+                  marginLeft: '4px'
+                }}>
+                  {emailError}
+                </div>
+              )}
             </div>
 
             {/* 提交按钮 */}
