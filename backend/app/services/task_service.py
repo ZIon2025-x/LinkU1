@@ -20,10 +20,9 @@ class TaskService:
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
-        # P2 优化：使用 Pydantic model_dump() 优化序列化
-        # 注意：由于装饰器已经处理了序列化，这里直接返回即可
-        # 但确保返回的是 Pydantic 模型，以便 FastAPI 自动序列化
-        return task
+        # 将 SQLAlchemy 对象转换为 Pydantic 模型
+        # TaskOut.from_orm 会从 task_time_slot_relations 表读取时间段信息
+        return schemas.TaskOut.from_orm(task)
     
     @staticmethod
     def invalidate_cache(task_id: int):
