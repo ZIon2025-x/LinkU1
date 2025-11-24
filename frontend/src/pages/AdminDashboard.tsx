@@ -2054,10 +2054,17 @@ const AdminDashboard: React.FC = () => {
                 onClick={async () => {
                   try {
                     if (taskExpertForm.name) {
+                      // 准备要发送的数据，排除空字符串的头像字段（避免覆盖原有头像）
+                      const dataToSend = { ...taskExpertForm };
+                      // 如果头像为空字符串，删除该字段（后端会保留原值）
+                      if (dataToSend.avatar === '') {
+                        delete dataToSend.avatar;
+                      }
+                      
                       if (taskExpertForm.id) {
-                        await updateTaskExpert(taskExpertForm.id, taskExpertForm);
+                        await updateTaskExpert(taskExpertForm.id, dataToSend);
                       } else {
-                        await createTaskExpert(taskExpertForm);
+                        await createTaskExpert(dataToSend);
                       }
                       setShowTaskExpertModal(false);
                       await loadDashboardData();

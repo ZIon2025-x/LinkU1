@@ -1768,14 +1768,16 @@ async def check_and_end_activities(db: AsyncSession):
                 )
                 db.add(task_audit_log)
             
-            # 记录活动审计日志
-            audit_log = models.TaskAuditLog(
-                task_id=None,  # 活动没有task_id
+            # 记录活动审计日志（使用通用的 AuditLog 表，因为 TaskAuditLog 的 task_id 不能为 NULL）
+            audit_log = models.AuditLog(
                 action_type="activity_completed",
-                action_description=f"活动自动结束: {end_reason}",
-                user_id=None,
-                old_status="open",
-                new_status="completed",
+                entity_type="activity",
+                entity_id=str(activity.id),
+                user_id=None,  # 系统自动操作
+                admin_id=None,
+                old_value={"status": "open"},
+                new_value={"status": "completed"},
+                reason=f"活动自动结束: {end_reason}",
             )
             db.add(audit_log)
             
@@ -2300,8 +2302,29 @@ async def apply_for_service(
             )
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
+        
+        # 发送邮件通知给任务达人（自动批准的情况）
+        from app.task_notifications import send_service_application_notification
+        try:
+            await send_service_application_notification(
+                db=db,
+                expert_id=service.expert_id,
+                applicant_id=current_user.id,
+                service_id=service_id,
+                service_name=service.service_name,
+                negotiated_price=None,  # 自动批准，没有议价
+                service_description=service.description,
+                base_price=service.base_price,
+                application_message=application_data.application_message,
+                currency=application_data.currency or service.currency,
+                deadline=deadline,
+                is_flexible=(application_data.is_flexible == 1),
+                application_time=new_application.created_at
+            )
+        except Exception as e:
+            logger.error(f"Failed to send email notification to expert: {e}")
     else:
-        # 13. 发送通知给任务达人（需要批准）
+        # 13. 发送通知和邮件给任务达人（需要批准）
         from app.task_notifications import send_service_application_notification
         try:
             await send_service_application_notification(

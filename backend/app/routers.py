@@ -6577,16 +6577,37 @@ def update_task_expert(
         # 更新字段（排除主键 id，因为它不应该被更新）
         # 注意：id 和 user_id 的同步已经在上面处理过了，这里只需要更新其他字段
         excluded_fields = {'id', 'user_id'}  # 主键和关联字段不应该通过循环更新
+        # 需要特殊处理的字段：如果值为空字符串或None，且原值存在，则跳过更新（避免覆盖原有数据）
+        preserve_if_empty_fields = {'avatar'}  # 头像字段：如果新值为空且原值存在，则保留原值
         updated_fields = []
         for key, value in expert_data.items():
             if key not in excluded_fields and hasattr(expert, key):
                 # 跳过只读字段或不应该更新的字段
                 if key not in ['created_at', 'created_by']:  # 创建时间和创建者不应该被更新
                     old_value = getattr(expert, key, None)
+                    # 对于需要保留的字段，如果新值为空且原值存在，则跳过更新
+                    if key in preserve_if_empty_fields:
+                        if (value is None or value == '') and old_value:
+                            logger.info(f"跳过更新字段 {key}：新值为空，保留原值 {old_value}")
+                            continue
                     setattr(expert, key, value)
                     updated_fields.append(f"{key}: {old_value} -> {value}")
         
         logger.info(f"更新的字段: {updated_fields}")
+        
+        # 如果更新了名字，同步更新 TaskExpert 表中的 expert_name
+        # 检查 name 是否在 expert_data 中且不在排除字段中（说明会被更新）
+        if 'name' in expert_data and 'name' not in excluded_fields:
+            task_expert = db.query(models.TaskExpert).filter(
+                models.TaskExpert.id == expert.user_id
+            ).first()
+            if task_expert:
+                # 使用更新后的 expert.name（在 commit 前已经通过 setattr 更新）
+                task_expert.expert_name = expert.name
+                task_expert.updated_at = get_utc_time()
+                logger.info(f"同步更新 TaskExpert.expert_name: {task_expert.expert_name} (来自 FeaturedTaskExpert.name: {expert.name})")
+            else:
+                logger.warning(f"未找到对应的 TaskExpert 记录 (user_id: {expert.user_id})")
         
         expert.updated_at = get_utc_time()
         db.commit()
