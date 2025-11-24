@@ -328,6 +328,23 @@ const TaskExpertDashboard: React.FC = () => {
     }
   }, [activeTab, user]);
 
+  // 时刻表页面定时刷新（每10秒刷新一次，确保参与者数量实时更新）
+  useEffect(() => {
+    if (activeTab === 'schedule' && user) {
+      // 立即加载一次
+      loadSchedule();
+      
+      // 每10秒刷新一次
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadSchedule();
+        }
+      }, 10000); // 10秒
+      
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, user]);
+
   // 当打开创建多人活动模态框时，确保服务列表已加载
   useEffect(() => {
     if (showCreateMultiTaskModal && services.length === 0 && !loadingServices) {

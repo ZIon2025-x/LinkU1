@@ -2177,7 +2177,24 @@ const TaskDetail: React.FC = () => {
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>截止时间</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')}
+              {(() => {
+                // 如果有截止日期，显示截止日期
+                if (task.deadline) {
+                  return TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London');
+                }
+                // 如果是灵活任务，显示"灵活时间"
+                if (task.is_flexible === 1 || task.is_flexible === true) {
+                  return language === 'zh' ? '灵活时间' : 'Flexible';
+                }
+                // 如果有时间段，显示时间段
+                if (task.time_slot_start_datetime && task.time_slot_end_datetime) {
+                  const startTime = TimeHandlerV2.formatUtcToLocal(task.time_slot_start_datetime, 'MM/DD HH:mm', 'Europe/London');
+                  const endTime = TimeHandlerV2.formatUtcToLocal(task.time_slot_end_datetime, 'HH:mm', 'Europe/London');
+                  return `${startTime} - ${endTime}`;
+                }
+                // 否则显示"未设置"
+                return language === 'zh' ? '未设置' : 'Not set';
+              })()}
             </div>
           </div>
         </div>

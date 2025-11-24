@@ -316,6 +316,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     }
   }, [task, taskId, loadParticipants]);
 
+  // 多人任务定时刷新参与者列表（每10秒刷新一次，确保参与者数量实时更新）
+  useEffect(() => {
+    if (isOpen && task && task.is_multi_participant && taskId) {
+      // 立即加载一次
+      loadParticipants();
+      
+      // 每10秒刷新一次
+      const interval = setInterval(() => {
+        if (!document.hidden) {
+          loadParticipants();
+        }
+      }, 10000); // 10秒
+      
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, task, taskId, loadParticipants]);
+
   // P0 优化：使用 useMemo 缓存复杂计算
   // 检查用户等级是否满足任务等级要求
   const canViewTask = useMemo(() => {
@@ -1304,16 +1321,28 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
               </div>
             )}
             {/* 多人任务：参与者信息 */}
-            {task.is_multi_participant && (
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                👥 {task.current_participants || 0} / {task.max_participants || 1} {language === 'zh' ? '参与者' : 'Participants'}
-                {task.min_participants && (
-                  <span style={{ marginLeft: '8px' }}>
-                    ({language === 'zh' ? '最少' : 'Min'} {task.min_participants})
-                  </span>
-                )}
-              </div>
-            )}
+            {task.is_multi_participant && (() => {
+              // 实时计算参与者数量：使用已加载的参与者列表（如果已加载）
+              // 过滤出有效状态的参与者（accepted, in_progress, completed）
+              const validParticipants = participants.filter((p: any) => 
+                ['accepted', 'in_progress', 'completed'].includes(p.status)
+              );
+              // 如果参与者列表已加载，使用实时计算的值；否则使用任务数据中的值
+              const currentParticipantsCount = participants.length > 0 
+                ? validParticipants.length 
+                : (task.current_participants || 0);
+              
+              return (
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  👥 {currentParticipantsCount} / {task.max_participants || 1} {language === 'zh' ? '参与者' : 'Participants'}
+                  {task.min_participants && (
+                    <span style={{ marginLeft: '8px' }}>
+                      ({language === 'zh' ? '最少' : 'Min'} {task.min_participants})
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             {task.agreed_reward && task.agreed_reward !== task.base_reward && (
               <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
                 原价: {task.base_reward?.toFixed(2) || '0.00'} {task.currency || 'CNY'}
@@ -1331,7 +1360,24 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏰</div>
             <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '4px' }}>{t('taskDetail.deadlineLabel')}</div>
             <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              {TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London')}
+              {(() => {
+                // 如果有截止日期，显示截止日期
+                if (task.deadline) {
+                  return TimeHandlerV2.formatUtcToLocal(task.deadline, 'MM/DD HH:mm', 'Europe/London');
+                }
+                // 如果是灵活任务，显示"灵活时间"
+                if (task.is_flexible === 1 || task.is_flexible === true) {
+                  return language === 'zh' ? '灵活时间' : 'Flexible';
+                }
+                // 如果有时间段，显示时间段
+                if (task.time_slot_start_datetime && task.time_slot_end_datetime) {
+                  const startTime = TimeHandlerV2.formatUtcToLocal(task.time_slot_start_datetime, 'MM/DD HH:mm', 'Europe/London');
+                  const endTime = TimeHandlerV2.formatUtcToLocal(task.time_slot_end_datetime, 'HH:mm', 'Europe/London');
+                  return `${startTime} - ${endTime}`;
+                }
+                // 否则显示"未设置"
+                return language === 'zh' ? '未设置' : 'Not set';
+              })()}
             </div>
           </div>
         </div>

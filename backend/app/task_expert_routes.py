@@ -2683,7 +2683,8 @@ async def get_expert_schedule(
         datetime.combine(end_date_obj, dt_time.max), LONDON
     )
     
-    # 查询时间段数据
+    # 查询时间段数据（加载任务关联，用于动态计算参与者数量）
+    from sqlalchemy.orm import selectinload
     query = (
         select(
             models.ServiceTimeSlot,
@@ -2698,11 +2699,68 @@ async def get_expert_schedule(
                 models.ServiceTimeSlot.slot_start_datetime <= end_datetime
             )
         )
+        .options(
+            selectinload(models.ServiceTimeSlot.task_relations)  # 加载任务关联，用于动态计算参与者数量
+        )
         .order_by(models.ServiceTimeSlot.slot_start_datetime.asc())
     )
     
     result = await db.execute(query)
     rows = result.all()
+    
+    # 动态计算每个时间段的实际参与者数量（排除已取消的任务）
+    from app.models import Task, TaskParticipant, TaskTimeSlotRelation
+    from sqlalchemy import func
+    
+    time_slots = [row.ServiceTimeSlot for row in rows]
+    
+    # 初始化变量（确保在if块外也能访问）
+    tasks_by_slot: dict[int, list] = {}
+    participants_count_by_task: dict[int, int] = {}
+    
+    # 批量查询所有时间段关联的任务（排除已取消的任务）
+    if time_slots:
+        slot_ids = [slot.id for slot in time_slots]
+        
+        related_tasks_query = select(
+            TaskTimeSlotRelation,
+            Task
+        ).join(
+            Task, TaskTimeSlotRelation.task_id == Task.id
+        ).where(
+            TaskTimeSlotRelation.time_slot_id.in_(slot_ids),
+            Task.status != "cancelled"
+        )
+        related_tasks_result = await db.execute(related_tasks_query)
+        all_relations = related_tasks_result.all()
+        
+        # 按时间段ID分组任务
+        for relation_row in all_relations:
+            # 处理不同的返回格式
+            if hasattr(relation_row, 'TaskTimeSlotRelation'):
+                slot_id = relation_row.TaskTimeSlotRelation.time_slot_id
+                task = relation_row.Task
+            else:
+                # 如果返回的是元组格式
+                slot_id = relation_row[0].time_slot_id
+                task = relation_row[1]
+            if slot_id not in tasks_by_slot:
+                tasks_by_slot[slot_id] = []
+            tasks_by_slot[slot_id].append(task)
+        
+        # 批量查询多人任务的参与者数量
+        multi_task_ids = [task.id for tasks in tasks_by_slot.values() for task in tasks if task.is_multi_participant]
+        if multi_task_ids:
+            participants_count_query = select(
+                TaskParticipant.task_id,
+                func.count(TaskParticipant.id).label('count')
+            ).where(
+                TaskParticipant.task_id.in_(multi_task_ids),
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+            ).group_by(TaskParticipant.task_id)
+            participants_count_result = await db.execute(participants_count_query)
+            for row in participants_count_result:
+                participants_count_by_task[row.task_id] = row.count
     
     # 组织数据
     schedule_items = []
@@ -2710,6 +2768,19 @@ async def get_expert_schedule(
         slot = row.ServiceTimeSlot
         service_name = row.service_name
         service_id = row.service_id
+        
+        # 实时计算参与者数量
+        actual_participants = 0
+        if time_slots and slot.id in tasks_by_slot:
+            tasks = tasks_by_slot[slot.id]
+            for task in tasks:
+                if task.is_multi_participant:
+                    # 多人任务：使用批量查询的结果
+                    actual_participants += participants_count_by_task.get(task.id, 0)
+                else:
+                    # 单个任务：如果状态为open、taken、in_progress，计数为1
+                    if task.status in ["open", "taken", "in_progress"]:
+                        actual_participants += 1
         
         # 转换为本地时间显示
         slot_start_local = slot.slot_start_datetime.astimezone(LONDON)
@@ -2724,7 +2795,7 @@ async def get_expert_schedule(
             "date": slot_start_local.strftime("%Y-%m-%d"),
             "start_time": slot_start_local.strftime("%H:%M"),
             "end_time": slot_end_local.strftime("%H:%M"),
-            "current_participants": slot.current_participants,
+            "current_participants": actual_participants,  # 使用实时计算的值
             "max_participants": slot.max_participants,
             "is_available": slot.is_available,
             "is_expired": slot.slot_start_datetime < now,
@@ -2749,10 +2820,28 @@ async def get_expert_schedule(
     multi_tasks_result = await db.execute(multi_tasks_query)
     multi_tasks = multi_tasks_result.scalars().all()
     
+    # 批量查询多人任务的参与者数量（实时计算）
+    multi_task_ids = [task.id for task in multi_tasks]
+    task_participants_count: dict[int, int] = {}
+    if multi_task_ids:
+        participants_count_query = select(
+            TaskParticipant.task_id,
+            func.count(TaskParticipant.id).label('count')
+        ).where(
+            TaskParticipant.task_id.in_(multi_task_ids),
+            TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
+        ).group_by(TaskParticipant.task_id)
+        participants_count_result = await db.execute(participants_count_query)
+        for row in participants_count_result:
+            task_participants_count[row.task_id] = row.count
+    
     # 添加多人任务到时刻表
     for task in multi_tasks:
         deadline_local = task.deadline.astimezone(LONDON) if task.deadline else None
         if deadline_local:
+            # 实时计算参与者数量
+            actual_participants = task_participants_count.get(task.id, 0)
+            
             schedule_items.append({
                 "id": f"task_{task.id}",
                 "service_id": task.expert_service_id,
@@ -2763,7 +2852,7 @@ async def get_expert_schedule(
                 "start_time": None,
                 "end_time": None,
                 "deadline": deadline_local.isoformat(),
-                "current_participants": task.current_participants,
+                "current_participants": actual_participants,  # 使用实时计算的值
                 "max_participants": task.max_participants,
                 "task_status": task.status,
                 "is_task": True,
