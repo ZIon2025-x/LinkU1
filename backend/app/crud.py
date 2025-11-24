@@ -114,7 +114,11 @@ def update_user_statistics(db: Session, user_id: str):
         
         # 同步更新 TaskExpert 数据（如果该用户是任务达人）
         # 因为任务达人就是用户，数据应该保持同步
-        task_expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == user_id).first()
+        # 重要：预加载 services 关系，避免 refresh 时清除未加载的关系
+        from sqlalchemy.orm import joinedload
+        task_expert = db.query(models.TaskExpert).options(
+            joinedload(models.TaskExpert.services)
+        ).filter(models.TaskExpert.id == user_id).first()
         if task_expert:
             task_expert.completed_tasks = completed_tasks
             task_expert.rating = Decimal(str(avg_rating)).quantize(Decimal('0.01'))  # 保留2位小数
@@ -122,6 +126,7 @@ def update_user_statistics(db: Session, user_id: str):
             # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
             db.commit()
+            # 注意：由于已经预加载了 services，refresh 不会清除这些关系
             db.refresh(task_expert)
         
         # 同步更新 FeaturedTaskExpert 数据（如果该用户是特色任务达人）

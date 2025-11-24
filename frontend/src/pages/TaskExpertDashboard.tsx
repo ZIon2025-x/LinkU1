@@ -130,6 +130,8 @@ const TaskExpertDashboard: React.FC = () => {
   const [taskParticipants, setTaskParticipants] = useState<{[activityId: number]: {[taskId: number]: any[]}}>({});
   // 存储活动关联的任务列表：{activityId: [tasks]}
   const [activityTasks, setActivityTasks] = useState<{[activityId: number]: any[]}>({});
+  // 存储折叠的活动ID：Set<activityId>，已结束的活动默认折叠
+  const [collapsedActivities, setCollapsedActivities] = useState<Set<number>>(new Set());
   
   // 创建多人活动相关
   const [showCreateMultiTaskModal, setShowCreateMultiTaskModal] = useState(false);
@@ -671,6 +673,12 @@ const TaskExpertDashboard: React.FC = () => {
       const activities = response.data || [];
       console.log('loadMultiTasks: 加载到', activities.length, '个活动', activities);
       setMultiTasks(activities);
+      
+      // 将已结束的活动默认添加到折叠集合中
+      const completedActivityIds = activities
+        .filter((activity: any) => activity.status === 'completed' || activity.status === 'cancelled')
+        .map((activity: any) => activity.id);
+      setCollapsedActivities(new Set(completedActivityIds));
       
       // 并行加载所有活动关联的任务的参与者列表（按任务分组）
       const participantsMap: {[activityId: number]: {[taskId: number]: any[]}} = {};
@@ -1247,13 +1255,48 @@ const TaskExpertDashboard: React.FC = () => {
                                         activity.status === 'completed' ? styles.activityTagCompleted :
                                         styles.activityTagCancelled;
                   
+                  const isCollapsed = collapsedActivities.has(activity.id);
+                  const toggleCollapse = () => {
+                    setCollapsedActivities(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(activity.id)) {
+                        newSet.delete(activity.id);
+                      } else {
+                        newSet.add(activity.id);
+                      }
+                      return newSet;
+                    });
+                  };
+                  
                   return (
                     <div key={activity.id} className={styles.activityCard}>
                       <div className={styles.activityHeader}>
-                        <div className={styles.activityInfo}>
-                          <h3 className={styles.activityTitle}>
-                            {activity.title}
-                          </h3>
+                        <div className={styles.activityInfo} style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={toggleCollapse}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCollapse();
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#4a5568',
+                                transition: 'transform 0.2s'
+                              }}
+                              title={isCollapsed ? '展开' : '折叠'}
+                            >
+                              {isCollapsed ? '▶' : '▼'}
+                            </button>
+                            <h3 className={styles.activityTitle} style={{ margin: 0, flex: 1 }}>
+                              {activity.title}
+                            </h3>
+                          </div>
                           {/* 活动描述（简短） */}
                           {activity.description && (
                             <p className={styles.activityDescription}>
@@ -1320,8 +1363,8 @@ const TaskExpertDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 参与者列表（按任务分组显示） */}
-                      {tasks.length > 0 && (
+                      {/* 参与者列表（按任务分组显示）- 根据折叠状态显示/隐藏 */}
+                      {tasks.length > 0 && !isCollapsed && (
                         <div className={styles.taskGroup}>
                           <h4 className={styles.taskGroupTitle}>
                             参与者列表（按任务分组）
@@ -1522,7 +1565,8 @@ const TaskExpertDashboard: React.FC = () => {
                         </div>
                       )}
 
-                      {/* 操作按钮 */}
+                      {/* 操作按钮 - 根据折叠状态显示/隐藏 */}
+                      {!isCollapsed && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <span style={{ fontSize: '14px', color: '#718096' }}>
@@ -1579,6 +1623,7 @@ const TaskExpertDashboard: React.FC = () => {
                           </button>
                         )}
                       </div>
+                      )}
                     </div>
                   );
                 })}

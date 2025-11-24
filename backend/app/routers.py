@@ -6643,7 +6643,11 @@ def update_task_expert(
         # 如果更新了名字，同步更新 TaskExpert 表中的 expert_name
         # 检查 name 是否在 expert_data 中且不在排除字段中（说明会被更新）
         if 'name' in expert_data and 'name' not in excluded_fields:
-            task_expert = db.query(models.TaskExpert).filter(
+            # 重要：预加载 services 关系，避免级联删除问题
+            from sqlalchemy.orm import joinedload
+            task_expert = db.query(models.TaskExpert).options(
+                joinedload(models.TaskExpert.services)
+            ).filter(
                 models.TaskExpert.id == expert.user_id
             ).first()
             if task_expert:
@@ -6661,7 +6665,11 @@ def update_task_expert(
             # 不能传递空值，只能传递更新有 url 的头像值
             avatar_value = expert_data.get('avatar')
             if avatar_value and avatar_value.strip():  # 确保不是 None、空字符串或只有空白字符
-                task_expert = db.query(models.TaskExpert).filter(
+                # 重要：预加载 services 关系，避免级联删除问题
+                from sqlalchemy.orm import joinedload
+                task_expert = db.query(models.TaskExpert).options(
+                    joinedload(models.TaskExpert.services)
+                ).filter(
                     models.TaskExpert.id == expert.user_id
                 ).first()
                 if task_expert:
@@ -6793,7 +6801,7 @@ def get_public_task_experts(
                 "bio": expert.bio,
                 "response_time": expert.response_time,
                 "success_rate": expert.success_rate,
-                "location": expert.location,  # 添加城市字段
+                "location": expert.location if expert.location and expert.location.strip() else "Online",  # 添加城市字段，处理NULL和空字符串
             })
         
         return {

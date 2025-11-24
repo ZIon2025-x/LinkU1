@@ -495,8 +495,13 @@ async def review_profile_update_request(
             raise HTTPException(status_code=404, detail="修改请求不存在或已处理")
         
         # 2. 获取任务达人记录
+        # 重要：使用 selectinload 预加载 services 关系，避免级联删除问题
+        # 这样可以确保在更新 expert 时，services 关系已经被正确加载，不会被意外删除
+        from sqlalchemy.orm import selectinload
         expert_result = await db.execute(
-            select(models.TaskExpert).where(models.TaskExpert.id == update_request.expert_id)
+            select(models.TaskExpert)
+            .options(selectinload(models.TaskExpert.services))
+            .where(models.TaskExpert.id == update_request.expert_id)
         )
         expert = expert_result.scalar_one_or_none()
         
@@ -511,6 +516,8 @@ async def review_profile_update_request(
             # 保存旧头像URL，用于后续删除
             old_avatar_url = expert.avatar if update_request.new_avatar is not None else None
             
+            # 注意：由于我们已经预加载了 services 关系，SQLAlchemy 会保持这些关系不变
+            # 只更新需要修改的字段，不会影响 services
             if update_request.new_expert_name is not None:
                 expert.expert_name = update_request.new_expert_name
             if update_request.new_bio is not None:

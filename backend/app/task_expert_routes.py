@@ -203,7 +203,7 @@ async def get_experts_list(
                 "bio": expert.bio or "",
                 "response_time": expert.response_time or "",
                 "success_rate": expert.success_rate or 0,
-                "location": expert.location or "Online",
+                "location": expert.location if expert.location and expert.location.strip() else "Online",
                 "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
                 "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
             }
@@ -235,6 +235,19 @@ async def get_experts_list(
             expert_dict["avatar"] = user.avatar
             expert_dict["user_name"] = user.name
             expert_dict["user_avatar"] = user.avatar
+        
+        # 获取location：优先从FeaturedTaskExpert获取，如果没有则从用户表获取，最后使用默认值
+        featured_expert_result = await db.execute(
+            select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert.id)
+        )
+        featured_expert = featured_expert_result.scalar_one_or_none()
+        if featured_expert and featured_expert.location:
+            expert_dict["location"] = featured_expert.location
+        elif user and hasattr(user, 'residence_city') and user.residence_city:
+            expert_dict["location"] = user.residence_city
+        else:
+            expert_dict["location"] = "Online"  # 默认值
+        
         items.append(expert_dict)
     
     return items
