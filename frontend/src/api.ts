@@ -1514,6 +1514,12 @@ export const getTaskExperts = async (params?: {
   return res.data;
 };
 
+// 管理员 API - 获取单个任务达人详情
+export const getTaskExpertForAdmin = async (expertId: string) => {
+  const res = await api.get(`/api/admin/task-expert/${expertId}`);
+  return res.data;
+};
+
 // 管理员 API - 创建任务达人
 export const createTaskExpert = async (expertData: any) => {
   const res = await api.post('/api/admin/task-expert', expertData);

@@ -127,14 +127,13 @@ const TaskExperts: React.FC = () => {
   const categories = [
     { value: 'all', label: t('taskExperts.allCategories') },
     { value: 'programming', label: t('taskExperts.programming') },
-    { value: 'design', label: t('taskExperts.design') },
-    { value: 'marketing', label: t('taskExperts.marketing') },
-    { value: 'writing', label: t('taskExperts.writing') },
     { value: 'translation', label: t('taskExperts.translation') },
     { value: 'tutoring', label: t('taskExperts.tutoring') },
     { value: 'food', label: t('taskExperts.food') },
     { value: 'beverage', label: t('taskExperts.beverage') },
-    { value: 'cake', label: t('taskExperts.cake') }
+    { value: 'cake', label: t('taskExperts.cake') },
+    { value: 'errand_transport', label: t('taskExperts.errandTransport') },
+    { value: 'social_entertainment', label: t('taskExperts.socialEntertainment') }
   ];
 
   const sortOptions = [

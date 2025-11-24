@@ -6436,6 +6436,58 @@ def get_task_experts(
         raise HTTPException(status_code=500, detail="获取任务达人列表失败")
 
 
+@router.get("/admin/task-expert/{expert_id}")
+def get_task_expert(
+    expert_id: str,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取单个任务达人详情（管理员）"""
+    try:
+        expert = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.id == expert_id
+        ).first()
+        
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        return {
+            "id": expert.id,
+            "user_id": expert.user_id,
+            "name": expert.name,
+            "avatar": expert.avatar,
+            "user_level": expert.user_level,
+            "bio": expert.bio,
+            "bio_en": expert.bio_en,
+            "avg_rating": expert.avg_rating,
+            "completed_tasks": expert.completed_tasks,
+            "total_tasks": expert.total_tasks,
+            "completion_rate": expert.completion_rate,
+            "expertise_areas": json.loads(expert.expertise_areas) if expert.expertise_areas else [],
+            "expertise_areas_en": json.loads(expert.expertise_areas_en) if expert.expertise_areas_en else [],
+            "featured_skills": json.loads(expert.featured_skills) if expert.featured_skills else [],
+            "featured_skills_en": json.loads(expert.featured_skills_en) if expert.featured_skills_en else [],
+            "achievements": json.loads(expert.achievements) if expert.achievements else [],
+            "achievements_en": json.loads(expert.achievements_en) if expert.achievements_en else [],
+            "response_time": expert.response_time,
+            "response_time_en": expert.response_time_en,
+            "success_rate": expert.success_rate,
+            "is_verified": bool(expert.is_verified),
+            "is_active": expert.is_active if expert.is_active is not None else 1,
+            "is_featured": expert.is_featured if expert.is_featured is not None else 1,
+            "display_order": expert.display_order,
+            "category": expert.category,
+            "location": expert.location,
+            "created_at": format_iso_utc(expert.created_at) if expert.created_at else None,
+            "updated_at": format_iso_utc(expert.updated_at) if expert.updated_at else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务达人详情失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取任务达人详情失败: {str(e)}")
+
+
 @router.post("/admin/task-expert")
 def create_task_expert(
     expert_data: dict,

@@ -15,6 +15,7 @@ import api, {
   notifyCustomerService,
   sendStaffNotification,
   getTaskExperts,
+  getTaskExpertForAdmin,
   createTaskExpert,
   updateTaskExpert,
   deleteTaskExpert,
@@ -1504,14 +1505,21 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td style={{ padding: '12px' }}>
                     <button
-                      onClick={() => {
-                        // 确保 is_active 和 is_featured 正确传递（数字类型）
-                        setTaskExpertForm({
-                          ...expert,
-                          is_active: expert.is_active ?? 0,
-                          is_featured: expert.is_featured ?? 0
-                        });
-                        setShowTaskExpertModal(true);
+                      onClick={async () => {
+                        try {
+                          // 从数据库实时加载最新的任务达人数据
+                          const expertData = await getTaskExpertForAdmin(expert.id);
+                          // 确保 is_active 和 is_featured 正确传递（数字类型）
+                          setTaskExpertForm({
+                            ...expertData,
+                            is_active: expertData.is_active ?? 0,
+                            is_featured: expertData.is_featured ?? 0
+                          });
+                          setShowTaskExpertModal(true);
+                        } catch (error) {
+                          console.error('加载任务达人详情失败:', error);
+                          message.error('加载任务达人详情失败，请重试');
+                        }
                       }}
                       style={{
                         padding: '4px 8px',
@@ -1821,14 +1829,13 @@ const AdminDashboard: React.FC = () => {
                   }}
                 >
                   <option value="programming">编程开发</option>
-                  <option value="design">设计创意</option>
-                  <option value="marketing">营销推广</option>
-                  <option value="writing">文案写作</option>
                   <option value="translation">翻译服务</option>
                   <option value="tutoring">学业辅导</option>
                   <option value="food">美食料理</option>
                   <option value="beverage">饮品调制</option>
                   <option value="cake">蛋糕烘焙</option>
+                  <option value="errand_transport">跑腿接送</option>
+                  <option value="social_entertainment">社交娱乐</option>
                 </select>
               </div>
             </div>
