@@ -221,42 +221,58 @@ def apply_to_activity(
     # 如果有，让新用户加入现有任务，而不是创建新任务
     existing_task = None
     if request.is_multi_participant and db_activity.has_time_slots and request.time_slot_id:
+        logger.info(f"查找多人任务现有任务: activity_id={activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={request.is_multi_participant}")
+        
         # 查找已存在的任务（通过时间段关联）
-        existing_relation = db.query(TaskTimeSlotRelation).filter(
+        # 先查找所有关联该时间段的任务，然后筛选出符合条件的多人任务
+        existing_relations = db.query(TaskTimeSlotRelation).filter(
             and_(
                 TaskTimeSlotRelation.time_slot_id == request.time_slot_id,
                 TaskTimeSlotRelation.relation_mode == "fixed"
             )
-        ).first()
+        ).all()
         
-        if existing_relation:
-            existing_task = db.query(Task).filter(
+        logger.info(f"找到 {len(existing_relations)} 个时间段关联")
+        
+        # 遍历所有关联，找到符合条件的任务
+        for relation in existing_relations:
+            task = db.query(Task).filter(
                 and_(
-                    Task.id == existing_relation.task_id,
+                    Task.id == relation.task_id,
                     Task.parent_activity_id == activity_id,
                     Task.is_multi_participant == True,
                     Task.status.in_(["open", "taken", "in_progress"])
                 )
             ).first()
             
-            if existing_task:
-                # 检查用户是否已经是该任务的参与者
-                existing_participant = db.query(TaskParticipant).filter(
-                    and_(
-                        TaskParticipant.task_id == existing_task.id,
-                        TaskParticipant.user_id == current_user.id,
-                        TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
-                    )
-                ).first()
-                
-                if existing_participant:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="You have already applied to this time slot. Please check your tasks."
-                    )
+            if task:
+                logger.info(f"找到现有多人任务: task_id={task.id}, status={task.status}, current_participants={task.current_participants}, max_participants={task.max_participants}")
+                existing_task = task
+                break
+        
+        if existing_task:
+            # 检查用户是否已经是该任务的参与者
+            existing_participant = db.query(TaskParticipant).filter(
+                and_(
+                    TaskParticipant.task_id == existing_task.id,
+                    TaskParticipant.user_id == current_user.id,
+                    TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
+                )
+            ).first()
+            
+            if existing_participant:
+                logger.warning(f"用户 {current_user.id} 已经是任务 {existing_task.id} 的参与者")
+                raise HTTPException(
+                    status_code=400,
+                    detail="You have already applied to this time slot. Please check your tasks."
+                )
+            logger.info(f"用户 {current_user.id} 将加入现有任务 {existing_task.id}")
+        else:
+            logger.info(f"未找到现有任务，将创建新任务")
     
     # 对于非多人任务或没有时间段的情况，检查用户是否已为此活动创建过任务
-    if not existing_task:
+    # 注意：多人任务不应该检查 originating_user_id，因为多人任务允许多个用户申请
+    if not existing_task and not (request.is_multi_participant and db_activity.has_time_slots):
         existing_task = db.query(Task).filter(
             and_(
                 Task.parent_activity_id == activity_id,
@@ -358,8 +374,8 @@ def apply_to_activity(
     
     # 创建新任务
     # 重要：任务方向逻辑
-    # - poster_id（发布者）= 付钱的人 = 申请活动的普通用户
-    # - taker_id（接收者）= 收钱的人 = 任务达人
+    # - 对于单人任务：poster_id（发布者）= 付钱的人 = 申请活动的普通用户，taker_id（接收者）= 收钱的人 = 任务达人
+    # - 对于多人任务：poster_id 应该为 None，因为所有参与者都通过 TaskParticipant 表管理，不应该有单一的发布者
     new_task = Task(
         title=db_activity.title,
         description=db_activity.description,
@@ -370,7 +386,9 @@ def apply_to_activity(
         currency=db_activity.currency,
         location=db_activity.location,
         task_type=db_activity.task_type,
-        poster_id=current_user.id,  # 申请者作为发布者（付钱的）
+        # 对于多人任务，poster_id 应该为 None，因为参与者通过 TaskParticipant 管理
+        # 对于单人任务，poster_id 是申请者（付钱的）
+        poster_id=None if request.is_multi_participant else current_user.id,
         taker_id=db_activity.expert_id,  # 达人作为接收者（收钱的）
         status=initial_status,
         task_level="expert",
@@ -380,7 +398,7 @@ def apply_to_activity(
         points_reward=db_activity.points_reward,
         # 关联到活动
         parent_activity_id=activity_id,
-        # 记录实际申请人
+        # 记录实际申请人（对于多人任务，这是第一个申请者，但不应该作为 poster_id）
         originating_user_id=current_user.id,
         # 是否是多人任务
         is_multi_participant=request.is_multi_participant,
