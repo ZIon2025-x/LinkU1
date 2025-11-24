@@ -87,9 +87,22 @@ const ApplicantList: React.FC<ApplicantListProps> = ({
                     议价: {app.negotiated_price} {app.currency || 'GBP'}
                   </div>
                 )}
-                <div style={{ color: '#999', fontSize: '12px' }}>
-                  {t('taskDetail.applicationTime')}: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
-                </div>
+                {app.created_at && (() => {
+                  try {
+                    const formattedDate = TimeHandlerV2.formatUtcToLocal(app.created_at);
+                    // 检查是否是有效的日期字符串
+                    if (formattedDate && formattedDate !== 'Invalid Date' && !formattedDate.includes('Invalid')) {
+                      return (
+                        <div style={{ color: '#999', fontSize: '12px' }}>
+                          {t('taskDetail.applicationTime')}: {formattedDate}
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // 日期格式化失败，不显示
+                  }
+                  return null;
+                })()}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button

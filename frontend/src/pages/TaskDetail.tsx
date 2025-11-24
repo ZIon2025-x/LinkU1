@@ -2880,11 +2880,22 @@ const TaskDetail: React.FC = () => {
                            (language === 'zh' ? '已退出' : 'Exited')}
                         </div>
                       </div>
-                      {participant.applied_at && (
-                        <div style={{ color: '#999', fontSize: '12px' }}>
-                          {language === 'zh' ? '申请时间' : 'Applied at'}: {TimeHandlerV2.formatUtcToLocal(participant.applied_at)}
-                        </div>
-                      )}
+                      {participant.applied_at && (() => {
+                        try {
+                          const formattedDate = TimeHandlerV2.formatUtcToLocal(participant.applied_at);
+                          // 检查是否是有效的日期字符串
+                          if (formattedDate && formattedDate !== 'Invalid Date' && !formattedDate.includes('Invalid')) {
+                            return (
+                              <div style={{ color: '#999', fontSize: '12px' }}>
+                                {language === 'zh' ? '申请时间' : 'Applied at'}: {formattedDate}
+                              </div>
+                            );
+                          }
+                        } catch (e) {
+                          // 日期格式化失败，不显示
+                        }
+                        return null;
+                      })()}
                       {participant.exit_reason && (
                         <div style={{ color: '#f59e0b', fontSize: '12px', marginTop: '4px' }}>
                           {language === 'zh' ? '退出原因' : 'Exit reason'}: {participant.exit_reason}
@@ -3113,9 +3124,22 @@ const TaskDetail: React.FC = () => {
                           "{app.message}"
                         </div>
                       )}
-                      <div style={{ color: '#999', fontSize: '12px' }}>
-                        申请时间: {TimeHandlerV2.formatUtcToLocal(app.created_at)}
-                      </div>
+                      {app.created_at && (() => {
+                        try {
+                          const formattedDate = TimeHandlerV2.formatUtcToLocal(app.created_at);
+                          // 检查是否是有效的日期字符串
+                          if (formattedDate && formattedDate !== 'Invalid Date' && !formattedDate.includes('Invalid')) {
+                            return (
+                              <div style={{ color: '#999', fontSize: '12px' }}>
+                                申请时间: {formattedDate}
+                              </div>
+                            );
+                          }
+                        } catch (e) {
+                          // 日期格式化失败，不显示
+                        }
+                        return null;
+                      })()}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button

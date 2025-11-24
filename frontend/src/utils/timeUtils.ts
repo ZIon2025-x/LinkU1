@@ -78,12 +78,31 @@ export class TimeHandlerV2 {
       if (utcTimeString.endsWith('Z')) {
         // 标准ISO格式，带Z后缀
         utcTime = dayjs.utc(utcTimeString);
+      } else if (utcTimeString.match(/[+-]\d{2}:?\d{2}$/)) {
+        // ISO格式带时区偏移（如 +00:00 或 +00）
+        // 将时区偏移转换为Z（UTC）
+        const normalized = utcTimeString.replace(/[+-]\d{2}:?\d{2}$/, 'Z');
+        utcTime = dayjs.utc(normalized);
       } else if (utcTimeString.includes('T')) {
-        // ISO格式但没有Z后缀
+        // ISO格式但没有Z后缀，假设是UTC时间
         utcTime = dayjs.utc(utcTimeString + 'Z');
       } else {
         // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
-        utcTime = dayjs.utc(utcTimeString);
+        // 或者带时区的格式：'2025-11-24 02:01:31.575514+00'
+        if (utcTimeString.match(/[+-]\d{2}$/)) {
+          // 带时区偏移的数据库格式（如 +00）
+          const normalized = utcTimeString.replace(/[+-]\d{2}$/, '').replace(' ', 'T') + 'Z';
+          utcTime = dayjs.utc(normalized);
+        } else {
+          // 纯数据库格式，假设是UTC时间
+          utcTime = dayjs.utc(utcTimeString.replace(' ', 'T') + 'Z');
+        }
+      }
+      
+      // 检查日期是否有效
+      if (!utcTime.isValid()) {
+        console.error('无效的日期格式:', utcTimeString);
+        return utcTimeString; // 返回原始字符串
       }
       
       // 转换为用户时区
@@ -98,7 +117,7 @@ export class TimeHandlerV2 {
       
       return localTime.format(format);
     } catch (error) {
-      console.error('时间格式化错误:', error);
+      console.error('时间格式化错误:', error, '原始字符串:', utcTimeString);
       return utcTimeString; // 返回原始字符串作为fallback
     }
   }

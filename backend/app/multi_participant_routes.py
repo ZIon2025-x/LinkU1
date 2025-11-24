@@ -139,6 +139,7 @@ def get_task_participants(
     ).order_by(TaskParticipant.applied_at.asc()).all()
     
     # 获取用户信息
+    from app.utils.time_utils import format_iso_utc
     participant_list = []
     for participant in participants:
         user = db.query(User).filter(User.id == participant.user_id).first()
@@ -150,13 +151,13 @@ def get_task_participants(
             "user_avatar": user.avatar if user else None,
             "status": participant.status,
             "time_slot_id": participant.time_slot_id,
-            "preferred_deadline": participant.preferred_deadline.isoformat() if participant.preferred_deadline else None,
+            "preferred_deadline": format_iso_utc(participant.preferred_deadline) if participant.preferred_deadline else None,
             "is_flexible_time": participant.is_flexible_time,
-            "applied_at": participant.applied_at.isoformat() if participant.applied_at else None,
-            "accepted_at": participant.accepted_at.isoformat() if participant.accepted_at else None,
-            "started_at": participant.started_at.isoformat() if participant.started_at else None,
-            "completed_at": participant.completed_at.isoformat() if participant.completed_at else None,
-            "exit_requested_at": participant.exit_requested_at.isoformat() if participant.exit_requested_at else None,
+            "applied_at": format_iso_utc(participant.applied_at) if participant.applied_at else None,
+            "accepted_at": format_iso_utc(participant.accepted_at) if participant.accepted_at else None,
+            "started_at": format_iso_utc(participant.started_at) if participant.started_at else None,
+            "completed_at": format_iso_utc(participant.completed_at) if participant.completed_at else None,
+            "exit_requested_at": format_iso_utc(participant.exit_requested_at) if participant.exit_requested_at else None,
             "exit_reason": participant.exit_reason,
             "completion_notes": participant.completion_notes,
         }
