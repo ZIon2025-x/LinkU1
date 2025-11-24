@@ -121,17 +121,63 @@ Error: Invalid value for '--port': '$PORT' is not a valid integer.
 Usage: python -m uvicorn [OPTIONS] APP
 ```
 
-## 🎯 快速修复步骤
+## 🎯 最终解决方案（推荐）
+
+由于 Railway 总是读取根目录的 `railway.json`，最可靠的方法是**使用启动脚本**：
+
+### 步骤 1：提交启动脚本
+
+确保 `start_celery.sh` 已提交到 Git 仓库根目录。
+
+### 步骤 2：配置 Celery Worker 服务
 
 1. **进入 Celery Worker 服务**
-2. **Settings → Deploy**
-3. **Custom Start Command 字段中输入：**
+2. **Settings → Deploy → Custom Start Command：**
+   ```
+   bash start_celery.sh
+   ```
+3. **Settings → Variables → 添加环境变量：**
+   - 变量名：`CELERY_TYPE`
+   - 变量值：`worker`
+4. **确保 Root Directory 设置为：** `backend`（如果服务根目录不是 backend）
+5. **点击 Save**
+6. **等待重新部署**
+
+### 步骤 3：配置 Celery Beat 服务
+
+1. **进入 Celery Beat 服务**
+2. **Settings → Deploy → Custom Start Command：**
+   ```
+   bash start_celery.sh
+   ```
+3. **Settings → Variables → 添加环境变量：**
+   - 变量名：`CELERY_TYPE`
+   - 变量值：`beat`
+4. **确保 Root Directory 设置为：** `backend`（如果服务根目录不是 backend）
+5. **点击 Save**
+6. **等待重新部署**
+
+### 步骤 4：验证
+
+部署后查看日志，应该看到：
+- Worker 服务：`Starting Celery Worker...`
+- Beat 服务：`Starting Celery Beat...`
+
+## 🎯 快速修复步骤（如果脚本方法不行）
+
+如果启动脚本方法也不行，最后的办法是：
+
+1. **进入 Celery Worker 服务**
+2. **Settings → Source**
+3. **设置 Root Directory 为：** `backend`
+4. **Settings → Deploy → Custom Start Command：**
    ```
    celery -A app.celery_app worker --loglevel=info --concurrency=2
    ```
-4. **点击 Save**
-5. **等待重新部署**
-6. **查看 Logs 确认 Worker 启动成功**
+5. **点击 Save**
+6. **如果还是被覆盖，尝试添加环境变量：**
+   - 变量名：`RAILWAY_START_COMMAND`
+   - 变量值：`celery -A app.celery_app worker --loglevel=info --concurrency=2`
 
 ### 方法 4：使用启动脚本（如果方法3不行）
 
