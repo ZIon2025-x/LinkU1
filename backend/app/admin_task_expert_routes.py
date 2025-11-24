@@ -185,7 +185,7 @@ async def review_expert_application(
                     total_services=0,  # 初始服务数为0
                     completed_tasks=user_completed_tasks,  # 使用用户已完成任务数量
                     approved_by=current_admin.id,  # 批准的管理员ID
-                    approved_at=models.get_utc_time(),
+                    approved_at=get_utc_time(),
                 )
                 
                 db.add(new_expert)
@@ -193,9 +193,9 @@ async def review_expert_application(
                 # 5. 更新申请记录
                 application.status = "approved"
                 application.reviewed_by = current_admin.id
-                application.reviewed_at = models.get_utc_time()
+                application.reviewed_at = get_utc_time()
                 application.review_comment = review_data.review_comment
-                application.updated_at = models.get_utc_time()
+                application.updated_at = get_utc_time()
                 
                 await db.commit()
                 commit_success = True
@@ -255,9 +255,9 @@ async def review_expert_application(
             # 拒绝申请
             application.status = "rejected"
             application.reviewed_by = current_admin.id
-            application.reviewed_at = models.get_utc_time()
+            application.reviewed_at = get_utc_time()
             application.review_comment = review_data.review_comment
-            application.updated_at = models.get_utc_time()
+            application.updated_at = get_utc_time()
             
             await db.commit()
             
@@ -517,7 +517,7 @@ async def review_profile_update_request(
                 expert.bio = update_request.new_bio
             if update_request.new_avatar is not None:
                 expert.avatar = update_request.new_avatar
-            expert.updated_at = models.get_utc_time()
+            expert.updated_at = get_utc_time()
             
             # 如果更换了头像，删除旧头像
             if old_avatar_url and old_avatar_url != update_request.new_avatar:
@@ -550,9 +550,9 @@ async def review_profile_update_request(
             # 5. 更新修改请求状态
             update_request.status = "approved"
             update_request.reviewed_by = current_admin.id
-            update_request.reviewed_at = models.get_utc_time()
+            update_request.reviewed_at = get_utc_time()
             update_request.review_comment = review_data.review_comment
-            update_request.updated_at = models.get_utc_time()
+            update_request.updated_at = get_utc_time()
             
             await db.commit()
             
@@ -577,9 +577,9 @@ async def review_profile_update_request(
             # 拒绝：只更新请求状态
             update_request.status = "rejected"
             update_request.reviewed_by = current_admin.id
-            update_request.reviewed_at = models.get_utc_time()
+            update_request.reviewed_at = get_utc_time()
             update_request.review_comment = review_data.review_comment
-            update_request.updated_at = models.get_utc_time()
+            update_request.updated_at = get_utc_time()
             
             await db.commit()
             

@@ -55,40 +55,68 @@ from app.error_handlers import SecurityError, ValidationError, BusinessError
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# 配置日志过滤器（401 错误降噪）
+try:
+    from app.logging_config import configure_logging
+    configure_logging()
+except Exception as e:
+    logger.warning(f"配置日志过滤器时出错: {e}")
+
 # 添加日志过滤器，将 SQLAlchemy 连接池的事件循环错误降级为警告
 # 这些错误不影响应用功能，只是连接池内部清理时的常见问题
 class SQLAlchemyPoolErrorFilter(logging.Filter):
     def filter(self, record):
+        # 只处理 SQLAlchemy 内部连接池的日志
+        if not record.name.startswith("sqlalchemy.pool"):
+            return True
+        
         msg = record.getMessage()
+        
         # 过滤掉连接池关闭时的事件循环错误
         if "Exception terminating connection" in msg:
             # 检查是否是事件循环关闭相关的错误
             if any(keyword in msg for keyword in [
                 "Event loop is closed",
                 "loop is closed",
-                "attached to a different loop",
-                "RuntimeError"
             ]):
                 # 降级为 DEBUG，因为这些是应用关闭时的正常情况
                 record.levelno = logging.DEBUG
                 record.levelname = "DEBUG"
                 return True
-        # 过滤掉 asyncpg 的协程未等待警告
-        if "coroutine" in msg and "was never awaited" in msg:
-            if "Connection._cancel" in msg:
-                # 这是连接关闭时的正常情况，降级为 DEBUG
-                record.levelno = logging.DEBUG
-                record.levelname = "DEBUG"
+            # "attached to a different loop" 需要关注，不降级
+            if "attached to a different loop" in msg:
+                # 保持原始级别，让这个错误正常暴露
                 return True
+        
+        # 过滤掉 asyncpg 的协程未等待警告
+        if "coroutine" in msg and "was never awaited" in msg and "Connection._cancel" in msg:
+            # 这是连接关闭时的正常情况，降级为 DEBUG
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+            return True
+        
         return True
 
 # 应用过滤器到 SQLAlchemy 连接池日志
-sqlalchemy_pool_logger = logging.getLogger("sqlalchemy.pool.impl.AsyncAdaptedQueuePool")
+sqlalchemy_pool_logger = logging.getLogger("sqlalchemy.pool")
 sqlalchemy_pool_logger.addFilter(SQLAlchemyPoolErrorFilter())
 
-# 也过滤 asyncpg 的警告
+# 也过滤 asyncpg 的警告（仅限连接取消相关的）
+class AsyncPGConnectionFilter(logging.Filter):
+    def filter(self, record):
+        if not record.name.startswith("asyncpg"):
+            return True
+        
+        msg = record.getMessage()
+        if "coroutine" in msg and "was never awaited" in msg and "Connection._cancel" in msg:
+            record.levelno = logging.DEBUG
+            record.levelname = "DEBUG"
+            return True
+        
+        return True
+
 asyncpg_logger = logging.getLogger("asyncpg")
-asyncpg_logger.addFilter(SQLAlchemyPoolErrorFilter())
+asyncpg_logger.addFilter(AsyncPGConnectionFilter())
 
 
 app = FastAPI(
@@ -389,9 +417,20 @@ else:
             }
         )
 
-active_connections = {}
-# 用户级连接锁，确保原子替换
-connection_locks = defaultdict(asyncio.Lock)
+# 使用 WebSocket 管理器进行连接池管理
+from app.websocket_manager import get_ws_manager
+
+# 向后兼容：保留 active_connections 字典（通过 WebSocketManager 访问）
+def get_active_connections():
+    """获取活跃连接字典（向后兼容）"""
+    ws_manager = get_ws_manager()
+    return {user_id: conn.websocket for user_id, conn in ws_manager.connections.items() if conn.is_alive}
+
+# 用户级连接锁，确保原子替换（通过 WebSocketManager 访问）
+def get_connection_locks():
+    """获取连接锁字典（向后兼容）"""
+    ws_manager = get_ws_manager()
+    return ws_manager.connection_locks
 
 # 全局变量：保存后台任务引用，用于优雅关闭
 _background_cleanup_task = None
@@ -569,35 +608,100 @@ def run_session_cleanup_task():
 @app.on_event("startup")
 async def startup_event():
     """应用启动时初始化数据库并启动后台任务"""
-    # 启动定时任务（可选：使用APScheduler或Celery）
-    # 这里使用简单的后台线程方式
+    # 保存主事件循环，供后台线程使用
+    from app.state import set_main_event_loop
+    loop = asyncio.get_running_loop()
+    set_main_event_loop(loop)
+    logger.info("主事件循环已保存")
+    
+    # 初始化 Prometheus 指标
+    try:
+        from app.metrics import update_health_status
+        update_health_status("overall", True)
+        logger.info("Prometheus 指标已初始化")
+    except Exception as e:
+        logger.warning(f"初始化 Prometheus 指标失败: {e}")
+    
+    # 启动定时任务 - 优先使用 Celery，如果不可用则回退到 TaskScheduler
     import threading
     import time
-    from app.scheduled_tasks import run_scheduled_tasks
     
-    def run_tasks_periodically():
-        """每5分钟执行一次定时任务"""
-        global _shutdown_flag
-        while not _shutdown_flag:
+    # 尝试使用 Celery（如果可用且配置正确）
+    use_celery = False
+    try:
+        from app.celery_app import celery_app, USE_REDIS, REDIS_URL
+        import os
+        
+        # 检查 Celery 是否可用
+        if USE_REDIS and REDIS_URL:
+            # 尝试连接 Redis（Celery broker）
             try:
-                run_scheduled_tasks()
-            except Exception as e:
-                # 如果是关闭时的错误，只记录调试信息
-                if _shutdown_flag and ("Event loop is closed" in str(e) or "loop is closed" in str(e)):
-                    logger.debug(f"定时任务在关闭时跳过: {e}")
-                    break
-                logger.error(f"定时任务执行失败: {e}", exc_info=True)
-            
-            # 使用可中断的睡眠
-            for _ in range(300):  # 5分钟 = 300秒
-                if _shutdown_flag:
-                    break
-                time.sleep(1)
+                try:
+                    import redis
+                except ImportError:
+                    logger.warning("⚠️  redis 模块未安装，将回退到 TaskScheduler")
+                    use_celery = False
+                else:
+                    redis_client = redis.from_url(REDIS_URL)
+                    redis_client.ping()
+                    use_celery = True
+                    logger.info("✅ Redis 连接成功，将使用 Celery 执行定时任务")
+                    logger.info("⚠️  注意：需要单独启动 Celery Worker 和 Celery Beat")
+                    logger.info("   启动命令：")
+                    logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
+                    logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
+            except Exception as redis_error:
+                logger.warning(f"⚠️  Redis 连接失败，将回退到 TaskScheduler: {redis_error}")
+                use_celery = False
+        else:
+            logger.info("ℹ️  Redis 未配置，将使用 TaskScheduler（内存模式）")
+            use_celery = False
+    except ImportError as import_error:
+        logger.warning(f"⚠️  Celery 未安装，将使用 TaskScheduler: {import_error}")
+        use_celery = False
+    except Exception as e:
+        logger.warning(f"⚠️  Celery 配置检查失败，将使用 TaskScheduler: {e}")
+        use_celery = False
     
-    # 启动后台线程
-    scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
-    scheduler_thread.start()
-    logger.info("定时任务已启动（每5分钟执行一次）")
+    # 如果 Celery 不可用，使用 TaskScheduler 作为回退方案
+    if not use_celery:
+        try:
+            from app.task_scheduler import init_scheduler
+            scheduler = init_scheduler()
+            scheduler.start()
+            logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动")
+        except Exception as e:
+            logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
+            # 回退到旧的调度方式
+            from app.scheduled_tasks import run_scheduled_tasks
+            
+            def run_tasks_periodically():
+                """每5分钟执行一次定时任务（回退方案）"""
+                global _shutdown_flag
+                from app.state import is_app_shutting_down
+                
+                while not _shutdown_flag and not is_app_shutting_down():
+                    try:
+                        run_scheduled_tasks()
+                    except Exception as e:
+                        error_str = str(e)
+                        if is_app_shutting_down() and (
+                            "Event loop is closed" in error_str or 
+                            "loop is closed" in error_str or
+                            "attached to a different loop" in error_str
+                        ):
+                            logger.debug(f"定时任务在关闭时跳过: {e}")
+                            break
+                        logger.error(f"定时任务执行失败: {e}", exc_info=True)
+                    
+                    for _ in range(300):  # 5分钟 = 300秒
+                        if _shutdown_flag or is_app_shutting_down():
+                            break
+                        time.sleep(1)
+            
+            scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
+            scheduler_thread.start()
+            logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
     logger.info("应用启动中...")
     
     # ⚠️ 环境变量验证 - 高优先级修复
@@ -676,6 +780,15 @@ async def startup_event():
         logger.info("定期清理任务已启动")
     except Exception as e:
         logger.error(f"启动定期清理任务失败: {e}")
+    
+    # 启动连接池监控任务
+    logger.info("启动数据库连接池监控任务")
+    try:
+        from app.database import start_pool_monitor
+        start_pool_monitor()
+        logger.info("数据库连接池监控任务已启动")
+    except Exception as e:
+        logger.error(f"启动连接池监控任务失败: {e}")
 
 
 @app.on_event("shutdown")
@@ -683,10 +796,25 @@ async def shutdown_event():
     """应用关闭时清理资源"""
     global _shutdown_flag, _background_cleanup_task
     
-    logger.info("应用正在关闭，清理资源...")
+    logger.info("应用正在关闭，开始清理资源...")
+    
+    # 设置关停标志（必须在最开始就设置，这样后台线程看到就会自动"早退"）
+    from app.state import set_app_shutting_down
+    set_app_shutting_down(True)
     _shutdown_flag = True
     
-    # 1. 停止异步清理任务
+    # 给正在处理的请求一点时间
+    await asyncio.sleep(0.3)
+    
+    # 1. 停止连接池监控任务
+    try:
+        from app.database import stop_pool_monitor
+        stop_pool_monitor()
+        logger.info("已停止连接池监控任务")
+    except Exception as e:
+        logger.warning(f"停止连接池监控任务时出错: {e}")
+    
+    # 2. 停止异步清理任务
     try:
         from app.cleanup_tasks import stop_background_cleanup
         stop_background_cleanup()
@@ -704,62 +832,34 @@ async def shutdown_event():
     except Exception as e:
         logger.warning(f"停止清理任务时出错: {e}")
     
-    # 2. 关闭所有活跃的 WebSocket 连接
+    # 3. 关闭所有活跃的 WebSocket 连接（使用 WebSocketManager）
     try:
-        logger.info(f"正在关闭 {len(active_connections)} 个活跃的 WebSocket 连接...")
-        close_tasks = []
-        for user_id, websocket in list(active_connections.items()):
-            try:
-                if websocket.client_state != WebSocketState.DISCONNECTED:
-                    close_tasks.append(websocket.close(code=1001, reason="Server shutting down"))
-            except Exception as e:
-                logger.debug(f"关闭 WebSocket 连接 {user_id} 时出错: {e}")
-        
-        # 等待所有关闭操作完成（最多等待2秒）
-        if close_tasks:
-            try:
-                await asyncio.wait_for(asyncio.gather(*close_tasks, return_exceptions=True), timeout=2.0)
-            except asyncio.TimeoutError:
-                logger.warning("WebSocket 关闭超时，强制继续")
-        
-        active_connections.clear()
+        from app.websocket_manager import get_ws_manager
+        ws_manager = get_ws_manager()
+        await ws_manager.close_all()
         logger.info("WebSocket 连接已关闭")
     except Exception as e:
         logger.warning(f"关闭 WebSocket 连接时出错: {e}")
     
-    # 3. 等待一小段时间，让正在进行的数据库操作完成
+    # 4. 停止 Celery Worker（如果使用 Celery）
     try:
-        # 检查事件循环是否仍然可用
-        try:
-            loop = asyncio.get_running_loop()
-            if not loop.is_closed():
-                await asyncio.sleep(0.5)
-        except RuntimeError:
-            # 事件循环已关闭，跳过等待
-            logger.debug("事件循环已关闭，跳过等待")
+        from app.celery_app import celery_app, USE_REDIS
+        if USE_REDIS:
+            # 发送关闭信号给所有 Celery Worker
+            try:
+                celery_app.control.shutdown()
+                logger.info("已发送关闭信号给 Celery Worker")
+            except Exception as e:
+                logger.debug(f"发送 Celery Worker 关闭信号失败（可能 Worker 未运行）: {e}")
     except Exception as e:
-        logger.debug(f"等待期间出错: {e}")
+        logger.debug(f"Celery Worker 清理失败: {e}")
     
-    # 4. 关闭数据库连接池（在事件循环关闭之前）
+    # 5. 关闭数据库连接池（必须在事件循环还活着的时候做）
     try:
-        # 检查事件循环是否仍然可用
-        try:
-            loop = asyncio.get_running_loop()
-            if loop.is_closed():
-                logger.debug("事件循环已关闭，跳过数据库连接池关闭")
-            else:
-                from app.database import close_database_pools
-                await close_database_pools()
-        except RuntimeError:
-            # 没有运行中的事件循环
-            logger.debug("没有运行中的事件循环，跳过数据库连接池关闭")
+        from app.database import close_database_pools
+        await close_database_pools()
     except Exception as e:
-        # 捕获所有异常，包括事件循环关闭相关的错误
-        error_msg = str(e)
-        if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
-            logger.debug("事件循环已关闭，跳过数据库连接池关闭")
-        else:
-            logger.warning(f"关闭数据库连接池时出错: {e}")
+        logger.warning(f"关闭数据库连接池时出错: {e}")
     
     logger.info("资源清理完成")
 
@@ -835,23 +935,62 @@ async def websocket_chat(
         return
 
     # ⚠️ 原子替换：使用用户级锁确保原子操作
+    connection_established = False
+    ws_manager = get_ws_manager()
+    
     try:
-        async with connection_locks[user_id]:
-            # 先登记新连接为当前连接（原子操作）
-            old_websocket = active_connections.get(user_id)
-            active_connections[user_id] = websocket
+        connection_lock = ws_manager.get_lock(user_id)
+        
+        async with connection_lock:
+            # 先获取旧连接（原子操作）
+            old_connection = ws_manager.connections.get(user_id)
+            old_websocket = old_connection.websocket if old_connection else None
             
-            # 接受新连接
-            await websocket.accept()
-            logger.info(f"WebSocket connection established for user {user_id} (total: {len(active_connections)})")
+            # 创建并登记新连接为当前连接（原子操作）
+            from app.websocket_manager import WebSocketConnection
+            new_connection = WebSocketConnection(websocket, user_id)
+            ws_manager.connections[user_id] = new_connection
+            
+            # 接受新连接（如果失败，需要回滚连接注册）
+            try:
+                await websocket.accept()
+                connection_established = True
+                logger.debug(f"WebSocket connection established for user {user_id} (total: {len(ws_manager.connections)})")
+            except Exception as accept_error:
+                # accept 失败，回滚连接注册
+                if ws_manager.connections.get(user_id) == new_connection:
+                    del ws_manager.connections[user_id]
+                raise accept_error
             
             # 异步关闭旧连接（不影响新连接）
             if old_websocket:
                 logger.debug(f"Closing old WebSocket connection for user {user_id}")
                 asyncio.create_task(close_old_connection(old_websocket, user_id))
+        
+        # 在锁外启动清理和心跳任务（避免阻塞）
+        if ws_manager._cleanup_task is None or ws_manager._cleanup_task.done():
+            ws_manager._cleanup_task = asyncio.create_task(ws_manager._cleanup_loop())
+        if ws_manager._heartbeat_task is None or ws_manager._heartbeat_task.done():
+            ws_manager._heartbeat_task = asyncio.create_task(ws_manager._heartbeat_loop())
+        
+        # 更新 Prometheus 指标
+        try:
+            from app.metrics import (
+                record_websocket_connection,
+                update_websocket_connections_active
+            )
+            record_websocket_connection("established")
+            update_websocket_connections_active(len(ws_manager.connections))
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error during WebSocket connection setup for user {user_id}: {e}", exc_info=True)
-        active_connections.pop(user_id, None)
+        # 只有在连接已建立但后续出错时才需要清理
+        if connection_established:
+            ws_manager.remove_connection(user_id)
+        elif user_id in ws_manager.connections:
+            # 如果连接已注册但 accept 失败，清理注册
+            del ws_manager.connections[user_id]
         try:
             await websocket.close(code=1011, reason="Connection setup failed")
         except:
@@ -913,7 +1052,10 @@ async def websocket_chat(
                 
                 # ⚠️ 处理pong响应（心跳）
                 if msg.get("type") == "pong":
-                    missing_pongs = 0
+                    missing_pongs = 0  # 重置缺失pong计数
+                    ws_manager = get_ws_manager()
+                    ws_manager.record_pong(user_id)
+                    logger.debug(f"Received pong from user {user_id}")
                     continue
 
                 # 验证消息格式
@@ -1061,29 +1203,15 @@ async def websocket_chat(
                     }
                     logger.info(f"Message response: {message_response}")
 
-                    # 推送给接收方
-                    receiver_ws = active_connections.get(receiver_id)
-                    logger.info(
-                        f"Active connections: {list(active_connections.keys())}"
-                    )
-                    logger.info(
-                        f"Looking for receiver_ws for {receiver_id}: {receiver_ws is not None}"
+                    # 推送给接收方（使用 WebSocketManager）
+                    ws_manager = get_ws_manager()
+                    success = await ws_manager.send_to_user(receiver_id, message_response)
+                    logger.debug(
+                        f"Message send to {receiver_id}: {'success' if success else 'failed (no active connection)'}"
                     )
 
-                    if receiver_ws:
-                        try:
-                            await receiver_ws.send_text(json.dumps(message_response))
-                            logger.info(
-                                f"Customer service message sent to receiver {receiver_id}"
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f"Failed to send customer service message to receiver {receiver_id}: {e}"
-                            )
-                            # 如果接收方连接失败，从活跃连接中移除
-                            active_connections.pop(receiver_id, None)
-                    else:
-                        logger.warning(
+                    if not success:
+                        logger.debug(
                             f"No active WebSocket connection found for receiver {receiver_id}"
                         )
 
@@ -1233,18 +1361,11 @@ async def websocket_chat(
                     "original_sender_id": user_id,
                 }
 
-                # 推送给接收方
-                receiver_ws = active_connections.get(msg["receiver_id"])
-                if receiver_ws:
-                    try:
-                        await receiver_ws.send_text(json.dumps(message_response))
-                        logger.debug(f"Message sent to receiver {msg['receiver_id']}")
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to send message to receiver {msg['receiver_id']}: {e}"
-                        )
-                        # 如果接收方连接失败，从活跃连接中移除
-                        active_connections.pop(msg["receiver_id"], None)
+                # 推送给接收方（使用 WebSocketManager）
+                ws_manager = get_ws_manager()
+                success = await ws_manager.send_to_user(msg["receiver_id"], message_response)
+                if not success:
+                    logger.debug(f"Message not sent to receiver {msg['receiver_id']} (no active connection)")
 
                 # 向发送者发送确认响应
                 try:
@@ -1278,18 +1399,21 @@ async def websocket_chat(
 
     except WebSocketDisconnect:
         logger.debug(f"WebSocket disconnected for user {user_id}")
-        active_connections.pop(user_id, None)
+        # 连接正常断开，清理连接
+        ws_manager.remove_connection(user_id)
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}", exc_info=True)
-        active_connections.pop(user_id, None)
+        # 连接异常，清理连接
+        ws_manager.remove_connection(user_id)
         try:
             await websocket.close()
         except:
             pass
     finally:
-        # ⚠️ 连接关闭后清理连接锁，防止泄漏
-        if user_id not in active_connections and user_id in connection_locks:
-            connection_locks.pop(user_id, None)
+        # 确保连接被清理（防止异常情况下连接泄漏）
+        # remove_connection 内部有检查，重复调用是安全的
+        if user_id in ws_manager.connections:
+            ws_manager.remove_connection(user_id)
 
 
 @app.get("/")
@@ -1301,9 +1425,11 @@ def read_root():
 @app.get("/health")
 async def health_check():
     """完整的健康检查 - 高优先级优化"""
+    import time
     from datetime import datetime
     from sqlalchemy import text
     
+    start_time = time.time()
     health_status = {
         "status": "healthy",
         "timestamp": format_iso_utc(get_utc_time()),
@@ -1311,25 +1437,36 @@ async def health_check():
     }
     
     # 检查数据库连接
+    db_healthy = False
     try:
         from app.database import sync_engine
         with sync_engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
             result.fetchone()
         health_status["checks"]["database"] = "ok"
+        db_healthy = True
         logger.debug("✅ 数据库连接检查通过")
     except Exception as e:
         health_status["checks"]["database"] = f"error: {str(e)}"
         health_status["status"] = "degraded"
         logger.error(f"❌ 数据库连接失败: {e}")
     
+    # 更新 Prometheus 指标
+    try:
+        from app.metrics import update_health_status
+        update_health_status("database", db_healthy)
+    except Exception:
+        pass
+    
     # 检查Redis连接
+    redis_healthy = False
     try:
         from app.redis_cache import get_redis_client
         redis_client = get_redis_client()
         if redis_client:
             redis_client.ping()
             health_status["checks"]["redis"] = "ok"
+            redis_healthy = True
             logger.debug("✅ Redis连接检查通过")
         else:
             health_status["checks"]["redis"] = "not configured"
@@ -1337,6 +1474,13 @@ async def health_check():
     except Exception as e:
         health_status["checks"]["redis"] = f"error: {str(e)}"
         logger.warning(f"⚠️  Redis连接失败: {e}")
+    
+    # 更新 Prometheus 指标
+    try:
+        from app.metrics import update_health_status
+        update_health_status("redis", redis_healthy)
+    except Exception:
+        pass
     
     # 检查磁盘空间（上传目录）
     try:
@@ -1353,6 +1497,51 @@ async def health_check():
         health_status["checks"]["disk"] = f"error: {str(e)}"
         logger.error(f"❌ 磁盘检查失败: {e}")
     
+    # 检查 Celery Worker 状态（如果使用 Celery）
+    celery_healthy = None
+    try:
+        from app.celery_app import celery_app, USE_REDIS
+        if USE_REDIS:
+            # 尝试检查 Celery Worker 是否在线（设置超时避免阻塞）
+            try:
+                inspect = celery_app.control.inspect(timeout=2.0)  # 2秒超时
+                active_workers = inspect.active()
+                if active_workers:
+                    health_status["checks"]["celery_worker"] = f"ok ({len(active_workers)} workers)"
+                    celery_healthy = True
+                else:
+                    health_status["checks"]["celery_worker"] = "no active workers"
+                    celery_healthy = False
+                    # Celery Worker 不在线不影响整体健康状态（因为可能使用 TaskScheduler）
+                    logger.warning("⚠️  Celery Worker 未在线（如果使用 Celery，请启动 Worker）")
+            except Exception as inspect_error:
+                # 超时或其他错误
+                health_status["checks"]["celery_worker"] = f"check timeout/failed: {str(inspect_error)}"
+                celery_healthy = False
+                logger.debug(f"Celery Worker 状态检查超时或失败: {inspect_error}")
+        else:
+            health_status["checks"]["celery_worker"] = "not configured (using TaskScheduler)"
+    except Exception as e:
+        health_status["checks"]["celery_worker"] = f"check failed: {str(e)}"
+        logger.debug(f"Celery Worker 状态检查失败: {e}")
+    
+    # 更新整体健康状态
+    try:
+        from app.metrics import update_health_status
+        overall_healthy = health_status["status"] == "healthy"
+        update_health_status("overall", overall_healthy)
+    except Exception:
+        pass
+    
+    # 记录 HTTP 请求指标
+    try:
+        from app.metrics import record_http_request
+        duration = time.time() - start_time
+        status_code = 200 if health_status["status"] == "healthy" else 503
+        record_http_request("GET", "/health", status_code, duration)
+    except Exception:
+        pass
+    
     # 根据检查结果决定最终状态
     if health_status["status"] == "healthy":
         return health_status
@@ -1367,6 +1556,26 @@ async def health_check():
 def ping():
     """简单的ping端点 - 用于健康检查"""
     return "pong"
+
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus 指标端点"""
+    try:
+        from app.metrics import get_metrics_response
+        return get_metrics_response()
+    except ImportError:
+        logger.warning("Prometheus client not installed, metrics endpoint unavailable")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Metrics not available"}
+        )
+    except Exception as e:
+        logger.error(f"Error generating metrics: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to generate metrics"}
+        )
 
 
 @app.get("/test-db")
@@ -1405,9 +1614,14 @@ def test_users(db: Session = Depends(get_db)):
 @app.get("/test-active-connections")
 def test_active_connections():
     """测试活跃WebSocket连接"""
+    from app.websocket_manager import get_ws_manager
+    ws_manager = get_ws_manager()
+    stats = ws_manager.get_stats()
     return {
-        "active_connections": list(active_connections.keys()),
-        "connection_count": len(active_connections),
+        "active_connections": [conn['user_id'] for conn in stats['connections']],
+        "connection_count": stats['total_connections'],
+        "active_count": stats['active_connections'],
+        "detailed_stats": stats
     }
 
 

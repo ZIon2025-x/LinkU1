@@ -141,7 +141,16 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     safe_message = get_safe_error_message(error_code, exc.detail)
     
     # 记录错误日志（不包含敏感信息）
-    logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url}")
+    # 401 错误在非调试模式下使用 debug 级别，减少日志噪音
+    # 日志过滤器会进一步过滤常见的 401 端点
+    if exc.status_code == 401:
+        import os
+        if os.getenv("ENVIRONMENT", "development") == "development":
+            logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url}")
+        else:
+            logger.debug(f"认证失败: {request.url}")
+    else:
+        logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url}")
     
     return JSONResponse(
         status_code=exc.status_code,

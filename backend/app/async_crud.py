@@ -33,7 +33,31 @@ class AsyncUserCRUD:
                 select(models.User).where(models.User.id == user_id)
             )
             return result.scalar_one_or_none()
+        except RuntimeError as e:
+            # 只在确认应用正在关停时才优雅降级
+            from app.state import is_app_shutting_down
+            error_str = str(e)
+            
+            if is_app_shutting_down() and (
+                "Event loop is closed" in error_str or "loop is closed" in error_str
+            ):
+                logger.debug(f"事件循环已关闭，跳过查询用户 {user_id}（应用正在关闭）")
+                return None
+            
+            # 其它 RuntimeError 应该继续抛出，避免吞掉真正的问题
+            logger.error(f"Error getting user by ID {user_id}: {e}")
+            raise
         except Exception as e:
+            # 检查是否是事件循环关闭的错误（仅在关停时）
+            from app.state import is_app_shutting_down
+            error_str = str(e)
+            
+            if is_app_shutting_down() and (
+                "Event loop is closed" in error_str or "loop is closed" in error_str
+            ):
+                logger.debug(f"事件循环已关闭，跳过查询用户 {user_id}（应用正在关闭）")
+                return None
+            
             logger.error(f"Error getting user by ID {user_id}: {e}")
             return None
 

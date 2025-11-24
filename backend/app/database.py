@@ -114,6 +114,16 @@ SessionLocal = sessionmaker(
     expire_on_commit=False  # 提高性能，避免不必要的session刷新
 )
 
+# ⚠️ 弃用警告：SessionLocal (同步数据库) 已标记为弃用
+# 请在新代码中使用 AsyncSessionLocal (异步数据库)
+# 老接口将逐步迁移到异步模式
+import warnings
+warnings.warn(
+    "SessionLocal (sync DB) 已标记为弃用，请在新代码中使用 AsyncSessionLocal",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 
 # 异步数据库依赖
 async def get_async_db():
@@ -188,74 +198,103 @@ async def get_pool_status():
     }
 
 
-# 安全关闭数据库连接池
-async def close_database_pools():
-    """安全关闭所有数据库连接池"""
+# 连接池监控任务
+_pool_monitor_task = None
+
+
+async def monitor_pool_state():
+    """监控连接池状态，如果压力偏高则记录警告日志"""
     import logging
     logger = logging.getLogger(__name__)
     
-    # 关闭异步连接池
-    if ASYNC_AVAILABLE and async_engine:
-        try:
-            # 检查事件循环是否仍然可用
-            try:
-                loop = asyncio.get_running_loop()
-                if loop.is_closed():
-                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
-                    return
-            except RuntimeError:
-                # 没有运行中的事件循环，可能已经关闭
-                logger.debug("没有运行中的事件循环，跳过异步连接池关闭")
-                return
-            
-            # 等待一小段时间，让正在进行的操作完成
-            try:
-                await asyncio.sleep(0.5)
-            except RuntimeError:
-                # 事件循环可能在等待期间关闭
-                logger.debug("等待期间事件循环关闭，跳过异步连接池关闭")
-                return
-            
-            # 先尝试关闭所有活跃连接
-            try:
-                pool = async_engine.pool
-                # 获取所有已签出的连接并关闭它们
-                checked_out = pool.checkedout()
-                if checked_out > 0:
-                    logger.debug(f"正在关闭 {checked_out} 个活跃的异步连接...")
-                    # 强制关闭所有连接
-                    await async_engine.dispose(close=True)
-                else:
-                    await async_engine.dispose()
-                logger.info("异步数据库连接池已安全关闭")
-            except RuntimeError as e:
-                # 如果事件循环已关闭，这是正常的
-                if "Event loop is closed" in str(e) or "loop is closed" in str(e):
-                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
-                else:
-                    logger.warning(f"关闭异步连接池时出错: {e}")
-            except Exception as e:
-                # 捕获所有其他异常，包括 asyncpg 的连接取消警告
-                error_msg = str(e)
-                if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
-                    logger.debug("事件循环已关闭，跳过异步连接池关闭")
-                elif "coroutine" in error_msg and "was never awaited" in error_msg:
-                    # asyncpg 连接取消的警告，可以忽略
-                    logger.debug("检测到未等待的协程（连接关闭时的正常情况）")
-                else:
-                    logger.warning(f"关闭异步连接池时出错: {e}")
-        except Exception as e:
-            # 最外层异常处理
-            error_msg = str(e)
-            if "Event loop is closed" in error_msg or "loop is closed" in error_msg:
-                logger.debug("事件循环已关闭，跳过异步连接池关闭")
-            else:
-                logger.warning(f"关闭异步连接池时出错: {e}")
+    from app.state import is_app_shutting_down
     
-    # 关闭同步连接池
-    if sync_engine:
+    while not is_app_shutting_down():
         try:
-            sync_engine.dispose()
-            logger.info("同步数据库连接池已安全关闭")
+            if not ASYNC_AVAILABLE or not async_engine:
+                await asyncio.sleep(60)
+                continue
+            
+            pool = async_engine.pool
+            pool_size = pool.size()
+            checked_out = pool.checkedout()
+            overflow = pool.overflow()
+            
+            # 检查连接池压力
+            # 1. 如果有溢出连接，说明连接池可能不够大
+            # 2. 如果已签出连接超过池大小的80%，说明压力较高
+            if overflow > 0:
+                logger.warning(
+                    "数据库连接池压力偏高: overflow=%d, checked_out=%d, pool_size=%d",
+                    overflow, checked_out, pool_size
+                )
+            elif checked_out > pool_size * 0.8:
+                logger.warning(
+                    "数据库连接池使用率较高: checked_out=%d, pool_size=%d (使用率: %.1f%%)",
+                    checked_out, pool_size, (checked_out / pool_size * 100) if pool_size > 0 else 0
+                )
+            
+            # 每分钟检查一次
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            logger.debug("连接池监控任务已取消")
+            break
         except Exception as e:
-            logger.warning(f"关闭同步连接池时出错: {e}")
+            # 如果应用正在关停，忽略错误
+            if is_app_shutting_down():
+                break
+            logger.error(f"连接池监控任务出错: {e}", exc_info=True)
+            # 出错时等待更长时间再重试
+            await asyncio.sleep(60)
+
+
+def start_pool_monitor():
+    """启动连接池监控任务"""
+    global _pool_monitor_task
+    if _pool_monitor_task is None or _pool_monitor_task.done():
+        import asyncio
+        _pool_monitor_task = asyncio.create_task(monitor_pool_state())
+
+
+def stop_pool_monitor():
+    """停止连接池监控任务"""
+    global _pool_monitor_task
+    if _pool_monitor_task and not _pool_monitor_task.done():
+        _pool_monitor_task.cancel()
+
+
+# 安全关闭数据库连接池
+async def close_database_pools():
+    """
+    在 shutdown 事件里调用，安全关闭数据库连接池
+    必须在事件循环还活着的时候调用
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # 先处理异步引擎（因为它依赖事件循环）
+        if ASYNC_AVAILABLE and async_engine:
+            try:
+                # 可以视情况留一点时间给 in-flight query
+                await asyncio.sleep(0.1)
+                await async_engine.dispose(close=True)
+                logger.info("异步数据库引擎已关闭")
+            except RuntimeError as e:
+                # 如果此时 loop 已经被关闭，就不要再强行处理
+                if "Event loop is closed" in str(e):
+                    logger.debug("事件循环已关闭，跳过异步引擎关闭")
+                else:
+                    logger.warning(f"关闭异步引擎时出错: {e}")
+            except Exception as e:
+                logger.warning(f"关闭异步引擎时出错: {e}")
+        
+        # 再处理同步引擎
+        if sync_engine:
+            try:
+                sync_engine.dispose()
+                logger.info("同步数据库引擎已关闭")
+            except Exception as e:
+                logger.warning(f"关闭同步引擎时出错: {e}")
+    except Exception as e:
+        logger.warning(f"关闭数据库连接池时出错: {e}")

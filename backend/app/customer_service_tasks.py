@@ -21,45 +21,109 @@ from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+# 辅助函数：记录 Prometheus 指标
+def _record_task_metrics(task_name: str, status: str, duration: float):
+    """记录任务执行指标"""
+    try:
+        from app.metrics import record_scheduled_task
+        record_scheduled_task(task_name, status, duration)
+    except Exception:
+        pass  # 指标记录失败不影响任务执行
+
 # 导入Celery（如果可用）
 try:
     from app.celery_app import celery_app
+    import time
     
-    @celery_app.task(name='app.customer_service_tasks.process_customer_service_queue_task')
-    def process_customer_service_queue_task():
+    @celery_app.task(
+        name='app.customer_service_tasks.process_customer_service_queue_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=30  # 客服任务重试延迟较短（30秒）
+    )
+    def process_customer_service_queue_task(self):
         """处理客服队列 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'process_customer_service_queue_task'
         db = SessionLocal()
         try:
-            return process_customer_service_queue(db)
+            result = process_customer_service_queue(db)
+            duration = time.time() - start_time
+            logger.info(f"处理客服队列完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"Celery任务 process_customer_service_queue_task 执行失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            # 任务函数内部已经处理了 rollback，这里只需要记录错误
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
         finally:
             db.close()
     
-    @celery_app.task(name='app.customer_service_tasks.auto_end_timeout_chats_task')
-    def auto_end_timeout_chats_task():
+    @celery_app.task(
+        name='app.customer_service_tasks.auto_end_timeout_chats_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=30
+    )
+    def auto_end_timeout_chats_task(self):
         """自动结束超时对话 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'auto_end_timeout_chats_task'
         db = SessionLocal()
         try:
-            return auto_end_timeout_chats(db, timeout_minutes=2)
+            result = auto_end_timeout_chats(db, timeout_minutes=2)
+            duration = time.time() - start_time
+            logger.info(f"自动结束超时对话完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"Celery任务 auto_end_timeout_chats_task 执行失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            # 任务函数内部已经处理了 rollback，这里只需要记录错误
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
         finally:
             db.close()
     
-    @celery_app.task(name='app.customer_service_tasks.send_timeout_warnings_task')
-    def send_timeout_warnings_task():
+    @celery_app.task(
+        name='app.customer_service_tasks.send_timeout_warnings_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=30
+    )
+    def send_timeout_warnings_task(self):
         """发送超时预警 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'send_timeout_warnings_task'
         db = SessionLocal()
         try:
-            return send_timeout_warnings(db, warning_minutes=1)
+            result = send_timeout_warnings(db, warning_minutes=1)
+            duration = time.time() - start_time
+            logger.info(f"发送超时预警完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return result
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"Celery任务 send_timeout_warnings_task 执行失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            # 任务函数内部已经处理了 rollback，这里只需要记录错误
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
         finally:
             db.close()
     
-    @celery_app.task(name='app.customer_service_tasks.cleanup_long_inactive_chats_task')
-    def cleanup_long_inactive_chats_task():
-        """清理长期无活动对话 - Celery任务包装"""
-        db = SessionLocal()
-        try:
-            return cleanup_long_inactive_chats(db, inactive_days=30)
-        finally:
-            db.close()
+    # 注意：cleanup_long_inactive_chats_task 已在 celery_tasks.py 中定义
+    # 这里不再重复定义，避免任务名称冲突
     
     CELERY_AVAILABLE = True
 except ImportError:

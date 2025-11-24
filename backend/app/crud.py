@@ -279,9 +279,22 @@ def update_all_task_experts_bio():
     注意：
     - bio 是简介，不应该在这里更新（应该由用户或管理员手动填写）
     - response_time 和 response_time_en 才是响应时间，需要计算
+    
+    已弃用：此函数已改为 update_all_featured_task_experts_response_time
+    """
+    # 为了向后兼容，调用新函数
+    return update_all_featured_task_experts_response_time()
+
+
+def update_all_featured_task_experts_response_time():
+    """更新所有特征任务达人（FeaturedTaskExpert）的响应时间（每天执行一次）
+    
+    注意：
+    - 只更新 FeaturedTaskExpert 的 response_time 和 response_time_en
+    - 不更新 bio（bio 是简介，应该由用户或管理员手动填写）
     """
     from app.database import SessionLocal
-    from app.models import TaskExpert
+    from app.models import FeaturedTaskExpert
     import logging
     
     logger = logging.getLogger(__name__)
@@ -289,23 +302,29 @@ def update_all_task_experts_bio():
     db = None
     try:
         db = SessionLocal()
-        # 获取所有任务达人
-        task_experts = db.query(TaskExpert).all()
+        # 获取所有特征任务达人
+        featured_experts = db.query(FeaturedTaskExpert).all()
         updated_count = 0
         
-        for expert in task_experts:
+        for expert in featured_experts:
             try:
+                # 只更新响应时间，不更新其他字段
                 update_task_expert_bio(db, expert.id)
                 updated_count += 1
             except Exception as e:
-                logger.error(f"更新任务达人 {expert.id} 的 bio 时出错: {e}")
+                logger.error(f"更新特征任务达人 {expert.id} 的响应时间时出错: {e}")
                 continue
         
         if updated_count > 0:
-            logger.info(f"成功更新 {updated_count} 个任务达人的 bio")
+            logger.info(f"成功更新 {updated_count} 个特征任务达人的响应时间")
+        else:
+            logger.info("没有需要更新的特征任务达人")
+        
+        return updated_count
     
     except Exception as e:
-        logger.error(f"更新任务达人 bio 时出错: {e}")
+        logger.error(f"更新特征任务达人响应时间时出错: {e}")
+        raise
     finally:
         if db:
             db.close()

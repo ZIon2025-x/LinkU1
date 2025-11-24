@@ -16,7 +16,10 @@ celery_app = Celery(
     'linku_tasks',
     broker=REDIS_URL if USE_REDIS else 'memory://',
     backend=REDIS_URL if USE_REDIS else 'cache+memory://',
-    include=['app.customer_service_tasks']
+    include=[
+        'app.customer_service_tasks',
+        'app.celery_tasks'
+    ]
 )
 
 # Celery配置
@@ -31,29 +34,84 @@ celery_app.conf.update(
     task_soft_time_limit=25 * 60,  # 25分钟软超时
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
+    # 任务重试配置
+    task_acks_late=True,  # 任务完成后才确认，防止任务丢失
+    task_reject_on_worker_lost=True,  # Worker 丢失时拒绝任务
+    # 默认重试配置（可在任务级别覆盖）
+    task_default_retry_delay=60,  # 默认重试延迟60秒
+    task_max_retries=3,  # 默认最大重试3次
 )
 
 # Celery Beat定时任务配置
 celery_app.conf.beat_schedule = {
-    # 处理客服排队 - 每30秒执行一次
+    # ========== 高频任务（每30秒-1分钟）==========
+    
+    # 客服相关任务 - 每30秒执行一次（确保及时响应）
     'process-customer-service-queue': {
         'task': 'app.customer_service_tasks.process_customer_service_queue_task',
         'schedule': 30.0,  # 30秒
     },
-    # 自动结束超时对话 - 每30秒执行一次
     'auto-end-timeout-chats': {
         'task': 'app.customer_service_tasks.auto_end_timeout_chats_task',
         'schedule': 30.0,  # 30秒
     },
-    # 发送超时预警 - 每30秒执行一次
     'send-timeout-warnings': {
         'task': 'app.customer_service_tasks.send_timeout_warnings_task',
         'schedule': 30.0,  # 30秒
     },
+    
+    # 取消过期任务 - 每1分钟执行一次
+    'cancel-expired-tasks': {
+        'task': 'app.celery_tasks.cancel_expired_tasks_task',
+        'schedule': 60.0,  # 1分钟
+    },
+    
+    # ========== 中频任务（每5分钟）==========
+    
+    # 检查过期优惠券 - 每5分钟执行一次
+    'check-expired-coupons': {
+        'task': 'app.celery_tasks.check_expired_coupons_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
+    # 检查过期邀请码 - 每5分钟执行一次
+    'check-expired-invitation-codes': {
+        'task': 'app.celery_tasks.check_expired_invitation_codes_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
+    # 检查过期积分 - 每5分钟执行一次
+    'check-expired-points': {
+        'task': 'app.celery_tasks.check_expired_points_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
+    # 检查并结束活动 - 每5分钟执行一次
+    'check-and-end-activities': {
+        'task': 'app.celery_tasks.check_and_end_activities_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
+    # ========== 低频任务（每10分钟）==========
+    
+    # 更新所有用户统计信息 - 每10分钟执行一次
+    'update-all-users-statistics': {
+        'task': 'app.celery_tasks.update_all_users_statistics_task',
+        'schedule': 600.0,  # 10分钟
+    },
+    
+    # ========== 每日任务（每天特定时间）==========
+    
     # 清理长期无活动对话 - 每天凌晨2点执行
     'cleanup-long-inactive-chats': {
-        'task': 'app.customer_service_tasks.cleanup_long_inactive_chats_task',
+        'task': 'app.celery_tasks.cleanup_long_inactive_chats_task',
         'schedule': crontab(hour=2, minute=0),  # 每天凌晨2点
+    },
+    
+    # 更新特征任务达人的响应时间 - 每天凌晨3点执行
+    'update-featured-task-experts-response-time': {
+        'task': 'app.celery_tasks.update_featured_task_experts_response_time_task',
+        'schedule': crontab(hour=3, minute=0),  # 每天凌晨3点
     },
 }
 

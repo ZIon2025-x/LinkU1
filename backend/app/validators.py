@@ -78,8 +78,15 @@ class StringValidator(BaseValidator):
             raise ValueError("密码必须包含至少一个数字")
         
         # 检查是否包含至少一个特殊字符
-        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        if not re.search(f'[{re.escape(special_chars)}]', password):
+        # 使用与 password_validator.py 相同的检测逻辑
+        # 先检查显式特殊字符列表（包含常见货币符号）
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?~`\"'\\/￥£€¥"
+        has_special_en = bool(re.search(f'[{re.escape(special_chars)}]', password))
+        # 再检查Unicode特殊字符（排除中文字符范围）
+        has_special_unicode = bool(re.search(r'[^\w\s\u4e00-\u9fff]', password))
+        has_special = has_special_en or has_special_unicode
+        
+        if not has_special:
             raise ValueError("密码必须包含至少一个特殊字符")
         
         return password

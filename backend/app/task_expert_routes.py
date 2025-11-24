@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.separate_auth_deps import get_current_admin
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -522,7 +523,7 @@ async def update_service(
     if service_data.display_order is not None:
         service.display_order = service_data.display_order
     
-    service.updated_at = models.get_utc_time()
+    service.updated_at = get_utc_time()
     
     # 如果时间段配置发生变化，需要清理不符合新配置的时间段
     # 检查是否从统一时间改为按周几配置，或按周几配置发生了变化
@@ -563,7 +564,7 @@ async def update_service(
         current_weekly_config = service.weekly_time_slot_config if service.weekly_time_slot_config else None
         
         # 获取所有未来的时间段（未过期且未手动删除的）
-        current_utc = models.get_utc_time()
+        current_utc = get_utc_time()
         future_slots = await db.execute(
             select(models.ServiceTimeSlot)
             .where(models.ServiceTimeSlot.service_id == service_id)
@@ -1552,7 +1553,7 @@ async def check_and_end_activities(db: AsyncSession):
     open_activities = open_activities.scalars().all()
     
     ended_count = 0
-    current_time = dt_datetime.now(timezone.utc)
+    current_time = get_utc_time()
     
     for activity in open_activities:
         should_end = False
@@ -2040,7 +2041,7 @@ async def apply_for_service(
             raise HTTPException(status_code=400, detail="该时间段不可用")
         
         # 验证时间段是否已过期（开始时间是否已过当前时间）
-        current_utc = models.get_utc_time()
+        current_utc = get_utc_time()
         if time_slot.slot_start_datetime < current_utc:
             raise HTTPException(status_code=400, detail="该时间段已过期，无法申请")
         
@@ -2057,7 +2058,7 @@ async def apply_for_service(
             raise HTTPException(status_code=400, detail="非灵活模式必须提供截至日期")
         else:
             # 验证截至日期不能早于当前时间
-            if application_data.deadline < models.get_utc_time():
+            if application_data.deadline < get_utc_time():
                 raise HTTPException(status_code=400, detail="截至日期不能早于当前时间")
             deadline = application_data.deadline
     else:
@@ -2093,7 +2094,7 @@ async def apply_for_service(
             new_application.final_price = time_slot.price_per_participant
         else:
             new_application.final_price = service.base_price
-        new_application.approved_at = models.get_utc_time()
+        new_application.approved_at = get_utc_time()
     
     db.add(new_application)
     
@@ -2166,7 +2167,7 @@ async def apply_for_service(
             task_deadline = deadline
         else:
             # 默认7天后
-            task_deadline = models.get_utc_time() + timedelta(days=7)
+            task_deadline = get_utc_time() + timedelta(days=7)
         
         # 处理图片（JSONB类型，直接使用list）
         images_list = service.images if service.images else None
@@ -2188,7 +2189,7 @@ async def apply_for_service(
             taker_id=service.expert_id,  # 任务达人接收方
             status="in_progress",
             images=images_list,
-            accepted_at=models.get_utc_time()
+            accepted_at=get_utc_time()
         )
         
         db.add(new_task)
@@ -2353,7 +2354,7 @@ async def counter_offer_service_application(
     # 5. 更新申请记录
     application.status = "negotiating"
     application.expert_counter_price = counter_offer.counter_price
-    application.updated_at = models.get_utc_time()
+    application.updated_at = get_utc_time()
     
     await db.commit()
     await db.refresh(application)
@@ -2459,7 +2460,7 @@ async def approve_service_application(
         task_deadline = application.deadline
     else:
         # 如果没有设置截止日期且不是灵活模式，默认7天后
-        task_deadline = models.get_utc_time() + timedelta(days=7)
+        task_deadline = get_utc_time() + timedelta(days=7)
     
     # 7. 处理图片（JSONB类型，直接使用list）
     images_list = service.images if service.images else None
@@ -2481,7 +2482,7 @@ async def approve_service_application(
         taker_id=application.expert_id,  # 任务达人接收方
         status="in_progress",
         images=images_list,  # 直接使用list，ORM会自动处理JSONB序列化
-        accepted_at=models.get_utc_time()
+        accepted_at=get_utc_time()
     )
     
     db.add(new_task)
@@ -2491,8 +2492,8 @@ async def approve_service_application(
     application.status = "approved"
     application.final_price = price
     application.task_id = new_task.id
-    application.approved_at = models.get_utc_time()
-    application.updated_at = models.get_utc_time()
+    application.approved_at = get_utc_time()
+    application.updated_at = get_utc_time()
     
     await db.commit()
     await db.refresh(new_task)
@@ -2967,8 +2968,8 @@ async def reject_service_application(
     reject_reason = reject_data.reject_reason
     
     application.status = "rejected"
-    application.rejected_at = models.get_utc_time()
-    application.updated_at = models.get_utc_time()
+    application.rejected_at = get_utc_time()
+    application.updated_at = get_utc_time()
     
     await db.commit()
     

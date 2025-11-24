@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -144,8 +145,8 @@ async def respond_to_counter_offer(
         # 5. 同意议价：更新状态为price_agreed
         application.status = "price_agreed"
         application.final_price = application.expert_counter_price
-        application.price_agreed_at = models.get_utc_time()
-        application.updated_at = models.get_utc_time()
+        application.price_agreed_at = get_utc_time()
+        application.updated_at = get_utc_time()
         
         await db.commit()
         await db.refresh(application)
@@ -173,7 +174,7 @@ async def respond_to_counter_offer(
         # 7. 拒绝议价：恢复为pending状态
         application.status = "pending"
         application.expert_counter_price = None  # 清除议价
-        application.updated_at = models.get_utc_time()
+        application.updated_at = get_utc_time()
         
         await db.commit()
         await db.refresh(application)
@@ -237,7 +238,7 @@ async def cancel_service_application(
     
     # 5. 更新状态
     application.status = "cancelled"
-    application.updated_at = models.get_utc_time()
+    application.updated_at = get_utc_time()
     
     await db.commit()
     await db.refresh(application)

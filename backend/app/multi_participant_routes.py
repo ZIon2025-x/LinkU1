@@ -221,7 +221,7 @@ def apply_to_activity(
     # 检查截止日期（非时间段服务）
     if not db_activity.has_time_slots:
         if db_activity.deadline:
-            current_time = datetime.now(tz.utc)
+            current_time = get_utc_time()
             if current_time > db_activity.deadline:
                 raise HTTPException(status_code=400, detail="Activity has expired")
     
@@ -1288,8 +1288,8 @@ def create_expert_activity(
             from app.utils.time_utils import parse_local_as_utc, LONDON
             
             # 获取当前日期和未来30天的所有时间段
-            today = datetime.now().date()
-            future_date = datetime.now().date()
+            today = get_utc_time().date()
+            future_date = get_utc_time().date()
             from datetime import timedelta
             future_date += timedelta(days=30)
             
@@ -1382,8 +1382,8 @@ def create_expert_activity(
             from app.utils.time_utils import parse_local_as_utc, LONDON
             
             # 获取当前日期和未来30天的所有时间段
-            today = datetime.now().date()
-            future_date = datetime.now().date()
+            today = get_utc_time().date()
+            future_date = get_utc_time().date()
             from datetime import timedelta
             future_date += timedelta(days=30)
             

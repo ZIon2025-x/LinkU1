@@ -224,12 +224,11 @@ async def get_timezone_info():
     获取当前时区信息
     """
     try:
-        from datetime import datetime
         from zoneinfo import ZoneInfo
-        from app.utils.time_utils import get_utc_time
+        from app.utils.time_utils import get_utc_time, to_user_timezone
         
         uk_zone = ZoneInfo("Europe/London")
-        current_time = datetime.now(uk_zone)
+        current_time = to_user_timezone(get_utc_time(), uk_zone)
         
         is_dst = current_time.dst() != datetime.timedelta(0)
         offset_hours = current_time.utcoffset().total_seconds() / 3600
