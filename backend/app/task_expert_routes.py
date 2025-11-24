@@ -442,12 +442,35 @@ async def update_service(
     old_weekly_config = service.weekly_time_slot_config if service.weekly_time_slot_config else None
     old_has_time_slots = service.has_time_slots
     
+    # 保存旧图片列表，用于清理不再使用的图片
+    old_images = service.images if service.images else []
+    if isinstance(old_images, str):
+        import json
+        try:
+            old_images = json.loads(old_images) if old_images else []
+        except:
+            old_images = []
+    elif not isinstance(old_images, list):
+        old_images = []
+    
     if service_data.service_name is not None:
         service.service_name = service_data.service_name
     if service_data.description is not None:
         service.description = service_data.description
     if service_data.images is not None:
         service.images = service_data.images
+        
+        # 清理不再使用的旧图片
+        new_images = service_data.images if isinstance(service_data.images, list) else []
+        deleted_images = [img for img in old_images if img not in new_images]
+        
+        if deleted_images:
+            from app.image_cleanup import delete_service_images
+            try:
+                logger.info(f"服务 {service_id} 更新图片，需要删除 {len(deleted_images)} 张旧图片")
+                delete_service_images(current_expert.id, service_id, deleted_images)
+            except Exception as e:
+                logger.warning(f"清理服务 {service_id} 的旧图片失败: {e}")
     if service_data.base_price is not None:
         service.base_price = service_data.base_price
     

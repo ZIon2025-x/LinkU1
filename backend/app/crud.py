@@ -1895,9 +1895,10 @@ def cleanup_completed_tasks_files(db: Session):
 def cleanup_expired_tasks_files(db: Session):
     """清理过期任务（已取消或deadline已过超过3天）的图片和文件"""
     from app.models import Task, TaskHistory
-    from datetime import timedelta, datetime as dt
+    from datetime import timedelta, datetime as dt, timezone
     from app.utils.time_utils import get_utc_time
     from sqlalchemy import or_, and_, func
+    from sqlalchemy.orm import selectinload
     import logging
     
     logger = logging.getLogger(__name__)
@@ -1906,37 +1907,49 @@ def cleanup_expired_tasks_files(db: Session):
     now_utc = get_utc_time()
     three_days_ago = now_utc - timedelta(days=3)
     
-    # 查找过期任务（已取消超过3天，或deadline已过超过3天）：
-    # 注意：Task 模型没有 updated_at 字段
-    # 对于已取消的任务，使用 TaskHistory 中的取消时间，如果没有则使用 created_at
-    expired_tasks = []
+    # 优化：批量查询所有已取消任务的取消时间，避免 N+1 查询
+    # 1. 先获取所有已取消的任务ID
+    cancelled_task_ids = db.query(Task.id).filter(Task.status == "cancelled").all()
+    cancelled_task_ids = [tid[0] for tid in cancelled_task_ids]
     
-    # 1. 查找已取消超过3天的任务
-    # 先查找所有已取消的任务
-    cancelled_tasks = db.query(Task).filter(Task.status == "cancelled").all()
-    
-    for task in cancelled_tasks:
-        # 尝试从 TaskHistory 获取取消时间
-        cancel_history = (
-            db.query(TaskHistory)
+    # 2. 批量查询这些任务的最新取消时间（一次性查询，避免 N+1）
+    cancel_times_map = {}
+    if cancelled_task_ids:
+        # 使用窗口函数或子查询获取每个任务的最新取消时间
+        from sqlalchemy import desc
+        
+        # 方法1：使用子查询获取每个任务的最新取消时间
+        latest_cancels = (
+            db.query(
+                TaskHistory.task_id,
+                func.max(TaskHistory.timestamp).label('cancel_time')
+            )
             .filter(
-                TaskHistory.task_id == task.id,
+                TaskHistory.task_id.in_(cancelled_task_ids),
                 TaskHistory.action == "cancelled"
             )
-            .order_by(TaskHistory.timestamp.desc())
-            .first()
+            .group_by(TaskHistory.task_id)
+            .all()
         )
         
-        # 使用取消时间或创建时间作为判断依据
-        cancel_time = cancel_history.timestamp if cancel_history else task.created_at
-        if cancel_time:
-            # 确保 cancel_time 是带时区的，以便与 three_days_ago 比较
-            if cancel_time.tzinfo is None:
-                # 如果是 naive datetime，假设它是 UTC 时间
-                from datetime import timezone
-                cancel_time = cancel_time.replace(tzinfo=timezone.utc)
-            if cancel_time <= three_days_ago:
-                expired_tasks.append(task)
+        # 构建 task_id -> cancel_time 的映射
+        for task_id, cancel_time in latest_cancels:
+            cancel_times_map[task_id] = cancel_time
+    
+    # 3. 批量加载已取消的任务对象
+    expired_tasks = []
+    if cancelled_task_ids:
+        cancelled_tasks = db.query(Task).filter(Task.id.in_(cancelled_task_ids)).all()
+        
+        for task in cancelled_tasks:
+            # 从映射中获取取消时间，如果没有则使用 created_at
+            cancel_time = cancel_times_map.get(task.id) or task.created_at
+            if cancel_time:
+                # 确保 cancel_time 是带时区的
+                if cancel_time.tzinfo is None:
+                    cancel_time = cancel_time.replace(tzinfo=timezone.utc)
+                if cancel_time <= three_days_ago:
+                    expired_tasks.append(task)
     
     # 2. 查找deadline已过超过3天的open任务
     deadline_expired_tasks = (
