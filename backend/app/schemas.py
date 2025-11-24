@@ -294,7 +294,7 @@ class TaskCreate(TaskBase):
 
 class TaskOut(TaskBase):
     id: int
-    poster_id: str  # 现在ID是字符串类型
+    poster_id: Optional[str] = None  # 现在ID是字符串类型，多人任务可能为None
     taker_id: Optional[str]  # 现在ID是字符串类型
     status: str
     task_level: str = "normal"  # normal, vip, super, expert（达人任务）
