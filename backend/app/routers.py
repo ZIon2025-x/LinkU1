@@ -6610,7 +6610,9 @@ def update_task_expert(
         expert_data.pop('user_id', None)
         
         # 保存旧头像URL，用于后续删除
-        old_avatar_url = expert.avatar if 'avatar' in expert_data and expert_data['avatar'] else None
+        # 注意：只要 expert_data 中包含 'avatar' 字段（无论值是什么），都应该保存旧头像URL
+        # 这样即使传入空字符串清空头像，也能删除旧头像文件
+        old_avatar_url = expert.avatar if 'avatar' in expert_data else None
         
         # 记录要更新的字段（用于调试）
         logger.info(f"更新任务达人 {expert_id}，接收到的字段: {list(expert_data.keys())}")

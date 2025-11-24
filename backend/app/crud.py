@@ -136,10 +136,9 @@ def update_user_statistics(db: Session, user_id: str):
             featured_expert.total_tasks = total_tasks
             featured_expert.completion_rate = completion_rate
             # 注意：name 只在创建时使用 user.name，后续不自动同步，允许手动修改
-            # 注意：头像同步逻辑：只有当用户头像存在且不为空时，才同步更新
-            # 如果用户头像为空，保留 FeaturedTaskExpert 的原有头像（避免清空管理员设置的头像）
-            if user.avatar and user.avatar.strip():
-                featured_expert.avatar = user.avatar
+            # 注意：头像不应该自动同步！特色任务达人的头像应该由管理员独立管理
+            # 如果自动同步用户头像，会导致管理员设置的头像被覆盖
+            # 因此完全移除头像同步逻辑，保持特色任务达人头像的独立性
             # 注意：bio 是简介，应该由用户或管理员手动填写，不在这里自动更新
             
             db.commit()
