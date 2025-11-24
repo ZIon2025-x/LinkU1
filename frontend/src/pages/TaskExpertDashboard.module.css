@@ -1,0 +1,968 @@
+/* 任务达人管理后台样式模块 */
+
+/* CSS 变量 */
+:root {
+  --te-primary-color: #3b82f6;
+  --te-primary-hover: #2563eb;
+  --te-background: #f7fafc;
+  --te-card-background: #fff;
+  --te-border-color: #e2e8f0;
+  --te-text-primary: #1a202c;
+  --te-text-secondary: #718096;
+  --te-text-muted: #999;
+  --te-border-radius: 12px;
+  --te-border-radius-sm: 8px;
+  --te-shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+  --te-shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --te-shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* 容器样式 */
+.container {
+  min-height: 100vh;
+  background: var(--te-background);
+  padding: 20px;
+}
+
+.contentWrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 头部卡片 */
+.headerCard {
+  background: var(--te-card-background);
+  border-radius: var(--te-border-radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+}
+
+.subtitle {
+  margin-top: 12px;
+  color: var(--te-text-secondary);
+}
+
+.pendingRequestNotice {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fef3c7;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 14px;
+}
+
+/* 标签页按钮 */
+.tabsContainer {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.tabButton {
+  padding: 12px 24px;
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  background: #fff;
+  color: #333;
+}
+
+.tabButton:hover {
+  background: #f8f9fa;
+  border-color: var(--te-primary-color);
+}
+
+.tabButtonActive {
+  background: var(--te-primary-color);
+  color: #fff;
+  border-color: var(--te-primary-color);
+}
+
+.tabButtonActive:hover {
+  background: var(--te-primary-hover);
+}
+
+/* 内容卡片 */
+.contentCard {
+  background: var(--te-card-background);
+  border-radius: var(--te-border-radius);
+  padding: 24px;
+}
+
+.cardTitle {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* 按钮样式 */
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--te-border-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.buttonPrimary {
+  background: var(--te-primary-color);
+  color: #fff;
+}
+
+.buttonPrimary:hover {
+  background: var(--te-primary-hover);
+}
+
+.buttonSecondary {
+  background: #fff;
+  color: var(--te-text-primary);
+  border: 1px solid var(--te-border-color);
+}
+
+.buttonSecondary:hover {
+  background: #f8f9fa;
+}
+
+.buttonDanger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.buttonDanger:hover {
+  background: #dc2626;
+}
+
+.buttonSmall {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+/* 仪表盘统计卡片 */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.statCard {
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius);
+  padding: 20px;
+  color: #fff;
+}
+
+.statCardPurple {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.statCardPink {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.statCardBlue {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.statCardGreen {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.statCardYellow {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.statLabel {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.statSubValue {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
+/* 加载和空状态 */
+.loading {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px;
+  color: var(--te-text-secondary);
+}
+
+.emptyText {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+/* 服务卡片网格 */
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.serviceCard {
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius);
+  padding: 20px;
+  background: var(--te-card-background);
+}
+
+.serviceCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.serviceName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+}
+
+.serviceStatus {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.serviceStatusActive {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.serviceStatusInactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.serviceDescription {
+  color: var(--te-text-secondary);
+  font-size: 14px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.servicePrice {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--te-primary-color);
+  margin-bottom: 16px;
+}
+
+.serviceActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 申请列表 */
+.applicationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.applicationCard {
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius);
+  padding: 20px;
+  background: var(--te-card-background);
+}
+
+.applicationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.applicationInfo {
+  flex: 1;
+}
+
+.applicationTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+  margin-bottom: 4px;
+}
+
+.applicationMeta {
+  font-size: 14px;
+  color: var(--te-text-secondary);
+}
+
+.applicationStatus {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.applicationStatusPending {
+  background: rgba(146, 64, 14, 0.1);
+  color: #92400e;
+}
+
+.applicationStatusApproved {
+  background: rgba(6, 95, 70, 0.1);
+  color: #065f46;
+}
+
+.applicationStatusRejected {
+  background: rgba(153, 27, 27, 0.1);
+  color: #991b1b;
+}
+
+.applicationStatusNegotiating {
+  background: rgba(30, 64, 175, 0.1);
+  color: #1e40af;
+}
+
+.applicationMessage {
+  font-size: 14px;
+  color: #4a5568;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.applicationPriceInfo {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--te-text-secondary);
+  flex-wrap: wrap;
+}
+
+.applicationActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.buttonSuccess {
+  background: #10b981;
+  color: #fff;
+}
+
+.buttonSuccess:hover {
+  background: #059669;
+}
+
+/* 多人活动相关 */
+.activityCard {
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius);
+  padding: 20px;
+  background: var(--te-card-background);
+  margin-bottom: 16px;
+}
+
+.activityHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.activityInfo {
+  flex: 1;
+}
+
+.activityTitle {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+}
+
+.activityDescription {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--te-text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activityTags {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.activityTag {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.activityTagOpen {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.activityTagInProgress {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.activityTagCompleted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.activityTagCancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.activityTagTimeSlot {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.activityTagPrice {
+  font-size: 14px;
+  color: #059669;
+  font-weight: 600;
+}
+
+.taskGroup {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--te-border-color);
+}
+
+.taskGroupTitle {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.taskItem {
+  border: 1px solid var(--te-border-color);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f9fafb;
+  margin-bottom: 16px;
+}
+
+.taskItemHeader {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.taskItemMeta {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--te-text-secondary);
+  font-weight: 400;
+}
+
+.taskItemTimeSlot {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.participantsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participantCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid var(--te-border-color);
+}
+
+.participantInfo {
+  flex: 1;
+}
+
+.participantName {
+  font-weight: 600;
+  color: var(--te-text-primary);
+  margin-bottom: 4px;
+}
+
+.participantStatus {
+  font-size: 12px;
+  color: var(--te-text-secondary);
+}
+
+.participantActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 时刻表相关 */
+.scheduleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.scheduleControls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scheduleDateInput {
+  padding: 8px 12px;
+  border: 1px solid var(--te-border-color);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.scheduleRefreshButton {
+  padding: 8px 16px;
+  background: var(--te-primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.scheduleDateGroup {
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius);
+  margin-bottom: 24px;
+  background: var(--te-card-background);
+  overflow: hidden;
+}
+
+.scheduleDateHeader {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scheduleDateTitle {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.scheduleDateActions {
+  display: flex;
+  gap: 8px;
+}
+
+.scheduleDateActionButton {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.scheduleDateActionButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scheduleDateActionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scheduleDateActionButtonDanger {
+  background: #dc3545;
+  border-color: #dc3545;
+}
+
+.scheduleDateContent {
+  padding: 16px;
+}
+
+.scheduleItem {
+  border: 1px solid var(--te-border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--te-card-background);
+}
+
+.scheduleItemTask {
+  background: #f0f9ff;
+}
+
+.scheduleItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.scheduleItemInfo {
+  flex: 1;
+}
+
+.scheduleItemTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+  margin-bottom: 4px;
+}
+
+.scheduleItemTime {
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.scheduleItemStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.scheduleItemStatusBadge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scheduleItemStatusExpired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.scheduleItemStatusFull {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.scheduleItemStatusAvailable {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.scheduleItemFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--te-border-color);
+}
+
+.scheduleItemParticipants {
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.scheduleItemActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 表格样式 */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeader {
+  background: #f8f9fa;
+  border-bottom: 2px solid var(--te-border-color);
+}
+
+.tableHeaderCell {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--te-text-primary);
+  font-size: 14px;
+}
+
+.tableRow {
+  border-bottom: 1px solid var(--te-border-color);
+}
+
+.tableRow:hover {
+  background: #f8f9fa;
+}
+
+.tableCell {
+  padding: 12px;
+  font-size: 14px;
+  color: var(--te-text-primary);
+}
+
+/* 表单样式 */
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+  margin-bottom: 8px;
+}
+
+.formInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius-sm);
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--te-primary-color);
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--te-border-color);
+  border-radius: var(--te-border-radius-sm);
+  font-size: 16px;
+  box-sizing: border-box;
+  min-height: 100px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: var(--te-primary-color);
+}
+
+/* 模态框样式 */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: var(--te-card-background);
+  border-radius: var(--te-border-radius);
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--te-text-primary);
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--te-text-secondary);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalClose:hover {
+  color: var(--te-text-primary);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+  
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .tabsContainer {
+    gap: 8px;
+  }
+  
+  .tabButton {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .servicesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .applicationHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .serviceActions {
+    flex-direction: column;
+  }
+  
+  .modalContent {
+    width: 95%;
+    padding: 16px;
+  }
+}
+
+/* 工具类 */
+.textCenter {
+  text-align: center;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.mt12 {
+  margin-top: 12px;
+}
+
+.mt16 {
+  margin-top: 16px;
+}
+
+.mt24 {
+  margin-top: 24px;
+}
+
+.mb12 {
+  margin-bottom: 12px;
+}
+
+.mb16 {
+  margin-bottom: 16px;
+}
+
+.mb24 {
+  margin-bottom: 24px;
+}
+
+.flex {
+  display: flex;
+}
+
+.flexBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flexCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gap8 {
+  gap: 8px;
+}
+
+.gap12 {
+  gap: 12px;
+}
+
+.gap16 {
+  gap: 16px;
+}
+

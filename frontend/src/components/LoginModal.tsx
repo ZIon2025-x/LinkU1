@@ -1030,6 +1030,10 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, ''); // 只允许数字
                     setVerificationCode(value.slice(0, 6));
+                    // 当用户输入验证码时，清除错误信息
+                    if (error) {
+                      setError('');
+                    }
                   }}
                   placeholder={t('auth.enterVerificationCode')}
                   maxLength={6}
@@ -1037,7 +1041,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    border: '1px solid #ddd',
+                    border: error && (error.includes('验证码') || error.includes('verification') || error.includes('code')) ? '1px solid #ff4d4f' : '1px solid #ddd',
                     borderRadius: '8px',
                     fontSize: '24px',
                     letterSpacing: '8px',
@@ -1050,9 +1054,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     e.target.style.borderColor = '#3b82f6';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#ddd';
+                    e.target.style.borderColor = error && (error.includes('验证码') || error.includes('verification') || error.includes('code')) ? '#ff4d4f' : '#ddd';
                   }}
                 />
+                {/* 验证码错误提示（在输入框下方显示） */}
+                {error && (error.includes('验证码') || error.includes('verification') || error.includes('code')) && (
+                  <div style={{
+                    color: '#ff4d4f',
+                    fontSize: '12px',
+                    marginTop: '8px',
+                    textAlign: 'center'
+                  }}>
+                    {error}
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: 'center', marginBottom: '16px', color: '#666', fontSize: '12px' }}>
                 <div>{t('auth.codeSentToEmail').replace('{email}', formData.email)}</div>

@@ -4,7 +4,7 @@
  * 功能: 服务管理、申请管理
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -47,7 +47,10 @@ import {
 } from '../api';
 import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
+import TabButton from '../components/taskExpertDashboard/TabButton';
+import StatCard from '../components/taskExpertDashboard/StatCard';
 import api from '../api';
+import styles from './TaskExpertDashboard.module.css';
 
 interface Service {
   id: number;
@@ -313,6 +316,11 @@ const TaskExpertDashboard: React.FC = () => {
       }
     }
   };
+
+  // 使用 useCallback 优化标签页切换处理函数
+  const handleTabChange = useCallback((tab: 'dashboard' | 'services' | 'applications' | 'multi-tasks' | 'schedule') => {
+    setActiveTab(tab);
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'services') {
@@ -867,20 +875,20 @@ const TaskExpertDashboard: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f7fafc', padding: '20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className={styles.container}>
+      <div className={styles.contentWrapper}>
         {/* 头部 */}
-        <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className={styles.headerCard}>
+          <div className={styles.headerContent}>
             <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#1a202c' }}>
+              <h1 className={styles.title}>
                 任务达人管理后台
               </h1>
-              <div style={{ marginTop: '12px', color: '#718096' }}>
+              <div className={styles.subtitle}>
                 欢迎回来，{expert.expert_name || user?.name || '任务达人'}
               </div>
               {pendingRequest && (
-                <div style={{ marginTop: '12px', padding: '8px 12px', background: '#fef3c7', borderRadius: '6px', color: '#92400e', fontSize: '14px' }}>
+                <div className={styles.pendingRequestNotice}>
                   您有一个待审核的信息修改请求，请等待管理员审核
                 </div>
               )}
@@ -895,15 +903,7 @@ const TaskExpertDashboard: React.FC = () => {
                 setAvatarPreview(expert.avatar || '');
                 setShowProfileEditModal(true);
               }}
-              style={{
-                padding: '10px 20px',
-                background: '#3b82f6',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
+              className={`${styles.button} ${styles.buttonPrimary}`}
             >
               编辑资料
             </button>
@@ -912,144 +912,122 @@ const TaskExpertDashboard: React.FC = () => {
 
 
         {/* 标签页 */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            style={{
-              padding: '12px 24px',
-              background: activeTab === 'dashboard' ? '#3b82f6' : '#fff',
-              color: activeTab === 'dashboard' ? '#fff' : '#333',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px',
-            }}
-          >
-            📊 仪表盘
-          </button>
-          <button
-            onClick={() => setActiveTab('services')}
-            style={{
-              padding: '12px 24px',
-              background: activeTab === 'services' ? '#3b82f6' : '#fff',
-              color: activeTab === 'services' ? '#fff' : '#333',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            服务管理
-          </button>
-          <button
-            onClick={() => setActiveTab('applications')}
-            style={{
-              padding: '12px 24px',
-              background: activeTab === 'applications' ? '#3b82f6' : '#fff',
-              color: activeTab === 'applications' ? '#fff' : '#333',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            申请管理
-          </button>
-          <button
-            onClick={() => setActiveTab('multi-tasks')}
-            style={{
-              padding: '12px 24px',
-              background: activeTab === 'multi-tasks' ? '#3b82f6' : '#fff',
-              color: activeTab === 'multi-tasks' ? '#fff' : '#333',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            多人活动
-          </button>
-          <button
-            onClick={() => setActiveTab('schedule')}
-            style={{
-              padding: '12px 24px',
-              background: activeTab === 'schedule' ? '#3b82f6' : '#fff',
-              color: activeTab === 'schedule' ? '#fff' : '#333',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            📅 时刻表
-          </button>
+        <div className={styles.tabsContainer}>
+          <TabButton
+            label="仪表盘"
+            isActive={activeTab === 'dashboard'}
+            onClick={() => handleTabChange('dashboard')}
+            icon="📊"
+          />
+          <TabButton
+            label="服务管理"
+            isActive={activeTab === 'services'}
+            onClick={() => handleTabChange('services')}
+          />
+          <TabButton
+            label="申请管理"
+            isActive={activeTab === 'applications'}
+            onClick={() => handleTabChange('applications')}
+          />
+          <TabButton
+            label="多人活动"
+            isActive={activeTab === 'multi-tasks'}
+            onClick={() => handleTabChange('multi-tasks')}
+          />
+          <TabButton
+            label="时刻表"
+            isActive={activeTab === 'schedule'}
+            onClick={() => handleTabChange('schedule')}
+            icon="📅"
+          />
         </div>
+
+        {/* 仪表盘 */}
+        {activeTab === 'dashboard' && (
+          <div className={styles.contentCard}>
+            <h2 className={styles.cardTitle}>仪表盘</h2>
+            
+            {loadingDashboardStats ? (
+              <div className={styles.loading}>加载中...</div>
+            ) : dashboardStats ? (
+              <div className={styles.statsGrid}>
+                <StatCard
+                  label="总服务数"
+                  value={dashboardStats.total_services || 0}
+                  subValue={`活跃服务: ${dashboardStats.active_services || 0}`}
+                  gradient="Purple"
+                />
+                <StatCard
+                  label="总申请数"
+                  value={dashboardStats.total_applications || 0}
+                  subValue={`待处理: ${dashboardStats.pending_applications || 0}`}
+                  gradient="Pink"
+                />
+                <StatCard
+                  label="多人任务"
+                  value={dashboardStats.total_multi_tasks || 0}
+                  subValue={`进行中: ${dashboardStats.in_progress_multi_tasks || 0}`}
+                  gradient="Blue"
+                />
+                <StatCard
+                  label="总参与者"
+                  value={dashboardStats.total_participants || 0}
+                  gradient="Green"
+                />
+                <StatCard
+                  label="未来30天时间段"
+                  value={dashboardStats.upcoming_time_slots || 0}
+                  subValue={`有参与者: ${dashboardStats.time_slots_with_participants || 0}`}
+                  gradient="Yellow"
+                />
+              </div>
+            ) : (
+              <div className={styles.empty}>
+                暂无数据
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 服务管理 */}
         {activeTab === 'services' && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>我的服务</h2>
+          <div className={styles.contentCard}>
+            <div className={styles.flexBetween} style={{ marginBottom: '24px' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>我的服务</h2>
               <button
                 onClick={handleCreateService}
-                style={{
-                  padding: '10px 20px',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
+                className={`${styles.button} ${styles.buttonPrimary}`}
               >
                 + 创建服务
               </button>
             </div>
 
             {loadingServices ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              <div className={styles.loading}>加载中...</div>
             ) : services.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+              <div className={styles.empty}>
                 暂无服务，点击"创建服务"按钮添加
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+              <div className={styles.servicesGrid}>
                 {services.map((service) => (
-                  <div
-                    key={service.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '20px',
-                      background: '#fff',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
+                  <div key={service.id} className={styles.serviceCard}>
+                    <div className={styles.serviceCardHeader}>
+                      <h3 className={styles.serviceName}>
                         {service.service_name}
                       </h3>
-                      <span
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          background: service.status === 'active' ? '#d1fae5' : '#fee2e2',
-                          color: service.status === 'active' ? '#065f46' : '#991b1b',
-                        }}
-                      >
+                      <span className={`${styles.serviceStatus} ${service.status === 'active' ? styles.serviceStatusActive : styles.serviceStatusInactive}`}>
                         {service.status === 'active' ? '上架' : '下架'}
                       </span>
                     </div>
                     
-                    <div style={{ fontSize: '14px', color: '#4a5568', marginBottom: '12px', lineHeight: '1.5' }}>
+                    <div className={styles.serviceDescription}>
                       {service.description?.substring(0, 100)}
                       {service.description && service.description.length > 100 ? '...' : ''}
                     </div>
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#3b82f6' }}>
+                    <div className={styles.flexBetween} style={{ marginBottom: '12px' }}>
+                      <div className={styles.servicePrice}>
                         {service.currency} {service.base_price.toFixed(2)}
                       </div>
                       <div style={{ fontSize: '12px', color: '#718096' }}>
@@ -1057,34 +1035,18 @@ const TaskExpertDashboard: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className={styles.serviceActions}>
                       <button
                         onClick={() => handleEditService(service)}
-                        style={{
-                          flex: 1,
-                          padding: '8px',
-                          background: '#f3f4f6',
-                          color: '#333',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
+                        className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSmall}`}
+                        style={{ flex: 1 }}
                       >
                         编辑
                       </button>
                       <button
                         onClick={() => handleDeleteService(service.id)}
-                        style={{
-                          flex: 1,
-                          padding: '8px',
-                          background: '#fee2e2',
-                          color: '#991b1b',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
+                        className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSmall}`}
+                        style={{ flex: 1 }}
                       >
                         删除
                       </button>
@@ -1098,158 +1060,104 @@ const TaskExpertDashboard: React.FC = () => {
 
         {/* 申请管理 */}
         {activeTab === 'applications' && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
-            <h2 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 600 }}>收到的申请</h2>
+          <div className={styles.contentCard}>
+            <h2 className={styles.cardTitle} style={{ margin: '0 0 24px 0' }}>收到的申请</h2>
 
             {loadingApplications ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              <div className={styles.loading}>加载中...</div>
             ) : applications.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+              <div className={styles.empty}>
                 暂无申请
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {applications.map((app) => (
-                  <div
-                    key={app.id}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '20px',
-                      background: '#fff',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '18px', fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
-                          {app.service_name}
+              <div className={styles.applicationsList}>
+                {applications.map((app) => {
+                  const statusClass = app.status === 'pending' ? styles.applicationStatusPending :
+                                    app.status === 'approved' ? styles.applicationStatusApproved :
+                                    app.status === 'rejected' ? styles.applicationStatusRejected :
+                                    app.status === 'negotiating' || app.status === 'price_agreed' ? styles.applicationStatusNegotiating :
+                                    styles.applicationStatusPending;
+                  
+                  return (
+                    <div key={app.id} className={styles.applicationCard}>
+                      <div className={styles.applicationHeader}>
+                        <div className={styles.applicationInfo}>
+                          <div className={styles.applicationTitle}>
+                            {app.service_name}
+                          </div>
+                          <div className={styles.applicationMeta}>
+                            申请用户: {app.applicant_name || app.applicant_id}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '14px', color: '#718096' }}>
-                          申请用户: {app.applicant_name || app.applicant_id}
+                        <span className={`${styles.applicationStatus} ${statusClass}`}>
+                          {getStatusText(app.status)}
+                        </span>
+                      </div>
+
+                      {app.application_message && (
+                        <div className={styles.applicationMessage}>
+                          {app.application_message}
                         </div>
+                      )}
+
+                      <div className={styles.applicationPriceInfo}>
+                        {app.negotiated_price && (
+                          <span>用户议价: {app.currency || 'GBP'} {app.negotiated_price.toFixed(2)}</span>
+                        )}
+                        {app.expert_counter_price && (
+                          <span>我的议价: {app.currency || 'GBP'} {app.expert_counter_price.toFixed(2)}</span>
+                        )}
+                        {app.final_price && (
+                          <span>最终价格: {app.currency || 'GBP'} {app.final_price.toFixed(2)}</span>
+                        )}
                       </div>
-                      <span
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          background: getStatusColor(app.status) + '20',
-                          color: getStatusColor(app.status),
-                        }}
-                      >
-                        {getStatusText(app.status)}
-                      </span>
-                    </div>
 
-                    {app.application_message && (
-                      <div style={{ fontSize: '14px', color: '#4a5568', marginBottom: '12px', padding: '12px', background: '#f7fafc', borderRadius: '8px' }}>
-                        {app.application_message}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', fontSize: '14px', color: '#718096' }}>
-                      {app.negotiated_price && (
-                        <span>用户议价: {app.currency || 'GBP'} {app.negotiated_price.toFixed(2)}</span>
-                      )}
-                      {app.expert_counter_price && (
-                        <span>我的议价: {app.currency || 'GBP'} {app.expert_counter_price.toFixed(2)}</span>
-                      )}
-                      {app.final_price && (
-                        <span>最终价格: {app.currency || 'GBP'} {app.final_price.toFixed(2)}</span>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {app.status === 'pending' && (
-                        <>
+                      <div className={styles.applicationActions}>
+                        {app.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApproveApplication(app.id)}
+                              className={`${styles.button} ${styles.buttonSuccess} ${styles.buttonSmall}`}
+                            >
+                              同意申请
+                            </button>
+                            <button
+                              onClick={() => handleCounterOffer(app)}
+                              className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonSmall}`}
+                            >
+                              再次议价
+                            </button>
+                            <button
+                              onClick={() => {
+                                const reason = window.prompt('请输入拒绝原因（可选）');
+                                handleRejectApplication(app.id, reason || undefined);
+                              }}
+                              className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSmall}`}
+                            >
+                              拒绝申请
+                            </button>
+                          </>
+                        )}
+                        {app.status === 'price_agreed' && (
                           <button
                             onClick={() => handleApproveApplication(app.id)}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                              fontWeight: 600,
-                            }}
+                            className={`${styles.button} ${styles.buttonSuccess} ${styles.buttonSmall}`}
                           >
-                            同意申请
+                            创建任务
                           </button>
+                        )}
+                        {app.status === 'approved' && app.task_id && (
                           <button
-                            onClick={() => handleCounterOffer(app)}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#3b82f6',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                              fontWeight: 600,
-                            }}
+                            onClick={() => navigate(`/tasks/${app.task_id}`)}
+                            className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonSmall}`}
                           >
-                            再次议价
+                            查看任务
                           </button>
-                          <button
-                            onClick={() => {
-                              const reason = window.prompt('请输入拒绝原因（可选）');
-                              handleRejectApplication(app.id, reason || undefined);
-                            }}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#ef4444',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            拒绝申请
-                          </button>
-                        </>
-                      )}
-                      {app.status === 'price_agreed' && (
-                        <button
-                          onClick={() => handleApproveApplication(app.id)}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          创建任务
-                        </button>
-                      )}
-                      {app.status === 'approved' && app.task_id && (
-                        <button
-                          onClick={() => navigate(`/tasks/${app.task_id}`)}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#3b82f6',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          查看任务
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1257,9 +1165,9 @@ const TaskExpertDashboard: React.FC = () => {
 
         {/* 多人活动管理 */}
         {activeTab === 'multi-tasks' && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>我的多人活动</h2>
+          <div className={styles.contentCard}>
+            <div className={styles.flexBetween} style={{ marginBottom: '24px' }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>我的多人活动</h2>
               <button
                 onClick={() => {
                   setCreateMultiTaskForm({
@@ -1284,24 +1192,16 @@ const TaskExpertDashboard: React.FC = () => {
                   });
                   setShowCreateMultiTaskModal(true);
                 }}
-                style={{
-                  padding: '10px 20px',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
+                className={`${styles.button} ${styles.buttonPrimary}`}
               >
                 + 创建多人活动
               </button>
             </div>
 
             {loadingMultiTasks ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              <div className={styles.loading}>加载中...</div>
             ) : multiTasks.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+              <div className={styles.empty}>
                 暂无多人活动
               </div>
             ) : (
@@ -1341,51 +1241,26 @@ const TaskExpertDashboard: React.FC = () => {
                     }
                   }, 0);
                   
+                  const statusTagClass = activity.status === 'open' ? styles.activityTagOpen :
+                                        activity.status === 'in_progress' ? styles.activityTagInProgress :
+                                        activity.status === 'completed' ? styles.activityTagCompleted :
+                                        styles.activityTagCancelled;
+                  
                   return (
-                    <div
-                      key={activity.id}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '20px',
-                        background: '#fff',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600, color: '#1a202c' }}>
+                    <div key={activity.id} className={styles.activityCard}>
+                      <div className={styles.activityHeader}>
+                        <div className={styles.activityInfo}>
+                          <h3 className={styles.activityTitle}>
                             {activity.title}
                           </h3>
                           {/* 活动描述（简短） */}
                           {activity.description && (
-                            <p style={{ 
-                              margin: '0 0 8px 0', 
-                              fontSize: '13px', 
-                              color: '#718096',
-                              lineHeight: 1.5,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                            }}>
+                            <p className={styles.activityDescription}>
                               {activity.description}
                             </p>
                           )}
-                          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              background: activity.status === 'open' ? '#dbeafe' :
-                                         activity.status === 'in_progress' ? '#d1fae5' :
-                                         activity.status === 'completed' ? '#d1fae5' :
-                                         '#fee2e2',
-                              color: activity.status === 'open' ? '#1e40af' :
-                                     activity.status === 'in_progress' ? '#065f46' :
-                                     activity.status === 'completed' ? '#065f46' :
-                                     '#991b1b',
-                            }}>
+                          <div className={styles.activityTags}>
+                            <span className={`${styles.activityTag} ${statusTagClass}`}>
                               {activity.status === 'open' ? '开放中' :
                                activity.status === 'in_progress' ? '进行中' :
                                activity.status === 'completed' ? '已完成' :
@@ -1396,14 +1271,7 @@ const TaskExpertDashboard: React.FC = () => {
                             </span>
                             {/* 活动类型标识 */}
                             {activity.has_time_slots && (
-                              <span style={{
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                background: '#e0f2fe',
-                                color: '#0369a1',
-                              }}>
+                              <span className={`${styles.activityTag} ${styles.activityTagTimeSlot}`}>
                                 ⏰ 多时间段
                               </span>
                             )}
@@ -1453,8 +1321,8 @@ const TaskExpertDashboard: React.FC = () => {
 
                       {/* 参与者列表（按任务分组显示） */}
                       {tasks.length > 0 && (
-                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: '#4a5568' }}>
+                        <div className={styles.taskGroup}>
+                          <h4 className={styles.taskGroupTitle}>
                             参与者列表（按任务分组）
                           </h4>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1469,47 +1337,28 @@ const TaskExpertDashboard: React.FC = () => {
                               }
                               
                               return (
-                                <div
-                                  key={task.id}
-                                  style={{
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    background: '#f9fafb',
-                                  }}
-                                >
-                                  <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>
+                                <div key={task.id} className={styles.taskItem}>
+                                  <div className={styles.taskItemHeader}>
                                     任务 #{task.id} - {task.title || '未命名任务'}
-                                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#718096', fontWeight: 400 }}>
+                                    <span className={styles.taskItemMeta}>
                                       {isMultiParticipant ? `(${taskParticipants.length} 个参与者)` : '(单个任务)'}
                                     </span>
                                     {/* 显示时间段信息（如果有） */}
                                     {(task.time_slot_id || (task.time_slot_relations && task.time_slot_relations.length > 0)) && (
-                                      <span style={{ marginLeft: '8px', fontSize: '11px', color: '#059669', fontWeight: 500 }}>
+                                      <span className={styles.taskItemTimeSlot}>
                                         ⏰ 时间段 {task.time_slot_id || (task.time_slot_relations?.[0]?.time_slot_id)}
                                       </span>
                                     )}
                                   </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div className={styles.participantsList}>
                                     {/* 多人任务：显示参与者列表 */}
                                     {isMultiParticipant && taskParticipants.map((participant: any) => (
-                                      <div
-                                        key={participant.id}
-                                        style={{
-                                          display: 'flex',
-                                          justifyContent: 'space-between',
-                                          alignItems: 'center',
-                                          padding: '10px',
-                                          background: '#fff',
-                                          borderRadius: '6px',
-                                          border: '1px solid #e2e8f0',
-                                        }}
-                                      >
-                                        <div style={{ flex: 1 }}>
-                                          <div style={{ fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
+                                      <div key={participant.id} className={styles.participantCard}>
+                                        <div className={styles.participantInfo}>
+                                          <div className={styles.participantName}>
                                             {participant.user_name || 'Unknown'}
                                           </div>
-                                          <div style={{ fontSize: '12px', color: '#718096' }}>
+                                          <div className={styles.participantStatus}>
                                             状态: {participant.status === 'pending' ? '待审核' :
                                                    participant.status === 'accepted' ? '已接受' :
                                                    participant.status === 'in_progress' ? '进行中' :
@@ -1518,7 +1367,7 @@ const TaskExpertDashboard: React.FC = () => {
                                                    '已退出'}
                                           </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                        <div className={styles.participantActions}>
                                           {/* 审核申请 */}
                                           {isTaskManager && participant.status === 'pending' && activity.status === 'open' && participant.task_id && (
                                             <>
@@ -1739,10 +1588,10 @@ const TaskExpertDashboard: React.FC = () => {
 
         {/* 时刻表 */}
         {activeTab === 'schedule' && (
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>时刻表</h2>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className={styles.contentCard}>
+            <div className={styles.scheduleHeader}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>时刻表</h2>
+              <div className={styles.scheduleControls}>
                 <input
                   type="date"
                   value={scheduleStartDate || new Date().toISOString().split('T')[0]}
@@ -1752,12 +1601,7 @@ const TaskExpertDashboard: React.FC = () => {
                       loadSchedule();
                     }
                   }}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
+                  className={styles.scheduleDateInput}
                 />
                 <span style={{ color: '#718096' }}>至</span>
                 <input
@@ -1769,25 +1613,11 @@ const TaskExpertDashboard: React.FC = () => {
                       loadSchedule();
                     }
                   }}
-                  style={{
-                    padding: '8px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
+                  className={styles.scheduleDateInput}
                 />
                 <button
                   onClick={loadSchedule}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#3b82f6',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                  }}
+                  className={styles.scheduleRefreshButton}
                 >
                   刷新
                 </button>
@@ -1795,7 +1625,7 @@ const TaskExpertDashboard: React.FC = () => {
             </div>
 
             {loadingSchedule ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+              <div className={styles.loading}>加载中...</div>
             ) : scheduleData && scheduleData.items && scheduleData.items.length > 0 ? (
               <div>
                 {/* 按日期分组显示 */}
@@ -1819,19 +1649,10 @@ const TaskExpertDashboard: React.FC = () => {
                         const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dateObj.getDay()];
                         
                         return (
-                          <div key={date} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
-                            <div style={{
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              padding: '16px 20px',
-                              color: '#fff',
-                              fontWeight: 600,
-                              fontSize: '16px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                            }}>
-                              <span>{date} ({dayName})</span>
-                              <div style={{ display: 'flex', gap: '8px' }}>
+                          <div key={date} className={styles.scheduleDateGroup}>
+                            <div className={styles.scheduleDateHeader}>
+                              <span className={styles.scheduleDateTitle}>{date} ({dayName})</span>
+                              <div className={styles.scheduleDateActions}>
                                 {(() => {
                                   const isClosed = closedDates.some((cd: any) => cd.closed_date === date);
                                   const hasTimeSlots = items.some((i: any) => !i.is_task);
@@ -1882,17 +1703,7 @@ const TaskExpertDashboard: React.FC = () => {
                                             }
                                           }}
                                           disabled={loadingSchedule}
-                                          style={{
-                                            padding: '6px 12px',
-                                            background: loadingSchedule ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
-                                            color: '#fff',
-                                            border: '1px solid rgba(255,255,255,0.3)',
-                                            borderRadius: '6px',
-                                            cursor: loadingSchedule ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            opacity: loadingSchedule ? 0.6 : 1,
-                                          }}
+                                          className={`${styles.scheduleDateActionButton} ${loadingSchedule ? '' : ''}`}
                                         >
                                           {loadingSchedule ? '删除中...' : '删除该日期的所有时间段'}
                                         </button>
@@ -1921,16 +1732,7 @@ const TaskExpertDashboard: React.FC = () => {
                                             setShowCloseDateModal(true);
                                           }
                                         }}
-                                        style={{
-                                          padding: '6px 12px',
-                                          background: isClosed ? '#dc3545' : 'rgba(255,255,255,0.2)',
-                                          color: '#fff',
-                                          border: '1px solid rgba(255,255,255,0.3)',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                        }}
+                                        className={`${styles.scheduleDateActionButton} ${isClosed ? styles.scheduleDateActionButtonDanger : ''}`}
                                       >
                                         {isClosed ? '已关门 - 点击取消' : '设置关门'}
                                       </button>
@@ -1939,118 +1741,85 @@ const TaskExpertDashboard: React.FC = () => {
                                 })()}
                               </div>
                             </div>
-                            <div style={{ padding: '16px' }}>
-                              {items.map((item: any) => (
-                                <div
-                                  key={item.id}
-                                  style={{
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    padding: '16px',
-                                    marginBottom: '12px',
-                                    background: item.is_task ? '#f0f9ff' : '#fff',
-                                  }}
-                                >
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                                    <div style={{ flex: 1 }}>
-                                      <div style={{ fontSize: '16px', fontWeight: 600, color: '#1a202c', marginBottom: '4px' }}>
-                                        {item.service_name}
+                            <div className={styles.scheduleDateContent}>
+                              {items.map((item: any) => {
+                                const statusBadgeClass = item.is_expired ? styles.scheduleItemStatusExpired :
+                                                       item.current_participants >= item.max_participants ? styles.scheduleItemStatusFull :
+                                                       styles.scheduleItemStatusAvailable;
+                                
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className={`${styles.scheduleItem} ${item.is_task ? styles.scheduleItemTask : ''}`}
+                                  >
+                                    <div className={styles.scheduleItemHeader}>
+                                      <div className={styles.scheduleItemInfo}>
+                                        <div className={styles.scheduleItemTitle}>
+                                          {item.service_name}
+                                        </div>
+                                        {item.start_time && item.end_time && (
+                                          <div className={styles.scheduleItemTime}>
+                                            ⏰ {item.start_time} - {item.end_time}
+                                          </div>
+                                        )}
+                                        {item.deadline && (
+                                          <div className={styles.scheduleItemTime}>
+                                            📅 截止: {new Date(item.deadline).toLocaleString('zh-CN')}
+                                          </div>
+                                        )}
                                       </div>
-                                      {item.start_time && item.end_time && (
-                                        <div style={{ fontSize: '14px', color: '#4a5568' }}>
-                                          ⏰ {item.start_time} - {item.end_time}
+                                      <div className={styles.scheduleItemStatus}>
+                                        <div className={`${styles.scheduleItemStatusBadge} ${statusBadgeClass}`}>
+                                          {item.is_expired ? '已过期' :
+                                           item.current_participants >= item.max_participants ? '已满' :
+                                           '可预约'}
                                         </div>
-                                      )}
-                                      {item.deadline && (
-                                        <div style={{ fontSize: '14px', color: '#4a5568' }}>
-                                          📅 截止: {new Date(item.deadline).toLocaleString('zh-CN')}
-                                        </div>
-                                      )}
+                                        {item.task_status && (
+                                          <div className={styles.scheduleItemStatusBadge} style={{
+                                            background: item.task_status === 'in_progress' ? '#dbeafe' : '#f3f4f6',
+                                            color: item.task_status === 'in_progress' ? '#1e40af' : '#4a5568',
+                                          }}>
+                                            {item.task_status === 'open' ? '开放中' :
+                                             item.task_status === 'in_progress' ? '进行中' : item.task_status}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                                      <div style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        background: item.is_expired ? '#fee2e2' :
-                                                   item.current_participants >= item.max_participants ? '#fef3c7' :
-                                                   '#d1fae5',
-                                        color: item.is_expired ? '#991b1b' :
-                                               item.current_participants >= item.max_participants ? '#92400e' :
-                                               '#065f46',
-                                      }}>
-                                        {item.is_expired ? '已过期' :
-                                         item.current_participants >= item.max_participants ? '已满' :
-                                         '可预约'}
+                                    <div className={styles.scheduleItemFooter}>
+                                      <div className={styles.scheduleItemParticipants}>
+                                        👥 参与者: {item.current_participants} / {item.max_participants}
                                       </div>
-                                      {item.task_status && (
-                                        <div style={{
-                                          padding: '4px 8px',
-                                          borderRadius: '6px',
-                                          fontSize: '12px',
-                                          fontWeight: 600,
-                                          background: item.task_status === 'in_progress' ? '#dbeafe' : '#f3f4f6',
-                                          color: item.task_status === 'in_progress' ? '#1e40af' : '#4a5568',
-                                        }}>
-                                          {item.task_status === 'open' ? '开放中' :
-                                           item.task_status === 'in_progress' ? '进行中' : item.task_status}
-                                        </div>
-                                      )}
+                                      <div className={styles.scheduleItemActions}>
+                                        {!item.is_task && (
+                                          <button
+                                            onClick={async () => {
+                                              if (!window.confirm('确定要删除这个时间段吗？')) return;
+                                              try {
+                                                await deleteServiceTimeSlot(item.service_id, item.id);
+                                                message.success('时间段已删除');
+                                                await loadSchedule();
+                                              } catch (err: any) {
+                                                message.error(err.response?.data?.detail || '删除失败');
+                                              }
+                                            }}
+                                            className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSmall}`}
+                                          >
+                                            删除
+                                          </button>
+                                        )}
+                                        {item.is_task && (
+                                          <button
+                                            onClick={() => navigate(`/tasks/${item.id.replace('task_', '')}`)}
+                                            className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonSmall}`}
+                                          >
+                                            查看任务
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontSize: '14px', color: '#4a5568' }}>
-                                      👥 参与者: {item.current_participants} / {item.max_participants}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                      {!item.is_task && (
-                                        <button
-                                          onClick={async () => {
-                                            if (!window.confirm('确定要删除这个时间段吗？')) return;
-                                            try {
-                                              await deleteServiceTimeSlot(item.service_id, item.id);
-                                              message.success('时间段已删除');
-                                              await loadSchedule();
-                                            } catch (err: any) {
-                                              message.error(err.response?.data?.detail || '删除失败');
-                                            }
-                                          }}
-                                          style={{
-                                            padding: '6px 12px',
-                                            background: '#dc3545',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                          }}
-                                        >
-                                          删除
-                                        </button>
-                                      )}
-                                      {item.is_task && (
-                                        <button
-                                          onClick={() => navigate(`/tasks/${item.id.replace('task_', '')}`)}
-                                          style={{
-                                            padding: '6px 12px',
-                                            background: '#3b82f6',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                          }}
-                                        >
-                                          查看任务
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -2060,7 +1829,7 @@ const TaskExpertDashboard: React.FC = () => {
                 })()}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#718096' }}>
+              <div className={styles.empty}>
                 暂无时间段安排
               </div>
             )}
