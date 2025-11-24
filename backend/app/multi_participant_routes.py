@@ -202,6 +202,14 @@ def apply_to_activity(
     if db_activity.status != "open":
         raise HTTPException(status_code=400, detail="Activity is not accepting applications")
     
+    # 根据活动的 max_participants 自动判断是否为多人任务
+    # 如果活动的 max_participants > 1，则自动创建多人任务
+    is_multi_participant = db_activity.max_participants > 1
+    if is_multi_participant:
+        logger.info(f"活动 {activity_id} 的 max_participants={db_activity.max_participants}，自动判断为多人任务")
+    else:
+        logger.info(f"活动 {activity_id} 的 max_participants={db_activity.max_participants}，自动判断为单人任务")
+    
     # 查询服务
     service = db.query(TaskExpertService).filter(
         TaskExpertService.id == db_activity.expert_service_id
@@ -220,8 +228,8 @@ def apply_to_activity(
     # 对于多人任务且有时间段的情况，检查是否已经有任务关联到这个时间段
     # 如果有，让新用户加入现有任务，而不是创建新任务
     existing_task = None
-    if request.is_multi_participant and db_activity.has_time_slots and request.time_slot_id:
-        logger.info(f"查找多人任务现有任务: activity_id={activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={request.is_multi_participant}")
+    if is_multi_participant and db_activity.has_time_slots and request.time_slot_id:
+        logger.info(f"查找多人任务现有任务: activity_id={activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={is_multi_participant}")
         
         # 查找已存在的任务（通过时间段关联）
         # 先查找所有关联该时间段的任务，然后筛选出符合条件的多人任务
@@ -272,7 +280,7 @@ def apply_to_activity(
     
     # 对于非多人任务或没有时间段的情况，检查用户是否已为此活动创建过任务
     # 注意：多人任务不应该检查 originating_user_id，因为多人任务允许多个用户申请
-    if not existing_task and not (request.is_multi_participant and db_activity.has_time_slots):
+    if not existing_task and not (is_multi_participant and db_activity.has_time_slots):
         existing_task = db.query(Task).filter(
             and_(
                 Task.parent_activity_id == activity_id,
@@ -388,7 +396,7 @@ def apply_to_activity(
         task_type=db_activity.task_type,
         # 对于多人任务，poster_id 应该为 None，因为参与者通过 TaskParticipant 管理
         # 对于单人任务，poster_id 是申请者（付钱的）
-        poster_id=None if request.is_multi_participant else current_user.id,
+        poster_id=None if is_multi_participant else current_user.id,
         taker_id=db_activity.expert_id,  # 达人作为接收者（收钱的）
         status=initial_status,
         task_level="expert",
@@ -400,14 +408,14 @@ def apply_to_activity(
         parent_activity_id=activity_id,
         # 记录实际申请人（对于多人任务，这是第一个申请者，但不应该作为 poster_id）
         originating_user_id=current_user.id,
-        # 是否是多人任务
-        is_multi_participant=request.is_multi_participant,
-        max_participants=request.max_participants if request.is_multi_participant else 1,
-        min_participants=request.min_participants if request.is_multi_participant else 1,
+        # 是否是多人任务（根据活动的 max_participants 自动判断）
+        is_multi_participant=is_multi_participant,
+        max_participants=db_activity.max_participants,
+        min_participants=db_activity.min_participants,
         # 如果是多人任务且有时间段，第一个参与者会被自动接受，所以初始计数为1
-        current_participants=1 if (request.is_multi_participant and db_activity.has_time_slots) else 0,
-        completion_rule=db_activity.completion_rule if request.is_multi_participant else "all",
-        reward_distribution=db_activity.reward_distribution if request.is_multi_participant else "equal",
+        current_participants=1 if (is_multi_participant and db_activity.has_time_slots) else 0,
+        completion_rule=db_activity.completion_rule if is_multi_participant else "all",
+        reward_distribution=db_activity.reward_distribution if is_multi_participant else "equal",
         reward_type=db_activity.reward_type,
         auto_accept=False,
         allow_negotiation=False,
@@ -424,7 +432,7 @@ def apply_to_activity(
     
     # 如果是多人任务，创建TaskParticipant记录
     participant = None
-    if request.is_multi_participant:
+    if is_multi_participant:
         # 对于有时间段的活动申请，参与者状态直接设为"accepted"，不需要审核
         participant_status = "accepted" if db_activity.has_time_slots else "pending"
         participant = TaskParticipant(
@@ -531,8 +539,8 @@ def apply_to_activity(
         "activity_id": activity_id,
         "message": "Task created successfully from activity",
         "task_status": new_task.status,
-        "is_multi_participant": request.is_multi_participant,
-        "participant_id": participant.id if request.is_multi_participant else None
+        "is_multi_participant": is_multi_participant,
+        "participant_id": participant.id if is_multi_participant else None
     }
 
 
