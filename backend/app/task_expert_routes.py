@@ -2664,7 +2664,7 @@ async def get_expert_schedule(
     """获取任务达人时刻表数据（时间段服务安排）"""
     expert_id = current_expert.id
     
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, time as dt_time
     from app.utils.time_utils import get_utc_time, parse_local_as_utc, format_iso_utc, LONDON
     
     # 如果没有提供日期，默认查询未来30天

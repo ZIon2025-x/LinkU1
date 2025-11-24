@@ -409,11 +409,12 @@ const TaskExpertDashboard: React.FC = () => {
       try {
         const scheduleDataResult = await getExpertSchedule({ start_date: startDate, end_date: endDate });
         setScheduleData(scheduleDataResult);
-      } catch (err: any) {
-        console.error('加载时刻表数据失败:', err);
-        message.error('加载时刻表数据失败');
-        setScheduleData(null);
-      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || err.message || '未知错误';
+      console.error('加载时刻表数据失败:', errorMessage, err);
+      message.error(`加载时刻表数据失败: ${errorMessage}`);
+      setScheduleData(null);
+    }
       
       try {
         const closedDatesResult = await getClosedDates({ start_date: startDate, end_date: endDate });
@@ -701,11 +702,18 @@ const TaskExpertDashboard: React.FC = () => {
             }
             
             for (const task of relatedTasks) {
-              try {
-                const participantsData = await getTaskParticipants(task.id);
-                participantsMap[activity.id][task.id] = participantsData.participants || [];
-              } catch (error) {
-                console.error(`加载任务 ${task.id} 的参与者失败:`, error);
+              // 只加载多人任务的参与者
+              if (task.is_multi_participant) {
+                try {
+                  const participantsData = await getTaskParticipants(task.id);
+                  participantsMap[activity.id][task.id] = participantsData.participants || [];
+                } catch (error: any) {
+                  const errorMessage = error.response?.data?.detail || error.message || '未知错误';
+                  console.error(`加载任务 ${task.id} 的参与者失败:`, errorMessage, error);
+                  participantsMap[activity.id][task.id] = [];
+                }
+              } else {
+                // 非多人任务不需要加载参与者
                 participantsMap[activity.id][task.id] = [];
               }
             }
