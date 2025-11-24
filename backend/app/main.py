@@ -644,12 +644,29 @@ async def startup_event():
                 else:
                     redis_client = redis.from_url(REDIS_URL)
                     redis_client.ping()
-                    use_celery = True
-                    logger.info("✅ Redis 连接成功，将使用 Celery 执行定时任务")
-                    logger.info("⚠️  注意：需要单独启动 Celery Worker 和 Celery Beat")
-                    logger.info("   启动命令：")
-                    logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
-                    logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
+                    # Redis 连接成功，检查 Worker 是否在线
+                    try:
+                        inspect = celery_app.control.inspect(timeout=2.0)  # 2秒超时
+                        active_workers = inspect.active()
+                        if active_workers:
+                            use_celery = True
+                            logger.info(f"✅ Redis 连接成功，Celery Worker 在线 ({len(active_workers)} workers)，将使用 Celery 执行定时任务")
+                            logger.info("⚠️  注意：需要单独启动 Celery Beat 来调度定时任务")
+                            logger.info("   启动命令：")
+                            logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
+                        else:
+                            use_celery = False
+                            logger.warning("⚠️  Redis 连接成功，但 Celery Worker 未在线，将回退到 TaskScheduler")
+                            logger.info("   如需使用 Celery，请启动 Worker：")
+                            logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
+                            logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
+                    except Exception as inspect_error:
+                        # Worker 检查失败，回退到 TaskScheduler
+                        use_celery = False
+                        logger.warning(f"⚠️  Redis 连接成功，但无法检查 Celery Worker 状态，将回退到 TaskScheduler: {inspect_error}")
+                        logger.info("   如需使用 Celery，请启动 Worker：")
+                        logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
+                        logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
             except Exception as redis_error:
                 logger.warning(f"⚠️  Redis 连接失败，将回退到 TaskScheduler: {redis_error}")
                 use_celery = False
