@@ -1599,11 +1599,11 @@ const Tasks: React.FC = () => {
             <div
               style={{
                 display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
+                flexDirection: 'row',
                 justifyContent: 'space-between',
-                alignItems: isMobile ? 'flex-start' : 'center',
-                gap: isMobile ? '6px' : '0',
-                padding: isMobile ? '10px' : '8px',
+                alignItems: 'center',
+                gap: '8px',
+                padding: isMobile ? '10px 12px' : '10px 12px',
                 background: 'rgba(255, 255, 255, 0.15)',
                 backdropFilter: 'blur(10px)',
                 borderRadius: '8px',
@@ -1611,44 +1611,57 @@ const Tasks: React.FC = () => {
               }}
             >
               <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
                 fontSize: isMobile ? '11px' : '12px', 
                 fontWeight: 500,
-                flex: isMobile ? 'none' : '1',
-                minWidth: 0, // 允许收缩
+                flex: 1,
+                minWidth: 0,
               }}>
+                <span style={{ 
+                  fontSize: isMobile ? '13px' : '14px',
+                  opacity: 0.9 
+                }}>👥</span>
                 <span style={{ opacity: 0.9 }}>参与者: </span>
-                <span style={{ fontWeight: 700 }}>
+                <span style={{ fontWeight: 700, color: '#fff' }}>
                   {activity.current_participants || 0} / {activity.max_participants}
                 </span>
-                {/* 注意：current_participants 需要从关联任务计算，这里暂时显示0，后续可以从后端返回 */}
               </div>
               {activity.has_time_slots ? (
                 <div
                   style={{
-                    fontSize: isMobile ? '9px' : '10px',
-                    background: 'rgba(16, 185, 129, 0.25)',
-                    padding: isMobile ? '4px 8px' : '3px 6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: isMobile ? '10px' : '11px',
+                    background: 'rgba(16, 185, 129, 0.3)',
+                    padding: '4px 8px',
                     borderRadius: '6px',
                     fontWeight: 500,
-                    whiteSpace: isMobile ? 'normal' : 'nowrap',
-                    wordBreak: isMobile ? 'break-word' : 'normal',
+                    whiteSpace: 'nowrap',
                     flexShrink: 0,
                   }}
                 >
-                  ⏰ {dateText}
+                  <span>⏰</span>
+                  <span>{dateText}</span>
                 </div>
               ) : (dateText || timeText) ? (
                 <div
                   style={{
-                    fontSize: isMobile ? '9px' : '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: isMobile ? '10px' : '11px',
                     background: 'rgba(255, 255, 255, 0.25)',
-                    padding: isMobile ? '4px 8px' : '3px 6px',
+                    padding: '4px 8px',
                     borderRadius: '6px',
-                    whiteSpace: isMobile ? 'normal' : 'nowrap',
+                    whiteSpace: 'nowrap',
                     flexShrink: 0,
                   }}
                 >
-                  📅 {dateText} {timeText}
+                  <span>📅</span>
+                  <span>{dateText} {timeText}</span>
                 </div>
               ) : null}
             </div>

@@ -312,17 +312,26 @@ class TaskOut(TaskBase):
 
     @validator('images', pre=True)
     def parse_images(cls, v):
-        """将JSON字符串解析为列表"""
+        """将JSON字符串解析为列表，处理各种输入类型"""
         if v is None:
             return None
         if isinstance(v, str):
             import json
             try:
-                return json.loads(v)
+                parsed = json.loads(v)
+                # 如果解析后是列表，直接返回
+                if isinstance(parsed, list):
+                    return parsed
+                # 如果解析后是字典或其他类型，返回空列表
+                return []
             except (json.JSONDecodeError, TypeError):
                 return []
         if isinstance(v, list):
             return v
+        if isinstance(v, dict):
+            # 如果是字典（如JSONB返回的{}），返回空列表
+            return []
+        # 其他类型返回None
         return None
 
     @model_validator(mode='after')
@@ -343,8 +352,28 @@ class TaskOut(TaskBase):
     
     @classmethod
     def from_orm(cls, obj):
-        """自定义ORM转换，处理时间字段"""
+        """自定义ORM转换，处理时间字段和images字段"""
         from datetime import time
+        import json
+        
+        # 处理images字段，确保始终是列表或None
+        images_value = obj.images
+        if images_value is None:
+            images_list = None
+        elif isinstance(images_value, list):
+            images_list = images_value
+        elif isinstance(images_value, str):
+            try:
+                parsed = json.loads(images_value)
+                images_list = parsed if isinstance(parsed, list) else []
+            except (json.JSONDecodeError, TypeError):
+                images_list = []
+        elif isinstance(images_value, dict):
+            # 如果是字典（如JSONB返回的{}），返回空列表
+            images_list = []
+        else:
+            images_list = []
+        
         data = {
             "id": obj.id,
             "poster_id": obj.poster_id,
@@ -353,7 +382,7 @@ class TaskOut(TaskBase):
             "task_level": obj.task_level,
             "created_at": obj.created_at,
             "is_public": obj.is_public,
-            "images": obj.images,
+            "images": images_list,
             "points_reward": obj.points_reward,
             "is_flexible": obj.is_flexible,
             "title": obj.title,

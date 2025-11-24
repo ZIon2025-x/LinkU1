@@ -1467,9 +1467,11 @@ const TaskExperts: React.FC = () => {
                                 <div
                                   style={{
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '6px',
-                                    padding: '10px',
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '10px 12px',
                                     background: 'rgba(255, 255, 255, 0.15)',
                                     backdropFilter: 'blur(10px)',
                                     borderRadius: '8px',
@@ -1477,42 +1479,57 @@ const TaskExperts: React.FC = () => {
                                   }}
                                 >
                                   <div style={{ 
-                                    fontSize: '11px', 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '12px', 
                                     fontWeight: 500,
-                                    width: '100%',
+                                    flex: 1,
+                                    minWidth: 0,
                                   }}>
+                                    <span style={{ 
+                                      fontSize: '14px',
+                                      opacity: 0.9 
+                                    }}>👥</span>
                                     <span style={{ opacity: 0.9 }}>参与者: </span>
-                                    <span style={{ fontWeight: 700 }}>
+                                    <span style={{ fontWeight: 700, color: '#fff' }}>
                                       {activity.current_participants || 0} / {activity.max_participants}
                                     </span>
                                   </div>
                                   {activity.has_time_slots ? (
                                     <div
                                       style={{
-                                        fontSize: '9px',
-                                        background: 'rgba(16, 185, 129, 0.25)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '11px',
+                                        background: 'rgba(16, 185, 129, 0.3)',
                                         padding: '4px 8px',
                                         borderRadius: '6px',
                                         fontWeight: 500,
-                                        whiteSpace: 'normal',
-                                        wordBreak: 'break-word',
-                                        width: '100%',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
                                       }}
                                     >
-                                      ⏰ {dateText}
+                                      <span>⏰</span>
+                                      <span>{dateText}</span>
                                     </div>
                                   ) : (dateText || timeText) ? (
                                     <div
                                       style={{
-                                        fontSize: '9px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        fontSize: '11px',
                                         background: 'rgba(255, 255, 255, 0.25)',
                                         padding: '4px 8px',
                                         borderRadius: '6px',
-                                        whiteSpace: 'normal',
-                                        width: '100%',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
                                       }}
                                     >
-                                      📅 {dateText} {timeText}
+                                      <span>📅</span>
+                                      <span>{dateText} {timeText}</span>
                                     </div>
                                   ) : null}
                                 </div>

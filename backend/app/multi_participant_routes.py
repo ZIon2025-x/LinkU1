@@ -231,6 +231,11 @@ def apply_to_activity(
         float(db_activity.original_price_per_participant) if db_activity.original_price_per_participant else 0.0
     )
     
+    # 确定任务状态
+    # 对于有时间段的活动申请（无论是单个任务还是多人任务），直接进入"进行中"状态
+    # 因为时间段已经确定，不需要审核
+    initial_status = "in_progress" if db_activity.has_time_slots else "open"
+    
     # 创建新任务
     # 重要：任务方向逻辑
     # - poster_id（发布者）= 付钱的人 = 申请活动的普通用户
@@ -247,7 +252,7 @@ def apply_to_activity(
         task_type=db_activity.task_type,
         poster_id=current_user.id,  # 申请者作为发布者（付钱的）
         taker_id=db_activity.expert_id,  # 达人作为接收者（收钱的）
-        status="open",
+        status=initial_status,
         task_level="expert",
         is_public=1 if db_activity.is_public else 0,
         visibility=db_activity.visibility,
@@ -261,7 +266,8 @@ def apply_to_activity(
         is_multi_participant=request.is_multi_participant,
         max_participants=request.max_participants if request.is_multi_participant else 1,
         min_participants=request.min_participants if request.is_multi_participant else 1,
-        current_participants=0,
+        # 如果是多人任务且有时间段，第一个参与者会被自动接受，所以初始计数为1
+        current_participants=1 if (request.is_multi_participant and db_activity.has_time_slots) else 0,
         completion_rule=db_activity.completion_rule if request.is_multi_participant else "all",
         reward_distribution=db_activity.reward_distribution if request.is_multi_participant else "equal",
         reward_type=db_activity.reward_type,
@@ -270,6 +276,8 @@ def apply_to_activity(
         created_by_expert=True,
         expert_creator_id=db_activity.expert_id,
         expert_service_id=db_activity.expert_service_id,
+        # 对于有时间段的活动申请，设置接受时间
+        accepted_at=get_utc_time() if db_activity.has_time_slots else None,
     )
     
     db.add(new_task)
@@ -278,11 +286,13 @@ def apply_to_activity(
     
     # 如果是多人任务，创建TaskParticipant记录
     if request.is_multi_participant:
+        # 对于有时间段的活动申请，参与者状态直接设为"accepted"，不需要审核
+        participant_status = "accepted" if db_activity.has_time_slots else "pending"
         participant = TaskParticipant(
             task_id=new_task.id,
             user_id=current_user.id,
             activity_id=activity_id,  # 冗余字段：关联的活动ID
-            status="pending",  # 需要达人审核
+            status=participant_status,
             time_slot_id=request.time_slot_id if db_activity.has_time_slots else None,
             preferred_deadline=request.preferred_deadline,
             is_flexible_time=request.is_flexible_time,
@@ -290,6 +300,7 @@ def apply_to_activity(
             is_official_task=False,
             expert_creator_id=db_activity.expert_id,
             applied_at=get_utc_time(),
+            accepted_at=get_utc_time() if db_activity.has_time_slots else None,
             idempotency_key=request.idempotency_key,
         )
         db.add(participant)
@@ -350,6 +361,15 @@ def apply_to_activity(
         # 更新时间段的参与者数量（活动申请成功后，在锁定状态下更新）
         time_slot.current_participants += 1
         db.add(time_slot)
+        
+        # 创建TaskTimeSlotRelation来关联时间段（无论是单个任务还是多人任务）
+        task_time_slot_relation = TaskTimeSlotRelation(
+            task_id=new_task.id,
+            time_slot_id=request.time_slot_id,
+            relation_mode="fixed",
+            auto_add_new_slots=False,
+        )
+        db.add(task_time_slot_relation)
     
     # 记录审计日志
     audit_log = TaskAuditLog(
@@ -357,7 +377,7 @@ def apply_to_activity(
         action_type="task_created_from_activity",
         action_description=f"用户申请活动 {activity_id}，创建了任务 {new_task.id}",
         user_id=current_user.id,
-        new_status="open",
+        new_status=initial_status,
     )
     db.add(audit_log)
     db.commit()
