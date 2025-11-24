@@ -189,6 +189,7 @@ def apply_to_activity(
     
     from app.models import TaskExpertService, ServiceTimeSlot
     from datetime import datetime, timezone as tz
+    from app.utils.time_utils import get_utc_time
     
     logger.info(f"用户 {current_user.id} 申请活动 {activity_id}, time_slot_id={request.time_slot_id}, is_multi_participant={request.is_multi_participant}")
     
@@ -364,7 +365,6 @@ def apply_to_activity(
             raise HTTPException(status_code=400, detail="该时间段已满")
         
         # 检查时间段是否已过期
-        from app.utils.time_utils import get_utc_time
         current_time = get_utc_time()
         if time_slot.slot_start_datetime < current_time:
             logger.warning(f"活动 {activity_id} 申请失败: 时间段 {request.time_slot_id} 已过期 (开始时间: {time_slot.slot_start_datetime}, 当前时间: {current_time})")
@@ -793,12 +793,24 @@ def get_activities(
     result = []
     for activity in activities:
         # 统计该活动关联的任务中，状态为 accepted, in_progress, completed 的参与者数量
-        current_count = db.query(func.count(TaskParticipant.id)).join(
+        # 1. 多人任务的参与者（通过TaskParticipant表）
+        multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
             Task, TaskParticipant.task_id == Task.id
         ).filter(
             Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == True,
             TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
         ).scalar() or 0
+        
+        # 2. 单个任务（非多人任务，直接计数为1）
+        single_task_count = db.query(func.count(Task.id)).filter(
+            Task.parent_activity_id == activity.id,
+            Task.is_multi_participant == False,
+            Task.status.in_(["open", "taken", "in_progress"])
+        ).scalar() or 0
+        
+        # 总参与者数量 = 多人任务的参与者 + 单个任务数量
+        current_count = multi_participant_count + single_task_count
         
         # 使用 from_orm_with_participants 方法创建输出对象
         from app import schemas
@@ -826,12 +838,24 @@ def get_activity_detail(
         raise HTTPException(status_code=404, detail="Activity not found")
     
     # 计算当前参与者数量
-    current_count = db.query(func.count(TaskParticipant.id)).join(
+    # 1. 多人任务的参与者（通过TaskParticipant表）
+    multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
         Task, TaskParticipant.task_id == Task.id
     ).filter(
         Task.parent_activity_id == activity.id,
+        Task.is_multi_participant == True,
         TaskParticipant.status.in_(["accepted", "in_progress", "completed"])
     ).scalar() or 0
+    
+    # 2. 单个任务（非多人任务，直接计数为1）
+    single_task_count = db.query(func.count(Task.id)).filter(
+        Task.parent_activity_id == activity.id,
+        Task.is_multi_participant == False,
+        Task.status.in_(["open", "taken", "in_progress"])
+    ).scalar() or 0
+    
+    # 总参与者数量 = 多人任务的参与者 + 单个任务数量
+    current_count = multi_participant_count + single_task_count
     
     # 使用 from_orm_with_participants 方法创建输出对象
     from app import schemas
@@ -916,16 +940,8 @@ def delete_expert_activity(
         )
         db.add(audit_log)
     
-    # 记录活动审计日志
-    activity_audit_log = TaskAuditLog(
-        task_id=None,  # 活动没有task_id
-        action_type="activity_cancelled",
-        action_description=f"任务达人取消活动",
-        user_id=current_user.id,
-        old_status=old_status,
-        new_status="cancelled",
-    )
-    db.add(activity_audit_log)
+    # 注意：TaskAuditLog 的 task_id 字段不允许为 None，所以不记录活动级别的审计日志
+    # 活动的状态变更已经通过 status 字段记录在 Activity 表中
     
     db.commit()
     db.refresh(db_activity)
