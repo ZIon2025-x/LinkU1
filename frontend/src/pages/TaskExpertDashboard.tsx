@@ -640,17 +640,32 @@ const TaskExpertDashboard: React.FC = () => {
       const participantsMap: {[activityId: number]: {[taskId: number]: any[]}} = {};
       const tasksMap: {[activityId: number]: any[]} = {};
       
-      await Promise.all(
+        await Promise.all(
         activities.map(async (activity: any) => {
           try {
-            // 查找关联的任务
+            // 查找关联的任务（获取所有状态的任务，不限制status）
             const tasksResponse = await api.get('/api/tasks', {
               params: {
                 parent_activity_id: activity.id,
-                limit: 100
+                limit: 100,
+                status: 'all'  // 获取所有状态的任务
               }
             });
-            const relatedTasks = tasksResponse.data.tasks || tasksResponse.data || [];
+            console.log(`活动 ${activity.id} 的任务响应:`, tasksResponse.data);
+            
+            // 处理不同的返回格式
+            let relatedTasks = [];
+            if (tasksResponse.data) {
+              if (Array.isArray(tasksResponse.data)) {
+                relatedTasks = tasksResponse.data;
+              } else if (tasksResponse.data.tasks && Array.isArray(tasksResponse.data.tasks)) {
+                relatedTasks = tasksResponse.data.tasks;
+              } else if (tasksResponse.data.data && Array.isArray(tasksResponse.data.data)) {
+                relatedTasks = tasksResponse.data.data;
+              }
+            }
+            
+            console.log(`活动 ${activity.id} 的关联任务数量:`, relatedTasks.length, relatedTasks);
             tasksMap[activity.id] = relatedTasks;
             
             // 为每个任务加载参与者（按任务分组）

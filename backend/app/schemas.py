@@ -306,9 +306,15 @@ class TaskOut(TaskBase):
     # 多人任务相关字段
     is_multi_participant: Optional[bool] = False
     expert_creator_id: Optional[str] = None
+    max_participants: Optional[int] = None
+    min_participants: Optional[int] = None
+    current_participants: Optional[int] = 0
     # 时间段相关字段（如果任务有固定时间段）
     time_slot_start_time: Optional[str] = None  # 时间格式：HH:MM:SS
     time_slot_end_time: Optional[str] = None  # 时间格式：HH:MM:SS
+    time_slot_id: Optional[int] = None  # 时间段ID
+    time_slot_start_datetime: Optional[str] = None  # 时间段开始时间（UTC，ISO格式）
+    time_slot_end_datetime: Optional[str] = None  # 时间段结束时间（UTC，ISO格式）
 
     @validator('images', pre=True)
     def parse_images(cls, v):
@@ -396,9 +402,33 @@ class TaskOut(TaskBase):
             "task_type": obj.task_type,
             "is_multi_participant": getattr(obj, 'is_multi_participant', False),
             "expert_creator_id": getattr(obj, 'expert_creator_id', None),
+            "max_participants": getattr(obj, 'max_participants', None),
+            "min_participants": getattr(obj, 'min_participants', None),
+            "current_participants": getattr(obj, 'current_participants', 0) or 0,
             "time_slot_start_time": obj.time_slot_start_time.isoformat() if hasattr(obj, 'time_slot_start_time') and isinstance(obj.time_slot_start_time, time) else (str(obj.time_slot_start_time) if hasattr(obj, 'time_slot_start_time') and obj.time_slot_start_time else None),
             "time_slot_end_time": obj.time_slot_end_time.isoformat() if hasattr(obj, 'time_slot_end_time') and isinstance(obj.time_slot_end_time, time) else (str(obj.time_slot_end_time) if hasattr(obj, 'time_slot_end_time') and obj.time_slot_end_time else None),
+            # 从TaskTimeSlotRelation获取时间段信息
+            "time_slot_id": None,
+            "time_slot_start_datetime": None,
+            "time_slot_end_datetime": None,
         }
+        
+        # 如果任务有关联的时间段，获取时间段信息
+        if hasattr(obj, 'time_slot_relations') and obj.time_slot_relations:
+            # 查找固定模式的时间段关联
+            fixed_relation = next(
+                (rel for rel in obj.time_slot_relations 
+                 if rel.relation_mode == 'fixed' and rel.time_slot_id and rel.time_slot),
+                None
+            )
+            if fixed_relation and fixed_relation.time_slot:
+                time_slot = fixed_relation.time_slot
+                data["time_slot_id"] = time_slot.id
+                if time_slot.slot_start_datetime:
+                    from app.utils.time_utils import format_iso_utc
+                    data["time_slot_start_datetime"] = format_iso_utc(time_slot.slot_start_datetime)
+                if time_slot.slot_end_datetime:
+                    data["time_slot_end_datetime"] = format_iso_utc(time_slot.slot_end_datetime)
         return cls(**data)
 
     class Config:

@@ -71,6 +71,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
   const [participants, setParticipants] = useState<any[]>([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [userParticipant, setUserParticipant] = useState<any>(null);
+  // 时间段信息
+  const [timeSlot, setTimeSlot] = useState<any>(null);
 
   // P0 优化：使用 useTransition 优化非关键渲染（评价加载）
   const [isPending, startTransition] = useTransition();
@@ -270,6 +272,20 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       if (user) {
         const userPart = participantsData.participants?.find((p: any) => p.user_id === user.id);
         setUserParticipant(userPart);
+        
+        // 如果参与者有时间段ID，获取时间段信息
+        if (userPart?.time_slot_id) {
+          try {
+            // 通过任务获取时间段信息（通过TaskTimeSlotRelation）
+            const taskRes = await api.get(`/api/tasks/${taskId}`);
+            const taskData = taskRes.data;
+            // 如果有time_slot_id，尝试获取时间段详情
+            // 注意：这里可能需要通过服务ID获取时间段，暂时先不实现
+            // 或者可以通过后端API直接返回时间段信息
+          } catch (error) {
+            console.error('获取时间段信息失败:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('加载参与者列表失败:', error);
@@ -2164,51 +2180,76 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             );
           })()}
 
-          {/* 多人任务：参与者退出申请按钮 */}
+          {/* 多人任务：参与者申请退出按钮 */}
           {task.is_multi_participant && userParticipant && 
            (userParticipant.status === 'accepted' || userParticipant.status === 'in_progress') && 
-           userParticipant.status !== 'exit_requested' && (
-            <button
-              onClick={async () => {
-                const reason = window.prompt(language === 'zh' ? '请输入退出原因（可选）' : 'Please enter exit reason (optional)');
-                if (reason === null) return;
-                
-                setActionLoading(true);
-                try {
-                  const idempotencyKey = `${user.id}_${task.id}_exit_${Date.now()}`;
-                  await requestExitFromTask(task.id, {
-                    idempotency_key: idempotencyKey,
-                    reason: reason || undefined
-                  });
-                  alert(language === 'zh' ? '退出申请已提交，等待审核。' : 'Exit request submitted, waiting for approval.');
-                  await checkUserApplication();
-                  await loadParticipants();
-                  const res = await api.get(`/api/tasks/${taskId}`);
-                  setTask(res.data);
-                } catch (error: any) {
-                  console.error('提交退出申请失败:', error);
-                  alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
-                } finally {
-                  setActionLoading(false);
-                }
-              }}
-              disabled={actionLoading}
-              style={{
-                background: '#ffc107',
-                color: '#000',
-                border: 'none',
+           userParticipant.status !== 'exit_requested' && (() => {
+            // 检查时间段是否已开始
+            let canExit = true;
+            let exitReason = '';
+            if (task.time_slot_start_datetime) {
+              const now = dayjs.utc();
+              const slotStart = dayjs.utc(task.time_slot_start_datetime);
+              if (now.isAfter(slotStart) || now.isSame(slotStart)) {
+                canExit = false;
+                exitReason = language === 'zh' ? '时间段已开始，无法申请退出' : 'Time slot has started, cannot request exit';
+              }
+            }
+            
+            return canExit ? (
+              <button
+                onClick={async () => {
+                  const reason = window.prompt(language === 'zh' ? '请输入退出原因（可选）' : 'Please enter exit reason (optional)');
+                  if (reason === null) return;
+                  
+                  setActionLoading(true);
+                  try {
+                    const idempotencyKey = `${user.id}_${task.id}_exit_${Date.now()}`;
+                    await requestExitFromTask(task.id, {
+                      idempotency_key: idempotencyKey,
+                      reason: reason || undefined
+                    });
+                    alert(language === 'zh' ? '申请退出已提交，等待任务达人审核。' : 'Exit request submitted, waiting for expert approval.');
+                    await checkUserApplication();
+                    await loadParticipants();
+                    const res = await api.get(`/api/tasks/${taskId}`);
+                    setTask(res.data);
+                  } catch (error: any) {
+                    console.error('提交申请退出失败:', error);
+                    alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading}
+                style={{
+                  background: '#ffc107',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 32px',
+                  fontWeight: 700,
+                  fontSize: 18,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                  marginRight: '16px'
+                }}
+              >
+                {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '🚪 申请退出' : '🚪 Request Exit')}
+              </button>
+            ) : (
+              <div style={{
+                padding: '10px 16px',
+                background: '#f3f4f6',
+                color: '#6b7280',
                 borderRadius: 8,
-                padding: '10px 32px',
-                fontWeight: 700,
-                fontSize: 18,
-                cursor: actionLoading ? 'not-allowed' : 'pointer',
-                opacity: actionLoading ? 0.6 : 1,
+                fontSize: 14,
                 marginRight: '16px'
-              }}
-            >
-              {actionLoading ? (language === 'zh' ? '处理中...' : 'Processing...') : (language === 'zh' ? '🚪 申请退出' : '🚪 Request Exit')}
-            </button>
-          )}
+              }}>
+                {exitReason}
+              </div>
+            );
+          })()}
 
           {/* 多人任务：管理员分配奖励按钮 */}
           {task.is_multi_participant && task.status === 'completed' && (() => {

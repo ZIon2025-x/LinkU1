@@ -153,6 +153,7 @@ class AsyncTaskCRUD:
                 select(models.Task)
                 .options(selectinload(models.Task.poster))
                 .options(selectinload(models.Task.taker))
+                .options(selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot))
                 .where(models.Task.id == task_id)
             )
             return result.scalar_one_or_none()
@@ -400,28 +401,34 @@ class AsyncTaskCRUD:
             now_utc = get_utc_time()
             
             # 1. 构建 base_query（列表 & 总数共用）
-            actual_status = status or "open"
-            
-            # 如果指定了 expert_creator_id，不过滤状态和截止日期（显示所有状态的活动）
-            # 否则只显示开放中的任务
-            if expert_creator_id:
-                # 达人查看自己的活动时，显示所有状态
+            # 如果指定了 parent_activity_id，显示所有状态的任务（用于统计活动关联的任务）
+            if parent_activity_id is not None:
+                actual_status = None
                 base_query = select(models.Task)
-                if status:
+            elif expert_creator_id:
+                # 达人查看自己的活动时，显示所有状态
+                actual_status = status or None
+                base_query = select(models.Task)
+                if status and status != "all":
                     base_query = base_query.where(models.Task.status == status)
             else:
                 # 公开任务列表：只显示开放中的任务
-                base_query = select(models.Task).where(
-                    or_(
-                        models.Task.status == "open",
-                        models.Task.status == "taken"
+                actual_status = status or "open"
+                if actual_status == "all":
+                    # status='all' 时，显示所有状态的任务
+                    base_query = select(models.Task)
+                else:
+                    base_query = select(models.Task).where(
+                        or_(
+                            models.Task.status == "open",
+                            models.Task.status == "taken"
+                        )
+                    ).where(
+                        or_(
+                            models.Task.deadline > now_utc,  # 有截止日期且未过期
+                            models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
+                        )
                     )
-                ).where(
-                    or_(
-                        models.Task.deadline > now_utc,  # 有截止日期且未过期
-                        models.Task.deadline.is_(None)  # 灵活模式（无截止日期）
-                    )
-                )
 
             # 任务类型筛选
             if task_type and task_type not in ["全部类型", "全部", "all"]:
@@ -719,7 +726,8 @@ class AsyncTaskCRUD:
                 select(models.Task)
                 .options(
                     selectinload(models.Task.poster),
-                    selectinload(models.Task.taker)
+                    selectinload(models.Task.taker),
+                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot)
                 )
                 .where(models.Task.poster_id == user_id)
             )
@@ -729,7 +737,8 @@ class AsyncTaskCRUD:
                 select(models.Task)
                 .options(
                     selectinload(models.Task.poster),
-                    selectinload(models.Task.taker)
+                    selectinload(models.Task.taker),
+                    selectinload(models.Task.time_slot_relations).selectinload(models.TaskTimeSlotRelation.time_slot)
                 )
                 .where(models.Task.taker_id == user_id)
             )

@@ -1728,6 +1728,12 @@ def admin_approve_exit(
     participant.status = "exited"
     participant.exited_at = get_utc_time()
     
+    # 更新任务的参与者数量（如果是多人任务且参与者之前是accepted或in_progress状态）
+    if db_task.is_multi_participant and participant.previous_status in ("accepted", "in_progress"):
+        if db_task.current_participants > 0:
+            db_task.current_participants -= 1
+        db.add(db_task)
+    
     db.commit()
     
     # 记录审计日志
@@ -1779,6 +1785,12 @@ def expert_approve_exit(
     # 更新状态
     participant.status = "exited"
     participant.exited_at = get_utc_time()
+    
+    # 更新任务的参与者数量（如果是多人任务且参与者之前是accepted或in_progress状态）
+    if db_task.is_multi_participant and participant.previous_status in ("accepted", "in_progress"):
+        if db_task.current_participants > 0:
+            db_task.current_participants -= 1
+        db.add(db_task)
     
     # 更新时间段的参与者数量（如果参与者有关联的时间段）
     time_slot_id_to_update = None

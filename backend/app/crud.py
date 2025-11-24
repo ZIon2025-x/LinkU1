@@ -350,7 +350,7 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 
 def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
-    from app.models import Task
+    from app.models import Task, TaskTimeSlotRelation
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from datetime import datetime, timedelta, timezone
@@ -368,7 +368,8 @@ def get_user_tasks(db: Session, user_id: str, limit: int = 50, offset: int = 0):
         .options(
             selectinload(Task.poster),  # 预加载发布者
             selectinload(Task.taker),   # 预加载接受者
-            selectinload(Task.reviews)   # 预加载评论
+            selectinload(Task.reviews),   # 预加载评论
+            selectinload(Task.time_slot_relations).selectinload(TaskTimeSlotRelation.time_slot)  # 预加载时间段关联
         )
         .filter(
             or_(Task.poster_id == user_id, Task.taker_id == user_id),

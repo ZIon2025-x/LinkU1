@@ -3,7 +3,7 @@ import { message, Modal } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
-import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications } from '../api';
+import { getMyTasks, fetchCurrentUser, completeTask, cancelTask, confirmTaskCompletion, createReview, getTaskReviews, updateTaskVisibility, deleteTask, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, getTaskApplications, requestExitFromTask, getTaskParticipants } from '../api';
 import WebSocketManager from '../utils/WebSocketManager';
 import { WS_BASE_URL } from '../config';
 import api from '../api';
@@ -36,6 +36,10 @@ interface Task {
   status: string;
   created_at: string;
   is_public?: number;
+  is_multi_participant?: boolean;
+  time_slot_start_datetime?: string;
+  time_slot_end_datetime?: string;
+  time_slot_id?: number;
 }
 
 interface Notification {
@@ -95,6 +99,9 @@ const MyTasks: React.FC = () => {
   
   // 已提交取消审核的任务
   const [pendingCancelTasks, setPendingCancelTasks] = useState<Set<number>>(new Set());
+  
+  // 多人任务参与者信息（taskId -> participant）
+  const [taskParticipants, setTaskParticipants] = useState<{[key: number]: any}>({});
   
   // 任务详情弹窗状态
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
@@ -274,6 +281,11 @@ const MyTasks: React.FC = () => {
         task.poster_id === user.id && task.status === 'open'
       ) : [];
       
+      // 获取多人任务的参与者信息
+      const multiParticipantTasks = user ? tasksData.filter((task: any) => 
+        task.is_multi_participant && task.poster_id !== user.id
+      ) : [];
+      
       // 并行加载所有非关键数据
       Promise.all([
         // 并行加载所有已完成任务的评价
@@ -288,17 +300,35 @@ const MyTasks: React.FC = () => {
           } catch (error) {
             return { taskId: task.id, applications: [] };
           }
+        }),
+        // 并行加载多人任务的参与者信息
+        ...multiParticipantTasks.map(async (task: any) => {
+          try {
+            const participantsData = await getTaskParticipants(task.id);
+            const userPart = participantsData.participants?.find((p: any) => p.user_id === user?.id);
+            return { taskId: task.id, participant: userPart || null };
+          } catch (error) {
+            return { taskId: task.id, participant: null };
+          }
         })
       ]).then(results => {
         // 处理申请信息结果
         const applicationsMap: {[key: number]: any[]} = {};
+        const participantsMap: {[key: number]: any} = {};
         results.forEach(result => {
           if (result && 'taskId' in result) {
-            applicationsMap[result.taskId] = result.applications;
+            if ('applications' in result) {
+              applicationsMap[result.taskId] = result.applications;
+            } else if ('participant' in result && result.participant) {
+              participantsMap[result.taskId] = result.participant;
+            }
           }
         });
         if (Object.keys(applicationsMap).length > 0) {
           setTaskApplicationsMap(applicationsMap);
+        }
+        if (Object.keys(participantsMap).length > 0) {
+          setTaskParticipants(prev => ({ ...prev, ...participantsMap }));
         }
       }).catch(() => {
         // 静默处理错误
@@ -386,6 +416,47 @@ const MyTasks: React.FC = () => {
       }, 1000);
     } catch (error: any) {
       message.error(error.response?.data?.detail || t('myTasks.alerts.operationFailed'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 加载多人任务的参与者信息
+  const loadTaskParticipants = async (taskIds: number[]) => {
+    if (!user) return;
+    
+    const participantsMap: {[key: number]: any} = {};
+    for (const taskId of taskIds) {
+      try {
+        const participantsData = await getTaskParticipants(taskId);
+        const userPart = participantsData.participants?.find((p: any) => p.user_id === user.id);
+        if (userPart) {
+          participantsMap[taskId] = userPart;
+        }
+      } catch (error) {
+        console.error(`加载任务 ${taskId} 的参与者信息失败:`, error);
+      }
+    }
+    setTaskParticipants(prev => ({ ...prev, ...participantsMap }));
+  };
+
+  // 申请退出多人任务
+  const handleRequestExit = async (taskId: number) => {
+    const reason = prompt(t('myTasks.cancelReason') || '请输入退出原因（可选）');
+    if (reason === null) return; // 用户取消了输入
+    
+    setActionLoading(taskId);
+    try {
+      const idempotencyKey = `${user?.id}_${taskId}_exit_${Date.now()}`;
+      await requestExitFromTask(taskId, {
+        idempotency_key: idempotencyKey,
+        reason: reason || undefined
+      });
+      message.success('申请退出已提交，等待任务达人审核');
+      await loadTasks();
+    } catch (error: any) {
+      console.error('提交申请退出失败:', error);
+      message.error(error.response?.data?.detail || '提交失败，请重试');
     } finally {
       setActionLoading(null);
     }
@@ -1245,9 +1316,49 @@ const MyTasks: React.FC = () => {
                         </button>
                       )}
 
+                      {/* 多人任务参与者：申请退出按钮 */}
+                      {task.is_multi_participant && taskParticipants[task.id] && 
+                       (taskParticipants[task.id].status === 'accepted' || taskParticipants[task.id].status === 'in_progress') &&
+                       taskParticipants[task.id].status !== 'exit_requested' && (() => {
+                        // 检查时间段是否已开始
+                        let canExit = true;
+                        if ((task as any).time_slot_start_datetime) {
+                          const now = dayjs.utc();
+                          const slotStart = dayjs.utc((task as any).time_slot_start_datetime);
+                          if (now.isAfter(slotStart) || now.isSame(slotStart)) {
+                            canExit = false;
+                          }
+                        }
+                        
+                        return canExit ? (
+                          <button
+                            onClick={() => handleRequestExit(task.id)}
+                            disabled={actionLoading === task.id}
+                            className={`${styles.taskCardButton} ${styles.taskCardButtonCancel} ${actionLoading === task.id ? styles.taskCardButtonDisabled : ''}`}
+                            style={{
+                              background: '#ffc107',
+                              color: '#000'
+                            }}
+                          >
+                            {actionLoading === task.id ? t('myTasks.actions.processing') : '申请退出'}
+                          </button>
+                        ) : (
+                          <div style={{
+                            padding: '8px 12px',
+                            background: '#f3f4f6',
+                            color: '#6b7280',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}>
+                            时间段已开始，无法申请退出
+                          </div>
+                        );
+                      })()}
+
                       {/* 取消按钮：只有 open、taken 或 in_progress 状态的任务可以取消 */}
                       {/* pending_confirmation（待确认）和 completed（已完成）状态的任务不能取消 */}
-                      {(task.status === 'open' || task.status === 'taken' || task.status === 'in_progress') && (
+                      {/* 多人任务的参与者不显示取消按钮，而是显示申请退出按钮 */}
+                      {!task.is_multi_participant && (task.status === 'open' || task.status === 'taken' || task.status === 'in_progress') && (
                         <button
                           onClick={() => !pendingCancelTasks.has(task.id) && handleCancelTask(task.id)}
                           disabled={actionLoading === task.id || pendingCancelTasks.has(task.id)}
