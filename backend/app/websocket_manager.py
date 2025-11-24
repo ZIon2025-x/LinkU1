@@ -52,8 +52,8 @@ class WebSocketConnection:
         """获取连接统计信息"""
         return {
             'user_id': self.user_id,
-            'created_at': self.created_at.isoformat(),
-            'last_activity': self.last_activity.isoformat(),
+            'created_at': format_iso_utc(self.created_at),
+            'last_activity': format_iso_utc(self.last_activity),
             'ping_count': self.ping_count,
             'pong_count': self.pong_count,
             'missing_pongs': self.missing_pongs,

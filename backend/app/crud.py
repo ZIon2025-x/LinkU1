@@ -3633,7 +3633,7 @@ def add_user_to_customer_service_queue(db: Session, user_id: str) -> dict:
         result = {
             "queue_id": existing_queue.id,
             "status": existing_queue.status,
-            "queued_at": existing_queue.queued_at.isoformat() if hasattr(existing_queue.queued_at, 'isoformat') else str(existing_queue.queued_at),
+            "queued_at": format_iso_utc(existing_queue.queued_at) if existing_queue.queued_at else None,
             "wait_seconds": wait_seconds,
             "wait_time_minutes": wait_time_minutes,
             "assigned_service_id": existing_queue.assigned_service_id
@@ -3676,7 +3676,7 @@ def add_user_to_customer_service_queue(db: Session, user_id: str) -> dict:
     return {
         "queue_id": new_queue.id,
         "status": "waiting",
-        "queued_at": new_queue.queued_at.isoformat() if hasattr(new_queue.queued_at, 'isoformat') else str(new_queue.queued_at),
+        "queued_at": format_iso_utc(new_queue.queued_at) if new_queue.queued_at else None,
         "wait_seconds": 0,
         "wait_time_minutes": 0,
         "queue_position": queue_position,
@@ -3788,11 +3788,11 @@ def get_user_queue_status(db: Session, user_id: str) -> dict:
     result = {
         "queue_id": queue_entry.id,
         "status": queue_entry.status,
-        "queued_at": queue_entry.queued_at.isoformat() if hasattr(queue_entry.queued_at, 'isoformat') else str(queue_entry.queued_at),
+        "queued_at": format_iso_utc(queue_entry.queued_at) if queue_entry.queued_at else None,
         "wait_seconds": wait_seconds,
         "wait_time_minutes": wait_time_minutes,
         "assigned_service_id": queue_entry.assigned_service_id,
-        "assigned_at": queue_entry.assigned_at.isoformat() if queue_entry.assigned_at and hasattr(queue_entry.assigned_at, 'isoformat') else (str(queue_entry.assigned_at) if queue_entry.assigned_at else None)
+        "assigned_at": format_iso_utc(queue_entry.assigned_at) if queue_entry.assigned_at else None
     }
     
     if queue_position is not None:

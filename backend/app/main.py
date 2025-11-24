@@ -622,112 +622,47 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"初始化 Prometheus 指标失败: {e}")
     
-    # 启动定时任务 - 优先使用 Celery，如果不可用则回退到 TaskScheduler
+    # 启动定时任务调度器
     import threading
     import time
     
-    # 尝试使用 Celery（如果可用且配置正确）
-    use_celery = False
     try:
-        from app.celery_app import celery_app, USE_REDIS, REDIS_URL
-        import os
-        
-        # 检查 Celery 是否可用
-        if USE_REDIS and REDIS_URL:
-            # 尝试连接 Redis（Celery broker）
-            try:
-                try:
-                    import redis
-                except ImportError:
-                    logger.warning("⚠️  redis 模块未安装，将回退到 TaskScheduler")
-                    use_celery = False
-                else:
-                    redis_client = redis.from_url(REDIS_URL)
-                    redis_client.ping()
-                    # Redis 连接成功，检查 Worker 是否在线
-                    # 增加超时时间，因为 Worker 可能启动得比较慢
-                    try:
-                        inspect = celery_app.control.inspect(timeout=5.0)  # 5秒超时，给 Worker 更多时间启动
-                        active_workers = inspect.active()
-                        if active_workers:
-                            use_celery = True
-                            logger.info(f"✅ Redis 连接成功，Celery Worker 在线 ({len(active_workers)} workers)，将使用 Celery 执行定时任务")
-                            logger.info("⚠️  注意：需要单独启动 Celery Beat 来调度定时任务")
-                            logger.info("   启动命令：")
-                            logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
-                        else:
-                            use_celery = False
-                            logger.warning("⚠️  Redis 连接成功，但 Celery Worker 未在线，将回退到 TaskScheduler")
-                            logger.info("   可能的原因：")
-                            logger.info("   1. Celery Worker 服务未启动")
-                            logger.info("   2. Worker 启动时间较慢（请等待几秒后重试）")
-                            logger.info("   3. Worker 和主服务使用不同的 Redis 配置")
-                            logger.info("   如需使用 Celery，请启动 Worker：")
-                            logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
-                            logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
-                    except Exception as inspect_error:
-                        # Worker 检查失败，回退到 TaskScheduler
-                        use_celery = False
-                        logger.warning(f"⚠️  Redis 连接成功，但无法检查 Celery Worker 状态，将回退到 TaskScheduler: {inspect_error}")
-                        logger.info("   可能的原因：")
-                        logger.info("   1. Worker 未启动或启动时间较慢")
-                        logger.info("   2. Worker 和主服务使用不同的 Redis URL")
-                        logger.info("   3. 网络连接问题")
-                        logger.info("   如需使用 Celery，请启动 Worker：")
-                        logger.info("   - Celery Worker: celery -A app.celery_app worker --loglevel=info")
-                        logger.info("   - Celery Beat: celery -A app.celery_app beat --loglevel=info")
-            except Exception as redis_error:
-                logger.warning(f"⚠️  Redis 连接失败，将回退到 TaskScheduler: {redis_error}")
-                use_celery = False
-        else:
-            logger.info("ℹ️  Redis 未配置，将使用 TaskScheduler（内存模式）")
-            use_celery = False
-    except ImportError as import_error:
-        logger.warning(f"⚠️  Celery 未安装，将使用 TaskScheduler: {import_error}")
-        use_celery = False
+        from app.task_scheduler import init_scheduler
+        scheduler = init_scheduler()
+        scheduler.start()
+        logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动")
     except Exception as e:
-        logger.warning(f"⚠️  Celery 配置检查失败，将使用 TaskScheduler: {e}")
-        use_celery = False
-    
-    # 如果 Celery 不可用，使用 TaskScheduler 作为回退方案
-    if not use_celery:
-        try:
-            from app.task_scheduler import init_scheduler
-            scheduler = init_scheduler()
-            scheduler.start()
-            logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动")
-        except Exception as e:
-            logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
-            # 回退到旧的调度方式
-            from app.scheduled_tasks import run_scheduled_tasks
+        logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
+        # 回退到旧的调度方式
+        from app.scheduled_tasks import run_scheduled_tasks
+        
+        def run_tasks_periodically():
+            """每5分钟执行一次定时任务（回退方案）"""
+            global _shutdown_flag
+            from app.state import is_app_shutting_down
             
-            def run_tasks_periodically():
-                """每5分钟执行一次定时任务（回退方案）"""
-                global _shutdown_flag
-                from app.state import is_app_shutting_down
+            while not _shutdown_flag and not is_app_shutting_down():
+                try:
+                    run_scheduled_tasks()
+                except Exception as e:
+                    error_str = str(e)
+                    if is_app_shutting_down() and (
+                        "Event loop is closed" in error_str or 
+                        "loop is closed" in error_str or
+                        "attached to a different loop" in error_str
+                    ):
+                        logger.debug(f"定时任务在关闭时跳过: {e}")
+                        break
+                    logger.error(f"定时任务执行失败: {e}", exc_info=True)
                 
-                while not _shutdown_flag and not is_app_shutting_down():
-                    try:
-                        run_scheduled_tasks()
-                    except Exception as e:
-                        error_str = str(e)
-                        if is_app_shutting_down() and (
-                            "Event loop is closed" in error_str or 
-                            "loop is closed" in error_str or
-                            "attached to a different loop" in error_str
-                        ):
-                            logger.debug(f"定时任务在关闭时跳过: {e}")
-                            break
-                        logger.error(f"定时任务执行失败: {e}", exc_info=True)
-                    
-                    for _ in range(300):  # 5分钟 = 300秒
-                        if _shutdown_flag or is_app_shutting_down():
-                            break
-                        time.sleep(1)
-            
-            scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
-            scheduler_thread.start()
-            logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
+                for _ in range(300):  # 5分钟 = 300秒
+                    if _shutdown_flag or is_app_shutting_down():
+                        break
+                    time.sleep(1)
+        
+        scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
+        scheduler_thread.start()
+        logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
     logger.info("应用启动中...")
     
     # ⚠️ 环境变量验证 - 高优先级修复
@@ -1522,34 +1457,6 @@ async def health_check():
     except Exception as e:
         health_status["checks"]["disk"] = f"error: {str(e)}"
         logger.error(f"❌ 磁盘检查失败: {e}")
-    
-    # 检查 Celery Worker 状态（如果使用 Celery）
-    celery_healthy = None
-    try:
-        from app.celery_app import celery_app, USE_REDIS
-        if USE_REDIS:
-            # 尝试检查 Celery Worker 是否在线（设置超时避免阻塞）
-            try:
-                inspect = celery_app.control.inspect(timeout=5.0)  # 5秒超时，给 Worker 更多时间响应
-                active_workers = inspect.active()
-                if active_workers:
-                    health_status["checks"]["celery_worker"] = f"ok ({len(active_workers)} workers)"
-                    celery_healthy = True
-                else:
-                    health_status["checks"]["celery_worker"] = "no active workers"
-                    celery_healthy = False
-                    # Celery Worker 不在线不影响整体健康状态（因为可能使用 TaskScheduler）
-                    logger.warning("⚠️  Celery Worker 未在线（如果使用 Celery，请启动 Worker）")
-            except Exception as inspect_error:
-                # 超时或其他错误
-                health_status["checks"]["celery_worker"] = f"check timeout/failed: {str(inspect_error)}"
-                celery_healthy = False
-                logger.debug(f"Celery Worker 状态检查超时或失败: {inspect_error}")
-        else:
-            health_status["checks"]["celery_worker"] = "not configured (using TaskScheduler)"
-    except Exception as e:
-        health_status["checks"]["celery_worker"] = f"check failed: {str(e)}"
-        logger.debug(f"Celery Worker 状态检查失败: {e}")
     
     # 更新整体健康状态
     try:

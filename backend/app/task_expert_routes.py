@@ -1449,7 +1449,9 @@ async def auto_add_time_slots_to_activities(
                         activity_id=relation.activity_id,
                         time_slot_id=slot.id,
                         relation_mode="fixed",
-                        auto_add_new_slots=False
+                        auto_add_new_slots=False,
+                        slot_start_datetime=slot.slot_start_datetime,  # 冗余存储时间段信息
+                        slot_end_datetime=slot.slot_end_datetime,  # 冗余存储时间段信息
                     )
                     db.add(fixed_relation)
                     added_count += 1
@@ -1522,7 +1524,9 @@ async def auto_add_time_slots_to_activities(
                         activity_id=relation.activity_id,
                         time_slot_id=slot.id,
                         relation_mode="fixed",
-                        auto_add_new_slots=False
+                        auto_add_new_slots=False,
+                        slot_start_datetime=slot.slot_start_datetime,  # 冗余存储时间段信息
+                        slot_end_datetime=slot.slot_end_datetime,  # 冗余存储时间段信息
                     )
                     db.add(fixed_relation)
                     added_count += 1
@@ -2790,8 +2794,8 @@ async def get_expert_schedule(
             "id": slot.id,
             "service_id": service_id,
             "service_name": service_name,
-            "slot_start_datetime": slot.slot_start_datetime.isoformat(),
-            "slot_end_datetime": slot.slot_end_datetime.isoformat(),
+            "slot_start_datetime": format_iso_utc(slot.slot_start_datetime),
+            "slot_end_datetime": format_iso_utc(slot.slot_end_datetime),
             "date": slot_start_local.strftime("%Y-%m-%d"),
             "start_time": slot_start_local.strftime("%H:%M"),
             "end_time": slot_end_local.strftime("%H:%M"),
@@ -2851,7 +2855,7 @@ async def get_expert_schedule(
                 "date": deadline_local.strftime("%Y-%m-%d"),
                 "start_time": None,
                 "end_time": None,
-                "deadline": deadline_local.isoformat(),
+                "deadline": format_iso_utc(task.deadline) if task.deadline else None,
                 "current_participants": actual_participants,  # 使用实时计算的值
                 "max_participants": task.max_participants,
                 "task_status": task.status,

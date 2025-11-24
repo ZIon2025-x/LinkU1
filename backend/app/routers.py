@@ -2258,7 +2258,7 @@ def admin_set_user_status(
     
     if suspend_until:
         from app.utils.time_utils import parse_iso_utc
-        old_values['suspend_until'] = user.suspend_until.isoformat() if user.suspend_until else None
+        old_values['suspend_until'] = format_iso_utc(user.suspend_until) if user.suspend_until else None
         new_values['suspend_until'] = suspend_until
         user.suspend_until = parse_iso_utc(suspend_until)
     
@@ -3370,7 +3370,7 @@ def assign_customer_service(
                         "user_id": existing_chat.user_id,
                         "service_id": existing_chat.service_id,
                         "is_ended": existing_chat.is_ended,
-                        "created_at": existing_chat.created_at.isoformat() if existing_chat.created_at else None,
+                        "created_at": format_iso_utc(existing_chat.created_at) if existing_chat.created_at else None,
                         "total_messages": existing_chat.total_messages or 0,
                     },
                 }

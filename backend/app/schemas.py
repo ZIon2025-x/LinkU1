@@ -436,39 +436,75 @@ class TaskOut(TaskBase):
         
         # 如果任务有关联的时间段，获取时间段信息
         # 优先检查任务直接关联的时间段（TaskTimeSlotRelation）
+        # task_time_slot_relations 表现在直接存储时间段信息（slot_start_datetime, slot_end_datetime）
+        # 优先使用关联表中的时间段字段，避免关联查询 service_time_slots 表
         if hasattr(obj, 'time_slot_relations') and obj.time_slot_relations:
-            # 查找固定模式的时间段关联
+            # 查找固定模式的时间段关联（只需要有 time_slot_id 即可）
             fixed_relation = next(
                 (rel for rel in obj.time_slot_relations 
-                 if rel.relation_mode == 'fixed' and rel.time_slot_id and rel.time_slot),
+                 if rel.relation_mode == 'fixed' and rel.time_slot_id),
                 None
             )
-            if fixed_relation and fixed_relation.time_slot:
-                time_slot = fixed_relation.time_slot
-                data["time_slot_id"] = time_slot.id
-                if time_slot.slot_start_datetime:
+            if fixed_relation:
+                # 优先使用关联表中直接存储的时间段字段（如果存在）
+                if hasattr(fixed_relation, 'slot_start_datetime') and fixed_relation.slot_start_datetime:
                     from app.utils.time_utils import format_iso_utc
-                    data["time_slot_start_datetime"] = format_iso_utc(time_slot.slot_start_datetime)
-                if time_slot.slot_end_datetime:
-                    data["time_slot_end_datetime"] = format_iso_utc(time_slot.slot_end_datetime)
+                    data["time_slot_id"] = fixed_relation.time_slot_id
+                    data["time_slot_start_datetime"] = format_iso_utc(fixed_relation.slot_start_datetime)
+                    if hasattr(fixed_relation, 'slot_end_datetime') and fixed_relation.slot_end_datetime:
+                        data["time_slot_end_datetime"] = format_iso_utc(fixed_relation.slot_end_datetime)
+                else:
+                    # 如果关联表中没有时间段字段，回退到从 service_time_slots 表查询
+                    # 通过 selectinload 加载的 time_slot 对象（ServiceTimeSlot）
+                    time_slot = getattr(fixed_relation, 'time_slot', None)
+                    
+                    if time_slot:
+                        # 从 service_time_slots 表获取的时间段信息
+                        data["time_slot_id"] = time_slot.id
+                        if time_slot.slot_start_datetime:
+                            from app.utils.time_utils import format_iso_utc
+                            data["time_slot_start_datetime"] = format_iso_utc(time_slot.slot_start_datetime)
+                        if time_slot.slot_end_datetime:
+                            data["time_slot_end_datetime"] = format_iso_utc(time_slot.slot_end_datetime)
+                    elif fixed_relation.time_slot_id:
+                        # 如果 time_slot 对象未加载，至少保存 time_slot_id
+                        data["time_slot_id"] = fixed_relation.time_slot_id
         # 如果是多人任务且没有直接关联的时间段，检查父活动的时间段关联（ActivityTimeSlotRelation）
+        # activity_time_slot_relations 表现在直接存储时间段信息（slot_start_datetime, slot_end_datetime）
+        # 优先使用关联表中的时间段字段，避免关联查询 service_time_slots 表
         elif hasattr(obj, 'parent_activity_id') and obj.parent_activity_id and hasattr(obj, 'parent_activity') and obj.parent_activity:
             activity = obj.parent_activity
             if hasattr(activity, 'time_slot_relations') and activity.time_slot_relations:
-                # 查找固定模式的时间段关联
+                # 查找固定模式的时间段关联（只需要有 time_slot_id 即可）
                 fixed_relation = next(
                     (rel for rel in activity.time_slot_relations 
-                     if rel.relation_mode == 'fixed' and rel.time_slot_id and rel.time_slot),
+                     if rel.relation_mode == 'fixed' and rel.time_slot_id),
                     None
                 )
-                if fixed_relation and fixed_relation.time_slot:
-                    time_slot = fixed_relation.time_slot
-                    data["time_slot_id"] = time_slot.id
-                    if time_slot.slot_start_datetime:
+                if fixed_relation:
+                    # 优先使用关联表中直接存储的时间段字段（如果存在）
+                    if hasattr(fixed_relation, 'slot_start_datetime') and fixed_relation.slot_start_datetime:
                         from app.utils.time_utils import format_iso_utc
-                        data["time_slot_start_datetime"] = format_iso_utc(time_slot.slot_start_datetime)
-                    if time_slot.slot_end_datetime:
-                        data["time_slot_end_datetime"] = format_iso_utc(time_slot.slot_end_datetime)
+                        data["time_slot_id"] = fixed_relation.time_slot_id
+                        data["time_slot_start_datetime"] = format_iso_utc(fixed_relation.slot_start_datetime)
+                        if hasattr(fixed_relation, 'slot_end_datetime') and fixed_relation.slot_end_datetime:
+                            data["time_slot_end_datetime"] = format_iso_utc(fixed_relation.slot_end_datetime)
+                    else:
+                        # 如果关联表中没有时间段字段，回退到从 service_time_slots 表查询
+                        # 通过 selectinload 加载的 time_slot 对象（ServiceTimeSlot）
+                        time_slot = getattr(fixed_relation, 'time_slot', None)
+                        
+                        if time_slot:
+                            # 从 service_time_slots 表获取的时间段信息
+                            data["time_slot_id"] = time_slot.id
+                            if time_slot.slot_start_datetime:
+                                from app.utils.time_utils import format_iso_utc
+                                data["time_slot_start_datetime"] = format_iso_utc(time_slot.slot_start_datetime)
+                            if time_slot.slot_end_datetime:
+                                data["time_slot_end_datetime"] = format_iso_utc(time_slot.slot_end_datetime)
+                        elif fixed_relation.time_slot_id:
+                            # 如果 time_slot 对象未加载，至少保存 time_slot_id
+                            data["time_slot_id"] = fixed_relation.time_slot_id
         return cls(**data)
 
     class Config:

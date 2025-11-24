@@ -1741,6 +1741,9 @@ class TaskTimeSlotRelation(Base):
     auto_add_new_slots = Column(Boolean, default=True, nullable=False)
     # 活动截至日期（可选，如果设置则在此时活动自动结束）
     activity_end_date = Column(Date, nullable=True)
+    # 时间段信息（冗余字段，避免关联查询 service_time_slots 表）
+    slot_start_datetime = Column(DateTime(timezone=True), nullable=True)  # 时间段开始时间（UTC）
+    slot_end_datetime = Column(DateTime(timezone=True), nullable=True)  # 时间段结束时间（UTC）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
@@ -1852,6 +1855,9 @@ class ActivityTimeSlotRelation(Base):
     auto_add_new_slots = Column(Boolean, default=True, nullable=False)
     # 活动截至日期（可选，如果设置则在此时活动自动结束）
     activity_end_date = Column(Date, nullable=True)
+    # 时间段信息（冗余字段，避免关联查询 service_time_slots 表）
+    slot_start_datetime = Column(DateTime(timezone=True), nullable=True)  # 时间段开始时间（UTC）
+    slot_end_datetime = Column(DateTime(timezone=True), nullable=True)  # 时间段结束时间（UTC）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     

@@ -521,6 +521,8 @@ def apply_to_activity(
             time_slot_id=request.time_slot_id,
             relation_mode="fixed",
             auto_add_new_slots=False,
+            slot_start_datetime=time_slot.slot_start_datetime,  # 冗余存储时间段信息
+            slot_end_datetime=time_slot.slot_end_datetime,  # 冗余存储时间段信息
         )
         db.add(task_time_slot_relation)
     
@@ -1256,7 +1258,9 @@ def create_expert_activity(
                     time_slot_id=slot_id,
                     relation_mode="fixed",
                     auto_add_new_slots=False,
-                    activity_end_date=activity.activity_end_date
+                    activity_end_date=activity.activity_end_date,
+                    slot_start_datetime=slot.slot_start_datetime,  # 冗余存储时间段信息
+                    slot_end_datetime=slot.slot_end_datetime,  # 冗余存储时间段信息
                 )
                 db.add(relation)
         
@@ -1344,7 +1348,9 @@ def create_expert_activity(
                             activity_id=db_activity.id,
                             time_slot_id=slot.id,
                             relation_mode="fixed",
-                            auto_add_new_slots=False
+                            auto_add_new_slots=False,
+                            slot_start_datetime=slot.slot_start_datetime,  # 冗余存储时间段信息
+                            slot_end_datetime=slot.slot_end_datetime,  # 冗余存储时间段信息
                         )
                         db.add(fixed_relation)
         
@@ -1444,7 +1450,9 @@ def create_expert_activity(
                             activity_id=db_activity.id,
                             time_slot_id=slot.id,
                             relation_mode="fixed",
-                            auto_add_new_slots=False
+                            auto_add_new_slots=False,
+                            slot_start_datetime=slot.slot_start_datetime,  # 冗余存储时间段信息
+                            slot_end_datetime=slot.slot_end_datetime,  # 冗余存储时间段信息
                         )
                         db.add(fixed_relation)
     

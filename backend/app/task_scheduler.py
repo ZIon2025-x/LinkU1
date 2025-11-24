@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Callable, Optional
 from app.state import is_app_shutting_down
-from app.utils.time_utils import get_utc_time
+from app.utils.time_utils import get_utc_time, format_iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ class TaskScheduler:
                 name: {
                     'description': task['description'],
                     'interval': task['interval'],
-                    'last_run': task['last_run'].isoformat() if task['last_run'] else None,
+                    'last_run': format_iso_utc(task['last_run']) if task['last_run'] else None,
                     'run_count': task['run_count'],
                     'error_count': task['error_count']
                 }
