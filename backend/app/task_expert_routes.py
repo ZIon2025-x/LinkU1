@@ -1251,9 +1251,13 @@ async def batch_create_service_time_slots(
     for slot in created_slots:
         await db.refresh(slot)
     
-    # 自动添加匹配的时间段到活动中
+    # 自动添加匹配的时间段到活动中（使用错误处理，避免影响时间段创建的成功）
     if created_slots:
-        await auto_add_time_slots_to_activities(db, service_id, created_slots)
+        try:
+            await auto_add_time_slots_to_activities(db, service_id, created_slots)
+        except Exception as e:
+            # 记录错误但不影响时间段创建的成功
+            logger.error(f"自动添加时间段到活动时出错: {e}", exc_info=True)
     
     return {
         "message": f"成功创建 {len(created_slots)} 个时间段",
@@ -1345,20 +1349,12 @@ async def auto_add_time_slots_to_activities(
                 slot_end_utc = slot.slot_end_datetime
                 
                 # 转换为英国时间
-                from app.utils.time_utils import format_utc_to_local
-                slot_start_local_str = format_utc_to_local(
-                    slot_start_utc.isoformat(),
-                    'HH:mm',
-                    'Europe/London'
-                )
-                slot_end_local_str = format_utc_to_local(
-                    slot_end_utc.isoformat(),
-                    'HH:mm',
-                    'Europe/London'
-                )
+                from app.utils.time_utils import to_user_timezone
+                slot_start_local = to_user_timezone(slot_start_utc, LONDON)
+                slot_end_local = to_user_timezone(slot_end_utc, LONDON)
                 
-                slot_start_time = dt_time.fromisoformat(slot_start_local_str)
-                slot_end_time = dt_time.fromisoformat(slot_end_local_str)
+                slot_start_time = slot_start_local.time()
+                slot_end_time = slot_end_local.time()
                 
                 # 检查是否匹配任何一个时间范围
                 matched = False
@@ -1426,20 +1422,12 @@ async def auto_add_time_slots_to_activities(
                     continue
                 
                 # 获取时间段的时间（英国时间）
-                from app.utils.time_utils import format_utc_to_local
-                slot_start_local_str = format_utc_to_local(
-                    slot_start_utc.isoformat(),
-                    'HH:mm',
-                    'Europe/London'
-                )
-                slot_end_local_str = format_utc_to_local(
-                    slot.slot_end_datetime.isoformat(),
-                    'HH:mm',
-                    'Europe/London'
-                )
+                from app.utils.time_utils import to_user_timezone
+                slot_start_local = to_user_timezone(slot_start_utc, LONDON)
+                slot_end_local = to_user_timezone(slot.slot_end_datetime, LONDON)
                 
-                slot_start_time = dt_time.fromisoformat(slot_start_local_str)
-                slot_end_time = dt_time.fromisoformat(slot_end_local_str)
+                slot_start_time = slot_start_local.time()
+                slot_end_time = slot_end_local.time()
                 
                 # 检查时间范围是否匹配
                 matched = False

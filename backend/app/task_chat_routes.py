@@ -75,12 +75,49 @@ async def get_task_chat_list(
     返回当前用户作为发布者或接受者的所有任务，包含未读计数和最后消息
     """
     try:
-        # 查询用户相关的任务（作为发布者或接受者）
-        tasks_query = select(models.Task).where(
+        # 查询用户相关的任务（作为发布者、接受者或多人任务参与者）
+        # 获取所有相关的任务ID
+        task_ids_set = set()
+        
+        # 1. 作为发布者或接受者的任务
+        tasks_query_1 = select(models.Task.id).where(
             or_(
                 models.Task.poster_id == current_user.id,
-                models.Task.taker_id == current_user.id
+                models.Task.taker_id == current_user.id,
+                # 多人任务：作为任务达人创建者
+                and_(
+                    models.Task.is_multi_participant == True,
+                    models.Task.created_by_expert == True,
+                    models.Task.expert_creator_id == current_user.id
+                )
             )
+        )
+        result_1 = await db.execute(tasks_query_1)
+        task_ids_set.update([row[0] for row in result_1.all()])
+        
+        # 2. 作为多人任务参与者的任务
+        participant_tasks_query = select(models.Task.id).join(
+            models.TaskParticipant,
+            models.Task.id == models.TaskParticipant.task_id
+        ).where(
+            and_(
+                models.TaskParticipant.user_id == current_user.id,
+                models.TaskParticipant.status.in_(["accepted", "in_progress"]),
+                models.Task.is_multi_participant == True
+            )
+        )
+        result_2 = await db.execute(participant_tasks_query)
+        task_ids_set.update([row[0] for row in result_2.all()])
+        
+        if not task_ids_set:
+            return {
+                "tasks": [],
+                "total": 0
+            }
+        
+        # 查询所有相关任务
+        tasks_query = select(models.Task).where(
+            models.Task.id.in_(list(task_ids_set))
         ).order_by(models.Task.created_at.desc())
         
         # 分页
@@ -88,15 +125,8 @@ async def get_task_chat_list(
         result = await db.execute(tasks_query)
         tasks = result.scalars().all()
         
-        # 查询总数
-        count_query = select(func.count(models.Task.id)).where(
-            or_(
-                models.Task.poster_id == current_user.id,
-                models.Task.taker_id == current_user.id
-            )
-        )
-        total_result = await db.execute(count_query)
-        total = total_result.scalar()
+        # 总数就是去重后的任务ID数量
+        total = len(task_ids_set)
         
         # 批量获取任务ID列表
         task_ids = [task.id for task in tasks]
@@ -275,7 +305,29 @@ async def get_task_messages(
             )
         
         # 权限检查：必须是任务的参与者
-        if task.poster_id != current_user.id and task.taker_id != current_user.id:
+        # 对于多人任务，需要检查 TaskParticipant
+        is_poster = task.poster_id == current_user.id
+        is_taker = task.taker_id == current_user.id
+        is_participant = False
+        
+        # 如果是多人任务，检查是否是参与者
+        if task.is_multi_participant:
+            # 检查是否是任务达人（创建者）
+            if task.created_by_expert and task.expert_creator_id == current_user.id:
+                is_participant = True
+            else:
+                # 检查是否是TaskParticipant
+                participant_query = select(models.TaskParticipant).where(
+                    and_(
+                        models.TaskParticipant.task_id == task_id,
+                        models.TaskParticipant.user_id == current_user.id,
+                        models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                    )
+                )
+                participant_result = await db.execute(participant_query)
+                is_participant = participant_result.scalar_one_or_none() is not None
+        
+        if not is_poster and not is_taker and not is_participant:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="无权限查看该任务的消息"
@@ -665,10 +717,29 @@ async def send_task_message(
             )
         
         # 权限检查：必须是任务的参与者
+        # 对于多人任务，需要检查 TaskParticipant
         is_poster = task.poster_id == current_user.id
         is_taker = task.taker_id == current_user.id
+        is_participant = False
         
-        if not is_poster and not is_taker:
+        # 如果是多人任务，检查是否是参与者
+        if task.is_multi_participant:
+            participant_query = select(models.TaskParticipant).where(
+                and_(
+                    models.TaskParticipant.task_id == task_id,
+                    models.TaskParticipant.user_id == current_user.id,
+                    models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                )
+            )
+            participant_result = await db.execute(participant_query)
+            is_participant = participant_result.scalar_one_or_none() is not None
+        
+        # 对于多人任务，还需要检查是否是任务达人（创建者）
+        is_expert_creator = False
+        if task.is_multi_participant and task.created_by_expert:
+            is_expert_creator = task.expert_creator_id == current_user.id
+        
+        if not is_poster and not is_taker and not is_participant and not is_expert_creator:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="无权限发送消息"
@@ -797,6 +868,72 @@ async def send_task_message(
         await db.commit()
         await db.refresh(new_message)
         
+        # 通过WebSocket广播消息给所有参与者
+        try:
+            from app.main import active_connections
+            
+            # 获取所有参与者ID
+            participant_ids = set()
+            
+            # 添加发布者（对于单人任务，这是发布者；对于多人任务，这是申请活动的用户）
+            if task.poster_id:
+                participant_ids.add(task.poster_id)
+            
+            # 添加接受者（如果是单人任务）
+            if task.taker_id:
+                participant_ids.add(task.taker_id)
+            
+            # 如果是多人任务，添加所有参与者
+            if task.is_multi_participant:
+                # 添加任务达人（创建者）
+                if task.expert_creator_id:
+                    participant_ids.add(task.expert_creator_id)
+                
+                # 添加所有TaskParticipant（包括申请活动的用户和其他参与者）
+                participants_query = select(models.TaskParticipant).where(
+                    and_(
+                        models.TaskParticipant.task_id == task_id,
+                        models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                    )
+                )
+                participants_result = await db.execute(participants_query)
+                participants = participants_result.scalars().all()
+                for participant in participants:
+                    if participant.user_id:
+                        participant_ids.add(participant.user_id)
+            
+            # 构建消息响应
+            message_response = {
+                "type": "task_message",
+                "message": {
+                    "id": new_message.id,
+                    "sender_id": new_message.sender_id,
+                    "sender_name": current_user.name,
+                    "sender_avatar": getattr(current_user, 'avatar', None),
+                    "content": new_message.content,
+                    "task_id": new_message.task_id,
+                    "message_type": new_message.message_type,
+                    "created_at": format_iso_utc(new_message.created_at) if new_message.created_at else None,
+                    "attachments": attachments_data
+                }
+            }
+            
+            # 向所有参与者（除了发送者）广播消息
+            for participant_id in participant_ids:
+                if participant_id != current_user.id:
+                    participant_ws = active_connections.get(participant_id)
+                    if participant_ws:
+                        try:
+                            await participant_ws.send_text(json.dumps(message_response))
+                            logger.debug(f"Task message broadcasted to participant {participant_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to broadcast message to participant {participant_id}: {e}")
+                            # 如果连接失败，从活跃连接中移除
+                            active_connections.pop(participant_id, None)
+        except Exception as e:
+            # WebSocket广播失败不应该影响消息发送
+            logger.error(f"Failed to broadcast task message via WebSocket: {e}", exc_info=True)
+        
         return {
             "id": new_message.id,
             "sender_id": new_message.sender_id,
@@ -841,7 +978,29 @@ async def mark_messages_read(
             )
         
         # 权限检查：必须是任务的参与者
-        if task.poster_id != current_user.id and task.taker_id != current_user.id:
+        # 对于多人任务，需要检查 TaskParticipant
+        is_poster = task.poster_id == current_user.id
+        is_taker = task.taker_id == current_user.id
+        is_participant = False
+        
+        # 如果是多人任务，检查是否是参与者
+        if task.is_multi_participant:
+            # 检查是否是任务达人（创建者）
+            if task.created_by_expert and task.expert_creator_id == current_user.id:
+                is_participant = True
+            else:
+                # 检查是否是TaskParticipant
+                participant_query = select(models.TaskParticipant).where(
+                    and_(
+                        models.TaskParticipant.task_id == task_id,
+                        models.TaskParticipant.user_id == current_user.id,
+                        models.TaskParticipant.status.in_(["accepted", "in_progress"])
+                    )
+                )
+                participant_result = await db.execute(participant_query)
+                is_participant = participant_result.scalar_one_or_none() is not None
+        
+        if not is_poster and not is_taker and not is_participant:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="无权限标记该任务的消息"
