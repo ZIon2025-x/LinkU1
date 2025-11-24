@@ -1904,7 +1904,7 @@ def expert_approve_exit(
     db.commit()
     
     # 通过WebSocket通知其他用户时间段可用性变化
-    # 注意：由于这是同步函数，WebSocket通知在异步上下文中执行
+    # 使用 BackgroundTasks 在后台执行异步操作
     if time_slot_id_to_update:
         # 获取时间段信息
         updated_time_slot = db.query(ServiceTimeSlot).filter(
@@ -1912,9 +1912,7 @@ def expert_approve_exit(
         ).first()
         
         if updated_time_slot:
-            import json
             import logging
-            import asyncio
             logger = logging.getLogger(__name__)
             
             # 构建通知消息
@@ -1928,35 +1926,21 @@ def expert_approve_exit(
                 "message": "时间段可用性已更新"
             }
             
-            # 异步发送WebSocket通知
+            # 使用 BackgroundTasks 执行异步 WebSocket 广播
             async def broadcast_notification():
                 try:
-                    from app.main import active_connections
-                    notification_json = json.dumps(notification)
-                    for user_id, websocket in list(active_connections.items()):
-                        if user_id != str(current_user.id):  # 不通知操作者本人
-                            try:
-                                await websocket.send_text(notification_json)
-                            except Exception as e:
-                                logger.error(f"Failed to notify user {user_id} about time slot availability: {e}")
-                                active_connections.pop(user_id, None)
+                    from app.websocket_manager import get_ws_manager
+                    ws_manager = get_ws_manager()
+                    # 使用 WebSocketManager 的 broadcast 方法，排除操作者本人
+                    await ws_manager.broadcast(
+                        notification,
+                        exclude_users={str(current_user.id)}
+                    )
                 except Exception as e:
                     logger.error(f"Failed to broadcast time slot availability via WebSocket: {e}", exc_info=True)
             
-            # 尝试在后台执行异步任务
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # 如果事件循环正在运行，创建任务
-                    asyncio.create_task(broadcast_notification())
-                else:
-                    # 如果事件循环未运行，运行它
-                    loop.run_until_complete(broadcast_notification())
-            except RuntimeError:
-                # 如果没有事件循环，创建一个新的
-                asyncio.run(broadcast_notification())
-            except Exception as e:
-                logger.error(f"Failed to schedule WebSocket notification: {e}", exc_info=True)
+            # 使用 BackgroundTasks 添加异步任务
+            background_tasks.add_task(broadcast_notification)
     
     return {"message": "Exit approved successfully", "status": "exited"}
 
