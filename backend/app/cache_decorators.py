@@ -177,30 +177,24 @@ def cache_task_detail_async(ttl: int = 300):
                 
                 settings = get_settings()
                 redis_url = settings.REDIS_URL or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-                
-                redis_client = aioredis.from_url(
-                    redis_url,
-                    decode_responses=False
-                )
             except Exception as e:
-                logger.warning(f"创建异步 Redis 客户端失败: {e}")
-                redis_client = None
+                logger.warning(f"获取 Redis 配置失败: {e}")
+                redis_url = None
             
             cache_key = f"task:{CACHE_VERSION}:detail:{task_id}"
             
-            if redis_client:
+            if redis_url:
                 try:
-                    # 异步获取缓存
-                    cached = await redis_client.get(cache_key)
-                    if cached:
-                        cached_dict = orjson.loads(cached)
-                        from app import schemas
-                        return schemas.TaskOut(**cached_dict)
+                    # 使用上下文管理器确保连接正确关闭
+                    async with aioredis.from_url(redis_url, decode_responses=False) as redis_client:
+                        # 异步获取缓存
+                        cached = await redis_client.get(cache_key)
+                        if cached:
+                            cached_dict = orjson.loads(cached)
+                            from app import schemas
+                            return schemas.TaskOut(**cached_dict)
                 except Exception as e:
                     logger.warning(f"缓存反序列化失败: {e}")
-                finally:
-                    if redis_client:
-                        await redis_client.aclose()
             
             # 异步查询
             result = await func(*args, **kwargs)
@@ -271,15 +265,14 @@ def cache_task_detail_async(ttl: int = 300):
                             else:
                                 cache_data = result
                     
-                    # 重新创建客户端用于写入
-                    redis_client = aioredis.from_url(redis_url, decode_responses=False)
-                    # 异步写入缓存
-                    await redis_client.setex(
-                        cache_key,
-                        ttl,
-                        orjson.dumps(cache_data)
-                    )
-                    await redis_client.aclose()
+                    # 使用上下文管理器重新创建客户端用于写入
+                    async with aioredis.from_url(redis_url, decode_responses=False) as redis_client:
+                        # 异步写入缓存
+                        await redis_client.setex(
+                            cache_key,
+                            ttl,
+                            orjson.dumps(cache_data)
+                        )
                 except Exception as e:
                     logger.warning(f"缓存写入失败: {e}")
             

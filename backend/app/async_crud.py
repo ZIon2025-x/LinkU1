@@ -482,12 +482,11 @@ class AsyncTaskCRUD:
             
             # 尝试从缓存获取总数
             try:
-                # 使用异步Redis客户端
+                # 使用异步Redis客户端（使用上下文管理器确保正确关闭）
                 import redis.asyncio as aioredis
                 redis_url = Config.REDIS_URL or f"redis://{Config.REDIS_HOST}:{Config.REDIS_PORT}/{Config.REDIS_DB}"
-                async_redis = aioredis.from_url(redis_url, decode_responses=True)
                 
-                try:
+                async with aioredis.from_url(redis_url, decode_responses=True) as async_redis:
                     cached_total = await async_redis.get(cache_key)
                     if cached_total is not None:
                         try:
@@ -501,8 +500,6 @@ class AsyncTaskCRUD:
                         total = total_result.scalar() or 0
                         # 缓存总数（TTL 可以按需调整）
                         await async_redis.setex(cache_key, 300, str(total))
-                finally:
-                    await async_redis.aclose()
             except Exception as e:
                 # Redis 不可用时，直接执行 count
                 logger.warning(f"Redis缓存失败，直接执行count: {e}")
