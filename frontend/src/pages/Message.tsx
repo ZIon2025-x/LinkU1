@@ -4308,10 +4308,31 @@ const MessagePage: React.FC = () => {
                               color: '#6b7280', 
                               marginBottom: '4px',
                               cursor: 'pointer',
-                              textDecoration: 'underline'
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
                             }}
                           >
-                            {msg.sender_name}
+                            <span style={{ textDecoration: 'underline' }}>
+                              {msg.sender_name}
+                            </span>
+                            {/* 多人任务：显示任务达人（房主）标识 */}
+                            {activeTask && activeTask.is_multi_participant && (
+                              (activeTask.expert_creator_id === msg.sender_id || activeTask.taker_id === msg.sender_id) && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '10px',
+                                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                }}>
+                                  🏠 房主
+                                </span>
+                              )
+                            )}
                           </div>
                         )}
                         <div 

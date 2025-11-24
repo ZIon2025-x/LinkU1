@@ -92,7 +92,15 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
 
   // 加载申请者列表
   const loadApplications = useCallback(async () => {
-    if (!user || !task || user.id !== task.poster_id || !taskId) {
+    if (!user || !task || !taskId) {
+      return;
+    }
+    // 多人任务：只有任务达人（expert_creator_id）或发布者可以查看申请列表
+    // 单人任务：只有发布者可以查看申请列表
+    const canViewApplications = task.is_multi_participant 
+      ? (task.expert_creator_id === user.id || (task.poster_id && task.poster_id === user.id))
+      : (task.poster_id && task.poster_id === user.id);
+    if (!canViewApplications) {
       return;
     }
     
@@ -224,12 +232,19 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
     };
   }, [enlargedImage, task, currentImageIndex]);
 
-  // 当用户信息加载后，如果是任务发布者，加载申请者列表
+  // 当用户信息加载后，如果是任务发布者或任务达人，加载申请者列表
   useEffect(() => {
-    if (user && task && task.poster_id === user.id) {
-      loadApplications();
+    if (user && task) {
+      // 多人任务：任务达人（expert_creator_id）或发布者可以查看申请列表
+      // 单人任务：只有发布者可以查看申请列表
+      const canViewApplications = task.is_multi_participant 
+        ? (task.expert_creator_id === user.id || (task.poster_id && task.poster_id === user.id))
+        : (task.poster_id && task.poster_id === user.id);
+      if (canViewApplications) {
+        loadApplications();
+      }
     }
-  }, [user, task]);
+  }, [user, task, loadApplications]);
 
   // 检查当前用户是否已经申请了此任务
   useEffect(() => {
@@ -311,13 +326,33 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       return task.task_level === 'normal';
     }
     
-    // 任务发布者可以查看自己发布的所有任务，无论任务等级如何
-    if (user.id === task.poster_id) {
+    // 多人任务：检查用户是否是参与者或任务达人
+    if (task.is_multi_participant) {
+      // 任务达人（创建者）可以查看
+      if (task.expert_creator_id === user.id) {
+        return true;
+      }
+      // 任务接收者（taker_id）可以查看
+      if (task.taker_id === user.id) {
+        return true;
+      }
+      // 任务发布者（如果有）可以查看
+      if (task.poster_id && task.poster_id === user.id) {
+        return true;
+      }
+      // 如果是多人任务，参与者也可以查看（即使 poster_id 为 null）
+      // 注意：这里不检查 userParticipant，因为它是异步加载的，可能导致初始时无法显示
+      // 多人任务默认允许查看，具体权限由后端控制
       return true;
     }
     
-    // 任务接受者可以查看自己接受的任务，无论任务等级如何
-    if (user.id === task.taker_id) {
+    // 单人任务：任务发布者可以查看自己发布的所有任务，无论任务等级如何
+    if (task.poster_id && user.id === task.poster_id) {
+      return true;
+    }
+    
+    // 单人任务：任务接受者可以查看自己接受的任务，无论任务等级如何
+    if (task.taker_id && user.id === task.taker_id) {
       return true;
     }
     

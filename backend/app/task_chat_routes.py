@@ -263,7 +263,11 @@ async def get_task_chat_list(
                 "taker_id": task.taker_id,
                 "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
                 "unread_count": unread_count,
-                "last_message": last_message_data
+                "last_message": last_message_data,
+                # 多人任务相关字段
+                "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
+                "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
+                "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False
             }
             task_list.append(task_data)
         
@@ -490,7 +494,11 @@ async def get_task_messages(
             "completed_at": format_iso_utc(task.completed_at) if task.completed_at else None,
             "base_reward": float(task.base_reward) if task.base_reward else None,
             "agreed_reward": float(task.agreed_reward) if task.agreed_reward else None,
-            "currency": task.currency or "GBP"
+            "currency": task.currency or "GBP",
+            # 多人任务相关字段
+            "is_multi_participant": bool(task.is_multi_participant) if hasattr(task, 'is_multi_participant') else False,
+            "expert_creator_id": task.expert_creator_id if hasattr(task, 'expert_creator_id') else None,
+            "created_by_expert": bool(task.created_by_expert) if hasattr(task, 'created_by_expert') else False
         }
         
         return {
