@@ -14,6 +14,7 @@ import logging
 from app import models, schemas
 # 移除不存在的导入
 from app.security import get_password_hash
+from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
@@ -377,5 +378,4 @@ def send_verification_email_with_token(
     subject, body = get_email_verification_email(language, verification_url)
     
     from app.email_utils import send_email
-    from app.utils.time_utils import get_utc_time
     background_tasks.add_task(send_email, email, subject, body)
