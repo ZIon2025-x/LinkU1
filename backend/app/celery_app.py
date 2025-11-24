@@ -66,6 +66,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 60.0,  # 1分钟
     },
     
+    # 自动完成已过期时间段的任务 - 每1分钟执行一次
+    'auto-complete-expired-time-slot-tasks': {
+        'task': 'app.celery_tasks.auto_complete_expired_time_slot_tasks_task',
+        'schedule': 60.0,  # 1分钟
+    },
+    
     # ========== 中频任务（每5分钟）==========
     
     # 检查过期优惠券 - 每5分钟执行一次

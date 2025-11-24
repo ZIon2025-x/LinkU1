@@ -137,6 +137,73 @@ def check_expired_points(db: Session):
         raise
 
 
+def auto_complete_expired_time_slot_tasks(db: Session):
+    """
+    自动完成已过期时间段的任务
+    只处理达人类型的任务（expert_service_id 不为空）且有时间段的任务
+    
+    如果时间段已过期且任务状态为 in_progress 或 taken，则自动标记为 completed
+    
+    支持两种情况：
+    1. 单个任务：通过 TaskTimeSlotRelation 直接关联时间段
+    2. 多人任务：通过父活动（Activity）的 ActivityTimeSlotRelation 关联时间段
+    """
+    try:
+        from sqlalchemy.orm import selectinload
+        
+        current_time = get_utc_time()
+        completed_count = 0
+        
+        # 查询所有状态为 in_progress 或 taken 的达人类型任务（expert_service_id 不为空）
+        # 加载时间段关联和父活动关联
+        tasks_query = db.query(models.Task).filter(
+            models.Task.status.in_(["in_progress", "taken"]),
+            models.Task.expert_service_id.isnot(None)  # 只处理达人类型的任务
+        ).options(
+            selectinload(models.Task.time_slot_relations),
+            selectinload(models.Task.parent_activity).selectinload(models.Activity.time_slot_relations)
+        )
+        
+        tasks = tasks_query.all()
+        
+        for task in tasks:
+            max_end_time = None
+            
+            # 情况1：检查任务直接关联的时间段（TaskTimeSlotRelation）
+            if task.time_slot_relations and len(task.time_slot_relations) > 0:
+                for relation in task.time_slot_relations:
+                    if relation.slot_end_datetime:
+                        if max_end_time is None or relation.slot_end_datetime > max_end_time:
+                            max_end_time = relation.slot_end_datetime
+            
+            # 情况2：检查父活动关联的时间段（ActivityTimeSlotRelation）
+            if task.parent_activity and task.parent_activity.time_slot_relations:
+                for relation in task.parent_activity.time_slot_relations:
+                    if relation.slot_end_datetime:
+                        if max_end_time is None or relation.slot_end_datetime > max_end_time:
+                            max_end_time = relation.slot_end_datetime
+            
+            # 如果找到了时间段结束时间，且已过期，则自动完成
+            if max_end_time and max_end_time < current_time:
+                logger.info(f"达人任务 {task.id} (expert_service_id: {task.expert_service_id}) 的时间段已过期（结束时间: {max_end_time}），自动标记为已完成")
+                task.status = "completed"
+                task.completed_at = current_time
+                completed_count += 1
+        
+        if completed_count > 0:
+            db.commit()
+            logger.info(f"自动完成了 {completed_count} 个已过期时间段的达人任务")
+        else:
+            logger.debug("没有需要自动完成的达人任务")
+        
+        return completed_count
+        
+    except Exception as e:
+        logger.error(f"自动完成过期时间段任务失败: {e}", exc_info=True)
+        db.rollback()
+        return 0
+
+
 def check_and_end_activities_sync(db: Session):
     """
     检查活动是否应该结束（最后一个时间段结束或达到截至日期），并自动结束活动（同步版本）

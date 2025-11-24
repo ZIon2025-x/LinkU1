@@ -168,7 +168,8 @@ def init_scheduler():
         check_expired_coupons,
         check_expired_invitation_codes,
         check_expired_points,
-        check_and_end_activities_sync
+        check_and_end_activities_sync,
+        auto_complete_expired_time_slot_tasks
     )
     from app.customer_service_tasks import (
         process_customer_service_queue,
@@ -200,6 +201,13 @@ def init_scheduler():
         cancel_expired_tasks,
         interval_seconds=60,
         description="取消过期任务"
+    )
+    
+    scheduler.register_task(
+        'auto_complete_expired_time_slot_tasks',
+        with_db(auto_complete_expired_time_slot_tasks),
+        interval_seconds=60,
+        description="自动完成已过期时间段的任务"
     )
     
     # 中频任务（每5分钟）
