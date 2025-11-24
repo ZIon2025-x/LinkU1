@@ -6609,6 +6609,26 @@ def update_task_expert(
             else:
                 logger.warning(f"未找到对应的 TaskExpert 记录 (user_id: {expert.user_id})")
         
+        # 如果更新了头像，同步更新 TaskExpert 表中的 avatar
+        # 检查 avatar 是否在 expert_data 中且不在排除字段中（说明会被更新）
+        if 'avatar' in expert_data and 'avatar' not in excluded_fields:
+            # 直接检查传入的 avatar 值，只有当传入的是有效的非空 URL 时才同步更新
+            # 不能传递空值，只能传递更新有 url 的头像值
+            avatar_value = expert_data.get('avatar')
+            if avatar_value and avatar_value.strip():  # 确保不是 None、空字符串或只有空白字符
+                task_expert = db.query(models.TaskExpert).filter(
+                    models.TaskExpert.id == expert.user_id
+                ).first()
+                if task_expert:
+                    # 使用传入的有效头像 URL（expert.avatar 已经通过 setattr 更新）
+                    task_expert.avatar = expert.avatar
+                    task_expert.updated_at = get_utc_time()
+                    logger.info(f"同步更新 TaskExpert.avatar: {task_expert.avatar} (来自 FeaturedTaskExpert.avatar: {expert.avatar})")
+                else:
+                    logger.warning(f"未找到对应的 TaskExpert 记录 (user_id: {expert.user_id})")
+            else:
+                logger.info(f"跳过同步更新头像：传入的 avatar 值为空或无效 (user_id: {expert.user_id})")
+        
         expert.updated_at = get_utc_time()
         db.commit()
         db.refresh(expert)

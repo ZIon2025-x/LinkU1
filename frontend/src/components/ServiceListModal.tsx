@@ -126,7 +126,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       setServices(servicesList);
       
       if (servicesList.length === 0) {
-        setError('该任务达人暂无可用服务');
+        setError('达人整顿中，请稍后再来~');
       }
     } catch (err: any) {
       setError('加载服务列表失败');
@@ -369,7 +369,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
             </div>
           ) : services.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '18px', color: '#666' }}>暂无可用服务</div>
+              <div style={{ fontSize: '18px', color: '#666' }}>达人整顿中，请稍后再来~</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
