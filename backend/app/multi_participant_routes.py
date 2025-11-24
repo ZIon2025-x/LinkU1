@@ -217,25 +217,139 @@ def apply_to_activity(
             if current_time > db_activity.deadline:
                 raise HTTPException(status_code=400, detail="Activity has expired")
     
-    # 检查是否已为此活动创建过任务（通过 originating_user_id 判断）
-    existing_task = db.query(Task).filter(
-        and_(
-            Task.parent_activity_id == activity_id,
-            Task.originating_user_id == current_user.id,
-            Task.status.in_(["open", "taken", "in_progress"])
-        )
-    ).first()
+    # 对于多人任务且有时间段的情况，检查是否已经有任务关联到这个时间段
+    # 如果有，让新用户加入现有任务，而不是创建新任务
+    existing_task = None
+    if request.is_multi_participant and db_activity.has_time_slots and request.time_slot_id:
+        # 查找已存在的任务（通过时间段关联）
+        existing_relation = db.query(TaskTimeSlotRelation).filter(
+            and_(
+                TaskTimeSlotRelation.time_slot_id == request.time_slot_id,
+                TaskTimeSlotRelation.relation_mode == "fixed"
+            )
+        ).first()
+        
+        if existing_relation:
+            existing_task = db.query(Task).filter(
+                and_(
+                    Task.id == existing_relation.task_id,
+                    Task.parent_activity_id == activity_id,
+                    Task.is_multi_participant == True,
+                    Task.status.in_(["open", "taken", "in_progress"])
+                )
+            ).first()
+            
+            if existing_task:
+                # 检查用户是否已经是该任务的参与者
+                existing_participant = db.query(TaskParticipant).filter(
+                    and_(
+                        TaskParticipant.task_id == existing_task.id,
+                        TaskParticipant.user_id == current_user.id,
+                        TaskParticipant.status.in_(["pending", "accepted", "in_progress"])
+                    )
+                ).first()
+                
+                if existing_participant:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="You have already applied to this time slot. Please check your tasks."
+                    )
     
-    if existing_task:
-        raise HTTPException(
-            status_code=400,
-            detail="You have already applied to this activity. Please check your tasks."
-        )
+    # 对于非多人任务或没有时间段的情况，检查用户是否已为此活动创建过任务
+    if not existing_task:
+        existing_task = db.query(Task).filter(
+            and_(
+                Task.parent_activity_id == activity_id,
+                Task.originating_user_id == current_user.id,
+                Task.status.in_(["open", "taken", "in_progress"])
+            )
+        ).first()
+        
+        if existing_task:
+            raise HTTPException(
+                status_code=400,
+                detail="You have already applied to this activity. Please check your tasks."
+            )
     
     # 确定价格
     price = float(db_activity.discounted_price_per_participant) if db_activity.discounted_price_per_participant else (
         float(db_activity.original_price_per_participant) if db_activity.original_price_per_participant else 0.0
     )
+    
+    # 如果已存在任务（多人任务），让新用户加入现有任务
+    if existing_task:
+        # 检查时间段是否已满
+        if db_activity.has_time_slots and request.time_slot_id:
+            time_slot = db.query(ServiceTimeSlot).filter(
+                and_(
+                    ServiceTimeSlot.id == request.time_slot_id,
+                    ServiceTimeSlot.service_id == service.id,
+                    ServiceTimeSlot.is_manually_deleted == False
+                )
+            ).with_for_update().first()
+            
+            if not time_slot:
+                raise HTTPException(status_code=404, detail="时间段不存在或已被删除")
+            
+            # 检查时间段是否已满
+            if time_slot.current_participants >= time_slot.max_participants:
+                raise HTTPException(status_code=400, detail="该时间段已满")
+            
+            # 检查时间段是否已过期
+            current_time = get_utc_time()
+            if time_slot.slot_start_datetime < current_time:
+                raise HTTPException(status_code=400, detail="该时间段已过期")
+            
+            # 更新时间段的参与者数量
+            time_slot.current_participants += 1
+            db.add(time_slot)
+        
+        # 创建TaskParticipant记录，让新用户加入现有任务
+        participant_status = "accepted" if db_activity.has_time_slots else "pending"
+        participant = TaskParticipant(
+            task_id=existing_task.id,
+            user_id=current_user.id,
+            activity_id=activity_id,
+            status=participant_status,
+            time_slot_id=request.time_slot_id if db_activity.has_time_slots else None,
+            preferred_deadline=request.preferred_deadline,
+            is_flexible_time=request.is_flexible_time,
+            is_expert_task=True,
+            is_official_task=False,
+            expert_creator_id=db_activity.expert_id,
+            applied_at=get_utc_time(),
+            accepted_at=get_utc_time() if db_activity.has_time_slots else None,
+            idempotency_key=request.idempotency_key,
+        )
+        db.add(participant)
+        
+        # 更新任务的参与者数量
+        if db_activity.has_time_slots:
+            existing_task.current_participants += 1
+        
+        db.commit()
+        db.refresh(participant)
+        db.refresh(existing_task)
+        
+        # 记录审计日志
+        audit_log = TaskAuditLog(
+            task_id=existing_task.id,
+            action_type="participant_joined_existing_task",
+            action_description=f"用户加入已存在的任务 {existing_task.id}（活动 {activity_id}）",
+            user_id=current_user.id,
+            new_status=participant_status,
+        )
+        db.add(audit_log)
+        db.commit()
+        
+        return {
+            "task_id": existing_task.id,
+            "activity_id": activity_id,
+            "message": "Successfully joined existing task",
+            "task_status": existing_task.status,
+            "is_multi_participant": True,
+            "participant_id": participant.id
+        }
     
     # 确定任务状态
     # 对于有时间段的活动申请（无论是单个任务还是多人任务），直接进入"进行中"状态
@@ -1636,6 +1750,7 @@ def admin_approve_exit(
 def expert_approve_exit(
     task_id: str,
     participant_id: int,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
@@ -1665,6 +1780,38 @@ def expert_approve_exit(
     participant.status = "exited"
     participant.exited_at = get_utc_time()
     
+    # 更新时间段的参与者数量（如果参与者有关联的时间段）
+    time_slot_id_to_update = None
+    if participant.time_slot_id:
+        time_slot_id_to_update = participant.time_slot_id
+        time_slot = db.query(ServiceTimeSlot).filter(
+            ServiceTimeSlot.id == participant.time_slot_id
+        ).with_for_update().first()
+        if time_slot and time_slot.current_participants > 0:
+            time_slot.current_participants -= 1
+            # 如果时间段现在有空位，确保is_available为True
+            if time_slot.current_participants < time_slot.max_participants:
+                time_slot.is_available = True
+            db.add(time_slot)
+    
+    # 如果任务通过TaskTimeSlotRelation关联了时间段，也需要更新
+    task_time_slot_relation = db.query(TaskTimeSlotRelation).filter(
+        TaskTimeSlotRelation.task_id == parsed_task_id
+    ).first()
+    if task_time_slot_relation and task_time_slot_relation.time_slot_id:
+        relation_time_slot_id = task_time_slot_relation.time_slot_id
+        # 如果和participant.time_slot_id不同，也需要更新
+        if relation_time_slot_id != time_slot_id_to_update:
+            relation_time_slot = db.query(ServiceTimeSlot).filter(
+                ServiceTimeSlot.id == relation_time_slot_id
+            ).with_for_update().first()
+            if relation_time_slot and relation_time_slot.current_participants > 0:
+                relation_time_slot.current_participants -= 1
+                if relation_time_slot.current_participants < relation_time_slot.max_participants:
+                    relation_time_slot.is_available = True
+                db.add(relation_time_slot)
+                time_slot_id_to_update = relation_time_slot_id
+    
     db.commit()
     
     # 记录审计日志
@@ -1678,7 +1825,85 @@ def expert_approve_exit(
         new_status="exited",
     )
     db.add(audit_log)
+    
+    # 如果任务有关联的活动，重新计算活动的参与者数量
+    if db_task.parent_activity_id:
+        from sqlalchemy import func
+        # 统计该活动关联的多人任务中，状态为 accepted, in_progress 的参与者数量
+        multi_participant_count = db.query(func.count(TaskParticipant.id)).join(
+            Task, TaskParticipant.task_id == Task.id
+        ).filter(
+            Task.parent_activity_id == db_task.parent_activity_id,
+            Task.is_multi_participant == True,
+            TaskParticipant.status.in_(["accepted", "in_progress"])
+        ).scalar() or 0
+        
+        # 统计该活动关联的单个任务中，状态为 open, taken, in_progress 的任务数量
+        single_task_count = db.query(func.count(Task.id)).filter(
+            Task.parent_activity_id == db_task.parent_activity_id,
+            Task.is_multi_participant == False,
+            Task.status.in_(["open", "taken", "in_progress"])
+        ).scalar() or 0
+        
+        # 注意：活动的current_participants是动态计算的，不需要更新数据库字段
+        # 但我们需要通过WebSocket通知其他用户活动参与者数量变化
+    
     db.commit()
+    
+    # 通过WebSocket通知其他用户时间段可用性变化
+    # 注意：由于这是同步函数，WebSocket通知在异步上下文中执行
+    if time_slot_id_to_update:
+        # 获取时间段信息
+        updated_time_slot = db.query(ServiceTimeSlot).filter(
+            ServiceTimeSlot.id == time_slot_id_to_update
+        ).first()
+        
+        if updated_time_slot:
+            import json
+            import logging
+            import asyncio
+            logger = logging.getLogger(__name__)
+            
+            # 构建通知消息
+            notification = {
+                "type": "time_slot_availability_changed",
+                "time_slot_id": updated_time_slot.id,
+                "service_id": updated_time_slot.service_id,
+                "current_participants": updated_time_slot.current_participants,
+                "max_participants": updated_time_slot.max_participants,
+                "is_available": updated_time_slot.is_available,
+                "message": "时间段可用性已更新"
+            }
+            
+            # 异步发送WebSocket通知
+            async def broadcast_notification():
+                try:
+                    from app.main import active_connections
+                    notification_json = json.dumps(notification)
+                    for user_id, websocket in list(active_connections.items()):
+                        if user_id != str(current_user.id):  # 不通知操作者本人
+                            try:
+                                await websocket.send_text(notification_json)
+                            except Exception as e:
+                                logger.error(f"Failed to notify user {user_id} about time slot availability: {e}")
+                                active_connections.pop(user_id, None)
+                except Exception as e:
+                    logger.error(f"Failed to broadcast time slot availability via WebSocket: {e}", exc_info=True)
+            
+            # 尝试在后台执行异步任务
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 如果事件循环正在运行，创建任务
+                    asyncio.create_task(broadcast_notification())
+                else:
+                    # 如果事件循环未运行，运行它
+                    loop.run_until_complete(broadcast_notification())
+            except RuntimeError:
+                # 如果没有事件循环，创建一个新的
+                asyncio.run(broadcast_notification())
+            except Exception as e:
+                logger.error(f"Failed to schedule WebSocket notification: {e}", exc_info=True)
     
     return {"message": "Exit approved successfully", "status": "exited"}
 

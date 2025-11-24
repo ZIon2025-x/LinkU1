@@ -1621,6 +1621,13 @@ class ServiceTimeSlotOut(BaseModel):
                 if activity.discount_percentage:
                     activity_discount_percentage = float(activity.discount_percentage)
         
+        # 动态计算is_available：如果时间段未满且未手动删除且未过期，则可用
+        # 但也要考虑手动设置的is_available（如果手动设置为False，则不可用）
+        is_available = obj.is_available and not obj.is_manually_deleted and not is_expired
+        # 如果时间段已满，则不可用
+        if obj.current_participants >= obj.max_participants:
+            is_available = False
+        
         data = {
             "id": obj.id,
             "service_id": obj.service_id,
@@ -1633,7 +1640,7 @@ class ServiceTimeSlotOut(BaseModel):
             "price_per_participant": float(obj.price_per_participant),
             "max_participants": obj.max_participants,
             "current_participants": obj.current_participants,
-            "is_available": obj.is_available,
+            "is_available": is_available,  # 使用动态计算的值
             "is_expired": is_expired,  # 时间段是否已过期
             "is_manually_deleted": obj.is_manually_deleted,
             "created_at": obj.created_at,
