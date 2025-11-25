@@ -622,47 +622,82 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"初始化 Prometheus 指标失败: {e}")
     
-    # 启动定时任务调度器
+    # 启动定时任务调度器 - 优先使用 Celery，备用 TaskScheduler
     import threading
     import time
     
+    # 检查 Celery Worker 是否可用
+    celery_available = False
     try:
-        from app.task_scheduler import init_scheduler
-        scheduler = init_scheduler()
-        scheduler.start()
-        logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动")
-    except Exception as e:
-        logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
-        # 回退到旧的调度方式
-        from app.scheduled_tasks import run_scheduled_tasks
+        from app.celery_app import celery_app, USE_REDIS
+        from app.redis_cache import get_redis_client
         
-        def run_tasks_periodically():
-            """每5分钟执行一次定时任务（回退方案）"""
-            global _shutdown_flag
-            from app.state import is_app_shutting_down
-            
-            while not _shutdown_flag and not is_app_shutting_down():
+        # 检查 Redis 连接
+        if USE_REDIS:
+            redis_client = get_redis_client()
+            if redis_client:
                 try:
-                    run_scheduled_tasks()
+                    redis_client.ping()
+                    # 检查 Celery Worker 是否在线
+                    inspect = celery_app.control.inspect(timeout=5.0)
+                    active_workers = inspect.active()
+                    
+                    if active_workers and isinstance(active_workers, dict):
+                        worker_count = len(active_workers)
+                        celery_available = True
+                        logger.info(f"✅ Redis 连接成功，Celery Worker 在线 ({worker_count} workers)，将使用 Celery 执行定时任务")
+                    else:
+                        logger.info("ℹ️  Redis 连接成功，但 Celery Worker 未检测到，将使用 TaskScheduler 作为备用")
                 except Exception as e:
-                    error_str = str(e)
-                    if is_app_shutting_down() and (
-                        "Event loop is closed" in error_str or 
-                        "loop is closed" in error_str or
-                        "attached to a different loop" in error_str
-                    ):
-                        logger.debug(f"定时任务在关闭时跳过: {e}")
-                        break
-                    logger.error(f"定时任务执行失败: {e}", exc_info=True)
+                    logger.warning(f"⚠️  检测 Celery Worker 状态失败: {e}，将使用 TaskScheduler 作为备用")
+            else:
+                logger.info("ℹ️  Redis 未配置，将使用 TaskScheduler 执行定时任务")
+        else:
+            logger.info("ℹ️  USE_REDIS=false，将使用 TaskScheduler 执行定时任务")
+    except ImportError:
+        logger.info("ℹ️  Celery 未安装，将使用 TaskScheduler 执行定时任务")
+    except Exception as e:
+        logger.warning(f"⚠️  检查 Celery 可用性时出错: {e}，将使用 TaskScheduler 作为备用")
+    
+    # 如果 Celery 不可用，启动 TaskScheduler 作为备用
+    if not celery_available:
+        try:
+            from app.task_scheduler import init_scheduler
+            scheduler = init_scheduler()
+            scheduler.start()
+            logger.info("✅ 细粒度定时任务调度器（TaskScheduler）已启动（备用方案）")
+        except Exception as e:
+            logger.error(f"❌ 启动任务调度器失败，回退到旧方案: {e}", exc_info=True)
+            # 回退到旧的调度方式
+            from app.scheduled_tasks import run_scheduled_tasks
+            
+            def run_tasks_periodically():
+                """每5分钟执行一次定时任务（回退方案）"""
+                global _shutdown_flag
+                from app.state import is_app_shutting_down
                 
-                for _ in range(300):  # 5分钟 = 300秒
-                    if _shutdown_flag or is_app_shutting_down():
-                        break
-                    time.sleep(1)
-        
-        scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
-        scheduler_thread.start()
-        logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
+                while not _shutdown_flag and not is_app_shutting_down():
+                    try:
+                        run_scheduled_tasks()
+                    except Exception as e:
+                        error_str = str(e)
+                        if is_app_shutting_down() and (
+                            "Event loop is closed" in error_str or 
+                            "loop is closed" in error_str or
+                            "attached to a different loop" in error_str
+                        ):
+                            logger.debug(f"定时任务在关闭时跳过: {e}")
+                            break
+                        logger.error(f"定时任务执行失败: {e}", exc_info=True)
+                    
+                    for _ in range(300):  # 5分钟 = 300秒
+                        if _shutdown_flag or is_app_shutting_down():
+                            break
+                        time.sleep(1)
+            
+            scheduler_thread = threading.Thread(target=run_tasks_periodically, daemon=True)
+            scheduler_thread.start()
+            logger.info("✅ 定时任务已启动（回退方案，每5分钟执行一次）")
     logger.info("应用启动中...")
     
     # ⚠️ 环境变量验证 - 高优先级修复

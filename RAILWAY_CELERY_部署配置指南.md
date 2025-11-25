@@ -58,6 +58,22 @@ celery -A app.celery_app beat --loglevel=info
 
 **Root Directory：** `backend`
 
+**依赖安装（重要）：**
+如果遇到 `asyncpg` 编译错误，可以使用轻量级依赖文件：
+- 在 Railway 的 Build Command 中设置：
+  ```bash
+  pip install -r requirements-celery.txt
+  ```
+- 或者使用环境变量 `RAILWAY_BUILD_COMMAND`：
+  ```
+  pip install -r requirements-celery.txt
+  ```
+
+**注意：** `requirements-celery.txt` 不包含 `asyncpg`，因为：
+- Celery Beat/Worker 不需要异步数据库
+- Celery 任务使用同步数据库操作
+- 代码已支持 `asyncpg` 可选（会自动回退到同步模式）
+
 **健康检查配置（重要）：**
 - **Healthcheck Path：** 留空或设置为 `/`（Celery Beat 不提供 HTTP 服务）
 - **Healthcheck Timeout：** 可以设置为 `0` 或留空以禁用健康检查
@@ -99,6 +115,22 @@ celery -A app.celery_app worker --loglevel=info --concurrency=2
 ```
 
 **Root Directory：** `backend`
+
+**依赖安装（重要）：**
+如果遇到 `asyncpg` 编译错误，可以使用轻量级依赖文件：
+- 在 Railway 的 Build Command 中设置：
+  ```bash
+  pip install -r requirements-celery.txt
+  ```
+- 或者使用环境变量 `RAILWAY_BUILD_COMMAND`：
+  ```
+  pip install -r requirements-celery.txt
+  ```
+
+**注意：** `requirements-celery.txt` 不包含 `asyncpg`，因为：
+- Celery Beat/Worker 不需要异步数据库
+- Celery 任务使用同步数据库操作
+- 代码已支持 `asyncpg` 可选（会自动回退到同步模式）
 
 **健康检查配置（重要）：**
 - **Healthcheck Path：** 留空或设置为 `/`（Celery Worker 不提供 HTTP 服务）

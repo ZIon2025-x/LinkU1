@@ -1,0 +1,30 @@
+# Celery 服务专用依赖（不包含 asyncpg，避免编译问题）
+# 用于 Celery Worker 和 Celery Beat 服务
+
+# 核心依赖（Celery 需要）
+celery[redis]>=5.3.0,<6.0.0
+redis>=4.5.0,<6.0.0
+
+# 数据库相关（仅同步，Celery 任务使用同步数据库）
+sqlalchemy>=2.0.0,<3.0.0
+pydantic>=2.0.0,<3.0.0
+aiopg>=1.4.0,<1.5.0
+psycopg2-binary>=2.9.0,<3.0.0
+
+# 认证和安全（Celery 任务可能需要）
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+PyJWT>=2.8.0,<3.0.0
+
+# 其他工具
+python-dotenv>=1.0.0,<2.0.0
+pytz>=2023.3
+requests>=2.31.0,<3.0.0
+orjson>=3.9.0,<4.0.0
+
+# 注意：不包含 asyncpg，因为：
+# 1. Celery Beat/Worker 不需要异步数据库
+# 2. Celery 任务使用同步数据库操作（通过 SessionLocal）
+# 3. asyncpg 需要编译 C 扩展，在某些构建环境中可能失败
+# 4. 代码已支持 asyncpg 可选（ASYNC_AVAILABLE 检查）
+
