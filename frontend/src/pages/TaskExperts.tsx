@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -14,6 +14,7 @@ import SEOHead from '../components/SEOHead';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import ServiceListModal from '../components/ServiceListModal';
 import ExpertDetailModal from '../components/ExpertDetailModal';
+import styles from './TaskExperts.module.css';
 
 interface TaskExpert {
   id: string;
@@ -315,11 +316,8 @@ const TaskExperts: React.FC = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    loadExperts();
-  }, [selectedCategory, selectedCity, sortBy]);
-
-  const loadExperts = async () => {
+  // 使用useCallback优化loadExperts函数，避免不必要的重新创建
+  const loadExperts = useCallback(async () => {
     setLoading(true);
     try {
       // 从API获取任务达人列表，传递城市筛选参数
@@ -400,7 +398,13 @@ const TaskExperts: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, selectedCity, t]);
+
+  // 当筛选条件改变时，只重新加载数据，不刷新整个页面
+  // sortBy变化时不需要重新加载数据，只需要重新排序（由useMemo处理）
+  useEffect(() => {
+    loadExperts();
+  }, [loadExperts]);
 
   // 处理单个通知标记为已读
   const handleMarkAsRead = async (id: number) => {
@@ -433,29 +437,29 @@ const TaskExperts: React.FC = () => {
     }
   };
 
-  // 注意：分类和城市筛选已经在后端API调用时完成（loadExperts中传递了category和location参数）
-  // 这里直接使用experts，不需要再次筛选
-  const filteredExperts = experts;
+  // 使用useMemo优化排序计算，只在experts或sortBy变化时重新计算
+  const sortedExperts = useMemo(() => {
+    return [...experts].sort((a, b) => {
+      switch (sortBy) {
+        case 'rating':
+          return b.avg_rating - a.avg_rating;
+        case 'tasks':
+          return b.completed_tasks - a.completed_tasks;
+        case 'recent':
+          return new Date(b.last_active).getTime() - new Date(a.last_active).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [experts, sortBy]);
 
-  const sortedExperts = [...filteredExperts].sort((a, b) => {
-    switch (sortBy) {
-      case 'rating':
-        return b.avg_rating - a.avg_rating;
-      case 'tasks':
-        return b.completed_tasks - a.completed_tasks;
-      case 'recent':
-        return new Date(b.last_active).getTime() - new Date(a.last_active).getTime();
-      default:
-        return 0;
-    }
-  });
-
-  const handleExpertClick = (expertId: string) => {
+  // 使用useCallback优化事件处理函数
+  const handleExpertClick = useCallback((expertId: string) => {
     setSelectedExpertDetailId(expertId);
     setShowExpertDetailModal(true);
-  };
+  }, []);
 
-  const handleRequestService = async (expertId: string, expertName: string, e: React.MouseEvent) => {
+  const handleRequestService = useCallback(async (expertId: string, expertName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // 阻止事件冒泡，避免触发卡片的点击事件
     
     if (!user) {
@@ -467,7 +471,7 @@ const TaskExperts: React.FC = () => {
     setSelectedExpertId(expertId);
     setSelectedExpertName(expertName);
     setShowServiceListModal(true);
-  };
+  }, [user]);
 
   // 处理活动详情查看（达人发布的多人活动）
   const handleViewActivity = async (activity: any) => {
@@ -701,48 +705,33 @@ const TaskExperts: React.FC = () => {
         onMarkAllRead={handleMarkAllRead}
       />
       
-      <div style={{
-        maxWidth: isMobile ? '100%' : '1600px',
-        margin: '0 auto',
-        padding: '0 20px 20px 20px',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        position: 'relative'
-      }}>
-        {/* 页面头部 */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '40px',
-          color: 'white'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
-          <h1 style={{
-            position: 'absolute',
-            top: '-100px',
-            left: '-100px',
-            width: '1px',
-            height: '1px',
-            padding: '0',
-            margin: '0',
-            overflow: 'hidden',
-            clip: 'rect(0, 0, 0, 0)',
-            whiteSpace: 'nowrap',
-            border: '0',
-            fontSize: '1px',
-            color: 'transparent',
-            background: 'transparent'
-          }}>
-            {t('taskExperts.title')}
-          </h1>
-          <p style={{
-            fontSize: '18px',
-            margin: '0 auto',
-            maxWidth: '600px',
-            lineHeight: '1.6',
-            color: 'rgba(255, 255, 255, 0.9)'
-          }}>
-            {t('taskExperts.subtitle')}
-          </p>
+      <div className={styles.container}>
+        <div className={styles.content}>
+          {/* 页面头部 */}
+          <div className={styles.header}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
+            <h1 style={{
+              position: 'absolute',
+              top: '-100px',
+              left: '-100px',
+              width: '1px',
+              height: '1px',
+              padding: '0',
+              margin: '0',
+              overflow: 'hidden',
+              clip: 'rect(0, 0, 0, 0)',
+              whiteSpace: 'nowrap',
+              border: '0',
+              fontSize: '1px',
+              color: 'transparent',
+              background: 'transparent'
+            }}>
+              {t('taskExperts.title')}
+            </h1>
+            <h2 className={styles.title}>{t('taskExperts.title')}</h2>
+            <p className={styles.subtitle}>
+              {t('taskExperts.subtitle')}
+            </p>
           
           {/* 想成为任务达人按钮 */}
           {!isTaskExpert && (
@@ -816,50 +805,16 @@ const TaskExperts: React.FC = () => {
         </div>
 
         {/* 筛选和排序 */}
-        <div style={{
-          background: '#f9fafb',
-          borderRadius: '20px',
-          padding: isMobile ? '20px' : '24px',
-          marginBottom: '32px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '16px' : '20px',
-            alignItems: isMobile ? 'stretch' : 'center',
-            justifyContent: 'center'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center', 
-              gap: isMobile ? '8px' : '12px',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <label style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
-                fontWeight: '600', 
-                color: '#1f2937',
-                minWidth: isMobile ? 'auto' : '80px'
-              }}>
+        <div className={styles.filtersContainer}>
+          <div className={styles.filtersContent}>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>
                 {t('taskExperts.filterBy')}:
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  borderRadius: '12px',
-                  border: '2px solid #e5e7eb',
-                  fontSize: isMobile ? '15px' : '14px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  width: isMobile ? '100%' : 'auto',
-                  minWidth: isMobile ? 'auto' : '150px'
-                }}
+                className={styles.filterSelect}
               >
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
@@ -869,35 +824,14 @@ const TaskExperts: React.FC = () => {
               </select>
             </div>
 
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center', 
-              gap: isMobile ? '8px' : '12px',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <label style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
-                fontWeight: '600', 
-                color: '#1f2937',
-                minWidth: isMobile ? 'auto' : '100px'
-              }}>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>
                 {t('taskExperts.filterByCity')}:
               </label>
               <select
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
-                style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  borderRadius: '12px',
-                  border: '2px solid #e5e7eb',
-                  fontSize: isMobile ? '15px' : '14px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  width: isMobile ? '100%' : 'auto',
-                  minWidth: isMobile ? 'auto' : '150px'
-                }}
+                className={styles.filterSelect}
               >
                 <option value="all">{t('home.allCities')}</option>
                 {CITIES.map(city => (
@@ -908,35 +842,14 @@ const TaskExperts: React.FC = () => {
               </select>
             </div>
 
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center', 
-              gap: isMobile ? '8px' : '12px',
-              width: isMobile ? '100%' : 'auto'
-            }}>
-              <label style={{ 
-                fontSize: isMobile ? '14px' : '16px', 
-                fontWeight: '600', 
-                color: '#1f2937',
-                minWidth: isMobile ? 'auto' : '80px'
-              }}>
+            <div className={styles.filterGroup}>
+              <label className={styles.filterLabel}>
                 {t('taskExperts.sortBy')}:
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                style={{
-                  padding: isMobile ? '10px 16px' : '8px 16px',
-                  borderRadius: '12px',
-                  border: '2px solid #e5e7eb',
-                  fontSize: isMobile ? '15px' : '14px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  background: '#fff',
-                  width: isMobile ? '100%' : 'auto',
-                  minWidth: isMobile ? 'auto' : '150px'
-                }}
+                className={styles.filterSelect}
               >
                 {sortOptions.map(option => (
                   <option key={option.value} value={option.value}>
@@ -948,203 +861,79 @@ const TaskExperts: React.FC = () => {
           </div>
         </div>
 
-        {/* 任务达人列表 */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(350px, 1fr))',
-          gap: '24px',
-          marginBottom: '40px'
-        }}>
-          {sortedExperts.map(expert => (
-            <div
-              key={expert.id}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '24px',
-                padding: '28px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
-              }}
-            >
-              {/* 地点 - 右上角 */}
-              {expert.location && (
-                <div style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '20px',
-                  padding: '4px 10px',
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  fontWeight: '500',
-                  zIndex: 10
-                }}>
-                  📍 {expert.location}
-                </div>
-              )}
+        {/* 任务达人列表 - 使用CSS模块优化 */}
+        <div className={`${styles.contentArea} ${loading ? styles.loading : ''}`}>
+          <div className={styles.expertsGrid}>
+            {sortedExperts.map(expert => (
+              <div
+                key={expert.id}
+                className={styles.expertCard}
+                onClick={() => handleExpertClick(expert.id)}
+              >
+                {/* 地点 - 右上角 */}
+                {expert.location && (
+                  <div className={styles.locationBadge}>
+                    📍 {expert.location}
+                  </div>
+                )}
 
-              {/* 专家头部信息 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '18px',
-                marginBottom: '24px'
-              }}>
-                <div style={{ position: 'relative' }}>
-                  <img
-                    src={expert.avatar}
-                    alt={expert.name}
-                    style={{
-                      width: '72px',
-                      height: '72px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '3px solid rgba(255, 255, 255, 0.3)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-                    }}
-                  />
-                  {expert.is_verified && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: '-2px',
-                      right: '-2px',
-                      width: '20px',
-                      height: '20px',
-                      background: '#10b981',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      color: '#fff'
-                    }}>
-                      ✓
-                    </div>
-                  )}
-                </div>
+                {/* 专家头部信息 */}
+                <div className={styles.expertHeader}>
+                  <div className={styles.avatarContainer}>
+                    <img
+                      src={expert.avatar}
+                      alt={expert.name}
+                      className={styles.avatar}
+                      loading="lazy"
+                    />
+                    {expert.is_verified && (
+                      <div className={styles.verifiedBadge}>
+                        ✓
+                      </div>
+                    )}
+                  </div>
 
-                <div style={{ flex: 1 }}>
-                  <h3 style={{
-                    fontSize: '22px',
-                    fontWeight: '700',
-                    color: 'white',
-                    marginBottom: '6px',
-                    margin: 0
-                  }}>
-                    {expert.name}
-                  </h3>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '5px 12px',
-                    background: 'rgba(255, 255, 255, 0.25)',
-                    backdropFilter: 'blur(10px)',
-                    color: 'white',
-                    borderRadius: '14px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    marginTop: '4px'
-                  }}>
-                    {getLevelText(expert.user_level)}
-                  </span>
-                </div>
-              </div>
-
-              {/* 简介 */}
-              <p style={{
-                color: 'rgba(255, 255, 255, 0.9)',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                marginBottom: '16px',
-                margin: 0
-              }}>
-                {expert.bio}
-              </p>
-
-              {/* 类别 */}
-              {expert.category && (() => {
-                // 将下划线格式转换为驼峰格式用于翻译键
-                const categoryKey = expert.category.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-                const categoryLabel = t(`taskExperts.${categoryKey}`) || expert.category;
-                return (
-                  <div style={{ marginBottom: '16px' }}>
-                    <span style={{
-                      padding: '4px 10px',
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      color: 'white',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      display: 'inline-block'
-                    }}>
-                      💼 {categoryLabel}
+                  <div className={styles.expertInfo}>
+                    <h3 className={styles.expertName}>
+                      {expert.name}
+                    </h3>
+                    <span className={styles.levelBadge}>
+                      {getLevelText(expert.user_level)}
                     </span>
                   </div>
-                );
-              })()}
+                </div>
+
+                {/* 简介 */}
+                <p className={styles.bio}>
+                  {expert.bio}
+                </p>
+
+                {/* 类别 */}
+                {expert.category && (() => {
+                  // 将下划线格式转换为驼峰格式用于翻译键
+                  const categoryKey = expert.category.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+                  const categoryLabel = t(`taskExperts.${categoryKey}`) || expert.category;
+                  return (
+                    <div style={{ marginBottom: '16px' }}>
+                      <span className={styles.categoryBadge}>
+                        💼 {categoryLabel}
+                      </span>
+                    </div>
+                  );
+                })()}
 
               {/* 评分和统计 - 网格布局 */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
-                marginBottom: '20px'
-              }}>
-                <div style={{
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: 'white',
-                    marginBottom: '4px'
-                  }}>
+              <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {expert.avg_rating.toFixed(1)}
                   </div>
-                  <div style={{
-                    fontSize: '11px',
-                    color: 'rgba(255, 255, 255, 0.8)'
-                  }}>
+                  <div className={styles.statLabel}>
                     评分
                   </div>
                 </div>
-                <div style={{
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    color: 'white',
-                    marginBottom: '4px'
-                  }}>
+                <div className={styles.statCard}>
+                  <div className={styles.statValue}>
                     {expert.completed_tasks}
                   </div>
                   <div style={{
@@ -1559,7 +1348,9 @@ const TaskExperts: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
+    </div>
       
       {/* 登录弹窗 */}
       <LoginModal 
