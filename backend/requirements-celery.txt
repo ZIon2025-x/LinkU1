@@ -22,6 +22,9 @@ pytz>=2023.3
 requests>=2.31.0,<3.0.0
 orjson>=3.9.0,<4.0.0
 
+# 监控和指标（Celery 任务也需要记录指标）
+prometheus-client>=0.19.0,<1.0.0
+
 # 注意：不包含 asyncpg，因为：
 # 1. Celery Beat/Worker 不需要异步数据库
 # 2. Celery 任务使用同步数据库操作（通过 SessionLocal）

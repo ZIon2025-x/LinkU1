@@ -35,11 +35,20 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --http h11
 - **Healthcheck Path：** `/health`
 - **Healthcheck Timeout：** `300`（秒）
 
-**环境变量：**
-- 所有应用需要的环境变量
-- `REDIS_URL`（如果使用 Redis）
-- `USE_REDIS=true`
-- 数据库配置等
+**环境变量（重要）：**
+- **Redis 配置（必需，用于 Celery 检测）：**
+  - `REDIS_URL=${{Redis.REDIS_URL}}` （必须与 Celery Worker/Beat 完全相同）
+  - `USE_REDIS=true` （必须设置为 true）
+- **数据库配置：**
+  - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+- **其他必需配置：**
+  - `SECRET_KEY=your-secret-key`
+  - `ENVIRONMENT=production`
+  - 其他应用需要的环境变量
+
+**⚠️ 重要：** `REDIS_URL` 必须在所有服务（主程序、Worker、Beat）中**完全相同**，否则主程序无法检测到 Celery Worker。
+
+详细环境变量配置请参考：[Celery 环境变量配置指南](./CELERY_ENV_VARS_GUIDE.md)
 
 **验证：**
 - 服务应该有公共域名

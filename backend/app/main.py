@@ -626,11 +626,13 @@ async def startup_event():
     import threading
     import time
     
-    # 检查 Celery Worker 是否可用
+    # 检查 Celery Worker 是否可用 - 优先使用 Celery，备用 TaskScheduler
     celery_available = False
     try:
         from app.celery_app import celery_app, USE_REDIS
         from app.redis_cache import get_redis_client
+        
+        logger.info("🔍 开始检测 Celery Worker 可用性...")
         
         # 检查 Redis 连接
         if USE_REDIS:
@@ -638,29 +640,55 @@ async def startup_event():
             if redis_client:
                 try:
                     redis_client.ping()
-                    # 检查 Celery Worker 是否在线
-                    inspect = celery_app.control.inspect(timeout=5.0)
-                    active_workers = inspect.active()
+                    logger.info("✅ Redis 连接成功")
                     
-                    if active_workers and isinstance(active_workers, dict):
-                        worker_count = len(active_workers)
+                    # 检查 Celery Worker 是否在线
+                    # 使用 ping() 方法检测 worker，更可靠
+                    logger.info("🔍 正在检测 Celery Worker...")
+                    inspect = celery_app.control.inspect(timeout=10.0)
+                    
+                    # 方法1: 使用 ping() 检测 worker
+                    ping_result = inspect.ping()
+                    if ping_result and isinstance(ping_result, dict) and len(ping_result) > 0:
+                        worker_count = len(ping_result)
+                        worker_names = list(ping_result.keys())
                         celery_available = True
-                        logger.info(f"✅ Redis 连接成功，Celery Worker 在线 ({worker_count} workers)，将使用 Celery 执行定时任务")
+                        logger.info(f"✅ Celery Worker 在线 ({worker_count} workers): {', '.join(worker_names)}")
+                        logger.info("✅ 将使用 Celery 执行定时任务（Celery Beat 负责调度）")
                     else:
-                        logger.info("ℹ️  Redis 连接成功，但 Celery Worker 未检测到，将使用 TaskScheduler 作为备用")
+                        # 方法2: 尝试使用 stats() 检测
+                        logger.info("⚠️  ping() 未检测到 worker，尝试使用 stats()...")
+                        stats_result = inspect.stats()
+                        if stats_result and isinstance(stats_result, dict) and len(stats_result) > 0:
+                            worker_count = len(stats_result)
+                            worker_names = list(stats_result.keys())
+                            celery_available = True
+                            logger.info(f"✅ Celery Worker 在线 ({worker_count} workers): {', '.join(worker_names)}")
+                            logger.info("✅ 将使用 Celery 执行定时任务（Celery Beat 负责调度）")
+                        else:
+                            logger.warning("⚠️  Celery Worker 未检测到（可能还未启动）")
+                            logger.info("ℹ️  将使用 TaskScheduler 作为备用（如果 Worker 稍后启动，Celery Beat 会自动接管）")
+                            
                 except Exception as e:
-                    logger.warning(f"⚠️  检测 Celery Worker 状态失败: {e}，将使用 TaskScheduler 作为备用")
+                    logger.warning(f"⚠️  检测 Celery Worker 状态失败: {e}")
+                    logger.info("ℹ️  将使用 TaskScheduler 作为备用")
             else:
-                logger.info("ℹ️  Redis 未配置，将使用 TaskScheduler 执行定时任务")
+                logger.info("ℹ️  Redis 客户端不可用，将使用 TaskScheduler 执行定时任务")
         else:
             logger.info("ℹ️  USE_REDIS=false，将使用 TaskScheduler 执行定时任务")
-    except ImportError:
-        logger.info("ℹ️  Celery 未安装，将使用 TaskScheduler 执行定时任务")
+    except ImportError as e:
+        logger.info(f"ℹ️  Celery 未安装 ({e})，将使用 TaskScheduler 执行定时任务")
     except Exception as e:
         logger.warning(f"⚠️  检查 Celery 可用性时出错: {e}，将使用 TaskScheduler 作为备用")
+        import traceback
+        logger.debug(f"详细错误: {traceback.format_exc()}")
     
-    # 如果 Celery 不可用，启动 TaskScheduler 作为备用
-    if not celery_available:
+    # 如果 Celery 可用，不启动 TaskScheduler（由 Celery Beat 负责调度）
+    if celery_available:
+        logger.info("ℹ️  Celery 可用，不启动 TaskScheduler（定时任务由 Celery Beat 调度，Celery Worker 执行）")
+    else:
+        # 如果 Celery 不可用，启动 TaskScheduler 作为备用
+        logger.info("📋 启动 TaskScheduler 作为备用调度器...")
         try:
             from app.task_scheduler import init_scheduler
             scheduler = init_scheduler()
