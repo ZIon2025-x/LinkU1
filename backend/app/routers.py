@@ -6851,6 +6851,329 @@ def delete_task_expert(
         raise HTTPException(status_code=500, detail=f"删除任务达人失败: {str(e)}")
 
 
+# ==================== 管理员管理任务达人服务和活动 API ====================
+
+@router.get("/admin/task-expert/{expert_id}/services")
+def get_expert_services_admin(
+    expert_id: str,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取任务达人的服务列表（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        services = db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.expert_id == expert_id
+        ).order_by(models.TaskExpertService.display_order, models.TaskExpertService.created_at.desc()).all()
+        
+        return {
+            "services": [
+                {
+                    "id": s.id,
+                    "expert_id": s.expert_id,
+                    "service_name": s.service_name,
+                    "description": s.description,
+                    "images": s.images,
+                    "base_price": float(s.base_price) if s.base_price else 0,
+                    "currency": s.currency,
+                    "status": s.status,
+                    "display_order": s.display_order,
+                    "view_count": s.view_count,
+                    "application_count": s.application_count,
+                    "has_time_slots": s.has_time_slots,
+                    "time_slot_duration_minutes": s.time_slot_duration_minutes,
+                    "time_slot_start_time": str(s.time_slot_start_time) if s.time_slot_start_time else None,
+                    "time_slot_end_time": str(s.time_slot_end_time) if s.time_slot_end_time else None,
+                    "participants_per_slot": s.participants_per_slot,
+                    "weekly_time_slot_config": s.weekly_time_slot_config,
+                    "created_at": s.created_at.isoformat() if s.created_at else None,
+                    "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+                }
+                for s in services
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务达人服务列表失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取服务列表失败: {str(e)}")
+
+
+@router.put("/admin/task-expert/{expert_id}/services/{service_id}")
+def update_expert_service_admin(
+    expert_id: str,
+    service_id: int,
+    service_data: dict,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """更新任务达人的服务（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 验证服务是否存在且属于该任务达人
+        service = db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.id == service_id,
+            models.TaskExpertService.expert_id == expert_id
+        ).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="服务不存在")
+        
+        # 更新服务字段
+        for key, value in service_data.items():
+            if hasattr(service, key) and key not in ['id', 'expert_id', 'created_at']:
+                if key == 'base_price' and value is not None:
+                    from decimal import Decimal
+                    setattr(service, key, Decimal(str(value)))
+                elif key in ['time_slot_start_time', 'time_slot_end_time'] and value:
+                    from datetime import time as dt_time
+                    setattr(service, key, dt_time.fromisoformat(value))
+                else:
+                    setattr(service, key, value)
+        
+        service.updated_at = get_utc_time()
+        db.commit()
+        
+        logger.info(f"管理员 {current_admin.id} 更新任务达人 {expert_id} 的服务 {service_id}")
+        
+        return {"message": "服务更新成功", "service_id": service_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新服务失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新服务失败: {str(e)}")
+
+
+@router.delete("/admin/task-expert/{expert_id}/services/{service_id}")
+def delete_expert_service_admin(
+    expert_id: str,
+    service_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """删除任务达人的服务（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 验证服务是否存在且属于该任务达人
+        service = db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.id == service_id,
+            models.TaskExpertService.expert_id == expert_id
+        ).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="服务不存在")
+        
+        # 检查是否有任务正在使用这个服务
+        tasks_using_service = db.query(models.Task).filter(
+            models.Task.expert_service_id == service_id
+        ).count()
+        
+        # 检查是否有活动正在使用这个服务
+        activities_using_service = db.query(models.Activity).filter(
+            models.Activity.expert_service_id == service_id
+        ).count()
+        
+        if tasks_using_service > 0 or activities_using_service > 0:
+            error_msg = "无法删除服务，因为"
+            reasons = []
+            if tasks_using_service > 0:
+                reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
+            if activities_using_service > 0:
+                reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
+            error_msg += "、" .join(reasons) + "。请先处理相关任务和活动后再删除。"
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        db.delete(service)
+        db.commit()
+        
+        logger.info(f"管理员 {current_admin.id} 删除任务达人 {expert_id} 的服务 {service_id}")
+        
+        return {"message": "服务删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除服务失败: {e}")
+        db.rollback()
+        # 如果是外键约束错误，提供更友好的错误消息
+        if "foreign key constraint" in str(e).lower() or "referenced" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail="无法删除服务，因为有任务或活动正在使用此服务。请先处理相关任务和活动后再删除。"
+            )
+        raise HTTPException(status_code=500, detail=f"删除服务失败: {str(e)}")
+
+
+@router.get("/admin/task-expert/{expert_id}/activities")
+def get_expert_activities_admin(
+    expert_id: str,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """获取任务达人的活动列表（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        activities = db.query(models.Activity).filter(
+            models.Activity.expert_id == expert_id
+        ).order_by(models.Activity.created_at.desc()).all()
+        
+        return {
+            "activities": [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "description": a.description,
+                    "expert_id": a.expert_id,
+                    "expert_service_id": a.expert_service_id,
+                    "location": a.location,
+                    "task_type": a.task_type,
+                    "reward_type": a.reward_type,
+                    "original_price_per_participant": float(a.original_price_per_participant) if a.original_price_per_participant else None,
+                    "discount_percentage": float(a.discount_percentage) if a.discount_percentage else None,
+                    "discounted_price_per_participant": float(a.discounted_price_per_participant) if a.discounted_price_per_participant else None,
+                    "currency": a.currency,
+                    "points_reward": a.points_reward,
+                    "max_participants": a.max_participants,
+                    "min_participants": a.min_participants,
+                    "completion_rule": a.completion_rule,
+                    "reward_distribution": a.reward_distribution,
+                    "status": a.status,
+                    "is_public": a.is_public,
+                    "visibility": a.visibility,
+                    "deadline": a.deadline.isoformat() if a.deadline else None,
+                    "activity_end_date": a.activity_end_date.isoformat() if a.activity_end_date else None,
+                    "images": a.images,
+                    "has_time_slots": a.has_time_slots,
+                    "created_at": a.created_at.isoformat() if a.created_at else None,
+                }
+                for a in activities
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取任务达人活动列表失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取活动列表失败: {str(e)}")
+
+
+@router.put("/admin/task-expert/{expert_id}/activities/{activity_id}")
+def update_expert_activity_admin(
+    expert_id: str,
+    activity_id: int,
+    activity_data: dict,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """更新任务达人的活动（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 验证活动是否存在且属于该任务达人
+        activity = db.query(models.Activity).filter(
+            models.Activity.id == activity_id,
+            models.Activity.expert_id == expert_id
+        ).first()
+        if not activity:
+            raise HTTPException(status_code=404, detail="活动不存在")
+        
+        # 更新活动字段
+        for key, value in activity_data.items():
+            if hasattr(activity, key) and key not in ['id', 'expert_id', 'created_at']:
+                if key in ['original_price_per_participant', 'discount_percentage', 'discounted_price_per_participant'] and value is not None:
+                    from decimal import Decimal
+                    setattr(activity, key, Decimal(str(value)))
+                elif key in ['deadline'] and value:
+                    from datetime import datetime
+                    setattr(activity, key, datetime.fromisoformat(value.replace('Z', '+00:00')))
+                elif key in ['activity_end_date'] and value:
+                    from datetime import date
+                    setattr(activity, key, date.fromisoformat(value))
+                else:
+                    setattr(activity, key, value)
+        
+        db.commit()
+        
+        logger.info(f"管理员 {current_admin.id} 更新任务达人 {expert_id} 的活动 {activity_id}")
+        
+        return {"message": "活动更新成功", "activity_id": activity_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新活动失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新活动失败: {str(e)}")
+
+
+@router.delete("/admin/task-expert/{expert_id}/activities/{activity_id}")
+def delete_expert_activity_admin(
+    expert_id: str,
+    activity_id: int,
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """删除任务达人的活动（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 验证活动是否存在且属于该任务达人
+        activity = db.query(models.Activity).filter(
+            models.Activity.id == activity_id,
+            models.Activity.expert_id == expert_id
+        ).first()
+        if not activity:
+            raise HTTPException(status_code=404, detail="活动不存在")
+        
+        # 检查是否有任务正在使用这个活动
+        tasks_using_activity = db.query(models.Task).filter(
+            models.Task.parent_activity_id == activity_id
+        ).count()
+        
+        if tasks_using_activity > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除活动，因为有 {tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
+            )
+        
+        db.delete(activity)
+        db.commit()
+        
+        logger.info(f"管理员 {current_admin.id} 删除任务达人 {expert_id} 的活动 {activity_id}")
+        
+        return {"message": "活动删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除活动失败: {e}")
+        db.rollback()
+        # 如果是外键约束错误，提供更友好的错误消息
+        if "foreign key constraint" in str(e).lower() or "referenced" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail="无法删除活动，因为有任务正在使用此活动。请先处理相关任务后再删除。"
+            )
+        raise HTTPException(status_code=500, detail=f"删除活动失败: {str(e)}")
+
+
 # 公开 API - 获取任务达人列表（前端使用）
 @router.get("/task-experts")
 def get_public_task_experts(

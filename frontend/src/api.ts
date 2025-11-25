@@ -1544,6 +1544,42 @@ export const deleteTaskExpert = async (expertId: string) => {
   return res.data;
 };
 
+// 管理员 API - 获取任务达人的服务列表
+export const getExpertServicesAdmin = async (expertId: string) => {
+  const res = await api.get(`/api/admin/task-expert/${expertId}/services`);
+  return res.data;
+};
+
+// 管理员 API - 更新任务达人的服务
+export const updateExpertServiceAdmin = async (expertId: string, serviceId: number, serviceData: any) => {
+  const res = await api.put(`/api/admin/task-expert/${expertId}/services/${serviceId}`, serviceData);
+  return res.data;
+};
+
+// 管理员 API - 删除任务达人的服务
+export const deleteExpertServiceAdmin = async (expertId: string, serviceId: number) => {
+  const res = await api.delete(`/api/admin/task-expert/${expertId}/services/${serviceId}`);
+  return res.data;
+};
+
+// 管理员 API - 获取任务达人的活动列表
+export const getExpertActivitiesAdmin = async (expertId: string) => {
+  const res = await api.get(`/api/admin/task-expert/${expertId}/activities`);
+  return res.data;
+};
+
+// 管理员 API - 更新任务达人的活动
+export const updateExpertActivityAdmin = async (expertId: string, activityId: number, activityData: any) => {
+  const res = await api.put(`/api/admin/task-expert/${expertId}/activities/${activityId}`, activityData);
+  return res.data;
+};
+
+// 管理员 API - 删除任务达人的活动
+export const deleteExpertActivityAdmin = async (expertId: string, activityId: number) => {
+  const res = await api.delete(`/api/admin/task-expert/${expertId}/activities/${activityId}`);
+  return res.data;
+};
+
 // 公开 API - 获取任务达人列表（用于前端展示）
 export const getPublicTaskExperts = async (category?: string) => {
   const params = category ? { category } : {};

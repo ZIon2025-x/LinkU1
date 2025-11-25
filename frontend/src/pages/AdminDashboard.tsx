@@ -25,6 +25,12 @@ import api, {
   createExpertFromApplication,
   getProfileUpdateRequests,
   reviewProfileUpdateRequest,
+  getExpertServicesAdmin,
+  updateExpertServiceAdmin,
+  deleteExpertServiceAdmin,
+  getExpertActivitiesAdmin,
+  updateExpertActivityAdmin,
+  deleteExpertActivityAdmin,
   adminLogout,
   createInvitationCode,
   getInvitationCodes,
@@ -149,6 +155,11 @@ const AdminDashboard: React.FC = () => {
   const [loadingApprovedApplications, setLoadingApprovedApplications] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [taskExpertSubTab, setTaskExpertSubTab] = useState<'list' | 'applications' | 'profile-updates'>('list'); // 任务达人管理内部标签切换
+  const [expertModalTab, setExpertModalTab] = useState<'basic' | 'services' | 'activities'>('basic'); // 编辑弹窗内部标签切换
+  const [expertServices, setExpertServices] = useState<any[]>([]);
+  const [expertActivities, setExpertActivities] = useState<any[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   
   // 任务达人申请审核相关状态
   const [expertApplications, setExpertApplications] = useState<any[]>([]);
@@ -1639,6 +1650,92 @@ const AdminDashboard: React.FC = () => {
               </button>
             </div>
             
+            {/* 编辑弹窗内部标签页导航 */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0' }}>
+              <button
+                onClick={() => setExpertModalTab('basic')}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: expertModalTab === 'basic' ? '#007bff' : '#666',
+                  borderBottom: expertModalTab === 'basic' ? '2px solid #007bff' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: expertModalTab === 'basic' ? 600 : 400,
+                  marginBottom: '-2px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                基本信息
+              </button>
+              <button
+                onClick={async () => {
+                  setExpertModalTab('services');
+                  if (taskExpertForm.id && expertServices.length === 0) {
+                    setLoadingServices(true);
+                    try {
+                      const data = await getExpertServicesAdmin(taskExpertForm.id);
+                      setExpertServices(data.services || []);
+                    } catch (error: any) {
+                      console.error('加载服务列表失败:', error);
+                      message.error('加载服务列表失败');
+                    } finally {
+                      setLoadingServices(false);
+                    }
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: expertModalTab === 'services' ? '#007bff' : '#666',
+                  borderBottom: expertModalTab === 'services' ? '2px solid #007bff' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: expertModalTab === 'services' ? 600 : 400,
+                  marginBottom: '-2px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                服务管理
+              </button>
+              <button
+                onClick={async () => {
+                  setExpertModalTab('activities');
+                  if (taskExpertForm.id && expertActivities.length === 0) {
+                    setLoadingActivities(true);
+                    try {
+                      const data = await getExpertActivitiesAdmin(taskExpertForm.id);
+                      setExpertActivities(data.activities || []);
+                    } catch (error: any) {
+                      console.error('加载活动列表失败:', error);
+                      message.error('加载活动列表失败');
+                    } finally {
+                      setLoadingActivities(false);
+                    }
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: expertModalTab === 'activities' ? '#007bff' : '#666',
+                  borderBottom: expertModalTab === 'activities' ? '2px solid #007bff' : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: expertModalTab === 'activities' ? 600 : 400,
+                  marginBottom: '-2px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                活动管理
+              </button>
+            </div>
+            
+            {/* 基本信息标签页 */}
+            {expertModalTab === 'basic' && (
+              <>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>名称 *</label>
               <input
@@ -2059,8 +2156,297 @@ const AdminDashboard: React.FC = () => {
                 </select>
               </div>
             </div>
+            </>
+            )}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            {/* 服务管理标签页 */}
+            {expertModalTab === 'services' && (
+              <div>
+                {!taskExpertForm.id ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    请先保存任务达人基本信息
+                  </div>
+                ) : loadingServices ? (
+                  <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0 }}>服务列表</h4>
+                      <button
+                        onClick={async () => {
+                          setLoadingServices(true);
+                          try {
+                            const data = await getExpertServicesAdmin(taskExpertForm.id);
+                            setExpertServices(data.services || []);
+                            message.success('刷新成功');
+                          } catch (error: any) {
+                            console.error('加载服务列表失败:', error);
+                            message.error('加载服务列表失败');
+                          } finally {
+                            setLoadingServices(false);
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        刷新
+                      </button>
+                    </div>
+                    {expertServices.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                        该任务达人暂无服务
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
+                          <thead>
+                            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>服务名称</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>价格</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>状态</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expertServices.map((service) => (
+                              <tr key={service.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>{service.service_name}</td>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>{service.base_price} {service.currency}</td>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    background: service.status === 'active' ? '#d4edda' : '#f8d7da',
+                                    color: service.status === 'active' ? '#155724' : '#721c24'
+                                  }}>
+                                    {service.status === 'active' ? '已启用' : '已禁用'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px' }}>
+                                  <button
+                                    onClick={async () => {
+                                      const newStatus = service.status === 'active' ? 'inactive' : 'active';
+                                      try {
+                                        await updateExpertServiceAdmin(taskExpertForm.id, service.id, { status: newStatus });
+                                        message.success('服务状态更新成功');
+                                        const data = await getExpertServicesAdmin(taskExpertForm.id);
+                                        setExpertServices(data.services || []);
+                                      } catch (error: any) {
+                                        console.error('更新服务状态失败:', error);
+                                        message.error(error.response?.data?.detail || '更新失败');
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      marginRight: '4px',
+                                      border: '1px solid #007bff',
+                                      background: 'white',
+                                      color: '#007bff',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    {service.status === 'active' ? '禁用' : '启用'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      Modal.confirm({
+                                        title: '确认删除',
+                                        content: '确定要删除这个服务吗？',
+                                        okText: '确定',
+                                        cancelText: '取消',
+                                        onOk: async () => {
+                                          try {
+                                            await deleteExpertServiceAdmin(taskExpertForm.id, service.id);
+                                            message.success('服务删除成功');
+                                            const data = await getExpertServicesAdmin(taskExpertForm.id);
+                                            setExpertServices(data.services || []);
+                                          } catch (error: any) {
+                                            console.error('删除服务失败:', error);
+                                            message.error(error.response?.data?.detail || '删除失败');
+                                          }
+                                        }
+                                      });
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      border: '1px solid #dc3545',
+                                      background: 'white',
+                                      color: '#dc3545',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* 活动管理标签页 */}
+            {expertModalTab === 'activities' && (
+              <div>
+                {!taskExpertForm.id ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    请先保存任务达人基本信息
+                  </div>
+                ) : loadingActivities ? (
+                  <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0 }}>活动列表</h4>
+                      <button
+                        onClick={async () => {
+                          setLoadingActivities(true);
+                          try {
+                            const data = await getExpertActivitiesAdmin(taskExpertForm.id);
+                            setExpertActivities(data.activities || []);
+                            message.success('刷新成功');
+                          } catch (error: any) {
+                            console.error('加载活动列表失败:', error);
+                            message.error('加载活动列表失败');
+                          } finally {
+                            setLoadingActivities(false);
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        刷新
+                      </button>
+                    </div>
+                    {expertActivities.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                        该任务达人暂无活动
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
+                          <thead>
+                            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>活动标题</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>状态</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>参与者</th>
+                              <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: 600 }}>操作</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expertActivities.map((activity) => (
+                              <tr key={activity.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>{activity.title}</td>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>
+                                  <span style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    background: activity.status === 'open' ? '#d4edda' : activity.status === 'closed' ? '#fff3cd' : '#f8d7da',
+                                    color: activity.status === 'open' ? '#155724' : activity.status === 'closed' ? '#856404' : '#721c24'
+                                  }}>
+                                    {activity.status === 'open' ? '开放' : activity.status === 'closed' ? '已关闭' : activity.status === 'cancelled' ? '已取消' : '已完成'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px', fontSize: '14px' }}>
+                                  {activity.min_participants} - {activity.max_participants} 人
+                                </td>
+                                <td style={{ padding: '12px' }}>
+                                  <button
+                                    onClick={async () => {
+                                      const newStatus = activity.status === 'open' ? 'closed' : 'open';
+                                      try {
+                                        await updateExpertActivityAdmin(taskExpertForm.id, activity.id, { status: newStatus });
+                                        message.success('活动状态更新成功');
+                                        const data = await getExpertActivitiesAdmin(taskExpertForm.id);
+                                        setExpertActivities(data.activities || []);
+                                      } catch (error: any) {
+                                        console.error('更新活动状态失败:', error);
+                                        message.error(error.response?.data?.detail || '更新失败');
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      marginRight: '4px',
+                                      border: '1px solid #007bff',
+                                      background: 'white',
+                                      color: '#007bff',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    {activity.status === 'open' ? '关闭' : '开放'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      Modal.confirm({
+                                        title: '确认删除',
+                                        content: '确定要删除这个活动吗？',
+                                        okText: '确定',
+                                        cancelText: '取消',
+                                        onOk: async () => {
+                                          try {
+                                            await deleteExpertActivityAdmin(taskExpertForm.id, activity.id);
+                                            message.success('活动删除成功');
+                                            const data = await getExpertActivitiesAdmin(taskExpertForm.id);
+                                            setExpertActivities(data.activities || []);
+                                          } catch (error: any) {
+                                            console.error('删除活动失败:', error);
+                                            message.error(error.response?.data?.detail || '删除失败');
+                                          }
+                                        }
+                                      });
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      border: '1px solid #dc3545',
+                                      background: 'white',
+                                      color: '#dc3545',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    删除
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {expertModalTab === 'basic' && (
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '30px' }}>
               <button
                 onClick={async () => {
                   try {
@@ -2123,6 +2509,7 @@ const AdminDashboard: React.FC = () => {
                 取消
               </button>
             </div>
+            )}
           </div>
         </div>
       )}
