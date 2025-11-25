@@ -102,9 +102,10 @@ class StringValidator(BaseValidator):
         if len(username) > 30:
             raise ValueError("用户名不能超过30个字符")
         
-        # 只允许字母、数字、下划线和连字符
-        if not re.match(r'^[a-zA-Z0-9_-]+$', username):
-            raise ValueError("用户名只能包含字母、数字、下划线和连字符")
+        # 支持中文、英文字母、数字、下划线和连字符
+        # 排除空格、换行、制表符等空白字符
+        if re.search(r'[\s\n\r\t]', username):
+            raise ValueError("用户名不能包含空格或换行符")
         
         # 不能以数字开头
         if username[0].isdigit():

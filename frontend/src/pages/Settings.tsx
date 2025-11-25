@@ -725,7 +725,7 @@ const Settings: React.FC = () => {
                       })()}
                     </p>
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#666' }}>
-                      用户名只能包含字母、数字、下划线和连字符，且不能以数字开头
+                      用户名支持中文、英文字母、数字、下划线和连字符，不能以数字开头，不能包含空格
                     </p>
                   </div>
 

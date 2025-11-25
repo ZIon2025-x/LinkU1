@@ -2089,9 +2089,11 @@ def update_profile(
             if len(new_name) > 50:
                 raise HTTPException(status_code=400, detail="用户名不能超过50个字符")
             
-            # 验证名字格式（只允许字母、数字、下划线和连字符）
-            if not re.match(r'^[a-zA-Z0-9_-]+$', new_name):
-                raise HTTPException(status_code=400, detail="用户名只能包含字母、数字、下划线和连字符")
+            # 验证名字格式（支持中文、英文字母、数字、下划线和连字符）
+            # 使用Unicode字符类，允许中文、日文、韩文等
+            # 排除空格、换行、制表符等空白字符
+            if re.search(r'[\s\n\r\t]', new_name):
+                raise HTTPException(status_code=400, detail="用户名不能包含空格或换行符")
             
             # 验证名字不能以数字开头
             if new_name[0].isdigit():
