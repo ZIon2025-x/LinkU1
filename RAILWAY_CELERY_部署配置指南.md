@@ -2,11 +2,19 @@
 
 ## 🔴 问题
 
-Railway 在每次部署时都会读取 `railway.json` 文件中的 `startCommand`，覆盖服务级别的 Custom Start Command 设置。
+Railway 在每次部署时都会读取 `railway.json` 文件中的配置，覆盖服务级别的设置：
+1. `startCommand` 会覆盖 Custom Start Command
+2. `healthcheckPath` 会应用到所有服务，导致 Celery Worker/Beat 健康检查失败
 
 ## ✅ 解决方案
 
-我已经移除了 `railway.json` 中的 `startCommand`，现在每个服务可以独立配置启动命令。
+我已经从 `railway.json` 中移除了：
+1. `startCommand` - 现在每个服务可以独立配置启动命令
+2. `healthcheckPath` 和 `healthcheckTimeout` - 现在每个服务可以在 Railway Dashboard 中单独配置健康检查
+
+这样：
+- **App Service** 可以设置健康检查路径为 `/health`
+- **Celery Worker/Beat** 可以禁用健康检查（因为它们不提供 HTTP 服务）
 
 ---
 
@@ -22,6 +30,10 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --http h11
 ```
 
 **Root Directory：** `backend`
+
+**健康检查配置：**
+- **Healthcheck Path：** `/health`
+- **Healthcheck Timeout：** `300`（秒）
 
 **环境变量：**
 - 所有应用需要的环境变量
@@ -46,6 +58,13 @@ celery -A app.celery_app beat --loglevel=info
 
 **Root Directory：** `backend`
 
+**健康检查配置（重要）：**
+- **Healthcheck Path：** 留空或设置为 `/`（Celery Beat 不提供 HTTP 服务）
+- **Healthcheck Timeout：** 可以设置为 `0` 或留空以禁用健康检查
+- 或者：在 Railway Dashboard 中禁用健康检查（如果支持）
+
+**注意：** 由于 `railway.json` 中已移除 `healthcheckPath`，现在每个服务可以在 Railway Dashboard 中单独配置健康检查。对于 Celery Beat 这种不提供 HTTP 服务的后台任务，建议禁用健康检查。
+
 **环境变量：**
 - 复制 App Service 的所有环境变量
 - 特别是：
@@ -65,6 +84,7 @@ celery -A app.celery_app beat --loglevel=info
 ```
 Error: Invalid value for '--port': '$PORT' is not a valid integer.
 Usage: python -m uvicorn [OPTIONS] APP
+1/1 replicas never became healthy!
 ```
 
 ---
@@ -79,6 +99,13 @@ celery -A app.celery_app worker --loglevel=info --concurrency=2
 ```
 
 **Root Directory：** `backend`
+
+**健康检查配置（重要）：**
+- **Healthcheck Path：** 留空或设置为 `/`（Celery Worker 不提供 HTTP 服务）
+- **Healthcheck Timeout：** 可以设置为 `0` 或留空以禁用健康检查
+- 或者：在 Railway Dashboard 中禁用健康检查（如果支持）
+
+**注意：** 由于 `railway.json` 中已移除 `healthcheckPath`，现在每个服务可以在 Railway Dashboard 中单独配置健康检查。对于 Celery Worker 这种不提供 HTTP 服务的后台任务，建议禁用健康检查。
 
 **环境变量：**
 - 复制 App Service 的所有环境变量
@@ -99,6 +126,7 @@ celery -A app.celery_app worker --loglevel=info --concurrency=2
 ```
 Error: Invalid value for '--port': '$PORT' is not a valid integer.
 Usage: python -m uvicorn [OPTIONS] APP
+1/1 replicas never became healthy!
 ```
 
 ---
