@@ -308,6 +308,22 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
+            position: relative;
+        }
+
+        .card-style-3 .location-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            font-size: 12px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-weight: 500;
+            z-index: 10;
         }
 
         .card-style-3:hover {
@@ -812,10 +828,70 @@
             color: white;
         }
 
+        .modal-style-3 .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
         .modal-style-3 .modal-content {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-style-3 .modal-header {
+            border-bottom-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-style-3 .modal-header h2 {
+            color: white;
+        }
+
+        .modal-style-3 .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .modal-style-3 .expert-info {
+            border-bottom-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-style-3 .expert-info .details h3 {
+            color: white;
+        }
+
+        .modal-style-3 .expert-info .details p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .modal-style-3 .section h4 {
+            color: white;
+        }
+
+        .modal-style-3 .tag {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-style-3 .modal-footer {
+            border-top-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-style-3 .btn-primary {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-style-3 .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
     </style>
 </head>
@@ -962,22 +1038,22 @@
             <h2 class="section-title">风格3：玻璃态风格（带地点和类别）</h2>
             <div class="cards-grid">
                 <div class="card-style-3">
+                    <div class="location-badge">📍 London</div>
                     <div class="header">
                         <img src="https://via.placeholder.com/72" alt="Avatar" class="avatar">
                         <div class="info">
                             <h3>陈静</h3>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                                 <span class="level">VIP达人</span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    📍 London
-                                </span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    💼 编程开发
-                                </span>
                             </div>
                         </div>
                     </div>
                     <p class="bio">专业编程开发，5年+经验，擅长React、Node.js、Python等全栈开发</p>
+                    <div style="margin-bottom: 16px;">
+                        <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3); display: inline-block;">
+                            💼 编程开发
+                        </span>
+                    </div>
                     <div class="stats">
                         <div class="stat-item">
                             <div class="stat-value">4.8</div>
@@ -992,31 +1068,26 @@
                             <div class="stat-label">完成率</div>
                         </div>
                     </div>
-                    <div class="tags">
-                        <span class="tag">编程开发</span>
-                        <span class="tag">网站建设</span>
-                        <span class="tag">移动应用</span>
-                    </div>
                     <button class="button">查看服务</button>
                 </div>
 
                 <div class="card-style-3">
+                    <div class="location-badge">📍 Birmingham</div>
                     <div class="header">
                         <img src="https://via.placeholder.com/72" alt="Avatar" class="avatar">
                         <div class="info">
                             <h3>赵磊</h3>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                                 <span class="level">超级达人</span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    📍 Birmingham
-                                </span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    💼 翻译服务
-                                </span>
                             </div>
                         </div>
                     </div>
                     <p class="bio">资深翻译专家，精通中英日三语，10年+翻译经验，专业文档翻译</p>
+                    <div style="margin-bottom: 16px;">
+                        <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3); display: inline-block;">
+                            💼 翻译服务
+                        </span>
+                    </div>
                     <div class="stats">
                         <div class="stat-item">
                             <div class="stat-value">5.0</div>
@@ -1031,31 +1102,26 @@
                             <div class="stat-label">完成率</div>
                         </div>
                     </div>
-                    <div class="tags">
-                        <span class="tag">翻译服务</span>
-                        <span class="tag">文档翻译</span>
-                        <span class="tag">口译</span>
-                    </div>
                     <button class="button">查看服务</button>
                 </div>
 
                 <div class="card-style-3">
+                    <div class="location-badge">📍 Manchester</div>
                     <div class="header">
                         <img src="https://via.placeholder.com/72" alt="Avatar" class="avatar">
                         <div class="info">
                             <h3>王芳</h3>
                             <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
                                 <span class="level">VIP达人</span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    📍 Manchester
-                                </span>
-                                <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3);">
-                                    💼 学业辅导
-                                </span>
                             </div>
                         </div>
                     </div>
                     <p class="bio">专业学业辅导老师，擅长数学、物理、化学等科目，帮助学生提高成绩</p>
+                    <div style="margin-bottom: 16px;">
+                        <span style="padding: 4px 10px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 8px; font-size: 12px; color: white; border: 1px solid rgba(255, 255, 255, 0.3); display: inline-block;">
+                            💼 学业辅导
+                        </span>
+                    </div>
                     <div class="stats">
                         <div class="stat-item">
                             <div class="stat-value">4.9</div>
@@ -1069,11 +1135,6 @@
                             <div class="stat-value">97%</div>
                             <div class="stat-label">完成率</div>
                         </div>
-                    </div>
-                    <div class="tags">
-                        <span class="tag">数学辅导</span>
-                        <span class="tag">物理辅导</span>
-                        <span class="tag">化学辅导</span>
                     </div>
                     <button class="button">查看服务</button>
                 </div>
@@ -1363,7 +1424,7 @@
                     <div class="details">
                         <h3>张明</h3>
                         <p>专业编程开发，5年+经验，擅长React、Node.js、Python等全栈开发</p>
-                        <div style="margin-top: 12px; display: flex; gap: 16px; font-size: 14px;">
+                        <div style="margin-top: 12px; display: flex; gap: 16px; font-size: 14px; color: rgba(255,255,255,0.9);">
                             <span>⭐ 4.8</span>
                             <span>✅ 128 任务</span>
                             <span>📊 95% 完成率</span>
@@ -1404,7 +1465,7 @@
 
                 <div class="section">
                     <h4>服务信息</h4>
-                    <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                    <p style="color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.6;">
                         响应时间：通常在2小时内回复<br>
                         成功率：95%<br>
                         已完成任务：128个

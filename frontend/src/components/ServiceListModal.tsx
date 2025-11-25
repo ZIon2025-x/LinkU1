@@ -312,10 +312,16 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
 
   return (
     <>
-      <div style={MODAL_OVERLAY_STYLE} onClick={onClose}>
+      <div style={{
+        ...MODAL_OVERLAY_STYLE,
+        background: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(4px)'
+      }} onClick={onClose}>
         <div
           style={{
-            backgroundColor: '#fff',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '16px',
             padding: '24px',
             maxWidth: '800px',
@@ -323,6 +329,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
             maxHeight: '90vh',
             overflowY: 'auto',
             position: 'relative',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -332,11 +339,12 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
               position: 'absolute',
               top: '16px',
               right: '16px',
-              background: 'none',
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
-              color: '#666',
+              color: 'white',
               width: '32px',
               height: '32px',
               display: 'flex',
@@ -346,22 +354,22 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
               transition: 'background 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f0f0f0';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'none';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
             }}
           >
             ×
           </button>
 
-          <h2 style={{ marginBottom: '24px', color: '#1a202c', fontSize: '24px', fontWeight: 600 }}>
+          <h2 style={{ marginBottom: '24px', color: 'white', fontSize: '24px', fontWeight: 600 }}>
             {expertName ? `${expertName} 的服务菜单` : '服务菜单'}
           </h2>
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '18px', color: '#666' }}>加载中...</div>
+              <div style={{ fontSize: '18px', color: 'rgba(255, 255, 255, 0.9)' }}>加载中...</div>
             </div>
           ) : error ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -369,7 +377,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
             </div>
           ) : services.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
-              <div style={{ fontSize: '18px', color: '#666' }}>达人准备中，请稍后再来~</div>
+              <div style={{ fontSize: '18px', color: 'rgba(255, 255, 255, 0.9)' }}>达人准备中，请稍后再来~</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -378,22 +386,25 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                   key={service.id}
                   onClick={() => handleServiceClick(service.id)}
                   style={{
-                    border: '2px solid #e2e8f0',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '12px',
                     padding: '20px',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    background: '#fff',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(10px)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#667eea';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
                     e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                     e.currentTarget.style.boxShadow = 'none';
                     e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                   }}
                 >
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
@@ -408,6 +419,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                           objectFit: 'cover',
                           borderRadius: '8px',
                           flexShrink: 0,
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
                         }}
                       />
                     )}
@@ -417,7 +429,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                       <h3 style={{
                         fontSize: '18px',
                         fontWeight: 600,
-                        color: '#1a202c',
+                        color: 'white',
                         marginBottom: '8px',
                       }}>
                         {service.service_name}
@@ -426,7 +438,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                       {/* 服务描述 */}
                       <p style={{
                         fontSize: '14px',
-                        color: '#4a5568',
+                        color: 'rgba(255, 255, 255, 0.9)',
                         marginBottom: '12px',
                         lineHeight: '1.5',
                         display: '-webkit-box',
@@ -442,14 +454,14 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                         <div style={{
                           fontSize: '20px',
                           fontWeight: 700,
-                          color: '#667eea',
+                          color: 'white',
                         }}>
                           {service.currency} {Number(service.base_price).toFixed(2)}
                         </div>
                         
                         <div style={{
                           fontSize: '12px',
-                          color: '#718096',
+                          color: 'rgba(255, 255, 255, 0.8)',
                           display: 'flex',
                           gap: '12px',
                         }}>
@@ -464,9 +476,10 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                           onClick={(e) => handleApplyClick(e, service)}
                           style={{
                             padding: '10px 20px',
-                            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                            color: '#fff',
-                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            backdropFilter: 'blur(10px)',
+                            color: 'white',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
                             borderRadius: '8px',
                             fontSize: '14px',
                             fontWeight: 600,
@@ -476,11 +489,13 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = 'translateY(0)';
                             e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
                           }}
                         >
                           申请服务

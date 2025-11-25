@@ -7,10 +7,12 @@ import json
 import logging
 import os
 import uuid
+import shutil
 from decimal import Decimal
 from typing import List, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import (
     APIRouter,
@@ -64,6 +66,143 @@ else:
 
 # 确保目录存在
 FLEA_MARKET_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ==================== 图片清理辅助函数 ====================
+
+def delete_flea_market_item_images(item_id: int, image_urls: Optional[List[str]] = None):
+    """
+    删除跳蚤市场商品的图片文件
+    
+    Args:
+        item_id: 商品ID
+        image_urls: 可选的图片URL列表，如果提供则只删除这些URL对应的文件
+    """
+    try:
+        # 检测部署环境
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        if RAILWAY_ENVIRONMENT:
+            base_dir = Path("/data/uploads")
+        else:
+            base_dir = Path("uploads")
+        
+        deleted_count = 0
+        
+        # 方法1：删除商品图片目录（标准路径）
+        flea_market_dir = base_dir / "flea_market" / str(item_id)
+        if flea_market_dir.exists():
+            shutil.rmtree(flea_market_dir)
+            logger.info(f"删除商品 {item_id} 的图片目录: {flea_market_dir}")
+            deleted_count += 1
+        
+        # 方法2：从URL中提取路径并删除（兼容其他存储位置）
+        if image_urls:
+            for image_url in image_urls:
+                try:
+                    # 解析URL，提取路径
+                    parsed = urlparse(image_url)
+                    path = parsed.path
+                    
+                    # 如果URL包含 /uploads/flea_market/，尝试删除对应文件
+                    if "/uploads/flea_market/" in path:
+                        # 提取相对路径
+                        if path.startswith("/uploads/"):
+                            relative_path = path[len("/uploads/"):]
+                            file_path = base_dir / relative_path
+                            if file_path.exists():
+                                if file_path.is_file():
+                                    file_path.unlink()
+                                    deleted_count += 1
+                                    logger.info(f"删除图片文件: {file_path}")
+                                elif file_path.is_dir():
+                                    shutil.rmtree(file_path)
+                                    deleted_count += 1
+                                    logger.info(f"删除图片目录: {file_path}")
+                except Exception as e:
+                    logger.warning(f"删除图片URL {image_url} 对应的文件失败: {e}")
+        
+        if deleted_count > 0:
+            logger.info(f"商品 {item_id} 已删除 {deleted_count} 个图片文件/目录")
+        
+    except Exception as e:
+        logger.error(f"删除商品 {item_id} 图片文件失败: {e}")
+
+
+def delete_flea_market_temp_images(user_id: Optional[str] = None):
+    """
+    删除跳蚤市场临时图片
+    
+    Args:
+        user_id: 可选的用户ID，如果提供则只删除该用户的临时图片，否则删除所有超过24小时的临时图片
+    """
+    try:
+        # 检测部署环境
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        if RAILWAY_ENVIRONMENT:
+            base_dir = Path("/data/uploads")
+        else:
+            base_dir = Path("uploads")
+        
+        temp_base_dir = base_dir / "flea_market"
+        
+        # 如果临时文件夹不存在，直接返回
+        if not temp_base_dir.exists():
+            return 0
+        
+        deleted_count = 0
+        
+        if user_id:
+            # 删除指定用户的临时目录
+            temp_dir = temp_base_dir / f"temp_{user_id}"
+            if temp_dir.exists():
+                try:
+                    shutil.rmtree(temp_dir)
+                    deleted_count += 1
+                    logger.info(f"删除用户 {user_id} 的跳蚤市场临时图片目录: {temp_dir}")
+                except Exception as e:
+                    logger.warning(f"删除临时目录失败 {temp_dir}: {e}")
+        else:
+            # 删除所有超过24小时的临时图片
+            cutoff_time = get_utc_time() - timedelta(hours=24)
+            
+            # 遍历所有临时文件夹（temp_*）
+            for temp_dir in temp_base_dir.iterdir():
+                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                    try:
+                        # 检查文件夹中的文件
+                        files_deleted = False
+                        for file_path in temp_dir.iterdir():
+                            if file_path.is_file():
+                                # 获取文件的修改时间
+                                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                                
+                                # 如果文件超过24小时未修改，删除它
+                                if file_mtime < cutoff_time:
+                                    try:
+                                        file_path.unlink()
+                                        deleted_count += 1
+                                        files_deleted = True
+                                        logger.info(f"删除未使用的跳蚤市场临时图片: {file_path}")
+                                    except Exception as e:
+                                        logger.warning(f"删除临时图片失败 {file_path}: {e}")
+                        
+                        # 如果文件夹为空或所有文件都已删除，尝试删除它
+                        try:
+                            if not any(temp_dir.iterdir()):
+                                temp_dir.rmdir()
+                                logger.info(f"删除空的跳蚤市场临时文件夹: {temp_dir}")
+                        except Exception as e:
+                            logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                    except Exception as e:
+                        logger.warning(f"处理临时目录失败 {temp_dir}: {e}")
+        
+        if deleted_count > 0:
+            logger.info(f"清理了 {deleted_count} 个跳蚤市场临时图片文件/目录")
+        
+        return deleted_count
+    except Exception as e:
+        logger.error(f"清理跳蚤市场临时图片失败: {e}")
+        return 0
 
 
 # 认证依赖
@@ -447,6 +586,7 @@ async def create_flea_market_item(
             if temp_dir.exists():
                 item_dir.mkdir(parents=True, exist_ok=True)
                 # 移动临时目录中的图片文件
+                moved_count = 0
                 for image_url in item_data.images:
                     try:
                         # 从URL中提取文件名
@@ -455,15 +595,26 @@ async def create_flea_market_item(
                         if temp_file.exists():
                             item_file = item_dir / filename
                             temp_file.rename(item_file)
+                            moved_count += 1
                             logger.info(f"移动临时图片到商品目录: {filename}")
                     except Exception as e:
                         logger.warning(f"移动图片文件失败: {e}")
-                # 删除临时目录（如果为空）
+                
+                # 删除临时目录（如果为空或所有文件都已移动）
                 try:
-                    if not any(temp_dir.iterdir()):
+                    remaining_files = list(temp_dir.iterdir())
+                    if not remaining_files:
                         temp_dir.rmdir()
-                except:
-                    pass
+                        logger.info(f"删除空的临时目录: {temp_dir}")
+                    else:
+                        # 如果还有未移动的文件，记录警告
+                        logger.warning(f"临时目录 {temp_dir} 中还有 {len(remaining_files)} 个文件未移动")
+                except Exception as e:
+                    logger.warning(f"删除临时目录失败: {e}")
+                
+                # 清理临时目录中未使用的图片（如果创建商品时没有使用所有临时图片）
+                if moved_count > 0:
+                    delete_flea_market_temp_images(str(current_user.id))
         
         return {
             "success": True,
@@ -550,7 +701,28 @@ async def update_flea_market_item(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="最多只能上传5张图片"
                     )
+                
+                # 获取旧图片列表，用于删除不再使用的图片
+                old_images = []
+                if item.images:
+                    try:
+                        old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                    except:
+                        old_images = []
+                
+                # 更新图片列表
                 update_data["images"] = json.dumps(item_data.images) if item_data.images else None
+                
+                # 删除不再使用的旧图片
+                if old_images:
+                    new_images_set = set(item_data.images) if item_data.images else set()
+                    old_images_set = set(old_images)
+                    images_to_delete = old_images_set - new_images_set
+                    
+                    if images_to_delete:
+                        logger.info(f"商品 {db_id} 更新图片，删除 {len(images_to_delete)} 张旧图片")
+                        delete_flea_market_item_images(db_id, list(images_to_delete))
+            
             if item_data.location is not None:
                 update_data["location"] = item_data.location
             if item_data.category is not None:
@@ -566,6 +738,18 @@ async def update_flea_market_item(
         
         # 执行删除操作
         if is_delete:
+            # 删除商品的所有图片文件
+            old_images = []
+            if item.images:
+                try:
+                    old_images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                except:
+                    old_images = []
+            
+            if old_images:
+                logger.info(f"删除商品 {db_id}，删除 {len(old_images)} 张图片")
+                delete_flea_market_item_images(db_id, old_images)
+            
             await db.execute(
                 update(models.FleaMarketItem)
                 .where(models.FleaMarketItem.id == db_id)
