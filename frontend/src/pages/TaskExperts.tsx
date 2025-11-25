@@ -734,7 +734,7 @@ const TaskExperts: React.FC = () => {
         margin: '0 auto',
         padding: '0 20px 20px 20px',
         minHeight: '100vh',
-        background: '#fff',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
         position: 'relative'
       }}>
         {/* 页面头部 */}

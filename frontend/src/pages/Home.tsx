@@ -901,26 +901,25 @@ const Home: React.FC = () => {
                   <div
                     key={expert.id}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      backdropFilter: 'blur(20px)',
+                      background: '#ffffff',
                       borderRadius: '24px',
                       padding: '28px',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                       transition: 'all 0.3s ease',
                       cursor: 'pointer',
                       position: 'relative',
                       overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.background = '#ffffff';
                       e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
+                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.12)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.background = '#ffffff';
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
                     }}
                     onClick={() => navigate(`/task-experts`)}
                   >
@@ -931,12 +930,11 @@ const Home: React.FC = () => {
                         top: '20px',
                         right: '20px',
                         padding: '4px 10px',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        backdropFilter: 'blur(10px)',
+                        background: '#f1f5f9',
                         borderRadius: '8px',
                         fontSize: '12px',
-                        color: 'white',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        color: '#475569',
+                        border: '1px solid #e2e8f0',
                         fontWeight: 500,
                         zIndex: 10
                       }}>
@@ -960,8 +958,8 @@ const Home: React.FC = () => {
                             height: '72px',
                             borderRadius: '50%',
                             objectFit: 'cover',
-                            border: '3px solid rgba(255, 255, 255, 0.3)',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+                            border: '3px solid #e2e8f0',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                           }}
                         />
                         {expert.is_verified && (
@@ -988,7 +986,7 @@ const Home: React.FC = () => {
                         <h3 style={{
                           fontSize: '20px',
                           fontWeight: '700',
-                          color: 'white',
+                          color: '#1a202c',
                           marginBottom: '6px',
                           margin: 0
                         }}>
@@ -997,9 +995,10 @@ const Home: React.FC = () => {
                         <span style={{
                           display: 'inline-block',
                           padding: '5px 12px',
-                          background: 'rgba(255, 255, 255, 0.25)',
-                          backdropFilter: 'blur(10px)',
-                          color: 'white',
+                          background: expert.user_level === 'super' ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
+                                     expert.user_level === 'vip' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' :
+                                     '#f1f5f9',
+                          color: expert.user_level === 'super' || expert.user_level === 'vip' ? '#fff' : '#475569',
                           borderRadius: '14px',
                           fontSize: '12px',
                           fontWeight: '600',
@@ -1015,7 +1014,7 @@ const Home: React.FC = () => {
                     {/* 简介 */}
                     {expert.bio && (
                       <p style={{
-                        color: 'rgba(255, 255, 255, 0.9)',
+                        color: '#4a5568',
                         fontSize: '14px',
                         lineHeight: '1.6',
                         marginBottom: '16px',
@@ -1030,12 +1029,11 @@ const Home: React.FC = () => {
                       <div style={{ marginBottom: '16px' }}>
                         <span style={{
                           padding: '4px 10px',
-                          background: 'rgba(255, 255, 255, 0.2)',
-                          backdropFilter: 'blur(10px)',
+                          background: '#f1f5f9',
                           borderRadius: '8px',
                           fontSize: '12px',
-                          color: 'white',
-                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          color: '#475569',
+                          border: '1px solid #e2e8f0',
                           display: 'inline-block'
                         }}>
                           💼 {categoryLabel}
@@ -1052,69 +1050,66 @@ const Home: React.FC = () => {
                     }}>
                       <div style={{
                         padding: '12px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(10px)',
+                        background: '#f8fafc',
                         borderRadius: '12px',
                         textAlign: 'center',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
                           fontSize: '18px',
                           fontWeight: '700',
-                          color: 'white',
+                          color: '#1a202c',
                           marginBottom: '4px'
                         }}>
                           {expert.avg_rating ? expert.avg_rating.toFixed(1) : '0.0'}
                         </div>
                         <div style={{
                           fontSize: '11px',
-                          color: 'rgba(255, 255, 255, 0.8)'
+                          color: '#64748b'
                         }}>
                           评分
                         </div>
                       </div>
                       <div style={{
                         padding: '12px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(10px)',
+                        background: '#f8fafc',
                         borderRadius: '12px',
                         textAlign: 'center',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
                           fontSize: '18px',
                           fontWeight: '700',
-                          color: 'white',
+                          color: '#1a202c',
                           marginBottom: '4px'
                         }}>
                           {expert.completed_tasks || 0}
                         </div>
                         <div style={{
                           fontSize: '11px',
-                          color: 'rgba(255, 255, 255, 0.8)'
+                          color: '#64748b'
                         }}>
                           任务
                         </div>
                       </div>
                       <div style={{
                         padding: '12px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(10px)',
+                        background: '#f8fafc',
                         borderRadius: '12px',
                         textAlign: 'center',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
                           fontSize: '18px',
                           fontWeight: '700',
-                          color: 'white',
+                          color: '#1a202c',
                           marginBottom: '4px'
                         }}>
                           {expert.completion_rate || 0}%
                         </div>
                         <div style={{
                           fontSize: '11px',
-                          color: 'rgba(255, 255, 255, 0.8)'
+                          color: '#64748b'
                         }}>
                           完成率
                         </div>
@@ -1130,23 +1125,25 @@ const Home: React.FC = () => {
                       style={{
                         width: '100%',
                         padding: '14px',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        border: 'none',
                         borderRadius: '12px',
                         color: 'white',
                         fontSize: '15px',
                         fontWeight: '600',
                         cursor: 'pointer',
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.3s ease',
+                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
                         e.currentTarget.style.transform = 'scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
                         e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
                       }}
                     >
                       {t('taskExperts.viewProfile') || '查看资料'}
