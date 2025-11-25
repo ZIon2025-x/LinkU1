@@ -232,8 +232,8 @@ class CleanupTasks:
         try:
             from pathlib import Path
             import os
-            from datetime import datetime, timedelta
-            from app.utils.time_utils import get_utc_time
+            from datetime import timedelta
+            from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
             # 检测部署环境
             RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -259,8 +259,8 @@ class CleanupTasks:
                         # 检查文件夹中的文件
                         for file_path in temp_dir.iterdir():
                             if file_path.is_file():
-                                # 获取文件的修改时间
-                                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                                # 获取文件的修改时间（使用统一时间工具函数）
+                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
                                 
                                 # 如果文件超过24小时未修改，删除它
                                 if file_mtime < cutoff_time:
@@ -298,8 +298,8 @@ class CleanupTasks:
             from pathlib import Path
             import os
             import shutil
-            from datetime import datetime, timedelta
-            from app.utils.time_utils import get_utc_time
+            from datetime import timedelta
+            from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
             
             # 检测部署环境
             RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -326,8 +326,8 @@ class CleanupTasks:
                         files_deleted = False
                         for file_path in temp_dir.iterdir():
                             if file_path.is_file():
-                                # 获取文件的修改时间
-                                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                                # 获取文件的修改时间（使用统一时间工具函数）
+                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
                                 
                                 # 如果文件超过24小时未修改，删除它
                                 if file_mtime < cutoff_time:

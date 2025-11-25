@@ -17,6 +17,7 @@ import LoginModal from '../components/LoginModal';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useThrottledCallback } from '../hooks/useThrottledCallback';
 import FleaMarketItemDetailModal from '../components/FleaMarketItemDetailModal';
+import { compressImage } from '../utils/imageCompression';
 import styles from './FleaMarketPage.module.css';
 import headerStyles from './Home.module.css';
 
@@ -429,8 +430,14 @@ const FleaMarketPage: React.FC = () => {
     
     for (const file of files) {
       try {
+        // 压缩图片
+        const compressedFile = await compressImage(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        });
+        
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', compressedFile);
         formData.append('category', 'public');
         
         const response = await api.post('/api/upload/public-image', formData, {

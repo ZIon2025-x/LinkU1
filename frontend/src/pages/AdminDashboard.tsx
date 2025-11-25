@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
+import { compressImage } from '../utils/imageCompression';
 import api, { 
   getDashboardStats, 
   getUsersForAdmin, 
@@ -1715,8 +1716,14 @@ const AdminDashboard: React.FC = () => {
                         
                         setUploadingAvatar(true);
                         try {
+                          // 压缩头像图片
+                          const compressedFile = await compressImage(file, {
+                            maxSizeMB: 0.5,
+                            maxWidthOrHeight: 800,
+                          });
+                          
                           const formData = new FormData();
-                          formData.append('image', file);
+                          formData.append('image', compressedFile);
                           
                           // 任务达人头像上传：传递expert_id作为resource_id
                           const expertId = taskExpertForm.id;

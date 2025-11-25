@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import api from '../../api';
+import { compressImage } from '../../utils/imageCompression';
 
 interface MessageInputProps {
   input: string;
@@ -28,8 +29,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleImageUpload = useCallback(async (file: File) => {
     try {
+      // 压缩图片
+      const compressedFile = await compressImage(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+      });
+      
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', compressedFile);
       
       // 根据聊天类型构建上传URL
       let uploadUrl: string;

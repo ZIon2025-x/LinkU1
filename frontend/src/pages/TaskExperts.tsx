@@ -734,14 +734,14 @@ const TaskExperts: React.FC = () => {
         margin: '0 auto',
         padding: '0 20px 20px 20px',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#fff',
         position: 'relative'
       }}>
         {/* 页面头部 */}
         <div style={{
           textAlign: 'center',
           marginBottom: '40px',
-          color: 'white'
+          color: '#1f2937'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
           <h1 style={{
@@ -764,11 +764,10 @@ const TaskExperts: React.FC = () => {
           </h1>
           <p style={{
             fontSize: '18px',
-            opacity: 0.9,
             margin: '0 auto',
             maxWidth: '600px',
             lineHeight: '1.6',
-            color: 'rgba(255, 255, 255, 0.9)'
+            color: '#6b7280'
           }}>
             {t('taskExperts.subtitle')}
           </p>
@@ -846,26 +845,32 @@ const TaskExperts: React.FC = () => {
 
         {/* 筛选和排序 */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(20px)',
+          background: '#f9fafb',
           borderRadius: '20px',
-          padding: '24px',
+          padding: isMobile ? '20px' : '24px',
           marginBottom: '32px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+          border: '1px solid #e5e7eb'
         }}>
           <div style={{
             display: 'flex',
-            gap: '20px',
-            flexWrap: 'wrap',
-            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '16px' : '20px',
+            alignItems: isMobile ? 'stretch' : 'center',
             justifyContent: 'center'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center', 
+              gap: isMobile ? '8px' : '12px',
+              width: isMobile ? '100%' : 'auto'
+            }}>
               <label style={{ 
-                fontSize: '16px', 
+                fontSize: isMobile ? '14px' : '16px', 
                 fontWeight: '600', 
-                color: 'white' 
+                color: '#1f2937',
+                minWidth: isMobile ? 'auto' : '80px'
               }}>
                 {t('taskExperts.filterBy')}:
               </label>
@@ -873,13 +878,15 @@ const TaskExperts: React.FC = () => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 style={{
-                  padding: '8px 16px',
+                  padding: isMobile ? '10px 16px' : '8px 16px',
                   borderRadius: '12px',
                   border: '2px solid #e5e7eb',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '15px' : '14px',
                   outline: 'none',
                   cursor: 'pointer',
-                  background: '#fff'
+                  background: '#fff',
+                  width: isMobile ? '100%' : 'auto',
+                  minWidth: isMobile ? 'auto' : '150px'
                 }}
               >
                 {categories.map(cat => (
@@ -890,11 +897,18 @@ const TaskExperts: React.FC = () => {
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center', 
+              gap: isMobile ? '8px' : '12px',
+              width: isMobile ? '100%' : 'auto'
+            }}>
               <label style={{ 
-                fontSize: '16px', 
+                fontSize: isMobile ? '14px' : '16px', 
                 fontWeight: '600', 
-                color: 'white' 
+                color: '#1f2937',
+                minWidth: isMobile ? 'auto' : '100px'
               }}>
                 {t('taskExperts.filterByCity')}:
               </label>
@@ -902,13 +916,15 @@ const TaskExperts: React.FC = () => {
                 value={selectedCity}
                 onChange={(e) => setSelectedCity(e.target.value)}
                 style={{
-                  padding: '8px 16px',
+                  padding: isMobile ? '10px 16px' : '8px 16px',
                   borderRadius: '12px',
                   border: '2px solid #e5e7eb',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '15px' : '14px',
                   outline: 'none',
                   cursor: 'pointer',
-                  background: '#fff'
+                  background: '#fff',
+                  width: isMobile ? '100%' : 'auto',
+                  minWidth: isMobile ? 'auto' : '150px'
                 }}
               >
                 <option value="all">{t('home.allCities')}</option>
@@ -920,11 +936,18 @@ const TaskExperts: React.FC = () => {
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center', 
+              gap: isMobile ? '8px' : '12px',
+              width: isMobile ? '100%' : 'auto'
+            }}>
               <label style={{ 
-                fontSize: '16px', 
+                fontSize: isMobile ? '14px' : '16px', 
                 fontWeight: '600', 
-                color: 'white' 
+                color: '#1f2937',
+                minWidth: isMobile ? 'auto' : '80px'
               }}>
                 {t('taskExperts.sortBy')}:
               </label>
@@ -932,13 +955,15 @@ const TaskExperts: React.FC = () => {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  padding: '8px 16px',
+                  padding: isMobile ? '10px 16px' : '8px 16px',
                   borderRadius: '12px',
                   border: '2px solid #e5e7eb',
-                  fontSize: '14px',
+                  fontSize: isMobile ? '15px' : '14px',
                   outline: 'none',
                   cursor: 'pointer',
-                  background: '#fff'
+                  background: '#fff',
+                  width: isMobile ? '100%' : 'auto',
+                  minWidth: isMobile ? 'auto' : '150px'
                 }}
               >
                 {sortOptions.map(option => (
@@ -1548,17 +1573,16 @@ const TaskExperts: React.FC = () => {
           <div style={{
             textAlign: 'center',
             padding: '60px 20px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
+            background: '#f9fafb',
             borderRadius: '20px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            border: '1px solid #e5e7eb'
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-            <div style={{ fontSize: '18px', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '8px' }}>
+            <div style={{ fontSize: '18px', color: '#1f2937', marginBottom: '8px' }}>
               {t('taskExperts.noExpertsFound')}
             </div>
-            <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+            <div style={{ fontSize: '14px', color: '#6b7280' }}>
               {t('taskExperts.tryDifferentFilter')}
             </div>
           </div>

@@ -40,7 +40,8 @@
     "phone": "Phone",
     "phoneOptional": "Please enter phone number (optional)",
     "privacyPolicy": "Privacy Policy",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "more": "More"
   },
   "navigation": {
     "home": "Home",
@@ -653,7 +654,7 @@
   },
   "taskExperts": {
     "title": "Task Experts",
-    "subtitle": "Discover excellent task performers on our platform who have professional skills and rich experience to provide you with high-quality services",
+    "subtitle": "Discover excellent task performers on our platform",
     "loading": "Loading...",
     "allCategories": "All Categories",
     "programming": "Programming",

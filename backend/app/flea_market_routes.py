@@ -10,7 +10,7 @@ import uuid
 import shutil
 from decimal import Decimal
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -34,7 +34,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models, schemas
 from app.deps import get_async_db_dependency
 from app.id_generator import format_flea_market_id, parse_flea_market_id
-from app.utils.time_utils import get_utc_time, format_iso_utc
+from app.utils.time_utils import get_utc_time, format_iso_utc, file_timestamp_to_utc
 from app.config import Config
 from app.flea_market_constants import FLEA_MARKET_CATEGORIES
 from app.flea_market_extensions import (
@@ -173,8 +173,8 @@ def delete_flea_market_temp_images(user_id: Optional[str] = None):
                         files_deleted = False
                         for file_path in temp_dir.iterdir():
                             if file_path.is_file():
-                                # 获取文件的修改时间
-                                file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                                # 获取文件的修改时间（使用统一时间工具函数）
+                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
                                 
                                 # 如果文件超过24小时未修改，删除它
                                 if file_mtime < cutoff_time:

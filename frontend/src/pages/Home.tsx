@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -266,6 +266,10 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [maxTaskId, setMaxTaskId] = useState<number>(0);
   const [totalTasks, setTotalTasks] = useState<number>(0);
+  
+  // 热门达人相关状态
+  const [hotExperts, setHotExperts] = useState<any[]>([]);
+  const [loadingExperts, setLoadingExperts] = useState(false);
 
   // User login and avatar logic
   const [user, setUser] = useState<any>(null);
@@ -454,6 +458,45 @@ const Home: React.FC = () => {
         setTasks([]);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  // 获取热门达人数据 - 显示前3个
+  useEffect(() => {
+    setLoadingExperts(true);
+    getPublicTaskExperts()
+      .then(data => {
+        let expertsList: any[] = [];
+        if (Array.isArray(data)) {
+          expertsList = data;
+        } else if (data.task_experts) {
+          expertsList = data.task_experts;
+        } else if (data.items) {
+          expertsList = data.items;
+        }
+        
+        // 按评分和完成任务数排序，取前3个
+        const sortedExperts = expertsList
+          .sort((a: any, b: any) => {
+            // 首先按评分排序（从高到低）
+            const ratingA = parseFloat(a.avg_rating) || 0;
+            const ratingB = parseFloat(b.avg_rating) || 0;
+            if (ratingA !== ratingB) {
+              return ratingB - ratingA;
+            }
+            // 如果评分相同，按完成任务数排序（从高到低）
+            const tasksA = parseInt(a.completed_tasks) || 0;
+            const tasksB = parseInt(b.completed_tasks) || 0;
+            return tasksB - tasksA;
+          })
+          .slice(0, 3); // 只取前3个
+        
+        setHotExperts(sortedExperts);
+      })
+      .catch(error => {
+        console.error('获取热门达人数据失败:', error);
+        setHotExperts([]);
+      })
+      .finally(() => setLoadingExperts(false));
   }, []);
 
   // 定期刷新任务列表以更新剩余时间和状态
@@ -799,61 +842,358 @@ const Home: React.FC = () => {
         </div>
       </section>
       
-      {/* 特色功能区域 */}
-      <section className={styles.featuresSection}>
+      {/* 热门达人区域 */}
+      <section className={styles.featuresSection} style={{ background: '#fff' }}>
         <div className={styles.featuresContainer}>
-          <h2 className={styles.featuresTitle}>
-            {t('about.title')}
-          </h2>
-          <p className={styles.featuresSubtitle}>
-            {t('about.subtitle')}
+          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
+            <h2 className={styles.featuresTitle} style={{ color: '#1f2937', margin: 0 }}>
+              {t('taskExperts.title') || '热门达人'}
+            </h2>
+            <button
+              onClick={() => navigate('/task-experts')}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                padding: '8px 20px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#059669';
+                e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#10b981';
+                e.currentTarget.style.transform = 'translateY(-50%)';
+              }}
+            >
+              {t('common.more') || '更多'} →
+            </button>
+          </div>
+          <p className={styles.featuresSubtitle} style={{ color: '#6b7280' }}>
+            {t('taskExperts.subtitle') || '发现平台上的优秀任务执行者'}
           </p>
           
-          <div className={styles.featuresGrid}>
-            <div className={styles.featureCard}>
-              <div className={`${styles.featureIcon} ${styles.featureIconValues}`}>
-                🎯
-              </div>
-              <h3 className={styles.featureTitle}>
-                {t('about.values')}
-              </h3>
-              <p className={styles.featureText}>
-                {t('about.valuesText')}
-              </p>
+          {loadingExperts ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>🔄 {t('taskExperts.loading') || '加载中...'}</div>
             </div>
-            
-            <div className={styles.featureCard}>
-              <div className={`${styles.featureIcon} ${styles.featureIconMission}`}>
-                🛡️
-              </div>
-              <h3 className={styles.featureTitle}>
-                {t('about.mission')}
-              </h3>
-              <p className={styles.featureText}>
-                {t('about.missionText')}
-              </p>
+          ) : hotExperts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>{t('taskExperts.noExpertsFound') || '暂无热门达人'}</div>
             </div>
-            
-            <div className={styles.featureCard}>
-              <div className={`${styles.featureIcon} ${styles.featureIconVision}`}>
-                ⚡
-              </div>
-              <h3 className={styles.featureTitle}>
-                {t('about.vision')}
-              </h3>
-              <p className={styles.featureText}>
-                {t('about.visionText')}
-              </p>
+          ) : (
+            <div className={styles.featuresGrid} style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              {hotExperts.map((expert: any) => {
+                // 将下划线格式转换为驼峰格式用于翻译键
+                const categoryKey = expert.category ? expert.category.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase()) : '';
+                const categoryLabel = expert.category ? (t(`taskExperts.${categoryKey}`) || expert.category) : '';
+                
+                return (
+                  <div
+                    key={expert.id}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: '24px',
+                      padding: '28px',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onClick={() => navigate(`/task-experts`)}
+                  >
+                    {/* 地点 - 右上角 */}
+                    {expert.location && expert.location !== 'Online' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '20px',
+                        right: '20px',
+                        padding: '4px 10px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        fontWeight: 500,
+                        zIndex: 10
+                      }}>
+                        📍 {expert.location}
+                      </div>
+                    )}
+
+                    {/* 专家头部信息 */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '18px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{ position: 'relative' }}>
+                        <img
+                          src={expert.avatar || 'https://via.placeholder.com/72'}
+                          alt={expert.name}
+                          style={{
+                            width: '72px',
+                            height: '72px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            border: '3px solid rgba(255, 255, 255, 0.3)',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+                          }}
+                        />
+                        {expert.is_verified && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-2px',
+                            right: '-2px',
+                            width: '20px',
+                            height: '20px',
+                            background: '#10b981',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            color: '#fff'
+                          }}>
+                            ✓
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{
+                          fontSize: '20px',
+                          fontWeight: '700',
+                          color: 'white',
+                          marginBottom: '6px',
+                          margin: 0
+                        }}>
+                          {expert.name}
+                        </h3>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '5px 12px',
+                          background: 'rgba(255, 255, 255, 0.25)',
+                          backdropFilter: 'blur(10px)',
+                          color: 'white',
+                          borderRadius: '14px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          marginTop: '4px'
+                        }}>
+                          {expert.user_level === 'super' ? (t('taskExperts.superExpert') || '超级达人') :
+                           expert.user_level === 'vip' ? (t('taskExperts.vipExpert') || 'VIP达人') :
+                           (t('taskExperts.normalExpert') || '普通达人')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 简介 */}
+                    {expert.bio && (
+                      <p style={{
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        marginBottom: '16px',
+                        margin: 0
+                      }}>
+                        {expert.bio.length > 80 ? expert.bio.substring(0, 80) + '...' : expert.bio}
+                      </p>
+                    )}
+
+                    {/* 类别 */}
+                    {categoryLabel && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          color: 'white',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          display: 'inline-block'
+                        }}>
+                          💼 {categoryLabel}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 评分和统计 */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '12px',
+                      marginBottom: '20px'
+                    }}>
+                      <div style={{
+                        padding: '12px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '12px',
+                        textAlign: 'center',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}>
+                        <div style={{
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: 'white',
+                          marginBottom: '4px'
+                        }}>
+                          {expert.avg_rating ? expert.avg_rating.toFixed(1) : '0.0'}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: 'rgba(255, 255, 255, 0.8)'
+                        }}>
+                          评分
+                        </div>
+                      </div>
+                      <div style={{
+                        padding: '12px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '12px',
+                        textAlign: 'center',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}>
+                        <div style={{
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: 'white',
+                          marginBottom: '4px'
+                        }}>
+                          {expert.completed_tasks || 0}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: 'rgba(255, 255, 255, 0.8)'
+                        }}>
+                          任务
+                        </div>
+                      </div>
+                      <div style={{
+                        padding: '12px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '12px',
+                        textAlign: 'center',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}>
+                        <div style={{
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: 'white',
+                          marginBottom: '4px'
+                        }}>
+                          {expert.completion_rate || 0}%
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: 'rgba(255, 255, 255, 0.8)'
+                        }}>
+                          完成率
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 查看资料按钮 */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/task-experts`);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '12px',
+                        color: 'white',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      {t('taskExperts.viewProfile') || '查看资料'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </div>
       </section>
       {/* 最新任务区块 - 重新设计 */}
       <main className={styles.tasksSection}>
         <div className={styles.tasksHeader}>
-          <h2 className={styles.tasksTitle}>
-            {t('home.recentTasks')}
-          </h2>
+          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
+            <h2 className={styles.tasksTitle} style={{ margin: 0 }}>
+              {t('home.recentTasks')}
+            </h2>
+            <button
+              onClick={() => navigate('/tasks')}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                padding: '8px 20px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#059669';
+                e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#10b981';
+                e.currentTarget.style.transform = 'translateY(-50%)';
+              }}
+            >
+              {t('common.more') || '更多'} →
+            </button>
+          </div>
           <p className={styles.tasksSubtitle}>
             {t('home.subtitle')}
           </p>
@@ -1075,6 +1415,19 @@ const Home: React.FC = () => {
       </section>
       {/* 底部信息区块 */}
       <Footer />
+      
+      {/* 跳蚤市场悬浮入口 */}
+      <div
+        onClick={() => navigate('/flea-market')}
+        className={styles.fleaMarketFloatButton}
+        title={t('fleaMarket.cardTitle') || '跳蚤市场'}
+      >
+        <img 
+          src="/static/Flea.png" 
+          alt="跳蚤市场"
+          className={styles.fleaMarketIcon}
+        />
+      </div>
       
       {/* 任务详情弹窗 */}
       <TaskDetailModal

@@ -40,7 +40,8 @@
     "phone": "手机号",
     "phoneOptional": "请输入手机号（可选）",
     "privacyPolicy": "隐私政策",
-    "processing": "处理中..."
+    "processing": "处理中...",
+    "more": "更多"
   },
   "navigation": {
     "home": "首页",
@@ -647,7 +648,7 @@
   },
   "taskExperts": {
     "title": "任务达人",
-    "subtitle": "发现平台上的优秀任务执行者，他们拥有专业技能和丰富经验，能够为您提供高质量的服务",
+    "subtitle": "发现平台上的优秀任务执行者",
     "loading": "加载中...",
     "allCategories": "全部分类",
     "programming": "编程开发",

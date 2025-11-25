@@ -191,6 +191,27 @@ def parse_iso_utc(iso_string: str) -> datetime:
     return dt
 
 
+def file_timestamp_to_utc(timestamp: float) -> datetime:
+    """
+    将文件系统时间戳转换为UTC aware datetime
+    
+    用于处理文件修改时间、创建时间等文件系统时间戳
+    文件系统时间戳通常是UTC时间戳，需要转换为带时区的datetime对象
+    
+    Args:
+        timestamp: 文件系统时间戳（Unix时间戳，浮点数）
+    
+    Returns:
+        datetime: UTC时间对象（带时区）
+    
+    Example:
+        >>> file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+        >>> if file_mtime < cutoff_time:
+        ...     # 处理过期文件
+    """
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
 def detect_dst_transition_dates(year: int, tz: ZoneInfo = LONDON) -> dict:
     """
     检测指定年份的DST切换日期

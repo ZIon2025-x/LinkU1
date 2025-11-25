@@ -49,6 +49,7 @@ import LoginModal from '../components/LoginModal';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import TabButton from '../components/taskExpertDashboard/TabButton';
 import StatCard from '../components/taskExpertDashboard/StatCard';
+import { compressImage } from '../utils/imageCompression';
 import api from '../api';
 import styles from './TaskExpertDashboard.module.css';
 
@@ -800,8 +801,14 @@ const TaskExpertDashboard: React.FC = () => {
     }
     
     try {
+      // 压缩头像图片
+      const compressedFile = await compressImage(avatarFile, {
+        maxSizeMB: 0.5, // 头像压缩到0.5MB
+        maxWidthOrHeight: 800, // 头像最大800px
+      });
+      
       const formData = new FormData();
-      formData.append('image', avatarFile);
+      formData.append('image', compressedFile);
       
       // 任务达人头像上传：传递expert_id（即user.id）作为resource_id
       const expertId = user?.id || expert?.id;
@@ -4626,8 +4633,14 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                     setUploadingImages(prev => [...prev, true]);
                     
                     try {
+                      // 压缩服务图片
+                      const compressedFile = await compressImage(file, {
+                        maxSizeMB: 1,
+                        maxWidthOrHeight: 1920,
+                      });
+                      
                       const formDataUpload = new FormData();
-                      formDataUpload.append('image', file);
+                      formDataUpload.append('image', compressedFile);
                       
                       // 服务图片上传：传递expert_id（任务达人ID）作为resource_id
                       // 因为服务图片属于任务达人，应该按任务达人ID分类

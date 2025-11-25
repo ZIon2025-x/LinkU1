@@ -4,6 +4,7 @@ import { message } from 'antd';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api, { getPublicSystemSettings, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
+import { compressImage } from '../utils/imageCompression';
 
 // 移动端检测函数
 const isMobileDevice = () => {
@@ -121,8 +122,14 @@ const PublishTask: React.FC = () => {
       });
 
       try {
+        // 压缩图片
+        const compressedFile = await compressImage(file, {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+        });
+        
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', compressedFile);
 
         const response = await api.post('/api/upload/public-image', formData, {
           headers: {
