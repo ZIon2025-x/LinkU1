@@ -51,14 +51,16 @@ class PrivateFileSystem:
         random_part = str(uuid.uuid4())[:8]
         return f"{user_id}_{timestamp}_{random_part}"
     
-    def get_file_extension(self, filename: str) -> str:
-        """获取文件扩展名"""
-        return Path(filename).suffix.lower()
+    def get_file_extension(self, filename: str, content_type: Optional[str] = None, content: Optional[bytes] = None) -> str:
+        """获取文件扩展名（支持从 filename、Content-Type 或 magic bytes 检测）"""
+        from app.file_utils import detect_file_extension
+        ext = detect_file_extension(filename=filename, content_type=content_type, content=content)
+        return ext
     
-    def validate_file(self, content: bytes, filename: str) -> None:
+    def validate_file(self, content: bytes, filename: str, content_type: Optional[str] = None) -> None:
         """验证文件"""
-        # 检查文件扩展名
-        extension = self.get_file_extension(filename)
+        # 检查文件扩展名（支持从 Content-Type 或 magic bytes 检测）
+        extension = self.get_file_extension(filename, content_type=content_type, content=content)
         if extension in self.dangerous_extensions:
             raise HTTPException(
                 status_code=400,
@@ -96,15 +98,15 @@ class PrivateFileSystem:
         
         return file_path
     
-    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Dict[str, Any]:
+    def upload_file(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None, content_type: Optional[str] = None) -> Dict[str, Any]:
         """上传文件，支持按任务ID或聊天ID分类"""
         try:
-            # 验证文件
-            self.validate_file(content, filename)
+            # 验证文件（支持从 Content-Type 或 magic bytes 检测）
+            self.validate_file(content, filename, content_type=content_type)
             
             # 生成文件ID
             file_id = self.generate_file_id(user_id, filename)
-            extension = self.get_file_extension(filename)
+            extension = self.get_file_extension(filename, content_type=content_type, content=content)
             
             # 保存文件（按任务ID或聊天ID分类）
             file_path = self.save_file(content, file_id, extension, task_id, chat_id)

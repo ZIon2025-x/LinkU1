@@ -4129,12 +4129,21 @@ async def upload_customer_service_chat_file(
         raise HTTPException(status_code=400, detail="Chat has ended")
     
     try:
-        # 验证文件类型和大小
-        if not file.filename:
-            raise HTTPException(status_code=400, detail="文件名不能为空")
+        # 读取文件内容（流式读取，避免大文件占内存）
+        content = await file.read()
+        file_size = len(content)
         
-        # 获取文件扩展名
-        file_ext = Path(file.filename).suffix.lower()
+        # 验证文件类型和大小
+        # 使用智能扩展名检测（支持从 filename、Content-Type 或 magic bytes 检测）
+        from app.file_utils import get_file_extension_from_upload
+        file_ext = get_file_extension_from_upload(file, content=content)
+        
+        # 如果无法检测到扩展名
+        if not file_ext:
+            raise HTTPException(
+                status_code=400,
+                detail="无法检测文件类型，请确保上传的是有效的文件（图片或文档）"
+            )
         
         # 检查是否为危险文件类型
         if file_ext in DANGEROUS_EXTENSIONS:
@@ -4149,10 +4158,6 @@ async def upload_customer_service_chat_file(
                 status_code=400,
                 detail=f"不支持的文件类型。允许的类型: 图片({', '.join(ALLOWED_EXTENSIONS)}), 文档(pdf, doc, docx, txt)"
             )
-        
-        # 读取文件内容（流式读取，避免大文件占内存）
-        content = await file.read()
-        file_size = len(content)
         
         # 验证文件大小
         max_size = MAX_FILE_SIZE if is_image else MAX_FILE_SIZE_LARGE
@@ -4171,7 +4176,8 @@ async def upload_customer_service_chat_file(
             current_user.id, 
             db, 
             task_id=None, 
-            chat_id=chat_id
+            chat_id=chat_id,
+            content_type=file.content_type
         )
         
         # 生成签名URL
@@ -4267,7 +4273,8 @@ async def upload_customer_service_file(
             current_user.id, 
             db, 
             task_id=None, 
-            chat_id=chat_id
+            chat_id=chat_id,
+            content_type=file.content_type
         )
         
         # 生成签名URL
@@ -5557,7 +5564,7 @@ async def upload_image(
         
         # 使用新的私密图片系统上传
         from app.image_system import private_image_system
-        result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id)
+        result = private_image_system.upload_image(content, image.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=image.content_type)
         
         return JSONResponse(content=result)
 
@@ -5643,10 +5650,14 @@ async def upload_public_image(
         content = await image.read()
         
         # 验证文件类型
-        # 如果filename为None，尝试从文件内容或Content-Type检测文件类型
-        if not image.filename:
+        # 首先尝试从filename获取扩展名
+        if image.filename:
+            file_extension = Path(image.filename).suffix.lower()
+        else:
             file_extension = ''
-            
+        
+        # 如果从filename无法获取扩展名（如filename为"blob"），尝试从Content-Type或文件内容检测
+        if not file_extension:
             # 首先尝试从Content-Type获取
             content_type = image.content_type or ''
             if 'jpeg' in content_type or 'jpg' in content_type:
@@ -5679,8 +5690,6 @@ async def upload_public_image(
                     status_code=400,
                     detail="无法检测文件类型，请确保上传的是有效的图片文件（JPG、PNG、GIF、WEBP）"
                 )
-        else:
-            file_extension = Path(image.filename).suffix.lower()
         
         if file_extension not in ALLOWED_EXTENSIONS:
             logger.warning(f"不支持的文件类型: {file_extension}, filename={image.filename}, content_type={image.content_type}")
@@ -6009,7 +6018,7 @@ async def upload_file(
         
         # 使用新的私密文件系统上传
         from app.file_system import private_file_system
-        result = private_file_system.upload_file(content, file.filename, current_user.id, db, task_id=task_id, chat_id=chat_id)
+        result = private_file_system.upload_file(content, file.filename, current_user.id, db, task_id=task_id, chat_id=chat_id, content_type=file.content_type)
         
         # 生成签名URL（使用新的文件ID）
         from app.signed_url import signed_url_manager

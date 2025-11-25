@@ -48,14 +48,16 @@ class PrivateImageSystem:
         random_part = str(uuid.uuid4())[:8]
         return f"{user_id}_{timestamp}_{random_part}"
     
-    def get_file_extension(self, filename: str) -> str:
-        """获取文件扩展名"""
-        return Path(filename).suffix.lower()
+    def get_file_extension(self, filename: str, content_type: Optional[str] = None, content: Optional[bytes] = None) -> str:
+        """获取文件扩展名（支持从 filename、Content-Type 或 magic bytes 检测）"""
+        from app.file_utils import detect_file_extension
+        ext = detect_file_extension(filename=filename, content_type=content_type, content=content)
+        return ext
     
-    def validate_image(self, content: bytes, filename: str) -> None:
+    def validate_image(self, content: bytes, filename: str, content_type: Optional[str] = None) -> None:
         """验证图片文件"""
-        # 检查文件扩展名
-        ext = self.get_file_extension(filename)
+        # 检查文件扩展名（支持从 Content-Type 或 magic bytes 检测）
+        ext = self.get_file_extension(filename, content_type=content_type, content=content)
         if ext not in self.allowed_extensions:
             raise HTTPException(
                 status_code=400,
@@ -235,15 +237,15 @@ class PrivateImageSystem:
             participants.append(message.receiver_id)
         return participants
     
-    def upload_image(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None) -> Dict[str, Any]:
+    def upload_image(self, content: bytes, filename: str, user_id: str, db: Session, task_id: Optional[int] = None, chat_id: Optional[str] = None, content_type: Optional[str] = None) -> Dict[str, Any]:
         """上传图片，支持按任务ID或聊天ID分类"""
         try:
-            # 验证图片
-            self.validate_image(content, filename)
+            # 验证图片（支持从 Content-Type 或 magic bytes 检测）
+            self.validate_image(content, filename, content_type=content_type)
             
             # 生成图片ID
             image_id = self.generate_image_id(user_id, filename)
-            extension = self.get_file_extension(filename)
+            extension = self.get_file_extension(filename, content_type=content_type, content=content)
             
             # 保存图片（按任务ID或聊天ID分类）
             file_path = self.save_image(content, image_id, extension, task_id, chat_id)

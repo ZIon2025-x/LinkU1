@@ -456,8 +456,16 @@ async def upload_flea_market_image(
         # 读取文件内容
         content = await image.read()
         
-        # 验证文件类型
-        file_extension = Path(image.filename).suffix.lower()
+        # 验证文件类型（使用智能扩展名检测，支持从 filename、Content-Type 或 magic bytes 检测）
+        from app.file_utils import get_file_extension_from_upload
+        file_extension = get_file_extension_from_upload(image, content=content)
+        
+        if not file_extension:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="无法检测文件类型，请确保上传的是有效的图片文件（JPG、PNG、GIF、WEBP）"
+            )
+        
         if file_extension not in ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
