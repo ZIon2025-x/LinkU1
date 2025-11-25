@@ -734,14 +734,14 @@ const TaskExperts: React.FC = () => {
         margin: '0 auto',
         padding: '0 20px 20px 20px',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         position: 'relative'
       }}>
         {/* 页面头部 */}
         <div style={{
           textAlign: 'center',
           marginBottom: '40px',
-          color: '#1f2937'
+          color: 'white'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>👑</div>
           <h1 style={{
@@ -767,7 +767,7 @@ const TaskExperts: React.FC = () => {
             margin: '0 auto',
             maxWidth: '600px',
             lineHeight: '1.6',
-            color: '#6b7280'
+            color: 'rgba(255, 255, 255, 0.9)'
           }}>
             {t('taskExperts.subtitle')}
           </p>
