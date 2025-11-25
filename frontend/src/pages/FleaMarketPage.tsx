@@ -60,6 +60,9 @@ const FleaMarketPage: React.FC = () => {
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
   
+  // 移动端检测
+  const [isMobile, setIsMobile] = useState(false);
+  
   // 用户和通知相关状态
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -123,6 +126,16 @@ const FleaMarketPage: React.FC = () => {
       setUser(null);
     }
   }, [currentUser]);
+
+  // 移动端检测
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // 加载系统设置
   useEffect(() => {
@@ -846,10 +859,39 @@ const FleaMarketPage: React.FC = () => {
                 allowClear
                 size="large"
                 style={{ width: '100%' }}
-                showSearch
-                filterOption={(input, option) =>
+                showSearch={!isMobile}
+                filterOption={isMobile ? undefined : (input, option) =>
                   (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
                 }
+                getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
+                dropdownStyle={{
+                  maxHeight: isMobile ? '300px' : '400px',
+                  overflow: 'auto',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onDropdownVisibleChange={(open) => {
+                  if (open && isMobile) {
+                    // 移动端打开下拉框时，记录当前滚动位置并禁用页面滚动
+                    const scrollY = window.scrollY;
+                    document.body.style.position = 'fixed';
+                    document.body.style.top = `-${scrollY}px`;
+                    document.body.style.width = '100%';
+                    document.body.style.overflow = 'hidden';
+                    // 保存滚动位置到data属性
+                    document.body.setAttribute('data-scroll-y', scrollY.toString());
+                  } else if (!open && isMobile) {
+                    // 关闭时恢复页面滚动
+                    const scrollY = document.body.getAttribute('data-scroll-y');
+                    document.body.style.position = '';
+                    document.body.style.top = '';
+                    document.body.style.width = '';
+                    document.body.style.overflow = '';
+                    if (scrollY) {
+                      window.scrollTo(0, parseInt(scrollY, 10));
+                    }
+                    document.body.removeAttribute('data-scroll-y');
+                  }
+                }}
               >
                 {CITIES.map((city: string) => (
                   <Select.Option key={city} value={city}>
@@ -866,10 +908,39 @@ const FleaMarketPage: React.FC = () => {
                 allowClear
                 size="large"
                 style={{ width: '100%' }}
-                showSearch
-                filterOption={(input, option) =>
+                showSearch={!isMobile}
+                filterOption={isMobile ? undefined : (input, option) =>
                   (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
                 }
+                getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
+                dropdownStyle={{
+                  maxHeight: isMobile ? '300px' : '400px',
+                  overflow: 'auto',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onDropdownVisibleChange={(open) => {
+                  if (open && isMobile) {
+                    // 移动端打开下拉框时，记录当前滚动位置并禁用页面滚动
+                    const scrollY = window.scrollY;
+                    document.body.style.position = 'fixed';
+                    document.body.style.top = `-${scrollY}px`;
+                    document.body.style.width = '100%';
+                    document.body.style.overflow = 'hidden';
+                    // 保存滚动位置到data属性
+                    document.body.setAttribute('data-scroll-y', scrollY.toString());
+                  } else if (!open && isMobile) {
+                    // 关闭时恢复页面滚动
+                    const scrollY = document.body.getAttribute('data-scroll-y');
+                    document.body.style.position = '';
+                    document.body.style.top = '';
+                    document.body.style.width = '';
+                    document.body.style.overflow = '';
+                    if (scrollY) {
+                      window.scrollTo(0, parseInt(scrollY, 10));
+                    }
+                    document.body.removeAttribute('data-scroll-y');
+                  }
+                }}
               >
                 {CATEGORIES.map((category: string) => (
                   <Select.Option key={category} value={category}>

@@ -6802,6 +6802,7 @@ def get_public_task_experts(
                 "response_time": expert.response_time,
                 "success_rate": expert.success_rate,
                 "location": expert.location if expert.location and expert.location.strip() else "Online",  # 添加城市字段，处理NULL和空字符串
+                "category": expert.category if hasattr(expert, 'category') else None,  # 添加类别字段
             })
         
         return {

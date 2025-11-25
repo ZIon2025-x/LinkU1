@@ -584,6 +584,27 @@
     line-height: 32px;
   }
 
+  /* 移动端下拉框优化 - 防止背景滚动 */
+  .locationFilter :global(.ant-select-dropdown),
+  .categoryFilter :global(.ant-select-dropdown) {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .locationFilter :global(.ant-select-dropdown .rc-virtual-list),
+  .categoryFilter :global(.ant-select-dropdown .rc-virtual-list) {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .locationFilter :global(.ant-select-dropdown .rc-virtual-list-holder),
+  .categoryFilter :global(.ant-select-dropdown .rc-virtual-list-holder) {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
   .itemsSection {
     padding: 0 16px 24px;
   }

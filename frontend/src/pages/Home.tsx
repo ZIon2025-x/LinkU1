@@ -271,6 +271,9 @@ const Home: React.FC = () => {
   const [hotExperts, setHotExperts] = useState<any[]>([]);
   const [loadingExperts, setLoadingExperts] = useState(false);
 
+  // 移动端检测
+  const [isMobile, setIsMobile] = useState(false);
+
   // User login and avatar logic
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -297,6 +300,16 @@ const Home: React.FC = () => {
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   
+  // 移动端检测
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -852,27 +865,33 @@ const Home: React.FC = () => {
             <button
               onClick={() => navigate('/task-experts')}
               style={{
-                position: 'absolute',
-                right: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                padding: '8px 20px',
+                position: isMobile ? 'relative' : 'absolute',
+                right: isMobile ? 'auto' : 0,
+                top: isMobile ? 'auto' : '50%',
+                transform: isMobile ? 'none' : 'translateY(-50%)',
+                marginTop: isMobile ? '12px' : 0,
+                padding: isMobile ? '8px 16px' : '8px 20px',
                 background: '#10b981',
                 border: 'none',
                 borderRadius: '8px',
                 color: 'white',
-                fontSize: '14px',
+                fontSize: isMobile ? '13px' : '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                display: isMobile ? 'inline-block' : 'block'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#059669';
-                e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#059669';
+                  e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#10b981';
-                e.currentTarget.style.transform = 'translateY(-50%)';
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#10b981';
+                  e.currentTarget.style.transform = 'translateY(-50%)';
+                }
               }}
             >
               {t('common.more') || '更多'} →
@@ -891,7 +910,10 @@ const Home: React.FC = () => {
               <div>{t('taskExperts.noExpertsFound') || '暂无热门达人'}</div>
             </div>
           ) : (
-            <div className={styles.featuresGrid} style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className={styles.featuresGrid} style={{ 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: isMobile ? '20px' : '24px'
+            }}>
               {hotExperts.map((expert: any) => {
                 // 将下划线格式转换为驼峰格式用于翻译键
                 const categoryKey = expert.category ? expert.category.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase()) : '';
@@ -902,8 +924,8 @@ const Home: React.FC = () => {
                     key={expert.id}
                     style={{
                       background: '#ffffff',
-                      borderRadius: '24px',
-                      padding: '28px',
+                      borderRadius: isMobile ? '16px' : '24px',
+                      padding: isMobile ? '20px' : '28px',
                       border: '1px solid #e2e8f0',
                       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                       transition: 'all 0.3s ease',
@@ -927,12 +949,12 @@ const Home: React.FC = () => {
                     {expert.location && expert.location !== 'Online' && (
                       <div style={{
                         position: 'absolute',
-                        top: '20px',
-                        right: '20px',
-                        padding: '4px 10px',
+                        top: isMobile ? '12px' : '20px',
+                        right: isMobile ? '12px' : '20px',
+                        padding: isMobile ? '3px 8px' : '4px 10px',
                         background: '#f1f5f9',
                         borderRadius: '8px',
-                        fontSize: '12px',
+                        fontSize: isMobile ? '11px' : '12px',
                         color: '#475569',
                         border: '1px solid #e2e8f0',
                         fontWeight: 500,
@@ -946,19 +968,19 @@ const Home: React.FC = () => {
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '18px',
-                      marginBottom: '20px'
+                      gap: isMobile ? '12px' : '18px',
+                      marginBottom: isMobile ? '16px' : '20px'
                     }}>
                       <div style={{ position: 'relative' }}>
                         <img
                           src={expert.avatar || 'https://via.placeholder.com/72'}
                           alt={expert.name}
                           style={{
-                            width: '72px',
-                            height: '72px',
+                            width: isMobile ? '56px' : '72px',
+                            height: isMobile ? '56px' : '72px',
                             borderRadius: '50%',
                             objectFit: 'cover',
-                            border: '3px solid #e2e8f0',
+                            border: isMobile ? '2px solid #e2e8f0' : '3px solid #e2e8f0',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)'
                           }}
                         />
@@ -982,25 +1004,28 @@ const Home: React.FC = () => {
                         )}
                       </div>
 
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 style={{
-                          fontSize: '20px',
+                          fontSize: isMobile ? '16px' : '20px',
                           fontWeight: '700',
                           color: '#1a202c',
-                          marginBottom: '6px',
-                          margin: 0
+                          marginBottom: isMobile ? '4px' : '6px',
+                          margin: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
                         }}>
                           {expert.name}
                         </h3>
                         <span style={{
                           display: 'inline-block',
-                          padding: '5px 12px',
+                          padding: isMobile ? '4px 10px' : '5px 12px',
                           background: expert.user_level === 'super' ? 'linear-gradient(135deg, #FFD700, #FFA500)' :
                                      expert.user_level === 'vip' ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' :
                                      '#f1f5f9',
                           color: expert.user_level === 'super' || expert.user_level === 'vip' ? '#fff' : '#475569',
                           borderRadius: '14px',
-                          fontSize: '12px',
+                          fontSize: isMobile ? '11px' : '12px',
                           fontWeight: '600',
                           marginTop: '4px'
                         }}>
@@ -1015,12 +1040,16 @@ const Home: React.FC = () => {
                     {expert.bio && (
                       <p style={{
                         color: '#4a5568',
-                        fontSize: '14px',
+                        fontSize: isMobile ? '13px' : '14px',
                         lineHeight: '1.6',
-                        marginBottom: '16px',
-                        margin: 0
+                        marginBottom: isMobile ? '12px' : '16px',
+                        margin: 0,
+                        display: '-webkit-box',
+                        WebkitLineClamp: isMobile ? 2 : 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
                       }}>
-                        {expert.bio.length > 80 ? expert.bio.substring(0, 80) + '...' : expert.bio}
+                        {expert.bio}
                       </p>
                     )}
 
@@ -1045,18 +1074,18 @@ const Home: React.FC = () => {
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: '12px',
-                      marginBottom: '20px'
+                      gap: isMobile ? '8px' : '12px',
+                      marginBottom: isMobile ? '16px' : '20px'
                     }}>
                       <div style={{
-                        padding: '12px',
+                        padding: isMobile ? '10px 8px' : '12px',
                         background: '#f8fafc',
-                        borderRadius: '12px',
+                        borderRadius: isMobile ? '10px' : '12px',
                         textAlign: 'center',
                         border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
-                          fontSize: '18px',
+                          fontSize: isMobile ? '16px' : '18px',
                           fontWeight: '700',
                           color: '#1a202c',
                           marginBottom: '4px'
@@ -1064,21 +1093,21 @@ const Home: React.FC = () => {
                           {expert.avg_rating ? expert.avg_rating.toFixed(1) : '0.0'}
                         </div>
                         <div style={{
-                          fontSize: '11px',
+                          fontSize: isMobile ? '10px' : '11px',
                           color: '#64748b'
                         }}>
                           评分
                         </div>
                       </div>
                       <div style={{
-                        padding: '12px',
+                        padding: isMobile ? '10px 8px' : '12px',
                         background: '#f8fafc',
-                        borderRadius: '12px',
+                        borderRadius: isMobile ? '10px' : '12px',
                         textAlign: 'center',
                         border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
-                          fontSize: '18px',
+                          fontSize: isMobile ? '16px' : '18px',
                           fontWeight: '700',
                           color: '#1a202c',
                           marginBottom: '4px'
@@ -1086,21 +1115,21 @@ const Home: React.FC = () => {
                           {expert.completed_tasks || 0}
                         </div>
                         <div style={{
-                          fontSize: '11px',
+                          fontSize: isMobile ? '10px' : '11px',
                           color: '#64748b'
                         }}>
                           任务
                         </div>
                       </div>
                       <div style={{
-                        padding: '12px',
+                        padding: isMobile ? '10px 8px' : '12px',
                         background: '#f8fafc',
-                        borderRadius: '12px',
+                        borderRadius: isMobile ? '10px' : '12px',
                         textAlign: 'center',
                         border: '1px solid #e2e8f0'
                       }}>
                         <div style={{
-                          fontSize: '18px',
+                          fontSize: isMobile ? '16px' : '18px',
                           fontWeight: '700',
                           color: '#1a202c',
                           marginBottom: '4px'
@@ -1108,7 +1137,7 @@ const Home: React.FC = () => {
                           {expert.completion_rate || 0}%
                         </div>
                         <div style={{
-                          fontSize: '11px',
+                          fontSize: isMobile ? '10px' : '11px',
                           color: '#64748b'
                         }}>
                           完成率
@@ -1124,26 +1153,30 @@ const Home: React.FC = () => {
                       }}
                       style={{
                         width: '100%',
-                        padding: '14px',
+                        padding: isMobile ? '12px' : '14px',
                         background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
                         border: 'none',
-                        borderRadius: '12px',
+                        borderRadius: isMobile ? '10px' : '12px',
                         color: 'white',
-                        fontSize: '15px',
+                        fontSize: isMobile ? '14px' : '15px',
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                        if (!isMobile) {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #2563eb, #7c3aed)';
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                          e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
+                        }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                        if (!isMobile) {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                        }
                       }}
                     >
                       {t('taskExperts.viewProfile') || '查看资料'}

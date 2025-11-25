@@ -354,24 +354,7 @@ const TaskExperts: React.FC = () => {
         category: expert.category || null,  // 添加类别字段
       }));
       
-      // 应用城市筛选
-      if (selectedCity !== 'all') {
-        expertsList = expertsList.filter((expert: any) => expert.location === selectedCity);
-      }
-      
-      // 应用排序
-      expertsList.sort((a: any, b: any) => {
-        switch (sortBy) {
-          case 'rating':
-            return (b.avg_rating || 0) - (a.avg_rating || 0);
-          case 'tasks':
-            return (b.completed_tasks || 0) - (a.completed_tasks || 0);
-          case 'recent':
-            return new Date(b.last_active || 0).getTime() - new Date(a.last_active || 0).getTime();
-          default:
-            return 0;
-        }
-      });
+      // 注意：城市筛选和排序在 filteredExperts 和 sortedExperts 中统一处理
       
       console.log('加载的任务达人列表:', expertsList);
       setExperts(expertsList);
@@ -447,13 +430,8 @@ const TaskExperts: React.FC = () => {
   };
 
   const filteredExperts = experts.filter(expert => {
-    // 按分类筛选
-    if (selectedCategory !== 'all') {
-      const categoryMatch = expert.expertise_areas.some(area => 
-        area.toLowerCase().includes(selectedCategory.toLowerCase())
-      );
-      if (!categoryMatch) return false;
-    }
+    // 注意：分类筛选已经在后端API调用时完成（loadExperts中传递了category参数）
+    // 这里只需要做城市筛选即可
     
     // 按城市筛选
     if (selectedCity !== 'all') {
