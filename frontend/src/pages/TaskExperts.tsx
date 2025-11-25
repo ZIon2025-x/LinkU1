@@ -140,7 +140,8 @@ const TaskExperts: React.FC = () => {
     { value: 'cake', label: t('taskExperts.cake') },
     { value: 'errand_transport', label: t('taskExperts.errandTransport') },
     { value: 'social_entertainment', label: t('taskExperts.socialEntertainment') },
-    { value: 'beauty_skincare', label: t('taskExperts.beautySkincare') }
+    { value: 'beauty_skincare', label: t('taskExperts.beautySkincare') },
+    { value: 'handicraft', label: t('taskExperts.handicraft') }
   ];
 
   const sortOptions = [

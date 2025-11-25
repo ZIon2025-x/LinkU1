@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Card, message } from 'antd';
 import styled from 'styled-components';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import api from '../api';
 
@@ -29,7 +30,7 @@ const ResetPassword: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
   const { token } = useParams();
 
   const onFinish = async (values: any) => {
@@ -113,7 +114,8 @@ const ResetPassword: React.FC = () => {
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => {
           setShowLoginModal(false);
-          window.location.reload();
+          // 登录成功后跳转到首页
+          navigate('/');
         }}
         showForgotPassword={showForgotPasswordModal}
         onShowForgotPassword={() => setShowForgotPasswordModal(true)}

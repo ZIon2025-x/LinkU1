@@ -687,7 +687,7 @@ class FeaturedTaskExpert(Base):
     is_active = Column(Integer, default=1)  # 是否显示
     is_featured = Column(Integer, default=1)  # 是否精选推荐
     display_order = Column(Integer, default=0)  # 显示顺序
-    category = Column(String(50), nullable=True)  # 分类（programming, translation, tutoring, food, beverage, cake, errand_transport, social_entertainment, beauty_skincare）
+    category = Column(String(50), nullable=True)  # 分类（programming, translation, tutoring, food, beverage, cake, errand_transport, social_entertainment, beauty_skincare, handicraft）
     location = Column(String(50), nullable=True)  # 城市位置（如：London, Manchester, Online等）
     
     created_at = Column(DateTime(timezone=True), default=get_utc_time)

@@ -29,7 +29,27 @@ class EmailVerificationManager:
     def generate_verification_token(email: str) -> str:
         """生成邮箱验证令牌 - 使用与旧系统兼容的方式"""
         from app.email_utils import generate_confirmation_token
-        return generate_confirmation_token(email)
+        token = generate_confirmation_token(email)
+        
+        # 将token存储到Redis，设置24小时过期，确保一次性使用
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            try:
+                # 存储token到Redis，值为邮箱，过期时间24小时（86400秒）
+                redis_client.setex(
+                    f"email_verification_token:{token}",
+                    86400,  # 24小时 = 86400秒
+                    email
+                )
+            except Exception as e:
+                logger.warning(f"存储邮箱验证token到Redis失败: {e}")
+                # Redis失败时仍然返回token，但验证时会失败（需要Redis可用）
+        else:
+            logger.warning("Redis不可用，无法存储邮箱验证token")
+        
+        return token
     
     @staticmethod
     def create_pending_user(
@@ -160,6 +180,44 @@ class EmailVerificationManager:
                 email = pending_user.email
                 logger.info(f"使用PendingUser格式token验证成功: {email}")
                 
+                # 从Redis获取并删除token（原子操作，确保一次性使用）
+                from app.redis_cache import get_redis_client
+                redis_client = get_redis_client()
+                
+                if redis_client:
+                    token_key = f"email_verification_token:{token}"
+                    
+                    # 使用GETDEL原子操作（Redis 6.2+），如果Redis版本不支持则使用Lua脚本
+                    try:
+                        # 尝试使用GETDEL（原子操作：获取并删除）
+                        stored_email = redis_client.getdel(token_key)
+                    except AttributeError:
+                        # Redis版本不支持GETDEL，使用Lua脚本实现原子操作
+                        lua_script = """
+                        local value = redis.call('GET', KEYS[1])
+                        if value then
+                            redis.call('DEL', KEYS[1])
+                        end
+                        return value
+                        """
+                        stored_email = redis_client.eval(lua_script, 1, token_key)
+                    except Exception as e:
+                        logger.error(f"从Redis获取验证token失败: {e}")
+                        stored_email = None
+                    
+                    # 如果Redis中有token记录，验证是否匹配
+                    if stored_email:
+                        stored_email_str = stored_email.decode('utf-8') if isinstance(stored_email, bytes) else stored_email
+                        if stored_email_str != email:
+                            logger.warning(f"Token邮箱不匹配: Redis中={stored_email_str}, PendingUser中={email}")
+                            return None
+                        # Token已从Redis删除，确保一次性使用
+                        logger.info(f"Token已从Redis删除，确保一次性使用: {email}")
+                    else:
+                        # Redis中没有token记录，可能是旧token或已使用
+                        logger.warning(f"Redis中没有token记录，可能已被使用: {email}")
+                        # 仍然允许验证（向后兼容），但记录警告
+                
                 # 检查邮箱是否已被注册
                 existing_user = db.query(models.User).filter(
                     models.User.email == email
@@ -251,10 +309,66 @@ class EmailVerificationManager:
             logger.warning(f"验证令牌无效或已过期: {token}")
             return None
         
-        # 对于旧格式的token，查找并更新现有用户（已在User表中的用户）
+        # 对于旧格式的token，从Redis获取并删除token（原子操作，确保一次性使用）
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            token_key = f"email_verification_token:{token}"
+            
+            # 使用GETDEL原子操作（Redis 6.2+），如果Redis版本不支持则使用Lua脚本
+            try:
+                # 尝试使用GETDEL（原子操作：获取并删除）
+                stored_email = redis_client.getdel(token_key)
+            except AttributeError:
+                # Redis版本不支持GETDEL，使用Lua脚本实现原子操作
+                lua_script = """
+                local value = redis.call('GET', KEYS[1])
+                if value then
+                    redis.call('DEL', KEYS[1])
+                end
+                return value
+                """
+                stored_email = redis_client.eval(lua_script, 1, token_key)
+            except Exception as e:
+                logger.error(f"从Redis获取验证token失败: {e}")
+                # Redis操作失败，但token格式有效，允许验证（向后兼容）
+                stored_email = None
+            
+            # 如果Redis中有token记录，验证是否匹配
+            if stored_email:
+                stored_email_str = stored_email.decode('utf-8') if isinstance(stored_email, bytes) else stored_email
+                if stored_email_str != email:
+                    logger.warning(f"Token邮箱不匹配: Redis中={stored_email_str}, Token中={email}")
+                    return None
+                # Token已从Redis删除，确保一次性使用
+                logger.info(f"Token已从Redis删除，确保一次性使用: {email}")
+            else:
+                # Redis中没有token记录，可能是旧token或已使用
+                # 检查用户是否已经验证过
+                user = crud.get_user_by_email(db, email)
+                if user and user.is_verified == 1:
+                    logger.warning(f"用户已验证，token可能已被使用: {email}")
+                    return None
+                # 如果用户未验证，允许验证（向后兼容旧token）
+                logger.info(f"Redis中没有token记录，但允许验证（向后兼容）: {email}")
+        else:
+            # Redis不可用，检查用户是否已经验证过
+            user = crud.get_user_by_email(db, email)
+            if user and user.is_verified == 1:
+                logger.warning(f"用户已验证，Redis不可用无法验证token: {email}")
+                return None
+            logger.warning("Redis不可用，无法验证token是否已使用")
+        
+        # 查找并更新现有用户（已在User表中的用户）
         user = crud.get_user_by_email(db, email)
         if not user:
             logger.warning(f"用户不存在: {email}")
+            return None
+        
+        # 检查用户是否已经验证过
+        if user.is_verified == 1:
+            logger.warning(f"用户已验证: {email}")
             return None
         
         # 更新用户验证状态

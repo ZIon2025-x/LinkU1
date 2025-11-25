@@ -1844,6 +1844,7 @@ const AdminDashboard: React.FC = () => {
                   <option value="errand_transport">跑腿接送</option>
                   <option value="social_entertainment">社交娱乐</option>
                   <option value="beauty_skincare">美容护肤</option>
+                  <option value="handicraft">手工制品</option>
                 </select>
               </div>
             </div>

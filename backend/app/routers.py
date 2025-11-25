@@ -791,10 +791,39 @@ def forgot_password(
     user = crud.get_user_by_email(db, validated_email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # 生成token
     token = generate_reset_token(validated_email)
+    
+    # 将token存储到Redis，设置2小时过期（7200秒），key格式：password_reset_token:{token}
+    from app.redis_cache import get_redis_client
+    redis_client = get_redis_client()
+    
+    if redis_client:
+        try:
+            # 存储token到Redis，值为邮箱，过期时间2小时
+            redis_client.setex(
+                f"password_reset_token:{token}",
+                7200,  # 2小时 = 7200秒
+                validated_email
+            )
+        except Exception as e:
+            logger.error(f"存储重置密码token到Redis失败: {e}")
+            # Redis失败时，不发送邮件，避免用户收到无法使用的链接
+            raise HTTPException(
+                status_code=503,
+                detail="Service temporarily unavailable. Please try again later."
+            )
+    else:
+        logger.error("Redis不可用，无法存储重置密码token")
+        # Redis不可用时，不发送邮件
+        raise HTTPException(
+            status_code=503,
+            detail="Service temporarily unavailable. Please try again later."
+        )
+    
     # 尝试获取用户语言偏好
     from app.email_templates import get_user_language
-    user = crud.get_user_by_email(db, validated_email)
     language = get_user_language(user) if user else 'en'
     
     send_reset_email(background_tasks, validated_email, token, language)
@@ -805,16 +834,59 @@ def forgot_password(
 def reset_password(
     token: str, new_password: str = Form(...), db: Session = Depends(get_db)
 ):
+    """重置密码 - 使用一次性token"""
+    # 首先验证token格式和过期时间
     email = confirm_reset_token(token)
     if not email:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    # 从Redis获取并删除token（原子操作，确保一次性使用）
+    from app.redis_cache import get_redis_client
+    redis_client = get_redis_client()
+    
+    if not redis_client:
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable. Please try again later.")
+    
+    token_key = f"password_reset_token:{token}"
+    
+    # 使用GETDEL原子操作（Redis 6.2+），如果Redis版本不支持则使用Lua脚本
+    try:
+        # 尝试使用GETDEL（原子操作：获取并删除）
+        stored_email = redis_client.getdel(token_key)
+    except AttributeError:
+        # Redis版本不支持GETDEL，使用Lua脚本实现原子操作
+        lua_script = """
+        local value = redis.call('GET', KEYS[1])
+        if value then
+            redis.call('DEL', KEYS[1])
+        end
+        return value
+        """
+        stored_email = redis_client.eval(lua_script, 1, token_key)
+    except Exception as e:
+        logger.error(f"从Redis获取token失败: {e}")
+        raise HTTPException(status_code=500, detail="Token verification failed")
+    
+    # 检查token是否存在（如果不存在说明已被使用或过期）
+    if not stored_email:
+        raise HTTPException(status_code=400, detail="Invalid, expired, or already used token")
+    
+    # 验证存储的邮箱与token中的邮箱是否匹配
+    stored_email_str = stored_email.decode('utf-8') if isinstance(stored_email, bytes) else stored_email
+    if stored_email_str != email:
+        raise HTTPException(status_code=400, detail="Token email mismatch")
+    
+    # 查找用户
     user = crud.get_user_by_email(db, email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # token有效且未被使用，重置密码
     from app.security import get_password_hash
-
     user.hashed_password = get_password_hash(new_password)
     db.commit()
+    
+    # token已在Redis中删除（通过GETDEL或Lua脚本），确保一次性使用
     return {"message": "Password reset successful."}
 
 
