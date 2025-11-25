@@ -37,9 +37,9 @@ if CELERY_AVAILABLE:
     )
     from app.crud import (
         cancel_expired_tasks,
-        update_all_users_statistics,
         update_all_featured_task_experts_response_time
     )
+    from app.main import update_all_users_statistics
     
     @celery_app.task(
         name='app.celery_tasks.cancel_expired_tasks_task',

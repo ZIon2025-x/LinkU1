@@ -329,18 +329,7 @@ async def create_featured_expert_from_application(
     if not task_expert:
         raise HTTPException(status_code=400, detail="该用户还不是任务达人，请先批准申请")
     
-    # 4. 检查是否已经存在 FeaturedTaskExpert（避免重复创建）
-    from sqlalchemy import text
-    existing_featured_result = await db.execute(
-        text("SELECT id FROM featured_task_experts WHERE id = :user_id"),
-        {"user_id": application.user_id}
-    )
-    existing_featured = existing_featured_result.fetchone()
-    
-    if existing_featured:
-        raise HTTPException(status_code=400, detail="该用户已经是特色任务达人")
-    
-    # 5. 创建特色任务达人记录（FeaturedTaskExpert）
+    # 4. 检查是否已经存在 FeaturedTaskExpert
     # 使用同步数据库会话（因为 FeaturedTaskExpert 是同步模型）
     from app.database import SessionLocal
     
@@ -349,12 +338,25 @@ async def create_featured_expert_from_application(
         # 创建同步数据库会话
         sync_db = SessionLocal()
         
+        # 检查是否已有精选任务达人记录
+        existing_expert = sync_db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.id == application.user_id
+        ).first()
+        
+        if existing_expert:
+            # 如果记录已存在，保留现有头像，不覆盖
+            # 这样可以避免部署时重新创建记录导致头像被用户表头像覆盖
+            raise HTTPException(status_code=400, detail="该用户已经是特色任务达人")
+        
+        # 5. 创建特色任务达人记录（FeaturedTaskExpert）
+        # 重要：头像永远不要自动从用户表同步，必须由管理员手动设置
+        # 创建时使用空字符串，管理员后续可以通过编辑功能设置头像
         import json
         new_featured_expert = models.FeaturedTaskExpert(
             id=application.user_id,  # 使用用户ID作为主键
             user_id=application.user_id,  # 关联到用户ID（与id相同）
             name=user.name or f"用户{application.user_id}",  # 使用用户名
-            avatar=user.avatar or "",  # 使用用户头像
+            avatar="",  # 头像必须由管理员手动设置，不自动使用用户头像
             user_level="normal",  # 默认等级
             bio=application.application_message or None,  # 使用申请说明作为简介
             bio_en=None,

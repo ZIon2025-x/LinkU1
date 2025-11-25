@@ -231,17 +231,27 @@ async def get_experts_list(
         # 加载用户信息以获取名称和头像
         from app import async_crud
         user = await async_crud.async_user_crud.get_user_by_id(db, expert.id)
-        if user:
-            expert_dict["name"] = user.name
-            expert_dict["avatar"] = user.avatar
-            expert_dict["user_name"] = user.name
-            expert_dict["user_avatar"] = user.avatar
         
-        # 获取location：优先从FeaturedTaskExpert获取，如果没有则从用户表获取，最后使用默认值
+        # 获取location和头像：优先从FeaturedTaskExpert获取，如果没有则从用户表获取
         featured_expert_result = await db.execute(
             select(models.FeaturedTaskExpert).where(models.FeaturedTaskExpert.id == expert.id)
         )
         featured_expert = featured_expert_result.scalar_one_or_none()
+        
+        # 重要：头像优先使用精选任务达人的头像，如果没有才使用用户头像
+        if featured_expert and featured_expert.avatar:
+            expert_dict["avatar"] = featured_expert.avatar
+        elif user:
+            expert_dict["avatar"] = user.avatar or ""
+        else:
+            expert_dict["avatar"] = ""
+        
+        if user:
+            expert_dict["name"] = user.name
+            expert_dict["user_name"] = user.name
+            expert_dict["user_avatar"] = user.avatar or ""
+        
+        # 获取location：优先从FeaturedTaskExpert获取，如果没有则从用户表获取，最后使用默认值
         if featured_expert and featured_expert.location:
             expert_dict["location"] = featured_expert.location
         elif user and hasattr(user, 'residence_city') and user.residence_city:

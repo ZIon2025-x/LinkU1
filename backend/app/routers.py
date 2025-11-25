@@ -6642,6 +6642,11 @@ def create_task_expert(
     # 设置 id 为 user_id
     expert_data['id'] = user_id
     
+    # 重要：头像永远不要自动从用户表同步，必须由管理员手动设置
+    # 如果 expert_data 中没有提供 avatar，确保使用空字符串而不是用户头像
+    if 'avatar' not in expert_data:
+        expert_data['avatar'] = ""
+    
     try:
         # 将数组字段转换为 JSON
         for field in ['expertise_areas', 'expertise_areas_en', 'featured_skills', 'featured_skills_en', 'achievements', 'achievements_en']:
