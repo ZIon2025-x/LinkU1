@@ -443,15 +443,18 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
                     {sellerInfo.avg_rating > 0 && (
                       <Rate disabled defaultValue={sellerInfo.avg_rating} allowHalf style={{ fontSize: 14 }} />
                     )}
-                    <Button
-                      type="link"
-                      onClick={() => {
-                        onClose();
-                        navigate(`/${language}/user/${sellerInfo.id}`);
-                      }}
-                    >
-                      {t('fleaMarket.viewProfile')}
-                    </Button>
+                    {/* 暂时隐藏查看个人资料按钮 */}
+                    {false && (
+                      <Button
+                        type="link"
+                        onClick={() => {
+                          onClose();
+                          navigate(`/${language}/user/${sellerInfo.id}`);
+                        }}
+                      >
+                        {t('fleaMarket.viewProfile')}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}

@@ -13,6 +13,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 import ServiceListModal from '../components/ServiceListModal';
+import ExpertDetailModal from '../components/ExpertDetailModal';
 
 interface TaskExpert {
   id: string;
@@ -33,6 +34,7 @@ interface TaskExpert {
   response_time: string;
   success_rate: number;
   location?: string; // 添加城市字段
+  category?: string; // 添加类别字段
 }
 
 // 城市列表 - 与其他页面保持一致
@@ -88,6 +90,10 @@ const TaskExperts: React.FC = () => {
   // 服务详情弹窗状态
   const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  
+  // 专家详情弹窗状态
+  const [showExpertDetailModal, setShowExpertDetailModal] = useState(false);
+  const [selectedExpertDetailId, setSelectedExpertDetailId] = useState<string | null>(null);
   
   // 达人活动相关状态
   const [expertActivities, setExpertActivities] = useState<{[key: string]: any[]}>({});
@@ -345,6 +351,7 @@ const TaskExperts: React.FC = () => {
         success_rate: expert.success_rate || 0,
         is_verified: expert.is_verified || false,
         location: expert.location || 'Online',
+        category: expert.category || null,  // 添加类别字段
       }));
       
       // 应用城市筛选
@@ -472,7 +479,8 @@ const TaskExperts: React.FC = () => {
   });
 
   const handleExpertClick = (expertId: string) => {
-    navigate(`/user/${expertId}`);
+    setSelectedExpertDetailId(expertId);
+    setShowExpertDetailModal(true);
   };
 
   const handleRequestService = async (expertId: string, expertName: string, e: React.MouseEvent) => {
@@ -1074,22 +1082,27 @@ const TaskExperts: React.FC = () => {
               </p>
 
               {/* 类别 */}
-              {expert.expertise_areas && expert.expertise_areas.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <span style={{
-                    padding: '4px 10px',
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: 'white',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    display: 'inline-block'
-                  }}>
-                    💼 {expert.expertise_areas[0]}
-                  </span>
-                </div>
-              )}
+              {expert.category && (() => {
+                // 将下划线格式转换为驼峰格式用于翻译键
+                const categoryKey = expert.category.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+                const categoryLabel = t(`taskExperts.${categoryKey}`) || expert.category;
+                return (
+                  <div style={{ marginBottom: '16px' }}>
+                    <span style={{
+                      padding: '4px 10px',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      color: 'white',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      display: 'inline-block'
+                    }}>
+                      💼 {categoryLabel}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* 评分和统计 - 网格布局 */}
               <div style={{
@@ -1568,6 +1581,26 @@ const TaskExperts: React.FC = () => {
         }}
         onHideForgotPassword={() => {
           setShowForgotPasswordModal(false);
+        }}
+      />
+      
+      {/* 专家详情弹窗 */}
+      <ExpertDetailModal
+        isOpen={showExpertDetailModal}
+        onClose={() => {
+          setShowExpertDetailModal(false);
+          setSelectedExpertDetailId(null);
+        }}
+        expertId={selectedExpertDetailId || ''}
+        onViewServices={() => {
+          if (selectedExpertDetailId) {
+            const expert = experts.find(e => e.id === selectedExpertDetailId);
+            if (expert) {
+              setSelectedExpertId(selectedExpertDetailId);
+              setSelectedExpertName(expert.name);
+              setShowServiceListModal(true);
+            }
+          }
         }}
       />
       
