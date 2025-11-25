@@ -173,6 +173,12 @@ function isMobileDevice(): boolean {
 api.interceptors.request.use(async config => {
   // 所有设备都使用HttpOnly Cookie认证，不再区分移动端和桌面端
   
+  // 如果请求数据是 FormData，删除手动设置的 Content-Type
+  // 让浏览器自动设置（包含 boundary）
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  
   // 对于写操作，添加CSRF token
   // 但跳过登录相关的请求，因为它们不需要CSRF保护
   if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {

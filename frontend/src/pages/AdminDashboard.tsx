@@ -1737,11 +1737,8 @@ const AdminDashboard: React.FC = () => {
                             ? `/api/upload/public-image?category=expert_avatar&resource_id=${expertId}`
                             : '/api/upload/public-image?category=expert_avatar';
                           
-                          const response = await api.post(uploadUrl, formData, {
-                            headers: {
-                              'Content-Type': 'multipart/form-data',
-                            },
-                          });
+                          // 注意：不要手动设置 Content-Type，让浏览器自动设置（包含boundary）
+                          const response = await api.post(uploadUrl, formData);
                           
                           if (response.data.success && response.data.url) {
                             setTaskExpertForm({...taskExpertForm, avatar: response.data.url});
