@@ -587,7 +587,14 @@ const TaskExpertDashboard: React.FC = () => {
       message.success('服务已删除');
       loadServices();
     } catch (err: any) {
-      message.error(err.response?.data?.detail || '删除服务失败');
+      console.error('删除服务失败:', err);
+      const errorMessage = err.response?.data?.detail || err.message || '删除服务失败';
+      // 显示更详细的错误信息，400错误显示更长时间
+      if (err.response?.status === 400) {
+        message.error(errorMessage, 5); // 显示5秒，让用户有足够时间阅读
+      } else {
+        message.error(errorMessage);
+      }
     }
   };
 

@@ -1041,26 +1041,60 @@ def delete_expert_activity(
     if db_activity.expert_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only delete your own activities")
     
-    # 检查活动状态：如果活动已完成或已取消，不允许删除
-    if db_activity.status in ("completed", "cancelled"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot delete activity with status: {db_activity.status}"
-        )
+    # 检查活动是否已结束
+    current_utc = get_utc_time()
+    is_expired = False
+    expiration_reason = ""
     
-    # 检查是否有已开始的任务
-    related_tasks = db.query(Task).filter(
-        and_(
-            Task.parent_activity_id == activity_id,
-            Task.status.in_(["in_progress", "completed"])
-        )
-    ).all()
+    # 检查截止日期（非时间段服务）
+    if db_activity.deadline:
+        if current_utc > db_activity.deadline:
+            is_expired = True
+            expiration_reason = "截止日期已过"
     
-    if related_tasks:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete activity with tasks in progress or completed"
-        )
+    # 检查活动结束日期（时间段服务）
+    if not is_expired and db_activity.activity_end_date:
+        from datetime import date
+        if current_utc.date() > db_activity.activity_end_date:
+            is_expired = True
+            expiration_reason = "活动结束日期已过"
+    
+    # 如果活动已结束，只检查是否有已完成或进行中的任务
+    if is_expired:
+        # 活动已结束，只检查是否有进行中或已完成的任务
+        active_tasks = db.query(Task).filter(
+            and_(
+                Task.parent_activity_id == activity_id,
+                Task.status.in_(["in_progress", "completed"])
+            )
+        ).all()
+        
+        if active_tasks:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除活动，虽然活动已结束（{expiration_reason}），但有 {len(active_tasks)} 个进行中或已完成的任务。请先处理相关任务后再删除。"
+            )
+    else:
+        # 活动未结束，检查活动状态和所有相关任务
+        if db_activity.status in ("completed", "cancelled"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除活动，活动状态为: {db_activity.status}"
+            )
+        
+        # 检查是否有已开始的任务
+        related_tasks = db.query(Task).filter(
+            and_(
+                Task.parent_activity_id == activity_id,
+                Task.status.in_(["in_progress", "completed"])
+            )
+        ).all()
+        
+        if related_tasks:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除活动，活动尚未结束，且有 {len(related_tasks)} 个进行中或已完成的任务。请先处理相关任务后再删除。"
+            )
     
     # 取消活动（设置状态为cancelled）
     old_status = db_activity.status

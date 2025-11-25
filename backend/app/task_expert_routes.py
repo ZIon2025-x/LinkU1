@@ -503,6 +503,9 @@ async def update_service(
     # 保存旧配置，用于后续比较
     old_weekly_config = service.weekly_time_slot_config if service.weekly_time_slot_config else None
     old_has_time_slots = service.has_time_slots
+    old_start_time = service.time_slot_start_time
+    old_end_time = service.time_slot_end_time
+    old_duration = service.time_slot_duration_minutes
     
     # 保存旧图片列表，用于清理不再使用的图片
     old_images = service.images if service.images else []
@@ -569,12 +572,41 @@ async def update_service(
                 except ValueError:
                     raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
         else:
-            # 禁用时间段时，清除相关字段
+            # 禁用时间段时，清除相关字段并删除所有时间段
             service.time_slot_duration_minutes = None
             service.time_slot_start_time = None
             service.time_slot_end_time = None
             service.participants_per_slot = None
             service.weekly_time_slot_config = None
+            
+            # 如果之前启用了时间段，现在禁用了，需要删除所有未来的时间段
+            if old_has_time_slots:
+                from datetime import datetime as dt_datetime
+                current_utc = get_utc_time()
+                
+                # 获取所有未来的时间段（未过期且未手动删除的）
+                future_slots_result = await db.execute(
+                    select(models.ServiceTimeSlot)
+                    .where(models.ServiceTimeSlot.service_id == service_id)
+                    .where(models.ServiceTimeSlot.slot_start_datetime >= current_utc)
+                    .where(models.ServiceTimeSlot.is_manually_deleted == False)
+                )
+                future_slots = future_slots_result.scalars().all()
+                
+                deleted_count = 0
+                for slot in future_slots:
+                    # 如果没有参与者，直接删除
+                    if slot.current_participants == 0:
+                        await db.delete(slot)
+                        deleted_count += 1
+                    else:
+                        # 如果有参与者，标记为手动删除和不可用（保留记录但不再显示）
+                        slot.is_manually_deleted = True
+                        slot.is_available = False
+                        deleted_count += 1
+                
+                if deleted_count > 0:
+                    logger.info(f"服务 {service_id} 从时间段服务改为非时间段服务，处理了 {deleted_count} 个时间段")
     
     # 更新其他时间段相关字段（如果单独提供）
     if service_data.time_slot_duration_minutes is not None:
@@ -639,6 +671,21 @@ async def update_service(
             # 之前是统一时间配置，现在改为按周几配置
             config_changed = True
             logger.info(f"检测到从统一时间配置改为按周几配置: service_id={service_id}")
+    
+    # 情况4：统一时间配置发生变化（时间范围或时长变化）
+    if not config_changed and old_has_time_slots and service.has_time_slots and not service.weekly_time_slot_config:
+        # 检查统一时间配置是否变化
+        new_start_time = service.time_slot_start_time
+        new_end_time = service.time_slot_end_time
+        new_duration = service.time_slot_duration_minutes
+        
+        if (old_start_time != new_start_time or 
+            old_end_time != new_end_time or 
+            old_duration != new_duration):
+            config_changed = True
+            logger.info(f"检测到统一时间配置变化: service_id={service_id}, "
+                       f"旧时间={old_start_time}-{old_end_time}, 新时间={new_start_time}-{new_end_time}, "
+                       f"旧时长={old_duration}, 新时长={new_duration}")
     
     if config_changed and service.has_time_slots:
         # 需要清理不符合新配置的时间段

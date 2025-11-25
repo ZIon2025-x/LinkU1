@@ -7143,16 +7143,49 @@ def delete_expert_activity_admin(
         if not activity:
             raise HTTPException(status_code=404, detail="活动不存在")
         
-        # 检查是否有任务正在使用这个活动
-        tasks_using_activity = db.query(models.Task).filter(
-            models.Task.parent_activity_id == activity_id
-        ).count()
+        # 检查活动是否已结束
+        from app.utils.time_utils import get_utc_time
+        current_utc = get_utc_time()
+        is_expired = False
+        expiration_reason = ""
         
-        if tasks_using_activity > 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"无法删除活动，因为有 {tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
-            )
+        # 检查截止日期（非时间段服务）
+        if activity.deadline:
+            if current_utc > activity.deadline:
+                is_expired = True
+                expiration_reason = "截止日期已过"
+        
+        # 检查活动结束日期（时间段服务）
+        if not is_expired and activity.activity_end_date:
+            from datetime import date
+            if current_utc.date() > activity.activity_end_date:
+                is_expired = True
+                expiration_reason = "活动结束日期已过"
+        
+        # 如果活动已结束，只检查是否有已完成或进行中的任务
+        if is_expired:
+            # 活动已结束，只检查是否有进行中或已完成的任务
+            active_tasks = db.query(models.Task).filter(
+                models.Task.parent_activity_id == activity_id,
+                models.Task.status.in_(["in_progress", "completed"])
+            ).count()
+            
+            if active_tasks > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"无法删除活动，虽然活动已结束（{expiration_reason}），但有 {active_tasks} 个进行中或已完成的任务。请先处理相关任务后再删除。"
+                )
+        else:
+            # 活动未结束，检查所有相关任务
+            tasks_using_activity = db.query(models.Task).filter(
+                models.Task.parent_activity_id == activity_id
+            ).count()
+            
+            if tasks_using_activity > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"无法删除活动，活动尚未结束，且有 {tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
+                )
         
         db.delete(activity)
         db.commit()
@@ -7178,6 +7211,7 @@ def delete_expert_activity_admin(
 @router.get("/task-experts")
 def get_public_task_experts(
     category: Optional[str] = None,
+    location: Optional[str] = Query(None, description="城市筛选"),
     db: Session = Depends(get_db),
 ):
     """获取任务达人列表（公开）"""
@@ -7188,6 +7222,23 @@ def get_public_task_experts(
         
         if category:
             query = query.filter(models.FeaturedTaskExpert.category == category)
+        
+        if location and location != 'all':
+            # 处理location筛选：支持精确匹配，同时处理NULL和空字符串的情况
+            # 如果筛选"Online"，也要匹配NULL和空字符串的记录（因为后端返回时会将它们转换为"Online"）
+            if location == 'Online':
+                query = query.filter(
+                    or_(
+                        models.FeaturedTaskExpert.location == 'Online',
+                        models.FeaturedTaskExpert.location == None,
+                        models.FeaturedTaskExpert.location == '',
+                        models.FeaturedTaskExpert.location.is_(None)  # 使用is_()检查NULL
+                    )
+                )
+            else:
+                # 对于其他城市，进行精确匹配
+                # 注意：数据库中的location值应该与筛选器中的值完全匹配
+                query = query.filter(models.FeaturedTaskExpert.location == location)
         
         # 排序
         query = query.order_by(

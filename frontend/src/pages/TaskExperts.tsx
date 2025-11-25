@@ -322,8 +322,11 @@ const TaskExperts: React.FC = () => {
   const loadExperts = async () => {
     setLoading(true);
     try {
-      // 从API获取任务达人列表
-      const expertsData = await getPublicTaskExperts(selectedCategory !== 'all' ? selectedCategory : undefined);
+      // 从API获取任务达人列表，传递城市筛选参数
+      const expertsData = await getPublicTaskExperts(
+        selectedCategory !== 'all' ? selectedCategory : undefined,
+        selectedCity !== 'all' ? selectedCity : undefined
+      );
       
       // 转换数据格式 - 后端返回 { task_experts: [...] }
       let expertsList: any[] = [];
@@ -430,19 +433,9 @@ const TaskExperts: React.FC = () => {
     }
   };
 
-  const filteredExperts = experts.filter(expert => {
-    // 注意：分类筛选已经在后端API调用时完成（loadExperts中传递了category参数）
-    // 这里只需要做城市筛选即可
-    
-    // 按城市筛选
-    if (selectedCity !== 'all') {
-      if (!expert.location || expert.location !== selectedCity) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
+  // 注意：分类和城市筛选已经在后端API调用时完成（loadExperts中传递了category和location参数）
+  // 这里直接使用experts，不需要再次筛选
+  const filteredExperts = experts;
 
   const sortedExperts = [...filteredExperts].sort((a, b) => {
     switch (sortBy) {

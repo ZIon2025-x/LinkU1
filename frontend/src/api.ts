@@ -1581,8 +1581,10 @@ export const deleteExpertActivityAdmin = async (expertId: string, activityId: nu
 };
 
 // 公开 API - 获取任务达人列表（用于前端展示）
-export const getPublicTaskExperts = async (category?: string) => {
-  const params = category ? { category } : {};
+export const getPublicTaskExperts = async (category?: string, location?: string) => {
+  const params: any = {};
+  if (category) params.category = category;
+  if (location && location !== 'all') params.location = location;
   const res = await api.get('/api/task-experts', { params });
   return res.data;
 };
