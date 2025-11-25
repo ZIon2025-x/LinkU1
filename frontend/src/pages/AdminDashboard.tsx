@@ -1722,8 +1722,14 @@ const AdminDashboard: React.FC = () => {
                             maxWidthOrHeight: 800,
                           });
                           
+                          // 确保压缩后的文件有正确的文件名
+                          // 如果压缩后的文件没有name，使用原始文件名
+                          const fileToUpload = compressedFile.name 
+                            ? compressedFile 
+                            : new File([compressedFile], file.name, { type: compressedFile.type || file.type });
+                          
                           const formData = new FormData();
-                          formData.append('image', compressedFile);
+                          formData.append('image', fileToUpload, fileToUpload.name);
                           
                           // 任务达人头像上传：传递expert_id作为resource_id
                           const expertId = taskExpertForm.id;

@@ -5641,11 +5641,50 @@ async def upload_public_image(
         content = await image.read()
         
         # 验证文件类型
-        file_extension = Path(image.filename).suffix.lower()
+        # 如果filename为None，尝试从文件内容或Content-Type检测文件类型
+        if not image.filename:
+            file_extension = ''
+            
+            # 首先尝试从Content-Type获取
+            content_type = image.content_type or ''
+            if 'jpeg' in content_type or 'jpg' in content_type:
+                file_extension = '.jpg'
+            elif 'png' in content_type:
+                file_extension = '.png'
+            elif 'gif' in content_type:
+                file_extension = '.gif'
+            elif 'webp' in content_type:
+                file_extension = '.webp'
+            
+            # 如果Content-Type无法确定，通过文件内容的magic bytes检测
+            if not file_extension and len(content) >= 4:
+                # JPEG: FF D8 FF
+                if content[:3] == b'\xff\xd8\xff':
+                    file_extension = '.jpg'
+                # PNG: 89 50 4E 47
+                elif content[:4] == b'\x89PNG':
+                    file_extension = '.png'
+                # GIF: 47 49 46 38
+                elif content[:4] == b'GIF8':
+                    file_extension = '.gif'
+                # WEBP: RIFF...WEBP
+                elif len(content) >= 12 and content[:4] == b'RIFF' and content[8:12] == b'WEBP':
+                    file_extension = '.webp'
+            
+            if not file_extension:
+                logger.error(f"无法检测文件类型: filename={image.filename}, content_type={image.content_type}, content_size={len(content)}, magic_bytes={content[:12].hex() if len(content) >= 12 else content.hex()}")
+                raise HTTPException(
+                    status_code=400,
+                    detail="无法检测文件类型，请确保上传的是有效的图片文件（JPG、PNG、GIF、WEBP）"
+                )
+        else:
+            file_extension = Path(image.filename).suffix.lower()
+        
         if file_extension not in ALLOWED_EXTENSIONS:
+            logger.warning(f"不支持的文件类型: {file_extension}, filename={image.filename}, content_type={image.content_type}")
             raise HTTPException(
                 status_code=400,
-                detail=f"不支持的文件类型。允许的类型: {', '.join(ALLOWED_EXTENSIONS)}"
+                detail=f"不支持的文件类型: {file_extension}。允许的类型: {', '.join(ALLOWED_EXTENSIONS)}"
             )
         
         # 验证文件大小
