@@ -862,18 +862,53 @@ const Tasks: React.FC = () => {
   // 定期更新未读通知数量
   useEffect(() => {
     if (user) {
-      const interval = setInterval(() => {
+      let interval: NodeJS.Timeout | null = null;
+      let consecutiveErrors = 0;
+      const MAX_CONSECUTIVE_ERRORS = 2; // 连续错误2次后停止
+      
+      const updateUnreadCount = () => {
         // 只在页面可见时才更新
         if (!document.hidden) {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
+            consecutiveErrors = 0; // 成功时重置错误计数
           }).catch(error => {
+            consecutiveErrors++;
+            const status = error?.response?.status || error?.status;
+            
+            // 如果是401错误（未授权），说明token已过期或用户未登录
+            if (status === 401) {
+              console.warn('定期更新未读数量失败: 用户未授权，停止定时更新');
+              if (interval) {
+                clearInterval(interval);
+                interval = null;
+              }
+              return;
+            }
+            
+            // 如果连续错误次数过多，停止定时器
+            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+              console.warn('定期更新未读数量连续失败，停止定时更新');
+              if (interval) {
+                clearInterval(interval);
+                interval = null;
+              }
+              return;
+            }
+            
             console.error('定期更新未读数量失败:', error);
           });
-          
         }
-      }, 30000); // 每30秒更新一次
-      return () => clearInterval(interval);
+      };
+      
+      interval = setInterval(updateUnreadCount, 30000); // 每30秒更新一次
+      updateUnreadCount(); // 立即执行一次
+      
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
     }
   }, [user]);
 

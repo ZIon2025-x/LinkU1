@@ -315,7 +315,7 @@
 
 .taskLevelBadge {
   position: absolute;
-  top: 12px;
+  top: 68px;
   right: 12px;
   padding: 4px 8px;
   border-radius: 12px;
@@ -546,6 +546,10 @@
 
   .tasksGrid {
     grid-template-columns: 1fr;
+  }
+
+  .taskLevelBadge {
+    top: 60px;
   }
 }
 

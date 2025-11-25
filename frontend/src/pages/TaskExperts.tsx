@@ -543,7 +543,7 @@ const TaskExperts: React.FC = () => {
         />
         {/* 顶部导航栏 - 与首页一致 */}
         <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
-          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: isMobile ? '100%' : 1600, margin: '0 auto', padding: '0 24px'}}>
             {/* Logo - 可点击跳转到首页 */}
             <div 
               onClick={() => navigate('/')}
@@ -654,7 +654,7 @@ const TaskExperts: React.FC = () => {
       />
       {/* 顶部导航栏 - 与首页一致 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: isMobile ? '100%' : 1600, margin: '0 auto', padding: '0 24px'}}>
           {/* Logo - 可点击跳转到首页 */}
           <div 
             onClick={() => navigate('/')}
@@ -708,7 +708,7 @@ const TaskExperts: React.FC = () => {
       />
       
       <div style={{
-        maxWidth: '1200px',
+        maxWidth: isMobile ? '100%' : '1600px',
         margin: '0 auto',
         padding: '0 20px 20px 20px',
         minHeight: '100vh',

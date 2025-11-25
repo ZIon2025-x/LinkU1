@@ -86,6 +86,7 @@ const PrivacyPolicy = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
+const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
 const FleaMarketItemDetail = lazyWithRetry(() => import('./pages/FleaMarketItemDetail'));
 
@@ -220,6 +221,7 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/admin/login`} element={<AdminLogin />} />
           <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
           <Route path={`/${lang}/verify-email`} element={<VerifyEmail />} />
+          <Route path={`/${lang}/reset-password/:token`} element={<ResetPassword />} />
           <Route path={`/${lang}/admin/auth`} element={
             <AdminRoute>
               <AdminAuth />
@@ -279,6 +281,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/customer-service" element={<Navigate to={`/${DEFAULT_LANGUAGE}/customer-service`} replace />} />
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
+      <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />
       </Routes>
     </Suspense>
   );

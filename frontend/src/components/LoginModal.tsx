@@ -1209,10 +1209,19 @@ const LoginModal: React.FC<LoginModalProps> = ({
               <div style={{ textAlign: 'right', marginTop: '4px' }}>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     if (onShowForgotPassword) {
                       onShowForgotPassword();
                     }
+                  }}
+                  onTouchStart={(e) => {
+                    // 移动端触摸反馈
+                    e.currentTarget.style.opacity = '0.7';
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.opacity = '1';
                   }}
                   style={{
                     background: 'none',
@@ -1221,7 +1230,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
                     fontSize: '12px',
                     cursor: 'pointer',
                     textDecoration: 'underline',
-                    padding: '0'
+                    padding: '8px 12px',
+                    margin: '-8px -12px',
+                    minHeight: '44px',
+                    minWidth: '44px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    WebkitTapHighlightColor: 'transparent',
+                    touchAction: 'manipulation',
+                    userSelect: 'none'
                   }}
                 >
                   {t('auth.forgotPassword')}
