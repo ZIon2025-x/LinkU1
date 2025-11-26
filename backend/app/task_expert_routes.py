@@ -2211,6 +2211,11 @@ async def apply_for_service(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """用户申请服务（完整校验 + 并发安全）"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"用户 {current_user.id} 申请服务 {service_id}")
+    
     # 1. 获取服务信息（带锁，防止并发修改）
     service = await db.execute(
         select(models.TaskExpertService)
@@ -2220,14 +2225,17 @@ async def apply_for_service(
     service = service.scalar_one_or_none()
     
     if not service:
+        logger.warning(f"服务 {service_id} 不存在")
         raise HTTPException(status_code=404, detail="服务不存在")
     
     # 2. 校验服务状态必须为active
     if service.status != "active":
+        logger.warning(f"服务 {service_id} 状态为 {service.status}，无法申请")
         raise HTTPException(status_code=400, detail="服务未上架，无法申请")
     
     # 3. 校验用户不能申请自己的服务
     if service.expert_id == current_user.id:
+        logger.warning(f"用户 {current_user.id} 尝试申请自己的服务 {service_id}")
         raise HTTPException(status_code=400, detail="不能申请自己的服务")
     
     # 4. 校验是否已有待处理的申请
@@ -2237,7 +2245,9 @@ async def apply_for_service(
         .where(models.ServiceApplication.applicant_id == current_user.id)
         .where(models.ServiceApplication.status.in_(["pending", "negotiating", "price_agreed"]))
     )
-    if existing.scalar_one_or_none():
+    existing_application = existing.scalar_one_or_none()
+    if existing_application:
+        logger.warning(f"用户 {current_user.id} 已申请过服务 {service_id}，当前状态: {existing_application.status}")
         raise HTTPException(status_code=400, detail="您已申请过此服务，请等待处理")
     
     # 5. 校验议价价格

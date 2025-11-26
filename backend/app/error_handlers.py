@@ -150,7 +150,9 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         else:
             logger.debug(f"认证失败: {request.url}")
     else:
-        logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url}")
+        # 记录错误详情以便调试（对于400错误特别重要）
+        error_detail = str(exc.detail) if hasattr(exc, 'detail') and exc.detail else "无详情"
+        logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url} - 详情: {error_detail}")
     
     return JSONResponse(
         status_code=exc.status_code,
