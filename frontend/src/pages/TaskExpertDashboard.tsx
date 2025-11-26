@@ -36,9 +36,9 @@ import {
   getServiceTimeSlotsPublic,
   batchCreateServiceTimeSlots,
   deleteTimeSlotsByDate,
+  deleteServiceTimeSlot,
   getExpertDashboardStats,
   getExpertSchedule,
-  deleteServiceTimeSlot,
   createServiceTimeSlot,
   createClosedDate,
   getClosedDates,
@@ -204,6 +204,14 @@ const TaskExpertDashboard: React.FC = () => {
   const [timeSlotManagementSlots, setTimeSlotManagementSlots] = useState<any[]>([]);
   const [loadingTimeSlotManagement, setLoadingTimeSlotManagement] = useState(false);
   const [timeSlotManagementDate, setTimeSlotManagementDate] = useState<string>('');
+  // 新增时间段表单
+  const [newTimeSlotForm, setNewTimeSlotForm] = useState({
+    slot_date: '',
+    slot_start_time: '12:00',
+    slot_end_time: '14:00',
+    max_participants: 1,
+  });
+  const [creatingTimeSlot, setCreatingTimeSlot] = useState(false);
   
   // 仪表盘相关状态
   const [dashboardStats, setDashboardStats] = useState<any>(null);
@@ -567,6 +575,93 @@ const TaskExpertDashboard: React.FC = () => {
       message.error(err.response?.data?.detail || '删除失败');
     }
   };
+
+  const handleDeleteSingleTimeSlot = useCallback(async (serviceId: number, timeSlotId: number) => {
+    if (!window.confirm('确定要删除这个时间段吗？')) {
+      return;
+    }
+    try {
+      await deleteServiceTimeSlot(serviceId, timeSlotId);
+      message.success('时间段已删除');
+      // 重新加载时间段
+      await loadTimeSlotManagement(serviceId);
+    } catch (err: any) {
+      message.error(err.response?.data?.detail || '删除失败');
+    }
+  }, []);
+
+  // 优化：使用useMemo计算时间段统计
+  const timeSlotStats = useMemo(() => {
+    if (timeSlotManagementSlots.length === 0) {
+      return null;
+    }
+    const total = timeSlotManagementSlots.length;
+    const available = timeSlotManagementSlots.filter((s: any) => 
+      !s.is_manually_deleted && 
+      !s.is_expired && 
+      s.current_participants < s.max_participants
+    ).length;
+    const full = timeSlotManagementSlots.filter((s: any) => 
+      !s.is_manually_deleted && 
+      !s.is_expired && 
+      s.current_participants >= s.max_participants
+    ).length;
+    const expired = timeSlotManagementSlots.filter((s: any) => s.is_expired).length;
+    const deleted = timeSlotManagementSlots.filter((s: any) => s.is_manually_deleted).length;
+    return { total, available, full, expired, deleted };
+  }, [timeSlotManagementSlots]);
+
+  // 优化：使用useCallback优化关闭弹窗函数
+  const handleCloseTimeSlotModal = useCallback(() => {
+    setShowTimeSlotManagement(false);
+    setSelectedServiceForTimeSlot(null);
+    setTimeSlotManagementSlots([]);
+    setTimeSlotManagementDate('');
+    setNewTimeSlotForm({
+      slot_date: '',
+      slot_start_time: '12:00',
+      slot_end_time: '14:00',
+      max_participants: 1,
+    });
+  }, []);
+
+  // 优化：使用useMemo优化时间段分组计算
+  const groupedTimeSlots = useMemo(() => {
+    if (timeSlotManagementSlots.length === 0) {
+      return [];
+    }
+    const groupedByDate: { [date: string]: any[] } = {};
+    timeSlotManagementSlots.forEach((slot: any) => {
+      const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+      const slotDateUK = TimeHandlerV2.formatUtcToLocal(
+        slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
+        'YYYY-MM-DD',
+        'Europe/London'
+      );
+      if (!groupedByDate[slotDateUK]) {
+        groupedByDate[slotDateUK] = [];
+      }
+      groupedByDate[slotDateUK].push(slot);
+    });
+    return Object.keys(groupedByDate).sort().map((dateStr) => ({
+      date: dateStr,
+      slots: groupedByDate[dateStr],
+    }));
+  }, [timeSlotManagementSlots]);
+
+  // 优化：使用useCallback优化删除日期时间段函数
+  const handleDeleteTimeSlotsByDateClick = useCallback(async () => {
+    if (!timeSlotManagementDate) {
+      message.warning('请选择要删除的日期');
+      return;
+    }
+    if (!window.confirm(`确定要删除 ${timeSlotManagementDate} 的所有时间段吗？`)) {
+      return;
+    }
+    if (selectedServiceForTimeSlot) {
+      await handleDeleteTimeSlotsByDate(selectedServiceForTimeSlot.id, timeSlotManagementDate);
+    }
+  }, [timeSlotManagementDate, selectedServiceForTimeSlot]);
 
   const handleDeleteService = async (serviceId: number) => {
     if (!window.confirm('确定要删除这个服务吗？')) {
@@ -1049,20 +1144,41 @@ const TaskExpertDashboard: React.FC = () => {
                     </div>
                     
                     <div className={styles.serviceActions}>
-                      <button
-                        onClick={() => handleEditService(service)}
-                        className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSmall}`}
-                        style={{ flex: 1 }}
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDeleteService(service.id)}
-                        className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSmall}`}
-                        style={{ flex: 1 }}
-                      >
-                        删除
-                      </button>
+                      {service.has_time_slots && (
+                        <button
+                          onClick={() => {
+                            setSelectedServiceForTimeSlot(service);
+                            setShowTimeSlotManagement(true);
+                            loadTimeSlotManagement(service.id);
+                            setNewTimeSlotForm({
+                              slot_date: '',
+                              slot_start_time: '12:00',
+                              slot_end_time: '14:00',
+                              max_participants: service.participants_per_slot || 1,
+                            });
+                          }}
+                          className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonSmall}`}
+                          style={{ width: '100%', marginBottom: '8px' }}
+                        >
+                          管理时间段
+                        </button>
+                      )}
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        <button
+                          onClick={() => handleEditService(service)}
+                          className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSmall}`}
+                          style={{ flex: 1 }}
+                        >
+                          编辑
+                        </button>
+                        <button
+                          onClick={() => handleDeleteService(service.id)}
+                          className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSmall}`}
+                          style={{ flex: 1 }}
+                        >
+                          删除
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -3160,212 +3276,276 @@ const TaskExpertDashboard: React.FC = () => {
       {/* 时间段管理弹窗 */}
       {showTimeSlotManagement && selectedServiceForTimeSlot && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => {
-            setShowTimeSlotManagement(false);
-            setSelectedServiceForTimeSlot(null);
-            setTimeSlotManagementSlots([]);
-            setTimeSlotManagementDate('');
-          }}
+          className={styles.timeSlotModalOverlay}
+          onClick={handleCloseTimeSlotModal}
         >
           <div
-            style={{
-              background: '#fff',
-              borderRadius: '12px',
-              padding: '24px',
-              maxWidth: '900px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-            }}
+            className={styles.timeSlotModalContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
-                管理时间段 - {selectedServiceForTimeSlot.service_name}
-              </h3>
+            <div className={styles.timeSlotModalHeader}>
+              <div>
+                <h3 className={styles.timeSlotModalTitle}>
+                  管理时间段 - {selectedServiceForTimeSlot.service_name}
+                </h3>
+                {timeSlotStats && (
+                  <div className={styles.timeSlotStats}>
+                    <span className={styles.timeSlotStatItem}>总计: <strong>{timeSlotStats.total}</strong></span>
+                    <span className={`${styles.timeSlotStatItem} ${styles.timeSlotStatAvailable}`}>可用: <strong>{timeSlotStats.available}</strong></span>
+                    <span className={`${styles.timeSlotStatItem} ${styles.timeSlotStatFull}`}>已满: <strong>{timeSlotStats.full}</strong></span>
+                    <span className={`${styles.timeSlotStatItem} ${styles.timeSlotStatExpired}`}>已过期: <strong>{timeSlotStats.expired}</strong></span>
+                    {timeSlotStats.deleted > 0 && (
+                      <span className={`${styles.timeSlotStatItem} ${styles.timeSlotStatDeleted}`}>已删除: <strong>{timeSlotStats.deleted}</strong></span>
+                    )}
+                  </div>
+                )}
+              </div>
               <button
-                onClick={() => {
-                  setShowTimeSlotManagement(false);
-                  setSelectedServiceForTimeSlot(null);
-                  setTimeSlotManagementSlots([]);
-                  setTimeSlotManagementDate('');
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#666',
-                }}
+                onClick={handleCloseTimeSlotModal}
+                className={styles.timeSlotModalClose}
+                aria-label="关闭"
               >
                 ×
               </button>
             </div>
 
+            {/* 新增时间段 */}
+            <div className={styles.timeSlotFormSection}>
+              <div className={styles.timeSlotFormTitle}>
+                ➕ 新增时间段
+              </div>
+              <div className={styles.timeSlotFormGrid}>
+                <div className={styles.timeSlotFormField}>
+                  <label className={styles.timeSlotFormLabel}>
+                    日期（英国时间） <span className={styles.timeSlotFormLabelRequired}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={newTimeSlotForm.slot_date}
+                    onChange={(e) => setNewTimeSlotForm({ ...newTimeSlotForm, slot_date: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    className={styles.timeSlotFormInput}
+                  />
+                </div>
+                <div className={styles.timeSlotFormField}>
+                  <label className={styles.timeSlotFormLabel}>
+                    开始时间 <span className={styles.timeSlotFormLabelRequired}>*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={newTimeSlotForm.slot_start_time}
+                    onChange={(e) => setNewTimeSlotForm({ ...newTimeSlotForm, slot_start_time: e.target.value })}
+                    className={styles.timeSlotFormInput}
+                  />
+                </div>
+                <div className={styles.timeSlotFormField}>
+                  <label className={styles.timeSlotFormLabel}>
+                    结束时间 <span className={styles.timeSlotFormLabelRequired}>*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={newTimeSlotForm.slot_end_time}
+                    onChange={(e) => setNewTimeSlotForm({ ...newTimeSlotForm, slot_end_time: e.target.value })}
+                    className={styles.timeSlotFormInput}
+                  />
+                </div>
+                <div className={styles.timeSlotFormField}>
+                  <label className={styles.timeSlotFormLabel}>
+                    最多参与者 <span className={styles.timeSlotFormLabelRequired}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newTimeSlotForm.max_participants}
+                    onChange={(e) => setNewTimeSlotForm({ ...newTimeSlotForm, max_participants: parseInt(e.target.value) || 1 })}
+                    className={styles.timeSlotFormInput}
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!newTimeSlotForm.slot_date) {
+                      message.warning('请选择日期');
+                      return;
+                    }
+                    if (!newTimeSlotForm.slot_start_time || !newTimeSlotForm.slot_end_time) {
+                      message.warning('请设置开始时间和结束时间');
+                      return;
+                    }
+                    if (newTimeSlotForm.max_participants <= 0) {
+                      message.warning('参与者数量必须大于0');
+                      return;
+                    }
+                    // 验证开始时间早于结束时间
+                    const startTime = newTimeSlotForm.slot_start_time.split(':').map(Number);
+                    const endTime = newTimeSlotForm.slot_end_time.split(':').map(Number);
+                    const startMinutes = startTime[0] * 60 + startTime[1];
+                    const endMinutes = endTime[0] * 60 + endTime[1];
+                    if (startMinutes >= endMinutes) {
+                      message.warning('开始时间必须早于结束时间');
+                      return;
+                    }
+                    
+                    setCreatingTimeSlot(true);
+                    try {
+                      await createServiceTimeSlot(selectedServiceForTimeSlot.id, {
+                        slot_date: newTimeSlotForm.slot_date,
+                        start_time: newTimeSlotForm.slot_start_time + ':00',
+                        end_time: newTimeSlotForm.slot_end_time + ':00',
+                        price_per_participant: selectedServiceForTimeSlot.base_price,
+                        max_participants: newTimeSlotForm.max_participants,
+                      });
+                      message.success('时间段已创建');
+                      // 重置表单
+                      setNewTimeSlotForm({
+                        slot_date: '',
+                        slot_start_time: '12:00',
+                        slot_end_time: '14:00',
+                        max_participants: selectedServiceForTimeSlot.participants_per_slot || 1,
+                      });
+                      // 重新加载时间段列表
+                      await loadTimeSlotManagement(selectedServiceForTimeSlot.id);
+                    } catch (err: any) {
+                      console.error('创建时间段失败:', err);
+                      message.error(err.response?.data?.detail || '创建时间段失败');
+                    } finally {
+                      setCreatingTimeSlot(false);
+                    }
+                  }}
+                  disabled={creatingTimeSlot}
+                  className={styles.timeSlotFormButton}
+                >
+                  {creatingTimeSlot ? '创建中...' : '添加'}
+                </button>
+              </div>
+              <div className={styles.timeSlotFormHint}>
+                💡 提示：可以添加任意个特定日期的时间段。时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置。
+              </div>
+            </div>
+
             {/* 删除特定日期的时间段 */}
-            <div style={{ marginBottom: '24px', padding: '16px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde68a' }}>
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#92400e' }}>
+            <div className={styles.timeSlotDeleteSection}>
+              <div className={styles.timeSlotDeleteTitle}>
                 🗑️ 删除特定日期的时间段
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div className={styles.timeSlotDeleteControls}>
                 <input
                   type="date"
                   value={timeSlotManagementDate}
                   onChange={(e) => setTimeSlotManagementDate(e.target.value)}
                   min={new Date().toISOString().split('T')[0]}
-                  style={{
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
+                  className={styles.timeSlotDeleteInput}
                 />
                 <button
-                  onClick={async () => {
-                    if (!timeSlotManagementDate) {
-                      message.warning('请选择要删除的日期');
-                      return;
-                    }
-                    if (!window.confirm(`确定要删除 ${timeSlotManagementDate} 的所有时间段吗？`)) {
-                      return;
-                    }
-                    await handleDeleteTimeSlotsByDate(selectedServiceForTimeSlot.id, timeSlotManagementDate);
-                  }}
+                  onClick={handleDeleteTimeSlotsByDateClick}
                   disabled={!timeSlotManagementDate || loadingTimeSlotManagement}
-                  style={{
-                    padding: '8px 16px',
-                    background: timeSlotManagementDate && !loadingTimeSlotManagement ? '#ef4444' : '#cbd5e0',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: timeSlotManagementDate && !loadingTimeSlotManagement ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                  }}
+                  className={styles.timeSlotDeleteButton}
                 >
                   删除该日期所有时间段
                 </button>
               </div>
-              <div style={{ fontSize: '12px', color: '#92400e', marginTop: '8px' }}>
+              <div className={styles.timeSlotDeleteHint}>
                 💡 提示：删除后，该日期的时间段将不再显示。如果该日期有已申请的时间段，将无法删除。
               </div>
             </div>
 
             {/* 时间段列表（按日期分组） */}
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>
-                时间段列表（未来30天）
+              <div className={styles.timeSlotListHeader}>
+                <span>时间段列表（未来30天）</span>
+                {timeSlotManagementSlots.length > 0 && (
+                  <span className={styles.timeSlotListCount}>
+                    共 {timeSlotManagementSlots.length} 个时间段
+                  </span>
+                )}
               </div>
               {loadingTimeSlotManagement ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+                <div className={styles.loading}>加载中...</div>
               ) : timeSlotManagementSlots.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
-                  暂无时间段，请先批量创建时间段
+                <div className={styles.timeSlotListEmpty}>
+                  <div className={styles.timeSlotListEmptyIcon}>📅</div>
+                  <div className={styles.timeSlotListEmptyText}>暂无时间段</div>
+                  <div className={styles.timeSlotListEmptyHint}>请在上方添加时间段</div>
                 </div>
               ) : (
                 <div>
-                  {(() => {
-                    // 按日期分组
-                    const groupedByDate: { [date: string]: any[] } = {};
-                    timeSlotManagementSlots.forEach((slot: any) => {
-                      const slotStartStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
-                      const slotDateUK = TimeHandlerV2.formatUtcToLocal(
-                        slotStartStr.includes('T') ? slotStartStr : `${slotStartStr}T00:00:00Z`,
-                        'YYYY-MM-DD',
-                        'Europe/London'
-                      );
-                      if (!groupedByDate[slotDateUK]) {
-                        groupedByDate[slotDateUK] = [];
-                      }
-                      groupedByDate[slotDateUK].push(slot);
-                    });
+                  {groupedTimeSlots.map(({ date, slots }) => {
+                    const hasDeleted = slots.some((s: any) => s.is_manually_deleted);
                     
-                    // 按日期排序
-                    const sortedDates = Object.keys(groupedByDate).sort();
-                    
-                    return sortedDates.map((dateStr) => {
-                      const daySlots = groupedByDate[dateStr];
-                      const hasDeleted = daySlots.some((s: any) => s.is_manually_deleted);
-                      const hasFull = daySlots.some((s: any) => s.current_participants >= s.max_participants);
-                      
-                      return (
-                        <div
-                          key={dateStr}
-                          style={{
-                            marginBottom: '16px',
-                            padding: '16px',
-                            border: `1px solid ${hasDeleted ? '#fecaca' : '#e2e8f0'}`,
-                            borderRadius: '8px',
-                            background: hasDeleted ? '#fef2f2' : '#fff',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: hasDeleted ? '#991b1b' : '#1a202c' }}>
-                              {dateStr} {hasDeleted && '(已删除)'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#718096' }}>
-                              {daySlots.length} 个时间段
-                            </div>
+                    return (
+                      <div
+                        key={date}
+                        className={`${styles.timeSlotDateGroup} ${hasDeleted ? styles.timeSlotDateGroupDeleted : ''}`}
+                      >
+                        <div className={styles.timeSlotDateHeader}>
+                          <div className={`${styles.timeSlotDateTitle} ${hasDeleted ? styles.timeSlotDateTitleDeleted : ''}`}>
+                            {date} {hasDeleted && '(已删除)'}
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px' }}>
-                            {daySlots.map((slot: any) => {
-                              const isFull = slot.current_participants >= slot.max_participants;
-                              const isExpired = slot.is_expired === true;
-                              const isDeleted = slot.is_manually_deleted === true;
-                              
-                              const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
-                              const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
-                              const startTimeUK = TimeHandlerV2.formatUtcToLocal(
-                                startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
-                                'HH:mm',
-                                'Europe/London'
-                              );
-                              const endTimeUK = TimeHandlerV2.formatUtcToLocal(
-                                endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
-                                'HH:mm',
-                                'Europe/London'
-                              );
-                              
-                              return (
-                                <div
-                                  key={slot.id}
-                                  style={{
-                                    padding: '10px',
-                                    border: `1px solid ${isDeleted ? '#fecaca' : isFull || isExpired ? '#fde68a' : '#cbd5e0'}`,
-                                    borderRadius: '6px',
-                                    background: isDeleted ? '#fee2e2' : isFull || isExpired ? '#fef3c7' : '#f7fafc',
-                                    fontSize: '12px',
-                                  }}
-                                >
-                                  <div style={{ fontWeight: 600, marginBottom: '4px', color: isDeleted ? '#991b1b' : '#1a202c' }}>
-                                    {startTimeUK} - {endTimeUK}
-                                  </div>
-                                  <div style={{ color: '#64748b', fontSize: '11px' }}>
-                                    {slot.current_participants}/{slot.max_participants} 人
-                                    {isFull && ' (已满)'}
-                                    {isExpired && ' (已过期)'}
-                                    {isDeleted && ' (已删除)'}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          <div className={styles.timeSlotDateCount}>
+                            {slots.length} 个时间段
                           </div>
                         </div>
-                      );
-                    });
-                  })()}
+                        <div className={styles.timeSlotDateGrid}>
+                          {slots.map((slot: any) => {
+                            const isFull = slot.current_participants >= slot.max_participants;
+                            const isExpired = slot.is_expired === true;
+                            const isDeleted = slot.is_manually_deleted === true;
+                            const hasParticipants = slot.current_participants > 0;
+                            
+                            const startTimeStr = slot.slot_start_datetime || (slot.slot_date + 'T' + slot.start_time + 'Z');
+                            const endTimeStr = slot.slot_end_datetime || (slot.slot_date + 'T' + slot.end_time + 'Z');
+                            const startTimeUK = TimeHandlerV2.formatUtcToLocal(
+                              startTimeStr.includes('T') ? startTimeStr : `${startTimeStr}T00:00:00Z`,
+                              'HH:mm',
+                              'Europe/London'
+                            );
+                            const endTimeUK = TimeHandlerV2.formatUtcToLocal(
+                              endTimeStr.includes('T') ? endTimeStr : `${endTimeStr}T00:00:00Z`,
+                              'HH:mm',
+                              'Europe/London'
+                            );
+                            
+                            let cardClassName = styles.timeSlotCard;
+                            if (isDeleted) {
+                              cardClassName += ` ${styles.timeSlotCardDeleted}`;
+                            } else if (isFull || isExpired) {
+                              cardClassName += ` ${styles.timeSlotCardFull}`;
+                            }
+                            
+                            return (
+                              <div key={slot.id} className={cardClassName}>
+                                <div className={styles.timeSlotCardHeader}>
+                                  <div className={`${styles.timeSlotCardTime} ${isDeleted ? styles.timeSlotCardTimeDeleted : ''}`}>
+                                    {startTimeUK} - {endTimeUK}
+                                  </div>
+                                  {!isDeleted && !hasParticipants && (
+                                    <button
+                                      onClick={() => handleDeleteSingleTimeSlot(selectedServiceForTimeSlot!.id, slot.id)}
+                                      className={styles.timeSlotCardDelete}
+                                      title="删除此时间段"
+                                      aria-label="删除此时间段"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                                <div className={styles.timeSlotCardInfo}>
+                                  {slot.current_participants}/{slot.max_participants} 人
+                                  {isFull && ' (已满)'}
+                                  {isExpired && ' (已过期)'}
+                                  {isDeleted && ' (已删除)'}
+                                </div>
+                                {slot.price_per_participant && (
+                                  <div className={styles.timeSlotCardPrice}>
+                                    £{slot.price_per_participant.toFixed(2)}/人
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
