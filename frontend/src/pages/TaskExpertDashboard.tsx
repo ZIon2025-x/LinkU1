@@ -155,13 +155,8 @@ const TaskExpertDashboard: React.FC = () => {
     reward_applicants: boolean;
     currency: string;
     // 时间段选择相关
-    time_slot_selection_mode?: 'fixed' | 'recurring_daily' | 'recurring_weekly';
+    time_slot_selection_mode?: 'fixed';
     selected_time_slot_ids?: number[];
-    recurring_daily_time_ranges?: Array<{start: string, end: string}>;
-    recurring_weekly_weekdays?: number[];
-    recurring_weekly_time_ranges?: Array<{start: string, end: string}>;
-    auto_add_new_slots: boolean;
-    activity_end_date?: string;
     // 向后兼容的旧字段
     selected_time_slot_id?: number;
     selected_time_slot_date?: string;
@@ -185,11 +180,6 @@ const TaskExpertDashboard: React.FC = () => {
     reward_applicants: false,
     time_slot_selection_mode: undefined,
     selected_time_slot_ids: [],
-    recurring_daily_time_ranges: [],
-    recurring_weekly_weekdays: [],
-    recurring_weekly_time_ranges: [],
-    auto_add_new_slots: true,
-    activity_end_date: undefined,
     selected_time_slot_id: undefined as number | undefined,
     selected_time_slot_date: undefined as string | undefined,
   });
@@ -1210,7 +1200,6 @@ const TaskExpertDashboard: React.FC = () => {
                     custom_discount: undefined,
                     use_custom_discount: false,
                     reward_applicants: false,
-                    auto_add_new_slots: true,
                   });
                   setShowCreateMultiTaskModal(true);
                 }}
@@ -2158,7 +2147,7 @@ const TaskExpertDashboard: React.FC = () => {
                       ⏰ 时间段服务 - 必须选择时间段
                     </div>
                     <div style={{ fontSize: '13px', color: '#075985', lineHeight: '1.5', marginBottom: '12px' }}>
-                      此服务为时间段服务，必须选择时间段才能创建活动。您可以选择固定时间段或重复模式。
+                      此服务为时间段服务，必须选择时间段才能创建活动。请选择具体的固定时间段。
                     </div>
                     
                     {/* 时间段选择模式 */}
@@ -2169,14 +2158,11 @@ const TaskExpertDashboard: React.FC = () => {
                       <select
                         value={createMultiTaskForm.time_slot_selection_mode || ''}
                         onChange={(e) => {
-                          const mode = e.target.value as 'fixed' | 'recurring_daily' | 'recurring_weekly' | '';
+                          const mode = e.target.value as 'fixed' | '';
                           setCreateMultiTaskForm({
                             ...createMultiTaskForm,
                             time_slot_selection_mode: mode || undefined,
                             selected_time_slot_ids: [],
-                            recurring_daily_time_ranges: [],
-                            recurring_weekly_weekdays: [],
-                            recurring_weekly_time_ranges: [],
                           });
                         }}
                         style={{
@@ -2190,8 +2176,6 @@ const TaskExpertDashboard: React.FC = () => {
                       >
                         <option value="">请选择模式</option>
                         <option value="fixed">固定时间段（选择具体的时间段）</option>
-                        <option value="recurring_daily">每天重复（每天固定时间段）</option>
-                        <option value="recurring_weekly">每周重复（每周几的固定时间段）</option>
                       </select>
                     </div>
                     {(() => {
@@ -2439,342 +2423,6 @@ const TaskExpertDashboard: React.FC = () => {
                           })()}
                         </div>
                       )}
-                    </div>
-                  )}
-                  
-                  {/* 每天重复模式 */}
-                  {createMultiTaskForm.time_slot_selection_mode === 'recurring_daily' && (
-                    <div style={{ marginBottom: '16px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
-                        每天的时间段范围 <span style={{ color: '#dc3545' }}>*</span>
-                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
-                          （可添加多个时间段范围）
-                        </span>
-                      </label>
-                      
-                      {(createMultiTaskForm.recurring_daily_time_ranges || []).map((range, index) => (
-                        <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                          <input
-                            type="time"
-                            value={range.start}
-                            onChange={(e) => {
-                              const newRanges = [...(createMultiTaskForm.recurring_daily_time_ranges || [])];
-                              newRanges[index].start = e.target.value;
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_daily_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                            }}
-                          />
-                          <span style={{ color: '#718096' }}>至</span>
-                          <input
-                            type="time"
-                            value={range.end}
-                            onChange={(e) => {
-                              const newRanges = [...(createMultiTaskForm.recurring_daily_time_ranges || [])];
-                              newRanges[index].end = e.target.value;
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_daily_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newRanges = (createMultiTaskForm.recurring_daily_time_ranges || []).filter((_, i) => i !== index);
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_daily_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              padding: '10px 16px',
-                              background: '#ef4444',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                            }}
-                          >
-                            删除
-                          </button>
-                        </div>
-                      ))}
-                      
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateMultiTaskForm({
-                            ...createMultiTaskForm,
-                            recurring_daily_time_ranges: [
-                              ...(createMultiTaskForm.recurring_daily_time_ranges || []),
-                              { start: '09:00', end: '12:00' }
-                            ],
-                          });
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#3b82f6',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
-                      >
-                        + 添加时间段范围
-                      </button>
-                      
-                      {/* 活动截至日期（可选） */}
-                      <div style={{ marginTop: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                          活动截至日期（可选）
-                          <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
-                            留空则活动一直有效，直到您手动取消
-                          </span>
-                        </label>
-                        <input
-                          type="date"
-                          value={createMultiTaskForm.activity_end_date || ''}
-                          onChange={(e) => {
-                            setCreateMultiTaskForm({
-                              ...createMultiTaskForm,
-                              activity_end_date: e.target.value || undefined,
-                            });
-                          }}
-                          min={new Date().toISOString().split('T')[0]}
-                          style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                          }}
-                        />
-                      </div>
-                      
-                      {/* 自动添加新时间段选项 */}
-                      <div style={{ marginTop: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={createMultiTaskForm.auto_add_new_slots}
-                            onChange={(e) => {
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                auto_add_new_slots: e.target.checked,
-                              });
-                            }}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                          />
-                          <span style={{ fontSize: '13px', color: '#374151' }}>
-                            自动添加新匹配的时间段（当服务生成新的时间段时，如果匹配规则，会自动添加到活动中）
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* 每周重复模式 */}
-                  {createMultiTaskForm.time_slot_selection_mode === 'recurring_weekly' && (
-                    <div style={{ marginBottom: '16px', padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
-                        选择星期几 <span style={{ color: '#dc3545' }}>*</span>
-                      </label>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((day, index) => {
-                          const isSelected = createMultiTaskForm.recurring_weekly_weekdays?.includes(index) || false;
-                          return (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => {
-                                const currentWeekdays = createMultiTaskForm.recurring_weekly_weekdays || [];
-                                const newWeekdays = isSelected
-                                  ? currentWeekdays.filter(w => w !== index)
-                                  : [...currentWeekdays, index];
-                                setCreateMultiTaskForm({
-                                  ...createMultiTaskForm,
-                                  recurring_weekly_weekdays: newWeekdays,
-                                });
-                              }}
-                              style={{
-                                padding: '8px 16px',
-                                border: `2px solid ${isSelected ? '#3b82f6' : '#cbd5e0'}`,
-                                borderRadius: '6px',
-                                background: isSelected ? '#eff6ff' : '#fff',
-                                color: isSelected ? '#3b82f6' : '#374151',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: isSelected ? 600 : 400,
-                                transition: 'all 0.2s',
-                              }}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      
-                      <label style={{ display: 'block', marginBottom: '12px', fontSize: '14px', fontWeight: 500 }}>
-                        时间段范围 <span style={{ color: '#dc3545' }}>*</span>
-                        <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
-                          （可添加多个时间段范围）
-                        </span>
-                      </label>
-                      
-                      {(createMultiTaskForm.recurring_weekly_time_ranges || []).map((range, index) => (
-                        <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                          <input
-                            type="time"
-                            value={range.start}
-                            onChange={(e) => {
-                              const newRanges = [...(createMultiTaskForm.recurring_weekly_time_ranges || [])];
-                              newRanges[index].start = e.target.value;
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_weekly_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                            }}
-                          />
-                          <span style={{ color: '#718096' }}>至</span>
-                          <input
-                            type="time"
-                            value={range.end}
-                            onChange={(e) => {
-                              const newRanges = [...(createMultiTaskForm.recurring_weekly_time_ranges || [])];
-                              newRanges[index].end = e.target.value;
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_weekly_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: '10px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '14px',
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newRanges = (createMultiTaskForm.recurring_weekly_time_ranges || []).filter((_, i) => i !== index);
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                recurring_weekly_time_ranges: newRanges,
-                              });
-                            }}
-                            style={{
-                              padding: '10px 16px',
-                              background: '#ef4444',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '14px',
-                            }}
-                          >
-                            删除
-                          </button>
-                        </div>
-                      ))}
-                      
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreateMultiTaskForm({
-                            ...createMultiTaskForm,
-                            recurring_weekly_time_ranges: [
-                              ...(createMultiTaskForm.recurring_weekly_time_ranges || []),
-                              { start: '09:00', end: '12:00' }
-                            ],
-                          });
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          background: '#3b82f6',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
-                      >
-                        + 添加时间段范围
-                      </button>
-                      
-                      {/* 活动截至日期（可选） */}
-                      <div style={{ marginTop: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                          活动截至日期（可选）
-                          <span style={{ fontSize: '12px', fontWeight: 400, color: '#718096', marginLeft: '8px' }}>
-                            留空则活动一直有效，直到您手动取消
-                          </span>
-                        </label>
-                        <input
-                          type="date"
-                          value={createMultiTaskForm.activity_end_date || ''}
-                          onChange={(e) => {
-                            setCreateMultiTaskForm({
-                              ...createMultiTaskForm,
-                              activity_end_date: e.target.value || undefined,
-                            });
-                          }}
-                          min={new Date().toISOString().split('T')[0]}
-                          style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                          }}
-                        />
-                      </div>
-                      
-                      {/* 自动添加新时间段选项 */}
-                      <div style={{ marginTop: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={createMultiTaskForm.auto_add_new_slots}
-                            onChange={(e) => {
-                              setCreateMultiTaskForm({
-                                ...createMultiTaskForm,
-                                auto_add_new_slots: e.target.checked,
-                              });
-                            }}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                          />
-                          <span style={{ fontSize: '13px', color: '#374151' }}>
-                            自动添加新匹配的时间段（当服务生成新的时间段时，如果匹配规则，会自动添加到活动中）
-                          </span>
-                        </label>
-                      </div>
                     </div>
                   )}
                   
@@ -3421,31 +3069,6 @@ const TaskExpertDashboard: React.FC = () => {
                             return;
                           }
                           taskData.selected_time_slot_ids = createMultiTaskForm.selected_time_slot_ids;
-                        } else if (createMultiTaskForm.time_slot_selection_mode === 'recurring_daily') {
-                          // 每天重复模式：必须指定时间段范围
-                          if (!createMultiTaskForm.recurring_daily_time_ranges || createMultiTaskForm.recurring_daily_time_ranges.length === 0) {
-                            message.error('每天重复模式必须指定至少一个时间段范围');
-                            return;
-                          }
-                          taskData.recurring_daily_time_ranges = createMultiTaskForm.recurring_daily_time_ranges;
-                        } else if (createMultiTaskForm.time_slot_selection_mode === 'recurring_weekly') {
-                          // 每周重复模式：必须指定星期几和时间段范围
-                          if (!createMultiTaskForm.recurring_weekly_weekdays || createMultiTaskForm.recurring_weekly_weekdays.length === 0) {
-                            message.error('每周重复模式必须选择至少一个星期几');
-                            return;
-                          }
-                          if (!createMultiTaskForm.recurring_weekly_time_ranges || createMultiTaskForm.recurring_weekly_time_ranges.length === 0) {
-                            message.error('每周重复模式必须指定至少一个时间段范围');
-                            return;
-                          }
-                          taskData.recurring_weekly_weekdays = createMultiTaskForm.recurring_weekly_weekdays;
-                          taskData.recurring_weekly_time_ranges = createMultiTaskForm.recurring_weekly_time_ranges;
-                        }
-                        
-                        // 添加自动添加新时间段选项和活动截至日期
-                        taskData.auto_add_new_slots = createMultiTaskForm.auto_add_new_slots;
-                        if (createMultiTaskForm.activity_end_date) {
-                          taskData.activity_end_date = createMultiTaskForm.activity_end_date;
                         }
                       } else {
                         // 非固定时间段服务：使用截至日期
@@ -4279,26 +3902,12 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     
     // 验证时间段设置
     if (formData.has_time_slots) {
-      if (!formData.time_slot_start_time || !formData.time_slot_end_time) {
-        message.warning('请设置时间段的开始和结束时间');
-        return;
-      }
       if (formData.time_slot_duration_minutes <= 0) {
         message.warning('时间段时长必须大于0');
         return;
       }
       if (formData.participants_per_slot <= 0) {
         message.warning('每个时间段的参与者数量必须大于0');
-        return;
-      }
-      
-      // 验证开始时间早于结束时间
-      const startTime = formData.time_slot_start_time.split(':').map(Number);
-      const endTime = formData.time_slot_end_time.split(':').map(Number);
-      const startMinutes = startTime[0] * 60 + startTime[1];
-      const endMinutes = endTime[0] * 60 + endTime[1];
-      if (startMinutes >= endMinutes) {
-        message.warning('开始时间必须早于结束时间');
         return;
       }
     }
@@ -4320,32 +3929,16 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         submitData.has_time_slots = true;
         submitData.time_slot_duration_minutes = formData.time_slot_duration_minutes;
         submitData.participants_per_slot = formData.participants_per_slot;
-        
-        // 如果使用按周几配置
-        if (formData.use_weekly_config) {
-          // 构建按周几配置（将时间格式转换为 "HH:MM:SS"）
-          const weeklyConfig: { [key: string]: { enabled: boolean; start_time: string; end_time: string } } = {};
-          Object.keys(formData.weekly_time_slot_config).forEach(day => {
-            const dayConfig = formData.weekly_time_slot_config[day];
-            weeklyConfig[day] = {
-              enabled: dayConfig.enabled,
-              start_time: dayConfig.start_time + ':00',
-              end_time: dayConfig.end_time + ':00',
-            };
-          });
-          submitData.weekly_time_slot_config = weeklyConfig;
-          // 不设置统一的开始/结束时间
-          submitData.time_slot_start_time = undefined;
-          submitData.time_slot_end_time = undefined;
-        } else {
-          // 使用统一的开始/结束时间（向后兼容）
-          submitData.time_slot_start_time = formData.time_slot_start_time + ':00';
-          submitData.time_slot_end_time = formData.time_slot_end_time + ':00';
-          submitData.weekly_time_slot_config = null;
-        }
+        // 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
+        // 任务达人不能设置这些配置
+        submitData.time_slot_start_time = undefined;
+        submitData.time_slot_end_time = undefined;
+        submitData.weekly_time_slot_config = undefined;
       } else {
         submitData.has_time_slots = false;
-        submitData.weekly_time_slot_config = null;
+        submitData.time_slot_start_time = undefined;
+        submitData.time_slot_end_time = undefined;
+        submitData.weekly_time_slot_config = undefined;
       }
       
       let savedServiceId: number;
@@ -4382,22 +3975,28 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       // 更新本地状态中的时间段配置（用于创建多人活动时快速获取）
       if (setServiceTimeSlotConfigs) {
         if (formData.has_time_slots && savedServiceId) {
+          // 注意：time_slot_start_time和time_slot_end_time由管理员设置，这里不更新
+          // 但为了类型兼容，需要从服务中获取这些值
           setServiceTimeSlotConfigs((prev: {[key: number]: {
             has_time_slots: boolean;
             time_slot_duration_minutes: number;
             time_slot_start_time: string;
             time_slot_end_time: string;
             participants_per_slot: number;
-          }}) => ({
-            ...prev,
-            [savedServiceId]: {
-              has_time_slots: true,
-              time_slot_duration_minutes: formData.time_slot_duration_minutes,
-              time_slot_start_time: formData.time_slot_start_time,
-              time_slot_end_time: formData.time_slot_end_time,
-              participants_per_slot: formData.participants_per_slot,
-            }
-          }));
+          }}) => {
+            // 保留原有的时间段配置（如果存在），只更新可以修改的字段
+            const existing = prev[savedServiceId];
+            return {
+              ...prev,
+              [savedServiceId]: {
+                has_time_slots: true,
+                time_slot_duration_minutes: formData.time_slot_duration_minutes,
+                time_slot_start_time: existing?.time_slot_start_time || '09:00',
+                time_slot_end_time: existing?.time_slot_end_time || '18:00',
+                participants_per_slot: formData.participants_per_slot,
+              }
+            };
+          });
         } else if (savedServiceId) {
           // 如果取消时间段，清除配置
           setServiceTimeSlotConfigs((prev: {[key: number]: {
@@ -4774,179 +4373,8 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                 </div>
               </div>
 
-              {/* 配置模式选择 */}
-              <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                  <input
-                    type="radio"
-                    id="time_slot_mode_unified"
-                    name="time_slot_mode"
-                    checked={!formData.use_weekly_config}
-                    onChange={() => setFormData({ ...formData, use_weekly_config: false })}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
-                  />
-                  <label htmlFor="time_slot_mode_unified" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-                    统一时间（每天相同时间）
-                  </label>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type="radio"
-                    id="time_slot_mode_weekly"
-                    name="time_slot_mode"
-                    checked={formData.use_weekly_config}
-                    onChange={() => setFormData({ ...formData, use_weekly_config: true })}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
-                  />
-                  <label htmlFor="time_slot_mode_weekly" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-                    按周几设置（不同工作日可设置不同时间）
-                  </label>
-                </div>
-              </div>
-
-              {/* 统一时间模式 */}
-              {!formData.use_weekly_config && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                        开始时间 *
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.time_slot_start_time}
-                        onChange={(e) => setFormData({ ...formData, time_slot_start_time: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                        结束时间 *
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.time_slot_end_time}
-                        onChange={(e) => setFormData({ ...formData, time_slot_end_time: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 按周几设置模式 */}
-              {formData.use_weekly_config && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px', color: '#4a5568' }}>
-                    设置每周的工作时间：
-                  </div>
-                  {[
-                    { key: 'monday', label: '周一' },
-                    { key: 'tuesday', label: '周二' },
-                    { key: 'wednesday', label: '周三' },
-                    { key: 'thursday', label: '周四' },
-                    { key: 'friday', label: '周五' },
-                    { key: 'saturday', label: '周六' },
-                    { key: 'sunday', label: '周日' },
-                  ].map(({ key, label }) => {
-                    const dayKey = key as keyof typeof formData.weekly_time_slot_config;
-                    const dayConfig = formData.weekly_time_slot_config[dayKey];
-                    return (
-                      <div
-                        key={key}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '80px 1fr 1fr 1fr',
-                          gap: '8px',
-                          alignItems: 'center',
-                          marginBottom: '10px',
-                          padding: '10px',
-                          background: dayConfig.enabled ? '#f0f9ff' : '#f7fafc',
-                          borderRadius: '6px',
-                          border: `1px solid ${dayConfig.enabled ? '#bfdbfe' : '#e2e8f0'}`,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={dayConfig.enabled}
-                            onChange={(e) => {
-                              const newConfig = { ...formData.weekly_time_slot_config };
-                              newConfig[key] = {
-                                ...dayConfig,
-                                enabled: e.target.checked,
-                              };
-                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
-                            }}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer', marginRight: '6px' }}
-                          />
-                          <label style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: dayConfig.enabled ? '#1e40af' : '#64748b' }}>
-                            {label}
-                          </label>
-                        </div>
-                        <div>
-                          <input
-                            type="time"
-                            value={dayConfig.start_time}
-                            onChange={(e) => {
-                              const newConfig = { ...formData.weekly_time_slot_config };
-                              newConfig[key] = { ...dayConfig, start_time: e.target.value };
-                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
-                            }}
-                            disabled={!dayConfig.enabled}
-                            style={{
-                              width: '100%',
-                              padding: '6px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              background: dayConfig.enabled ? '#fff' : '#f1f5f9',
-                              cursor: dayConfig.enabled ? 'text' : 'not-allowed',
-                            }}
-                          />
-                        </div>
-                        <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b' }}>至</div>
-                        <div>
-                          <input
-                            type="time"
-                            value={dayConfig.end_time}
-                            onChange={(e) => {
-                              const newConfig = { ...formData.weekly_time_slot_config };
-                              newConfig[key] = { ...dayConfig, end_time: e.target.value };
-                              setFormData({ ...formData, weekly_time_slot_config: newConfig });
-                            }}
-                            disabled={!dayConfig.enabled}
-                            style={{
-                              width: '100%',
-                              padding: '6px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              background: dayConfig.enabled ? '#fff' : '#f1f5f9',
-                              cursor: dayConfig.enabled ? 'text' : 'not-allowed',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              
               <div style={{ fontSize: '12px', color: '#718096', marginTop: '12px' }}>
-                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。您可以在服务创建后批量创建时间段，系统会根据您的配置自动生成。
+                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置。您只能创建单个固定时间段（如1月1号的12点-14点）。
               </div>
             </div>
           )}

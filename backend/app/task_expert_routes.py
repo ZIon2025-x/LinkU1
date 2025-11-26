@@ -393,31 +393,20 @@ async def create_service(
     
     # 验证时间段相关字段
     if service_data.has_time_slots:
-        # 检查是否使用按周几配置
-        has_weekly_config = service_data.weekly_time_slot_config and isinstance(service_data.weekly_time_slot_config, dict)
+        # 任务达人只能设置时间段时长和参与者数量
+        # 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
+        if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+            raise HTTPException(
+                status_code=400,
+                detail="启用时间段时，必须提供时间段时长和参与者数量"
+            )
         
-        if has_weekly_config:
-            # 使用按周几配置：只需要时间段时长和参与者数量
-            if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
-                raise HTTPException(
-                    status_code=400,
-                    detail="启用时间段时，必须提供时间段时长和参与者数量"
-                )
-        else:
-            # 使用统一时间配置：需要时间段时长、开始时间、结束时间和参与者数量
-            if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
-                raise HTTPException(
-                    status_code=400,
-                    detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
-                )
-            # 验证时间格式
-            try:
-                start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
-                end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
-                if start_time >= end_time:
-                    raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
-            except ValueError:
-                raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+        # 禁止任务达人设置时间段配置
+        if service_data.time_slot_start_time or service_data.time_slot_end_time or service_data.weekly_time_slot_config:
+            raise HTTPException(
+                status_code=403,
+                detail="时间段配置（统一时间或按周几设置）只能由管理员在任务达人管理中设置"
+            )
     
     new_service = models.TaskExpertService(
         expert_id=current_expert.id,
@@ -430,10 +419,11 @@ async def create_service(
         status="active",
         has_time_slots=service_data.has_time_slots,
         time_slot_duration_minutes=service_data.time_slot_duration_minutes,
-        time_slot_start_time=dt_time.fromisoformat(service_data.time_slot_start_time) if service_data.time_slot_start_time else None,
-        time_slot_end_time=dt_time.fromisoformat(service_data.time_slot_end_time) if service_data.time_slot_end_time else None,
+        # 时间段配置由管理员设置，任务达人不能设置
+        time_slot_start_time=None,
+        time_slot_end_time=None,
         participants_per_slot=service_data.participants_per_slot,
-        weekly_time_slot_config=service_data.weekly_time_slot_config,
+        weekly_time_slot_config=None,
     )
     db.add(new_service)
     
@@ -553,41 +543,32 @@ async def update_service(
     if service_data.has_time_slots is not None:
         service.has_time_slots = service_data.has_time_slots
         if service_data.has_time_slots:
-            # 启用时间段时，验证必填字段
-            # 检查是否使用按周几配置
-            has_weekly_config = service_data.weekly_time_slot_config and isinstance(service_data.weekly_time_slot_config, dict)
+            # 任务达人只能设置时间段时长和参与者数量
+            # 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
+            if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+                raise HTTPException(
+                    status_code=400,
+                    detail="启用时间段时，必须提供时间段时长和参与者数量"
+                )
             
-            if has_weekly_config:
-                # 使用按周几配置：只需要时间段时长和参与者数量
-                if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="启用时间段时，必须提供时间段时长和参与者数量"
-                    )
-            else:
-                # 使用统一时间配置：需要时间段时长、开始时间、结束时间和参与者数量
-                if not service_data.time_slot_duration_minutes or not service_data.time_slot_start_time or not service_data.time_slot_end_time or not service_data.participants_per_slot:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="启用时间段时，必须提供时间段时长、开始时间、结束时间和参与者数量"
-                    )
-                # 验证时间格式
-                try:
-                    start_time = dt_time.fromisoformat(service_data.time_slot_start_time)
-                    end_time = dt_time.fromisoformat(service_data.time_slot_end_time)
-                    if start_time >= end_time:
-                        raise HTTPException(status_code=400, detail="开始时间必须早于结束时间")
-                    service.time_slot_start_time = start_time
-                    service.time_slot_end_time = end_time
-                except ValueError:
-                    raise HTTPException(status_code=400, detail="时间格式错误，应为HH:MM:SS")
+            # 禁止任务达人修改时间段配置
+            if service_data.time_slot_start_time is not None or service_data.time_slot_end_time is not None or service_data.weekly_time_slot_config is not None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="时间段配置（统一时间或按周几设置）只能由管理员在任务达人管理中设置"
+                )
+            
+            # 只更新任务达人可以修改的字段
+            if service_data.time_slot_duration_minutes is not None:
+                service.time_slot_duration_minutes = service_data.time_slot_duration_minutes
+            if service_data.participants_per_slot is not None:
+                service.participants_per_slot = service_data.participants_per_slot
+            # 不更新time_slot_start_time、time_slot_end_time和weekly_time_slot_config（由管理员设置）
         else:
             # 禁用时间段时，清除相关字段并删除所有时间段
             service.time_slot_duration_minutes = None
-            service.time_slot_start_time = None
-            service.time_slot_end_time = None
+            # 不清除time_slot_start_time、time_slot_end_time和weekly_time_slot_config（由管理员管理）
             service.participants_per_slot = None
-            service.weekly_time_slot_config = None
             
             # 如果之前启用了时间段，现在禁用了，需要删除所有未来的时间段
             if old_has_time_slots:
@@ -618,13 +599,11 @@ async def update_service(
                 if deleted_count > 0:
                     logger.info(f"服务 {service_id} 从时间段服务改为非时间段服务，处理了 {deleted_count} 个时间段")
     
-    # 更新其他时间段相关字段（如果单独提供）
-    if service_data.time_slot_duration_minutes is not None:
-        service.time_slot_duration_minutes = service_data.time_slot_duration_minutes
-    if service_data.participants_per_slot is not None:
-        service.participants_per_slot = service_data.participants_per_slot
+    # 注意：time_slot_duration_minutes和participants_per_slot已在上面更新
+    # 任务达人不能修改时间段配置（time_slot_start_time、time_slot_end_time、weekly_time_slot_config）
+    # 这些配置只能由管理员在任务达人管理中设置
     
-    # 处理 weekly_time_slot_config 和 time_slot_start_time/time_slot_end_time 的互斥关系
+    # 处理 weekly_time_slot_config 和 time_slot_start_time/time_slot_end_time 的互斥关系（仅管理员可设置）
     if service_data.weekly_time_slot_config is not None:
         service.weekly_time_slot_config = service_data.weekly_time_slot_config
         # 如果使用按周几配置，清除统一时间配置

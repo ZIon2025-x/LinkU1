@@ -379,7 +379,15 @@ def apply_to_activity(
     # 确定任务状态
     # 对于有时间段的活动申请（无论是单个任务还是多人任务），直接进入"进行中"状态
     # 因为时间段已经确定，不需要审核
-    initial_status = "in_progress" if db_activity.has_time_slots else "open"
+    # 对于无时间段的多人活动，申请后也应该直接进入"进行中"状态，因为第一个申请者自动接受
+    if db_activity.has_time_slots:
+        initial_status = "in_progress"
+    elif is_multi_participant:
+        # 无时间段的多人活动，申请后直接进入进行中状态
+        initial_status = "in_progress"
+    else:
+        # 无时间段的单人任务，保持open状态等待审核
+        initial_status = "open"
     
     # 创建新任务
     # 重要：任务方向逻辑
@@ -413,8 +421,8 @@ def apply_to_activity(
         is_multi_participant=is_multi_participant,
         max_participants=db_activity.max_participants,
         min_participants=db_activity.min_participants,
-        # 如果是多人任务且有时间段，第一个参与者会被自动接受，所以初始计数为1
-        current_participants=1 if (is_multi_participant and db_activity.has_time_slots) else 0,
+        # 如果是多人任务，第一个参与者会被自动接受，所以初始计数为1
+        current_participants=1 if is_multi_participant else 0,
         completion_rule=db_activity.completion_rule if is_multi_participant else "all",
         reward_distribution=db_activity.reward_distribution if is_multi_participant else "equal",
         reward_type=db_activity.reward_type,
@@ -423,8 +431,8 @@ def apply_to_activity(
         created_by_expert=True,
         expert_creator_id=db_activity.expert_id,
         expert_service_id=db_activity.expert_service_id,
-        # 对于有时间段的活动申请，设置接受时间
-        accepted_at=get_utc_time() if db_activity.has_time_slots else None,
+        # 对于有时间段的活动申请，或者多人活动，设置接受时间
+        accepted_at=get_utc_time() if (db_activity.has_time_slots or is_multi_participant) else None,
     )
     
     db.add(new_task)
@@ -435,7 +443,8 @@ def apply_to_activity(
     participant = None
     if is_multi_participant:
         # 对于有时间段的活动申请，参与者状态直接设为"accepted"，不需要审核
-        participant_status = "accepted" if db_activity.has_time_slots else "pending"
+        # 对于无时间段的多人活动，第一个申请者也应该自动接受，直接设为"accepted"
+        participant_status = "accepted"  # 多人活动的申请者都自动接受
         participant = TaskParticipant(
             task_id=new_task.id,
             user_id=current_user.id,
@@ -448,7 +457,7 @@ def apply_to_activity(
             is_official_task=False,
             expert_creator_id=db_activity.expert_id,
             applied_at=get_utc_time(),
-            accepted_at=get_utc_time() if db_activity.has_time_slots else None,
+            accepted_at=get_utc_time(),  # 多人活动的申请者都自动接受，设置接受时间
             idempotency_key=request.idempotency_key,
         )
         db.add(participant)

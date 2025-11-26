@@ -778,7 +778,7 @@ const UserProfile: React.FC = () => {
                             color: '#333',
                             marginBottom: 4
                           }}>
-                            {review.is_anonymous ? t('userProfile.anonymousUser') : review.reviewer_name}
+                            {t('userProfile.anonymousUser')}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {renderStars(review.rating)}

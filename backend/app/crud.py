@@ -1263,13 +1263,15 @@ def get_unread_messages(db: Session, user_id: str):
     from sqlalchemy import and_, or_, not_, exists, select
     
     # 1. 普通消息（receiver_id不为空，task_id为空，通过MessageRead表判断）
-    # 查询在MessageRead表中没有记录的消息（排除自己发送的）
+    # 查询在MessageRead表中没有记录的消息（排除自己发送的和系统消息）
     regular_unread = (
         db.query(Message)
         .filter(
             Message.receiver_id == user_id,
             Message.task_id.is_(None),  # 排除任务消息
             Message.sender_id != user_id,  # 排除自己发送的消息
+            Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
+            Message.message_type != 'system',  # 排除系统类型消息
             ~exists(
                 select(1).where(
                     and_(
@@ -1283,9 +1285,12 @@ def get_unread_messages(db: Session, user_id: str):
     )
     
     # 2. 任务消息（通过MessageRead和MessageReadCursor判断）
-    # 获取用户参与的所有任务
-    from app.models import Task
-    user_tasks = (
+    # 获取用户参与的所有任务（包括单人任务和多人任务）
+    from app.models import Task, TaskParticipant
+    task_ids_set = set()
+    
+    # 1. 作为发布者或接受者的任务（单人任务）
+    user_tasks_1 = (
         db.query(Task.id)
         .filter(
             or_(
@@ -1295,7 +1300,38 @@ def get_unread_messages(db: Session, user_id: str):
         )
         .all()
     )
-    task_ids = [task.id for task in user_tasks]
+    task_ids_set.update([task.id for task in user_tasks_1])
+    
+    # 2. 作为多人任务参与者的任务
+    participant_tasks = (
+        db.query(Task.id)
+        .join(TaskParticipant, Task.id == TaskParticipant.task_id)
+        .filter(
+            and_(
+                TaskParticipant.user_id == user_id,
+                TaskParticipant.status.in_(["accepted", "in_progress", "completed"]),
+                Task.is_multi_participant == True
+            )
+        )
+        .all()
+    )
+    task_ids_set.update([task.id for task in participant_tasks])
+    
+    # 3. 作为多人任务创建者的任务（任务达人创建的活动）
+    expert_creator_tasks = (
+        db.query(Task.id)
+        .filter(
+            and_(
+                Task.is_multi_participant == True,
+                Task.created_by_expert == True,
+                Task.expert_creator_id == user_id
+            )
+        )
+        .all()
+    )
+    task_ids_set.update([task.id for task in expert_creator_tasks])
+    
+    task_ids = list(task_ids_set)
     
     if not task_ids:
         # 如果没有任务，只返回普通消息
@@ -1320,24 +1356,28 @@ def get_unread_messages(db: Session, user_id: str):
         cursor = cursor_dict.get(task_id)
         
         if cursor:
-            # 有游标：查询ID大于游标的、不是自己发送的消息
+            # 有游标：查询ID大于游标的、不是自己发送的、非系统消息
             unread_msgs = (
                 db.query(Message)
                 .filter(
                     Message.task_id == task_id,
                     Message.id > cursor,
                     Message.sender_id != user_id,
+                    Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
+                    Message.message_type != 'system',  # 排除系统类型消息
                     Message.conversation_type == 'task'
                 )
                 .all()
             )
         else:
-            # 没有游标：查询在MessageRead表中没有记录的消息（排除自己发送的）
+            # 没有游标：查询在MessageRead表中没有记录的消息（排除自己发送的和系统消息）
             unread_msgs = (
                 db.query(Message)
                 .filter(
                     Message.task_id == task_id,
                     Message.sender_id != user_id,
+                    Message.sender_id.notin_(['system', 'SYSTEM']),  # 排除系统消息
+                    Message.message_type != 'system',  # 排除系统类型消息
                     Message.conversation_type == 'task',
                     ~exists(
                         select(1).where(

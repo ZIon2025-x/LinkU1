@@ -6951,6 +6951,9 @@ def update_expert_service_admin(
                 elif key in ['time_slot_start_time', 'time_slot_end_time'] and value:
                     from datetime import time as dt_time
                     setattr(service, key, dt_time.fromisoformat(value))
+                elif key == 'weekly_time_slot_config':
+                    # weekly_time_slot_config是JSONB字段，直接设置
+                    setattr(service, key, value)
                 else:
                     setattr(service, key, value)
         

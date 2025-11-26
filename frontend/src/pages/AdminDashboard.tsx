@@ -160,6 +160,25 @@ const AdminDashboard: React.FC = () => {
   const [expertActivities, setExpertActivities] = useState<any[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  const [editingService, setEditingService] = useState<any>(null);
+  const [showServiceEditModal, setShowServiceEditModal] = useState(false);
+  const [serviceTimeSlotForm, setServiceTimeSlotForm] = useState({
+    has_time_slots: false,
+    time_slot_duration_minutes: 60,
+    time_slot_start_time: '09:00',
+    time_slot_end_time: '18:00',
+    participants_per_slot: 1,
+    use_weekly_config: false,
+    weekly_time_slot_config: {
+      monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+      sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+    } as { [key: string]: { enabled: boolean; start_time: string; end_time: string } },
+  });
   
   // 任务达人申请审核相关状态
   const [expertApplications, setExpertApplications] = useState<any[]>([]);
@@ -2233,6 +2252,81 @@ const AdminDashboard: React.FC = () => {
                                 <td style={{ padding: '12px' }}>
                                   <button
                                     onClick={async () => {
+                                      // 加载服务详情并打开编辑弹窗
+                                      try {
+                                        const data = await getExpertServicesAdmin(taskExpertForm.id);
+                                        const serviceDetail = data.services?.find((s: any) => s.id === service.id);
+                                        if (serviceDetail) {
+                                          // 初始化表单数据
+                                          const hasTimeSlots = serviceDetail.has_time_slots || false;
+                                          const timeSlotDuration = serviceDetail.time_slot_duration_minutes || 60;
+                                          const timeSlotStart = serviceDetail.time_slot_start_time 
+                                            ? serviceDetail.time_slot_start_time.substring(0, 5) 
+                                            : '09:00';
+                                          const timeSlotEnd = serviceDetail.time_slot_end_time 
+                                            ? serviceDetail.time_slot_end_time.substring(0, 5) 
+                                            : '18:00';
+                                          const participantsPerSlot = serviceDetail.participants_per_slot || 1;
+                                          const weeklyConfig = serviceDetail.weekly_time_slot_config || null;
+                                          const useWeeklyConfig = !!weeklyConfig;
+                                          
+                                          // 初始化按周几配置
+                                          const defaultWeeklyConfig = {
+                                            monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+                                            tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+                                            wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+                                            thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+                                            friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+                                            saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+                                            sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
+                                          };
+                                          
+                                          const weeklyTimeSlotConfig = useWeeklyConfig ? {
+                                            ...defaultWeeklyConfig,
+                                            ...Object.keys(defaultWeeklyConfig).reduce((acc, day) => {
+                                              const dayKey = day as keyof typeof defaultWeeklyConfig;
+                                              const dayConfig = (weeklyConfig as any)?.[day] || defaultWeeklyConfig[dayKey];
+                                              acc[dayKey] = {
+                                                enabled: dayConfig.enabled !== false,
+                                                start_time: dayConfig.start_time ? dayConfig.start_time.substring(0, 5) : defaultWeeklyConfig[dayKey].start_time,
+                                                end_time: dayConfig.end_time ? dayConfig.end_time.substring(0, 5) : defaultWeeklyConfig[dayKey].end_time,
+                                              };
+                                              return acc;
+                                            }, {} as typeof defaultWeeklyConfig)
+                                          } : defaultWeeklyConfig;
+                                          
+                                          setServiceTimeSlotForm({
+                                            has_time_slots: hasTimeSlots,
+                                            time_slot_duration_minutes: timeSlotDuration,
+                                            time_slot_start_time: timeSlotStart,
+                                            time_slot_end_time: timeSlotEnd,
+                                            participants_per_slot: participantsPerSlot,
+                                            use_weekly_config: useWeeklyConfig,
+                                            weekly_time_slot_config: weeklyTimeSlotConfig,
+                                          });
+                                          setEditingService(serviceDetail);
+                                          setShowServiceEditModal(true);
+                                        }
+                                      } catch (error: any) {
+                                        console.error('加载服务详情失败:', error);
+                                        message.error('加载服务详情失败');
+                                      }
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      marginRight: '4px',
+                                      border: '1px solid #28a745',
+                                      background: 'white',
+                                      color: '#28a745',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    编辑时间段
+                                  </button>
+                                  <button
+                                    onClick={async () => {
                                       const newStatus = service.status === 'active' ? 'inactive' : 'active';
                                       try {
                                         await updateExpertServiceAdmin(taskExpertForm.id, service.id, { status: newStatus });
@@ -2297,6 +2391,402 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     )}
                   </>
+                )}
+                
+                {/* 编辑服务时间段配置弹窗 */}
+                {showServiceEditModal && editingService && (
+                  <div 
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 1001
+                    }}
+                    onClick={() => setShowServiceEditModal(false)}
+                  >
+                    <div 
+                      style={{
+                        background: 'white',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                        maxWidth: '800px',
+                        width: '95%',
+                        maxHeight: '90vh',
+                        overflow: 'auto',
+                        position: 'relative'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3 style={{ margin: 0 }}>编辑服务时间段配置 - {editingService.service_name}</h3>
+                        <button
+                          onClick={() => setShowServiceEditModal(false)}
+                          style={{
+                            position: 'absolute',
+                            top: '15px',
+                            right: '15px',
+                            background: 'transparent',
+                            border: 'none',
+                            fontSize: '24px',
+                            color: '#666',
+                            cursor: 'pointer',
+                            padding: '5px 10px',
+                            lineHeight: '1',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      {/* 时间段设置 */}
+                      <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f9fafb' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                          <input
+                            type="checkbox"
+                            id="admin_has_time_slots"
+                            checked={serviceTimeSlotForm.has_time_slots}
+                            onChange={(e) => setServiceTimeSlotForm({ ...serviceTimeSlotForm, has_time_slots: e.target.checked })}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', marginRight: '8px' }}
+                          />
+                          <label htmlFor="admin_has_time_slots" style={{ fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+                            启用时间段功能
+                          </label>
+                        </div>
+                        
+                        {serviceTimeSlotForm.has_time_slots && (
+                          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                            {/* 时间段时长和参与者数量 */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                              <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                                  时间段时长（分钟）*
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={serviceTimeSlotForm.time_slot_duration_minutes}
+                                  onChange={(e) => setServiceTimeSlotForm({ ...serviceTimeSlotForm, time_slot_duration_minutes: parseInt(e.target.value) || 60 })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                  }}
+                                  placeholder="60"
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                                  每个时间段最多参与者 *
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={serviceTimeSlotForm.participants_per_slot}
+                                  onChange={(e) => setServiceTimeSlotForm({ ...serviceTimeSlotForm, participants_per_slot: parseInt(e.target.value) || 1 })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                  }}
+                                  placeholder="1"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 配置模式选择 */}
+                            <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                                <input
+                                  type="radio"
+                                  id="admin_time_slot_mode_unified"
+                                  name="admin_time_slot_mode"
+                                  checked={!serviceTimeSlotForm.use_weekly_config}
+                                  onChange={() => setServiceTimeSlotForm({ ...serviceTimeSlotForm, use_weekly_config: false })}
+                                  style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
+                                />
+                                <label htmlFor="admin_time_slot_mode_unified" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                                  统一时间（每天相同时间）
+                                </label>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <input
+                                  type="radio"
+                                  id="admin_time_slot_mode_weekly"
+                                  name="admin_time_slot_mode"
+                                  checked={serviceTimeSlotForm.use_weekly_config}
+                                  onChange={() => setServiceTimeSlotForm({ ...serviceTimeSlotForm, use_weekly_config: true })}
+                                  style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }}
+                                />
+                                <label htmlFor="admin_time_slot_mode_weekly" style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                                  按周几设置（不同工作日可设置不同时间）
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* 统一时间模式 */}
+                            {!serviceTimeSlotForm.use_weekly_config && (
+                              <div style={{ marginTop: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                                      开始时间 *
+                                    </label>
+                                    <input
+                                      type="time"
+                                      value={serviceTimeSlotForm.time_slot_start_time}
+                                      onChange={(e) => setServiceTimeSlotForm({ ...serviceTimeSlotForm, time_slot_start_time: e.target.value })}
+                                      style={{
+                                        width: '100%',
+                                        padding: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                                      结束时间 *
+                                    </label>
+                                    <input
+                                      type="time"
+                                      value={serviceTimeSlotForm.time_slot_end_time}
+                                      onChange={(e) => setServiceTimeSlotForm({ ...serviceTimeSlotForm, time_slot_end_time: e.target.value })}
+                                      style={{
+                                        width: '100%',
+                                        padding: '8px',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 按周几设置模式 */}
+                            {serviceTimeSlotForm.use_weekly_config && (
+                              <div style={{ marginTop: '12px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 500, marginBottom: '12px', color: '#4a5568' }}>
+                                  设置每周的工作时间：
+                                </div>
+                                {[
+                                  { key: 'monday', label: '周一' },
+                                  { key: 'tuesday', label: '周二' },
+                                  { key: 'wednesday', label: '周三' },
+                                  { key: 'thursday', label: '周四' },
+                                  { key: 'friday', label: '周五' },
+                                  { key: 'saturday', label: '周六' },
+                                  { key: 'sunday', label: '周日' },
+                                ].map(({ key, label }) => {
+                                  const dayKey = key as keyof typeof serviceTimeSlotForm.weekly_time_slot_config;
+                                  const dayConfig = serviceTimeSlotForm.weekly_time_slot_config[dayKey];
+                                  return (
+                                    <div
+                                      key={key}
+                                      style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '80px 1fr 1fr 1fr',
+                                        gap: '8px',
+                                        alignItems: 'center',
+                                        marginBottom: '10px',
+                                        padding: '10px',
+                                        background: dayConfig.enabled ? '#f0f9ff' : '#f7fafc',
+                                        borderRadius: '6px',
+                                        border: `1px solid ${dayConfig.enabled ? '#bfdbfe' : '#e2e8f0'}`,
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={dayConfig.enabled}
+                                          onChange={(e) => {
+                                            const newConfig = { ...serviceTimeSlotForm.weekly_time_slot_config };
+                                            newConfig[key] = {
+                                              ...dayConfig,
+                                              enabled: e.target.checked,
+                                            };
+                                            setServiceTimeSlotForm({ ...serviceTimeSlotForm, weekly_time_slot_config: newConfig });
+                                          }}
+                                          style={{ width: '18px', height: '18px', cursor: 'pointer', marginRight: '6px' }}
+                                        />
+                                        <label style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: dayConfig.enabled ? '#1e40af' : '#64748b' }}>
+                                          {label}
+                                        </label>
+                                      </div>
+                                      <div>
+                                        <input
+                                          type="time"
+                                          value={dayConfig.start_time}
+                                          onChange={(e) => {
+                                            const newConfig = { ...serviceTimeSlotForm.weekly_time_slot_config };
+                                            newConfig[key] = { ...dayConfig, start_time: e.target.value };
+                                            setServiceTimeSlotForm({ ...serviceTimeSlotForm, weekly_time_slot_config: newConfig });
+                                          }}
+                                          disabled={!dayConfig.enabled}
+                                          style={{
+                                            width: '100%',
+                                            padding: '6px',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '4px',
+                                            fontSize: '12px',
+                                            background: dayConfig.enabled ? '#fff' : '#f1f5f9',
+                                            cursor: dayConfig.enabled ? 'text' : 'not-allowed',
+                                          }}
+                                        />
+                                      </div>
+                                      <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b' }}>至</div>
+                                      <div>
+                                        <input
+                                          type="time"
+                                          value={dayConfig.end_time}
+                                          onChange={(e) => {
+                                            const newConfig = { ...serviceTimeSlotForm.weekly_time_slot_config };
+                                            newConfig[key] = { ...dayConfig, end_time: e.target.value };
+                                            setServiceTimeSlotForm({ ...serviceTimeSlotForm, weekly_time_slot_config: newConfig });
+                                          }}
+                                          disabled={!dayConfig.enabled}
+                                          style={{
+                                            width: '100%',
+                                            padding: '6px',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '4px',
+                                            fontSize: '12px',
+                                            background: dayConfig.enabled ? '#fff' : '#f1f5f9',
+                                            cursor: dayConfig.enabled ? 'text' : 'not-allowed',
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              // 验证
+                              if (serviceTimeSlotForm.has_time_slots) {
+                                if (serviceTimeSlotForm.time_slot_duration_minutes <= 0) {
+                                  message.warning('时间段时长必须大于0');
+                                  return;
+                                }
+                                if (serviceTimeSlotForm.participants_per_slot <= 0) {
+                                  message.warning('每个时间段最多参与者数量必须大于0');
+                                  return;
+                                }
+                                
+                                if (!serviceTimeSlotForm.use_weekly_config) {
+                                  // 统一时间模式：验证开始和结束时间
+                                  if (!serviceTimeSlotForm.time_slot_start_time || !serviceTimeSlotForm.time_slot_end_time) {
+                                    message.warning('请设置时间段的开始和结束时间');
+                                    return;
+                                  }
+                                  const startTime = serviceTimeSlotForm.time_slot_start_time.split(':').map(Number);
+                                  const endTime = serviceTimeSlotForm.time_slot_end_time.split(':').map(Number);
+                                  const startMinutes = startTime[0] * 60 + startTime[1];
+                                  const endMinutes = endTime[0] * 60 + endTime[1];
+                                  if (startMinutes >= endMinutes) {
+                                    message.warning('开始时间必须早于结束时间');
+                                    return;
+                                  }
+                                }
+                              }
+                              
+                              // 构建提交数据
+                              const submitData: any = {
+                                has_time_slots: serviceTimeSlotForm.has_time_slots,
+                                time_slot_duration_minutes: serviceTimeSlotForm.has_time_slots ? serviceTimeSlotForm.time_slot_duration_minutes : undefined,
+                                participants_per_slot: serviceTimeSlotForm.has_time_slots ? serviceTimeSlotForm.participants_per_slot : undefined,
+                              };
+                              
+                              if (serviceTimeSlotForm.has_time_slots) {
+                                if (serviceTimeSlotForm.use_weekly_config) {
+                                  // 构建按周几配置
+                                  const weeklyConfig: { [key: string]: { enabled: boolean; start_time: string; end_time: string } } = {};
+                                  Object.keys(serviceTimeSlotForm.weekly_time_slot_config).forEach(day => {
+                                    const dayConfig = serviceTimeSlotForm.weekly_time_slot_config[day];
+                                    weeklyConfig[day] = {
+                                      enabled: dayConfig.enabled,
+                                      start_time: dayConfig.start_time + ':00',
+                                      end_time: dayConfig.end_time + ':00',
+                                    };
+                                  });
+                                  submitData.weekly_time_slot_config = weeklyConfig;
+                                  submitData.time_slot_start_time = undefined;
+                                  submitData.time_slot_end_time = undefined;
+                                } else {
+                                  submitData.time_slot_start_time = serviceTimeSlotForm.time_slot_start_time + ':00';
+                                  submitData.time_slot_end_time = serviceTimeSlotForm.time_slot_end_time + ':00';
+                                  submitData.weekly_time_slot_config = null;
+                                }
+                              } else {
+                                submitData.time_slot_start_time = undefined;
+                                submitData.time_slot_end_time = undefined;
+                                submitData.weekly_time_slot_config = undefined;
+                              }
+                              
+                              await updateExpertServiceAdmin(taskExpertForm.id, editingService.id, submitData);
+                              message.success('时间段配置更新成功');
+                              setShowServiceEditModal(false);
+                              const data = await getExpertServicesAdmin(taskExpertForm.id);
+                              setExpertServices(data.services || []);
+                            } catch (error: any) {
+                              console.error('更新时间段配置失败:', error);
+                              message.error(error.response?.data?.detail || '更新失败');
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: '#3b82f6',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          保存
+                        </button>
+                        <button
+                          onClick={() => setShowServiceEditModal(false)}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: '#f3f4f6',
+                            color: '#333',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

@@ -1956,7 +1956,7 @@ const TaskExperts: React.FC = () => {
                         await applyToActivity(selectedActivity.id, {
                           idempotency_key: idempotencyKey,
                           time_slot_id: selectedTimeSlotId,
-                          is_multi_participant: false, // 默认创建单个任务
+                          is_multi_participant: (selectedActivity.max_participants || 1) > 1, // 根据活动的max_participants判断
                         });
                         message.success('申请成功！已为您创建任务');
                         setShowActivityDetailModal(false);
@@ -1973,7 +1973,7 @@ const TaskExperts: React.FC = () => {
                         const idempotencyKey = `${user.id}_${selectedActivity.id}_${Date.now()}`;
                         await applyToActivity(selectedActivity.id, {
                           idempotency_key: idempotencyKey,
-                          is_multi_participant: false, // 默认创建单个任务
+                          is_multi_participant: (selectedActivity.max_participants || 1) > 1, // 根据活动的max_participants判断
                         });
                         message.success('申请成功！已为您创建任务');
                         setShowActivityDetailModal(false);

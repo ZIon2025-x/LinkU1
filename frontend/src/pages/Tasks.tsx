@@ -2839,7 +2839,7 @@ const Tasks: React.FC = () => {
                         await applyToActivity(selectedActivity.id, {
                           idempotency_key: idempotencyKey,
                           time_slot_id: selectedTimeSlotId,
-                          is_multi_participant: false, // 默认创建单个任务
+                          is_multi_participant: (selectedActivity.max_participants || 1) > 1, // 根据活动的max_participants判断
                         });
                         message.success('申请成功！已为您创建任务');
                         setShowActivityDetailModal(false);
@@ -2848,6 +2848,8 @@ const Tasks: React.FC = () => {
                         setSelectedTimeSlotId(null);
                         // 重新加载任务列表以显示新创建的任务
                         loadTasksRef.current(false);
+                        // 重新加载活动列表以更新人数
+                        loadActivities();
                       } catch (err: any) {
                         console.error('申请活动失败:', err);
                         message.error(err.response?.data?.detail || '申请失败，请重试');
@@ -2858,7 +2860,7 @@ const Tasks: React.FC = () => {
                         const idempotencyKey = `${user.id}_${selectedActivity.id}_${Date.now()}`;
                         await applyToActivity(selectedActivity.id, {
                           idempotency_key: idempotencyKey,
-                          is_multi_participant: false, // 默认创建单个任务
+                          is_multi_participant: (selectedActivity.max_participants || 1) > 1, // 根据活动的max_participants判断
                         });
                         message.success('申请成功！已为您创建任务');
                         setShowActivityDetailModal(false);
@@ -2867,6 +2869,8 @@ const Tasks: React.FC = () => {
                         setSelectedTimeSlotId(null);
                         // 重新加载任务列表以显示新创建的任务
                         loadTasksRef.current(false);
+                        // 重新加载活动列表以更新人数
+                        loadActivities();
                       } catch (err: any) {
                         console.error('申请活动失败:', err);
                         message.error(err.response?.data?.detail || '申请失败，请重试');

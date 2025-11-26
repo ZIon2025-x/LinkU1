@@ -760,15 +760,23 @@ const MessagePage: React.FC = () => {
         throw new Error('服务器未返回图片ID');
       }
       
-      // 发送包含图片ID的消息
-      const messageContent = `[图片] ${imageId}`;
-      
-      // 如果是客服模式，使用客服的发送方法
+      // 如果是客服模式，使用客服的发送方法（保持旧格式兼容）
       if (isServiceMode && currentChat) {
+        const messageContent = `[图片] ${imageId}`;
         await sendImageMessage(messageContent);
       } else if (activeTaskId) {
-        // 如果是任务聊天模式，使用任务消息发送
-        await sendTaskMessage(activeTaskId, messageContent);
+        // 如果是任务聊天模式，使用任务消息发送，并正确构建附件数组
+        const messageContent = `[图片]`;
+        const attachments = [{
+          attachment_type: 'image',
+          blob_id: imageId,
+          meta: {
+            filename: selectedImage.name,
+            size: selectedImage.size,
+            mime_type: selectedImage.type
+          }
+        }];
+        await sendTaskMessage(activeTaskId, messageContent, undefined, attachments);
         // 重新加载任务消息
         await loadTaskMessages(activeTaskId);
       }
@@ -887,41 +895,64 @@ const MessagePage: React.FC = () => {
       
       // 处理不同的响应格式
       let fileUrl: string;
+      let fileId: string | undefined;
       if (uploadResult.url) {
         fileUrl = uploadResult.url;
       } else if (uploadResult.file_url) {
         fileUrl = uploadResult.file_url;
+      } else if (uploadResult.file_id) {
+        // 如果返回的是file_id（blob_id），需要构建访问URL
+        fileId = uploadResult.file_id;
+        fileUrl = `/api/blobs/${fileId}`;
       } else {
-        throw new Error('服务器未返回文件URL');
+        throw new Error('服务器未返回文件URL或ID');
       }
       
-      // 发送包含文件URL的消息
-      const messageContent = `[文件] ${selectedFile.name} - ${fileUrl}`;
-      
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        if (isServiceMode && currentChat) {
-          const messageData = {
-            receiver_id: currentChat.service_id,
-            content: messageContent,
-            chat_id: currentChat.chat_id
-          };
-          ws.send(JSON.stringify(messageData));
-          
-          // 添加消息到本地状态
-          const newMessage: Message = {
-            from: user?.id || 'me',
-            content: messageContent,
-            created_at: new Date().toISOString()
-          };
-          setMessages(prev => [...prev, newMessage]);
-        }
+      // 如果是任务聊天模式，使用任务消息发送，并正确构建附件数组
+      if (activeTaskId) {
+        const messageContent = `[文件] ${selectedFile.name}`;
+        const attachments = [{
+          attachment_type: 'file',
+          url: fileUrl,
+          blob_id: fileId,
+          meta: {
+            filename: selectedFile.name,
+            size: selectedFile.size,
+            mime_type: selectedFile.type
+          }
+        }];
+        await sendTaskMessage(activeTaskId, messageContent, undefined, attachments);
+        // 重新加载任务消息
+        await loadTaskMessages(activeTaskId);
+      } else {
+        // 其他情况保持旧格式
+        const messageContent = `[文件] ${selectedFile.name} - ${fileUrl}`;
         
-        // 清除文件选择
-        setSelectedFile(null);
-        setFilePreview(null);
-      } else {
-        throw new Error('WebSocket未连接');
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          if (isServiceMode && currentChat) {
+            const messageData = {
+              receiver_id: currentChat.service_id,
+              content: messageContent,
+              chat_id: currentChat.chat_id
+            };
+            ws.send(JSON.stringify(messageData));
+            
+            // 添加消息到本地状态
+            const newMessage: Message = {
+              from: user?.id || 'me',
+              content: messageContent,
+              created_at: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, newMessage]);
+          }
+        } else {
+          throw new Error('WebSocket未连接');
+        }
       }
+      
+      // 清除文件选择
+      setSelectedFile(null);
+      setFilePreview(null);
       
     } catch (error) {
       console.error('发送文件失败:', error);
@@ -982,15 +1013,23 @@ const MessagePage: React.FC = () => {
         throw new Error('服务器未返回图片ID');
       }
       
-      // 发送包含图片ID的消息
-      const messageContent = `[图片] ${imageId}`;
-      
-      // 如果是客服模式，使用客服的发送方法
+      // 如果是客服模式，使用客服的发送方法（保持旧格式兼容）
       if (isServiceMode && currentChat) {
+        const messageContent = `[图片] ${imageId}`;
         await sendImageMessage(messageContent);
       } else if (activeTaskId) {
-        // 如果是任务聊天模式，使用任务消息发送
-        await sendTaskMessage(activeTaskId, messageContent);
+        // 如果是任务聊天模式，使用任务消息发送，并正确构建附件数组
+        const messageContent = `[图片]`;
+        const attachments = [{
+          attachment_type: 'image',
+          blob_id: imageId,
+          meta: {
+            filename: selectedImage.name,
+            size: selectedImage.size,
+            mime_type: selectedImage.type
+          }
+        }];
+        await sendTaskMessage(activeTaskId, messageContent, undefined, attachments);
         // 重新加载任务消息
         await loadTaskMessages(activeTaskId);
       }
@@ -1428,7 +1467,13 @@ const MessagePage: React.FC = () => {
       // 更新最后一条消息ID
       if (response.id) {
         lastTaskMessageIdRef.current = response.id;
-        await markTaskMessagesRead(activeTaskId, response.id);
+        try {
+          await markTaskMessagesRead(activeTaskId, response.id);
+          // 标记已读后立即刷新未读计数
+          await loadUnreadCount();
+        } catch (error) {
+          console.error('标记任务消息已读失败:', error);
+        }
       }
       
       // 重新加载任务列表以更新未读计数
@@ -2016,7 +2061,13 @@ const MessagePage: React.FC = () => {
       // 标记消息为已读（后端返回的最新消息在数组第一个位置）
       if (data.messages && data.messages.length > 0) {
         const lastMessage = data.messages[0]; // 后端返回的最新消息在数组第一个位置
-        markTaskMessagesRead(taskId, lastMessage.id);
+        try {
+          await markTaskMessagesRead(taskId, lastMessage.id);
+          // 标记已读后立即刷新未读计数
+          await loadUnreadCount();
+        } catch (error) {
+          console.error('标记任务消息已读失败:', error);
+        }
       }
       
       // 首次加载时滚动到底部
@@ -2171,9 +2222,14 @@ const MessagePage: React.FC = () => {
                   
                   // 自动标记为已读
                   if (latestMessage.id) {
-                    markTaskMessagesRead(activeTaskId, latestMessage.id).catch(err => {
-                      console.error('标记任务消息已读失败:', err);
-                    });
+                    markTaskMessagesRead(activeTaskId, latestMessage.id)
+                      .then(() => {
+                        // 标记已读后立即刷新未读计数
+                        loadUnreadCount();
+                      })
+                      .catch(err => {
+                        console.error('标记任务消息已读失败:', err);
+                      });
                   }
                   
                   // 重新加载任务列表以更新未读计数
@@ -2672,9 +2728,14 @@ const MessagePage: React.FC = () => {
                   
                   // 自动标记为已读（如果用户正在查看该任务）
                   if (activeTaskId && activeTaskId === msg.task_id && taskMessage.id && typeof taskMessage.id === 'number') {
-                    markTaskMessagesRead(activeTaskId, taskMessage.id).catch(err => {
-                      console.error('标记任务消息已读失败:', err);
-                    });
+                    markTaskMessagesRead(activeTaskId, taskMessage.id)
+                      .then(() => {
+                        // 标记已读后立即刷新未读计数
+                        loadUnreadCount();
+                      })
+                      .catch(err => {
+                        console.error('标记任务消息已读失败:', err);
+                      });
                   }
                   
                   // 重新加载任务列表以更新未读计数
