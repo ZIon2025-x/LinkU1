@@ -598,7 +598,7 @@ def cleanup_all_sessions_unified():
         from app.secure_auth import SecureAuthManager
         from app.service_auth import ServiceAuthManager
         from app.admin_auth import AdminAuthManager
-        from app.user_redis_cleanup import cleanup_all_user_data
+        from app.user_redis_cleanup import user_redis_cleanup
         
         # 清理用户会话
         SecureAuthManager.cleanup_expired_sessions()
@@ -610,7 +610,7 @@ def cleanup_all_sessions_unified():
         AdminAuthManager.cleanup_expired_sessions()
         
         # 清理用户Redis数据
-        cleanup_all_user_data()
+        user_redis_cleanup.cleanup_all_user_data()
         
     except Exception as e:
         logger.error(f"统一会话清理失败: {e}")
