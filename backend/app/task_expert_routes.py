@@ -762,8 +762,6 @@ async def update_service(
                     slot.is_available = False
         
         if deleted_count > 0:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info(f"服务 {service_id} 配置更新后，删除了 {deleted_count} 个不符合新配置的时间段")
     
     await db.commit()
@@ -964,7 +962,19 @@ async def create_service_time_slot(
     db.add(new_time_slot)
     await db.commit()
     await db.refresh(new_time_slot)
-    return schemas.ServiceTimeSlotOut.from_orm(new_time_slot)
+    
+    # 预加载关系属性以避免 MissingGreenlet 错误
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.ServiceTimeSlot)
+        .where(models.ServiceTimeSlot.id == new_time_slot.id)
+        .options(
+            selectinload(models.ServiceTimeSlot.activity_relations).selectinload(models.ActivityTimeSlotRelation.activity),
+            selectinload(models.ServiceTimeSlot.task_relations)
+        )
+    )
+    loaded_slot = result.scalar_one()
+    return schemas.ServiceTimeSlotOut.from_orm(loaded_slot)
 
 
 @task_expert_router.get("/me/services/{service_id}/time-slots", response_model=List[schemas.ServiceTimeSlotOut])
