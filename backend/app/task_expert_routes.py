@@ -2413,8 +2413,21 @@ async def apply_for_service(
             # 默认7天后
             task_deadline = get_utc_time() + timedelta(days=7)
         
-        # 处理图片（JSONB类型，直接使用list）
-        images_list = service.images if service.images else None
+        # 处理图片：TaskExpertService.images是JSONB（list），Task.images是Text（JSON字符串）
+        import json
+        images_json = None
+        if service.images:
+            if isinstance(service.images, list):
+                images_json = json.dumps(service.images) if service.images else None
+            elif isinstance(service.images, str):
+                # 如果已经是字符串，直接使用
+                images_json = service.images
+            else:
+                # 其他类型，尝试转换为JSON
+                try:
+                    images_json = json.dumps(service.images)
+                except:
+                    images_json = None
         
         # 创建任务（任务达人服务创建的任务等级为 expert）
         new_task = models.Task(
@@ -2432,7 +2445,7 @@ async def apply_for_service(
             poster_id=current_user.id,  # 申请用户是发布人
             taker_id=service.expert_id,  # 任务达人接收方
             status="in_progress",
-            images=images_list,
+            images=images_json,  # 存储为JSON字符串
             accepted_at=get_utc_time()
         )
         
@@ -2707,8 +2720,21 @@ async def approve_service_application(
         # 如果没有设置截止日期且不是灵活模式，默认7天后
         task_deadline = get_utc_time() + timedelta(days=7)
     
-    # 7. 处理图片（JSONB类型，直接使用list）
-    images_list = service.images if service.images else None
+    # 7. 处理图片：TaskExpertService.images是JSONB（list），Task.images是Text（JSON字符串）
+    import json
+    images_json = None
+    if service.images:
+        if isinstance(service.images, list):
+            images_json = json.dumps(service.images) if service.images else None
+        elif isinstance(service.images, str):
+            # 如果已经是字符串，直接使用
+            images_json = service.images
+        else:
+            # 其他类型，尝试转换为JSON
+            try:
+                images_json = json.dumps(service.images)
+            except:
+                images_json = None
     
     # 8. 创建任务（任务达人服务创建的任务等级为 expert）
     new_task = models.Task(
@@ -2726,7 +2752,7 @@ async def approve_service_application(
         poster_id=application.applicant_id,  # 申请用户是发布人
         taker_id=application.expert_id,  # 任务达人接收方
         status="in_progress",
-        images=images_list,  # 直接使用list，ORM会自动处理JSONB序列化
+        images=images_json,  # 存储为JSON字符串
         accepted_at=get_utc_time()
     )
     
