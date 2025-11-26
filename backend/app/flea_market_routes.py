@@ -587,26 +587,49 @@ async def create_flea_market_item(
         await db.commit()
         await db.refresh(new_item)
         
-        # 移动临时图片到正式目录（如果使用了临时目录）
+        # 移动临时图片到正式目录并更新URL（如果使用了临时目录）
         if item_data.images:
             temp_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
             item_dir = FLEA_MARKET_IMAGE_DIR / str(new_item.id)
+            base_url = Config.FRONTEND_URL.rstrip('/')
+            updated_images = []
+            
             if temp_dir.exists():
                 item_dir.mkdir(parents=True, exist_ok=True)
-                # 移动临时目录中的图片文件
+                # 移动临时目录中的图片文件并更新URL
                 moved_count = 0
                 for image_url in item_data.images:
                     try:
-                        # 从URL中提取文件名
-                        filename = image_url.split('/')[-1]
-                        temp_file = temp_dir / filename
-                        if temp_file.exists():
-                            item_file = item_dir / filename
-                            temp_file.rename(item_file)
-                            moved_count += 1
-                            logger.info(f"移动临时图片到商品目录: {filename}")
+                        # 检查是否是临时文件夹的图片
+                        if f"/uploads/flea_market/temp_{current_user.id}/" in image_url:
+                            # 从URL中提取文件名
+                            filename = image_url.split('/')[-1]
+                            temp_file = temp_dir / filename
+                            if temp_file.exists():
+                                item_file = item_dir / filename
+                                temp_file.rename(item_file)
+                                moved_count += 1
+                                # 更新URL为正式目录
+                                new_url = f"{base_url}/uploads/flea_market/{new_item.id}/{filename}"
+                                updated_images.append(new_url)
+                                logger.info(f"移动临时图片到商品目录并更新URL: {filename} -> {new_url}")
+                            else:
+                                # 文件不存在，保持原URL（可能是其他来源的图片）
+                                updated_images.append(image_url)
+                                logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
+                        else:
+                            # 不是临时图片，保持原URL
+                            updated_images.append(image_url)
                     except Exception as e:
-                        logger.warning(f"移动图片文件失败: {e}")
+                        logger.warning(f"移动图片文件失败: {e}，保持原URL")
+                        updated_images.append(image_url)
+                
+                # 如果有图片被移动，更新数据库中的图片URL
+                if updated_images != item_data.images:
+                    new_item.images = json.dumps(updated_images)
+                    await db.commit()
+                    await db.refresh(new_item)
+                    logger.info(f"已更新商品 {new_item.id} 的图片URL")
                 
                 # 删除临时目录（如果为空或所有文件都已移动）
                 try:
@@ -623,6 +646,9 @@ async def create_flea_market_item(
                 # 清理临时目录中未使用的图片（如果创建商品时没有使用所有临时图片）
                 if moved_count > 0:
                     delete_flea_market_temp_images(str(current_user.id))
+            else:
+                # 临时目录不存在，可能是直接上传到正式目录的图片，不需要移动
+                updated_images = item_data.images
         
         return {
             "success": True,
@@ -718,12 +744,50 @@ async def update_flea_market_item(
                     except:
                         old_images = []
                 
-                # 更新图片列表
-                update_data["images"] = json.dumps(item_data.images) if item_data.images else None
+                # 处理临时图片：移动临时图片到正式目录并更新URL
+                temp_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
+                item_dir = FLEA_MARKET_IMAGE_DIR / str(db_id)
+                base_url = Config.FRONTEND_URL.rstrip('/')
+                updated_images = []
+                
+                if item_data.images:
+                    if temp_dir.exists():
+                        item_dir.mkdir(parents=True, exist_ok=True)
+                        # 移动临时目录中的图片文件并更新URL
+                        for image_url in item_data.images:
+                            try:
+                                # 检查是否是临时文件夹的图片
+                                if f"/uploads/flea_market/temp_{current_user.id}/" in image_url:
+                                    # 从URL中提取文件名
+                                    filename = image_url.split('/')[-1]
+                                    temp_file = temp_dir / filename
+                                    if temp_file.exists():
+                                        item_file = item_dir / filename
+                                        temp_file.rename(item_file)
+                                        # 更新URL为正式目录
+                                        new_url = f"{base_url}/uploads/flea_market/{db_id}/{filename}"
+                                        updated_images.append(new_url)
+                                        logger.info(f"编辑商品时移动临时图片并更新URL: {filename} -> {new_url}")
+                                    else:
+                                        # 文件不存在，保持原URL
+                                        updated_images.append(image_url)
+                                        logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
+                                else:
+                                    # 不是临时图片，保持原URL
+                                    updated_images.append(image_url)
+                            except Exception as e:
+                                logger.warning(f"移动图片文件失败: {e}，保持原URL")
+                                updated_images.append(image_url)
+                    else:
+                        # 临时目录不存在，使用原图片列表
+                        updated_images = item_data.images
+                
+                # 更新图片列表（使用更新后的URL）
+                update_data["images"] = json.dumps(updated_images) if updated_images else None
                 
                 # 删除不再使用的旧图片
                 if old_images:
-                    new_images_set = set(item_data.images) if item_data.images else set()
+                    new_images_set = set(updated_images) if updated_images else set()
                     old_images_set = set(old_images)
                     images_to_delete = old_images_set - new_images_set
                     
