@@ -2074,29 +2074,65 @@ def cleanup_all_old_tasks_files(db: Session):
 
 def cleanup_expired_time_slots(db: Session) -> int:
     """
-    清理过期的时间段（昨天及之前的所有时间段）
-    每天执行一次，删除昨天及之前的过期时间段，保持从今天到下个月的今天的时间段（一个月）
-    删除所有过期的时间段（无论是否有参与者），因为时间段已过期，不再需要
+    清理过期的时间段（保留期限方案）
+    每天执行一次，删除超过保留期限的过期时间段
+    优化：只清理对应任务已完成/取消的时间段，或保留最近30天的时间段（用于历史记录）
     """
     from datetime import timedelta, datetime as dt_datetime, time as dt_time
     from app.utils.time_utils import get_utc_time, parse_local_as_utc, LONDON
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     try:
         current_utc = get_utc_time()
-        # 昨天23:59:59（英国时间）转换为UTC
-        yesterday = current_utc.date() - timedelta(days=1)
-        yesterday_end_local = dt_datetime.combine(yesterday, dt_time(23, 59, 59))
-        cutoff_time = parse_local_as_utc(yesterday_end_local, LONDON)
+        # 保留最近30天的时间段（用于历史记录和审计）
+        # 计算30天前的23:59:59（英国时间）转换为UTC
+        thirty_days_ago = current_utc.date() - timedelta(days=30)
+        cutoff_local = dt_datetime.combine(thirty_days_ago, dt_time(23, 59, 59))
+        cutoff_time = parse_local_as_utc(cutoff_local, LONDON)
         
-        # 查找所有过期的时间段（无论是否有参与者）
+        # 查找超过保留期限的时间段
+        # 优先清理：对应任务已完成/取消的时间段
+        # 其次清理：没有关联任务的时间段
         expired_slots = db.query(models.ServiceTimeSlot).filter(
             models.ServiceTimeSlot.slot_start_datetime < cutoff_time,
             models.ServiceTimeSlot.is_manually_deleted == False,  # 不删除手动删除的（它们已经被标记为删除）
         ).all()
         
+        # 检查时间段关联的任务状态
+        from app.models import Task, TaskTimeSlotRelation
+        slots_to_delete = []
+        slots_with_active_tasks = 0
+        
+        for slot in expired_slots:
+            # 检查是否有关联的任务
+            task_relations = db.query(TaskTimeSlotRelation).filter(
+                TaskTimeSlotRelation.time_slot_id == slot.id
+            ).all()
+            
+            if task_relations:
+                # 检查关联的任务状态
+                task_ids = [rel.task_id for rel in task_relations]
+                tasks = db.query(Task).filter(Task.id.in_(task_ids)).all()
+                
+                # 如果所有任务都是已完成或已取消状态，可以删除时间段
+                all_finished = all(task.status in ['completed', 'cancelled'] for task in tasks)
+                
+                if all_finished:
+                    slots_to_delete.append(slot)
+                else:
+                    slots_with_active_tasks += 1
+                    logger.debug(f"时间段 {slot.id} 有未完成的任务，保留")
+            else:
+                # 没有关联任务的时间段，可以删除
+                slots_to_delete.append(slot)
+        
+        # 删除符合条件的时间段
+        
         deleted_count = 0
         slots_with_participants = 0
-        for slot in expired_slots:
+        for slot in slots_to_delete:
             try:
                 # 记录有参与者的时间段数量（用于日志）
                 if slot.current_participants > 0:
@@ -2104,18 +2140,16 @@ def cleanup_expired_time_slots(db: Session) -> int:
                 db.delete(slot)
                 deleted_count += 1
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.error(f"删除过期时间段失败 {slot.id}: {e}")
         
         if deleted_count > 0:
             db.commit()
-            import logging
-            logger = logging.getLogger(__name__)
             if slots_with_participants > 0:
-                logger.info(f"清理了 {deleted_count} 个过期时间段（昨天及之前的），其中 {slots_with_participants} 个有参与者")
+                logger.info(f"清理了 {deleted_count} 个过期时间段（超过30天且任务已完成/取消），其中 {slots_with_participants} 个有参与者，保留了 {slots_with_active_tasks} 个有未完成任务的时间段")
             else:
-                logger.info(f"清理了 {deleted_count} 个过期时间段（昨天及之前的）")
+                logger.info(f"清理了 {deleted_count} 个过期时间段（超过30天且任务已完成/取消），保留了 {slots_with_active_tasks} 个有未完成任务的时间段")
+        elif slots_with_active_tasks > 0:
+            logger.info(f"检查完成，保留了 {slots_with_active_tasks} 个有未完成任务的时间段（超过30天但任务未完成）")
         
         return deleted_count
     except Exception as e:

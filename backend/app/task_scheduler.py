@@ -210,33 +210,33 @@ def init_scheduler():
         description="自动完成已过期时间段的任务"
     )
     
-    # 中频任务（每5分钟）
+    # 中频任务（优化频率，减少DB压力）
     scheduler.register_task(
         'check_expired_coupons',
         with_db(check_expired_coupons),
-        interval_seconds=300,
+        interval_seconds=900,  # 15分钟（与 Celery 保持一致）
         description="检查过期优惠券"
     )
     
     scheduler.register_task(
         'check_expired_invitation_codes',
         with_db(check_expired_invitation_codes),
-        interval_seconds=300,
+        interval_seconds=900,  # 15分钟（与 Celery 保持一致）
         description="检查过期邀请码"
     )
     
     scheduler.register_task(
         'check_expired_points',
         with_db(check_expired_points),
-        interval_seconds=300,
+        interval_seconds=3600,  # 1小时（与 Celery 保持一致）
         description="检查过期积分"
     )
     
     scheduler.register_task(
         'check_and_end_activities',
         lambda: check_and_end_activities_sync(SessionLocal()),
-        interval_seconds=300,
-        description="检查并结束活动"
+        interval_seconds=900,  # 15分钟（与 Celery 保持一致，降低频率）
+        description="检查并结束活动（检查多人活动是否过期，过期则标记为已完成）"
     )
     
     # 客服相关任务（高频：每30秒，确保及时响应）

@@ -791,17 +791,19 @@ async def delete_service(
     service_images = service.images if hasattr(service, 'images') and service.images else []
     expert_id = current_expert.id
     
-    # 检查是否有任务正在使用这个服务
+    # 检查是否有未完成的任务正在使用这个服务（排除已完成和已取消的任务）
     tasks_using_service_result = await db.execute(
         select(func.count(models.Task.id))
         .where(models.Task.expert_service_id == service_id)
+        .where(models.Task.status.notin_(['completed', 'cancelled']))
     )
     tasks_using_service = tasks_using_service_result.scalar() or 0
     
-    # 检查是否有活动正在使用这个服务
+    # 检查是否有未完成的活动正在使用这个服务（排除已完成、已关闭和已取消的活动）
     activities_using_service_result = await db.execute(
         select(func.count(models.Activity.id))
         .where(models.Activity.expert_service_id == service_id)
+        .where(models.Activity.status.notin_(['completed', 'closed', 'cancelled']))
     )
     activities_using_service = activities_using_service_result.scalar() or 0
     
@@ -809,16 +811,34 @@ async def delete_service(
         error_msg = "无法删除服务，因为"
         reasons = []
         if tasks_using_service > 0:
-            reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
+            reasons.append(f"有 {tasks_using_service} 个未完成的任务正在使用此服务")
         if activities_using_service > 0:
-            reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
+            reasons.append(f"有 {activities_using_service} 个未完成的活动正在使用此服务")
         error_msg += "、".join(reasons) + "。请先处理相关任务和活动后再删除。"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error_msg
         )
     
-    # 1. 查找所有相关的 ServiceTimeSlot IDs
+    # 1. 检查是否有未过期且仍有参与者的时间段（即使任务/活动已完成，时间段本身可能仍有参与者记录）
+    from app.utils.time_utils import get_utc_time
+    current_utc = get_utc_time()
+    
+    future_slots_with_participants_result = await db.execute(
+        select(func.count(models.ServiceTimeSlot.id))
+        .where(models.ServiceTimeSlot.service_id == service_id)
+        .where(models.ServiceTimeSlot.slot_start_datetime >= current_utc)
+        .where(models.ServiceTimeSlot.current_participants > 0)
+    )
+    future_slots_with_participants = future_slots_with_participants_result.scalar() or 0
+    
+    if future_slots_with_participants > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"无法删除服务，因为有 {future_slots_with_participants} 个未过期的时间段仍有参与者。请等待时间段过期或处理相关参与者后再删除。"
+        )
+    
+    # 2. 查找所有相关的 ServiceTimeSlot IDs
     time_slots_result = await db.execute(
         select(models.ServiceTimeSlot.id)
         .where(models.ServiceTimeSlot.service_id == service_id)
@@ -826,27 +846,27 @@ async def delete_service(
     time_slot_ids = [row[0] for row in time_slots_result.fetchall()]
     
     if time_slot_ids:
-        # 2. 删除所有 TaskTimeSlotRelation 记录（fixed 模式，因为 time_slot_id 会被设置为 NULL）
+        # 3. 删除所有 TaskTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
+        # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
         task_relations_result = await db.execute(
             select(models.TaskTimeSlotRelation)
             .where(models.TaskTimeSlotRelation.time_slot_id.in_(time_slot_ids))
-            .where(models.TaskTimeSlotRelation.relation_mode == 'fixed')
         )
         task_relations = task_relations_result.scalars().all()
         for relation in task_relations:
             await db.delete(relation)
         
-        # 3. 删除所有 ActivityTimeSlotRelation 记录（fixed 模式，因为 time_slot_id 会被设置为 NULL）
+        # 4. 删除所有 ActivityTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
+        # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
         activity_relations_result = await db.execute(
             select(models.ActivityTimeSlotRelation)
             .where(models.ActivityTimeSlotRelation.time_slot_id.in_(time_slot_ids))
-            .where(models.ActivityTimeSlotRelation.relation_mode == 'fixed')
         )
         activity_relations = activity_relations_result.scalars().all()
         for relation in activity_relations:
             await db.delete(relation)
     
-    # 4. 现在安全地删除服务（cascades 到 ServiceTimeSlot）
+    # 5. 现在安全地删除服务（cascades 到 ServiceTimeSlot）
     await db.delete(service)
     current_expert.total_services = max(0, current_expert.total_services - 1)
     await db.commit()

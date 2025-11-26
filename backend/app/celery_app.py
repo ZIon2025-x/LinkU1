@@ -74,28 +74,29 @@ celery_app.conf.beat_schedule = {
     
     # ========== 中频任务（每5分钟）==========
     
-    # 检查过期优惠券 - 每5分钟执行一次
+    # 检查过期优惠券 - 每15分钟执行一次（降低频率，减少DB压力）
     'check-expired-coupons': {
         'task': 'app.celery_tasks.check_expired_coupons_task',
-        'schedule': 300.0,  # 5分钟
+        'schedule': 900.0,  # 15分钟
     },
     
-    # 检查过期邀请码 - 每5分钟执行一次
+    # 检查过期邀请码 - 每15分钟执行一次（降低频率，减少DB压力）
     'check-expired-invitation-codes': {
         'task': 'app.celery_tasks.check_expired_invitation_codes_task',
-        'schedule': 300.0,  # 5分钟
+        'schedule': 900.0,  # 15分钟
     },
     
-    # 检查过期积分 - 每5分钟执行一次
+    # 检查过期积分 - 每1小时执行一次（降低频率，积分过期对实时性要求不高）
     'check-expired-points': {
         'task': 'app.celery_tasks.check_expired_points_task',
-        'schedule': 300.0,  # 5分钟
+        'schedule': 3600.0,  # 1小时
     },
     
-    # 检查并结束活动 - 每5分钟执行一次
+    # 检查并结束活动 - 每15分钟执行一次（降低频率，减少DB压力）
+    # 检查多人活动是否过期（最后一个时间段结束或达到截止日期），过期则标记为已完成
     'check-and-end-activities': {
         'task': 'app.celery_tasks.check_and_end_activities_task',
-        'schedule': 300.0,  # 5分钟
+        'schedule': 900.0,  # 15分钟
     },
     
     # ========== 低频任务（每10分钟）==========

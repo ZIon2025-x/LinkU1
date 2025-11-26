@@ -5,11 +5,68 @@
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 from app.utils.time_utils import get_utc_time, parse_iso_utc
 
 logger = logging.getLogger(__name__)
+
+
+def get_redis_distributed_lock(lock_key: str, lock_ttl: int = 3600) -> bool:
+    """
+    获取 Redis 分布式锁（使用 SETNX）
+    返回 True 表示获取成功，False 表示锁已被占用
+    
+    Args:
+        lock_key: 锁的键名
+        lock_ttl: 锁的过期时间（秒），默认1小时
+    
+    Returns:
+        bool: 是否成功获取锁
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if not redis_client:
+            # Redis 不可用时，返回 True（允许执行，但会有多实例重复执行的风险）
+            logger.warning(f"Redis 不可用，跳过分布式锁检查: {lock_key}")
+            return True
+        
+        # 使用 SETNX 原子操作获取锁
+        # SET key value NX EX ttl
+        lock_value = str(time.time())
+        result = redis_client.set(lock_key, lock_value, nx=True, ex=lock_ttl)
+        
+        if result:
+            logger.debug(f"成功获取分布式锁: {lock_key}")
+            return True
+        else:
+            logger.debug(f"分布式锁已被占用: {lock_key}")
+            return False
+            
+    except Exception as e:
+        logger.warning(f"获取分布式锁失败 {lock_key}: {e}，允许执行（降级处理）")
+        return True  # 出错时允许执行，避免因锁机制故障导致任务无法执行
+
+
+def release_redis_distributed_lock(lock_key: str):
+    """
+    释放 Redis 分布式锁
+    
+    Args:
+        lock_key: 锁的键名
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            redis_client.delete(lock_key)
+            logger.debug(f"释放分布式锁: {lock_key}")
+    except Exception as e:
+        logger.warning(f"释放分布式锁失败 {lock_key}: {e}")
 
 class CleanupTasks:
     """清理任务管理器"""
@@ -64,7 +121,8 @@ class CleanupTasks:
             await self._cleanup_expired_time_slots()
             
             # 自动生成未来时间段（每天检查一次）
-            await self._auto_generate_future_time_slots()
+            # ⚠️ 已禁用：不需要每天新增时间段服务的下一个时间段
+            # await self._auto_generate_future_time_slots()
             
             logger.info("清理任务完成")
             
@@ -72,27 +130,28 @@ class CleanupTasks:
             logger.error(f"清理任务执行失败: {e}")
     
     async def _cleanup_expired_sessions(self):
-        """清理过期会话"""
+        """
+        清理过期会话（每小时执行一次，使用分布式锁）
+        注意：此任务已与 run_session_cleanup_task 合并，降低频率以避免重复清理
+        """
+        lock_key = "scheduled_task:cleanup_expired_sessions:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理过期会话：其他实例正在执行，跳过")
+            return
+        
         try:
-            from app.secure_auth import SecureAuthManager
-            from app.service_auth import ServiceAuthManager
-            from app.admin_auth import AdminAuthManager
-            from app.user_redis_cleanup import user_redis_cleanup
-            
-            # 清理用户会话
-            SecureAuthManager.cleanup_expired_sessions()
-            
-            # 清理客服会话
-            ServiceAuthManager.cleanup_expired_sessions()
-            
-            # 清理管理员会话
-            AdminAuthManager.cleanup_expired_sessions()
-            
-            # 清理用户Redis数据
-            user_redis_cleanup.cleanup_all_user_data()
+            # 统一调用清理函数（与 run_session_cleanup_task 使用相同的逻辑）
+            from app.main import cleanup_all_sessions_unified
+            cleanup_all_sessions_unified()
             
         except Exception as e:
             logger.error(f"清理过期会话失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_cache(self):
         """清理过期缓存"""
@@ -145,14 +204,16 @@ class CleanupTasks:
             logger.error(f"清理过期缓存失败: {e}")
     
     async def _cleanup_completed_tasks_files(self):
-        """清理已完成超过3天的任务的图片和文件（每天检查一次）"""
+        """清理已完成超过3天的任务的图片和文件（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_completed_tasks_files:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理已完成任务文件：其他实例正在执行，跳过")
+            return
+        
         try:
-            # 检查今天是否已经清理过
-            today = get_utc_time().date()
-            if self.last_completed_tasks_cleanup_date == today:
-                # 今天已经清理过，跳过
-                return
-            
             from app.deps import get_sync_db
             from app.crud import cleanup_completed_tasks_files
             
@@ -163,23 +224,26 @@ class CleanupTasks:
                 cleaned_count = cleanup_completed_tasks_files(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个已完成任务的文件")
-                # 更新最后清理日期
-                self.last_completed_tasks_cleanup_date = today
             finally:
                 db.close()
                 
         except Exception as e:
             logger.error(f"清理已完成任务文件失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_tasks_files(self):
-        """清理过期任务（已取消或deadline已过超过3天）的文件（每天检查一次）"""
+        """清理过期任务（已取消或deadline已过超过3天）的文件（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_expired_tasks_files:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理过期任务文件：其他实例正在执行，跳过")
+            return
+        
         try:
-            # 检查今天是否已经清理过
-            today = get_utc_time().date()
-            if self.last_expired_tasks_cleanup_date == today:
-                # 今天已经清理过，跳过
-                return
-            
             from app.deps import get_sync_db
             from app.crud import cleanup_expired_tasks_files
             
@@ -190,25 +254,26 @@ class CleanupTasks:
                 cleaned_count = cleanup_expired_tasks_files(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期任务的文件")
-                # 更新最后清理日期
-                self.last_expired_tasks_cleanup_date = today
             finally:
                 db.close()
                 
         except Exception as e:
             logger.error(f"清理过期任务文件失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_flea_market_items(self):
-        """清理超过10天未刷新的跳蚤市场商品（每天检查一次）"""
+        """清理超过10天未刷新的跳蚤市场商品（每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_expired_flea_market_items:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理过期跳蚤市场商品：其他实例正在执行，跳过")
+            return
+        
         try:
-            # 检查今天是否已经清理过
-            today = get_utc_time().date()
-            if not hasattr(self, 'last_flea_market_cleanup_date'):
-                self.last_flea_market_cleanup_date = None
-            if self.last_flea_market_cleanup_date == today:
-                # 今天已经清理过，跳过
-                return
-            
             from app.deps import get_sync_db
             from app.crud import cleanup_expired_flea_market_items
             
@@ -219,16 +284,25 @@ class CleanupTasks:
                 cleaned_count = cleanup_expired_flea_market_items(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期跳蚤市场商品")
-                # 更新最后清理日期
-                self.last_flea_market_cleanup_date = today
             finally:
                 db.close()
                 
         except Exception as e:
             logger.error(f"清理过期跳蚤市场商品失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_unused_temp_images(self):
-        """清理未使用的临时图片（超过24小时未使用的临时图片）"""
+        """清理未使用的临时图片（超过24小时未使用的临时图片，使用分布式锁和限流）"""
+        lock_key = "scheduled_task:cleanup_unused_temp_images:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理未使用临时图片：其他实例正在执行，跳过")
+            return
+        
         try:
             from pathlib import Path
             import os
@@ -251,31 +325,45 @@ class CleanupTasks:
             # 计算24小时前的时间
             cutoff_time = get_utc_time() - timedelta(hours=24)
             cleaned_count = 0
+            max_files_per_run = 1000  # 每次最多处理1000个文件，避免IO压力过大
             
             # 遍历所有临时文件夹（temp_*）
             for temp_dir in temp_base_dir.iterdir():
+                if cleaned_count >= max_files_per_run:
+                    logger.info(f"已达到单次处理上限（{max_files_per_run}），停止处理")
+                    break
+                    
                 if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
                     try:
-                        # 检查文件夹中的文件
+                        # 收集需要删除的文件（按修改时间排序，优先删除最旧的）
+                        files_to_delete = []
                         for file_path in temp_dir.iterdir():
                             if file_path.is_file():
-                                # 获取文件的修改时间（使用统一时间工具函数）
                                 file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
-                                
-                                # 如果文件超过24小时未修改，删除它
                                 if file_mtime < cutoff_time:
-                                    try:
-                                        file_path.unlink()
-                                        cleaned_count += 1
-                                        logger.info(f"删除未使用的临时图片: {file_path}")
-                                    except Exception as e:
-                                        logger.warning(f"删除临时图片失败 {file_path}: {e}")
+                                    files_to_delete.append((file_mtime, file_path))
+                        
+                        # 按时间排序，优先删除最旧的
+                        files_to_delete.sort(key=lambda x: x[0])
+                        
+                        # 限制本次处理的文件数量
+                        files_to_delete = files_to_delete[:max_files_per_run - cleaned_count]
+                        
+                        # 删除文件
+                        for _, file_path in files_to_delete:
+                            try:
+                                file_path.unlink()
+                                cleaned_count += 1
+                                if cleaned_count % 100 == 0:
+                                    logger.debug(f"已清理 {cleaned_count} 个临时图片...")
+                            except Exception as e:
+                                logger.warning(f"删除临时图片失败 {file_path}: {e}")
                         
                         # 如果文件夹为空，尝试删除它
                         try:
                             if not any(temp_dir.iterdir()):
                                 temp_dir.rmdir()
-                                logger.info(f"删除空的临时文件夹: {temp_dir}")
+                                logger.debug(f"删除空的临时文件夹: {temp_dir}")
                         except Exception as e:
                             logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
                             
@@ -291,6 +379,9 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理未使用临时图片失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_flea_market_temp_images(self):
         """清理跳蚤市场临时图片（超过24小时未使用的临时图片）"""
@@ -358,16 +449,16 @@ class CleanupTasks:
             logger.error(f"清理跳蚤市场临时图片失败: {e}")
     
     async def _cleanup_expired_time_slots(self):
-        """清理过期时间段（超过7天且没有参与者的时间段，每天检查一次）"""
+        """清理过期时间段（超过30天且任务已完成/取消的时间段，每天检查一次，使用分布式锁）"""
+        lock_key = "scheduled_task:cleanup_expired_time_slots:lock"
+        lock_ttl = 3600  # 1小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理过期时间段：其他实例正在执行，跳过")
+            return
+        
         try:
-            # 检查今天是否已经清理过
-            today = get_utc_time().date()
-            if not hasattr(self, 'last_time_slots_cleanup_date'):
-                self.last_time_slots_cleanup_date = None
-            if self.last_time_slots_cleanup_date == today:
-                # 今天已经清理过，跳过
-                return
-            
             from app.deps import get_sync_db
             from app.crud import cleanup_expired_time_slots
             
@@ -378,13 +469,14 @@ class CleanupTasks:
                 cleaned_count = cleanup_expired_time_slots(db)
                 if cleaned_count > 0:
                     logger.info(f"清理了 {cleaned_count} 个过期时间段")
-                # 更新最后清理日期
-                self.last_time_slots_cleanup_date = today
             finally:
                 db.close()
                 
         except Exception as e:
             logger.error(f"清理过期时间段失败: {e}")
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _auto_generate_future_time_slots(self):
         """自动为所有启用了时间段功能的服务生成未来30天的时间段（每天检查一次）"""

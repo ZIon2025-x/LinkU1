@@ -589,18 +589,49 @@ def run_background_task():
             time.sleep(60)  # 出错时等待1分钟后重试
 
 
+def cleanup_all_sessions_unified():
+    """
+    统一的会话清理函数
+    清理所有类型的过期会话（用户、客服、管理员）和用户Redis数据
+    """
+    try:
+        from app.secure_auth import SecureAuthManager
+        from app.service_auth import ServiceAuthManager
+        from app.admin_auth import AdminAuthManager
+        from app.user_redis_cleanup import cleanup_all_user_data
+        
+        # 清理用户会话
+        SecureAuthManager.cleanup_expired_sessions()
+        
+        # 清理客服会话
+        ServiceAuthManager.cleanup_expired_sessions()
+        
+        # 清理管理员会话
+        AdminAuthManager.cleanup_expired_sessions()
+        
+        # 清理用户Redis数据
+        cleanup_all_user_data()
+        
+    except Exception as e:
+        logger.error(f"统一会话清理失败: {e}")
+
+
 def run_session_cleanup_task():
-    """运行会话清理任务"""
+    """
+    运行会话清理任务（已优化：降低频率，改为每小时执行一次）
+    注意：此任务与 CleanupTasks._cleanup_expired_sessions 功能重叠，
+    但保留此任务作为独立线程，频率已降低以避免重复清理
+    """
     global _shutdown_flag
     while not _shutdown_flag:
         try:
-            from app.secure_auth import SecureAuthManager
-            SecureAuthManager.cleanup_expired_sessions()
-            # 每5分钟清理一次过期会话
-            time.sleep(300)
+            # 使用统一的清理函数
+            cleanup_all_sessions_unified()
+            # 改为每小时清理一次（降低频率，避免与 CleanupTasks 重复）
+            time.sleep(3600)  # 1小时
         except Exception as e:
             logger.error(f"会话清理任务出错: {e}")
-            time.sleep(300)  # 出错时等待5分钟后重试
+            time.sleep(3600)  # 出错时等待1小时后重试
 
 
 
@@ -625,6 +656,9 @@ async def startup_event():
     # 启动定时任务调度器 - 优先使用 Celery，备用 TaskScheduler
     import threading
     import time
+    
+    # 获取调度器模式（环境变量控制，避免双跑）
+    SCHEDULER_MODE = os.getenv("SCHEDULER_MODE", "auto").lower()  # auto, celery, local
     
     # 检查 Celery Worker 是否可用 - 优先使用 Celery，备用 TaskScheduler
     celery_available = False
@@ -683,9 +717,28 @@ async def startup_event():
         import traceback
         logger.debug(f"详细错误: {traceback.format_exc()}")
     
+    # 根据 SCHEDULER_MODE 决定使用哪个调度器
+    if SCHEDULER_MODE == "celery":
+        # 强制使用 Celery，不启动 TaskScheduler
+        if celery_available:
+            logger.info("✅ SCHEDULER_MODE=celery，使用 Celery 执行定时任务（Celery Beat 负责调度）")
+        else:
+            logger.warning("⚠️  SCHEDULER_MODE=celery，但 Celery Worker 不可用，请检查 Celery Worker 是否启动")
+    elif SCHEDULER_MODE == "local":
+        # 强制使用 TaskScheduler，不检测 Celery
+        celery_available = False
+        logger.info("ℹ️  SCHEDULER_MODE=local，使用 TaskScheduler 执行定时任务（不检测 Celery）")
+    else:  # auto
+        # 自动检测模式（原有逻辑）
+        if celery_available:
+            logger.info("ℹ️  Celery 可用，不启动 TaskScheduler（定时任务由 Celery Beat 调度，Celery Worker 执行）")
+        else:
+            logger.info("ℹ️  Celery 不可用，将使用 TaskScheduler 作为备用")
+    
     # 如果 Celery 可用，不启动 TaskScheduler（由 Celery Beat 负责调度）
     if celery_available:
-        logger.info("ℹ️  Celery 可用，不启动 TaskScheduler（定时任务由 Celery Beat 调度，Celery Worker 执行）")
+        # 已在上面记录日志，这里不需要重复
+        pass
     else:
         # 如果 Celery 不可用，启动 TaskScheduler 作为备用
         logger.info("📋 启动 TaskScheduler 作为备用调度器...")

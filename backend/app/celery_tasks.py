@@ -8,6 +8,61 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
+
+def get_redis_distributed_lock(lock_key: str, lock_ttl: int = 3600) -> bool:
+    """
+    获取 Redis 分布式锁（使用 SETNX）
+    返回 True 表示获取成功，False 表示锁已被占用
+    
+    Args:
+        lock_key: 锁的键名
+        lock_ttl: 锁的过期时间（秒），默认1小时
+    
+    Returns:
+        bool: 是否成功获取锁
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if not redis_client:
+            # Redis 不可用时，返回 True（允许执行，但会有多实例重复执行的风险）
+            logger.warning(f"Redis 不可用，跳过分布式锁检查: {lock_key}")
+            return True
+        
+        # 使用 SETNX 原子操作获取锁
+        lock_value = str(time.time())
+        result = redis_client.set(lock_key, lock_value, nx=True, ex=lock_ttl)
+        
+        if result:
+            logger.debug(f"成功获取分布式锁: {lock_key}")
+            return True
+        else:
+            logger.debug(f"分布式锁已被占用: {lock_key}")
+            return False
+            
+    except Exception as e:
+        logger.warning(f"获取分布式锁失败 {lock_key}: {e}，允许执行（降级处理）")
+        return True  # 出错时允许执行，避免因锁机制故障导致任务无法执行
+
+
+def release_redis_distributed_lock(lock_key: str):
+    """
+    释放 Redis 分布式锁
+    
+    Args:
+        lock_key: 锁的键名
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            redis_client.delete(lock_key)
+            logger.debug(f"释放分布式锁: {lock_key}")
+    except Exception as e:
+        logger.warning(f"释放分布式锁失败 {lock_key}: {e}")
+
 # 辅助函数：记录 Prometheus 指标
 def _record_task_metrics(task_name: str, status: str, duration: float):
     """记录任务执行指标"""
@@ -247,10 +302,38 @@ if CELERY_AVAILABLE:
         name='app.celery_tasks.update_all_users_statistics_task',
         bind=True,
         max_retries=2,
-        default_retry_delay=300  # 重试延迟5分钟（统计更新不是紧急任务）
+        default_retry_delay=60
     )
     def update_all_users_statistics_task(self):
-        """更新所有用户统计信息 - Celery任务包装"""
+        """更新所有用户统计信息 - Celery任务包装（带分布式锁，避免叠跑）"""
+        lock_key = "scheduled:update_all_users_statistics:lock"
+        lock_ttl = 600  # 10分钟（任务执行周期）
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.warning("更新用户统计信息任务正在执行中，跳过本次调度")
+            return {"status": "skipped", "reason": "previous_task_running"}
+        
+        start_time = time.time()
+        task_name = 'update_all_users_statistics_task'
+        try:
+            update_all_users_statistics()
+            duration = time.time() - start_time
+            logger.info(f"更新所有用户统计信息完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "message": "User statistics updated"}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"更新所有用户统计信息失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
+    
         start_time = time.time()
         task_name = 'update_all_users_statistics_task'
         try:
