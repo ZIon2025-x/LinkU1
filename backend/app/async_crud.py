@@ -1263,7 +1263,10 @@ class AsyncNotificationCRUD:
         content: str,
         related_id: Optional[str] = None,
     ) -> models.Notification:
-        """创建通知"""
+        """创建通知（如果已存在则更新）"""
+        from sqlalchemy.exc import IntegrityError
+        from app.utils.time_utils import get_utc_time
+        
         try:
             # ⚠️ 将related_id从字符串转换为整数（数据库字段是Integer类型）
             related_id_int = None
@@ -1285,6 +1288,33 @@ class AsyncNotificationCRUD:
             await db.commit()
             await db.refresh(db_notification)
             return db_notification
+        except IntegrityError:
+            # 如果违反唯一约束（uix_user_type_related），更新现有通知
+            await db.rollback()
+            
+            # 查询现有通知
+            existing_result = await db.execute(
+                select(models.Notification)
+                .where(models.Notification.user_id == user_id)
+                .where(models.Notification.type == notification_type)
+                .where(models.Notification.related_id == (int(related_id) if related_id else None))
+            )
+            existing_notification = existing_result.scalar_one_or_none()
+            
+            if existing_notification:
+                # 更新现有通知的内容和时间
+                existing_notification.content = content
+                existing_notification.title = title
+                existing_notification.created_at = get_utc_time()
+                existing_notification.is_read = 0  # 重置为未读
+                existing_notification.read_at = None  # 清除已读时间
+                await db.commit()
+                await db.refresh(existing_notification)
+                return existing_notification
+            else:
+                # 如果找不到现有通知，重新抛出异常
+                logger.error(f"IntegrityError but existing notification not found: user_id={user_id}, type={notification_type}, related_id={related_id}")
+                raise
         except Exception as e:
             await db.rollback()
             logger.error(f"Error creating notification: {e}")

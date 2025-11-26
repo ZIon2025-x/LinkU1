@@ -2350,11 +2350,12 @@ async def apply_for_service(
         await db.commit()
         # ⚠️ 在异步上下文中，需要重新查询对象以确保所有属性都被正确加载
         # 避免 MissingGreenlet 错误（惰性加载的关系属性）
-        await db.refresh(new_application)
-        # 重新查询以确保所有属性都被加载
+        # 先获取 ID（此时对象已经在会话中，id 应该已经可用）
+        application_id = new_application.id
+        # 重新查询以确保所有属性都被加载（使用 selectinload 预加载关系）
         refreshed_application = await db.execute(
             select(models.ServiceApplication)
-            .where(models.ServiceApplication.id == new_application.id)
+            .where(models.ServiceApplication.id == application_id)
         )
         new_application = refreshed_application.scalar_one()
     except IntegrityError:
@@ -2488,28 +2489,8 @@ async def apply_for_service(
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
     
-    # ⚠️ 确保所有属性都被访问，避免惰性加载问题
-    # 访问所有可能被响应模型使用的属性
-    _ = (
-        new_application.id,
-        new_application.service_id,
-        new_application.applicant_id,
-        new_application.expert_id,
-        new_application.time_slot_id,
-        new_application.application_message,
-        new_application.negotiated_price,
-        new_application.expert_counter_price,
-        new_application.currency,
-        new_application.status,
-        new_application.final_price,
-        new_application.task_id,
-        new_application.deadline,
-        new_application.is_flexible,
-        new_application.created_at,
-        new_application.approved_at,
-        new_application.price_agreed_at,
-    )
-    
+    # ⚠️ 重新查询后的对象所有属性都已加载，不需要再"预热"
+    # 直接返回对象即可（响应模型会自动序列化已加载的属性）
     return new_application
 
 

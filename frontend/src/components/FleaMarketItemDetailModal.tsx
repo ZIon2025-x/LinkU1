@@ -8,7 +8,8 @@ import {
   FlagOutlined,
   ShoppingCartOutlined,
   MessageOutlined,
-  CloseOutlined
+  CloseOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
@@ -77,6 +78,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
   const [counterPrice, setCounterPrice] = useState<number | undefined>();
   const [counterOfferLoading, setCounterOfferLoading] = useState(false);
   const [rejectLoading, setRejectLoading] = useState<string | null>(null);
+  const [refreshLoading, setRefreshLoading] = useState(false);
   
   const isOwner = currentUser && item && currentUser.id === item.seller_id;
   const isActive = item?.status === 'active';
@@ -331,6 +333,30 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       }
     });
   }, [itemId, loadPurchaseRequests, t]);
+
+  // 刷新商品
+  const handleRefresh = useCallback(async () => {
+    if (!itemId || !item) return;
+    
+    setRefreshLoading(true);
+    try {
+      const response = await api.post(`/api/flea-market/items/${itemId}/refresh`);
+      message.success(t('fleaMarket.refreshSuccess') || '商品刷新成功，已更新刷新时间');
+      
+      // 重新加载商品信息以更新刷新时间
+      await loadItem();
+      
+      // 通知父组件更新
+      if (onItemUpdated) {
+        onItemUpdated();
+      }
+    } catch (error: any) {
+      console.error('刷新商品失败:', error);
+      message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
+    } finally {
+      setRefreshLoading(false);
+    }
+  }, [itemId, item, loadItem, onItemUpdated, t]);
   
   if (!isOpen) return null;
   
@@ -463,6 +489,15 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
               <div className={styles.actions}>
                 {isOwner ? (
                   <Space>
+                    {isActive && (
+                      <Button
+                        icon={<ReloadOutlined />}
+                        loading={refreshLoading}
+                        onClick={handleRefresh}
+                      >
+                        {t('fleaMarket.refreshItem') || '刷新商品'}
+                      </Button>
+                    )}
                     <Button
                       icon={<EditOutlined />}
                       onClick={() => {
