@@ -393,12 +393,13 @@ async def create_service(
     
     # 验证时间段相关字段
     if service_data.has_time_slots:
-        # 任务达人只能设置时间段时长和参与者数量
-        # 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
-        if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+        # 任务达人只能设置参与者数量
+        # 时间段配置（统一时间或按周几设置）和时间段时长由管理员在任务达人管理中设置
+        # 任务达人通过创建时间段API直接创建特定日期的时间段
+        if not service_data.participants_per_slot:
             raise HTTPException(
                 status_code=400,
-                detail="启用时间段时，必须提供时间段时长和参与者数量"
+                detail="启用时间段时，必须提供参与者数量"
             )
         
         # 禁止任务达人设置时间段配置
@@ -418,7 +419,8 @@ async def create_service(
         display_order=service_data.display_order,
         status="active",
         has_time_slots=service_data.has_time_slots,
-        time_slot_duration_minutes=service_data.time_slot_duration_minutes,
+        # 时间段时长由管理员设置，任务达人不能设置
+        time_slot_duration_minutes=service_data.time_slot_duration_minutes if service_data.time_slot_duration_minutes else None,
         # 时间段配置由管理员设置，任务达人不能设置
         time_slot_start_time=None,
         time_slot_end_time=None,
@@ -543,12 +545,13 @@ async def update_service(
     if service_data.has_time_slots is not None:
         service.has_time_slots = service_data.has_time_slots
         if service_data.has_time_slots:
-            # 任务达人只能设置时间段时长和参与者数量
-            # 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
-            if not service_data.time_slot_duration_minutes or not service_data.participants_per_slot:
+            # 任务达人只能设置参与者数量
+            # 时间段配置（统一时间或按周几设置）和时间段时长由管理员在任务达人管理中设置
+            # 任务达人通过创建时间段API直接创建特定日期的时间段
+            if service_data.participants_per_slot is not None and service_data.participants_per_slot <= 0:
                 raise HTTPException(
                     status_code=400,
-                    detail="启用时间段时，必须提供时间段时长和参与者数量"
+                    detail="参与者数量必须大于0"
                 )
             
             # 禁止任务达人修改时间段配置
@@ -558,16 +561,20 @@ async def update_service(
                     detail="时间段配置（统一时间或按周几设置）只能由管理员在任务达人管理中设置"
                 )
             
-            # 只更新任务达人可以修改的字段
+            # 禁止任务达人修改时间段时长
             if service_data.time_slot_duration_minutes is not None:
-                service.time_slot_duration_minutes = service_data.time_slot_duration_minutes
+                raise HTTPException(
+                    status_code=403,
+                    detail="时间段时长只能由管理员在任务达人管理中设置"
+                )
+            
+            # 只更新任务达人可以修改的字段
             if service_data.participants_per_slot is not None:
                 service.participants_per_slot = service_data.participants_per_slot
-            # 不更新time_slot_start_time、time_slot_end_time和weekly_time_slot_config（由管理员设置）
+            # 不更新time_slot_start_time、time_slot_end_time、weekly_time_slot_config和time_slot_duration_minutes（由管理员设置）
         else:
             # 禁用时间段时，清除相关字段并删除所有时间段
-            service.time_slot_duration_minutes = None
-            # 不清除time_slot_start_time、time_slot_end_time和weekly_time_slot_config（由管理员管理）
+            # 不清除time_slot_start_time、time_slot_end_time、weekly_time_slot_config和time_slot_duration_minutes（由管理员管理）
             service.participants_per_slot = None
             
             # 如果之前启用了时间段，现在禁用了，需要删除所有未来的时间段

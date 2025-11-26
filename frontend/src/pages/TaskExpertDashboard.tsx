@@ -39,6 +39,7 @@ import {
   getExpertDashboardStats,
   getExpertSchedule,
   deleteServiceTimeSlot,
+  createServiceTimeSlot,
   createClosedDate,
   getClosedDates,
   deleteClosedDate,
@@ -3776,21 +3777,11 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     images: [] as string[],
     // 时间段相关字段（可选）
     has_time_slots: false,
-    time_slot_duration_minutes: 60,
-    time_slot_start_time: '09:00',
-    time_slot_end_time: '18:00',
     participants_per_slot: 1,
-    // 按周几设置时间段配置
-    use_weekly_config: false, // 是否使用按周几配置
-    weekly_time_slot_config: {
-      monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-      sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-    } as { [key: string]: { enabled: boolean; start_time: string; end_time: string } },
+    // 特定日期和时间段（英国时间）
+    slot_date: '', // 日期，格式：YYYY-MM-DD
+    slot_start_time: '12:00', // 开始时间（英国时间），格式：HH:MM
+    slot_end_time: '14:00', // 结束时间（英国时间），格式：HH:MM
   });
   const [saving, setSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
@@ -3798,45 +3789,9 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
 
   useEffect(() => {
     if (service) {
-      // 从服务对象中获取时间段信息（后端已支持）
+      // 从服务对象中获取时间段信息
       const hasTimeSlots = service.has_time_slots || false;
-      const timeSlotDuration = service.time_slot_duration_minutes || 60;
-      // 后端返回的时间格式可能是 "HH:MM:SS"，需要转换为 "HH:MM" 用于 input[type="time"]
-      const timeSlotStart = service.time_slot_start_time 
-        ? service.time_slot_start_time.substring(0, 5) 
-        : '09:00';
-      const timeSlotEnd = service.time_slot_end_time 
-        ? service.time_slot_end_time.substring(0, 5) 
-        : '18:00';
       const participantsPerSlot = service.participants_per_slot || 1;
-      const weeklyConfig = service.weekly_time_slot_config || null;
-      const useWeeklyConfig = !!weeklyConfig;
-      
-      // 初始化按周几配置
-      const defaultWeeklyConfig = {
-        monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-        tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-        wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-        thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-        friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-        saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-        sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-      };
-      
-      // 如果服务有按周几配置，使用它；否则使用默认配置
-      const weeklyTimeSlotConfig = useWeeklyConfig ? {
-        ...defaultWeeklyConfig,
-        ...Object.keys(defaultWeeklyConfig).reduce((acc, day) => {
-          const dayKey = day as keyof typeof defaultWeeklyConfig;
-          const dayConfig = (weeklyConfig as any)?.[day] || defaultWeeklyConfig[dayKey];
-          acc[dayKey] = {
-            enabled: dayConfig.enabled !== false,
-            start_time: dayConfig.start_time ? dayConfig.start_time.substring(0, 5) : defaultWeeklyConfig[dayKey].start_time,
-            end_time: dayConfig.end_time ? dayConfig.end_time.substring(0, 5) : defaultWeeklyConfig[dayKey].end_time,
-          };
-          return acc;
-        }, {} as typeof defaultWeeklyConfig)
-      } : defaultWeeklyConfig;
       
       setFormData({
         service_name: service.service_name,
@@ -3846,12 +3801,10 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         status: service.status,
         images: service.images || [],
         has_time_slots: hasTimeSlots,
-        time_slot_duration_minutes: timeSlotDuration,
-        time_slot_start_time: timeSlotStart,
-        time_slot_end_time: timeSlotEnd,
         participants_per_slot: participantsPerSlot,
-        use_weekly_config: useWeeklyConfig,
-        weekly_time_slot_config: weeklyTimeSlotConfig,
+        slot_date: '',
+        slot_start_time: '12:00',
+        slot_end_time: '14:00',
       });
     } else {
       // 新建服务时重置时间段字段
@@ -3863,20 +3816,10 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         status: 'active',
         images: [],
         has_time_slots: false,
-        time_slot_duration_minutes: 60,
-        time_slot_start_time: '09:00',
-        time_slot_end_time: '18:00',
         participants_per_slot: 1,
-        use_weekly_config: false,
-        weekly_time_slot_config: {
-          monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          saturday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-          sunday: { enabled: false, start_time: '12:00', end_time: '17:00' },
-        },
+        slot_date: '',
+        slot_start_time: '12:00',
+        slot_end_time: '14:00',
       });
     }
   }, [service]);
@@ -3902,12 +3845,25 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
     
     // 验证时间段设置
     if (formData.has_time_slots) {
-      if (formData.time_slot_duration_minutes <= 0) {
-        message.warning('时间段时长必须大于0');
+      if (!formData.slot_date) {
+        message.warning('请选择日期');
+        return;
+      }
+      if (!formData.slot_start_time || !formData.slot_end_time) {
+        message.warning('请设置开始时间和结束时间');
         return;
       }
       if (formData.participants_per_slot <= 0) {
         message.warning('每个时间段的参与者数量必须大于0');
+        return;
+      }
+      // 验证开始时间早于结束时间
+      const startTime = formData.slot_start_time.split(':').map(Number);
+      const endTime = formData.slot_end_time.split(':').map(Number);
+      const startMinutes = startTime[0] * 60 + startTime[1];
+      const endMinutes = endTime[0] * 60 + endTime[1];
+      if (startMinutes >= endMinutes) {
+        message.warning('开始时间必须早于结束时间');
         return;
       }
     }
@@ -3927,15 +3883,17 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
       // 添加时间段信息（如果启用）
       if (formData.has_time_slots) {
         submitData.has_time_slots = true;
-        submitData.time_slot_duration_minutes = formData.time_slot_duration_minutes;
         submitData.participants_per_slot = formData.participants_per_slot;
         // 时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置
+        // 时间段时长也由管理员设置
         // 任务达人不能设置这些配置
+        submitData.time_slot_duration_minutes = undefined;
         submitData.time_slot_start_time = undefined;
         submitData.time_slot_end_time = undefined;
         submitData.weekly_time_slot_config = undefined;
       } else {
         submitData.has_time_slots = false;
+        submitData.time_slot_duration_minutes = undefined;
         submitData.time_slot_start_time = undefined;
         submitData.time_slot_end_time = undefined;
         submitData.weekly_time_slot_config = undefined;
@@ -3952,21 +3910,19 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
         message.success('服务已创建');
       }
       
-      // 如果启用了时间段，自动批量创建未来30天的时间段
+      // 如果启用了时间段，创建指定的时间段
       if (formData.has_time_slots && savedServiceId) {
         try {
-          const today = new Date();
-          const futureDate = new Date(today);
-          futureDate.setDate(today.getDate() + 30);
-          
-          await batchCreateServiceTimeSlots(savedServiceId, {
-            start_date: today.toISOString().split('T')[0],
-            end_date: futureDate.toISOString().split('T')[0],
+          await createServiceTimeSlot(savedServiceId, {
+            slot_date: formData.slot_date,
+            start_time: formData.slot_start_time + ':00', // 转换为HH:MM:SS格式
+            end_time: formData.slot_end_time + ':00',
             price_per_participant: formData.base_price,
+            max_participants: formData.participants_per_slot,
           });
-          message.success('时间段已自动创建（未来30天）');
+          message.success('时间段已创建');
         } catch (err: any) {
-          console.error('批量创建时间段失败:', err);
+          console.error('创建时间段失败:', err);
           // 不阻止服务保存，只提示警告
           message.warning('服务已保存，但时间段创建失败，请稍后手动创建时间段');
         }
@@ -3990,9 +3946,9 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
               ...prev,
               [savedServiceId]: {
                 has_time_slots: true,
-                time_slot_duration_minutes: formData.time_slot_duration_minutes,
-                time_slot_start_time: existing?.time_slot_start_time || '09:00',
-                time_slot_end_time: existing?.time_slot_end_time || '18:00',
+                time_slot_duration_minutes: existing?.time_slot_duration_minutes || 60, // 从服务配置获取
+                time_slot_start_time: existing?.time_slot_start_time || '09:00', // 由管理员设置
+                time_slot_end_time: existing?.time_slot_end_time || '18:00', // 由管理员设置
                 participants_per_slot: formData.participants_per_slot,
               }
             };
@@ -4331,17 +4287,35 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
           
           {formData.has_time_slots && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-              {/* 时间段时长和参与者数量（两种模式都需要） */}
+              {/* 特定日期和时间段（英国时间） */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                  日期（英国时间） <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.slot_date}
+                  onChange={(e) => setFormData({ ...formData, slot_date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    时间段时长（分钟）*
+                    开始时间（英国时间） <span style={{ color: '#dc3545' }}>*</span>
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    value={formData.time_slot_duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, time_slot_duration_minutes: parseInt(e.target.value) || 60 })}
+                    type="time"
+                    value={formData.slot_start_time}
+                    onChange={(e) => setFormData({ ...formData, slot_start_time: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '8px',
@@ -4349,18 +4323,16 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                       borderRadius: '6px',
                       fontSize: '14px',
                     }}
-                    placeholder="60"
                   />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
-                    每个时间段最多参与者 *
+                    结束时间（英国时间） <span style={{ color: '#dc3545' }}>*</span>
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    value={formData.participants_per_slot}
-                    onChange={(e) => setFormData({ ...formData, participants_per_slot: parseInt(e.target.value) || 1 })}
+                    type="time"
+                    value={formData.slot_end_time}
+                    onChange={(e) => setFormData({ ...formData, slot_end_time: e.target.value })}
                     style={{
                       width: '100%',
                       padding: '8px',
@@ -4368,13 +4340,32 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({ service, onClose, o
                       borderRadius: '6px',
                       fontSize: '14px',
                     }}
-                    placeholder="1"
                   />
                 </div>
               </div>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#4a5568' }}>
+                  每个时间段最多参与者 <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.participants_per_slot}
+                  onChange={(e) => setFormData({ ...formData, participants_per_slot: parseInt(e.target.value) || 1 })}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                  placeholder="1"
+                />
+              </div>
 
               <div style={{ fontSize: '12px', color: '#718096', marginTop: '12px' }}>
-                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置。您只能创建单个固定时间段（如1月1号的12点-14点）。
+                💡 提示：启用时间段后，用户申请此服务时需要选择具体的日期和时间段。时间段配置（统一时间或按周几设置）由管理员在任务达人管理中设置。您只能创建单个固定时间段（如1月1号的12点-14点，英国时间）。
               </div>
             </div>
           )}
