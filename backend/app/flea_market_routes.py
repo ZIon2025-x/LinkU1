@@ -444,14 +444,14 @@ async def get_flea_market_item(
 @flea_market_router.post("/upload-image")
 async def upload_flea_market_image(
     image: UploadFile = File(...),
-    item_id: Optional[int] = Query(None, description="商品ID（编辑商品时提供，新建商品时可不提供）"),
+    item_id: Optional[str] = Query(None, description="商品ID（编辑商品时提供，支持格式化ID如S0004或数字ID，新建商品时可不提供）"),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """
     上传跳蚤市场商品图片
     - 新建商品时：不提供item_id，图片会存储在临时目录，创建商品后移动到正式目录
-    - 编辑商品时：提供item_id，图片直接存储在商品目录
+    - 编辑商品时：提供item_id（支持格式化ID如S0004或数字ID），图片直接存储在商品目录
     """
     try:
         # 读取文件内容
@@ -481,10 +481,20 @@ async def upload_flea_market_image(
             )
         
         # 确定存储目录
+        db_id = None
         if item_id:
+            # 解析商品ID（支持格式化ID如S0004或数字ID）
+            try:
+                db_id = parse_flea_market_id(item_id)
+            except (ValueError, AttributeError) as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"无效的商品ID格式: {item_id}"
+                )
+            
             # 编辑商品：验证权限
             result = await db.execute(
-                select(models.FleaMarketItem).where(models.FleaMarketItem.id == item_id)
+                select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
             )
             item = result.scalar_one_or_none()
             if not item:
@@ -497,7 +507,7 @@ async def upload_flea_market_image(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="无权限操作此商品"
                 )
-            image_dir = FLEA_MARKET_IMAGE_DIR / str(item_id)
+            image_dir = FLEA_MARKET_IMAGE_DIR / str(db_id)
         else:
             # 新建商品：使用临时目录
             image_dir = FLEA_MARKET_IMAGE_DIR / f"temp_{current_user.id}"
@@ -516,7 +526,8 @@ async def upload_flea_market_image(
         # 生成URL
         base_url = Config.FRONTEND_URL.rstrip('/')
         if item_id:
-            image_url = f"{base_url}/uploads/flea_market/{item_id}/{unique_filename}"
+            # 使用解析后的数据库ID生成URL
+            image_url = f"{base_url}/uploads/flea_market/{db_id}/{unique_filename}"
         else:
             image_url = f"{base_url}/uploads/flea_market/temp_{current_user.id}/{unique_filename}"
         
