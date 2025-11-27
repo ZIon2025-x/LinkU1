@@ -2691,6 +2691,27 @@ def delete_admin_user_by_super_admin(db: Session, admin_id: str):
         # 不能删除自己
         if admin.is_super_admin:
             return False
+        
+        # 检查是否有不可为空的记录引用此管理员（created_by不可为空，使用RESTRICT约束）
+        # 检查岗位（JobPosition）
+        job_count = db.query(models.JobPosition).filter(
+            models.JobPosition.created_by == admin_id
+        ).count()
+        
+        # 检查精选任务达人（FeaturedTaskExpert）
+        expert_count = db.query(models.FeaturedTaskExpert).filter(
+            models.FeaturedTaskExpert.created_by == admin_id
+        ).count()
+        
+        # 检查管理员奖励（AdminReward）
+        reward_count = db.query(models.AdminReward).filter(
+            models.AdminReward.created_by == admin_id
+        ).count()
+        
+        if job_count > 0 or expert_count > 0 or reward_count > 0:
+            # 有相关记录，不能删除
+            return False
+        
         db.delete(admin)
         db.commit()
         return True
@@ -2945,8 +2966,22 @@ def delete_customer_service_by_admin(db: Session, cs_id: int):
                 .first()
             )
 
+        # 如果找到对应的用户，检查是否有任务（poster_id是RESTRICT约束）
         if user:
-            db.delete(user)
+            # 检查是否有任务
+            task_count = db.query(models.Task).filter(
+                models.Task.poster_id == user.id
+            ).count()
+            
+            if task_count > 0:
+                # 有任务，不能删除用户，只删除客服记录
+                db.delete(cs)
+                db.commit()
+                return True
+            else:
+                # 没有任务，可以删除用户
+                db.delete(user)
+        
         db.delete(cs)
         db.commit()
         return True

@@ -4983,19 +4983,7 @@ def update_task_by_admin(
 
     return {"message": "Task updated successfully", "task": task}
 
-
-@router.delete("/admin/tasks/{task_id}")
-def delete_task_by_admin(
-    task_id: int,
-    current_admin=Depends(get_current_admin),
-    db: Session = Depends(get_db),
-):
-    """超级管理员删除任务"""
-    success = crud.delete_task_by_admin(db, task_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    return {"message": "Task deleted successfully"}
+# 注意：删除任务的路由已在2821行定义（admin_delete_task），这里不再重复定义
 
 
 @router.post("/admin/customer-service/{cs_id}/notify")
@@ -6984,6 +6972,60 @@ def delete_expert_service_admin(
             error_msg += "、" .join(reasons) + "。请先处理相关任务和活动后再删除。"
             raise HTTPException(status_code=400, detail=error_msg)
         
+        # 检查是否有未过期且仍有参与者的时间段
+        from app.utils.time_utils import get_utc_time
+        current_utc = get_utc_time()
+        
+        future_slots_with_participants = db.query(models.ServiceTimeSlot).filter(
+            models.ServiceTimeSlot.service_id == service_id,
+            models.ServiceTimeSlot.slot_start_datetime >= current_utc,
+            models.ServiceTimeSlot.current_participants > 0
+        ).count()
+        
+        if future_slots_with_participants > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除服务，因为有 {future_slots_with_participants} 个未过期的时间段仍有参与者。请等待时间段过期或处理相关参与者后再删除。"
+            )
+        
+        # 查找所有相关的 ServiceTimeSlot IDs
+        time_slots = db.query(models.ServiceTimeSlot.id).filter(
+            models.ServiceTimeSlot.service_id == service_id
+        ).all()
+        time_slot_ids = [row[0] for row in time_slots]
+        
+        if time_slot_ids:
+            # 删除所有 TaskTimeSlotRelation 记录
+            db.query(models.TaskTimeSlotRelation).filter(
+                models.TaskTimeSlotRelation.time_slot_id.in_(time_slot_ids)
+            ).delete(synchronize_session=False)
+            
+            # 删除所有 ActivityTimeSlotRelation 记录
+            db.query(models.ActivityTimeSlotRelation).filter(
+                models.ActivityTimeSlotRelation.time_slot_id.in_(time_slot_ids)
+            ).delete(synchronize_session=False)
+        
+        # 删除服务图片（如果存在）
+        service_images = service.images if hasattr(service, 'images') and service.images else []
+        if service_images:
+            from app.image_cleanup import delete_service_images
+            try:
+                import json
+                if isinstance(service_images, str):
+                    image_urls = json.loads(service_images)
+                elif isinstance(service_images, list):
+                    image_urls = service_images
+                else:
+                    image_urls = []
+                
+                delete_service_images(expert_id, service_id, image_urls)
+            except Exception as e:
+                logger.warning(f"删除服务图片失败: {e}")
+        
+        # 更新任务达人的服务数量
+        expert.total_services = max(0, expert.total_services - 1)
+        
+        # 现在安全地删除服务（cascades 到 ServiceTimeSlot）
         db.delete(service)
         db.commit()
         

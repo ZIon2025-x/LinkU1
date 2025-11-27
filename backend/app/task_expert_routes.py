@@ -776,118 +776,147 @@ async def delete_service(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """任务达人删除服务"""
-    service = await db.execute(
-        select(models.TaskExpertService)
-        .where(models.TaskExpertService.id == service_id)
-        .where(models.TaskExpertService.expert_id == current_expert.id)
-    )
-    service = service.scalar_one_or_none()
-    if not service:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+    try:
+        service = await db.execute(
+            select(models.TaskExpertService)
+            .where(models.TaskExpertService.id == service_id)
+            .where(models.TaskExpertService.expert_id == current_expert.id)
         )
-    
-    # 保存服务图片URL，用于后续删除
-    service_images = service.images if hasattr(service, 'images') and service.images else []
-    expert_id = current_expert.id
-    
-    # 检查是否有任务正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
-    # 注意：数据库层面的 RESTRICT 约束会阻止删除任何引用此服务的任务，无论状态如何
-    tasks_using_service_result = await db.execute(
-        select(func.count(models.Task.id))
-        .where(models.Task.expert_service_id == service_id)
-    )
-    tasks_using_service = tasks_using_service_result.scalar() or 0
-    
-    # 检查是否有活动正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
-    activities_using_service_result = await db.execute(
-        select(func.count(models.Activity.id))
-        .where(models.Activity.expert_service_id == service_id)
-    )
-    activities_using_service = activities_using_service_result.scalar() or 0
-    
-    if tasks_using_service > 0 or activities_using_service > 0:
-        error_msg = "无法删除服务，因为"
-        reasons = []
-        if tasks_using_service > 0:
-            reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
-        if activities_using_service > 0:
-            reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
-        error_msg += "、".join(reasons) + "。请先处理相关任务和活动后再删除。"
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error_msg
-        )
-    
-    # 1. 检查是否有未过期且仍有参与者的时间段（即使任务/活动已完成，时间段本身可能仍有参与者记录）
-    from app.utils.time_utils import get_utc_time
-    current_utc = get_utc_time()
-    
-    future_slots_with_participants_result = await db.execute(
-        select(func.count(models.ServiceTimeSlot.id))
-        .where(models.ServiceTimeSlot.service_id == service_id)
-        .where(models.ServiceTimeSlot.slot_start_datetime >= current_utc)
-        .where(models.ServiceTimeSlot.current_participants > 0)
-    )
-    future_slots_with_participants = future_slots_with_participants_result.scalar() or 0
-    
-    if future_slots_with_participants > 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"无法删除服务，因为有 {future_slots_with_participants} 个未过期的时间段仍有参与者。请等待时间段过期或处理相关参与者后再删除。"
-        )
-    
-    # 2. 查找所有相关的 ServiceTimeSlot IDs
-    time_slots_result = await db.execute(
-        select(models.ServiceTimeSlot.id)
-        .where(models.ServiceTimeSlot.service_id == service_id)
-    )
-    time_slot_ids = [row[0] for row in time_slots_result.fetchall()]
-    
-    if time_slot_ids:
-        # 3. 删除所有 TaskTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
-        # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
-        task_relations_result = await db.execute(
-            select(models.TaskTimeSlotRelation)
-            .where(models.TaskTimeSlotRelation.time_slot_id.in_(time_slot_ids))
-        )
-        task_relations = task_relations_result.scalars().all()
-        for relation in task_relations:
-            await db.delete(relation)
+        service = service.scalar_one_or_none()
+        if not service:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="服务不存在"
+            )
         
-        # 4. 删除所有 ActivityTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
-        # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
-        activity_relations_result = await db.execute(
-            select(models.ActivityTimeSlotRelation)
-            .where(models.ActivityTimeSlotRelation.time_slot_id.in_(time_slot_ids))
+        # 保存服务图片URL，用于后续删除
+        service_images = service.images if hasattr(service, 'images') and service.images else []
+        expert_id = current_expert.id
+        
+        # 检查是否有任务正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
+        # 注意：数据库层面的 RESTRICT 约束会阻止删除任何引用此服务的任务，无论状态如何
+        tasks_using_service_result = await db.execute(
+            select(func.count(models.Task.id))
+            .where(models.Task.expert_service_id == service_id)
         )
-        activity_relations = activity_relations_result.scalars().all()
-        for relation in activity_relations:
-            await db.delete(relation)
-    
-    # 5. 现在安全地删除服务（cascades 到 ServiceTimeSlot）
-    await db.delete(service)
-    current_expert.total_services = max(0, current_expert.total_services - 1)
-    await db.commit()
-    
-    # 删除服务的所有图片
-    if service_images:
-        from app.image_cleanup import delete_service_images
-        try:
-            # 如果images是JSONB类型，可能需要解析
-            import json
-            if isinstance(service_images, str):
-                image_urls = json.loads(service_images)
-            elif isinstance(service_images, list):
-                image_urls = service_images
-            else:
-                image_urls = []
+        tasks_using_service = tasks_using_service_result.scalar() or 0
+        
+        # 检查是否有活动正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
+        activities_using_service_result = await db.execute(
+            select(func.count(models.Activity.id))
+            .where(models.Activity.expert_service_id == service_id)
+        )
+        activities_using_service = activities_using_service_result.scalar() or 0
+        
+        if tasks_using_service > 0 or activities_using_service > 0:
+            error_msg = "无法删除服务，因为"
+            reasons = []
+            if tasks_using_service > 0:
+                reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
+            if activities_using_service > 0:
+                reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
+            error_msg += "、".join(reasons) + "。请先处理相关任务和活动后再删除。"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_msg
+            )
+        
+        # 检查是否有未完成的申请（pending, negotiating, price_agreed），这些申请还未创建任务
+        # 注意：已批准的申请（approved）已经创建了任务，会在上面的检查中被捕获
+        pending_applications_result = await db.execute(
+            select(func.count(models.ServiceApplication.id))
+            .where(models.ServiceApplication.service_id == service_id)
+            .where(models.ServiceApplication.status.in_(["pending", "negotiating", "price_agreed"]))
+        )
+        pending_applications = pending_applications_result.scalar() or 0
+        
+        if pending_applications > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"无法删除服务，因为有 {pending_applications} 个未完成的申请（待处理、议价中或价格已达成）。请先处理或取消这些申请后再删除。"
+            )
+        
+        # 1. 检查是否有未过期且仍有参与者的时间段（即使任务/活动已完成，时间段本身可能仍有参与者记录）
+        from app.utils.time_utils import get_utc_time
+        current_utc = get_utc_time()
+        
+        future_slots_with_participants_result = await db.execute(
+            select(func.count(models.ServiceTimeSlot.id))
+            .where(models.ServiceTimeSlot.service_id == service_id)
+            .where(models.ServiceTimeSlot.slot_start_datetime >= current_utc)
+            .where(models.ServiceTimeSlot.current_participants > 0)
+        )
+        future_slots_with_participants = future_slots_with_participants_result.scalar() or 0
+        
+        if future_slots_with_participants > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"无法删除服务，因为有 {future_slots_with_participants} 个未过期的时间段仍有参与者。请等待时间段过期或处理相关参与者后再删除。"
+            )
+        
+        # 2. 查找所有相关的 ServiceTimeSlot IDs
+        time_slots_result = await db.execute(
+            select(models.ServiceTimeSlot.id)
+            .where(models.ServiceTimeSlot.service_id == service_id)
+        )
+        time_slot_ids = [row[0] for row in time_slots_result.fetchall()]
+        
+        if time_slot_ids:
+            # 3. 删除所有 TaskTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
+            # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
+            task_relations_result = await db.execute(
+                select(models.TaskTimeSlotRelation)
+                .where(models.TaskTimeSlotRelation.time_slot_id.in_(time_slot_ids))
+            )
+            task_relations = task_relations_result.scalars().all()
+            for relation in task_relations:
+                await db.delete(relation)
             
-            delete_service_images(expert_id, service_id, image_urls)
-        except Exception as e:
-            logger.warning(f"删除服务图片失败: {e}")
+            # 4. 删除所有 ActivityTimeSlotRelation 记录（包括 fixed 和 recurring 模式）
+            # 注意：虽然数据库有 CASCADE 删除，但为了确保数据一致性，我们显式删除
+            activity_relations_result = await db.execute(
+                select(models.ActivityTimeSlotRelation)
+                .where(models.ActivityTimeSlotRelation.time_slot_id.in_(time_slot_ids))
+            )
+            activity_relations = activity_relations_result.scalars().all()
+            for relation in activity_relations:
+                await db.delete(relation)
+            
+            # 确保删除操作已提交到数据库
+            await db.flush()
+        
+        # 5. 现在安全地删除服务（cascades 到 ServiceTimeSlot 和 ServiceApplication）
+        await db.delete(service)
+        current_expert.total_services = max(0, current_expert.total_services - 1)
+        await db.commit()
+        
+        # 删除服务的所有图片
+        if service_images:
+            from app.image_cleanup import delete_service_images
+            try:
+                # 如果images是JSONB类型，可能需要解析
+                import json
+                if isinstance(service_images, str):
+                    image_urls = json.loads(service_images)
+                elif isinstance(service_images, list):
+                    image_urls = service_images
+                else:
+                    image_urls = []
+                
+                delete_service_images(expert_id, service_id, image_urls)
+            except Exception as e:
+                logger.warning(f"删除服务图片失败: {e}")
+        
+        return {"message": "服务已删除"}
     
-    return {"message": "服务已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除服务失败 {service_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除服务失败: {str(e)}"
+        )
 
 
 # ==================== 服务时间段管理接口 ====================

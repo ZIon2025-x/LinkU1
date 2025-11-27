@@ -155,7 +155,7 @@ class User(Base):
     agreed_to_terms = Column(Integer, default=0)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 同意时间
     name_updated_at = Column(DateTime(timezone=True), nullable=True)  # 上次修改名字的时间
-    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
+    inviter_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 邀请人ID（当输入是用户ID格式时），删除用户时设为NULL
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     flea_market_notice_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 跳蚤市场须知同意时间
@@ -182,8 +182,8 @@ class Task(Base):
     currency = Column(String(3), default="GBP")  # 货币类型
     location = Column(String(100), nullable=False)
     task_type = Column(String(50), nullable=False)
-    poster_id = Column(String(8), ForeignKey("users.id"))
-    taker_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    poster_id = Column(String(8), ForeignKey("users.id", ondelete="RESTRICT"))  # 不能删除有任务的用户
+    taker_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
     status = Column(String(20), default="open")
     task_level = Column(String(20), default="normal")  # normal, vip, super, expert（达人任务）
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
@@ -192,7 +192,7 @@ class Task(Base):
     is_paid = Column(Integer, default=0)  # 1=paid, 0=not paid
     escrow_amount = Column(Float, default=0.0)
     is_confirmed = Column(Integer, default=0)  # 1=confirmed, 0=not
-    paid_to_user_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    paid_to_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
     is_public = Column(Integer, default=1)  # 1=public, 0=private (仅自己可见)
     visibility = Column(String(20), default="public")  # public, private
     images = Column(Text, nullable=True)  # JSON数组存储图片URL列表
@@ -210,9 +210,9 @@ class Task(Base):
     auto_accept = Column(Boolean, default=False, nullable=False)
     allow_negotiation = Column(Boolean, default=True, nullable=False)
     created_by_admin = Column(Boolean, default=False, nullable=False)
-    admin_creator_id = Column(String(36), ForeignKey("admin_users.id"), nullable=True)
+    admin_creator_id = Column(String(36), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 删除管理员时设为NULL
     created_by_expert = Column(Boolean, default=False, nullable=False)
-    expert_creator_id = Column(String(8), ForeignKey("users.id"), nullable=True)
+    expert_creator_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 删除用户时设为NULL
     expert_service_id = Column(Integer, ForeignKey("task_expert_services.id", ondelete="RESTRICT"), nullable=True)
     is_fixed_time_slot = Column(Boolean, default=False, nullable=False)
     time_slot_duration_minutes = Column(Integer, nullable=True)
@@ -339,8 +339,8 @@ class TaskCancelRequest(Base):
     reason = Column(Text, nullable=True)  # 取消原因
     status = Column(String(20), default="pending")  # pending, approved, rejected
     admin_id = Column(
-        String(5), ForeignKey("admin_users.id"), nullable=True
-    )  # 审核的管理员ID（格式：A0001，指向 admin_users 表）
+        String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True
+    )  # 审核的管理员ID（格式：A0001，指向 admin_users 表），删除管理员时设为NULL
     service_id = Column(
         String(6), ForeignKey("customer_service.id"), nullable=True
     )  # 审核的客服ID（格式：CS8888，指向 customer_service 表）
@@ -376,8 +376,8 @@ class AdminRequest(Base):
     )  # 状态：pending, processing, completed, rejected
     admin_response = Column(Text, nullable=True)  # 管理员回复
     admin_id = Column(
-        String(5), ForeignKey("admin_users.id"), nullable=True
-    )  # 处理的管理员ID（格式：A0001，指向 admin_users 表）
+        String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True
+    )  # 处理的管理员ID（格式：A0001，指向 admin_users 表），删除管理员时设为NULL
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), nullable=True)  # 更新时间
 
@@ -577,7 +577,7 @@ class PendingUser(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     agreed_to_terms = Column(Integer, default=1)  # 1=agreed, 0=not agreed
     terms_agreed_at = Column(DateTime(timezone=True), nullable=True)  # 同意时间
-    inviter_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 邀请人ID（当输入是用户ID格式时）
+    inviter_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 邀请人ID（当输入是用户ID格式时），删除用户时设为NULL
     invitation_code_id = Column(BigInteger, ForeignKey("invitation_codes.id"), nullable=True)  # 邀请码ID
     invitation_code_text = Column(String(50), nullable=True)  # 邀请码文本
     
@@ -641,7 +641,7 @@ class JobPosition(Base):
     is_active = Column(Integer, default=1)  # 是否启用
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
-    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="RESTRICT"), nullable=False)  # 创建者，不能删除有记录的管理员
     
     # 索引
     __table_args__ = (
@@ -692,7 +692,7 @@ class FeaturedTaskExpert(Base):
     
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
-    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=False)  # 创建者
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="RESTRICT"), nullable=False)  # 创建者，不能删除有记录的管理员
     
     # 索引
     # 注意：id 已经是主键，会自动创建索引
@@ -775,10 +775,10 @@ class NegotiationResponseLog(Base):
     __tablename__ = "negotiation_response_logs"
     
     id = Column(Integer, primary_key=True, index=True)
-    notification_id = Column(Integer, ForeignKey("notifications.id"), nullable=True)  # 可为空（如果通知被删除）
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    application_id = Column(Integer, ForeignKey("task_applications.id"), nullable=False)
-    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    notification_id = Column(Integer, ForeignKey("notifications.id", ondelete="SET NULL"), nullable=True)  # 可为空（如果通知被删除）
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    application_id = Column(Integer, ForeignKey("task_applications.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     action = Column(String(20), nullable=False)  # 'accept' 或 'reject' 或 'withdraw'
     negotiated_price = Column(DECIMAL(12, 2), nullable=True)  # 议价价格（如果接受）
     responded_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
@@ -1067,7 +1067,7 @@ class InvitationCode(Base):
     valid_from = Column(DateTime(timezone=True), nullable=False)
     valid_until = Column(DateTime(timezone=True), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 创建者，删除管理员时设为NULL
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -1219,7 +1219,7 @@ class PromotionCode(Base):
     valid_until = Column(DateTime(timezone=True), nullable=False)
     is_active = Column(Boolean, default=True)
     target_user_type = Column(String(20), nullable=True)  # vip, super, normal, all
-    created_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    created_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 创建者，删除管理员时设为NULL
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -1270,7 +1270,7 @@ class TaskExpertApplication(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     application_message = Column(Text, nullable=True)
     status = Column(String(20), default="pending")  # pending, approved, rejected
-    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核者，删除管理员时设为NULL
     reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
     review_comment = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
@@ -1309,7 +1309,7 @@ class TaskExpert(Base):
     completed_tasks = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
-    approved_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    approved_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 批准者，删除管理员时设为NULL
     approved_at = Column(DateTime(timezone=True), nullable=True)
     
     # 关系
@@ -1337,7 +1337,7 @@ class TaskExpertProfileUpdateRequest(Base):
     new_avatar = Column(Text, nullable=True)  # 新的头像
     # 审核相关
     status = Column(String(20), default="pending")  # pending, approved, rejected
-    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核者，删除管理员时设为NULL
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     review_comment = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
@@ -1579,7 +1579,7 @@ class FleaMarketReport(Base):
     description = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, default="pending")  # pending, reviewing, resolved, rejected
     admin_comment = Column(Text, nullable=True)
-    handled_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)
+    handled_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 处理者，删除管理员时设为NULL
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     handled_at = Column(DateTime(timezone=True), nullable=True)
