@@ -802,7 +802,7 @@ class MessageReadCursor(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
     user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
-    last_read_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    last_read_message_id = Column(Integer, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)  # 改为可空，删除消息时设为NULL
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False)
     
     __table_args__ = (

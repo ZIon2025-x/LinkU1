@@ -2400,61 +2400,16 @@ def send_message_api(
     # ⚠️ DEPRECATED: 此接口已废弃，不再使用
     # 联系人聊天功能已移除，请使用任务聊天接口：
     # POST /api/messages/task/{task_id}/send
-    # 此接口保留仅用于向后兼容，可能会在未来的版本中移除
+    # 此接口已完全禁用，不再创建无任务ID的消息
     msg: schemas.MessageCreate,
     current_user=Depends(get_current_user_secure_sync_csrf),
     db: Session = Depends(get_db),
 ):
-    # 检查接收者是否存在
-    receiver = crud.get_user_by_id(db, msg.receiver_id)
-    if not receiver:
-        raise HTTPException(status_code=404, detail="接收者不存在")
-
-    # 处理图片消息
-    image_id = None
-    if msg.content.startswith('[图片] '):
-        # 提取图片ID
-        image_id = msg.content.replace('[图片] ', '')
-        # 验证图片ID格式
-        if not image_id or len(image_id) < 10:
-            raise HTTPException(status_code=400, detail="无效的图片ID")
-    
-    # 保存消息
-    message = crud.send_message(db, current_user.id, msg.receiver_id, msg.content, image_id=image_id)
-
-    # 创建通知
-    try:
-        # 检查发送者是否为客服账号
-        is_customer_service = False  # 普通用户不再有客服权限
-
-        if is_customer_service:
-            # 从客服数据库获取客服名字
-            from app.models import CustomerService
-
-            service = (
-                db.query(CustomerService)
-                .filter(CustomerService.id == current_user.id)
-                .first()
-            )
-            sender_name = service.name if service else f"客服{current_user.id}"
-            notification_content = f"客服 {sender_name} 给您发送了一条消息"
-        else:
-            # 从用户数据库获取普通用户名字
-            sender_name = current_user.name or f"用户{current_user.id}"
-            notification_content = f"用户 {sender_name} 给您发送了一条消息"
-
-        crud.create_notification(
-            db,
-            msg.receiver_id,
-            "message",
-            "新消息",
-            notification_content,
-            current_user.id,
-        )
-    except Exception as e:
-        print(f"Failed to create notification: {e}")
-
-    return message
+    # 完全禁用此接口，返回错误
+    raise HTTPException(
+        status_code=410,  # 410 Gone - 资源已永久移除
+        detail="此接口已废弃。联系人聊天功能已移除，请使用任务聊天接口：POST /api/messages/task/{task_id}/send"
+    )
 
 
 @router.get("/messages/history/{user_id}", response_model=list[schemas.MessageOut])

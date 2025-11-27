@@ -1310,49 +1310,16 @@ async def websocket_chat(
                     continue  # 跳过普通消息处理逻辑
 
                 else:
-                    # 处理普通消息（向后兼容）
-                    if is_customer_service:
-                        # 客服账号只能发送客服会话消息
-                        if not isinstance(data, dict) or not data.get("session_id"):
-                            await websocket.send_text(
-                                json.dumps({"error": "客服账号只能发送客服会话消息"})
-                            )
-                            continue
-                    else:
-                        # 普通用户向客服发送消息时，必须通过客服会话
-                        is_receiver_customer_service = (
-                            db.query(CustomerService)
-                            .filter(CustomerService.id == msg["receiver_id"])
-                            .first()
-                            is not None
-                        )
-                        if is_receiver_customer_service:
-                            if not chat_id:
-                                await websocket.send_text(
-                                    json.dumps(
-                                        {"error": "向客服发送消息必须通过客服会话"}
-                                    )
-                                )
-                                continue
-
-                    # 处理图片消息
-                    image_id = None
-                    if msg["content"].startswith('[图片] '):
-                        # 提取图片ID
-                        image_id = msg["content"].replace('[图片] ', '')
-                        logger.info(f"🔍 [DEBUG] WebSocket检测到图片消息，image_id: {image_id}")
-                    
-                    # 保存普通消息到数据库
-                    message = crud.send_message(
-                        db, 
-                        user_id, 
-                        msg["receiver_id"], 
-                        msg["content"], 
-                        msg.get("message_id", None),
-                        msg.get("timezone", "Europe/London"),
-                        msg.get("local_time", None),
-                        image_id=image_id
+                    # ⚠️ 普通消息（联系人聊天）已废弃，不再处理
+                    # 所有消息必须通过任务聊天或客服会话发送
+                    await websocket.send_text(
+                        json.dumps({
+                            "error": "普通消息功能已废弃。请使用任务聊天接口或客服会话发送消息。",
+                            "type": "error"
+                        })
                     )
+                    logger.warning(f"用户 {user_id} 尝试发送普通消息（已废弃功能）")
+                    continue
 
                 # 创建通知给接收者
                 try:
