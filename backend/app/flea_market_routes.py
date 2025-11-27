@@ -77,6 +77,7 @@ def delete_flea_market_item_images(item_id: int, image_urls: Optional[List[str]]
     Args:
         item_id: 商品ID
         image_urls: 可选的图片URL列表，如果提供则只删除这些URL对应的文件
+                   如果不提供，则删除整个商品图片目录
     """
     try:
         # 检测部署环境
@@ -88,15 +89,8 @@ def delete_flea_market_item_images(item_id: int, image_urls: Optional[List[str]]
         
         deleted_count = 0
         
-        # 方法1：删除商品图片目录（标准路径）
-        flea_market_dir = base_dir / "flea_market" / str(item_id)
-        if flea_market_dir.exists():
-            shutil.rmtree(flea_market_dir)
-            logger.info(f"删除商品 {item_id} 的图片目录: {flea_market_dir}")
-            deleted_count += 1
-        
-        # 方法2：从URL中提取路径并删除（兼容其他存储位置）
         if image_urls:
+            # 如果提供了图片URL列表，只删除指定的图片文件（不删除整个目录）
             for image_url in image_urls:
                 try:
                     # 解析URL，提取路径
@@ -120,6 +114,13 @@ def delete_flea_market_item_images(item_id: int, image_urls: Optional[List[str]]
                                     logger.info(f"删除图片目录: {file_path}")
                 except Exception as e:
                     logger.warning(f"删除图片URL {image_url} 对应的文件失败: {e}")
+        else:
+            # 如果没有提供图片URL列表，删除整个商品图片目录
+            flea_market_dir = base_dir / "flea_market" / str(item_id)
+            if flea_market_dir.exists():
+                shutil.rmtree(flea_market_dir)
+                logger.info(f"删除商品 {item_id} 的图片目录: {flea_market_dir}")
+                deleted_count += 1
         
         if deleted_count > 0:
             logger.info(f"商品 {item_id} 已删除 {deleted_count} 个图片文件/目录")
