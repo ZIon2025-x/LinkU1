@@ -243,8 +243,8 @@ class Task(Base):
 class Review(Base):
     __tablename__ = "reviews"
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"))
-    user_id = Column(String(8), ForeignKey("users.id"))
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"))
     rating = Column(Float, nullable=False)  # 改为Float以支持0.5星间隔
     comment = Column(Text, nullable=True)
     is_anonymous = Column(Integer, default=0)  # 0=实名, 1=匿名
@@ -257,8 +257,8 @@ class Review(Base):
 class TaskHistory(Base):
     __tablename__ = "task_history"
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"))
-    user_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 可空，用于管理员操作
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 可空，用于管理员操作
     action = Column(String(20), nullable=False)  # accepted, completed, cancelled
     timestamp = Column(DateTime(timezone=True), default=get_utc_time)
     remark = Column(Text, nullable=True)
@@ -268,15 +268,15 @@ class Message(Base):
     __tablename__ = "messages"
     id = Column(Integer, primary_key=True, index=True)
     sender_id = Column(
-        String(8), ForeignKey("users.id"), nullable=True
+        String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )  # 允许为NULL，用于系统消息
-    receiver_id = Column(String(8), ForeignKey("users.id"), nullable=True)  # 允许为NULL，用于任务消息
+    receiver_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # 允许为NULL，用于任务消息
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=get_utc_time)  # 统一存储UTC时间
     is_read = Column(Integer, default=0)  # 0=unread, 1=read (保留向后兼容，新系统使用 message_reads 表)
     image_id = Column(String(100), nullable=True)  # 私密图片ID
     # 任务聊天相关字段
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)  # 关联的任务ID
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)  # 关联的任务ID
     message_type = Column(String(20), default="normal")  # normal, system
     conversation_type = Column(String(20), default="task")  # task, customer_service, global
     meta = Column(Text, nullable=True)  # JSON格式存储元数据
@@ -313,7 +313,7 @@ class Message(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     type = Column(
         String(32), nullable=False
     )  # 'negotiation_offer', 'task_application', 'task_approved', 'message', 'task_accepted', 'task_completed', 'customer_service', 'announcement', 'application_message', 'application_message_reply'
@@ -334,8 +334,8 @@ class Notification(Base):
 class TaskCancelRequest(Base):
     __tablename__ = "task_cancel_requests"
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"))
-    requester_id = Column(String(8), ForeignKey("users.id"))  # 请求取消的用户ID
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    requester_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"))  # 请求取消的用户ID
     reason = Column(Text, nullable=True)  # 取消原因
     status = Column(String(20), default="pending")  # pending, approved, rejected
     admin_id = Column(
@@ -594,8 +594,8 @@ class TaskApplication(Base):
     __tablename__ = "task_applications"
     
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    applicant_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    applicant_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status = Column(String(20), default="pending")  # pending, approved, rejected
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     message = Column(Text, nullable=True)  # 申请时的留言
@@ -1481,7 +1481,7 @@ class ServiceApplication(Base):
     currency = Column(String(3), default="GBP")
     status = Column(String(20), default="pending")  # pending, negotiating, price_agreed, approved, rejected, cancelled
     final_price = Column(DECIMAL(12, 2), nullable=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     deadline = Column(DateTime(timezone=True), nullable=True)  # 任务截至日期（如果is_flexible为False）
     is_flexible = Column(Integer, default=0)  # 是否灵活（1=灵活，无截至日期；0=有截至日期）
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())

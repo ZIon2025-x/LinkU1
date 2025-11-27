@@ -791,19 +791,18 @@ async def delete_service(
     service_images = service.images if hasattr(service, 'images') and service.images else []
     expert_id = current_expert.id
     
-    # 检查是否有未完成的任务正在使用这个服务（排除已完成和已取消的任务）
+    # 检查是否有任务正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
+    # 注意：数据库层面的 RESTRICT 约束会阻止删除任何引用此服务的任务，无论状态如何
     tasks_using_service_result = await db.execute(
         select(func.count(models.Task.id))
         .where(models.Task.expert_service_id == service_id)
-        .where(models.Task.status.notin_(['completed', 'cancelled']))
     )
     tasks_using_service = tasks_using_service_result.scalar() or 0
     
-    # 检查是否有未完成的活动正在使用这个服务（排除已完成、已关闭和已取消的活动）
+    # 检查是否有活动正在使用这个服务（检查所有状态，因为数据库外键约束是 RESTRICT）
     activities_using_service_result = await db.execute(
         select(func.count(models.Activity.id))
         .where(models.Activity.expert_service_id == service_id)
-        .where(models.Activity.status.notin_(['completed', 'closed', 'cancelled']))
     )
     activities_using_service = activities_using_service_result.scalar() or 0
     
@@ -811,9 +810,9 @@ async def delete_service(
         error_msg = "无法删除服务，因为"
         reasons = []
         if tasks_using_service > 0:
-            reasons.append(f"有 {tasks_using_service} 个未完成的任务正在使用此服务")
+            reasons.append(f"有 {tasks_using_service} 个任务正在使用此服务")
         if activities_using_service > 0:
-            reasons.append(f"有 {activities_using_service} 个未完成的活动正在使用此服务")
+            reasons.append(f"有 {activities_using_service} 个活动正在使用此服务")
         error_msg += "、".join(reasons) + "。请先处理相关任务和活动后再删除。"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

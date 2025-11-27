@@ -523,6 +523,8 @@ const MessagePage: React.FC = () => {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false); // 显示"滚动到底部"按钮
   const [hasNewTaskMessages, setHasNewTaskMessages] = useState(false); // 是否有新任务消息（当用户不在底部时）
   const lastTaskMessageIdRef = useRef<number | null>(null); // 最后一条任务消息的ID（使用ref避免依赖循环）
+  const loadTasksRef = useRef<(() => Promise<void>) | null>(null); // 存储 loadTasks 函数引用
+  const loadTaskMessagesRef = useRef<((taskId: number, cursor?: string | null) => Promise<void>) | null>(null); // 存储 loadTaskMessages 函数引用
   const [toastMessage, setToastMessage] = useState<{type: 'success' | 'error' | 'info', text: string} | null>(null); // Toast通知
   const messagesContainerRef = useRef<HTMLDivElement>(null); // 消息容器引用
   const inputAreaRef = useRef<HTMLDivElement>(null); // 输入框区域引用（客服模式）
@@ -1497,7 +1499,7 @@ const MessagePage: React.FC = () => {
   };
 
   // 完成任务（接收者）
-  const handleCompleteTask = async () => {
+  const handleCompleteTask = useCallback(async () => {
     if (!activeTaskId || !user) return;
     
     // 确认提示
@@ -1509,21 +1511,37 @@ const MessagePage: React.FC = () => {
     try {
       await completeTask(activeTaskId);
       showToast('success', t('messages.notifications.taskMarkedComplete'));
-      // 重新加载任务信息
-      await loadTasks();
-      // 重新加载消息（包含系统消息）
-      await loadTaskMessages(activeTaskId);
+      
+      // 先更新UI状态，不阻塞
+      setActionLoading(false);
+      
+      // 延迟执行耗时的重新加载操作，避免阻塞UI
+      // 使用 setTimeout 将操作移到下一个事件循环，让UI先更新
+      setTimeout(async () => {
+        try {
+          // 重新加载任务信息（后台执行，不阻塞UI）
+          if (loadTasksRef.current) {
+            loadTasksRef.current().catch((err: any) => console.error('重新加载任务列表失败:', err));
+          }
+          // 重新加载消息（包含系统消息）
+          if (loadTaskMessagesRef.current && activeTaskId) {
+            await loadTaskMessagesRef.current(activeTaskId);
+          }
+        } catch (error) {
+          console.error('重新加载数据失败:', error);
+        }
+      }, 0);
     } catch (error: any) {
       console.error('完成任务失败:', error);
       const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
-    } finally {
       setActionLoading(false);
     }
-  };
+    // 注意：不包含 loadTasks 和 loadTaskMessages 在依赖数组中，因为它们是在同一个组件中定义的稳定引用
+  }, [activeTaskId, user, t]);
 
   // 确认完成（发布者）
-  const handleConfirmCompletion = async () => {
+  const handleConfirmCompletion = useCallback(async () => {
     if (!activeTaskId || !user) return;
     
     // 确认提示
@@ -1535,18 +1553,34 @@ const MessagePage: React.FC = () => {
     try {
       await confirmTaskCompletion(activeTaskId);
       showToast('success', t('messages.notifications.taskConfirmedComplete'));
-      // 重新加载任务信息
-      await loadTasks();
-      // 重新加载消息（包含系统消息）
-      await loadTaskMessages(activeTaskId);
+      
+      // 先更新UI状态，不阻塞
+      setActionLoading(false);
+      
+      // 延迟执行耗时的重新加载操作，避免阻塞UI
+      // 使用 setTimeout 将操作移到下一个事件循环，让UI先更新
+      setTimeout(async () => {
+        try {
+          // 重新加载任务信息（后台执行，不阻塞UI）
+          if (loadTasksRef.current) {
+            loadTasksRef.current().catch((err: any) => console.error('重新加载任务列表失败:', err));
+          }
+          // 重新加载消息（包含系统消息）
+          if (loadTaskMessagesRef.current && activeTaskId) {
+            await loadTaskMessagesRef.current(activeTaskId);
+          }
+        } catch (error) {
+          console.error('重新加载数据失败:', error);
+        }
+      }, 0);
     } catch (error: any) {
       console.error('确认完成失败:', error);
       const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
-    } finally {
       setActionLoading(false);
     }
-  };
+    // 注意：不包含 loadTasks 和 loadTaskMessages 在依赖数组中，因为它们是在同一个组件中定义的稳定引用
+  }, [activeTaskId, user, t]);
 
   // 根据角色获取标签选项
   const getReviewTags = (task: any | null) => {
@@ -1852,6 +1886,9 @@ const MessagePage: React.FC = () => {
       setTasksLoading(false);
     }
   }, [user]);
+  
+  // 更新 ref，以便在其他地方使用
+  loadTasksRef.current = loadTasks;
 
   // 过滤任务列表（根据搜索关键词）
   const filteredTasks = useMemo(() => {
@@ -2087,6 +2124,9 @@ const MessagePage: React.FC = () => {
       setTaskMessagesLoading(false);
     }
   }, [isNearBottom, checkIfNearBottom, smartScrollToBottom]);
+  
+  // 更新 ref，以便在其他地方使用
+  loadTaskMessagesRef.current = loadTaskMessages;
 
   // 加载申请列表
   const loadApplications = useCallback(async (taskId: number) => {

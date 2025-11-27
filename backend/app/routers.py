@@ -7152,30 +7152,32 @@ def delete_expert_activity_admin(
                 is_expired = True
                 expiration_reason = "活动结束日期已过"
         
-        # 如果活动已结束，只检查是否有已完成或进行中的任务
-        if is_expired:
-            # 活动已结束，只检查是否有进行中或已完成的任务
-            active_tasks = db.query(models.Task).filter(
-                models.Task.parent_activity_id == activity_id,
-                models.Task.status.in_(["in_progress", "completed"])
-            ).count()
-            
-            if active_tasks > 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"无法删除活动，虽然活动已结束（{expiration_reason}），但有 {active_tasks} 个进行中或已完成的任务。请先处理相关任务后再删除。"
-                )
-        else:
-            # 活动未结束，检查所有相关任务
-            tasks_using_activity = db.query(models.Task).filter(
-                models.Task.parent_activity_id == activity_id
-            ).count()
-            
-            if tasks_using_activity > 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"无法删除活动，活动尚未结束，且有 {tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
-                )
+        # 检查是否有任务正在使用这个活动（检查所有状态，因为数据库外键约束是 RESTRICT）
+        # 注意：数据库层面的 RESTRICT 约束会阻止删除任何引用此活动的任务，无论状态如何
+        all_tasks_using_activity = db.query(models.Task).filter(
+            models.Task.parent_activity_id == activity_id
+        ).count()
+        
+        if all_tasks_using_activity > 0:
+            # 如果活动已结束，只检查是否有已完成或进行中的任务（这些任务不应该被删除）
+            if is_expired:
+                active_tasks = db.query(models.Task).filter(
+                    models.Task.parent_activity_id == activity_id,
+                    models.Task.status.in_(["in_progress", "completed"])
+                ).count()
+                
+                if active_tasks > 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"无法删除活动，虽然活动已结束（{expiration_reason}），但有 {active_tasks} 个进行中或已完成的任务。请先处理相关任务后再删除。"
+                    )
+            else:
+                # 活动未结束，检查所有相关任务
+                if all_tasks_using_activity > 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"无法删除活动，活动尚未结束，且有 {all_tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
+                    )
         
         db.delete(activity)
         db.commit()
