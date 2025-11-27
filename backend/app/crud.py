@@ -1328,17 +1328,20 @@ def get_unread_messages(db: Session, user_id: str):
         )
         .all()
     )
-    cursor_dict = {c.task_id: c.last_read_message_id for c in cursors}
+    # 构建游标字典，过滤掉 NULL 值（游标存在但 last_read_message_id 为 NULL 时视为没有游标）
+    cursor_dict = {c.task_id: c.last_read_message_id for c in cursors if c.last_read_message_id is not None}
     
     # 查询任务消息的未读数
     task_unread_messages = []
     for task_id in task_ids:
         cursor = cursor_dict.get(task_id)
         
-        if cursor:
+        if cursor is not None:
             # 有游标：查询ID大于游标的、不是自己发送的、非系统消息
+            # 添加 JOIN 验证任务是否存在（防止任务删除后遗留消息被误判为未读）
             unread_msgs = (
                 db.query(Message)
+                .join(Task, Message.task_id == Task.id)  # 确保任务存在
                 .filter(
                     Message.task_id == task_id,
                     Message.id > cursor,
@@ -1351,8 +1354,10 @@ def get_unread_messages(db: Session, user_id: str):
             )
         else:
             # 没有游标：查询在MessageRead表中没有记录的消息（排除自己发送的和系统消息）
+            # 添加 JOIN 验证任务是否存在（防止任务删除后遗留消息被误判为未读）
             unread_msgs = (
                 db.query(Message)
+                .join(Task, Message.task_id == Task.id)  # 确保任务存在
                 .filter(
                     Message.task_id == task_id,
                     Message.sender_id != user_id,
@@ -3089,13 +3094,8 @@ def update_task_by_admin(db: Session, task_id: int, task_update: dict):
 
 
 def delete_task_by_admin(db: Session, task_id: int):
-    """管理员删除任务"""
-    task = db.query(models.Task).filter(models.Task.id == task_id).first()
-    if task:
-        db.delete(task)
-        db.commit()
-        return True
-    return False
+    """管理员删除任务（使用安全删除方法，确保删除所有相关数据）"""
+    return delete_task_safely(db, task_id)
 
 
 # 客服登录相关函数

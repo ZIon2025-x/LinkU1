@@ -2450,15 +2450,10 @@ def get_unread_messages_api(
             # 对于任务消息，receiver_id 可能为 None，设置为当前用户ID
             # 因为这是未读消息，肯定是发送给当前用户的
             if msg.receiver_id is None:
-                # 创建一个新的消息对象，避免修改原始对象
-                # 使用 setattr 来设置 receiver_id，因为这是 SQLAlchemy 对象
                 setattr(msg, 'receiver_id', current_user.id)
             valid_messages.append(msg)
         return valid_messages
     except Exception as e:
-        import traceback
-        error_detail = f"获取未读消息失败: {str(e)}\n{traceback.format_exc()}"
-        print(f"❌ 错误详情: {error_detail}")
         from fastapi import HTTPException
         raise HTTPException(status_code=500, detail=f"获取未读消息失败: {str(e)}")
 

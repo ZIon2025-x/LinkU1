@@ -1094,8 +1094,11 @@ async def mark_messages_read(
             cursor = cursor_result.scalar_one_or_none()
             
             if cursor:
-                cursor.last_read_message_id = upto_message.id
-                cursor.updated_at = current_time
+                # 只有当新游标大于等于当前游标时才更新（防止游标回退）
+                # 如果游标为 NULL（消息被删除后），也需要更新
+                if cursor.last_read_message_id is None or upto_message.id >= cursor.last_read_message_id:
+                    cursor.last_read_message_id = upto_message.id
+                    cursor.updated_at = current_time
             else:
                 new_cursor = models.MessageReadCursor(
                     task_id=task_id,
@@ -1159,7 +1162,8 @@ async def mark_messages_read(
                 cursor = cursor_result.scalar_one_or_none()
                 
                 if cursor:
-                    if max_message_id > cursor.last_read_message_id:
+                    # 处理游标为 NULL 的情况（消息被删除后游标可能为 NULL）
+                    if cursor.last_read_message_id is None or max_message_id > cursor.last_read_message_id:
                         cursor.last_read_message_id = max_message_id
                         cursor.updated_at = current_time
                 else:

@@ -606,7 +606,6 @@ const MessagePage: React.FC = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [showMobileImageSendModal, setShowMobileImageSendModal] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [unreadMessagesList, setUnreadMessagesList] = useState<any[]>([]); // 调试：存储未读消息列表
   
   // 无限滚动相关状态
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
@@ -2447,32 +2446,6 @@ const MessagePage: React.FC = () => {
       // 同步更新全局Context
       updateUnreadCount(newCount);
       
-      // 调试：同时获取未读消息列表
-      try {
-        const unreadResponse = await api.get('/api/users/messages/unread');
-        const unreadList = unreadResponse.data || [];
-        setUnreadMessagesList(unreadList);
-        console.log('🔍 调试信息 - 未读消息列表:', unreadList);
-        console.log('🔍 调试信息 - 未读消息数量:', newCount, '实际列表长度:', unreadList.length);
-        if (unreadList.length > 0) {
-          console.log('🔍 调试信息 - 未读消息详情:');
-          unreadList.forEach((msg: any, index: number) => {
-            console.log(`  消息 ${index + 1}:`, {
-              id: msg.id,
-              sender_id: msg.sender_id,
-              receiver_id: msg.receiver_id,
-              task_id: msg.task_id,
-              message_type: msg.message_type,
-              content: msg.content?.substring(0, 50) + (msg.content?.length > 50 ? '...' : ''),
-              created_at: msg.created_at
-            });
-          });
-        }
-      } catch (unreadError) {
-        console.error('加载未读消息列表失败:', unreadError);
-        setUnreadMessagesList([]);
-      }
-      
       // 更新页面标题
       if (newCount > 0) {
         document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
@@ -3691,52 +3664,6 @@ const MessagePage: React.FC = () => {
               </span>
             )}
           </div>
-
-          {/* 调试信息：显示未读消息详情 */}
-          {totalUnreadCount > 0 && (
-            <div style={{
-              padding: '12px',
-              margin: '8px',
-              background: '#fff3cd',
-              border: '2px solid #ffc107',
-              borderRadius: '8px',
-              fontSize: '12px',
-              maxHeight: '200px',
-              overflowY: 'auto'
-            }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#856404' }}>
-                🔍 调试信息 - 未读消息详情 (数量: {totalUnreadCount}, 实际列表: {unreadMessagesList.length})
-              </div>
-              {unreadMessagesList.length === 0 ? (
-                <div style={{ color: '#856404', fontStyle: 'italic' }}>
-                  未读消息列表为空，但计数显示有 {totalUnreadCount} 条未读消息
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {unreadMessagesList.map((msg: any, index: number) => (
-                    <div key={msg.id || index} style={{
-                      padding: '8px',
-                      background: '#fff',
-                      borderRadius: '4px',
-                      border: '1px solid #ffc107'
-                    }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                        消息 #{index + 1} (ID: {msg.id})
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
-                        <div>发送者: {msg.sender_id || '未知'}</div>
-                        <div>接收者: {msg.receiver_id || '未知'}</div>
-                        <div>任务ID: {msg.task_id || '无'}</div>
-                        <div>消息类型: {msg.message_type || 'text'}</div>
-                        <div>内容: {msg.content ? (msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content) : '无内容'}</div>
-                        <div>时间: {msg.created_at ? new Date(msg.created_at).toLocaleString('zh-CN') : '未知'}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* 搜索框 */}
           <div className={`${styles.searchSection} ${isMobile ? styles.searchSectionMobile : ''}`}>
