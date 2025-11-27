@@ -438,7 +438,7 @@ const FleaMarketPage: React.FC = () => {
   }, [handleScroll]);
 
   // 上传图片 - 使用useCallback优化
-  const uploadImages = useCallback(async (files: File[]): Promise<string[]> => {
+  const uploadImages = useCallback(async (files: File[], itemId?: number): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     
     for (const file of files) {
@@ -451,9 +451,15 @@ const FleaMarketPage: React.FC = () => {
         
         const formData = new FormData();
         formData.append('image', compressedFile);
-        formData.append('category', 'public');
         
-        const response = await api.post('/api/upload/public-image', formData, {
+        // 使用跳蚤市场的专用上传接口
+        // 新建商品时不传item_id，图片会存储在临时目录，创建商品后自动移动到正式目录
+        // 编辑商品时传item_id，图片直接存储在商品目录
+        const uploadUrl = itemId 
+          ? `/api/flea-market/upload-image?item_id=${itemId}`
+          : '/api/flea-market/upload-image';
+        
+        const response = await api.post(uploadUrl, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -493,7 +499,9 @@ const FleaMarketPage: React.FC = () => {
       // 先上传图片
       let imageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        imageUrls = await uploadImages(imageFiles);
+        // 编辑商品时传递item_id，新建商品时不传
+        const itemId = editingItem?.id;
+        imageUrls = await uploadImages(imageFiles, itemId);
       }
       
       const submitData = {
