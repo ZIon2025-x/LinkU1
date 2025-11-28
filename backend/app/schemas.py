@@ -2560,3 +2560,46 @@ class ForumReportProcess(BaseModel):
     """处理举报请求"""
     status: Literal["processed", "rejected"]
     action: Optional[str] = Field(None, max_length=50)
+
+
+class ForumFavoriteOut(BaseModel):
+    """收藏输出"""
+    id: int
+    post: ForumPostListItem
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumFavoriteListResponse(BaseModel):
+    """收藏列表响应"""
+    favorites: List[ForumFavoriteOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class ForumAdminOperationLogOut(BaseModel):
+    """管理员操作日志输出"""
+    id: int
+    operator_id: str
+    operation_type: str
+    target_type: str
+    target_id: int
+    target_title: Optional[str]
+    action: str
+    reason: Optional[str]
+    ip_address: Optional[str]
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumAdminOperationLogListResponse(BaseModel):
+    """管理员操作日志列表响应"""
+    logs: List[ForumAdminOperationLogOut]
+    total: int
+    page: int
+    page_size: int

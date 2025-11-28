@@ -2113,3 +2113,79 @@ class ForumReport(Base):
         Index("idx_forum_reports_unique_pending", target_type, target_id, reporter_id, 
               postgresql_where=(status == "pending"), unique=True),
     )
+
+
+class ForumAdminOperationLog(Base):
+    """管理员操作日志表"""
+    __tablename__ = "forum_admin_operation_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    operator_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    operation_type = Column(String(50), nullable=False)  # pin_post, unpin_post, feature_post, etc.
+    target_type = Column(String(20), nullable=False)  # post, reply, user, category
+    target_id = Column(Integer, nullable=False)
+    target_title = Column(String(500), nullable=True)  # 冗余字段，便于查询
+    action = Column(String(50), nullable=False)  # pin, unpin, feature, delete, ban
+    reason = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
+    
+    # 关系
+    operator = relationship("User", foreign_keys=[operator_id])
+    
+    __table_args__ = (
+        Index("idx_admin_logs_operator", operator_id, created_at.desc()),
+        Index("idx_admin_logs_target", target_type, target_id),
+        Index("idx_admin_logs_operation", operation_type, created_at.desc()),
+        Index("idx_admin_logs_created", created_at.desc()),
+    )
+
+
+class ForumRiskControlRule(Base):
+    """风控规则配置表"""
+    __tablename__ = "forum_risk_control_rules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    rule_name = Column(String(100), nullable=False)
+    target_type = Column(String(10), nullable=False)  # post, reply
+    trigger_count = Column(Integer, nullable=False, default=3)  # 触发阈值（举报次数）
+    trigger_time_window = Column(Integer, nullable=False, default=24)  # 时间窗口（小时）
+    action_type = Column(String(20), nullable=False)  # hide, lock, soft_delete, notify_admin
+    is_enabled = Column(Boolean, default=True, nullable=False, server_default=text("TRUE"))
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, nullable=False, server_default=func.now())
+    
+    __table_args__ = (
+        CheckConstraint("target_type IN ('post', 'reply')", name="check_risk_rule_target_type"),
+        CheckConstraint("action_type IN ('hide', 'lock', 'soft_delete', 'notify_admin')", name="check_risk_rule_action_type"),
+    )
+
+
+class ForumRiskControlLog(Base):
+    """风控执行记录表"""
+    __tablename__ = "forum_risk_control_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(String(10), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    rule_id = Column(Integer, ForeignKey("forum_risk_control_rules.id", ondelete="SET NULL"), nullable=True)
+    trigger_count = Column(Integer, nullable=False)  # 触发时的举报数
+    action_type = Column(String(20), nullable=False)
+    action_result = Column(String(50), nullable=True)  # success, failed, reverted
+    executed_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
+    executed_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # NULL 表示系统自动执行
+    reverted_at = Column(DateTime(timezone=True), nullable=True)
+    reverted_by = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    # 关系
+    rule = relationship("ForumRiskControlRule", foreign_keys=[rule_id])
+    executor = relationship("User", foreign_keys=[executed_by])
+    reverter = relationship("User", foreign_keys=[reverted_by])
+    
+    __table_args__ = (
+        CheckConstraint("target_type IN ('post', 'reply')", name="check_risk_log_target_type"),
+        CheckConstraint("action_type IN ('hide', 'lock', 'soft_delete', 'notify_admin')", name="check_risk_log_action_type"),
+        Index("idx_risk_control_logs_target", target_type, target_id),
+        Index("idx_risk_control_logs_executed", executed_at.desc()),
+    )

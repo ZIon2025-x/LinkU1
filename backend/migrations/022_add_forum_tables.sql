@@ -197,3 +197,62 @@ CREATE TRIGGER trigger_update_forum_replies_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- 10. 创建管理员操作日志表
+CREATE TABLE IF NOT EXISTS forum_admin_operation_logs (
+    id SERIAL PRIMARY KEY,
+    operator_id VARCHAR(8) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    operation_type VARCHAR(50) NOT NULL,
+    target_type VARCHAR(20) NOT NULL,
+    target_id INTEGER NOT NULL,
+    target_title VARCHAR(500),
+    action VARCHAR(50) NOT NULL,
+    reason TEXT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_logs_operator ON forum_admin_operation_logs(operator_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_target ON forum_admin_operation_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_operation ON forum_admin_operation_logs(operation_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_logs_created ON forum_admin_operation_logs(created_at DESC);
+
+-- 11. 创建风控规则配置表
+CREATE TABLE IF NOT EXISTS forum_risk_control_rules (
+    id SERIAL PRIMARY KEY,
+    rule_name VARCHAR(100) NOT NULL,
+    target_type VARCHAR(10) NOT NULL CHECK (target_type IN ('post', 'reply')),
+    trigger_count INTEGER NOT NULL DEFAULT 3,
+    trigger_time_window INTEGER NOT NULL DEFAULT 24,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('hide', 'lock', 'soft_delete', 'notify_admin')),
+    is_enabled BOOLEAN DEFAULT TRUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 12. 创建风控执行记录表
+CREATE TABLE IF NOT EXISTS forum_risk_control_logs (
+    id SERIAL PRIMARY KEY,
+    target_type VARCHAR(10) NOT NULL CHECK (target_type IN ('post', 'reply')),
+    target_id INTEGER NOT NULL,
+    rule_id INTEGER REFERENCES forum_risk_control_rules(id) ON DELETE SET NULL,
+    trigger_count INTEGER NOT NULL,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('hide', 'lock', 'soft_delete', 'notify_admin')),
+    action_result VARCHAR(50),
+    executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    executed_by VARCHAR(8) REFERENCES users(id) ON DELETE SET NULL,
+    reverted_at TIMESTAMP WITH TIME ZONE,
+    reverted_by VARCHAR(8) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_risk_control_logs_target ON forum_risk_control_logs(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_risk_control_logs_executed ON forum_risk_control_logs(executed_at DESC);
+
+-- 13. 插入默认风控规则
+INSERT INTO forum_risk_control_rules (rule_name, target_type, trigger_count, trigger_time_window, action_type) VALUES
+('帖子被举报3次自动隐藏', 'post', 3, 24, 'hide'),
+('帖子被举报5次自动锁定', 'post', 5, 24, 'lock'),
+('回复被举报3次自动隐藏', 'reply', 3, 24, 'hide'),
+('回复被举报5次自动删除', 'reply', 5, 24, 'soft_delete')
+ON CONFLICT DO NOTHING;
+

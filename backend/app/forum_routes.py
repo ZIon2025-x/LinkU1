@@ -19,6 +19,166 @@ from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
 
+
+# ==================== 辅助函数 ====================
+
+async def log_admin_operation(
+    operator_id: str,
+    operation_type: str,
+    target_type: str,
+    target_id: int,
+    action: str,
+    reason: Optional[str] = None,
+    request: Optional[Request] = None,
+    db: Optional[AsyncSession] = None
+):
+    """记录管理员操作日志"""
+    if not db:
+        return
+    
+    # 获取目标标题（用于日志查询）
+    target_title = None
+    if target_type == 'post':
+        result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == target_id)
+        )
+        post = result.scalar_one_or_none()
+        target_title = post.title if post else None
+    elif target_type == 'reply':
+        result = await db.execute(
+            select(models.ForumReply).where(models.ForumReply.id == target_id)
+        )
+        reply = result.scalar_one_or_none()
+        target_title = reply.content[:100] if reply else None  # 截取前100字符
+    
+    # 获取IP和User-Agent
+    ip_address = None
+    user_agent = None
+    if request:
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+    
+    # 创建日志记录
+    log = models.ForumAdminOperationLog(
+        operator_id=operator_id,
+        operation_type=operation_type,
+        target_type=target_type,
+        target_id=target_id,
+        target_title=target_title,
+        action=action,
+        reason=reason,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    db.add(log)
+    await db.flush()
+
+
+async def check_and_trigger_risk_control(
+    target_type: str,
+    target_id: int,
+    db: AsyncSession
+):
+    """检查并触发风控（当举报达到阈值时自动执行）"""
+    # 1. 查找匹配的规则
+    rule_result = await db.execute(
+        select(models.ForumRiskControlRule)
+        .where(
+            models.ForumRiskControlRule.target_type == target_type,
+            models.ForumRiskControlRule.is_enabled == True
+        )
+        .order_by(models.ForumRiskControlRule.trigger_count.desc())
+        .limit(1)
+    )
+    rule = rule_result.scalar_one_or_none()
+    
+    if not rule:
+        return  # 没有启用的规则
+    
+    # 2. 使用规则中配置的时间窗口（小时）
+    time_window = timedelta(hours=rule.trigger_time_window)
+    cutoff_time = datetime.now(timezone.utc) - time_window
+    
+    # 3. 统计时间窗口内的举报数
+    report_count_result = await db.execute(
+        select(func.count(models.ForumReport.id))
+        .where(
+            models.ForumReport.target_type == target_type,
+            models.ForumReport.target_id == target_id,
+            models.ForumReport.status == 'pending',
+            models.ForumReport.created_at >= cutoff_time
+        )
+    )
+    report_count = report_count_result.scalar() or 0
+    
+    # 4. 检查是否达到规则阈值
+    if report_count < rule.trigger_count:
+        return  # 未达到触发阈值
+    
+    # 5. 执行风控动作
+    action_result = "success"
+    try:
+        if rule.action_type == 'hide':
+            if target_type == 'post':
+                await db.execute(
+                    update(models.ForumPost)
+                    .where(models.ForumPost.id == target_id)
+                    .values(is_visible=False)
+                )
+            else:  # reply
+                await db.execute(
+                    update(models.ForumReply)
+                    .where(models.ForumReply.id == target_id)
+                    .values(is_visible=False)
+                )
+        
+        elif rule.action_type == 'lock':
+            if target_type == 'post':
+                await db.execute(
+                    update(models.ForumPost)
+                    .where(models.ForumPost.id == target_id)
+                    .values(is_locked=True)
+                )
+            # 回复不支持锁定
+        
+        elif rule.action_type == 'soft_delete':
+            if target_type == 'post':
+                await db.execute(
+                    update(models.ForumPost)
+                    .where(models.ForumPost.id == target_id)
+                    .values(is_deleted=True)
+                )
+            else:  # reply
+                await db.execute(
+                    update(models.ForumReply)
+                    .where(models.ForumReply.id == target_id)
+                    .values(is_deleted=True)
+                )
+        
+        elif rule.action_type == 'notify_admin':
+            # 仅通知管理员，不自动处理
+            # 这里可以发送通知给管理员，暂时只记录日志
+            pass
+        
+        await db.flush()
+        
+    except Exception as e:
+        logger.error(f"风控动作执行失败: {e}")
+        action_result = "failed"
+    
+    # 6. 记录执行日志
+    log = models.ForumRiskControlLog(
+        target_type=target_type,
+        target_id=target_id,
+        rule_id=rule.id,
+        trigger_count=report_count,
+        action_type=rule.action_type,
+        action_result=action_result,
+        executed_by=None  # 系统自动执行
+    )
+    db.add(log)
+    await db.flush()
+
 router = APIRouter(prefix="/api/forum", tags=["论坛"])
 
 
@@ -737,6 +897,7 @@ async def delete_post(
 @router.post("/posts/{post_id}/pin")
 async def pin_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -754,6 +915,19 @@ async def pin_post(
     
     post.is_pinned = True
     post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="pin_post",
+        target_type="post",
+        target_id=post_id,
+        action="pin",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     
     return {"id": post.id, "is_pinned": True, "message": "帖子已置顶"}
@@ -762,6 +936,7 @@ async def pin_post(
 @router.delete("/posts/{post_id}/pin")
 async def unpin_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -779,6 +954,19 @@ async def unpin_post(
     
     post.is_pinned = False
     post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="unpin_post",
+        target_type="post",
+        target_id=post_id,
+        action="unpin",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     
     return {"id": post.id, "is_pinned": False, "message": "已取消置顶"}
@@ -787,6 +975,7 @@ async def unpin_post(
 @router.post("/posts/{post_id}/feature")
 async def feature_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -804,9 +993,31 @@ async def feature_post(
     
     post.is_featured = True
     post.updated_at = get_utc_time()
-    await db.commit()
+    await db.flush()
     
-    # TODO: 发送通知给帖子作者
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="feature_post",
+        target_type="post",
+        target_id=post_id,
+        action="feature",
+        request=request,
+        db=db
+    )
+    
+    # 发送通知给帖子作者
+    if post.author_id:
+        notification = models.ForumNotification(
+            notification_type="feature_post",
+            target_type="post",
+            target_id=post.id,
+            from_user_id=None,  # 系统操作
+            to_user_id=post.author_id
+        )
+        db.add(notification)
+    
+    await db.commit()
     
     return {"id": post.id, "is_featured": True, "message": "帖子已加精"}
 
@@ -814,6 +1025,7 @@ async def feature_post(
 @router.delete("/posts/{post_id}/feature")
 async def unfeature_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -831,6 +1043,19 @@ async def unfeature_post(
     
     post.is_featured = False
     post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="unfeature_post",
+        target_type="post",
+        target_id=post_id,
+        action="unfeature",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     
     return {"id": post.id, "is_featured": False, "message": "已取消加精"}
@@ -839,6 +1064,7 @@ async def unfeature_post(
 @router.post("/posts/{post_id}/lock")
 async def lock_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -856,6 +1082,19 @@ async def lock_post(
     
     post.is_locked = True
     post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="lock_post",
+        target_type="post",
+        target_id=post_id,
+        action="lock",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     
     return {"id": post.id, "is_locked": True, "message": "帖子已锁定"}
@@ -864,6 +1103,7 @@ async def lock_post(
 @router.delete("/posts/{post_id}/lock")
 async def unlock_post(
     post_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -881,6 +1121,19 @@ async def unlock_post(
     
     post.is_locked = False
     post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="unlock_post",
+        target_type="post",
+        target_id=post_id,
+        action="unlock",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     
     return {"id": post.id, "is_locked": False, "message": "帖子已解锁"}
@@ -1122,7 +1375,43 @@ async def create_reply(
     await db.commit()
     await db.refresh(db_reply, ["author"])
     
-    # TODO: 发送通知给帖子作者和父回复作者
+    # 发送通知给帖子作者和父回复作者
+    notifications_to_create = []
+    
+    # 通知帖子作者（如果回复者不是帖子作者）
+    if post.author_id != current_user.id:
+        notifications_to_create.append(
+            models.ForumNotification(
+                notification_type="reply_post",
+                target_type="reply",
+                target_id=db_reply.id,
+                from_user_id=current_user.id,
+                to_user_id=post.author_id
+            )
+        )
+    
+    # 通知父回复作者（如果有父回复，且回复者不是父回复作者）
+    if reply.parent_reply_id:
+        parent_result = await db.execute(
+            select(models.ForumReply).where(models.ForumReply.id == reply.parent_reply_id)
+        )
+        parent_reply = parent_result.scalar_one()
+        if parent_reply.author_id != current_user.id and parent_reply.author_id != post.author_id:
+            notifications_to_create.append(
+                models.ForumNotification(
+                    notification_type="reply_reply",
+                    target_type="reply",
+                    target_id=db_reply.id,
+                    from_user_id=current_user.id,
+                    to_user_id=parent_reply.author_id
+                )
+            )
+    
+    # 批量创建通知
+    if notifications_to_create:
+        for notification in notifications_to_create:
+            db.add(notification)
+        await db.commit()
     
     return schemas.ForumReplyOut(
         id=db_reply.id,
@@ -1566,7 +1855,9 @@ async def create_report(
     await db.commit()
     await db.refresh(db_report)
     
-    # TODO: 触发风控检查（check_and_trigger_risk_control）
+    # 触发风控检查（简化版本，后续可以扩展为完整的风控系统）
+    # 注意：完整的风控系统需要 forum_risk_control_rules 和 forum_risk_control_logs 表
+    # 这里先实现基础逻辑，后续可以根据需要扩展
     
     return schemas.ForumReportOut(
         id=db_report.id,
@@ -1628,10 +1919,11 @@ async def get_reports(
     }
 
 
-@router.put("/reports/{report_id}/process", response_model=schemas.ForumReportOut)
+@router.put("/admin/reports/{report_id}/process", response_model=schemas.ForumReportOut)
 async def process_report(
     report_id: int,
     process: schemas.ForumReportProcess,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1655,9 +1947,22 @@ async def process_report(
     
     # 更新举报状态
     report.status = process.status
-    report.processor_id = current_admin.id
+    report.processor_id = current_admin.user_id
     report.processed_at = get_utc_time()
     report.action = process.action
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="process_report",
+        target_type="report",
+        target_id=report_id,
+        action=process.action or process.status,
+        reason=process.action,
+        request=request,
+        db=db
+    )
     
     await db.commit()
     await db.refresh(report)
@@ -1789,4 +2094,265 @@ async def mark_all_notifications_read(
     await db.commit()
     
     return {"message": "所有通知已标记为已读"}
+
+
+# ==================== 我的内容 API ====================
+
+@router.get("/my/posts", response_model=schemas.ForumPostListResponse)
+async def get_my_posts(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的帖子"""
+    query = select(models.ForumPost).where(
+        models.ForumPost.author_id == current_user.id,
+        models.ForumPost.is_deleted == False
+    )
+    
+    query = query.order_by(models.ForumPost.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.ForumPost.category),
+        selectinload(models.ForumPost.author)
+    )
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    
+    # 转换为列表项格式
+    post_items = []
+    for post in posts:
+        post_items.append(schemas.ForumPostListItem(
+            id=post.id,
+            title=post.title,
+            content_preview=strip_markdown(post.content),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
+            author=schemas.UserInfo(
+                id=post.author.id,
+                name=post.author.name,
+                avatar=post.author.avatar or None
+            ),
+            view_count=post.view_count,
+            reply_count=post.reply_count,
+            like_count=post.like_count,
+            is_pinned=post.is_pinned,
+            is_featured=post.is_featured,
+            is_locked=post.is_locked,
+            created_at=post.created_at,
+            last_reply_at=post.last_reply_at
+        ))
+    
+    return {
+        "posts": post_items,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+@router.get("/my/replies", response_model=schemas.ForumReplyListResponse)
+async def get_my_replies(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的回复"""
+    query = select(models.ForumReply).where(
+        models.ForumReply.author_id == current_user.id,
+        models.ForumReply.is_deleted == False
+    )
+    
+    query = query.order_by(models.ForumReply.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.ForumReply.post).selectinload(models.ForumPost.category),
+        selectinload(models.ForumReply.author)
+    )
+    
+    result = await db.execute(query)
+    replies = result.scalars().all()
+    
+    # 转换为输出格式
+    reply_list = []
+    for reply in replies:
+        reply_list.append(schemas.ForumReplyOut(
+            id=reply.id,
+            content=reply.content,
+            author=schemas.UserInfo(
+                id=reply.author.id,
+                name=reply.author.name,
+                avatar=reply.author.avatar or None
+            ),
+            parent_reply_id=reply.parent_reply_id,
+            reply_level=reply.reply_level,
+            like_count=reply.like_count,
+            is_liked=False,
+            created_at=reply.created_at,
+            updated_at=reply.updated_at,
+            replies=[]
+        ))
+    
+    return {
+        "replies": reply_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+@router.get("/favorites", response_model=schemas.ForumFavoriteListResponse)
+async def get_my_favorites(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我的收藏"""
+    query = select(models.ForumFavorite).where(
+        models.ForumFavorite.user_id == current_user.id
+    )
+    
+    query = query.order_by(models.ForumFavorite.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.category),
+        selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.author)
+    )
+    
+    result = await db.execute(query)
+    favorites = result.scalars().all()
+    
+    # 转换为输出格式
+    favorite_list = []
+    for favorite in favorites:
+        post = favorite.post
+        # 只返回可见的帖子
+        if post.is_deleted == False and post.is_visible == True:
+            favorite_list.append(schemas.ForumFavoriteOut(
+                id=favorite.id,
+                post=schemas.ForumPostListItem(
+                    id=post.id,
+                    title=post.title,
+                    content_preview=strip_markdown(post.content),
+                    category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
+                    author=schemas.UserInfo(
+                        id=post.author.id,
+                        name=post.author.name,
+                        avatar=post.author.avatar or None
+                    ),
+                    view_count=post.view_count,
+                    reply_count=post.reply_count,
+                    like_count=post.like_count,
+                    is_pinned=post.is_pinned,
+                    is_featured=post.is_featured,
+                    is_locked=post.is_locked,
+                    created_at=post.created_at,
+                    last_reply_at=post.last_reply_at
+                ),
+                created_at=favorite.created_at
+            ))
+    
+    return {
+        "favorites": favorite_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+# ==================== 管理员操作日志 API ====================
+
+@router.get("/admin/operation-logs", response_model=schemas.ForumAdminOperationLogListResponse)
+async def get_admin_operation_logs(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    operator_id: Optional[str] = Query(None),
+    operation_type: Optional[str] = Query(None),
+    target_type: Optional[str] = Query(None),
+    target_id: Optional[int] = Query(None),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取管理员操作日志（管理员）"""
+    query = select(models.ForumAdminOperationLog)
+    
+    # 筛选条件
+    if operator_id:
+        query = query.where(models.ForumAdminOperationLog.operator_id == operator_id)
+    if operation_type:
+        query = query.where(models.ForumAdminOperationLog.operation_type == operation_type)
+    if target_type:
+        query = query.where(models.ForumAdminOperationLog.target_type == target_type)
+    if target_id:
+        query = query.where(models.ForumAdminOperationLog.target_id == target_id)
+    
+    query = query.order_by(models.ForumAdminOperationLog.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    logs = result.scalars().all()
+    
+    # 转换为输出格式
+    log_list = []
+    for log in logs:
+        log_list.append(schemas.ForumAdminOperationLogOut(
+            id=log.id,
+            operator_id=log.operator_id,
+            operation_type=log.operation_type,
+            target_type=log.target_type,
+            target_id=log.target_id,
+            target_title=log.target_title,
+            action=log.action,
+            reason=log.reason,
+            ip_address=log.ip_address,
+            created_at=log.created_at
+        ))
+    
+    return {
+        "logs": log_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
 
