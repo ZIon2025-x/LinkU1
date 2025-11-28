@@ -2338,9 +2338,9 @@ class ForumCategoryListResponse(BaseModel):
 
 # 帖子相关 Schemas
 class ForumPostBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=1)
-    category_id: int
+    title: str = Field(..., min_length=1, max_length=200, description="帖子标题，1-200字符")
+    content: str = Field(..., min_length=10, max_length=50000, description="帖子内容，10-50000字符")
+    category_id: int = Field(..., description="板块ID")
 
 
 class ForumPostCreate(ForumPostBase):
@@ -2426,8 +2426,8 @@ class ForumPostListResponse(BaseModel):
 
 # 回复相关 Schemas
 class ForumReplyBase(BaseModel):
-    content: str = Field(..., min_length=1)
-    parent_reply_id: Optional[int] = None
+    content: str = Field(..., min_length=1, max_length=10000, description="回复内容，1-10000字符")
+    parent_reply_id: Optional[int] = Field(None, description="父回复ID（用于嵌套回复）")
 
 
 class ForumReplyCreate(ForumReplyBase):

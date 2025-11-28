@@ -120,17 +120,41 @@ async def check_and_trigger_risk_control(
     try:
         if rule.action_type == 'hide':
             if target_type == 'post':
-                await db.execute(
-                    update(models.ForumPost)
-                    .where(models.ForumPost.id == target_id)
-                    .values(is_visible=False)
+                # 获取帖子信息以更新统计
+                post_result = await db.execute(
+                    select(models.ForumPost).where(models.ForumPost.id == target_id)
                 )
+                post = post_result.scalar_one_or_none()
+                if post and not post.is_deleted:
+                    # 更新帖子可见性
+                    await db.execute(
+                        update(models.ForumPost)
+                        .where(models.ForumPost.id == target_id)
+                        .values(is_visible=False)
+                    )
+                    # 更新板块统计
+                    await update_category_stats(post.category_id, db)
             else:  # reply
-                await db.execute(
-                    update(models.ForumReply)
-                    .where(models.ForumReply.id == target_id)
-                    .values(is_visible=False)
+                # 获取回复信息以更新统计
+                reply_result = await db.execute(
+                    select(models.ForumReply).where(models.ForumReply.id == target_id)
                 )
+                reply = reply_result.scalar_one_or_none()
+                if reply and not reply.is_deleted:
+                    # 更新回复可见性
+                    await db.execute(
+                        update(models.ForumReply)
+                        .where(models.ForumReply.id == target_id)
+                        .values(is_visible=False)
+                    )
+                    # 更新帖子统计
+                    post_result = await db.execute(
+                        select(models.ForumPost).where(models.ForumPost.id == reply.post_id)
+                    )
+                    post = post_result.scalar_one_or_none()
+                    if post:
+                        post.reply_count = max(0, post.reply_count - 1)
+                        await db.flush()
         
         elif rule.action_type == 'lock':
             if target_type == 'post':
@@ -143,17 +167,52 @@ async def check_and_trigger_risk_control(
         
         elif rule.action_type == 'soft_delete':
             if target_type == 'post':
-                await db.execute(
-                    update(models.ForumPost)
-                    .where(models.ForumPost.id == target_id)
-                    .values(is_deleted=True)
+                # 获取帖子信息以更新统计
+                post_result = await db.execute(
+                    select(models.ForumPost).where(models.ForumPost.id == target_id)
                 )
+                post = post_result.scalar_one_or_none()
+                if post and post.is_visible and not post.is_deleted:
+                    # 更新帖子删除状态
+                    await db.execute(
+                        update(models.ForumPost)
+                        .where(models.ForumPost.id == target_id)
+                        .values(is_deleted=True)
+                    )
+                    # 更新板块统计
+                    await update_category_stats(post.category_id, db)
             else:  # reply
-                await db.execute(
-                    update(models.ForumReply)
-                    .where(models.ForumReply.id == target_id)
-                    .values(is_deleted=True)
+                # 获取回复信息以更新统计
+                reply_result = await db.execute(
+                    select(models.ForumReply).where(models.ForumReply.id == target_id)
                 )
+                reply = reply_result.scalar_one_or_none()
+                if reply and reply.is_visible and not reply.is_deleted:
+                    # 更新回复删除状态
+                    await db.execute(
+                        update(models.ForumReply)
+                        .where(models.ForumReply.id == target_id)
+                        .values(is_deleted=True)
+                    )
+                    # 更新帖子统计
+                    post_result = await db.execute(
+                        select(models.ForumPost).where(models.ForumPost.id == reply.post_id)
+                    )
+                    post = post_result.scalar_one_or_none()
+                    if post:
+                        post.reply_count = max(0, post.reply_count - 1)
+                        # 重新计算 last_reply_at
+                        last_reply_result = await db.execute(
+                            select(models.ForumReply.created_at)
+                            .where(models.ForumReply.post_id == post.id)
+                            .where(models.ForumReply.is_deleted == False)
+                            .where(models.ForumReply.is_visible == True)
+                            .order_by(models.ForumReply.created_at.desc())
+                            .limit(1)
+                        )
+                        last_reply = last_reply_result.scalar_one_or_none()
+                        post.last_reply_at = last_reply if last_reply else post.created_at
+                        await db.flush()
         
         elif rule.action_type == 'notify_admin':
             # 仅通知管理员，不自动处理
@@ -356,9 +415,14 @@ async def update_category_stats(category_id: int, db: AsyncSession):
 
 @router.get("/categories", response_model=schemas.ForumCategoryListResponse)
 async def get_categories(
+    include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取板块列表"""
+    """获取板块列表
+    
+    可选参数：
+    - include_latest_post: 如果为 True，每个板块会包含最新帖子的简要信息（标题、作者、最后回复时间等）
+    """
     result = await db.execute(
         select(models.ForumCategory)
         .where(models.ForumCategory.is_visible == True)
@@ -366,6 +430,71 @@ async def get_categories(
     )
     categories = result.scalars().all()
     
+    # 如果需要包含最新帖子信息，需要手动构建响应
+    if include_latest_post:
+        category_list = []
+        for category in categories:
+            # 获取该板块的最新帖子
+            latest_post_result = await db.execute(
+                select(models.ForumPost)
+                .where(
+                    models.ForumPost.category_id == category.id,
+                    models.ForumPost.is_deleted == False,
+                    models.ForumPost.is_visible == True
+                )
+                .order_by(
+                    func.coalesce(
+                        models.ForumPost.last_reply_at,
+                        models.ForumPost.created_at
+                    ).desc()
+                )
+                .limit(1)
+                .options(
+                    selectinload(models.ForumPost.author)
+                )
+            )
+            latest_post = latest_post_result.scalar_one_or_none()
+            
+            # 构建板块信息（使用 Pydantic 模型）
+            category_out = schemas.ForumCategoryOut(
+                id=category.id,
+                name=category.name,
+                description=category.description,
+                icon=category.icon,
+                sort_order=category.sort_order,
+                is_visible=category.is_visible,
+                post_count=category.post_count,
+                last_post_at=category.last_post_at,
+                created_at=category.created_at,
+                updated_at=category.updated_at
+            )
+            
+            # 将 Pydantic 模型转换为字典，以便添加额外字段
+            category_dict = category_out.model_dump()
+            
+            # 添加最新帖子信息（如果存在）
+            if latest_post:
+                category_dict["latest_post"] = {
+                    "id": latest_post.id,
+                    "title": latest_post.title,
+                    "author": {
+                        "id": latest_post.author.id,
+                        "name": latest_post.author.name,
+                        "avatar": latest_post.author.avatar or None
+                    } if latest_post.author else None,
+                    "last_reply_at": latest_post.last_reply_at or latest_post.created_at,
+                    "reply_count": latest_post.reply_count,
+                    "view_count": latest_post.view_count
+                }
+            else:
+                category_dict["latest_post"] = None
+            
+            category_list.append(category_dict)
+        
+        # 返回包含最新帖子信息的列表（注意：这会改变响应模型，但为了功能完整性暂时这样实现）
+        return {"categories": category_list}
+    
+    # 标准返回（不包含最新帖子信息）
     return {"categories": categories}
 
 
@@ -751,6 +880,42 @@ async def create_post(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """创建帖子"""
+    # 频率限制：检查用户最近1分钟内是否发过帖子
+    one_minute_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+    recent_post_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(
+            models.ForumPost.author_id == current_user.id,
+            models.ForumPost.created_at >= one_minute_ago
+        )
+    )
+    recent_post_count = recent_post_result.scalar() or 0
+    if recent_post_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="发帖频率限制：最多1条/分钟",
+            headers={"X-Error-Code": "RATE_LIMIT_EXCEEDED"}
+        )
+    
+    # 重复内容检测：检查用户最近5分钟内是否发过相同标题的帖子
+    five_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
+    duplicate_post_result = await db.execute(
+        select(models.ForumPost)
+        .where(
+            models.ForumPost.author_id == current_user.id,
+            models.ForumPost.title == post.title,
+            models.ForumPost.created_at >= five_minutes_ago
+        )
+        .limit(1)
+    )
+    duplicate_post = duplicate_post_result.scalar_one_or_none()
+    if duplicate_post:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="您最近5分钟内已发布过相同标题的帖子，请勿重复发布",
+            headers={"X-Error-Code": "DUPLICATE_POST"}
+        )
+    
     # 验证板块是否存在
     category_result = await db.execute(
         select(models.ForumCategory).where(models.ForumCategory.id == post.category_id)
@@ -759,7 +924,16 @@ async def create_post(
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="板块不存在"
+            detail="板块不存在",
+            headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+        )
+    
+    # 检查板块是否可见
+    if not category.is_visible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="该板块已隐藏",
+            headers={"X-Error-Code": "CATEGORY_HIDDEN"}
         )
     
     # 创建帖子
@@ -993,6 +1167,17 @@ async def pin_post(
         request=request,
         db=db
     )
+    
+    # 发送通知给帖子作者
+    if post.author_id:
+        notification = models.ForumNotification(
+            notification_type="pin_post",
+            target_type="post",
+            target_id=post.id,
+            from_user_id=None,  # 系统操作
+            to_user_id=post.author_id
+        )
+        db.add(notification)
     
     await db.commit()
     
@@ -1286,6 +1471,10 @@ async def unhide_post(
     post.updated_at = get_utc_time()
     await db.flush()
     
+    # 更新板块统计（仅当帖子未被删除时）
+    if not post.is_deleted:
+        await update_category_stats(post.category_id, db)
+    
     # 记录管理员操作日志
     await log_admin_operation(
         operator_id=current_admin.user_id,
@@ -1444,42 +1633,58 @@ async def get_replies(
 async def create_reply(
     post_id: int,
     reply: schemas.ForumReplyCreate,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """创建回复"""
-    # 验证帖子存在且可见
-    request_obj = Request
+    # 频率限制：检查用户最近30秒内是否发过回复
+    thirty_seconds_ago = datetime.now(timezone.utc) - timedelta(seconds=30)
+    recent_reply_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(
+            models.ForumReply.author_id == current_user.id,
+            models.ForumReply.created_at >= thirty_seconds_ago
+        )
+    )
+    recent_reply_count = recent_reply_result.scalar() or 0
+    if recent_reply_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="回复频率限制：最多1条/30秒",
+            headers={"X-Error-Code": "RATE_LIMIT_EXCEEDED"}
+        )
+    
+    # 重复内容检测：检查用户最近2分钟内是否在同一帖子下发过相同内容的回复
+    two_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=2)
+    duplicate_reply_result = await db.execute(
+        select(models.ForumReply)
+        .where(
+            models.ForumReply.author_id == current_user.id,
+            models.ForumReply.post_id == post_id,
+            models.ForumReply.content == reply.content,
+            models.ForumReply.created_at >= two_minutes_ago
+        )
+        .limit(1)
+    )
+    duplicate_reply = duplicate_reply_result.scalar_one_or_none()
+    if duplicate_reply:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="您最近2分钟内已在该帖子下发过相同内容的回复，请勿重复发布",
+            headers={"X-Error-Code": "DUPLICATE_REPLY"}
+        )
+    
+    # 检查是否为管理员
     is_admin = False
     try:
-        # 需要从函数参数获取 request
-        pass  # 这里暂时不检查管理员，因为 get_post_with_permissions 会处理
+        await get_current_admin_async(request, db)
+        is_admin = True
     except HTTPException:
         pass
     
-    # 获取帖子（简化处理，直接查询）
-    result = await db.execute(
-        select(models.ForumPost)
-        .where(models.ForumPost.id == post_id)
-        .where(models.ForumPost.is_deleted == False)
-    )
-    post = result.scalar_one_or_none()
-    
-    if not post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="帖子不存在或已删除",
-            headers={"X-Error-Code": "POST_DELETED"}
-        )
-    
-    # 检查风控隐藏
-    if not post.is_visible:
-        if not is_admin and (not current_user or post.author_id != current_user.id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="帖子不存在或已被隐藏",
-                headers={"X-Error-Code": "POST_HIDDEN"}
-            )
+    # 获取帖子（使用权限检查函数）
+    post = await get_post_with_permissions(post_id, current_user, is_admin, db)
     
     # 检查帖子是否锁定
     if post.is_locked:
@@ -1855,8 +2060,19 @@ async def toggle_like(
         # 更新点赞数
         if like.target_type == "post":
             target.like_count += 1
+            # 发送通知给帖子作者（如果点赞者不是作者本人）
+            if target.author_id and target.author_id != current_user.id:
+                notification = models.ForumNotification(
+                    notification_type="like_post",
+                    target_type="post",
+                    target_id=target.id,
+                    from_user_id=current_user.id,
+                    to_user_id=target.author_id
+                )
+                db.add(notification)
         else:
             target.like_count += 1
+            # 注意：根据文档，回复点赞不发送通知
         liked = True
     
     await db.commit()
@@ -2082,12 +2298,21 @@ async def create_report(
         status="pending"
     )
     db.add(db_report)
+    await db.flush()
+    
+    # 触发风控检查
+    try:
+        await check_and_trigger_risk_control(
+            target_type=report.target_type,
+            target_id=report.target_id,
+            db=db
+        )
+    except Exception as e:
+        # 风控检查失败不影响举报创建，记录日志即可
+        logger.warning(f"风控检查失败: {e}", exc_info=True)
+    
     await db.commit()
     await db.refresh(db_report)
-    
-    # 触发风控检查（简化版本，后续可以扩展为完整的风控系统）
-    # 注意：完整的风控系统需要 forum_risk_control_rules 和 forum_risk_control_logs 表
-    # 这里先实现基础逻辑，后续可以根据需要扩展
     
     return schemas.ForumReportOut(
         id=db_report.id,
@@ -2324,6 +2549,24 @@ async def mark_all_notifications_read(
     await db.commit()
     
     return {"message": "所有通知已标记为已读"}
+
+
+@router.get("/notifications/unread-count")
+async def get_unread_notification_count(
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取未读通知数量"""
+    unread_count_result = await db.execute(
+        select(func.count(models.ForumNotification.id))
+        .where(
+            models.ForumNotification.to_user_id == current_user.id,
+            models.ForumNotification.is_read == False
+        )
+    )
+    unread_count = unread_count_result.scalar() or 0
+    
+    return {"unread_count": unread_count}
 
 
 # ==================== 我的内容 API ====================
@@ -2910,4 +3153,454 @@ async def fix_forum_statistics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"修复统计字段失败: {str(e)}"
         )
+
+
+# ==================== 热门内容 API ====================
+
+@router.get("/hot-posts", response_model=schemas.ForumPostListResponse)
+async def get_hot_posts(
+    category_id: Optional[int] = Query(None, description="板块ID（可选）"),
+    limit: int = Query(20, ge=1, le=100, description="返回数量"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取热门帖子（按热度排序）"""
+    # 构建基础查询
+    query = select(models.ForumPost).where(
+        models.ForumPost.is_deleted == False,
+        models.ForumPost.is_visible == True
+    )
+    
+    # 板块筛选
+    if category_id:
+        query = query.where(models.ForumPost.category_id == category_id)
+    
+    # 热度排序：综合评分公式
+    hot_score = (
+        models.ForumPost.like_count * 5.0 +
+        models.ForumPost.reply_count * 3.0 +
+        models.ForumPost.view_count * 0.1
+    ) / func.pow(
+        func.extract('epoch', func.now() - models.ForumPost.created_at) / 3600.0 + 2.0,
+        1.5
+    )
+    query = query.order_by(hot_score.desc())
+    
+    # 限制数量
+    query = query.limit(limit)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.ForumPost.category),
+        selectinload(models.ForumPost.author)
+    )
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    
+    # 转换为列表项格式
+    post_items = []
+    for post in posts:
+        # 检查当前用户是否已点赞/收藏
+        is_liked = False
+        is_favorited = False
+        if current_user:
+            like_result = await db.execute(
+                select(models.ForumLike).where(
+                    models.ForumLike.target_type == "post",
+                    models.ForumLike.target_id == post.id,
+                    models.ForumLike.user_id == current_user.id
+                )
+            )
+            is_liked = like_result.scalar_one_or_none() is not None
+            
+            favorite_result = await db.execute(
+                select(models.ForumFavorite).where(
+                    models.ForumFavorite.post_id == post.id,
+                    models.ForumFavorite.user_id == current_user.id
+                )
+            )
+            is_favorited = favorite_result.scalar_one_or_none() is not None
+        
+        post_items.append(schemas.ForumPostListItem(
+            id=post.id,
+            title=post.title,
+            content_preview=strip_markdown(post.content),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
+            author=schemas.UserInfo(
+                id=post.author.id,
+                name=post.author.name,
+                avatar=post.author.avatar or None
+            ),
+            view_count=post.view_count,
+            reply_count=post.reply_count,
+            like_count=post.like_count,
+            is_pinned=post.is_pinned,
+            is_featured=post.is_featured,
+            is_locked=post.is_locked,
+            created_at=post.created_at,
+            last_reply_at=post.last_reply_at
+        ))
+    
+    return {
+        "posts": post_items,
+        "total": len(post_items),
+        "page": 1,
+        "page_size": limit
+    }
+
+
+# ==================== 用户论坛统计 API ====================
+
+@router.get("/users/{user_id}/stats")
+async def get_user_forum_stats(
+    user_id: str,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取用户论坛统计信息"""
+    # 检查权限：只能查看自己的统计或公开统计
+    if current_user and current_user.id != user_id:
+        # 非本人只能查看公开统计
+        pass  # 允许查看公开统计
+    
+    # 统计帖子数
+    posts_count_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(
+            models.ForumPost.author_id == user_id,
+            models.ForumPost.is_deleted == False
+        )
+    )
+    posts_count = posts_count_result.scalar() or 0
+    
+    # 统计回复数
+    replies_count_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(
+            models.ForumReply.author_id == user_id,
+            models.ForumReply.is_deleted == False
+        )
+    )
+    replies_count = replies_count_result.scalar() or 0
+    
+    # 统计获得的点赞数（分别统计帖子和回复的点赞）
+    post_likes_result = await db.execute(
+        select(func.sum(models.ForumPost.like_count))
+        .where(
+            models.ForumPost.author_id == user_id,
+            models.ForumPost.is_deleted == False
+        )
+    )
+    post_likes = post_likes_result.scalar() or 0
+    
+    reply_likes_result = await db.execute(
+        select(func.sum(models.ForumReply.like_count))
+        .where(
+            models.ForumReply.author_id == user_id,
+            models.ForumReply.is_deleted == False
+        )
+    )
+    reply_likes = reply_likes_result.scalar() or 0
+    likes_received = post_likes + reply_likes
+    
+    # 统计收藏数
+    favorites_count_result = await db.execute(
+        select(func.count(models.ForumFavorite.id))
+        .where(models.ForumFavorite.user_id == user_id)
+    )
+    favorites_count = favorites_count_result.scalar() or 0
+    
+    return {
+        "user_id": user_id,
+        "posts_count": posts_count,
+        "replies_count": replies_count,
+        "likes_received": likes_received,
+        "favorites_count": favorites_count
+    }
+
+
+# ==================== 排行榜 API ====================
+
+@router.get("/leaderboard/posts")
+async def get_top_posts_leaderboard(
+    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    limit: int = Query(10, ge=1, le=50, description="返回数量"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取发帖排行榜"""
+    now = datetime.now(timezone.utc)
+    
+    # 根据周期设置时间范围
+    if period == "today":
+        start_time = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    elif period == "week":
+        start_time = now - timedelta(days=7)
+    elif period == "month":
+        start_time = now - timedelta(days=30)
+    else:  # all
+        start_time = None
+    
+    # 构建查询
+    query = select(
+        models.ForumPost.author_id,
+        func.count(models.ForumPost.id).label("post_count")
+    ).where(
+        models.ForumPost.is_deleted == False
+    )
+    
+    if start_time:
+        query = query.where(models.ForumPost.created_at >= start_time)
+    
+    query = query.group_by(models.ForumPost.author_id).order_by(func.count(models.ForumPost.id).desc()).limit(limit)
+    
+    result = await db.execute(query)
+    top_users = result.all()
+    
+    # 获取用户信息
+    user_list = []
+    for user_id, post_count in top_users:
+        user_result = await db.execute(
+            select(models.User).where(models.User.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user_list.append({
+                "user": schemas.UserInfo(
+                    id=user.id,
+                    name=user.name,
+                    avatar=user.avatar or None
+                ),
+                "post_count": post_count
+            })
+    
+    return {
+        "period": period,
+        "users": user_list
+    }
+
+
+@router.get("/leaderboard/replies")
+async def get_top_replies_leaderboard(
+    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    limit: int = Query(10, ge=1, le=50, description="返回数量"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取回复排行榜"""
+    now = datetime.now(timezone.utc)
+    
+    # 根据周期设置时间范围
+    if period == "today":
+        start_time = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    elif period == "week":
+        start_time = now - timedelta(days=7)
+    elif period == "month":
+        start_time = now - timedelta(days=30)
+    else:  # all
+        start_time = None
+    
+    # 构建查询
+    query = select(
+        models.ForumReply.author_id,
+        func.count(models.ForumReply.id).label("reply_count")
+    ).where(
+        models.ForumReply.is_deleted == False
+    )
+    
+    if start_time:
+        query = query.where(models.ForumReply.created_at >= start_time)
+    
+    query = query.group_by(models.ForumReply.author_id).order_by(func.count(models.ForumReply.id).desc()).limit(limit)
+    
+    result = await db.execute(query)
+    top_users = result.all()
+    
+    # 获取用户信息
+    user_list = []
+    for user_id, reply_count in top_users:
+        user_result = await db.execute(
+            select(models.User).where(models.User.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user_list.append({
+                "user": schemas.UserInfo(
+                    id=user.id,
+                    name=user.name,
+                    avatar=user.avatar or None
+                ),
+                "reply_count": reply_count
+            })
+    
+    return {
+        "period": period,
+        "users": user_list
+    }
+
+
+@router.get("/leaderboard/likes")
+async def get_top_likes_leaderboard(
+    period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
+    limit: int = Query(10, ge=1, le=50, description="返回数量"),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取获赞排行榜（统计用户发布的帖子和回复获得的点赞数）"""
+    now = datetime.now(timezone.utc)
+    
+    # 根据周期设置时间范围
+    if period == "today":
+        start_time = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    elif period == "week":
+        start_time = now - timedelta(days=7)
+    elif period == "month":
+        start_time = now - timedelta(days=30)
+    else:  # all
+        start_time = None
+    
+    # 统计帖子获得的点赞数
+    post_likes_query = select(
+        models.ForumPost.author_id,
+        func.sum(models.ForumPost.like_count).label("likes")
+    ).where(
+        models.ForumPost.is_deleted == False
+    )
+    if start_time:
+        post_likes_query = post_likes_query.where(models.ForumPost.created_at >= start_time)
+    post_likes_query = post_likes_query.group_by(models.ForumPost.author_id)
+    
+    # 统计回复获得的点赞数
+    reply_likes_query = select(
+        models.ForumReply.author_id,
+        func.sum(models.ForumReply.like_count).label("likes")
+    ).where(
+        models.ForumReply.is_deleted == False
+    )
+    if start_time:
+        reply_likes_query = reply_likes_query.where(models.ForumReply.created_at >= start_time)
+    reply_likes_query = reply_likes_query.group_by(models.ForumReply.author_id)
+    
+    # 合并结果（简化处理：分别查询后合并）
+    post_result = await db.execute(post_likes_query)
+    post_likes_data = {row[0]: row[1] or 0 for row in post_result.all()}
+    
+    reply_result = await db.execute(reply_likes_query)
+    reply_likes_data = {row[0]: row[1] or 0 for row in reply_result.all()}
+    
+    # 合并统计
+    total_likes = {}
+    for user_id, likes in post_likes_data.items():
+        total_likes[user_id] = total_likes.get(user_id, 0) + likes
+    for user_id, likes in reply_likes_data.items():
+        total_likes[user_id] = total_likes.get(user_id, 0) + likes
+    
+    # 排序并取前N名
+    sorted_users = sorted(total_likes.items(), key=lambda x: x[1], reverse=True)[:limit]
+    
+    # 获取用户信息
+    user_list = []
+    for user_id, likes_count in sorted_users:
+        user_result = await db.execute(
+            select(models.User).where(models.User.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user_list.append({
+                "user": schemas.UserInfo(
+                    id=user.id,
+                    name=user.name,
+                    avatar=user.avatar or None
+                ),
+                "likes_received": likes_count
+            })
+    
+    return {
+        "period": period,
+        "users": user_list
+    }
+
+
+# ==================== 板块统计 API ====================
+
+@router.get("/categories/{category_id}/stats")
+async def get_category_stats(
+    category_id: int,
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取板块详细统计信息"""
+    # 验证板块存在
+    category_result = await db.execute(
+        select(models.ForumCategory).where(models.ForumCategory.id == category_id)
+    )
+    category = category_result.scalar_one_or_none()
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="板块不存在",
+            headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+        )
+    
+    # 统计可见帖子数
+    post_count_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(
+            models.ForumPost.category_id == category_id,
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True
+        )
+    )
+    post_count = post_count_result.scalar() or 0
+    
+    # 统计总回复数（可见帖子下的可见回复）
+    reply_count_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .join(models.ForumPost)
+        .where(
+            models.ForumPost.category_id == category_id,
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True,
+            models.ForumReply.is_deleted == False,
+            models.ForumReply.is_visible == True
+        )
+    )
+    reply_count = reply_count_result.scalar() or 0
+    
+    # 统计总点赞数（可见帖子下的点赞）
+    like_count_result = await db.execute(
+        select(func.count(models.ForumLike.id))
+        .join(models.ForumPost, and_(
+            models.ForumLike.target_type == "post",
+            models.ForumLike.target_id == models.ForumPost.id
+        ))
+        .where(
+            models.ForumPost.category_id == category_id,
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True
+        )
+    )
+    like_count = like_count_result.scalar() or 0
+    
+    # 统计参与用户数（在该板块发过帖子或回复的用户）
+    post_authors = select(models.ForumPost.author_id).distinct().where(
+        models.ForumPost.category_id == category_id,
+        models.ForumPost.is_deleted == False
+    )
+    reply_authors = select(models.ForumReply.author_id).distinct().join(models.ForumPost).where(
+        models.ForumPost.category_id == category_id,
+        models.ForumReply.is_deleted == False
+    )
+    users_subquery = post_authors.union(reply_authors).subquery()
+    users_count_result = await db.execute(
+        select(func.count()).select_from(users_subquery)
+    )
+    users_count = users_count_result.scalar() or 0
+    
+    return {
+        "category_id": category_id,
+        "category_name": category.name,
+        "post_count": post_count,
+        "reply_count": reply_count,
+        "like_count": like_count,
+        "users_count": users_count,
+        "last_post_at": category.last_post_at
+    }
 
