@@ -29,9 +29,12 @@ interface LeaderboardUser {
 }
 
 const ForumLeaderboard: React.FC = () => {
-  const { lang } = useParams<{ lang: string }>();
+  const { lang: langParam } = useParams<{ lang: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  
+  // 确保 lang 有值，防止路由错误
+  const lang = langParam || language || 'zh';
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
   const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'likes'>('posts');
@@ -112,32 +115,35 @@ const ForumLeaderboard: React.FC = () => {
         title={t('forum.leaderboard')}
         description={t('forum.description')}
       />
-      <div className={styles.header}>
-        <HamburgerMenu 
-          user={user}
-          onLogout={async () => {
-            try {
-              await logout();
-            } catch (error) {
-            }
-            window.location.reload();
-          }}
-          onLoginClick={() => {}}
-          systemSettings={systemSettings}
-          unreadCount={messageUnreadCount}
-        />
-        <Title level={3} className={styles.pageTitle}>
-          {t('forum.leaderboard')}
-        </Title>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
+          <div className={styles.headerActions}>
+            <LanguageSwitcher />
+            <NotificationButton 
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+            />
+            <HamburgerMenu 
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => {}}
+              systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
+            />
+          </div>
         </div>
-      </div>
+      </header>
+      <div className={styles.headerSpacer} />
 
       <div className={styles.content}>
         <Card>

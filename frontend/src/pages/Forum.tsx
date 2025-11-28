@@ -134,7 +134,9 @@ const Forum: React.FC = () => {
       />
       <header className={styles.header}>
         <div className={styles.headerContainer}>
-          <div className={styles.logo}>Link²Ur</div>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
           <div className={styles.headerActions}>
             <LanguageSwitcher />
             <NotificationButton 

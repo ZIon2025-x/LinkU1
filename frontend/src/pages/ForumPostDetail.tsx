@@ -70,9 +70,12 @@ interface ForumPost {
 }
 
 const ForumPostDetail: React.FC = () => {
-  const { lang, postId } = useParams<{ lang: string; postId: string }>();
+  const { lang: langParam, postId } = useParams<{ lang: string; postId: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  
+  // 确保 lang 有值，防止路由错误
+  const lang = langParam || language || 'zh';
   const { user: currentUser } = useCurrentUser();
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
@@ -345,27 +348,35 @@ const ForumPostDetail: React.FC = () => {
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <HamburgerMenu 
-            user={user}
-            onLogout={async () => {
-              try {
-                await logout();
-              } catch (error) {
-              }
-              window.location.reload();
-            }}
-            onLoginClick={() => setShowLoginModal(true)}
-            systemSettings={systemSettings}
-            unreadCount={messageUnreadCount}
-          />
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
-        </div>
+        <header className={styles.header}>
+          <div className={styles.headerContainer}>
+            <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+              Link²Ur
+            </div>
+            <div className={styles.headerActions}>
+              <LanguageSwitcher />
+              <NotificationButton 
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+              />
+              <HamburgerMenu 
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
+              />
+            </div>
+          </div>
+        </header>
+        <div className={styles.headerSpacer} />
         <div className={styles.loadingContainer}>
           <Spin size="large" />
         </div>
@@ -376,27 +387,35 @@ const ForumPostDetail: React.FC = () => {
   if (!post) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <HamburgerMenu 
-            user={user}
-            onLogout={async () => {
-              try {
-                await logout();
-              } catch (error) {
-              }
-              window.location.reload();
-            }}
-            onLoginClick={() => setShowLoginModal(true)}
-            systemSettings={systemSettings}
-            unreadCount={messageUnreadCount}
-          />
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
-        </div>
+        <header className={styles.header}>
+          <div className={styles.headerContainer}>
+            <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+              Link²Ur
+            </div>
+            <div className={styles.headerActions}>
+              <LanguageSwitcher />
+              <NotificationButton 
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+              />
+              <HamburgerMenu 
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
+              />
+            </div>
+          </div>
+        </header>
+        <div className={styles.headerSpacer} />
         <Empty description={t('forum.error')} />
       </div>
     );
@@ -408,37 +427,35 @@ const ForumPostDetail: React.FC = () => {
         title={post.title}
         description={post.content.substring(0, 200)}
       />
-      <div className={styles.header}>
-        <HamburgerMenu 
-          user={user}
-          onLogout={async () => {
-            try {
-              await logout();
-            } catch (error) {
-            }
-            window.location.reload();
-          }}
-          onLoginClick={() => setShowLoginModal(true)}
-          systemSettings={systemSettings}
-          unreadCount={messageUnreadCount}
-        />
-        <Button
-          type="link"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(`/${lang}/forum/category/${post.category.id}`)}
-          className={styles.backButton}
-        >
-          {t('common.back')}
-        </Button>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
+          <div className={styles.headerActions}>
+            <LanguageSwitcher />
+            <NotificationButton 
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+            />
+            <HamburgerMenu 
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
+            />
+          </div>
         </div>
-      </div>
+      </header>
+      <div className={styles.headerSpacer} />
 
       <div className={styles.content}>
         <Card className={styles.postCard}>

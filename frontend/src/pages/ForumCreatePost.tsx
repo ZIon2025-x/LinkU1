@@ -25,12 +25,15 @@ interface ForumCategory {
 }
 
 const ForumCreatePost: React.FC = () => {
-  const { lang, postId } = useParams<{ lang: string; postId?: string }>();
+  const { lang: langParam, postId } = useParams<{ lang: string; postId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const { user: currentUser } = useCurrentUser();
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
+  
+  // 确保 lang 有值，防止路由错误
+  const lang = langParam || language || 'zh';
   
   const [form] = Form.useForm();
   const [categories, setCategories] = useState<ForumCategory[]>([]);
@@ -178,47 +181,35 @@ const ForumCreatePost: React.FC = () => {
         title={isEdit ? t('forum.editPost') : t('forum.createPost')}
         description={t('forum.description')}
       />
-      <div className={styles.header}>
-        <HamburgerMenu 
-          user={user}
-          onLogout={async () => {
-            try {
-              await logout();
-            } catch (error) {
-            }
-            window.location.reload();
-          }}
-          onLoginClick={() => setShowLoginModal(true)}
-          systemSettings={systemSettings}
-          unreadCount={messageUnreadCount}
-        />
-        <Button
-          type="link"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => {
-            const categoryId = form.getFieldValue('category_id');
-            if (categoryId) {
-              navigate(`/${lang}/forum/category/${categoryId}`);
-            } else {
-              navigate(`/${lang}/forum`);
-            }
-          }}
-          className={styles.backButton}
-        >
-          {t('common.back')}
-        </Button>
-        <Title level={3} className={styles.pageTitle}>
-          {isEdit ? t('forum.editPost') : t('forum.createPost')}
-        </Title>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
+          <div className={styles.headerActions}>
+            <LanguageSwitcher />
+            <NotificationButton 
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+            />
+            <HamburgerMenu 
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
+            />
+          </div>
         </div>
-      </div>
+      </header>
+      <div className={styles.headerSpacer} />
 
       <div className={styles.content}>
         {postLoading ? (

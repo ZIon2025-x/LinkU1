@@ -165,27 +165,35 @@ const ForumPostList: React.FC = () => {
   if (loading && !category) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <HamburgerMenu 
-            user={user}
-            onLogout={async () => {
-              try {
-                await logout();
-              } catch (error) {
-              }
-              window.location.reload();
-            }}
-            onLoginClick={() => setShowLoginModal(true)}
-            systemSettings={systemSettings}
-            unreadCount={messageUnreadCount}
-          />
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
-        </div>
+        <header className={styles.header}>
+          <div className={styles.headerContainer}>
+            <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+              Link²Ur
+            </div>
+            <div className={styles.headerActions}>
+              <LanguageSwitcher />
+              <NotificationButton 
+                user={user}
+                unreadCount={unreadCount}
+                onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+              />
+              <HamburgerMenu 
+                user={user}
+                onLogout={async () => {
+                  try {
+                    await logout();
+                  } catch (error) {
+                  }
+                  window.location.reload();
+                }}
+                onLoginClick={() => setShowLoginModal(true)}
+                systemSettings={systemSettings}
+                unreadCount={messageUnreadCount}
+              />
+            </div>
+          </div>
+        </header>
+        <div className={styles.headerSpacer} />
         <div className={styles.loadingContainer}>
           <Spin size="large" />
         </div>
@@ -199,41 +207,35 @@ const ForumPostList: React.FC = () => {
         title={category ? `${category.name} - ${t('forum.title')}` : t('forum.title')}
         description={category?.description || t('forum.description')}
       />
-      <div className={styles.header}>
-        <HamburgerMenu 
-          user={user}
-          onLogout={async () => {
-            try {
-              await logout();
-            } catch (error) {
-            }
-            window.location.reload();
-          }}
-          onLoginClick={() => setShowLoginModal(true)}
-          systemSettings={systemSettings}
-          unreadCount={messageUnreadCount}
-        />
-        <div className={styles.headerContent}>
-          <Button 
-            type="link" 
-            onClick={() => navigate(`/${lang}/forum`)}
-            className={styles.backButton}
-          >
-            ← {t('common.back')}
-          </Button>
-          <Title level={3} className={styles.pageTitle}>
-            {category?.name || t('forum.title')}
-          </Title>
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
+          <div className={styles.headerActions}>
+            <LanguageSwitcher />
+            <NotificationButton 
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+            />
+            <HamburgerMenu 
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
+            />
+          </div>
         </div>
-        <div className={styles.headerRight}>
-          <LanguageSwitcher />
-          <NotificationButton 
-            user={user}
-            unreadCount={unreadCount}
-            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
-          />
-        </div>
-      </div>
+      </header>
+      <div className={styles.headerSpacer} />
 
       <div className={styles.content}>
         <div className={styles.toolbar}>
