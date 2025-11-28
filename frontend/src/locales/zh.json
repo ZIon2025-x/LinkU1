@@ -2264,7 +2264,9 @@
     "tradeWarning": "请谨慎交易，注意保护个人财产与隐私安全，避免私下交易风险。",
     "searchTasks": "搜索任务...",
     "connectToChat": "连接以开始聊天",
-    "typeMessage": "输入消息..."
+    "typeMessage": "输入消息...",
+    "noTasks": "暂无任务",
+    "noTasksFound": "没有找到匹配的任务"
   },
   "time": {
     "gmt": "GMT",

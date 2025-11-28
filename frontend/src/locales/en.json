@@ -2374,7 +2374,9 @@
     "tradeWarning": "Please trade with caution, protect your personal property and privacy, and avoid private transaction risks.",
     "searchTasks": "Search tasks...",
     "connectToChat": "Connect to start chatting",
-    "typeMessage": "Type a message..."
+    "typeMessage": "Type a message...",
+    "noTasks": "No tasks available",
+    "noTasksFound": "No matching tasks found"
   },
   "time": {
     "gmt": "GMT",

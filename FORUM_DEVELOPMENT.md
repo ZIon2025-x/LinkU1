@@ -167,6 +167,10 @@
 - 是否已读
 - 创建时间
 
+**通知类型范围说明**:
+- **目前只对帖子点赞发通知**，不包含回复点赞；如后续需要可以增加 `like_reply` 类型，并扩展表约束
+- 通知类型枚举：`reply_post`（回复帖子）、`reply_reply`（回复回复）、`like_post`（点赞帖子）、`feature_post`（加精帖子）、`pin_post`（置顶帖子）
+
 ### 8. 举报/审核功能
 
 #### 功能特性
@@ -226,15 +230,16 @@ CREATE TABLE forum_posts (
     is_featured BOOLEAN DEFAULT FALSE,
     is_locked BOOLEAN DEFAULT FALSE,
     is_deleted BOOLEAN DEFAULT FALSE,
+    is_visible BOOLEAN DEFAULT TRUE NOT NULL,  -- 风控隐藏字段，FALSE 时对普通用户不可见
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_reply_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_forum_posts_category ON forum_posts(category_id, is_deleted, created_at DESC);
-CREATE INDEX idx_forum_posts_author ON forum_posts(author_id, is_deleted);
+CREATE INDEX idx_forum_posts_category ON forum_posts(category_id, is_deleted, is_visible, created_at DESC);
+CREATE INDEX idx_forum_posts_author ON forum_posts(author_id, is_deleted, is_visible);
 CREATE INDEX idx_forum_posts_pinned ON forum_posts(is_pinned DESC, created_at DESC);
-CREATE INDEX idx_forum_posts_last_reply ON forum_posts(is_deleted, last_reply_at DESC NULLS LAST);
+CREATE INDEX idx_forum_posts_last_reply ON forum_posts(is_deleted, is_visible, last_reply_at DESC NULLS LAST);
 
 -- 注意：索引中的 DESC 排序方向与常用 ORDER BY 场景对齐，提升查询性能
 -- 全文搜索索引：使用 'simple' 配置（对中文分词效果较差）
@@ -258,13 +263,14 @@ CREATE TABLE forum_replies (
     author_id VARCHAR(8) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     like_count INTEGER DEFAULT 0,
     is_deleted BOOLEAN DEFAULT FALSE,
+    is_visible BOOLEAN DEFAULT TRUE NOT NULL,  -- 风控隐藏字段，FALSE 时对普通用户不可见
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_forum_replies_post ON forum_replies(post_id, created_at ASC);
 CREATE INDEX idx_forum_replies_parent ON forum_replies(parent_reply_id);
-CREATE INDEX idx_forum_replies_author ON forum_replies(author_id, is_deleted);
+CREATE INDEX idx_forum_replies_author ON forum_replies(author_id, is_deleted, is_visible);
 ```
 
 ### 4. 点赞表（forum_likes）
@@ -315,6 +321,14 @@ CREATE TABLE forum_notifications (
 CREATE INDEX idx_forum_notifications_user ON forum_notifications(to_user_id, is_read, created_at DESC);
 CREATE INDEX idx_forum_notifications_target ON forum_notifications(target_type, target_id);
 ```
+
+**通知类型扩展说明**:
+- 当前枚举：`reply_post`、`reply_reply`、`like_post`、`feature_post`、`pin_post`
+- **如需新增类型**（例如 `like_reply`），需要同时：
+  1. 更新数据库 CheckConstraint：`CHECK (notification_type IN ('reply_post', 'reply_reply', 'like_post', 'feature_post', 'pin_post', 'like_reply'))`
+  2. 更新 Alembic 迁移文件中的约束定义
+  3. 更新后端枚举和发送逻辑
+  4. 更新前端文案和通知处理逻辑
 
 ### 7. 举报表（forum_reports）
 
@@ -400,6 +414,7 @@ def upgrade():
         sa.Column('is_featured', sa.Boolean(), nullable=False, server_default=sa.text('false')),
         sa.Column('is_locked', sa.Boolean(), nullable=False, server_default=sa.text('false')),
         sa.Column('is_deleted', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column('is_visible', sa.Boolean(), nullable=False, server_default=sa.text('true')),  -- 风控隐藏字段
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('last_reply_at', sa.DateTime(timezone=True), nullable=True),
@@ -408,10 +423,11 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
     # 注意：PostgreSQL 索引支持 DESC 排序，使用 op.execute 创建带排序的索引以与常用查询对齐
-    op.create_index('idx_forum_posts_author', 'forum_posts', ['author_id', 'is_deleted'])
-    op.execute("CREATE INDEX idx_forum_posts_category ON forum_posts(category_id, is_deleted, created_at DESC)")
+    # 注意：索引中包含 is_visible 以匹配查询约定（WHERE is_deleted = FALSE AND is_visible = TRUE）
+    op.execute("CREATE INDEX idx_forum_posts_author ON forum_posts(author_id, is_deleted, is_visible)")
+    op.execute("CREATE INDEX idx_forum_posts_category ON forum_posts(category_id, is_deleted, is_visible, created_at DESC)")
     op.execute("CREATE INDEX idx_forum_posts_pinned ON forum_posts(is_pinned DESC, created_at DESC)")
-    op.execute("CREATE INDEX idx_forum_posts_last_reply ON forum_posts(is_deleted, last_reply_at DESC NULLS LAST)")
+    op.execute("CREATE INDEX idx_forum_posts_last_reply ON forum_posts(is_deleted, is_visible, last_reply_at DESC NULLS LAST)")
     
     # 创建全文搜索索引（PostgreSQL）
     # ⚠️ 注意：'simple' 配置对中文分词效果较差
@@ -439,6 +455,7 @@ def upgrade():
         sa.Column('author_id', sa.String(length=8), nullable=False),
         sa.Column('like_count', sa.Integer(), nullable=False, server_default='0'),
         sa.Column('is_deleted', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column('is_visible', sa.Boolean(), nullable=False, server_default=sa.text('true')),  -- 风控隐藏字段
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(['post_id'], ['forum_posts.id'], ondelete='CASCADE'),
@@ -449,7 +466,8 @@ def upgrade():
     )
     op.create_index('idx_forum_replies_post', 'forum_replies', ['post_id', 'created_at'], postgresql_ops={'created_at': 'ASC'})
     op.create_index('idx_forum_replies_parent', 'forum_replies', ['parent_reply_id'])
-    op.create_index('idx_forum_replies_author', 'forum_replies', ['author_id', 'is_deleted'])
+    # 注意：索引中包含 is_visible 以匹配查询约定（WHERE is_deleted = FALSE AND is_visible = TRUE）
+    op.execute("CREATE INDEX idx_forum_replies_author ON forum_replies(author_id, is_deleted, is_visible)")
     
     # 创建点赞表
     # 注意：target_id 没有外键约束（因为是多态关联），需要在业务逻辑中处理级联删除
@@ -712,9 +730,6 @@ Authorization: Bearer {admin_token}
   "message": "板块删除成功"
 }
 ```
-```
-DELETE /api/forum/categories/{category_id}
-```
 
 ### 2. 主题帖API
 
@@ -862,15 +877,16 @@ DELETE /api/forum/posts/{post_id}
 Authorization: Bearer {token}
 ```
 
+**说明**:
+- 实际实现为**软删除**：将 `is_deleted = true`，并触发点赞清理触发器
+- 软删除的帖子在列表中不再显示，详情页返回 404 或"该帖子已被删除"提示
+- 只有作者或管理员可以删除帖子
+
 **响应示例**:
 ```json
 {
   "message": "帖子删除成功"
 }
-```
-```
-DELETE /api/forum/posts/{post_id}
-Authorization: Bearer {token}
 ```
 
 #### 置顶帖子（管理员）
@@ -1081,15 +1097,16 @@ DELETE /api/forum/replies/{reply_id}
 Authorization: Bearer {token}
 ```
 
+**说明**:
+- 实际实现为**软删除**：将 `is_deleted = true`，并触发点赞清理触发器
+- 软删除的回复在列表中保留一行"该回复已被删除"占位（方便理解楼层结构），但内容不展示
+- 只有作者或管理员可以删除回复
+
 **响应示例**:
 ```json
 {
   "message": "回复删除成功"
 }
-```
-```
-DELETE /api/forum/replies/{reply_id}
-Authorization: Bearer {token}
 ```
 
 ### 4. 点赞API
@@ -1253,6 +1270,17 @@ GET /api/forum/search?q=关键词&category_id=1&sort=latest&page=1&page_size=20
   - `/api/forum/posts?q=...`: 使用简单 LIKE 查询，轻量级，适合简单搜索
   - `/api/forum/search?q=...`: 使用全文索引，性能更好，适合复杂搜索场景
 
+**中文搜索方案的落地路线图**:
+- **MVP 阶段**:
+  - `/api/forum/posts?q=...` 用 LIKE 查询
+  - `/api/forum/search` 用 PG simple tsvector
+- **中文体验升级阶段**:
+  - DB 开启 `pg_bigm` 扩展，重建全文索引
+  - 同时优化搜索权重（标题 > 正文）
+- **大规模阶段**:
+  - 引入独立搜索服务（Meili/ES），写数据时同步推送
+  - `/api/forum/search` 切到外部搜索引擎，PG 索引作为 fallback
+
 ### 6.1 排序字段映射表
 
 **统一的排序参数与数据库字段映射关系**:
@@ -1280,7 +1308,7 @@ SELECT
         EXTRACT(EPOCH FROM (NOW() - created_at)) / 86400.0 * 0.5
     ) AS hot_score
 FROM forum_posts
-WHERE is_deleted = FALSE
+WHERE is_deleted = FALSE AND is_visible = TRUE
 ORDER BY hot_score DESC
 ```
 
@@ -1327,7 +1355,7 @@ SELECT
         POW(EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600.0 + 2.0, 1.5)
     ) AS hot_score
 FROM forum_posts
-WHERE is_deleted = FALSE;
+WHERE is_deleted = FALSE AND is_visible = TRUE;
 
 -- 2. 创建索引以加速排序查询
 CREATE INDEX idx_forum_posts_hot_score ON forum_posts_hot_score(hot_score DESC);
@@ -1368,7 +1396,7 @@ SELECT
         POW(EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600.0 + 2.0, 1.5)
     ) AS hot_score
 FROM forum_posts
-WHERE is_deleted = FALSE
+WHERE is_deleted = FALSE AND is_visible = TRUE
 ORDER BY hot_score DESC
 LIMIT 20;
 ```
@@ -1404,7 +1432,7 @@ def get_hot_posts(category_id=None, limit=20):
 - `view_count * 0.1`: 浏览数权重较低（0.1倍）
 - `时间衰减`: 使用 `POW((小时数 + 2), 1.5)` 进行时间衰减，新帖子有初始优势，老帖子逐渐衰减
 
-**注意**: 所有排序都只统计 `is_deleted = FALSE` 的帖子
+**注意**: 所有排序都只统计 `is_deleted = FALSE AND is_visible = TRUE` 的帖子
 
 ### 7. 通知API
 
@@ -1702,6 +1730,32 @@ Authorization: Bearer {token}
   - **安全渲染**: 必须使用安全模式，对HTML标签做白名单过滤，防止XSS攻击
   - 推荐使用 `DOMPurify` 或类似库进行内容清理
 
+### 4.1 帖子状态矩阵表（前端参考）
+
+**用户角色 × 帖子状态 × 可见性规则**:
+
+| 用户角色 | 帖子状态 | 列表中显示 | 详情页可见 | 可回复 | 可编辑 | 可删除 |
+|---------|---------|-----------|-----------|--------|--------|--------|
+| 普通用户 | 正常（`is_deleted=FALSE, is_visible=TRUE, is_locked=FALSE`） | ✅ | ✅ | ✅ | ❌ | ❌ |
+| 普通用户 | 已锁定（`is_locked=TRUE`） | ✅ | ✅ | ❌ | ❌ | ❌ |
+| 普通用户 | 已隐藏（`is_visible=FALSE`） | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 普通用户 | 已删除（`is_deleted=TRUE`） | ❌ | ❌（404） | ❌ | ❌ | ❌ |
+| 帖子作者 | 正常 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 帖子作者 | 已锁定 | ✅ | ✅ | ❌ | ✅ | ✅ |
+| 帖子作者 | 已隐藏 | ✅ | ✅（显示"仅自己可见"） | ❌ | ✅ | ✅ |
+| 帖子作者 | 已删除 | ❌ | ❌（404） | ❌ | ❌ | ❌ |
+| 管理员 | 正常 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 管理员 | 已锁定 | ✅ | ✅ | ❌ | ✅ | ✅ |
+| 管理员 | 已隐藏 | ✅ | ✅（显示"已隐藏"标记） | ❌ | ✅ | ✅ |
+| 管理员 | 已删除 | ❌ | ✅（显示"已删除"标记） | ❌ | ✅ | ✅ |
+
+**说明**:
+- **列表中显示**: 是否在帖子列表中出现
+- **详情页可见**: 是否可以访问帖子详情页（普通用户访问隐藏/删除内容返回 404）
+- **可回复**: 是否可以创建新回复（锁定后禁止）
+- **可编辑**: 是否可以编辑帖子内容（只有作者和管理员）
+- **可删除**: 是否可以删除帖子（只有作者和管理员）
+
 ### 5. 嵌套回复实现
 
 **实现方式**:
@@ -1926,9 +1980,14 @@ async def init_categories():
 ### 1. 数据库优化
 
 - **索引优化**: 为常用查询字段添加索引
-- **分页查询**: 使用LIMIT和OFFSET进行分页
+- **分页查询**: 使用LIMIT和OFFSET进行分页（详见下方分页策略说明）
 - **全文搜索**: 使用PostgreSQL的全文搜索功能
 - **统计字段**: 使用冗余字段存储统计数据，避免实时计算
+
+**分页策略推荐使用场景**:
+- **列表页（用户按时间/板块浏览）**: 数据量大时推荐使用 **Keyset Pagination（游标分页）**
+- **搜索结果**: 为兼容跳转到任意页，可以暂时保留 **LIMIT/OFFSET**
+- **"我的帖子/回复/收藏"**: 一般数据量不会特别大，用 **OFFSET** 足够
 
 ### 2. 缓存策略
 
@@ -2000,11 +2059,20 @@ async def init_categories():
 - **删除权限**: 只有作者或管理员可以删除帖子
 - **管理权限**: 只有管理员可以置顶/加精/锁定帖子
 
+**实现建议**:
+- 后端统一使用已有的认证中间件（比如 FastAPI `Depends`），在论坛路由上挂一个 `get_current_user` 依赖
+- 权限检查在路由层统一处理，避免在业务逻辑中重复检查
+
 ### 3. 速率限制
 
 - **发帖限制**: 限制用户发帖频率（防止刷屏）
 - **回复限制**: 限制用户回复频率
 - **搜索限制**: 限制搜索请求频率
+
+**实现建议**:
+- **网关层限流**: 可以在网关（Nginx / API Gateway）层做 IP 级限流
+- **业务级限流**: 业务级限流（比如"单用户每分钟最多发帖 2 条"）用 Redis + Lua 实现
+- **Redis Key 规范**: `forum:rate:user:{user_id}:create_post`、`forum:rate:user:{user_id}:create_reply` 等
 
 ### 4. 内容审核
 
@@ -2078,9 +2146,9 @@ CREATE TABLE forum_risk_control_logs (
     action_type VARCHAR(20) NOT NULL,
     action_result VARCHAR(50),  -- 执行结果（success/failed/reverted）
     executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    executed_by INTEGER REFERENCES users(id),  -- NULL 表示系统自动执行
+    executed_by VARCHAR(8) REFERENCES users(id),  -- NULL 表示系统自动执行
     reverted_at TIMESTAMP WITH TIME ZONE,  -- 如果被管理员撤销
-    reverted_by INTEGER REFERENCES users(id)
+    reverted_by VARCHAR(8) REFERENCES users(id)
 );
 
 -- 索引
@@ -2106,7 +2174,23 @@ CREATE INDEX idx_risk_control_logs_executed ON forum_risk_control_logs(executed_
 # 伪代码：检查并执行风控
 async def check_and_trigger_risk_control(target_type: str, target_id: int, db: AsyncSession):
     # 1. 获取该目标在时间窗口内的举报数
-    time_window = timedelta(hours=24)
+    # 注意：使用 rule.trigger_time_window 而不是硬编码 24 小时
+    # 先查找匹配的规则以获取时间窗口配置
+    rule = await db.execute(
+        select(ForumRiskControlRule)
+        .where(
+            ForumRiskControlRule.target_type == target_type,
+            ForumRiskControlRule.is_enabled == True
+        )
+        .order_by(ForumRiskControlRule.trigger_count.desc())
+        .limit(1)
+    ).scalar_one_or_none()
+    
+    if not rule:
+        return
+    
+    # 使用规则中配置的时间窗口（小时）
+    time_window = timedelta(hours=rule.trigger_time_window)
     cutoff_time = datetime.now(timezone.utc) - time_window
     
     report_count = await db.execute(
@@ -2119,20 +2203,9 @@ async def check_and_trigger_risk_control(target_type: str, target_id: int, db: A
         )
     ).scalar()
     
-    # 2. 查找匹配的风控规则
-    rule = await db.execute(
-        select(ForumRiskControlRule)
-        .where(
-            ForumRiskControlRule.target_type == target_type,
-            ForumRiskControlRule.trigger_count <= report_count,
-            ForumRiskControlRule.is_enabled == True
-        )
-        .order_by(ForumRiskControlRule.trigger_count.desc())
-        .limit(1)
-    ).scalar_one_or_none()
-    
-    if not rule:
-        return
+    # 2. 检查是否达到规则阈值
+    if report_count < rule.trigger_count:
+        return  # 未达到触发阈值
     
     # 3. 执行风控动作
     if rule.action_type == 'hide':
@@ -2205,7 +2278,7 @@ INSERT INTO forum_risk_control_rules (rule_name, target_type, trigger_count, tri
 -- 管理员操作日志表
 CREATE TABLE forum_admin_operation_logs (
     id SERIAL PRIMARY KEY,
-    operator_id INTEGER NOT NULL REFERENCES users(id),  -- 操作者（管理员）
+    operator_id VARCHAR(8) NOT NULL REFERENCES users(id),  -- 操作者（管理员）
     operation_type VARCHAR(50) NOT NULL,  -- 操作类型：pin_post, unpin_post, feature_post, unfeature_post, lock_post, unlock_post, delete_post, delete_reply, ban_user, unban_user 等
     target_type VARCHAR(20) NOT NULL,  -- 目标类型：post, reply, user, category 等
     target_id INTEGER NOT NULL,  -- 目标ID
@@ -2250,7 +2323,7 @@ CREATE INDEX idx_admin_logs_created ON forum_admin_operation_logs(created_at DES
 ```python
 # 伪代码：记录管理员操作日志
 async def log_admin_operation(
-    operator_id: int,
+    operator_id: str,  # 注意：users.id 是 VARCHAR(8)，不是 INTEGER
     operation_type: str,
     target_type: str,
     target_id: int,
@@ -2292,7 +2365,7 @@ async def log_admin_operation(
     await db.commit()
 
 # 使用示例：置顶帖子
-async def pin_post(post_id: int, operator_id: int, reason: str, request: Request, db: AsyncSession):
+async def pin_post(post_id: int, operator_id: str, reason: str, request: Request, db: AsyncSession):  # 注意：operator_id 是 VARCHAR(8)
     # 执行置顶操作
     await db.execute(
         update(ForumPost)
@@ -2318,9 +2391,9 @@ async def pin_post(post_id: int, operator_id: int, reason: str, request: Request
 **查询示例**:
 
 ```sql
--- 查询某个管理员的所有操作
+-- 查询某个管理员的所有操作（注意：operator_id 是 VARCHAR(8)）
 SELECT * FROM forum_admin_operation_logs
-WHERE operator_id = 1
+WHERE operator_id = '12345678'  -- 示例：用户 ID 是字符串格式
 ORDER BY created_at DESC
 LIMIT 50;
 
@@ -2370,14 +2443,20 @@ ORDER BY created_at DESC;
 
 ### 2. 统计字段更新策略
 
-**重要约定**: 所有统计字段**只统计 `is_deleted = FALSE` 的数据**，软删除的数据不参与统计。
+**重要约定**: 
+- 所有统计字段**只统计 `is_deleted = FALSE AND is_visible = TRUE` 的数据**
+- 软删除的数据（`is_deleted = TRUE`）不参与统计
+- 隐藏的数据（`is_visible = FALSE`）不参与公开统计
+- **统计字段代表"公开可见的数量"**，用于展示给普通用户
 
 #### 2.1 板块统计字段更新
 
 **`forum_categories.post_count`**:
-- ✅ 创建帖子时：`category.post_count += 1`
-- ✅ 删除帖子时（硬删除或软删除）：`category.post_count -= 1`（仅当原 `is_deleted = FALSE` 时）
-- ✅ 恢复软删除帖子时：`category.post_count += 1`
+- ✅ 创建帖子时：`category.post_count += 1`（仅当 `is_deleted = FALSE AND is_visible = TRUE`）
+- ✅ 删除帖子时（硬删除或软删除）：`category.post_count -= 1`（仅当原 `is_deleted = FALSE AND is_visible = TRUE` 时）
+- ✅ 恢复软删除帖子时：`category.post_count += 1`（仅当恢复后 `is_deleted = FALSE AND is_visible = TRUE`）
+- ✅ 隐藏帖子时：`category.post_count -= 1`（仅当原 `is_visible = TRUE` 时）
+- ✅ 取消隐藏帖子时：`category.post_count += 1`（仅当 `is_deleted = FALSE` 且原 `is_visible = FALSE` 时）
 
 **`forum_categories.last_post_at`**:
 - ✅ 创建新帖子时：更新为当前时间
@@ -2386,9 +2465,11 @@ ORDER BY created_at DESC;
 #### 2.2 帖子统计字段更新
 
 **`forum_posts.reply_count`**:
-- ✅ 创建回复时：`post.reply_count += 1`（仅当回复 `is_deleted = FALSE`）
-- ✅ 删除回复时（硬删除或软删除）：`post.reply_count -= 1`（仅当原 `is_deleted = FALSE` 时）
-- ✅ 恢复软删除回复时：`post.reply_count += 1`
+- ✅ 创建回复时：`post.reply_count += 1`（仅当回复 `is_deleted = FALSE AND is_visible = TRUE`）
+- ✅ 删除回复时（硬删除或软删除）：`post.reply_count -= 1`（仅当原 `is_deleted = FALSE AND is_visible = TRUE` 时）
+- ✅ 恢复软删除回复时：`post.reply_count += 1`（仅当恢复后 `is_deleted = FALSE AND is_visible = TRUE`）
+- ✅ 隐藏回复时：`post.reply_count -= 1`（仅当原 `is_visible = TRUE` 时）
+- ✅ 取消隐藏回复时：`post.reply_count += 1`（仅当 `is_deleted = FALSE` 且原 `is_visible = FALSE` 时）
 
 **`forum_posts.last_reply_at`**:
 - ✅ 创建新回复时：更新为当前时间
@@ -2409,16 +2490,22 @@ ORDER BY created_at DESC;
 - ✅ 取消点赞时：`reply.like_count -= 1`
 - ⚠️ 删除回复时：级联删除所有点赞记录，计数自动归零
 
-### 3. 软删除的业务语义
+### 3. 软删除和风控隐藏的业务语义
 
 **统一约定**:
-- ✅ **所有对外查询默认 `WHERE is_deleted = FALSE`**
-- ✅ **统计字段不包含软删除数据**（`reply_count`、`like_count`、`post_count` 等）
+- ✅ **所有对外查询默认 `WHERE is_deleted = FALSE AND is_visible = TRUE`**
+- ✅ **统计字段只统计 `is_deleted = FALSE AND is_visible = TRUE` 的数据**（代表公开可见的数量）
 - ✅ **软删除的帖子/回复在列表中不显示**
-- ✅ **访问软删除内容的详情页时，返回 404 或"内容已删除"提示**
+- ✅ **被隐藏（`is_visible = FALSE`）的帖子/回复对普通用户不可见，但作者和管理员仍可见**
+- ✅ **访问软删除内容的详情页时，返回 404 或"该帖子已被删除"提示**
+- ✅ **访问被隐藏内容的详情页时，普通用户返回 404，作者和管理员可正常查看（显示"仅自己可见"样式）**
 - ✅ **举报/审核/通知中的 target 指向软删除内容时**:
   - 接口返回占位信息："内容已删除"
   - 或隐藏该条记录（根据业务需求决定）
+
+**字段语义区分**:
+- `is_deleted = TRUE`: 软删除，内容对所有人不可见（包括作者），用于用户主动删除或管理员删除
+- `is_visible = FALSE`: 风控隐藏，内容对普通用户不可见，但作者和管理员仍可见，用于风控自动处理
 
 **实现建议**:
 ```python
@@ -2426,17 +2513,38 @@ ORDER BY created_at DESC;
 from sqlalchemy import select
 from fastapi import HTTPException
 
-async def get_post(post_id, db: AsyncSession):
+async def get_post(post_id, current_user, db: AsyncSession, is_admin: bool = False):
     result = await db.execute(
         select(ForumPost).where(
             ForumPost.id == post_id,
-            ForumPost.is_deleted == False  # 默认过滤软删除
+            ForumPost.is_deleted == False  # 软删除的内容对所有人不可见
         )
     )
     post = result.scalar_one_or_none()
     if not post:
         raise HTTPException(404, "帖子不存在或已删除")
+    
+    # 检查风控隐藏：普通用户不可见，但作者和管理员可见
+    if not post.is_visible:
+        if not is_admin and (not current_user or post.author_id != current_user.id):
+            raise HTTPException(404, "帖子不存在或已被隐藏")
+    
     return post
+
+# 列表查询示例
+async def get_posts_list(category_id: int, current_user, db: AsyncSession, is_admin: bool = False):
+    query = select(ForumPost).where(
+        ForumPost.category_id == category_id,
+        ForumPost.is_deleted == False,
+        ForumPost.is_visible == True  # 默认只显示可见内容
+    )
+    
+    # 如果是管理员或作者，可以显示被隐藏的内容（可选）
+    # if is_admin:
+    #     query = query.where(or_(ForumPost.is_visible == True, ForumPost.author_id == current_user.id))
+    
+    result = await db.execute(query)
+    return result.scalars().all()
 ```
 
 ### 4. 锁定帖子的行为规则
@@ -2454,13 +2562,42 @@ async def get_post(post_id, db: AsyncSession):
 - ✅ **管理员可操作**: 管理员可以解锁、删除、置顶等操作
 - ⚠️ **删除权限**: 根据业务需求决定，一般作者仍可删除自己的帖子
 
+**前后端联动约定**:
+
+1. **后端统一错误码**:
+   - 详见下方「论坛业务错误码速查表」
+
+2. **前端交互**:
+   - 锁帖时隐藏回复输入框，显示"该帖子已锁定，无法继续回复"的提示
+   - 避免用户打了一大段字，提交才发现锁帖，体验会很差
+
+**论坛业务错误码速查表**:
+
+| 错误码 | HTTP 状态码 | 说明 | 使用场景 |
+|--------|------------|------|---------|
+| `POST_LOCKED` | 403 | 帖子已锁定，无法回复 | 尝试回复已锁定的帖子 |
+| `POST_DELETED` | 404 | 该帖子已被删除 | 访问已删除的帖子详情 |
+| `POST_HIDDEN` | 404 | 该帖子已被隐藏 | 普通用户访问已隐藏的帖子 |
+| `REPLY_LEVEL_LIMIT` | 403 | 回复层级最多三层 | 尝试创建超过3层的嵌套回复 |
+| `REPLY_DELETED` | 404 | 该回复已被删除 | 访问已删除的回复 |
+| `REPLY_HIDDEN` | 404 | 该回复已被隐藏 | 普通用户访问已隐藏的回复 |
+
+**错误码使用说明**:
+- 所有错误码应在后端统一管理，建议创建 `ForumErrorCode` 枚举类
+- 前端根据错误码显示对应的提示文案
+- 错误码通过响应体中的 `code` 字段传递，或通过响应头 `X-Error-Code` 传递
+
 **实现建议**:
 ```python
 # 伪代码示例
 async def create_reply(post_id, content, user):
     post = await get_post(post_id)
     if post.is_locked:
-        raise HTTPException(403, "帖子已锁定，无法回复")
+        raise HTTPException(
+            status_code=403,
+            detail="帖子已锁定，无法回复",
+            headers={"X-Error-Code": "POST_LOCKED"}  # 可选：在响应头中传递错误码
+        )
     # ... 创建回复逻辑
 ```
 
@@ -2836,6 +2973,52 @@ async def create_reply_with_notifications(
 - 基于 `created_at` 或 `id` 的游标，避免 `OFFSET` 在大数据量下的性能问题
 - 示例：`WHERE created_at < :cursor ORDER BY created_at DESC LIMIT :limit`
 
+### 14. 已删除/隐藏内容的展示规则（前端需要）
+
+**帖子被删除（`is_deleted = TRUE`）时**:
+- 列表中不再展示
+- 如果用户打开旧 URL，可以返回"该帖子已被删除"的占位页（HTTP 200 + 特定错误码），而不是 404，方便解释
+- 后端返回示例：
+  ```json
+  {
+    "error": "该帖子已被删除",
+    "code": "POST_DELETED"
+  }
+  ```
+
+**回复被删除时**:
+- 列表中保留一行"该回复已被删除"占位（方便理解楼层结构）
+- `content` 前端不展示，后端可选返回 `null` 或空字符串
+- 后端返回示例：
+  ```json
+  {
+    "id": 123,
+    "content": null,  // 或空字符串
+    "is_deleted": true,
+    "author": {
+      "id": "12345678",
+      "name": "已删除用户"
+    }
+  }
+  ```
+
+**被隐藏（`is_visible = FALSE`）时**:
+- 对普通用户不可见（列表中不显示，详情页返回 404）
+- 帖子作者和管理员仍可见，用"仅自己可见"样式展示
+- 前端显示提示："该内容已被隐藏，仅作者和管理员可见"
+- 后端返回时，需要根据用户身份判断是否返回内容：
+  ```python
+  # 伪代码示例
+  if not post.is_visible:
+      if is_admin or post.author_id == current_user.id:
+          # 返回内容，但标记为隐藏
+          return {"post": post, "is_hidden": True, "hidden_reason": "风控隐藏"}
+      else:
+          raise HTTPException(404, "帖子不存在或已被隐藏")
+  ```
+
+**这些规则确定好后，前后端对"为什么我看不到 / 为什么还能看到"就不会吵架** 😂
+
 ---
 
 ---
@@ -2846,18 +3029,26 @@ async def create_reply_with_notifications(
 
 | 操作 | 需要更新的字段 | 更新逻辑 |
 |------|--------------|---------|
-| 创建帖子 | `category.post_count += 1`<br>`category.last_post_at = now()` | 仅当 `is_deleted = FALSE` |
-| 删除帖子 | `category.post_count -= 1`<br>`category.last_post_at` 重新查询 | 仅当原 `is_deleted = FALSE` |
-| 创建回复 | `post.reply_count += 1`<br>`post.last_reply_at = now()` | 仅当 `is_deleted = FALSE` |
-| 删除回复 | `post.reply_count -= 1`<br>`post.last_reply_at` 重新查询 | 仅当原 `is_deleted = FALSE` |
+| 创建帖子 | `category.post_count += 1`<br>`category.last_post_at = now()` | 仅当 `is_deleted = FALSE AND is_visible = TRUE` |
+| 删除帖子 | `category.post_count -= 1`<br>`category.last_post_at` 重新查询 | 仅当原 `is_deleted = FALSE AND is_visible = TRUE` |
+| 恢复帖子 | `category.post_count += 1`<br>`category.last_post_at` 重新查询 | 仅当恢复后 `is_deleted = FALSE AND is_visible = TRUE` |
+| 隐藏帖子 | `category.post_count -= 1`<br>`category.last_post_at` 重新查询 | 仅当原 `is_visible = TRUE` |
+| 取消隐藏帖子 | `category.post_count += 1`<br>`category.last_post_at` 重新查询 | 仅当 `is_deleted = FALSE` 且原 `is_visible = FALSE` |
+| 创建回复 | `post.reply_count += 1`<br>`post.last_reply_at = now()` | 仅当 `is_deleted = FALSE AND is_visible = TRUE` |
+| 删除回复 | `post.reply_count -= 1`<br>`post.last_reply_at` 重新查询 | 仅当原 `is_deleted = FALSE AND is_visible = TRUE` |
+| 恢复回复 | `post.reply_count += 1`<br>`post.last_reply_at` 重新查询 | 仅当恢复后 `is_deleted = FALSE AND is_visible = TRUE` |
+| 隐藏回复 | `post.reply_count -= 1`<br>`post.last_reply_at` 重新查询 | 仅当原 `is_visible = TRUE` |
+| 取消隐藏回复 | `post.reply_count += 1`<br>`post.last_reply_at` 重新查询 | 仅当 `is_deleted = FALSE` 且原 `is_visible = FALSE` |
 | 点赞/收藏 | `post.like_count += 1`<br>`post.favorite_count += 1` | 直接更新 |
 | 取消点赞/收藏 | `post.like_count -= 1`<br>`post.favorite_count -= 1` | 直接更新 |
 
 ### 查询过滤约定
 
-- ✅ 所有列表查询：`WHERE is_deleted = FALSE`
-- ✅ 所有统计查询：只统计 `is_deleted = FALSE` 的数据
-- ✅ 详情查询：如果 `is_deleted = TRUE`，返回 404
+- ✅ 所有列表查询：`WHERE is_deleted = FALSE AND is_visible = TRUE`
+- ✅ 所有统计查询：只统计 `is_deleted = FALSE AND is_visible = TRUE` 的数据
+- ✅ 详情查询：
+  - 如果 `is_deleted = TRUE`，返回 404 或"该帖子已被删除"
+  - 如果 `is_visible = FALSE`，普通用户返回 404，作者和管理员可正常查看
 
 ### 权限和行为规则
 
@@ -2867,7 +3058,7 @@ async def create_reply_with_notifications(
 
 ---
 
-**文档版本**: v1.7  
+**文档版本**: v1.4  
 **最后更新**: 2025-01-27  
 **维护者**: LinkU开发团队
 

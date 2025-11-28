@@ -86,8 +86,8 @@ async def get_task_chat_list(
                 models.Task.taker_id == current_user.id,
                 # 多人任务：作为任务达人创建者
                 and_(
-                    models.Task.is_multi_participant == True,
-                    models.Task.created_by_expert == True,
+                    models.Task.is_multi_participant.is_(True),
+                    models.Task.created_by_expert.is_(True),
                     models.Task.expert_creator_id == current_user.id
                 )
             )
@@ -103,7 +103,7 @@ async def get_task_chat_list(
             and_(
                 models.TaskParticipant.user_id == current_user.id,
                 models.TaskParticipant.status.in_(["accepted", "in_progress"]),
-                models.Task.is_multi_participant == True
+                models.Task.is_multi_participant.is_(True)
             )
         )
         result_2 = await db.execute(participant_tasks_query)
