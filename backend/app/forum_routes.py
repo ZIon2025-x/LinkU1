@@ -322,32 +322,34 @@ async def update_category_stats(category_id: int, db: AsyncSession):
     
     # 获取最新帖子时间
     last_post_result = await db.execute(
-        select(models.ForumPost.last_reply_at, models.ForumPost.created_at)
+        select(
+            func.coalesce(
+                models.ForumPost.last_reply_at,
+                models.ForumPost.created_at
+            ).label("last_activity")
+        )
         .where(models.ForumPost.category_id == category_id)
         .where(models.ForumPost.is_deleted == False)
         .where(models.ForumPost.is_visible == True)
         .order_by(
-            func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at).desc()
+            func.coalesce(
+                models.ForumPost.last_reply_at,
+                models.ForumPost.created_at
+            ).desc()
         )
         .limit(1)
     )
     last_post_row = last_post_result.first()
-    last_post_at = last_post_row[0] if last_post_row and last_post_row[0] else (
-        last_post_row[1] if last_post_row else None
-    )
+    last_post_at = last_post_row[0] if last_post_row else None
     
     # 更新板块统计
-    await db.execute(
-        select(models.ForumCategory)
-        .where(models.ForumCategory.id == category_id)
-    )
     category_result = await db.execute(
         select(models.ForumCategory).where(models.ForumCategory.id == category_id)
     )
     category = category_result.scalar_one()
     category.post_count = post_count
     category.last_post_at = last_post_at
-    await db.commit()
+    await db.flush()
 
 
 # ==================== 板块 API ====================
@@ -390,6 +392,7 @@ async def get_category(
 @router.post("/categories", response_model=schemas.ForumCategoryOut)
 async def create_category(
     category: schemas.ForumCategoryCreate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -406,6 +409,19 @@ async def create_category(
     
     db_category = models.ForumCategory(**category.model_dump())
     db.add(db_category)
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="create_category",
+        target_type="category",
+        target_id=db_category.id,
+        action="create",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     await db.refresh(db_category)
     
@@ -416,6 +432,7 @@ async def create_category(
 async def update_category(
     category_id: int,
     category: schemas.ForumCategoryUpdate,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -448,6 +465,19 @@ async def update_category(
         setattr(db_category, field, value)
     
     db_category.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="update_category",
+        target_type="category",
+        target_id=category_id,
+        action="update",
+        request=request,
+        db=db
+    )
+    
     await db.commit()
     await db.refresh(db_category)
     
@@ -457,6 +487,7 @@ async def update_category(
 @router.delete("/categories/{category_id}")
 async def delete_category(
     category_id: int,
+    request: Request,
     current_admin: models.AdminUser = Depends(get_current_admin_async),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -471,6 +502,17 @@ async def delete_category(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="板块不存在"
         )
+    
+    # 记录管理员操作日志（在删除前记录）
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="delete_category",
+        target_type="category",
+        target_id=category_id,
+        action="delete",
+        request=request,
+        db=db
+    )
     
     await db.delete(category)
     await db.commit()
@@ -628,8 +670,32 @@ async def get_post(
     # 获取帖子
     post = await get_post_with_permissions(post_id, current_user, is_admin, db)
     
-    # 增加浏览次数（使用 Redis 累加，这里简化处理）
-    post.view_count += 1
+    # 增加浏览次数
+    # 优化方案：使用 Redis 累加，定时批量落库（由 Celery 任务处理）
+    # 当前实现：如果 Redis 可用则使用 Redis，否则直接更新数据库
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            # 使用 Redis 累加浏览数（存储增量）
+            redis_key = f"forum:post:view_count:{post_id}"
+            redis_client.incr(redis_key)
+            # 设置过期时间（7天），防止 key 无限增长
+            redis_client.expire(redis_key, 7 * 24 * 3600)
+            # 注意：返回给用户的浏览数使用数据库中的值
+            # Redis 中的增量会由后台任务定期同步到数据库
+            # 这里不更新数据库，减少数据库写入压力
+        else:
+            # Redis 不可用，直接更新数据库
+            post.view_count += 1
+            await db.flush()
+    except Exception as e:
+        # Redis 操作失败，回退到直接更新数据库
+        logger.debug(f"Redis view count increment failed, falling back to DB: {e}")
+        post.view_count += 1
+        await db.flush()
+    
     await db.commit()
     
     # 检查当前用户是否已点赞/收藏
@@ -1139,6 +1205,103 @@ async def unlock_post(
     return {"id": post.id, "is_locked": False, "message": "帖子已解锁"}
 
 
+@router.post("/posts/{post_id}/restore")
+async def restore_post(
+    post_id: int,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """恢复帖子（管理员）"""
+    result = await db.execute(
+        select(models.ForumPost).where(models.ForumPost.id == post_id)
+    )
+    post = result.scalar_one_or_none()
+    
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="帖子不存在"
+        )
+    
+    if not post.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="帖子未被删除"
+        )
+    
+    # 恢复帖子
+    old_is_visible = post.is_visible
+    post.is_deleted = False
+    post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 更新板块统计（仅当恢复后可见时）
+    if post.is_visible:
+        await update_category_stats(post.category_id, db)
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="restore_post",
+        target_type="post",
+        target_id=post_id,
+        action="restore",
+        request=request,
+        db=db
+    )
+    
+    await db.commit()
+    
+    return {"id": post.id, "is_deleted": False, "message": "帖子已恢复"}
+
+
+@router.post("/posts/{post_id}/unhide")
+async def unhide_post(
+    post_id: int,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """取消隐藏帖子（管理员）"""
+    result = await db.execute(
+        select(models.ForumPost).where(models.ForumPost.id == post_id)
+    )
+    post = result.scalar_one_or_none()
+    
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="帖子不存在"
+        )
+    
+    if post.is_visible:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="帖子未被隐藏"
+        )
+    
+    # 取消隐藏
+    post.is_visible = True
+    post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="unhide_post",
+        target_type="post",
+        target_id=post_id,
+        action="unhide",
+        request=request,
+        db=db
+    )
+    
+    await db.commit()
+    
+    return {"id": post.id, "is_visible": True, "message": "帖子已取消隐藏"}
+
+
 # ==================== 回复 API ====================
 
 @router.get("/posts/{post_id}/replies", response_model=schemas.ForumReplyListResponse)
@@ -1562,6 +1725,73 @@ async def delete_reply(
     await db.commit()
     
     return {"message": "回复删除成功"}
+
+
+@router.post("/replies/{reply_id}/restore")
+async def restore_reply(
+    reply_id: int,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """恢复回复（管理员）"""
+    result = await db.execute(
+        select(models.ForumReply).where(models.ForumReply.id == reply_id)
+    )
+    reply = result.scalar_one_or_none()
+    
+    if not reply:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="回复不存在"
+        )
+    
+    if not reply.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="回复未被删除"
+        )
+    
+    # 恢复回复
+    old_is_visible = reply.is_visible
+    reply.is_deleted = False
+    reply.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 更新帖子统计（仅当恢复后可见时）
+    if reply.is_visible:
+        post_result = await db.execute(
+            select(models.ForumPost).where(models.ForumPost.id == reply.post_id)
+        )
+        post = post_result.scalar_one()
+        post.reply_count += 1
+        # 重新计算 last_reply_at
+        last_reply_result = await db.execute(
+            select(models.ForumReply.created_at)
+            .where(models.ForumReply.post_id == post.id)
+            .where(models.ForumReply.is_deleted == False)
+            .where(models.ForumReply.is_visible == True)
+            .order_by(models.ForumReply.created_at.desc())
+            .limit(1)
+        )
+        last_reply = last_reply_result.scalar_one_or_none()
+        post.last_reply_at = last_reply if last_reply else post.created_at
+        await db.flush()
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.user_id,
+        operation_type="restore_reply",
+        target_type="reply",
+        target_id=reply_id,
+        action="restore",
+        request=request,
+        db=db
+    )
+    
+    await db.commit()
+    
+    return {"id": reply.id, "is_deleted": False, "message": "回复已恢复"}
 
 
 # ==================== 点赞 API ====================
@@ -2293,6 +2523,108 @@ async def get_my_favorites(
     }
 
 
+@router.get("/my/likes")
+async def get_my_likes(
+    target_type: Optional[str] = Query(None, regex="^(post|reply)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取我赞过的内容"""
+    query = select(models.ForumLike).where(
+        models.ForumLike.user_id == current_user.id
+    )
+    
+    if target_type:
+        query = query.where(models.ForumLike.target_type == target_type)
+    
+    query = query.order_by(models.ForumLike.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载关联数据
+    if target_type == "post" or target_type is None:
+        query = query.options(
+            selectinload(models.ForumLike.post).selectinload(models.ForumPost.category),
+            selectinload(models.ForumLike.post).selectinload(models.ForumPost.author)
+        )
+    if target_type == "reply" or target_type is None:
+        query = query.options(
+            selectinload(models.ForumLike.reply).selectinload(models.ForumReply.post),
+            selectinload(models.ForumLike.reply).selectinload(models.ForumReply.author)
+        )
+    
+    result = await db.execute(query)
+    likes = result.scalars().all()
+    
+    # 转换为输出格式
+    like_list = []
+    for like in likes:
+        if like.target_type == "post" and like.post:
+            post = like.post
+            if post.is_deleted == False and post.is_visible == True:
+                like_list.append({
+                    "target_type": "post",
+                    "post": {
+                        "id": post.id,
+                        "title": post.title,
+                        "content_preview": strip_markdown(post.content),
+                        "category": {
+                            "id": post.category.id,
+                            "name": post.category.name
+                        },
+                        "author": {
+                            "id": post.author.id,
+                            "name": post.author.name,
+                            "avatar": post.author.avatar or None
+                        },
+                        "view_count": post.view_count,
+                        "reply_count": post.reply_count,
+                        "like_count": post.like_count,
+                        "created_at": post.created_at,
+                        "last_reply_at": post.last_reply_at
+                    },
+                    "created_at": like.created_at
+                })
+        elif like.target_type == "reply" and like.reply:
+            reply = like.reply
+            if reply.is_deleted == False and reply.is_visible == True:
+                like_list.append({
+                    "target_type": "reply",
+                    "reply": {
+                        "id": reply.id,
+                        "content": reply.content,
+                        "post": {
+                            "id": reply.post.id,
+                            "title": reply.post.title
+                        },
+                        "author": {
+                            "id": reply.author.id,
+                            "name": reply.author.name,
+                            "avatar": reply.author.avatar or None
+                        },
+                        "like_count": reply.like_count,
+                        "created_at": reply.created_at
+                    },
+                    "created_at": like.created_at
+                })
+    
+    return {
+        "likes": like_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
 # ==================== 管理员操作日志 API ====================
 
 @router.get("/admin/operation-logs", response_model=schemas.ForumAdminOperationLogListResponse)
@@ -2355,4 +2687,227 @@ async def get_admin_operation_logs(
         "page": page,
         "page_size": page_size
     }
+
+
+# ==================== 论坛统计 API（管理员）====================
+
+@router.get("/admin/stats", response_model=schemas.ForumStatsResponse)
+async def get_forum_stats(
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取论坛统计数据（管理员）"""
+    now = datetime.now(timezone.utc)
+    today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+    
+    # 基础统计
+    total_categories = await db.execute(
+        select(func.count(models.ForumCategory.id))
+    )
+    total_categories_count = total_categories.scalar() or 0
+    
+    total_posts = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(models.ForumPost.is_deleted == False)
+    )
+    total_posts_count = total_posts.scalar() or 0
+    
+    total_replies = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(models.ForumReply.is_deleted == False)
+    )
+    total_replies_count = total_replies.scalar() or 0
+    
+    total_likes = await db.execute(
+        select(func.count(models.ForumLike.id))
+    )
+    total_likes_count = total_likes.scalar() or 0
+    
+    total_favorites = await db.execute(
+        select(func.count(models.ForumFavorite.id))
+    )
+    total_favorites_count = total_favorites.scalar() or 0
+    
+    total_reports = await db.execute(
+        select(func.count(models.ForumReport.id))
+    )
+    total_reports_count = total_reports.scalar() or 0
+    
+    pending_reports = await db.execute(
+        select(func.count(models.ForumReport.id))
+        .where(models.ForumReport.status == "pending")
+    )
+    pending_reports_count = pending_reports.scalar() or 0
+    
+    # 参与论坛的用户数（发过帖子或回复的用户）
+    # 使用 UNION 获取所有参与用户（去重）
+    total_users_subquery = select(models.ForumPost.author_id).distinct().union(
+        select(models.ForumReply.author_id).distinct()
+    ).subquery()
+    total_users_result = await db.execute(
+        select(func.count()).select_from(total_users_subquery)
+    )
+    total_users_count = total_users_result.scalar() or 0
+    
+    # 最近7天活跃用户（发过帖子或回复）
+    active_users_7d_subquery = select(models.ForumPost.author_id).distinct().where(
+        models.ForumPost.created_at >= seven_days_ago
+    ).union(
+        select(models.ForumReply.author_id).distinct().where(
+            models.ForumReply.created_at >= seven_days_ago
+        )
+    ).subquery()
+    active_users_7d_result = await db.execute(
+        select(func.count()).select_from(active_users_7d_subquery)
+    )
+    active_users_7d_count = active_users_7d_result.scalar() or 0
+    
+    # 最近30天活跃用户
+    active_users_30d_subquery = select(models.ForumPost.author_id).distinct().where(
+        models.ForumPost.created_at >= thirty_days_ago
+    ).union(
+        select(models.ForumReply.author_id).distinct().where(
+            models.ForumReply.created_at >= thirty_days_ago
+        )
+    ).subquery()
+    active_users_30d_result = await db.execute(
+        select(func.count()).select_from(active_users_30d_subquery)
+    )
+    active_users_30d_count = active_users_30d_result.scalar() or 0
+    
+    # 今日帖子数
+    posts_today_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(models.ForumPost.created_at >= today_start)
+        .where(models.ForumPost.is_deleted == False)
+    )
+    posts_today_count = posts_today_result.scalar() or 0
+    
+    # 最近7天帖子数
+    posts_7d_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(models.ForumPost.created_at >= seven_days_ago)
+        .where(models.ForumPost.is_deleted == False)
+    )
+    posts_7d_count = posts_7d_result.scalar() or 0
+    
+    # 最近30天帖子数
+    posts_30d_result = await db.execute(
+        select(func.count(models.ForumPost.id))
+        .where(models.ForumPost.created_at >= thirty_days_ago)
+        .where(models.ForumPost.is_deleted == False)
+    )
+    posts_30d_count = posts_30d_result.scalar() or 0
+    
+    # 今日回复数
+    replies_today_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(models.ForumReply.created_at >= today_start)
+        .where(models.ForumReply.is_deleted == False)
+    )
+    replies_today_count = replies_today_result.scalar() or 0
+    
+    # 最近7天回复数
+    replies_7d_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(models.ForumReply.created_at >= seven_days_ago)
+        .where(models.ForumReply.is_deleted == False)
+    )
+    replies_7d_count = replies_7d_result.scalar() or 0
+    
+    # 最近30天回复数
+    replies_30d_result = await db.execute(
+        select(func.count(models.ForumReply.id))
+        .where(models.ForumReply.created_at >= thirty_days_ago)
+        .where(models.ForumReply.is_deleted == False)
+    )
+    replies_30d_count = replies_30d_result.scalar() or 0
+    
+    return {
+        "total_categories": total_categories_count,
+        "total_posts": total_posts_count,
+        "total_replies": total_replies_count,
+        "total_likes": total_likes_count,
+        "total_favorites": total_favorites_count,
+        "total_reports": total_reports_count,
+        "pending_reports": pending_reports_count,
+        "total_users": total_users_count,
+        "active_users_7d": active_users_7d_count,
+        "active_users_30d": active_users_30d_count,
+        "posts_today": posts_today_count,
+        "posts_7d": posts_7d_count,
+        "posts_30d": posts_30d_count,
+        "replies_today": replies_today_count,
+        "replies_7d": replies_7d_count,
+        "replies_30d": replies_30d_count
+    }
+
+
+@router.post("/admin/fix-statistics")
+async def fix_forum_statistics(
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """修复论坛统计字段（管理员）"""
+    try:
+        # 修复所有板块的统计
+        categories_result = await db.execute(
+            select(models.ForumCategory)
+        )
+        categories = categories_result.scalars().all()
+        
+        fixed_categories = 0
+        for category in categories:
+            await update_category_stats(category.id, db)
+            fixed_categories += 1
+        
+        # 修复所有帖子的回复数统计
+        posts_result = await db.execute(
+            select(models.ForumPost)
+        )
+        posts = posts_result.scalars().all()
+        
+        fixed_posts = 0
+        for post in posts:
+            # 统计可见回复数
+            reply_count_result = await db.execute(
+                select(func.count(models.ForumReply.id))
+                .where(models.ForumReply.post_id == post.id)
+                .where(models.ForumReply.is_deleted == False)
+                .where(models.ForumReply.is_visible == True)
+            )
+            correct_reply_count = reply_count_result.scalar() or 0
+            
+            if post.reply_count != correct_reply_count:
+                post.reply_count = correct_reply_count
+                fixed_posts += 1
+            
+            # 重新计算 last_reply_at
+            last_reply_result = await db.execute(
+                select(models.ForumReply.created_at)
+                .where(models.ForumReply.post_id == post.id)
+                .where(models.ForumReply.is_deleted == False)
+                .where(models.ForumReply.is_visible == True)
+                .order_by(models.ForumReply.created_at.desc())
+                .limit(1)
+            )
+            last_reply = last_reply_result.scalar_one_or_none()
+            post.last_reply_at = last_reply if last_reply else post.created_at
+        
+        await db.commit()
+        
+        return {
+            "message": "统计字段修复完成",
+            "fixed_categories": fixed_categories,
+            "fixed_posts": fixed_posts
+        }
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"修复论坛统计字段失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"修复统计字段失败: {str(e)}"
+        )
 

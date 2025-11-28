@@ -99,6 +99,12 @@ celery_app.conf.beat_schedule = {
         'schedule': 900.0,  # 15分钟
     },
     
+    # 同步论坛浏览数 - 每5分钟执行一次
+    'sync-forum-view-counts': {
+        'task': 'app.celery_tasks.sync_forum_view_counts_task',
+        'schedule': 300.0,  # 5分钟
+    },
+    
     # ========== 低频任务（每10分钟）==========
     
     # 更新所有用户统计信息 - 每10分钟执行一次

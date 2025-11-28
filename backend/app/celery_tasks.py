@@ -407,4 +407,91 @@ if CELERY_AVAILABLE:
             raise
         finally:
             db.close()
+    
+    @celery_app.task(
+        name='app.celery_tasks.sync_forum_view_counts_task',
+        bind=True,
+        max_retries=2,
+        default_retry_delay=300  # 重试延迟5分钟
+    )
+    def sync_forum_view_counts_task(self):
+        """同步论坛帖子浏览数从 Redis 到数据库 - Celery任务包装（每5分钟执行）"""
+        start_time = time.time()
+        task_name = 'sync_forum_view_counts_task'
+        lock_key = 'forum:sync_view_counts:lock'
+        
+        # 获取分布式锁，防止多实例重复执行
+        if not get_redis_distributed_lock(lock_key, lock_ttl=600):  # 锁10分钟
+            logger.info("同步论坛浏览数任务已在其他实例执行，跳过")
+            return {"status": "skipped", "message": "Task already running in another instance"}
+        
+        try:
+            from app.redis_cache import get_redis_client
+            from app.database import SessionLocal
+            from app.models import ForumPost
+            from sqlalchemy import update
+            
+            redis_client = get_redis_client()
+            if not redis_client:
+                logger.warning("Redis 不可用，无法同步论坛浏览数")
+                return {"status": "skipped", "message": "Redis not available"}
+            
+            db = SessionLocal()
+            try:
+                # 获取所有论坛浏览数的 Redis key
+                pattern = "forum:post:view_count:*"
+                keys = redis_client.keys(pattern)
+                
+                if not keys:
+                    logger.debug("没有需要同步的论坛浏览数")
+                    return {"status": "success", "message": "No view counts to sync", "synced_count": 0}
+                
+                synced_count = 0
+                for key in keys:
+                    try:
+                        # 从 key 中提取 post_id
+                        post_id = int(key.split(":")[-1])
+                        
+                        # 获取 Redis 中的增量
+                        redis_increment = redis_client.get(key)
+                        if redis_increment:
+                            increment = int(redis_increment)
+                            
+                            if increment > 0:
+                                # 更新数据库中的浏览数
+                                db.execute(
+                                    update(ForumPost)
+                                    .where(ForumPost.id == post_id)
+                                    .values(view_count=ForumPost.view_count + increment)
+                                )
+                                
+                                # 删除 Redis key（已同步）
+                                redis_client.delete(key)
+                                synced_count += 1
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"处理浏览数 key {key} 时出错: {e}")
+                        continue
+                    except Exception as e:
+                        logger.error(f"同步帖子 {key} 浏览数失败: {e}")
+                        continue
+                
+                db.commit()
+                duration = time.time() - start_time
+                logger.info(f"同步论坛浏览数完成，同步了 {synced_count} 个帖子 (耗时: {duration:.2f}秒)")
+                _record_task_metrics(task_name, "success", duration)
+                return {"status": "success", "message": f"Synced {synced_count} post view counts", "synced_count": synced_count}
+            finally:
+                db.close()
+                # 释放分布式锁
+                release_redis_distributed_lock(lock_key)
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"同步论坛浏览数失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            # 释放分布式锁
+            release_redis_distributed_lock(lock_key)
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
 

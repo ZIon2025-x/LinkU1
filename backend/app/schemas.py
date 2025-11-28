@@ -2603,3 +2603,23 @@ class ForumAdminOperationLogListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ForumStatsResponse(BaseModel):
+    """论坛统计数据响应"""
+    total_categories: int
+    total_posts: int
+    total_replies: int
+    total_likes: int
+    total_favorites: int
+    total_reports: int
+    pending_reports: int
+    total_users: int  # 参与论坛的用户数
+    active_users_7d: int  # 最近7天活跃用户数
+    active_users_30d: int  # 最近30天活跃用户数
+    posts_today: int
+    posts_7d: int
+    posts_30d: int
+    replies_today: int
+    replies_7d: int
+    replies_30d: int

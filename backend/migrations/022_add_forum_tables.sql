@@ -248,11 +248,17 @@ CREATE TABLE IF NOT EXISTS forum_risk_control_logs (
 CREATE INDEX IF NOT EXISTS idx_risk_control_logs_target ON forum_risk_control_logs(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_risk_control_logs_executed ON forum_risk_control_logs(executed_at DESC);
 
--- 13. 插入默认风控规则
-INSERT INTO forum_risk_control_rules (rule_name, target_type, trigger_count, trigger_time_window, action_type) VALUES
-('帖子被举报3次自动隐藏', 'post', 3, 24, 'hide'),
-('帖子被举报5次自动锁定', 'post', 5, 24, 'lock'),
-('回复被举报3次自动隐藏', 'reply', 3, 24, 'hide'),
-('回复被举报5次自动删除', 'reply', 5, 24, 'soft_delete')
-ON CONFLICT DO NOTHING;
+-- 13. 插入默认风控规则（使用 NOT EXISTS 检查避免重复）
+INSERT INTO forum_risk_control_rules (rule_name, target_type, trigger_count, trigger_time_window, action_type)
+SELECT * FROM (VALUES
+    ('帖子被举报3次自动隐藏', 'post', 3, 24, 'hide'),
+    ('帖子被举报5次自动锁定', 'post', 5, 24, 'lock'),
+    ('回复被举报3次自动隐藏', 'reply', 3, 24, 'hide'),
+    ('回复被举报5次自动删除', 'reply', 5, 24, 'soft_delete')
+) AS v(rule_name, target_type, trigger_count, trigger_time_window, action_type)
+WHERE NOT EXISTS (
+    SELECT 1 FROM forum_risk_control_rules 
+    WHERE forum_risk_control_rules.rule_name = v.rule_name 
+    AND forum_risk_control_rules.target_type = v.target_type
+);
 
