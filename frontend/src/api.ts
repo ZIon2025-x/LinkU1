@@ -2268,6 +2268,7 @@ export const createForumCategory = async (category: {
   icon?: string;
   sort_order?: number;
   is_visible?: boolean;
+  is_admin_only?: boolean;
 }) => {
   const res = await api.post('/api/forum/categories', category);
   return res.data;
@@ -2280,6 +2281,7 @@ export const updateForumCategory = async (categoryId: number, category: {
   icon?: string;
   sort_order?: number;
   is_visible?: boolean;
+  is_admin_only?: boolean;
 }) => {
   const res = await api.put(`/api/forum/categories/${categoryId}`, category);
   return res.data;

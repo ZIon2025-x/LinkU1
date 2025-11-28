@@ -268,7 +268,8 @@ const AdminDashboard: React.FC = () => {
     description: '',
     icon: '',
     sort_order: 0,
-    is_visible: true
+    is_visible: true,
+    is_admin_only: false
   });
 
   const loadDashboardData = useCallback(async () => {
@@ -4396,7 +4397,8 @@ const AdminDashboard: React.FC = () => {
         description: forumCategoryForm.description || undefined,
         icon: forumCategoryForm.icon || undefined,
         sort_order: forumCategoryForm.sort_order || 0,
-        is_visible: forumCategoryForm.is_visible
+        is_visible: forumCategoryForm.is_visible,
+        is_admin_only: forumCategoryForm.is_admin_only
       });
       message.success('板块创建成功！');
       setShowForumCategoryModal(false);
@@ -4406,7 +4408,8 @@ const AdminDashboard: React.FC = () => {
         description: '',
         icon: '',
         sort_order: 0,
-        is_visible: true
+        is_visible: true,
+        is_admin_only: false
       });
       loadDashboardData();
     } catch (error: any) {
@@ -4425,7 +4428,8 @@ const AdminDashboard: React.FC = () => {
         description: forumCategoryForm.description || undefined,
         icon: forumCategoryForm.icon || undefined,
         sort_order: forumCategoryForm.sort_order !== undefined ? forumCategoryForm.sort_order : undefined,
-        is_visible: forumCategoryForm.is_visible
+        is_visible: forumCategoryForm.is_visible,
+        is_admin_only: forumCategoryForm.is_admin_only
       });
       message.success('板块更新成功！');
       setShowForumCategoryModal(false);
@@ -4435,7 +4439,8 @@ const AdminDashboard: React.FC = () => {
         description: '',
         icon: '',
         sort_order: 0,
-        is_visible: true
+        is_visible: true,
+        is_admin_only: false
       });
       loadDashboardData();
     } catch (error: any) {
@@ -4468,7 +4473,8 @@ const AdminDashboard: React.FC = () => {
       description: category.description || '',
       icon: category.icon || '',
       sort_order: category.sort_order || 0,
-      is_visible: category.is_visible !== undefined ? category.is_visible : true
+      is_visible: category.is_visible !== undefined ? category.is_visible : true,
+      is_admin_only: category.is_admin_only !== undefined ? category.is_admin_only : false
     });
     setShowForumCategoryModal(true);
   };
@@ -4485,7 +4491,8 @@ const AdminDashboard: React.FC = () => {
               description: '',
               icon: '',
               sort_order: 0,
-              is_visible: true
+              is_visible: true,
+              is_admin_only: false
             });
             setShowForumCategoryModal(true);
           }}
@@ -4521,6 +4528,7 @@ const AdminDashboard: React.FC = () => {
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>排序</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>帖子数</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>禁止用户发帖</th>
               <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
             </tr>
           </thead>
@@ -4552,6 +4560,18 @@ const AdminDashboard: React.FC = () => {
                       fontWeight: '500'
                     }}>
                       {category.is_visible ? '显示' : '隐藏'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: category.is_admin_only ? '#fff3cd' : '#d1ecf1',
+                      color: category.is_admin_only ? '#856404' : '#0c5460',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {category.is_admin_only ? '是' : '否'}
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
@@ -4698,7 +4718,7 @@ const AdminDashboard: React.FC = () => {
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -4708,6 +4728,21 @@ const AdminDashboard: React.FC = () => {
                 />
                 <span style={{ fontWeight: 'bold' }}>显示</span>
               </label>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={forumCategoryForm.is_admin_only}
+                  onChange={(e) => setForumCategoryForm({...forumCategoryForm, is_admin_only: e.target.checked})}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 'bold' }}>禁止用户发帖（仅管理员可发帖）</span>
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block', marginLeft: '26px' }}>
+                勾选后，普通用户将无法在此板块发帖，且该板块在发帖页面将被隐藏
+              </small>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -4720,7 +4755,8 @@ const AdminDashboard: React.FC = () => {
                     description: '',
                     icon: '',
                     sort_order: 0,
-                    is_visible: true
+                    is_visible: true,
+                    is_admin_only: false
                   });
                 }}
                 style={{

@@ -876,6 +876,7 @@ async def get_post(
 @router.post("/posts", response_model=schemas.ForumPostOut)
 async def create_post(
     post: schemas.ForumPostCreate,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -935,6 +936,24 @@ async def create_post(
             detail="该板块已隐藏",
             headers={"X-Error-Code": "CATEGORY_HIDDEN"}
         )
+    
+    # 检查板块是否禁止用户发帖
+    if category.is_admin_only:
+        # 检查用户是否为管理员
+        is_admin = False
+        try:
+            admin_user = await get_current_admin_async(request, db)
+            if admin_user:
+                is_admin = True
+        except HTTPException:
+            pass
+        
+        if not is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="该板块只允许管理员发帖",
+                headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+            )
     
     # 创建帖子
     db_post = models.ForumPost(

@@ -1918,6 +1918,7 @@ class ForumCategory(Base):
     icon = Column(String(200), nullable=True)
     sort_order = Column(Integer, default=0, server_default=text('0'))
     is_visible = Column(Boolean, default=True, server_default=text('true'))
+    is_admin_only = Column(Boolean, default=False, server_default=text('false'))
     post_count = Column(Integer, default=0, server_default=text('0'))
     last_post_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())

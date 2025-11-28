@@ -2306,6 +2306,7 @@ class ForumCategoryBase(BaseModel):
     icon: Optional[str] = Field(None, max_length=200)
     sort_order: int = Field(0, ge=0)
     is_visible: bool = True
+    is_admin_only: bool = False
 
 
 class ForumCategoryCreate(ForumCategoryBase):
@@ -2318,6 +2319,7 @@ class ForumCategoryUpdate(BaseModel):
     icon: Optional[str] = Field(None, max_length=200)
     sort_order: Optional[int] = Field(None, ge=0)
     is_visible: Optional[bool] = None
+    is_admin_only: Optional[bool] = None
 
 
 class ForumCategoryOut(ForumCategoryBase):
