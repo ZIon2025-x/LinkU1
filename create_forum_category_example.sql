@@ -1,5 +1,7 @@
 -- 创建论坛板块示例
--- 可以直接在数据库中执行这些SQL语句来创建板块
+-- 注意：此文件仅作为参考示例
+-- 实际部署时会自动执行 backend/migrations/025_insert_default_forum_categories.sql 迁移文件
+-- 如果需要手动执行，可以直接在数据库中执行这些SQL语句来创建板块
 
 -- 示例1：创建一个"技术讨论"板块
 INSERT INTO forum_categories (name, description, icon, sort_order, is_visible, is_admin_only)

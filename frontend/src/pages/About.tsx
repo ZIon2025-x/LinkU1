@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
-import { Card, Row, Col, Typography, Space, Avatar, Divider } from 'antd';
+import { Card, Row, Col, Typography, Space, Avatar, Divider, Button } from 'antd';
 import { 
   TeamOutlined, 
   RocketOutlined, 
@@ -373,6 +373,36 @@ const About: React.FC = () => {
             </Col>
           ))}
         </Row>
+        
+        {/* 加入我们按钮 */}
+        <div style={{ textAlign: 'center', marginTop: '48px' }}>
+          <Button
+            type="primary"
+            size="large"
+            onClick={() => navigate('/join-us')}
+            style={{
+              height: '48px',
+              padding: '0 32px',
+              fontSize: '16px',
+              fontWeight: '600',
+              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              border: 'none',
+              borderRadius: '24px',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+            }}
+          >
+            🤝 {t('hamburgerMenu.joinUs')}
+          </Button>
+        </div>
       </div>
 
       {/* 我们的愿景 */}
