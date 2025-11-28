@@ -1957,7 +1957,13 @@ class ForumPost(Base):
     category = relationship("ForumCategory", back_populates="posts")
     author = relationship("User", foreign_keys=[author_id])
     replies = relationship("ForumReply", back_populates="post", cascade="all, delete-orphan")
-    likes = relationship("ForumLike", back_populates="post", cascade="all, delete-orphan")
+    # 多态关联：使用 primaryjoin 指定连接条件（ForumLike 没有直接外键）
+    likes = relationship(
+        "ForumLike",
+        primaryjoin="and_(ForumPost.id==foreign(ForumLike.target_id), ForumLike.target_type=='post')",
+        foreign_keys="[ForumLike.target_id]",
+        viewonly=True  # 只读关系，因为是多态关联
+    )
     favorites = relationship("ForumFavorite", back_populates="post", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -1989,7 +1995,13 @@ class ForumReply(Base):
     post = relationship("ForumPost", back_populates="replies")
     parent_reply = relationship("ForumReply", remote_side=[id], backref="child_replies")
     author = relationship("User", foreign_keys=[author_id])
-    likes = relationship("ForumLike", back_populates="reply", cascade="all, delete-orphan")
+    # 多态关联：使用 primaryjoin 指定连接条件（ForumLike 没有直接外键）
+    likes = relationship(
+        "ForumLike",
+        primaryjoin="and_(ForumReply.id==foreign(ForumLike.target_id), ForumLike.target_type=='reply')",
+        foreign_keys="[ForumLike.target_id]",
+        viewonly=True  # 只读关系，因为是多态关联
+    )
     
     __table_args__ = (
         CheckConstraint("reply_level BETWEEN 1 AND 3", name="check_reply_level"),
@@ -2009,11 +2021,9 @@ class ForumLike(Base):
     user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     
-    # 关系（多态关联，需要根据 target_type 和 target_id 动态关联）
-    post = relationship("ForumPost", back_populates="likes", 
-                       primaryjoin="and_(ForumLike.target_type=='post', foreign(ForumLike.target_id)==ForumPost.id)")
-    reply = relationship("ForumReply", back_populates="likes",
-                        primaryjoin="and_(ForumLike.target_type=='reply', foreign(ForumLike.target_id)==ForumReply.id)")
+    # 关系（多态关联，反向关系）
+    # 注意：ForumPost.likes 和 ForumReply.likes 已经在各自的模型中定义，这里不需要 back_populates
+    # 因为是多态关联，不能使用标准的 back_populates
     user = relationship("User", foreign_keys=[user_id])
     
     __table_args__ = (
