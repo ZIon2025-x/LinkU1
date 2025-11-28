@@ -1,0 +1,107 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.pageTitle {
+  margin: 0 !important;
+  flex: 1;
+  text-align: center;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemCard {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.itemCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.itemTitle {
+  margin: 0 !important;
+  flex: 1;
+}
+
+.itemContent {
+  margin-bottom: 12px;
+  color: #666;
+}
+
+.itemMeta {
+  font-size: 12px;
+  color: #999;
+}
+
+.pagination {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .pageTitle {
+    width: 100%;
+    order: 2;
+    margin-top: 8px !important;
+  }
+
+  .headerRight {
+    order: 1;
+  }
+
+  .content {
+    padding: 16px 12px;
+  }
+}
+

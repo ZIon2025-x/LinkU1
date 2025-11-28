@@ -48,7 +48,8 @@ CREATE INDEX IF NOT EXISTS idx_forum_posts_pinned ON forum_posts(is_pinned, crea
 CREATE INDEX IF NOT EXISTS idx_forum_posts_category_desc ON forum_posts(category_id, is_deleted, is_visible, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_forum_posts_last_reply ON forum_posts(is_deleted, is_visible, last_reply_at DESC NULLS LAST);
 
--- 全文搜索索引（使用 simple 配置，后续可升级为 pg_bigm）
+-- 全文搜索索引（使用 simple 配置，作为备用方案）
+-- 注意：如果启用了 pg_trgm，建议使用 pg_trgm 索引（见 023_add_pg_trgm_for_forum_search.sql）
 CREATE INDEX IF NOT EXISTS idx_forum_posts_search ON forum_posts USING GIN(to_tsvector('simple', title || ' ' || content));
 
 -- 3. 创建回复表

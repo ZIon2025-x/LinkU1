@@ -297,6 +297,73 @@ export class TimeHandlerV2 {
   }
 }
 
+/**
+ * 格式化相对时间（用于论坛等场景）
+ * @param utcTimeString UTC时间字符串
+ * @param userTimezone 用户时区
+ * @returns 相对时间字符串（如"2小时前"、"3天前"等）
+ */
+export function formatRelativeTime(
+  utcTimeString: string | null | undefined,
+  userTimezone?: string
+): string {
+  if (!utcTimeString) return '';
+  
+  try {
+    const tz = userTimezone || TimeHandlerV2.getUserTimezone();
+    
+    // 确保正确解析UTC时间
+    let utcTime;
+    
+    // 处理不同的时间格式
+    if (utcTimeString.endsWith('Z')) {
+      // 标准ISO格式，带Z后缀
+      utcTime = dayjs.utc(utcTimeString);
+    } else if (utcTimeString.includes('T')) {
+      // ISO格式但没有Z后缀
+      utcTime = dayjs.utc(utcTimeString + 'Z');
+    } else {
+      // 数据库格式：'2025-10-18 05:28:03.841934'，假设是UTC时间
+      utcTime = dayjs.utc(utcTimeString);
+    }
+    
+    // 转换为用户时区
+    const localTime = utcTime.tz(tz);
+    const now = dayjs().tz(tz);
+    
+    // 计算时间差
+    const diffInSeconds = now.diff(localTime, 'second');
+    const diffInMinutes = now.diff(localTime, 'minute');
+    const diffInHours = now.diff(localTime, 'hour');
+    const diffInDays = now.diff(localTime, 'day');
+    const diffInWeeks = now.diff(localTime, 'week');
+    const diffInMonths = now.diff(localTime, 'month');
+    const diffInYears = now.diff(localTime, 'year');
+    
+    // 根据时间差显示不同格式
+    if (diffInSeconds < 60) {
+      return '刚刚';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}分钟前`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours}小时前`;
+    } else if (diffInDays < 7) {
+      return `${diffInDays}天前`;
+    } else if (diffInWeeks < 4) {
+      return `${diffInWeeks}周前`;
+    } else if (diffInMonths < 12) {
+      return `${diffInMonths}个月前`;
+    } else if (diffInYears < 1) {
+      return localTime.format('MM-DD');
+    } else {
+      return localTime.format('YYYY-MM-DD');
+    }
+  } catch (error) {
+    console.error('相对时间格式化错误:', error);
+    return utcTimeString;
+  }
+}
+
 // 导出便捷函数
 export const formatUtcToLocal = TimeHandlerV2.formatUtcToLocal.bind(TimeHandlerV2);
 export const formatMessageTime = TimeHandlerV2.formatMessageTime.bind(TimeHandlerV2);

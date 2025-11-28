@@ -2083,6 +2083,128 @@ async def toggle_like(
     }
 
 
+@router.get("/posts/{post_id}/likes", response_model=schemas.ForumLikeListResponse)
+async def get_post_likes(
+    post_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取帖子点赞列表"""
+    # 验证帖子存在
+    post_result = await db.execute(
+        select(models.ForumPost).where(models.ForumPost.id == post_id)
+    )
+    post = post_result.scalar_one_or_none()
+    if not post or post.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="帖子不存在或已删除"
+        )
+    
+    # 查询点赞列表
+    query = select(models.ForumLike).where(
+        models.ForumLike.target_type == "post",
+        models.ForumLike.target_id == post_id
+    )
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.order_by(models.ForumLike.created_at.desc())
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载用户信息
+    query = query.options(selectinload(models.ForumLike.user))
+    
+    result = await db.execute(query)
+    likes = result.scalars().all()
+    
+    # 转换为输出格式
+    like_list = []
+    for like in likes:
+        like_list.append(schemas.ForumLikeListItem(
+            user=schemas.UserInfo(
+                id=like.user.id,
+                name=like.user.name,
+                avatar=like.user.avatar or None
+            ),
+            created_at=like.created_at
+        ))
+    
+    return {
+        "likes": like_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+@router.get("/replies/{reply_id}/likes", response_model=schemas.ForumLikeListResponse)
+async def get_reply_likes(
+    reply_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取回复点赞列表"""
+    # 验证回复存在
+    reply_result = await db.execute(
+        select(models.ForumReply).where(models.ForumReply.id == reply_id)
+    )
+    reply = reply_result.scalar_one_or_none()
+    if not reply or reply.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="回复不存在或已删除"
+        )
+    
+    # 查询点赞列表
+    query = select(models.ForumLike).where(
+        models.ForumLike.target_type == "reply",
+        models.ForumLike.target_id == reply_id
+    )
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.order_by(models.ForumLike.created_at.desc())
+    query = query.offset(offset).limit(page_size)
+    
+    # 加载用户信息
+    query = query.options(selectinload(models.ForumLike.user))
+    
+    result = await db.execute(query)
+    likes = result.scalars().all()
+    
+    # 转换为输出格式
+    like_list = []
+    for like in likes:
+        like_list.append(schemas.ForumLikeListItem(
+            user=schemas.UserInfo(
+                id=like.user.id,
+                name=like.user.name,
+                avatar=like.user.avatar or None
+            ),
+            created_at=like.created_at
+        ))
+    
+    return {
+        "likes": like_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
 # ==================== 收藏 API ====================
 
 @router.post("/favorites", response_model=schemas.ForumFavoriteResponse)
@@ -2147,7 +2269,9 @@ async def search_posts(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """搜索帖子（使用 PostgreSQL 全文搜索）"""
+    """搜索帖子（使用 pg_trgm 相似度搜索，支持中文）"""
+    from app.config import Config
+    
     # 构建基础查询
     query = select(models.ForumPost).where(
         models.ForumPost.is_deleted == False,
@@ -2158,19 +2282,33 @@ async def search_posts(
     if category_id:
         query = query.where(models.ForumPost.category_id == category_id)
     
-    # 全文搜索（使用 PostgreSQL tsvector）
-    # 注意：这里使用 simple 配置，对中文支持较差
-    # 建议后续使用 pg_bigm 扩展或 MeiliSearch/Elasticsearch
-    search_condition = or_(
-        func.to_tsvector('simple', models.ForumPost.title).match(q),
-        func.to_tsvector('simple', models.ForumPost.content).match(q),
-        models.ForumPost.title.ilike(f"%{q}%"),
-        models.ForumPost.content.ilike(f"%{q}%")
-    )
-    query = query.where(search_condition)
-    
-    # 按相关性排序（简化处理，按创建时间倒序）
-    query = query.order_by(models.ForumPost.created_at.desc())
+    # 搜索条件（使用 pg_trgm 相似度搜索）
+    if Config.USE_PG_TRGM:
+        # 使用 pg_trgm 相似度搜索（对中文支持更好）
+        # similarity 阈值设为 0.2，可以根据需要调整（0.1-0.3 之间）
+        search_condition = or_(
+            func.similarity(models.ForumPost.title, q) > 0.2,
+            func.similarity(models.ForumPost.content, q) > 0.2,
+            # 同时保留 ILIKE 作为兜底，确保能匹配到结果
+            models.ForumPost.title.ilike(f"%{q}%"),
+            models.ForumPost.content.ilike(f"%{q}%")
+        )
+        query = query.where(search_condition)
+        
+        # 按相似度排序（标题相似度优先，然后是内容相似度）
+        query = query.order_by(
+            func.similarity(models.ForumPost.title, q).desc(),
+            func.similarity(models.ForumPost.content, q).desc(),
+            models.ForumPost.created_at.desc()  # 相似度相同时按时间倒序
+        )
+    else:
+        # 降级方案：使用 ILIKE 模糊搜索（如果未启用 pg_trgm）
+        search_condition = or_(
+            models.ForumPost.title.ilike(f"%{q}%"),
+            models.ForumPost.content.ilike(f"%{q}%")
+        )
+        query = query.where(search_condition)
+        query = query.order_by(models.ForumPost.created_at.desc())
     
     # 获取总数
     count_query = select(func.count()).select_from(query.subquery())

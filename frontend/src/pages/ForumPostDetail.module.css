@@ -1,0 +1,146 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.backButton {
+  margin-right: 12px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.postCard {
+  margin-bottom: 16px;
+}
+
+.postHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.postTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.postMeta {
+  margin-bottom: 16px;
+}
+
+.postContent {
+  font-size: 16px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.postActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.repliesCard {
+  margin-bottom: 16px;
+}
+
+.repliesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.replyItem {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border-left: 3px solid #1890ff;
+}
+
+.replyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.replyContent {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.nestedReplies {
+  margin-top: 12px;
+  padding-left: 16px;
+  border-left: 2px solid #e8e8e8;
+}
+
+.replyCard {
+  margin-bottom: 16px;
+}
+
+.replyToHint {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.replyActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .content {
+    padding: 16px 12px;
+  }
+
+  .postHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .replyItem {
+    padding: 12px;
+  }
+}
+

@@ -88,6 +88,14 @@ const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperat
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
 const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
+const Forum = lazyWithRetry(() => import('./pages/Forum'));
+const ForumPostList = lazyWithRetry(() => import('./pages/ForumPostList'));
+const ForumPostDetail = lazyWithRetry(() => import('./pages/ForumPostDetail'));
+const ForumCreatePost = lazyWithRetry(() => import('./pages/ForumCreatePost'));
+const ForumMyContent = lazyWithRetry(() => import('./pages/ForumMyContent'));
+const ForumNotifications = lazyWithRetry(() => import('./pages/ForumNotifications'));
+const ForumSearch = lazyWithRetry(() => import('./pages/ForumSearch'));
+const ForumLeaderboard = lazyWithRetry(() => import('./pages/ForumLeaderboard'));
 const FleaMarketItemDetail = lazyWithRetry(() => import('./pages/FleaMarketItemDetail'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
@@ -165,6 +173,31 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/tasks`} element={<Tasks />} />
           <Route path={`/${lang}/flea-market`} element={<FleaMarketPage />} />
           <Route path={`/${lang}/flea-market/:itemId`} element={<FleaMarketItemDetail />} />
+          <Route path={`/${lang}/forum`} element={<Forum />} />
+          <Route path={`/${lang}/forum/category/:categoryId`} element={<ForumPostList />} />
+          <Route path={`/${lang}/forum/post/:postId`} element={<ForumPostDetail />} />
+          <Route path={`/${lang}/forum/create`} element={
+            <ProtectedRoute>
+              <ForumCreatePost />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/forum/post/:postId/edit`} element={
+            <ProtectedRoute>
+              <ForumCreatePost />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/forum/my`} element={
+            <ProtectedRoute>
+              <ForumMyContent />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/forum/notifications`} element={
+            <ProtectedRoute>
+              <ForumNotifications />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/forum/search`} element={<ForumSearch />} />
+          <Route path={`/${lang}/forum/leaderboard`} element={<ForumLeaderboard />} />
           <Route path={`/${lang}/about`} element={<About />} />
               <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />
@@ -252,6 +285,8 @@ const LanguageRoutes: React.FC = () => {
       ))}
       
       {/* 处理没有语言前缀的旧链接 */}
+      <Route path="/forum" element={<Navigate to={`/${DEFAULT_LANGUAGE}/forum`} replace />} />
+      <Route path="/forum/*" element={<ParamRedirect basePath="/forum" />} />
       <Route path="/tasks" element={<Navigate to={`/${DEFAULT_LANGUAGE}/tasks`} replace />} />
       <Route path="/about" element={<Navigate to={`/${DEFAULT_LANGUAGE}/about`} replace />} />
       <Route path="/faq" element={<Navigate to={`/${DEFAULT_LANGUAGE}/faq`} replace />} />
@@ -282,6 +317,9 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
       <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />
+      
+      {/* Catch-all路由：处理未匹配的路径，重定向到首页 */}
+      <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />
       </Routes>
     </Suspense>
   );

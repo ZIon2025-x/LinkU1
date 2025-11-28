@@ -2474,6 +2474,23 @@ class ForumLikeResponse(BaseModel):
     like_count: int
 
 
+class ForumLikeListItem(BaseModel):
+    """点赞列表项"""
+    user: UserInfo
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumLikeListResponse(BaseModel):
+    """点赞列表响应"""
+    likes: List[ForumLikeListItem]
+    total: int
+    page: int
+    page_size: int
+
+
 # 收藏相关 Schemas
 class ForumFavoriteRequest(BaseModel):
     post_id: int

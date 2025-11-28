@@ -1,0 +1,382 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Select, Pagination } from 'antd';
+import { 
+  MessageOutlined, EyeOutlined, LikeOutlined, StarOutlined, 
+  PlusOutlined, SearchOutlined, FireOutlined, ClockCircleOutlined,
+  UserOutlined, EditOutlined, DeleteOutlined
+} from '@ant-design/icons';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useCurrentUser } from '../contexts/AuthContext';
+import { getForumPosts, getForumCategory, deleteForumPost, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import { message, Modal } from 'antd';
+import SEOHead from '../components/SEOHead';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import NotificationButton from '../components/NotificationButton';
+import HamburgerMenu from '../components/HamburgerMenu';
+import LoginModal from '../components/LoginModal';
+import { formatRelativeTime } from '../utils/timeUtils';
+import styles from './ForumPostList.module.css';
+
+const { Title, Text } = Typography;
+const { Search } = Input;
+const { Option } = Select;
+
+interface ForumPost {
+  id: number;
+  title: string;
+  content: string;
+  category: {
+    id: number;
+    name: string;
+  };
+  author: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  view_count: number;
+  reply_count: number;
+  like_count: number;
+  favorite_count: number;
+  is_liked: boolean;
+  is_favorited: boolean;
+  is_pinned: boolean;
+  is_featured: boolean;
+  created_at: string;
+  last_reply_at?: string;
+}
+
+const ForumPostList: React.FC = () => {
+  const { lang: langParam, categoryId } = useParams<{ lang: string; categoryId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { t, language } = useLanguage();
+  const { user: currentUser } = useCurrentUser();
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
+  
+  // 确保 lang 有值，防止路由错误
+  const lang = langParam || language || 'zh';
+  
+  const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [category, setCategory] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [sort, setSort] = useState<'latest' | 'last_reply' | 'hot' | 'replies' | 'likes'>('last_reply');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (categoryId) {
+      loadCategory();
+      loadPosts();
+    }
+    const loadUserData = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        setUser(userData);
+      } catch (error: any) {
+        setUser(null);
+      }
+    };
+    loadUserData();
+    getPublicSystemSettings().then(setSystemSettings).catch(() => {
+      setSystemSettings({ vip_button_visible: false });
+    });
+  }, [categoryId, currentPage, sort, searchKeyword]);
+
+  const loadCategory = async () => {
+    try {
+      const response = await getForumCategory(Number(categoryId));
+      setCategory(response);
+    } catch (error: any) {
+      console.error('加载板块失败:', error);
+    }
+  };
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      const params: any = {
+        category_id: Number(categoryId),
+        page: currentPage,
+        page_size: pageSize,
+        sort
+      };
+      if (searchKeyword) {
+        params.q = searchKeyword;
+      }
+      const response = await getForumPosts(params);
+      setPosts(response.posts || []);
+      setTotal(response.total || 0);
+    } catch (error: any) {
+      console.error('加载帖子失败:', error);
+      message.error(t('forum.error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchKeyword(value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (value: string) => {
+    setSort(value as any);
+    setCurrentPage(1);
+  };
+
+  const handleCreatePost = () => {
+    if (!currentUser) {
+      setShowLoginModal(true);
+      return;
+    }
+    navigate(`/${lang}/forum/create?category_id=${categoryId}`);
+  };
+
+  const handlePostClick = (postId: number) => {
+    navigate(`/${lang}/forum/post/${postId}`);
+  };
+
+  const handleDeletePost = async (postId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    Modal.confirm({
+      title: t('forum.confirmDelete'),
+      content: t('forum.confirmDeleteMessage'),
+      onOk: async () => {
+        try {
+          await deleteForumPost(postId);
+          message.success(t('forum.deleteSuccess'));
+          loadPosts();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || t('forum.error'));
+        }
+      }
+    });
+  };
+
+  if (loading && !category) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <HamburgerMenu 
+            user={user}
+            onLogout={async () => {
+              try {
+                await logout();
+              } catch (error) {
+              }
+              window.location.reload();
+            }}
+            onLoginClick={() => setShowLoginModal(true)}
+            systemSettings={systemSettings}
+            unreadCount={messageUnreadCount}
+          />
+          <LanguageSwitcher />
+          <NotificationButton 
+            user={user}
+            unreadCount={unreadCount}
+            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+          />
+        </div>
+        <div className={styles.loadingContainer}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <SEOHead 
+        title={category ? `${category.name} - ${t('forum.title')}` : t('forum.title')}
+        description={category?.description || t('forum.description')}
+      />
+      <div className={styles.header}>
+        <HamburgerMenu 
+          user={user}
+          onLogout={async () => {
+            try {
+              await logout();
+            } catch (error) {
+            }
+            window.location.reload();
+          }}
+          onLoginClick={() => setShowLoginModal(true)}
+          systemSettings={systemSettings}
+          unreadCount={messageUnreadCount}
+        />
+        <div className={styles.headerContent}>
+          <Button 
+            type="link" 
+            onClick={() => navigate(`/${lang}/forum`)}
+            className={styles.backButton}
+          >
+            ← {t('common.back')}
+          </Button>
+          <Title level={3} className={styles.pageTitle}>
+            {category?.name || t('forum.title')}
+          </Title>
+        </div>
+        <div className={styles.headerRight}>
+          <LanguageSwitcher />
+          <NotificationButton 
+            user={user}
+            unreadCount={unreadCount}
+            onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+          />
+        </div>
+      </div>
+
+      <div className={styles.content}>
+        <div className={styles.toolbar}>
+          <div className={styles.searchAndSort}>
+            <Search
+              placeholder={t('forum.search')}
+              allowClear
+              onSearch={handleSearch}
+              style={{ width: 200 }}
+              prefix={<SearchOutlined />}
+            />
+            <Select
+              value={sort}
+              onChange={handleSortChange}
+              style={{ width: 150 }}
+            >
+              <Option value="last_reply">{t('forum.sortLastReply')}</Option>
+              <Option value="latest">{t('forum.sortLatest')}</Option>
+              <Option value="hot">{t('forum.sortHot')}</Option>
+              <Option value="replies">{t('forum.sortReplies')}</Option>
+              <Option value="likes">{t('forum.sortLikes')}</Option>
+            </Select>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreatePost}
+          >
+            {t('forum.createPost')}
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className={styles.loadingContainer}>
+            <Spin size="large" />
+          </div>
+        ) : posts.length === 0 ? (
+          <Empty description={t('forum.noPosts')} />
+        ) : (
+          <>
+            <div className={styles.postsList}>
+              {posts.map((post) => (
+                <Card
+                  key={post.id}
+                  className={styles.postCard}
+                  hoverable
+                  onClick={() => handlePostClick(post.id)}
+                >
+                  <div className={styles.postHeader}>
+                    <div className={styles.postTitleRow}>
+                      {post.is_pinned && (
+                        <Tag color="red" icon={<FireOutlined />}>
+                          {t('forum.pinned')}
+                        </Tag>
+                      )}
+                      {post.is_featured && (
+                        <Tag color="gold" icon={<StarOutlined />}>
+                          {t('forum.featured')}
+                        </Tag>
+                      )}
+                      <Title 
+                        level={5} 
+                        className={styles.postTitle}
+                        ellipsis={{ rows: 2 }}
+                      >
+                        {post.title}
+                      </Title>
+                    </div>
+                    {currentUser && currentUser.id === post.author.id && (
+                      <div className={styles.postActions}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/${lang}/forum/post/${post.id}/edit`);
+                          }}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => handleDeletePost(post.id, e)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.postMeta}>
+                    <Space size="small" split="|">
+                      <span>
+                        <UserOutlined /> {post.author.name}
+                      </span>
+                      <span>
+                        <ClockCircleOutlined /> {formatRelativeTime(post.last_reply_at || post.created_at)}
+                      </span>
+                    </Space>
+                  </div>
+
+                  <div className={styles.postStats}>
+                    <Space size="large">
+                      <span>
+                        <EyeOutlined /> {post.view_count}
+                      </span>
+                      <span>
+                        <MessageOutlined /> {post.reply_count}
+                      </span>
+                      <span>
+                        <LikeOutlined /> {post.like_count}
+                      </span>
+                      <span>
+                        <StarOutlined /> {post.favorite_count}
+                      </span>
+                    </Space>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {total > pageSize && (
+              <div className={styles.pagination}>
+                <Pagination
+                  current={currentPage}
+                  total={total}
+                  pageSize={pageSize}
+                  onChange={(page) => setCurrentPage(page)}
+                  showSizeChanger={false}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+    </div>
+  );
+};
+
+export default ForumPostList;
+

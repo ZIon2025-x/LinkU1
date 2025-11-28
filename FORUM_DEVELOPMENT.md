@@ -1259,27 +1259,29 @@ GET /api/forum/search?q=关键词&category_id=1&sort=latest&page=1&page_size=20
 - `page_size`: 每页数量（默认20）
 
 **实现说明**:
-- 全文搜索基于 PostgreSQL 的 `to_tsvector('simple', ...)` 全文索引
-- 使用 `WHERE to_tsvector('simple', title || ' ' || content) @@ plainto_tsquery('simple', :q)` 进行搜索
-- ⚠️ **当前使用 'simple' 配置对中文分词效果较差**
-- **推荐方案**:
-  1. **优先方案**: 接入 MeiliSearch / Elasticsearch（生产环境强烈推荐）
-  2. **备选方案**: 使用 PostgreSQL 的 `pg_bigm` 扩展（需要先安装扩展）
-  3. **临时方案**: 当前 'simple' 配置仅作为临时方案，应尽快升级
+- **当前实现**: 使用 PostgreSQL 的 `pg_trgm` 扩展进行相似度搜索
+- **搜索方式**: 
+  - 使用 `similarity(title, q) > 0.2` 和 `similarity(content, q) > 0.2` 进行相似度匹配
+  - 同时保留 `ILIKE` 作为兜底方案，确保能匹配到结果
+  - 按相似度排序（标题相似度优先，然后是内容相似度）
+- **pg_trgm 优势**:
+  - ✅ 对中文、英文、数字都有良好的支持
+  - ✅ 支持容错搜索（拼写错误、部分匹配）
+  - ✅ 使用三元组（trigram）进行相似度匹配，效果优于 simple 配置
+  - ✅ 性能良好，适合中小规模数据
+- **配置要求**:
+  - 需要设置环境变量 `USE_PG_TRGM=true` 启用 pg_trgm
+  - 需要执行迁移文件 `023_add_pg_trgm_for_forum_search.sql` 创建扩展和索引
+- **降级方案**: 如果未启用 `USE_PG_TRGM`，将使用 `ILIKE` 模糊搜索
 - **与 `/api/forum/posts` 的区别**:
   - `/api/forum/posts?q=...`: 使用简单 LIKE 查询，轻量级，适合简单搜索
-  - `/api/forum/search?q=...`: 使用全文索引，性能更好，适合复杂搜索场景
+  - `/api/forum/search?q=...`: 使用 pg_trgm 相似度搜索，性能更好，支持中文，适合复杂搜索场景
 
-**中文搜索方案的落地路线图**:
-- **MVP 阶段**:
-  - `/api/forum/posts?q=...` 用 LIKE 查询
-  - `/api/forum/search` 用 PG simple tsvector
-- **中文体验升级阶段**:
-  - DB 开启 `pg_bigm` 扩展，重建全文索引
-  - 同时优化搜索权重（标题 > 正文）
-- **大规模阶段**:
-  - 引入独立搜索服务（Meili/ES），写数据时同步推送
-  - `/api/forum/search` 切到外部搜索引擎，PG 索引作为 fallback
+**未来扩展方案**:
+- **大规模阶段**（数据量 > 100万）:
+  - 可考虑引入独立搜索服务（MeiliSearch/Elasticsearch）
+  - 写数据时同步推送，`/api/forum/search` 切到外部搜索引擎
+  - pg_trgm 索引作为 fallback
 
 ### 6.1 排序字段映射表
 
@@ -1933,16 +1935,41 @@ cd backend
 alembic upgrade head
 ```
 
+**启用 pg_trgm 搜索**（推荐）:
+```bash
+# 执行 pg_trgm 扩展迁移
+psql $DATABASE_URL -f migrations/023_add_pg_trgm_for_forum_search.sql
+
+# 或者如果使用自动迁移，确保迁移文件已执行
+# 迁移文件会自动创建 pg_trgm 扩展和索引
+```
+
+**验证 pg_trgm 扩展**:
+```sql
+-- 检查扩展是否已安装
+SELECT * FROM pg_extension WHERE extname = 'pg_trgm';
+
+-- 检查索引是否已创建
+SELECT indexname FROM pg_indexes 
+WHERE tablename = 'forum_posts' 
+AND indexname LIKE '%trgm%';
+```
+
 ### 2. 环境变量
 
 **必需的环境变量**:
 - `REDIS_URL`: Redis 连接地址（用于缓存、计数和 Celery 消息队列/结果存储）
 
+**可选的环境变量**:
+- `USE_PG_TRGM`: 是否启用 pg_trgm 扩展进行相似度搜索（默认 `false`，建议设置为 `true`）
+  - 设置为 `true` 时，搜索API将使用 pg_trgm 相似度搜索，对中文支持更好
+  - 设置为 `false` 时，将使用 `ILIKE` 模糊搜索作为降级方案
+
 **说明**:
 - Redis 用于缓存板块列表、热门帖子、帖子详情等，以及浏览数计数
 - Celery 使用 `REDIS_URL` 作为 broker 和 backend（项目已有 Celery 配置，无需额外环境变量）
 - Celery 用于异步任务处理，如浏览数批量落库、通知发送等
-- 这些服务是完整实现的核心组件，必须配置
+- **pg_trgm 扩展**: 如果启用 `USE_PG_TRGM=true`，需要执行迁移文件 `023_add_pg_trgm_for_forum_search.sql` 创建扩展和索引
 
 ### 3. 初始化数据
 
@@ -2922,14 +2949,20 @@ async def create_reply_with_notifications(
 - 点赞通知：通过配置开关控制（默认启用）
 - 加精/置顶通知：必须触发
 
-### 8. 全文搜索语言配置
+### 8. 全文搜索配置
 
-- ⚠️ **当前使用 `'simple'` 配置对中文分词效果较差**
-- **推荐方案**（按优先级）:
-  1. **优先方案**: 接入 MeiliSearch / Elasticsearch（生产环境强烈推荐，提供更好的中文分词和搜索体验）
-  2. **备选方案**: 使用 PostgreSQL 的 `pg_bigm` 扩展 + gin 索引（需要先安装扩展：`CREATE EXTENSION pg_bigm`）
-  3. **临时方案**: 当前 'simple' 配置仅作为临时方案，应尽快升级
-- 📝 文档中已标注语言配置说明和升级建议
+- ✅ **当前使用 `pg_trgm` 扩展进行相似度搜索**
+- **配置方式**:
+  1. 设置环境变量 `USE_PG_TRGM=true` 启用 pg_trgm
+  2. 执行迁移文件 `023_add_pg_trgm_for_forum_search.sql` 创建扩展和索引
+- **pg_trgm 优势**:
+  - ✅ 对中文、英文、数字都有良好的支持
+  - ✅ 支持容错搜索和部分匹配
+  - ✅ 性能良好，适合中小规模数据
+- **降级方案**: 如果未启用 `USE_PG_TRGM`，将使用 `ILIKE` 模糊搜索
+- **未来扩展**（大规模数据）:
+  - 可考虑接入 MeiliSearch / Elasticsearch 作为独立搜索服务
+  - pg_trgm 作为 fallback 方案
 
 ### 9. 用户态字段说明
 

@@ -61,4 +61,10 @@ export const API_ENDPOINTS = {
   
   // WebSocket
   WS_CHAT: (userId: string) => `/ws/chat/${userId}`,
+  
+  // 论坛相关
+  FORUM_CATEGORIES: '/api/forum/categories',
+  FORUM_POSTS: '/api/forum/posts',
+  FORUM_SEARCH: '/api/forum/search',
+  FORUM_NOTIFICATIONS: '/api/forum/notifications',
 } as const;

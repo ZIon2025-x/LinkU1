@@ -2246,4 +2246,271 @@ export const completeTaskAndDistributeRewardsCustom = async (
   return res.data;
 };
 
+// ==================== 论坛 API ====================
+
+// 板块相关
+export const getForumCategories = async (includeLatestPost: boolean = false) => {
+  const res = await api.get('/api/forum/categories', {
+    params: { include_latest_post: includeLatestPost }
+  });
+  return res.data;
+};
+
+export const getForumCategory = async (categoryId: number) => {
+  const res = await api.get(`/api/forum/categories/${categoryId}`);
+  return res.data;
+};
+
+// 帖子相关
+export const getForumPosts = async (params: {
+  category_id?: number;
+  page?: number;
+  page_size?: number;
+  sort?: 'latest' | 'last_reply' | 'hot' | 'replies' | 'likes';
+  q?: string;
+}) => {
+  const res = await api.get('/api/forum/posts', { params });
+  return res.data;
+};
+
+export const getForumPost = async (postId: number) => {
+  const res = await api.get(`/api/forum/posts/${postId}`);
+  return res.data;
+};
+
+export const createForumPost = async (data: {
+  title: string;
+  content: string;
+  category_id: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/forum/posts', data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const updateForumPost = async (postId: number, data: {
+  title?: string;
+  content?: string;
+  category_id?: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/forum/posts/${postId}`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const deleteForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/forum/posts/${postId}`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const incrementPostViewCount = async (postId: number) => {
+  const res = await api.post(`/api/forum/posts/${postId}/view`);
+  return res.data;
+};
+
+// 回复相关
+export const getForumReplies = async (postId: number, params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get(`/api/forum/posts/${postId}/replies`, { params });
+  return res.data;
+};
+
+export const createForumReply = async (postId: number, data: {
+  content: string;
+  parent_reply_id?: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/replies`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const updateForumReply = async (replyId: number, data: {
+  content: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/forum/replies/${replyId}`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const deleteForumReply = async (replyId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/forum/replies/${replyId}`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 点赞/收藏相关
+export const toggleForumLike = async (targetType: 'post' | 'reply', targetId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/forum/likes', {
+    target_type: targetType,
+    target_id: targetId
+  }, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const toggleForumFavorite = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/forum/favorites', {
+    post_id: postId
+  }, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getMyForumFavorites = async (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get('/api/forum/my/favorites', { params });
+  return res.data;
+};
+
+// 搜索相关
+export const searchForumPosts = async (params: {
+  q: string;
+  category_id?: number;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get('/api/forum/search', { params });
+  return res.data;
+};
+
+// 通知相关
+export const getForumNotifications = async (params?: {
+  page?: number;
+  page_size?: number;
+  is_read?: boolean;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.get('/api/forum/notifications', {
+    params,
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const markForumNotificationRead = async (notificationId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/forum/notifications/${notificationId}/read`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const markAllForumNotificationsRead = async () => {
+  const token = await getCSRFToken();
+  const res = await api.put('/api/forum/notifications/read-all', {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getForumUnreadNotificationCount = async () => {
+  const token = await getCSRFToken();
+  const res = await api.get('/api/forum/notifications/unread-count', {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 举报相关
+export const createForumReport = async (data: {
+  target_type: 'post' | 'reply';
+  target_id: number;
+  reason: string;
+  description?: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/forum/reports', data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 我的内容相关
+export const getMyForumPosts = async (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.get('/api/forum/my/posts', {
+    params,
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getMyForumReplies = async (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.get('/api/forum/my/replies', {
+    params,
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getMyForumLikes = async (params?: {
+  page?: number;
+  page_size?: number;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.get('/api/forum/my/likes', {
+    params,
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 热门帖子
+export const getHotForumPosts = async (params?: {
+  category_id?: number;
+  limit?: number;
+}) => {
+  const res = await api.get('/api/forum/hot-posts', { params });
+  return res.data;
+};
+
+// 排行榜
+export const getForumLeaderboard = async (type: 'posts' | 'replies' | 'likes', params?: {
+  period?: 'all' | 'today' | 'week' | 'month';
+  limit?: number;
+}) => {
+  const res = await api.get(`/api/forum/leaderboard/${type}`, { params });
+  return res.data;
+};
+
+// 用户统计
+export const getUserForumStats = async (userId: string) => {
+  const res = await api.get(`/api/forum/users/${userId}/stats`);
+  return res.data;
+};
+
+// 板块统计
+export const getCategoryForumStats = async (categoryId: number) => {
+  const res = await api.get(`/api/forum/categories/${categoryId}/stats`);
+  return res.data;
+};
+
 export default api; 

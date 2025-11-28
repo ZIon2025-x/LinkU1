@@ -120,6 +120,14 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
                 <button
                   className="menu-item"
+                  onClick={() => handleNavigation('/forum')}
+                >
+                  <span className="menu-icon">💬</span>
+                  {t('hamburgerMenu.forum')}
+                </button>
+
+                <button
+                  className="menu-item"
                   onClick={() => handleNavigation('/join-us')}
                 >
                   <span className="menu-icon">🤝</span>
