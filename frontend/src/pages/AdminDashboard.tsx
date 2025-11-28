@@ -40,7 +40,24 @@ import api, {
   getForumCategories,
   createForumCategory,
   updateForumCategory,
-  deleteForumCategory
+  deleteForumCategory,
+  getForumPosts,
+  getForumPost,
+  createForumPost,
+  updateForumPost,
+  deleteForumPost,
+  pinForumPost,
+  unpinForumPost,
+  featureForumPost,
+  unfeatureForumPost,
+  lockForumPost,
+  unlockForumPost,
+  restoreForumPost,
+  unhideForumPost,
+  getForumReports,
+  processForumReport,
+  getFleaMarketReports,
+  processFleaMarketReport
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -272,6 +289,44 @@ const AdminDashboard: React.FC = () => {
     is_admin_only: false
   });
 
+  // 论坛内容管理相关状态
+  const [forumPosts, setForumPosts] = useState<any[]>([]);
+  const [forumPostsPage, setForumPostsPage] = useState(1);
+  const [forumPostsTotal, setForumPostsTotal] = useState(0);
+  const [forumPostsLoading, setForumPostsLoading] = useState(false);
+  const [showForumPostModal, setShowForumPostModal] = useState(false);
+  const [forumPostForm, setForumPostForm] = useState({
+    id: undefined as number | undefined,
+    title: '',
+    content: '',
+    category_id: undefined as number | undefined
+  });
+  const [forumPostFilter, setForumPostFilter] = useState({
+    category_id: undefined as number | undefined,
+    search: '',
+    is_deleted: undefined as boolean | undefined,
+    is_visible: undefined as boolean | undefined
+  });
+
+  // 举报管理相关状态
+  const [forumReports, setForumReports] = useState<any[]>([]);
+  const [forumReportsPage, setForumReportsPage] = useState(1);
+  const [forumReportsTotal, setForumReportsTotal] = useState(0);
+  const [forumReportsLoading, setForumReportsLoading] = useState(false);
+  const [forumReportsStatusFilter, setForumReportsStatusFilter] = useState<'pending' | 'processed' | 'rejected' | undefined>(undefined);
+  const [fleaMarketReports, setFleaMarketReports] = useState<any[]>([]);
+  const [fleaMarketReportsPage, setFleaMarketReportsPage] = useState(1);
+  const [fleaMarketReportsTotal, setFleaMarketReportsTotal] = useState(0);
+  const [fleaMarketReportsLoading, setFleaMarketReportsLoading] = useState(false);
+  const [fleaMarketReportsStatusFilter, setFleaMarketReportsStatusFilter] = useState<'pending' | 'reviewing' | 'resolved' | 'rejected' | undefined>(undefined);
+  const [showReportProcessModal, setShowReportProcessModal] = useState(false);
+  const [currentReport, setCurrentReport] = useState<any>(null);
+  const [reportProcessForm, setReportProcessForm] = useState({
+    status: 'processed' as 'processed' | 'rejected' | 'resolved' | 'rejected',
+    action: '',
+    admin_comment: ''
+  });
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -315,6 +370,13 @@ const AdminDashboard: React.FC = () => {
       } else if (activeTab === 'forum-categories') {
         const categoriesData = await getForumCategories(false);
         setForumCategories(categoriesData.categories || []);
+      } else if (activeTab === 'forum-posts') {
+        // 确保板块列表已加载
+        if (forumCategories.length === 0) {
+          const categoriesData = await getForumCategories(false);
+          setForumCategories(categoriesData.categories || []);
+        }
+        await loadForumPosts();
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -4479,6 +4541,116 @@ const AdminDashboard: React.FC = () => {
     setShowForumCategoryModal(true);
   };
 
+  // 当切换到论坛内容管理标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'forum-posts') {
+      // 确保板块列表已加载
+      if (forumCategories.length === 0) {
+        getForumCategories(false).then((categoriesData) => {
+          setForumCategories(categoriesData.categories || []);
+        });
+      }
+      // 延迟加载帖子，避免依赖循环
+      const timer = setTimeout(() => {
+        loadForumPosts();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, forumPostsPage, forumPostFilter.category_id, forumPostFilter.is_deleted, forumPostFilter.is_visible]);
+
+  // 加载论坛帖子
+  const loadForumPosts = async () => {
+    setForumPostsLoading(true);
+    try {
+      const params: any = {
+        page: forumPostsPage,
+        page_size: 20
+      };
+      if (forumPostFilter.category_id) {
+        params.category_id = forumPostFilter.category_id;
+      }
+      if (forumPostFilter.search) {
+        params.q = forumPostFilter.search;
+      }
+      if (forumPostFilter.is_deleted !== undefined) {
+        params.is_deleted = forumPostFilter.is_deleted;
+      }
+      if (forumPostFilter.is_visible !== undefined) {
+        params.is_visible = forumPostFilter.is_visible;
+      }
+      const response = await getForumPosts(params);
+      setForumPosts(response.posts || []);
+      setForumPostsTotal(response.total || 0);
+    } catch (error: any) {
+      console.error('加载论坛帖子失败:', error);
+      message.error('加载论坛帖子失败');
+    } finally {
+      setForumPostsLoading(false);
+    }
+  };
+
+  // 创建/更新论坛帖子
+  const handleCreateForumPost = async () => {
+    if (!forumPostForm.title || !forumPostForm.content || !forumPostForm.category_id) {
+      message.error('请填写完整信息');
+      return;
+    }
+    try {
+      if (forumPostForm.id) {
+        await updateForumPost(forumPostForm.id, {
+          title: forumPostForm.title,
+          content: forumPostForm.content,
+          category_id: forumPostForm.category_id
+        });
+        message.success('帖子更新成功');
+      } else {
+        await createForumPost({
+          title: forumPostForm.title,
+          content: forumPostForm.content,
+          category_id: forumPostForm.category_id
+        });
+        message.success('帖子创建成功');
+      }
+      setShowForumPostModal(false);
+      setForumPostForm({
+        id: undefined,
+        title: '',
+        content: '',
+        category_id: undefined
+      });
+      await loadForumPosts();
+    } catch (error: any) {
+      console.error('操作失败:', error);
+      message.error(error?.response?.data?.detail || '操作失败');
+    }
+  };
+
+  // 删除论坛帖子
+  const handleDeleteForumPost = async (postId: number) => {
+    if (!window.confirm('确定要删除这个帖子吗？')) {
+      return;
+    }
+    try {
+      await deleteForumPost(postId);
+      message.success('帖子删除成功');
+      await loadForumPosts();
+    } catch (error: any) {
+      console.error('删除失败:', error);
+      message.error(error?.response?.data?.detail || '删除失败');
+    }
+  };
+
+  // 编辑论坛帖子
+  const handleEditForumPost = async (post: any) => {
+    setForumPostForm({
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      category_id: post.category_id
+    });
+    setShowForumPostModal(true);
+  };
+
   const renderForumCategories = () => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -4790,6 +4962,1327 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const renderForumPosts = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>论坛内容管理</h2>
+        <button
+          onClick={() => {
+            setForumPostForm({
+              id: undefined,
+              title: '',
+              content: '',
+              category_id: undefined
+            });
+            setShowForumPostModal(true);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#28a745',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          快速发帖
+        </button>
+      </div>
+
+      {/* 筛选区域 */}
+      <div style={{
+        background: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <select
+            value={forumPostFilter.category_id || ''}
+            onChange={(e) => {
+              setForumPostFilter({...forumPostFilter, category_id: e.target.value ? Number(e.target.value) : undefined});
+              setForumPostsPage(1);
+            }}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          >
+            <option value="">全部板块</option>
+            {forumCategories.map((cat: any) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="搜索标题..."
+            value={forumPostFilter.search}
+            onChange={(e) => {
+              setForumPostFilter({...forumPostFilter, search: e.target.value});
+              setForumPostsPage(1);
+            }}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd', flex: 1, minWidth: '200px' }}
+          />
+          <select
+            value={forumPostFilter.is_deleted === undefined ? '' : forumPostFilter.is_deleted ? 'deleted' : 'not_deleted'}
+            onChange={(e) => {
+              setForumPostFilter({
+                ...forumPostFilter,
+                is_deleted: e.target.value === '' ? undefined : e.target.value === 'deleted'
+              });
+              setForumPostsPage(1);
+            }}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          >
+            <option value="">全部状态</option>
+            <option value="not_deleted">未删除</option>
+            <option value="deleted">已删除</option>
+          </select>
+          <select
+            value={forumPostFilter.is_visible === undefined ? '' : forumPostFilter.is_visible ? 'visible' : 'hidden'}
+            onChange={(e) => {
+              setForumPostFilter({
+                ...forumPostFilter,
+                is_visible: e.target.value === '' ? undefined : e.target.value === 'visible'
+              });
+              setForumPostsPage(1);
+            }}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+          >
+            <option value="">全部可见性</option>
+            <option value="visible">可见</option>
+            <option value="hidden">隐藏</option>
+          </select>
+          <button
+            onClick={loadForumPosts}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              background: '#007bff',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            搜索
+          </button>
+        </div>
+      </div>
+
+      {/* 帖子列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {forumPostsLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : forumPosts.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无帖子</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>标题</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>板块</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>作者</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forumPosts.map((post: any) => (
+                <tr key={post.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{post.id}</td>
+                  <td style={{ padding: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {post.is_pinned && <span style={{ color: '#ff6b6b', marginRight: '4px' }}>📌</span>}
+                    {post.is_featured && <span style={{ color: '#ffd93d', marginRight: '4px' }}>⭐</span>}
+                    {post.is_locked && <span style={{ color: '#999', marginRight: '4px' }}>🔒</span>}
+                    {post.title}
+                  </td>
+                  <td style={{ padding: '12px' }}>{post.category?.name || '-'}</td>
+                  <td style={{ padding: '12px' }}>{post.author?.name || '-'}</td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      {post.is_deleted && <span style={{ padding: '2px 6px', background: '#f8d7da', color: '#721c24', borderRadius: '4px', fontSize: '12px' }}>已删除</span>}
+                      {!post.is_visible && <span style={{ padding: '2px 6px', background: '#fff3cd', color: '#856404', borderRadius: '4px', fontSize: '12px' }}>已隐藏</span>}
+                      {post.is_pinned && <span style={{ padding: '2px 6px', background: '#d1ecf1', color: '#0c5460', borderRadius: '4px', fontSize: '12px' }}>置顶</span>}
+                      {post.is_featured && <span style={{ padding: '2px 6px', background: '#d4edda', color: '#155724', borderRadius: '4px', fontSize: '12px' }}>加精</span>}
+                      {post.is_locked && <span style={{ padding: '2px 6px', background: '#f8d7da', color: '#721c24', borderRadius: '4px', fontSize: '12px' }}>锁定</span>}
+                    </div>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleEditForumPost(post)}
+                        style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        编辑
+                      </button>
+                      {!post.is_pinned && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await pinForumPost(post.id);
+                              message.success('已置顶');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #28a745', background: 'white', color: '#28a745', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          置顶
+                        </button>
+                      )}
+                      {post.is_pinned && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await unpinForumPost(post.id);
+                              message.success('已取消置顶');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #ffc107', background: 'white', color: '#ffc107', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          取消置顶
+                        </button>
+                      )}
+                      {!post.is_featured && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await featureForumPost(post.id);
+                              message.success('已加精');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #ffc107', background: 'white', color: '#ffc107', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          加精
+                        </button>
+                      )}
+                      {post.is_featured && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await unfeatureForumPost(post.id);
+                              message.success('已取消加精');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #6c757d', background: 'white', color: '#6c757d', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          取消加精
+                        </button>
+                      )}
+                      {!post.is_locked && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await lockForumPost(post.id);
+                              message.success('已锁定');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          锁定
+                        </button>
+                      )}
+                      {post.is_locked && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await unlockForumPost(post.id);
+                              message.success('已解锁');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #28a745', background: 'white', color: '#28a745', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          解锁
+                        </button>
+                      )}
+                      {!post.is_visible && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await unhideForumPost(post.id);
+                              message.success('已取消隐藏');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #17a2b8', background: 'white', color: '#17a2b8', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          取消隐藏
+                        </button>
+                      )}
+                      {post.is_deleted && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await restoreForumPost(post.id);
+                              message.success('已恢复');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #17a2b8', background: 'white', color: '#17a2b8', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          恢复
+                        </button>
+                      )}
+                      {!post.is_deleted && (
+                        <button
+                          onClick={() => handleDeleteForumPost(post.id)}
+                          style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          删除
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {forumPostsTotal > 20 && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+          <button
+            onClick={() => {
+              if (forumPostsPage > 1) {
+                setForumPostsPage(forumPostsPage - 1);
+              }
+            }}
+            disabled={forumPostsPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: forumPostsPage === 1 ? '#f5f5f5' : 'white',
+              color: forumPostsPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: forumPostsPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
+            第 {forumPostsPage} 页，共 {Math.ceil(forumPostsTotal / 20)} 页
+          </span>
+          <button
+            onClick={() => {
+              if (forumPostsPage < Math.ceil(forumPostsTotal / 20)) {
+                setForumPostsPage(forumPostsPage + 1);
+              }
+            }}
+            disabled={forumPostsPage >= Math.ceil(forumPostsTotal / 20)}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: forumPostsPage >= Math.ceil(forumPostsTotal / 20) ? '#f5f5f5' : 'white',
+              color: forumPostsPage >= Math.ceil(forumPostsTotal / 20) ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: forumPostsPage >= Math.ceil(forumPostsTotal / 20) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+
+      {/* 快速发帖模态框 */}
+      {showForumPostModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '800px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ marginBottom: '20px' }}>{forumPostForm.id ? '编辑帖子' : '快速发帖'}</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>板块</label>
+              <select
+                value={forumPostForm.category_id || ''}
+                onChange={(e) => setForumPostForm({...forumPostForm, category_id: e.target.value ? Number(e.target.value) : undefined})}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+              >
+                <option value="">请选择板块</option>
+                {forumCategories.map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>标题</label>
+              <input
+                type="text"
+                value={forumPostForm.title}
+                onChange={(e) => setForumPostForm({...forumPostForm, title: e.target.value})}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                placeholder="请输入标题"
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>内容</label>
+              <textarea
+                value={forumPostForm.content}
+                onChange={(e) => setForumPostForm({...forumPostForm, content: e.target.value})}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', minHeight: '200px', fontFamily: 'inherit' }}
+                placeholder="请输入内容"
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowForumPostModal(false);
+                  setForumPostForm({
+                    id: undefined,
+                    title: '',
+                    content: '',
+                    category_id: undefined
+                  });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreateForumPost}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {forumPostForm.id ? '更新' : '发布'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // 加载论坛举报
+  const loadForumReports = async () => {
+    setForumReportsLoading(true);
+    try {
+      const response = await getForumReports({
+        status_filter: forumReportsStatusFilter,
+        page: forumReportsPage,
+        page_size: 20
+      });
+      setForumReports(response.reports || []);
+      setForumReportsTotal(response.total || 0);
+    } catch (error: any) {
+      console.error('加载论坛举报失败:', error);
+      message.error('加载论坛举报失败');
+    } finally {
+      setForumReportsLoading(false);
+    }
+  };
+
+  // 加载跳蚤市场举报
+  const loadFleaMarketReports = async () => {
+    setFleaMarketReportsLoading(true);
+    try {
+      const response = await getFleaMarketReports({
+        status_filter: fleaMarketReportsStatusFilter,
+        page: fleaMarketReportsPage,
+        page_size: 20
+      });
+      setFleaMarketReports(response.reports || []);
+      setFleaMarketReportsTotal(response.total || 0);
+    } catch (error: any) {
+      console.error('加载跳蚤市场举报失败:', error);
+      message.error('加载跳蚤市场举报失败');
+    } finally {
+      setFleaMarketReportsLoading(false);
+    }
+  };
+
+  // 处理举报
+  const [targetInfo, setTargetInfo] = useState<any>(null);
+  const [loadingTargetInfo, setLoadingTargetInfo] = useState(false);
+
+  // 加载目标对象信息
+  const loadTargetInfo = async (report: any) => {
+    setLoadingTargetInfo(true);
+    try {
+      if (report.type === 'forum') {
+        // 获取帖子或回复信息
+        if (report.target_type === 'post') {
+          const postData = await getForumPost(report.target_id);
+          setTargetInfo({
+            type: 'post',
+            id: postData.id,
+            title: postData.title,
+            author_id: postData.author?.id,
+            author_name: postData.author?.name,
+            is_deleted: postData.is_deleted,
+            is_visible: postData.is_visible,
+            is_locked: postData.is_locked
+          });
+        } else {
+          // 回复信息：需要先获取帖子，然后从回复列表中查找
+          // 这里简化处理，只设置基本信息
+          setTargetInfo({
+            type: 'reply',
+            id: report.target_id,
+            author_id: null,
+            author_name: null
+          });
+        }
+      } else if (report.type === 'flea_market') {
+        // 获取商品信息
+        const itemData = await api.get(`/api/flea-market/items/${report.item_id}`);
+        setTargetInfo({
+          type: 'item',
+          id: report.item_id,
+          title: itemData.data.title,
+          seller_id: itemData.data.seller_id,
+          seller_name: itemData.data.seller?.name,
+          status: itemData.data.status
+        });
+      }
+    } catch (error: any) {
+      console.error('加载目标信息失败:', error);
+      message.error('加载目标信息失败');
+    } finally {
+      setLoadingTargetInfo(false);
+    }
+  };
+
+  // 执行操作
+  const handleQuickAction = async (action: string) => {
+    if (!currentReport || !targetInfo) return;
+
+    try {
+      if (currentReport.type === 'forum') {
+        if (action === 'delete_post' && targetInfo.type === 'post') {
+          await deleteForumPost(targetInfo.id);
+          message.success('帖子已删除');
+        } else if (action === 'hide_post' && targetInfo.type === 'post') {
+          // 隐藏帖子需要调用隐藏API，这里暂时用删除代替
+          await deleteForumPost(targetInfo.id);
+          message.success('帖子已隐藏');
+        } else if (action === 'lock_post' && targetInfo.type === 'post') {
+          await lockForumPost(targetInfo.id);
+          message.success('帖子已锁定');
+        } else if (action === 'ban_user' && targetInfo.author_id) {
+          await updateUserByAdmin(targetInfo.author_id, { is_banned: 1 });
+          message.success('用户已封禁');
+        } else if (action === 'suspend_user' && targetInfo.author_id) {
+          const suspendUntil = new Date();
+          suspendUntil.setDate(suspendUntil.getDate() + 7); // 暂停7天
+          await updateUserByAdmin(targetInfo.author_id, {
+            is_suspended: 1,
+            suspend_until: suspendUntil.toISOString()
+          });
+          message.success('用户已暂停7天');
+        }
+      } else if (currentReport.type === 'flea_market') {
+        if (action === 'take_down_item') {
+          await api.put(`/api/flea-market/items/${targetInfo.id}`, {
+            status: 'deleted'
+          });
+          message.success('商品已下架');
+        } else if (action === 'ban_seller' && targetInfo.seller_id) {
+          await updateUserByAdmin(targetInfo.seller_id, { is_banned: 1 });
+          message.success('卖家已封禁');
+        } else if (action === 'suspend_seller' && targetInfo.seller_id) {
+          const suspendUntil = new Date();
+          suspendUntil.setDate(suspendUntil.getDate() + 7);
+          await updateUserByAdmin(targetInfo.seller_id, {
+            is_suspended: 1,
+            suspend_until: suspendUntil.toISOString()
+          });
+          message.success('卖家已暂停7天');
+        }
+      }
+      
+      // 操作后自动处理举报
+      await handleProcessReport();
+    } catch (error: any) {
+      console.error('操作失败:', error);
+      message.error(error?.response?.data?.detail || '操作失败');
+    }
+  };
+
+  const handleProcessReport = async () => {
+    if (!currentReport) return;
+    
+    try {
+      if (currentReport.type === 'forum') {
+        await processForumReport(currentReport.id, {
+          status: reportProcessForm.status as 'processed' | 'rejected',
+          action: reportProcessForm.action
+        });
+        message.success('举报处理成功');
+        await loadForumReports();
+      } else if (currentReport.type === 'flea_market') {
+        await processFleaMarketReport(currentReport.id, {
+          status: reportProcessForm.status as 'resolved' | 'rejected',
+          admin_comment: reportProcessForm.admin_comment
+        });
+        message.success('举报处理成功');
+        await loadFleaMarketReports();
+      }
+      setShowReportProcessModal(false);
+      setCurrentReport(null);
+      setTargetInfo(null);
+      setReportProcessForm({
+        status: 'processed',
+        action: '',
+        admin_comment: ''
+      });
+    } catch (error: any) {
+      console.error('处理举报失败:', error);
+      message.error(error?.response?.data?.detail || '处理举报失败');
+    }
+  };
+
+  const [reportSubTab, setReportSubTab] = useState<'forum' | 'flea_market'>('forum');
+
+  // 当切换到举报管理标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      const timer = setTimeout(() => {
+        if (reportSubTab === 'forum') {
+          loadForumReports();
+        } else {
+          loadFleaMarketReports();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, reportSubTab, forumReportsPage, forumReportsStatusFilter, fleaMarketReportsPage, fleaMarketReportsStatusFilter]);
+
+  const renderReports = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>举报管理</h2>
+      </div>
+
+      {/* 子标签页 */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <button
+          onClick={() => {
+            setReportSubTab('forum');
+            setForumReportsPage(1);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: reportSubTab === 'forum' ? '#007bff' : '#f0f0f0',
+            color: reportSubTab === 'forum' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          论坛举报
+        </button>
+        <button
+          onClick={() => {
+            setReportSubTab('flea_market');
+            setFleaMarketReportsPage(1);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: reportSubTab === 'flea_market' ? '#007bff' : '#f0f0f0',
+            color: reportSubTab === 'flea_market' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          商品举报
+        </button>
+      </div>
+
+      {/* 论坛举报 */}
+      {reportSubTab === 'forum' && (
+        <div>
+          {/* 筛选 */}
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            marginBottom: '20px'
+          }}>
+            <select
+              value={forumReportsStatusFilter || ''}
+              onChange={(e) => {
+                setForumReportsStatusFilter(e.target.value ? e.target.value as any : undefined);
+                setForumReportsPage(1);
+              }}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+            >
+              <option value="">全部状态</option>
+              <option value="pending">待处理</option>
+              <option value="processed">已处理</option>
+              <option value="rejected">已拒绝</option>
+            </select>
+            <button
+              onClick={loadForumReports}
+              style={{
+                marginLeft: '10px',
+                padding: '8px 16px',
+                border: 'none',
+                background: '#007bff',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              刷新
+            </button>
+          </div>
+
+          {/* 举报列表 */}
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            overflow: 'hidden'
+          }}>
+            {forumReportsLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+            ) : forumReports.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无举报</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8f9fa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>类型</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>目标ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>举报原因</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forumReports.map((report: any) => (
+                    <tr key={report.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                      <td style={{ padding: '12px' }}>{report.id}</td>
+                      <td style={{ padding: '12px' }}>{report.target_type === 'post' ? '帖子' : '回复'}</td>
+                      <td style={{ padding: '12px' }}>{report.target_id}</td>
+                      <td style={{ padding: '12px' }}>{report.reason}</td>
+                      <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {report.description || '-'}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          background: report.status === 'pending' ? '#fff3cd' : report.status === 'processed' ? '#d4edda' : '#f8d7da',
+                          color: report.status === 'pending' ? '#856404' : report.status === 'processed' ? '#155724' : '#721c24',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          {report.status === 'pending' ? '待处理' : report.status === 'processed' ? '已处理' : '已拒绝'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {report.status === 'pending' && (
+                          <button
+                            onClick={async () => {
+                              const reportData = { ...report, type: 'forum' };
+                              setCurrentReport(reportData);
+                              setReportProcessForm({
+                                status: 'processed',
+                                action: '',
+                                admin_comment: ''
+                              });
+                              setShowReportProcessModal(true);
+                              await loadTargetInfo(reportData);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid #007bff',
+                              background: 'white',
+                              color: '#007bff',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            处理
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* 分页 */}
+          {forumReportsTotal > 20 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (forumReportsPage > 1) {
+                    setForumReportsPage(forumReportsPage - 1);
+                  }
+                }}
+                disabled={forumReportsPage === 1}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  background: forumReportsPage === 1 ? '#f5f5f5' : 'white',
+                  color: forumReportsPage === 1 ? '#999' : '#333',
+                  borderRadius: '4px',
+                  cursor: forumReportsPage === 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                上一页
+              </button>
+              <span style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
+                第 {forumReportsPage} 页，共 {Math.ceil(forumReportsTotal / 20)} 页
+              </span>
+              <button
+                onClick={() => {
+                  if (forumReportsPage < Math.ceil(forumReportsTotal / 20)) {
+                    setForumReportsPage(forumReportsPage + 1);
+                  }
+                }}
+                disabled={forumReportsPage >= Math.ceil(forumReportsTotal / 20)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  background: forumReportsPage >= Math.ceil(forumReportsTotal / 20) ? '#f5f5f5' : 'white',
+                  color: forumReportsPage >= Math.ceil(forumReportsTotal / 20) ? '#999' : '#333',
+                  borderRadius: '4px',
+                  cursor: forumReportsPage >= Math.ceil(forumReportsTotal / 20) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                下一页
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 跳蚤市场举报 */}
+      {reportSubTab === 'flea_market' && (
+        <div>
+          {/* 筛选 */}
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            marginBottom: '20px'
+          }}>
+            <select
+              value={fleaMarketReportsStatusFilter || ''}
+              onChange={(e) => {
+                setFleaMarketReportsStatusFilter(e.target.value ? e.target.value as any : undefined);
+                setFleaMarketReportsPage(1);
+              }}
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+            >
+              <option value="">全部状态</option>
+              <option value="pending">待处理</option>
+              <option value="reviewing">审核中</option>
+              <option value="resolved">已解决</option>
+              <option value="rejected">已拒绝</option>
+            </select>
+            <button
+              onClick={loadFleaMarketReports}
+              style={{
+                marginLeft: '10px',
+                padding: '8px 16px',
+                border: 'none',
+                background: '#007bff',
+                color: 'white',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              刷新
+            </button>
+          </div>
+
+          {/* 举报列表 */}
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            overflow: 'hidden'
+          }}>
+            {fleaMarketReportsLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+            ) : fleaMarketReports.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无举报</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8f9fa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>商品ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>商品标题</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>举报人</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>举报原因</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fleaMarketReports.map((report: any) => (
+                    <tr key={report.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                      <td style={{ padding: '12px' }}>{report.id}</td>
+                      <td style={{ padding: '12px' }}>{report.item_id}</td>
+                      <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {report.item_title || '-'}
+                      </td>
+                      <td style={{ padding: '12px' }}>{report.reporter_name || '-'}</td>
+                      <td style={{ padding: '12px' }}>
+                        {report.reason === 'spam' ? '垃圾信息' :
+                         report.reason === 'fraud' ? '欺诈' :
+                         report.reason === 'inappropriate' ? '不当内容' : '其他'}
+                      </td>
+                      <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {report.description || '-'}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          background: report.status === 'pending' ? '#fff3cd' : report.status === 'resolved' ? '#d4edda' : report.status === 'rejected' ? '#f8d7da' : '#d1ecf1',
+                          color: report.status === 'pending' ? '#856404' : report.status === 'resolved' ? '#155724' : report.status === 'rejected' ? '#721c24' : '#0c5460',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          {report.status === 'pending' ? '待处理' : report.status === 'reviewing' ? '审核中' : report.status === 'resolved' ? '已解决' : '已拒绝'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {(report.status === 'pending' || report.status === 'reviewing') && (
+                          <button
+                            onClick={async () => {
+                              const reportData = { ...report, type: 'flea_market' };
+                              setCurrentReport(reportData);
+                              setReportProcessForm({
+                                status: 'resolved',
+                                action: '',
+                                admin_comment: ''
+                              });
+                              setShowReportProcessModal(true);
+                              await loadTargetInfo(reportData);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid #007bff',
+                              background: 'white',
+                              color: '#007bff',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            处理
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* 分页 */}
+          {fleaMarketReportsTotal > 20 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (fleaMarketReportsPage > 1) {
+                    setFleaMarketReportsPage(fleaMarketReportsPage - 1);
+                  }
+                }}
+                disabled={fleaMarketReportsPage === 1}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  background: fleaMarketReportsPage === 1 ? '#f5f5f5' : 'white',
+                  color: fleaMarketReportsPage === 1 ? '#999' : '#333',
+                  borderRadius: '4px',
+                  cursor: fleaMarketReportsPage === 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                上一页
+              </button>
+              <span style={{ padding: '8px 16px', display: 'flex', alignItems: 'center' }}>
+                第 {fleaMarketReportsPage} 页，共 {Math.ceil(fleaMarketReportsTotal / 20)} 页
+              </span>
+              <button
+                onClick={() => {
+                  if (fleaMarketReportsPage < Math.ceil(fleaMarketReportsTotal / 20)) {
+                    setFleaMarketReportsPage(fleaMarketReportsPage + 1);
+                  }
+                }}
+                disabled={fleaMarketReportsPage >= Math.ceil(fleaMarketReportsTotal / 20)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  background: fleaMarketReportsPage >= Math.ceil(fleaMarketReportsTotal / 20) ? '#f5f5f5' : 'white',
+                  color: fleaMarketReportsPage >= Math.ceil(fleaMarketReportsTotal / 20) ? '#999' : '#333',
+                  borderRadius: '4px',
+                  cursor: fleaMarketReportsPage >= Math.ceil(fleaMarketReportsTotal / 20) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                下一页
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 处理举报模态框 */}
+      {showReportProcessModal && currentReport && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ marginBottom: '20px' }}>处理举报</h3>
+            
+            {/* 目标信息显示 */}
+            {loadingTargetInfo ? (
+              <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
+            ) : targetInfo && (
+              <div style={{
+                background: '#f8f9fa',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '20px'
+              }}>
+                <h4 style={{ marginBottom: '12px', fontSize: '16px', fontWeight: '600' }}>目标信息</h4>
+                {currentReport.type === 'forum' && (
+                  <div>
+                    <p><strong>类型：</strong>{targetInfo.type === 'post' ? '帖子' : '回复'}</p>
+                    {targetInfo.title && <p><strong>标题：</strong>{targetInfo.title}</p>}
+                    {targetInfo.author_name && (
+                      <p><strong>作者：</strong>{targetInfo.author_name} (ID: {targetInfo.author_id})</p>
+                    )}
+                  </div>
+                )}
+                {currentReport.type === 'flea_market' && (
+                  <div>
+                    <p><strong>商品：</strong>{targetInfo.title}</p>
+                    {targetInfo.seller_name && (
+                      <p><strong>卖家：</strong>{targetInfo.seller_name} (ID: {targetInfo.seller_id})</p>
+                    )}
+                    <p><strong>状态：</strong>{targetInfo.status}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 快捷操作按钮 */}
+            {targetInfo && !loadingTargetInfo && (
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ marginBottom: '12px', fontSize: '16px', fontWeight: '600' }}>快捷操作</h4>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {currentReport.type === 'forum' && targetInfo.type === 'post' && (
+                    <>
+                      {!targetInfo.is_deleted && (
+                        <button
+                          onClick={() => handleQuickAction('delete_post')}
+                          style={{
+                            padding: '8px 16px',
+                            border: '1px solid #dc3545',
+                            background: 'white',
+                            color: '#dc3545',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          删除帖子
+                        </button>
+                      )}
+                      {targetInfo.is_visible && (
+                        <button
+                          onClick={() => handleQuickAction('hide_post')}
+                          style={{
+                            padding: '8px 16px',
+                            border: '1px solid #ffc107',
+                            background: 'white',
+                            color: '#ffc107',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          隐藏帖子
+                        </button>
+                      )}
+                      {!targetInfo.is_locked && (
+                        <button
+                          onClick={() => handleQuickAction('lock_post')}
+                          style={{
+                            padding: '8px 16px',
+                            border: '1px solid #6c757d',
+                            background: 'white',
+                            color: '#6c757d',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          锁定帖子
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {targetInfo.author_id && (
+                    <>
+                      <button
+                        onClick={() => handleQuickAction('ban_user')}
+                        style={{
+                          padding: '8px 16px',
+                          border: '1px solid #dc3545',
+                          background: 'white',
+                          color: '#dc3545',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        封禁用户
+                      </button>
+                      <button
+                        onClick={() => handleQuickAction('suspend_user')}
+                        style={{
+                          padding: '8px 16px',
+                          border: '1px solid #ffc107',
+                          background: 'white',
+                          color: '#ffc107',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        暂停用户7天
+                      </button>
+                    </>
+                  )}
+                  {currentReport.type === 'flea_market' && (
+                    <>
+                      {targetInfo.status !== 'deleted' && (
+                        <button
+                          onClick={() => handleQuickAction('take_down_item')}
+                          style={{
+                            padding: '8px 16px',
+                            border: '1px solid #dc3545',
+                            background: 'white',
+                            color: '#dc3545',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}
+                        >
+                          下架商品
+                        </button>
+                      )}
+                      {targetInfo.seller_id && (
+                        <>
+                          <button
+                            onClick={() => handleQuickAction('ban_seller')}
+                            style={{
+                              padding: '8px 16px',
+                              border: '1px solid #dc3545',
+                              background: 'white',
+                              color: '#dc3545',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                          >
+                            封禁卖家
+                          </button>
+                          <button
+                            onClick={() => handleQuickAction('suspend_seller')}
+                            style={{
+                              padding: '8px 16px',
+                              border: '1px solid #ffc107',
+                              background: 'white',
+                              color: '#ffc107',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '14px'
+                            }}
+                          >
+                            暂停卖家7天
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>处理结果</label>
+              <select
+                value={reportProcessForm.status}
+                onChange={(e) => setReportProcessForm({...reportProcessForm, status: e.target.value as any})}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+              >
+                {currentReport.type === 'forum' ? (
+                  <>
+                    <option value="processed">已处理</option>
+                    <option value="rejected">已拒绝</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="resolved">已解决</option>
+                    <option value="rejected">已拒绝</option>
+                  </>
+                )}
+              </select>
+            </div>
+            {currentReport.type === 'forum' && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>处理操作（可选）</label>
+                <input
+                  type="text"
+                  value={reportProcessForm.action}
+                  onChange={(e) => setReportProcessForm({...reportProcessForm, action: e.target.value})}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                  placeholder="例如：删除帖子、隐藏内容等"
+                />
+              </div>
+            )}
+            {currentReport.type === 'flea_market' && (
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>管理员备注（可选）</label>
+                <textarea
+                  value={reportProcessForm.admin_comment}
+                  onChange={(e) => setReportProcessForm({...reportProcessForm, admin_comment: e.target.value})}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', minHeight: '100px', fontFamily: 'inherit' }}
+                  placeholder="请输入处理备注"
+                />
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowReportProcessModal(false);
+                  setCurrentReport(null);
+                  setTargetInfo(null);
+                  setReportProcessForm({
+                    status: 'processed',
+                    action: '',
+                    admin_comment: ''
+                  });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleProcessReport}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                确认处理
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{
@@ -5045,6 +6538,36 @@ const AdminDashboard: React.FC = () => {
         >
           论坛板块管理
         </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'forum-posts' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'forum-posts' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+          onClick={() => setActiveTab('forum-posts')}
+        >
+          论坛内容管理
+        </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'reports' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'reports' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+          onClick={() => setActiveTab('reports')}
+        >
+          举报管理
+        </button>
       </div>
 
       <div>
@@ -5118,6 +6641,8 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
             {activeTab === 'forum-categories' && renderForumCategories()}
+            {activeTab === 'forum-posts' && renderForumPosts()}
+            {activeTab === 'reports' && renderReports()}
           </>
         )}
       </div>

@@ -33,6 +33,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
+from app.deps import get_current_admin_async
 from app.id_generator import format_flea_market_id, parse_flea_market_id
 from app.utils.time_utils import get_utc_time, format_iso_utc, file_timestamp_to_utc
 from app.config import Config
@@ -1998,4 +1999,126 @@ async def report_item(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="举报失败"
         )
+
+
+# ==================== 商品举报管理API（管理员）====================
+
+@flea_market_router.get("/admin/reports", response_model=dict)
+async def get_flea_market_reports(
+    status_filter: Optional[str] = Query(None, regex="^(pending|reviewing|resolved|rejected)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取商品举报列表（管理员）"""
+    query = select(models.FleaMarketReport)
+    
+    if status_filter:
+        query = query.where(models.FleaMarketReport.status == status_filter)
+    
+    query = query.order_by(models.FleaMarketReport.created_at.desc())
+    
+    # 获取总数
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 分页
+    offset = (page - 1) * page_size
+    query = query.offset(offset).limit(page_size)
+    
+    result = await db.execute(query)
+    reports = result.scalars().all()
+    
+    report_list = []
+    for r in reports:
+        # 加载商品信息
+        item_result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == r.item_id)
+        )
+        item = item_result.scalar_one_or_none()
+        
+        # 加载举报人信息
+        reporter_result = await db.execute(
+            select(models.User).where(models.User.id == r.reporter_id)
+        )
+        reporter = reporter_result.scalar_one_or_none()
+        
+        report_list.append({
+            "id": r.id,
+            "item_id": format_flea_market_id(r.item_id),
+            "item_title": item.title if item else "商品已删除",
+            "seller_id": item.seller_id if item else None,
+            "reporter_id": r.reporter_id,
+            "reporter_name": reporter.name if reporter else "未知用户",
+            "reason": r.reason,
+            "description": r.description,
+            "status": r.status,
+            "admin_comment": r.admin_comment,
+            "handled_by": r.handled_by,
+            "created_at": format_iso_utc(r.created_at),
+            "handled_at": format_iso_utc(r.handled_at) if r.handled_at else None
+        })
+    
+    return {
+        "reports": report_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
+
+
+@flea_market_router.put("/admin/reports/{report_id}/process", response_model=dict)
+async def process_flea_market_report(
+    report_id: int,
+    process_data: dict = Body(...),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """处理商品举报（管理员）"""
+    status_value = process_data.get("status")  # resolved, rejected
+    admin_comment = process_data.get("admin_comment")
+    
+    if status_value not in ["resolved", "rejected"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的状态，必须是 resolved 或 rejected"
+        )
+    
+    result = await db.execute(
+        select(models.FleaMarketReport).where(models.FleaMarketReport.id == report_id)
+    )
+    report = result.scalar_one_or_none()
+    
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="举报不存在"
+        )
+    
+    if report.status not in ["pending", "reviewing"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="该举报已处理"
+        )
+    
+    # 更新举报状态
+    report.status = status_value
+    report.handled_by = current_admin.id
+    report.handled_at = get_utc_time()
+    if admin_comment:
+        report.admin_comment = admin_comment
+    
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": "举报处理成功",
+        "report": {
+            "id": report.id,
+            "status": report.status,
+            "admin_comment": report.admin_comment
+        }
+    }
 

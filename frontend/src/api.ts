@@ -2545,4 +2545,111 @@ export const getCategoryForumStats = async (categoryId: number) => {
   return res.data;
 };
 
+// 管理员论坛管理API
+export const pinForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/pin`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const unpinForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/forum/posts/${postId}/pin`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const featureForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/feature`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const unfeatureForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/forum/posts/${postId}/feature`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const lockForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/lock`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const unlockForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/forum/posts/${postId}/lock`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const restoreForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/restore`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const unhideForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/unhide`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 论坛举报管理API（管理员）
+export const getForumReports = async (params?: {
+  status_filter?: 'pending' | 'processed' | 'rejected';
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get('/api/forum/reports', { params });
+  return res.data;
+};
+
+export const processForumReport = async (reportId: number, data: {
+  status: 'processed' | 'rejected';
+  action?: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/forum/admin/reports/${reportId}/process`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+// 跳蚤市场举报管理API（管理员）
+export const getFleaMarketReports = async (params?: {
+  status_filter?: 'pending' | 'reviewing' | 'resolved' | 'rejected';
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get('/api/flea-market/admin/reports', { params });
+  return res.data;
+};
+
+export const processFleaMarketReport = async (reportId: number, data: {
+  status: 'resolved' | 'rejected';
+  admin_comment?: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/flea-market/admin/reports/${reportId}/process`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
 export default api; 
