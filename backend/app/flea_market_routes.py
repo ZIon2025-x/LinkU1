@@ -33,7 +33,40 @@ from sqlalchemy.exc import IntegrityError
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
-from app.deps import get_current_admin_async
+
+# 管理员认证函数（从forum_routes复制，因为flea_market也需要）
+async def get_current_admin_async(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db_dependency),
+) -> models.AdminUser:
+    """获取当前管理员（异步版本）"""
+    from app.admin_auth import validate_admin_session
+    
+    admin_session = validate_admin_session(request)
+    if not admin_session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="管理员认证失败，请重新登录"
+        )
+    
+    # 获取管理员信息（异步）
+    admin_result = await db.execute(
+        select(models.AdminUser).where(models.AdminUser.id == admin_session.admin_id)
+    )
+    admin = admin_result.scalar_one_or_none()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="管理员不存在"
+        )
+    
+    if not admin.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="管理员账户已被禁用"
+        )
+    
+    return admin
 from app.id_generator import format_flea_market_id, parse_flea_market_id
 from app.utils.time_utils import get_utc_time, format_iso_utc, file_timestamp_to_utc
 from app.config import Config
@@ -2121,4 +2154,3 @@ async def process_flea_market_report(
             "admin_comment": report.admin_comment
         }
     }
-
