@@ -197,7 +197,7 @@ async def get_task_chat_list(
             # 计算未读数（排除自己发送的消息）
             cursor = cursors_dict.get(task.id)
             
-            if cursor:
+            if cursor and cursor.last_read_message_id is not None:
                 # 使用游标计算未读数
                 unread_query = select(func.count(models.Message.id)).where(
                     and_(
@@ -208,7 +208,7 @@ async def get_task_chat_list(
                     )
                 )
             else:
-                # 没有游标，使用 message_reads 表兜底
+                # 没有游标或游标为None，使用 message_reads 表兜底
                 unread_query = select(func.count(models.Message.id)).where(
                     and_(
                         models.Message.task_id == task.id,
