@@ -2261,6 +2261,36 @@ export const getForumCategory = async (categoryId: number) => {
   return res.data;
 };
 
+// 创建板块（管理员）
+export const createForumCategory = async (category: {
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+}) => {
+  const res = await api.post('/api/forum/categories', category);
+  return res.data;
+};
+
+// 更新板块（管理员）
+export const updateForumCategory = async (categoryId: number, category: {
+  name?: string;
+  description?: string;
+  icon?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+}) => {
+  const res = await api.put(`/api/forum/categories/${categoryId}`, category);
+  return res.data;
+};
+
+// 删除板块（管理员）
+export const deleteForumCategory = async (categoryId: number) => {
+  const res = await api.delete(`/api/forum/categories/${categoryId}`);
+  return res.data;
+};
+
 // 帖子相关
 export const getForumPosts = async (params: {
   category_id?: number;

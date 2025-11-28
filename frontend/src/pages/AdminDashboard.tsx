@@ -36,7 +36,11 @@ import api, {
   getInvitationCodes,
   getInvitationCodeDetail,
   updateInvitationCode,
-  deleteInvitationCode
+  deleteInvitationCode,
+  getForumCategories,
+  createForumCategory,
+  updateForumCategory,
+  deleteForumCategory
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -255,6 +259,18 @@ const AdminDashboard: React.FC = () => {
     is_active: true
   });
 
+  // 论坛板块管理相关状态
+  const [forumCategories, setForumCategories] = useState<any[]>([]);
+  const [showForumCategoryModal, setShowForumCategoryModal] = useState(false);
+  const [forumCategoryForm, setForumCategoryForm] = useState({
+    id: undefined as number | undefined,
+    name: '',
+    description: '',
+    icon: '',
+    sort_order: 0,
+    is_visible: true
+  });
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -295,6 +311,9 @@ const AdminDashboard: React.FC = () => {
         });
         setInvitationCodes(codesData.data || []);
         setInvitationCodesTotal(codesData.total || 0);
+      } else if (activeTab === 'forum-categories') {
+        const categoriesData = await getForumCategories(false);
+        setForumCategories(categoriesData.categories || []);
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -316,7 +335,7 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, currentPage, searchTerm, invitationCodesPage, invitationCodesStatusFilter]);
+  }, [activeTab, currentPage, searchTerm, invitationCodesPage, invitationCodesStatusFilter, taskExpertSubTab]);
 
   useEffect(() => {
     loadDashboardData();
@@ -4364,6 +4383,377 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 论坛板块管理相关函数
+  const handleCreateForumCategory = async () => {
+    if (!forumCategoryForm.name) {
+      message.warning('请填写板块名称');
+      return;
+    }
+
+    try {
+      await createForumCategory({
+        name: forumCategoryForm.name,
+        description: forumCategoryForm.description || undefined,
+        icon: forumCategoryForm.icon || undefined,
+        sort_order: forumCategoryForm.sort_order || 0,
+        is_visible: forumCategoryForm.is_visible
+      });
+      message.success('板块创建成功！');
+      setShowForumCategoryModal(false);
+      setForumCategoryForm({
+        id: undefined,
+        name: '',
+        description: '',
+        icon: '',
+        sort_order: 0,
+        is_visible: true
+      });
+      loadDashboardData();
+    } catch (error: any) {
+      console.error('创建板块失败:', error);
+      const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+      message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
+    }
+  };
+
+  const handleUpdateForumCategory = async () => {
+    if (!forumCategoryForm.id) return;
+
+    try {
+      await updateForumCategory(forumCategoryForm.id, {
+        name: forumCategoryForm.name || undefined,
+        description: forumCategoryForm.description || undefined,
+        icon: forumCategoryForm.icon || undefined,
+        sort_order: forumCategoryForm.sort_order !== undefined ? forumCategoryForm.sort_order : undefined,
+        is_visible: forumCategoryForm.is_visible
+      });
+      message.success('板块更新成功！');
+      setShowForumCategoryModal(false);
+      setForumCategoryForm({
+        id: undefined,
+        name: '',
+        description: '',
+        icon: '',
+        sort_order: 0,
+        is_visible: true
+      });
+      loadDashboardData();
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '更新失败');
+    }
+  };
+
+  const handleDeleteForumCategory = async (id: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个板块吗？删除后该板块下的所有帖子也将被删除！',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteForumCategory(id);
+          message.success('板块删除成功！');
+          loadDashboardData();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || '删除失败');
+        }
+      }
+    });
+  };
+
+  const handleEditForumCategory = (category: any) => {
+    setForumCategoryForm({
+      id: category.id,
+      name: category.name,
+      description: category.description || '',
+      icon: category.icon || '',
+      sort_order: category.sort_order || 0,
+      is_visible: category.is_visible !== undefined ? category.is_visible : true
+    });
+    setShowForumCategoryModal(true);
+  };
+
+  const renderForumCategories = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>论坛板块管理</h2>
+        <button
+          onClick={() => {
+            setForumCategoryForm({
+              id: undefined,
+              name: '',
+              description: '',
+              icon: '',
+              sort_order: 0,
+              is_visible: true
+            });
+            setShowForumCategoryModal(true);
+          }}
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: '#28a745',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          创建板块
+        </button>
+      </div>
+
+      {/* 板块列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8f9fa' }}>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>图标</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>名称</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>排序</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>帖子数</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+              <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {forumCategories.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                  暂无板块数据
+                </td>
+              </tr>
+            ) : (
+              forumCategories.map((category: any) => (
+                <tr key={category.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{category.id}</td>
+                  <td style={{ padding: '12px', fontSize: '20px' }}>{category.icon || '-'}</td>
+                  <td style={{ padding: '12px', fontWeight: '500' }}>{category.name}</td>
+                  <td style={{ padding: '12px', color: '#666', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {category.description || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>{category.sort_order}</td>
+                  <td style={{ padding: '12px' }}>{category.post_count || 0}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: category.is_visible ? '#d4edda' : '#f8d7da',
+                      color: category.is_visible ? '#155724' : '#721c24',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {category.is_visible ? '显示' : '隐藏'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleEditForumCategory(category)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #007bff',
+                          background: 'white',
+                          color: '#007bff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleDeleteForumCategory(category.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid #dc3545',
+                          background: 'white',
+                          color: '#dc3545',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 创建/编辑板块模态框 */}
+      {showForumCategoryModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+            minWidth: '500px',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>
+              {forumCategoryForm.id ? '编辑板块' : '创建板块'}
+            </h3>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                板块名称 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={forumCategoryForm.name}
+                onChange={(e) => setForumCategoryForm({...forumCategoryForm, name: e.target.value})}
+                placeholder="请输入板块名称"
+                maxLength={100}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>板块描述</label>
+              <textarea
+                value={forumCategoryForm.description}
+                onChange={(e) => setForumCategoryForm({...forumCategoryForm, description: e.target.value})}
+                placeholder="请输入板块描述（可选）"
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>图标</label>
+              <input
+                type="text"
+                value={forumCategoryForm.icon}
+                onChange={(e) => setForumCategoryForm({...forumCategoryForm, icon: e.target.value})}
+                placeholder="请输入图标（emoji或图标URL，可选）"
+                maxLength={200}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+              <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                提示：可以使用emoji（如 📝、💻）或图标URL
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>排序权重</label>
+              <input
+                type="number"
+                value={forumCategoryForm.sort_order}
+                onChange={(e) => setForumCategoryForm({...forumCategoryForm, sort_order: parseInt(e.target.value) || 0})}
+                placeholder="数字越小越靠前，默认0"
+                min="0"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={forumCategoryForm.is_visible}
+                  onChange={(e) => setForumCategoryForm({...forumCategoryForm, is_visible: e.target.checked})}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 'bold' }}>显示</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowForumCategoryModal(false);
+                  setForumCategoryForm({
+                    id: undefined,
+                    name: '',
+                    description: '',
+                    icon: '',
+                    sort_order: 0,
+                    is_visible: true
+                  });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#666',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={forumCategoryForm.id ? handleUpdateForumCategory : handleCreateForumCategory}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: '#007bff',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {forumCategoryForm.id ? '更新' : '创建'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{
@@ -4604,6 +4994,21 @@ const AdminDashboard: React.FC = () => {
         >
           邀请码管理
         </button>
+        <button 
+          style={{
+            padding: '10px 20px',
+            border: 'none',
+            background: activeTab === 'forum-categories' ? '#007bff' : '#f0f0f0',
+            color: activeTab === 'forum-categories' ? 'white' : 'black',
+            cursor: 'pointer',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+          onClick={() => setActiveTab('forum-categories')}
+        >
+          论坛板块管理
+        </button>
       </div>
 
       <div>
@@ -4676,6 +5081,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'task-experts' && renderTaskExperts()}
             {activeTab === 'notifications' && renderNotifications()}
             {activeTab === 'invitation-codes' && renderInvitationCodes()}
+            {activeTab === 'forum-categories' && renderForumCategories()}
           </>
         )}
       </div>
