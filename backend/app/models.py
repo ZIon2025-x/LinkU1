@@ -1904,3 +1904,202 @@ class TaskAuditLog(Base):
             name="chk_audit_user_or_admin"
         ),
     )
+
+
+# ==================== 论坛模块模型 ====================
+
+class ForumCategory(Base):
+    """论坛板块表"""
+    __tablename__ = "forum_categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    icon = Column(String(200), nullable=True)
+    sort_order = Column(Integer, default=0, server_default=text('0'))
+    is_visible = Column(Boolean, default=True, server_default=text('true'))
+    post_count = Column(Integer, default=0, server_default=text('0'))
+    last_post_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    posts = relationship("ForumPost", back_populates="category", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("idx_forum_categories_visible", is_visible, sort_order),
+    )
+
+
+class ForumPost(Base):
+    """主题帖表"""
+    __tablename__ = "forum_posts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    content = Column(Text, nullable=False)
+    category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    view_count = Column(Integer, default=0, server_default=text('0'))
+    reply_count = Column(Integer, default=0, server_default=text('0'))
+    like_count = Column(Integer, default=0, server_default=text('0'))
+    favorite_count = Column(Integer, default=0, server_default=text('0'))
+    is_pinned = Column(Boolean, default=False, server_default=text('false'))
+    is_featured = Column(Boolean, default=False, server_default=text('false'))
+    is_locked = Column(Boolean, default=False, server_default=text('false'))
+    is_deleted = Column(Boolean, default=False, server_default=text('false'))
+    is_visible = Column(Boolean, default=True, nullable=False, server_default=text('true'))
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    last_reply_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # 关系
+    category = relationship("ForumCategory", back_populates="posts")
+    author = relationship("User", foreign_keys=[author_id])
+    replies = relationship("ForumReply", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("ForumLike", back_populates="post", cascade="all, delete-orphan")
+    favorites = relationship("ForumFavorite", back_populates="post", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        # 注意：复杂索引（包含 DESC、NULLS LAST）在迁移文件中使用 SQL 创建
+        # 这里只创建基础索引
+        Index("idx_forum_posts_category", category_id, is_deleted, is_visible),
+        Index("idx_forum_posts_author", author_id, is_deleted, is_visible),
+        Index("idx_forum_posts_pinned", is_pinned, created_at),
+    )
+
+
+class ForumReply(Base):
+    """回复表"""
+    __tablename__ = "forum_replies"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False)
+    parent_reply_id = Column(Integer, ForeignKey("forum_replies.id", ondelete="CASCADE"), nullable=True)
+    reply_level = Column(Integer, default=1, server_default=text('1'))
+    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    like_count = Column(Integer, default=0, server_default=text('0'))
+    is_deleted = Column(Boolean, default=False, server_default=text('false'))
+    is_visible = Column(Boolean, default=True, nullable=False, server_default=text('true'))
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
+    
+    # 关系
+    post = relationship("ForumPost", back_populates="replies")
+    parent_reply = relationship("ForumReply", remote_side=[id], backref="child_replies")
+    author = relationship("User", foreign_keys=[author_id])
+    likes = relationship("ForumLike", back_populates="reply", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        CheckConstraint("reply_level BETWEEN 1 AND 3", name="check_reply_level"),
+        Index("idx_forum_replies_post", post_id, created_at),
+        Index("idx_forum_replies_parent", parent_reply_id),
+        Index("idx_forum_replies_author", author_id, is_deleted, is_visible),
+    )
+
+
+class ForumLike(Base):
+    """点赞表"""
+    __tablename__ = "forum_likes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(String(10), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    
+    # 关系（多态关联，需要根据 target_type 和 target_id 动态关联）
+    post = relationship("ForumPost", back_populates="likes", 
+                       primaryjoin="and_(ForumLike.target_type=='post', foreign(ForumLike.target_id)==ForumPost.id)")
+    reply = relationship("ForumReply", back_populates="likes",
+                        primaryjoin="and_(ForumLike.target_type=='reply', foreign(ForumLike.target_id)==ForumReply.id)")
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        CheckConstraint("target_type IN ('post', 'reply')", name="check_target_type"),
+        UniqueConstraint("target_type", "target_id", "user_id", name="uq_forum_likes_target_user"),
+        Index("idx_forum_likes_target", target_type, target_id),
+        Index("idx_forum_likes_user", user_id),
+    )
+
+
+class ForumFavorite(Base):
+    """收藏表"""
+    __tablename__ = "forum_favorites"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey("forum_posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
+    
+    # 关系
+    post = relationship("ForumPost", back_populates="favorites")
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        UniqueConstraint("post_id", "user_id", name="uq_forum_favorites_post_user"),
+        # 注意：需要 DESC 排序的索引在迁移文件中使用 SQL 创建
+        Index("idx_forum_favorites_user", user_id, created_at),
+        Index("idx_forum_favorites_post", post_id),
+    )
+
+
+class ForumNotification(Base):
+    """通知表"""
+    __tablename__ = "forum_notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    notification_type = Column(String(20), nullable=False)
+    target_type = Column(String(10), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    from_user_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    to_user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False, server_default=text('false'))
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
+    
+    # 关系
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])
+    
+    __table_args__ = (
+        CheckConstraint("notification_type IN ('reply_post', 'reply_reply', 'like_post', 'feature_post', 'pin_post')", 
+                       name="check_notification_type"),
+        CheckConstraint("target_type IN ('post', 'reply')", name="check_notification_target_type"),
+        # 注意：需要 DESC 排序的索引在迁移文件中使用 SQL 创建
+        Index("idx_forum_notifications_user", to_user_id, is_read, created_at),
+        Index("idx_forum_notifications_target", target_type, target_id),
+    )
+
+
+class ForumReport(Base):
+    """举报表"""
+    __tablename__ = "forum_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    target_type = Column(String(10), nullable=False)
+    target_id = Column(Integer, nullable=False)
+    reporter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason = Column(String(50), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(20), default="pending", nullable=False, server_default=text("'pending'"))
+    processor_id = Column(String(8), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+    action = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
+    
+    # 关系
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    processor = relationship("User", foreign_keys=[processor_id])
+    
+    __table_args__ = (
+        CheckConstraint("target_type IN ('post', 'reply')", name="check_report_target_type"),
+        CheckConstraint("status IN ('pending', 'processed', 'rejected')", name="check_report_status"),
+        # 注意：需要 DESC 排序的索引在迁移文件中使用 SQL 创建
+        Index("idx_forum_reports_status", status, created_at),
+        Index("idx_forum_reports_target", target_type, target_id),
+        Index("idx_forum_reports_reporter", reporter_id),
+        # 部分唯一索引：防止同一用户对同一目标的 pending 举报重复
+        Index("idx_forum_reports_unique_pending", target_type, target_id, reporter_id, 
+              postgresql_where=(status == "pending"), unique=True),
+    )

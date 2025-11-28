@@ -282,6 +282,10 @@ app.include_router(flea_market_router)
 from app.multi_participant_routes import router as multi_participant_router
 app.include_router(multi_participant_router)
 
+# 论坛路由
+from app.forum_routes import router as forum_router
+app.include_router(forum_router)
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")

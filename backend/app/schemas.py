@@ -2295,3 +2295,268 @@ class FleaMarketReportResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ==================== 论坛模块 Schemas ====================
+
+# 板块相关 Schemas
+class ForumCategoryBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = None
+    icon: Optional[str] = Field(None, max_length=200)
+    sort_order: int = Field(0, ge=0)
+    is_visible: bool = True
+
+
+class ForumCategoryCreate(ForumCategoryBase):
+    pass
+
+
+class ForumCategoryUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    icon: Optional[str] = Field(None, max_length=200)
+    sort_order: Optional[int] = Field(None, ge=0)
+    is_visible: Optional[bool] = None
+
+
+class ForumCategoryOut(ForumCategoryBase):
+    id: int
+    post_count: int
+    last_post_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumCategoryListResponse(BaseModel):
+    """板块列表响应"""
+    categories: List[ForumCategoryOut]
+
+
+# 帖子相关 Schemas
+class ForumPostBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1)
+    category_id: int
+
+
+class ForumPostCreate(ForumPostBase):
+    pass
+
+
+class ForumPostUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = Field(None, min_length=1)
+    category_id: Optional[int] = None
+
+
+class UserInfo(BaseModel):
+    """用户基本信息"""
+    id: str
+    name: str
+    avatar: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class CategoryInfo(BaseModel):
+    """板块基本信息"""
+    id: int
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumPostOut(BaseModel):
+    """帖子详情输出"""
+    id: int
+    title: str
+    content: str
+    category: CategoryInfo
+    author: UserInfo
+    view_count: int
+    reply_count: int
+    like_count: int
+    favorite_count: int
+    is_pinned: bool
+    is_featured: bool
+    is_locked: bool
+    is_liked: Optional[bool] = False  # 当前用户是否已点赞（动态计算）
+    is_favorited: Optional[bool] = False  # 当前用户是否已收藏（动态计算）
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    last_reply_at: Optional[datetime.datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumPostListItem(BaseModel):
+    """帖子列表项（不包含完整内容）"""
+    id: int
+    title: str
+    content_preview: str  # 内容预览（前200字符）
+    category: CategoryInfo
+    author: UserInfo
+    view_count: int
+    reply_count: int
+    like_count: int
+    is_pinned: bool
+    is_featured: bool
+    is_locked: bool
+    created_at: datetime.datetime
+    last_reply_at: Optional[datetime.datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumPostListResponse(BaseModel):
+    """帖子列表响应"""
+    posts: List[ForumPostListItem]
+    total: int
+    page: int
+    page_size: int
+
+
+# 回复相关 Schemas
+class ForumReplyBase(BaseModel):
+    content: str = Field(..., min_length=1)
+    parent_reply_id: Optional[int] = None
+
+
+class ForumReplyCreate(ForumReplyBase):
+    pass
+
+
+class ForumReplyUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
+class ForumReplyOut(BaseModel):
+    """回复输出"""
+    id: int
+    content: str
+    author: UserInfo
+    parent_reply_id: Optional[int] = None
+    reply_level: int
+    like_count: int
+    is_liked: Optional[bool] = False  # 当前用户是否已点赞（动态计算）
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    replies: List["ForumReplyOut"] = []  # 嵌套回复
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumReplyListResponse(BaseModel):
+    """回复列表响应"""
+    replies: List[ForumReplyOut]
+    total: int
+    page: int
+    page_size: int
+
+
+# 点赞相关 Schemas
+class ForumLikeRequest(BaseModel):
+    target_type: Literal["post", "reply"]
+    target_id: int
+
+
+class ForumLikeResponse(BaseModel):
+    liked: bool
+    like_count: int
+
+
+# 收藏相关 Schemas
+class ForumFavoriteRequest(BaseModel):
+    post_id: int
+
+
+class ForumFavoriteResponse(BaseModel):
+    favorited: bool
+    favorite_count: int
+
+
+# 搜索相关 Schemas
+class ForumSearchResponse(BaseModel):
+    """搜索响应"""
+    posts: List[ForumPostListItem]
+    total: int
+    page: int
+    page_size: int
+
+
+# 通知相关 Schemas
+class ForumNotificationOut(BaseModel):
+    """通知输出"""
+    id: int
+    notification_type: str
+    target_type: str
+    target_id: int
+    from_user: Optional[UserInfo] = None
+    is_read: bool
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumNotificationListResponse(BaseModel):
+    """通知列表响应"""
+    notifications: List[ForumNotificationOut]
+    total: int
+    unread_count: int
+    page: int
+    page_size: int
+
+
+class ForumNotificationListResponse(BaseModel):
+    """通知列表响应"""
+    notifications: List[ForumNotificationOut]
+    total: int
+    unread_count: int
+    page: int
+    page_size: int
+
+
+# 举报相关 Schemas
+class ForumReportCreate(BaseModel):
+    target_type: Literal["post", "reply"]
+    target_id: int
+    reason: str = Field(..., min_length=1, max_length=50)
+    description: Optional[str] = None
+
+
+class ForumReportOut(BaseModel):
+    """举报输出"""
+    id: int
+    target_type: str
+    target_id: int
+    reason: str
+    description: Optional[str] = None
+    status: str
+    created_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ForumReportListResponse(BaseModel):
+    """举报列表响应"""
+    reports: List[ForumReportOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class ForumReportProcess(BaseModel):
+    """处理举报请求"""
+    status: Literal["processed", "rejected"]
+    action: Optional[str] = Field(None, max_length=50)
