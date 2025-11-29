@@ -2,16 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <!-- Favicon配置 - 标准格式，优先使用.ico格式，Bing和搜索引擎更容易识别 -->
-    <!-- 使用绝对路径指向www.link2ur.com，避免link2ur.com和www.link2ur.com混乱导致的问题 -->
-    <!-- FaviconManager会在运行时动态更新为完整URL，这里设置默认值 -->
-    <!-- 标准格式：SVG favicon（现代浏览器优先，可缩放矢量图标） -->
-    <link rel="icon" type="image/svg+xml" href="https://www.link2ur.com/static/favicon.svg" />
+    <!-- Favicon配置 - 优先放在head最前面，确保Bing和搜索引擎能识别 -->
+    <!-- Bing搜索引擎优先识别根目录的favicon.ico，必须放在最前面 -->
+    <link rel="icon" href="https://www.link2ur.com/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="https://www.link2ur.com/favicon.ico" type="image/x-icon" />
+    <!-- 备选favicon路径 -->
+    <link rel="icon" href="https://www.link2ur.com/static/favicon.ico" type="image/x-icon" />
     <!-- 标准格式：主favicon（使用sizes="any"表示任何尺寸） -->
     <link rel="icon" href="https://www.link2ur.com/favicon.ico" sizes="any" />
-    <!-- 根目录favicon.ico（搜索引擎默认查找的路径） -->
-    <link rel="icon" href="https://www.link2ur.com/static/favicon.ico" type="image/x-icon" />
-    <link rel="shortcut icon" href="https://www.link2ur.com/static/favicon.ico" type="image/x-icon" />
+    <!-- 标准格式：SVG favicon（现代浏览器优先，可缩放矢量图标） -->
+    <link rel="icon" type="image/svg+xml" href="https://www.link2ur.com/static/favicon.svg" />
     
     <!-- 标准格式：PNG格式的favicon（按尺寸设置，作为SVG的备选） -->
     <!-- Chrome移动端和Google搜索引擎优先读取的favicon（192x192和512x512是关键尺寸） -->

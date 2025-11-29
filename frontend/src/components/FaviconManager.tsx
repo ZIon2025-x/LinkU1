@@ -19,43 +19,41 @@ const FaviconManager: React.FC = () => {
       const allFavicons = document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon'], link[rel='mask-icon']");
       allFavicons.forEach(icon => icon.remove());
       
-      // 1.5. 优先设置SVG favicon（现代浏览器优先，可缩放矢量图标）
-      const svgFavicon = document.createElement('link');
-      svgFavicon.rel = 'icon';
-      svgFavicon.type = 'image/svg+xml';
-      svgFavicon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
-      document.head.insertBefore(svgFavicon, document.head.firstChild);
-      
-      // 2. 优先设置favicon.ico（搜索引擎和浏览器默认查找的路径，Bing和Google都优先识别.ico格式）
-      // 插入到head的最前面，确保优先读取
-      // 使用绝对路径，确保搜索引擎能正确识别
-      // 首先设置根目录的favicon.ico（搜索引擎默认查找的路径）
+      // 1. 优先设置根目录的favicon.ico（Bing和搜索引擎默认查找的路径，必须放在最前面）
+      // Bing搜索引擎会优先查找根目录的 /favicon.ico，必须放在所有其他favicon之前
       const rootFavicon = document.createElement('link');
       rootFavicon.rel = 'icon';
       rootFavicon.type = 'image/x-icon';
       rootFavicon.href = `${baseUrl}/favicon.ico?v=${version}`;
-      document.head.insertBefore(rootFavicon, svgFavicon.nextSibling);
+      document.head.insertBefore(rootFavicon, document.head.firstChild);
       
-      // 然后设置static目录的favicon.ico（作为备选）
-      const staticFavicon = document.createElement('link');
-      staticFavicon.rel = 'icon';
-      staticFavicon.type = 'image/x-icon';
-      staticFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
-      document.head.insertBefore(staticFavicon, rootFavicon.nextSibling);
-
-      // 3. 设置shortcut icon（旧版浏览器和搜索引擎需要）
+      // 2. 设置shortcut icon（Bing和旧版浏览器需要，必须紧跟在根目录favicon之后）
       const shortcutIcon = document.createElement('link');
       shortcutIcon.rel = 'shortcut icon';
       shortcutIcon.type = 'image/x-icon';
       shortcutIcon.href = `${baseUrl}/favicon.ico?v=${version}`;
-      document.head.insertBefore(shortcutIcon, staticFavicon.nextSibling);
+      document.head.insertBefore(shortcutIcon, rootFavicon.nextSibling);
       
-      // 3.5. 额外设置一个无sizes的.ico favicon（某些搜索引擎需要）
+      // 3. 设置static目录的favicon.ico（作为备选）
+      const staticFavicon = document.createElement('link');
+      staticFavicon.rel = 'icon';
+      staticFavicon.type = 'image/x-icon';
+      staticFavicon.href = `${baseUrl}/static/favicon.ico?v=${version}`;
+      document.head.insertBefore(staticFavicon, shortcutIcon.nextSibling);
+      
+      // 4. 设置SVG favicon（现代浏览器优先，可缩放矢量图标）
+      const svgFavicon = document.createElement('link');
+      svgFavicon.rel = 'icon';
+      svgFavicon.type = 'image/svg+xml';
+      svgFavicon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
+      document.head.insertBefore(svgFavicon, staticFavicon.nextSibling);
+
+      // 5. 额外设置一个无sizes的.ico favicon（某些搜索引擎需要）
       const defaultIcoIcon = document.createElement('link');
       defaultIcoIcon.rel = 'icon';
       defaultIcoIcon.type = 'image/x-icon';
       defaultIcoIcon.href = `${baseUrl}/favicon.ico?v=${version}`;
-      document.head.insertBefore(defaultIcoIcon, shortcutIcon.nextSibling);
+      document.head.insertBefore(defaultIcoIcon, svgFavicon.nextSibling);
 
       // 4. 设置所有尺寸的PNG favicon（移动端Chrome和Google需要）
       // 关键尺寸：16x16, 32x32, 192x192, 512x512（移动端Chrome特别需要192x192和512x512）
@@ -70,7 +68,7 @@ const FaviconManager: React.FC = () => {
         sizeLink.setAttribute('sizes', size);
         sizeLink.type = 'image/png';
         sizeLink.href = `${baseUrl}/static/favicon.png?v=${version}`;
-        document.head.insertBefore(sizeLink, shortcutIcon.nextSibling);
+        document.head.insertBefore(sizeLink, defaultIcoIcon.nextSibling);
       });
       
       // 再设置其他尺寸
@@ -114,7 +112,7 @@ const FaviconManager: React.FC = () => {
       maskIcon.rel = 'mask-icon';
       maskIcon.href = `${baseUrl}/static/favicon.svg?v=${version}`;
       maskIcon.setAttribute('color', '#1890ff');
-      document.head.insertBefore(maskIcon, svgFavicon.nextSibling);
+      document.head.insertBefore(maskIcon, defaultPngIcon.nextSibling);
     };
 
     // 立即执行
