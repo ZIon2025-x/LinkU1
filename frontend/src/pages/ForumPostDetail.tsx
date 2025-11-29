@@ -306,6 +306,81 @@ const ForumPostDetail: React.FC = () => {
     }, 1000);
   }, [post, shareDescription, canonicalUrl]);
 
+  // 立即更新微信分享 meta 标签的函数
+  const updateWeixinMetaTags = useCallback(() => {
+    if (!post) return;
+    
+    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    
+    // 强制更新微信分享描述（微信优先读取weixin:description）
+    const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+    allWeixinDescriptions.forEach(tag => tag.remove());
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = shareDescription;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+    
+    // 强制更新微信分享标题
+    const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+    allWeixinTitles.forEach(tag => tag.remove());
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = post.title;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+    
+    // 强制更新微信分享图片
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    const weixinImageTag = document.createElement('meta');
+    weixinImageTag.setAttribute('name', 'weixin:image');
+    weixinImageTag.content = shareImageUrl;
+    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+    
+    // 同时更新 Open Graph 标签
+    const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+    allOgDescriptions.forEach(tag => tag.remove());
+    const ogDescTag = document.createElement('meta');
+    ogDescTag.setAttribute('property', 'og:description');
+    ogDescTag.content = shareDescription;
+    document.head.insertBefore(ogDescTag, document.head.firstChild);
+    
+    const existingOgTitle = document.querySelector('meta[property="og:title"]');
+    if (existingOgTitle) {
+      existingOgTitle.remove();
+    }
+    const ogTitleTag = document.createElement('meta');
+    ogTitleTag.setAttribute('property', 'og:title');
+    ogTitleTag.content = post.title;
+    document.head.insertBefore(ogTitleTag, document.head.firstChild);
+    
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
+    const ogImageTag = document.createElement('meta');
+    ogImageTag.setAttribute('property', 'og:image');
+    ogImageTag.content = shareImageUrl;
+    document.head.insertBefore(ogImageTag, document.head.firstChild);
+  }, [post]);
+
+  // 当显示分享模态框时，立即更新微信分享 meta 标签
+  useEffect(() => {
+    if (showShareModal && post) {
+      // 立即更新 meta 标签，确保微信爬虫能读取到最新值
+      updateWeixinMetaTags();
+      
+      // 多次更新确保微信爬虫能读取到
+      setTimeout(() => {
+        updateWeixinMetaTags();
+      }, 100);
+      
+      setTimeout(() => {
+        updateWeixinMetaTags();
+      }, 500);
+    }
+  }, [showShareModal, post, updateWeixinMetaTags]);
+
   useEffect(() => {
     if (postId) {
       loadPost();
@@ -540,6 +615,9 @@ const ForumPostDetail: React.FC = () => {
   const handleShare = async () => {
     if (!post) return;
     
+    // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
+    updateWeixinMetaTags();
+    
     const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
     const shareTitle = post.title;
     const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
@@ -564,14 +642,10 @@ const ForumPostDetail: React.FC = () => {
       }
     }
     
-    // 如果不支持 Web Share API 或失败，使用复制链接
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      message.success(t('forum.linkCopied'));
-    } catch (error) {
-      // 如果复制失败，显示分享模态框
-      setShowShareModal(true);
-    }
+    // 如果不支持 Web Share API 或失败，显示分享模态框
+    // 在显示模态框前立即更新 meta 标签，确保微信爬虫能读取到最新值
+    updateWeixinMetaTags();
+    setShowShareModal(true);
   };
 
   const handleCopyLink = async () => {
@@ -588,6 +662,12 @@ const ForumPostDetail: React.FC = () => {
 
   const handleShareToSocial = (platform: string) => {
     if (!post) return;
+    
+    // 如果是微信分享（通过二维码），立即更新 meta 标签
+    if (platform === 'wechat') {
+      updateWeixinMetaTags();
+    }
+    
     const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/posts/${post.id}`);
     const shareTitle = encodeURIComponent(post.title);
     const shareDescription = encodeURIComponent(post.content.replace(/<[^>]*>/g, '').trim());
@@ -611,7 +691,9 @@ const ForumPostDetail: React.FC = () => {
         return;
     }
     
-    window.open(shareWindowUrl, '_blank', 'width=600,height=400');
+    if (shareWindowUrl) {
+      window.open(shareWindowUrl, '_blank', 'width=600,height=400');
+    }
     setShowShareModal(false);
   };
 
