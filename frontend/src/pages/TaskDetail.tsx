@@ -181,7 +181,7 @@ const TaskDetail: React.FC = () => {
     updateMetaTag('og:url', taskUrl, true);
     updateMetaTag('og:type', 'article', true);
     
-    // 设置favicon图片（带版本号避免缓存问题）
+    // 设置默认logo图片（带版本号避免缓存问题）
     const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     // 强制移除旧的图片标签
     const existingOgImage = document.querySelector('meta[property="og:image"]');
@@ -675,9 +675,20 @@ const TaskDetail: React.FC = () => {
       
       updateMetaTag('og:url', taskUrl, true);
       
-      // 设置favicon作为og:image（微信和社交媒体分享会使用）
-      // 使用public/static/favicon.png，添加版本号避免缓存问题
-      const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+      // 设置分享图片（优先使用任务图片，否则使用默认logo图片）
+      // 如果有任务图片，使用第一张任务图片；否则使用默认logo图片
+      let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+      if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
+        // 确保图片URL是绝对路径
+        const taskImageUrl = task.images[0];
+        if (taskImageUrl.startsWith('http://') || taskImageUrl.startsWith('https://')) {
+          shareImageUrl = taskImageUrl;
+        } else if (taskImageUrl.startsWith('/')) {
+          shareImageUrl = `${window.location.origin}${taskImageUrl}`;
+        } else {
+          shareImageUrl = `${window.location.origin}/${taskImageUrl}`;
+        }
+      }
       // 强制更新og:image（通过先移除再添加的方式）
       const existingOgImage = document.querySelector('meta[property="og:image"]');
       if (existingOgImage) {
@@ -968,16 +979,65 @@ const TaskDetail: React.FC = () => {
           const displayReward = task.agreed_reward ?? task.base_reward ?? task.reward ?? 0;
           const shareText = `${task.title}\n\n${task.description.substring(0, 100)}${task.description.length > 100 ? '...' : ''}\n\n任务类型: ${task.task_type}\n地点: ${task.location}\n金额: £${displayReward.toFixed(2)}\n\n立即查看: ${shareUrl}`;
           
-          // 使用setTimeout确保在下一个事件循环中执行，这样可以保持用户交互的上下文
-          setTimeout(() => {
-            navigator.share({
-              title: shareTitle,
-              text: shareText,
-              url: shareUrl
-            }).catch((error) => {
-              // 用户取消分享或出错时不做任何处理
-            });
-          }, 100);
+          // 准备分享数据，如果有任务图片则尝试分享图片
+          const shareData: any = {
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl
+          };
+          
+          // 如果有任务图片，尝试获取图片并添加到分享数据中
+          if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
+            const imageUrl = task.images[0];
+            // 确保图片URL是绝对路径
+            let fullImageUrl = imageUrl;
+            if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+              if (imageUrl.startsWith('/')) {
+                fullImageUrl = `${window.location.origin}${imageUrl}`;
+              } else {
+                fullImageUrl = `${window.location.origin}/${imageUrl}`;
+              }
+            }
+            
+            // 尝试获取图片并转换为 File 对象（用于 Web Share API 的 files 参数）
+            fetch(fullImageUrl)
+              .then(response => response.blob())
+              .then(blob => {
+                const file = new File([blob], 'task-image.jpg', { type: blob.type || 'image/jpeg' });
+                shareData.files = [file];
+                
+                // 使用setTimeout确保在下一个事件循环中执行，这样可以保持用户交互的上下文
+                setTimeout(() => {
+                  navigator.share(shareData).catch((error) => {
+                    // 如果分享图片失败，尝试不分享图片
+                    if (error.name !== 'AbortError') {
+                      navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareUrl
+                      }).catch(() => {
+                        // 用户取消分享或出错时不做任何处理
+                      });
+                    }
+                  });
+                }, 100);
+              })
+              .catch(() => {
+                // 如果获取图片失败，直接分享不带图片
+                setTimeout(() => {
+                  navigator.share(shareData).catch((error) => {
+                    // 用户取消分享或出错时不做任何处理
+                  });
+                }, 100);
+              });
+          } else {
+            // 如果没有任务图片，直接分享
+            setTimeout(() => {
+              navigator.share(shareData).catch((error) => {
+                // 用户取消分享或出错时不做任何处理
+              });
+            }, 100);
+          }
         } else {
           // 如果不支持Web Share API，使用传统的复制链接方式
           const shareUrl = window.location.origin + window.location.pathname;

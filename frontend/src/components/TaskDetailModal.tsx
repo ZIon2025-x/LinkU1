@@ -1051,11 +1051,39 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                 // 先尝试使用Web Share API（需要在用户交互上下文中）
                 if (navigator.share) {
                   try {
-                    await navigator.share({
+                    // 准备分享数据
+                    const shareData: any = {
                       title: shareTitle,
                       text: shareText,
                       url: shareUrl
-                    });
+                    };
+                    
+                    // 如果有任务图片，尝试获取图片并添加到分享数据中
+                    if (task.images && Array.isArray(task.images) && task.images.length > 0 && task.images[0]) {
+                      const imageUrl = task.images[0];
+                      // 确保图片URL是绝对路径
+                      let fullImageUrl = imageUrl;
+                      if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+                        if (imageUrl.startsWith('/')) {
+                          fullImageUrl = `${window.location.origin}${imageUrl}`;
+                        } else {
+                          fullImageUrl = `${window.location.origin}/${imageUrl}`;
+                        }
+                      }
+                      
+                      // 尝试获取图片并转换为 File 对象
+                      try {
+                        const response = await fetch(fullImageUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'task-image.jpg', { type: blob.type || 'image/jpeg' });
+                        shareData.files = [file];
+                      } catch (imageError) {
+                        // 如果获取图片失败，继续使用不带图片的分享
+                        console.log('获取任务图片失败，使用不带图片的分享');
+                      }
+                    }
+                    
+                    await navigator.share(shareData);
                     // 分享成功后关闭弹窗并跳转
                     onClose();
                     navigate(`/tasks/${taskId}`);
@@ -1064,6 +1092,23 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     // 如果用户取消分享，不做任何操作
                     if (error.name === 'AbortError') {
                       return;
+                    }
+                    // 如果分享图片失败，尝试不分享图片
+                    if (error.name === 'NotSupportedError' || error.message?.includes('files')) {
+                      try {
+                        await navigator.share({
+                          title: shareTitle,
+                          text: shareText,
+                          url: shareUrl
+                        });
+                        onClose();
+                        navigate(`/tasks/${taskId}`);
+                        return;
+                      } catch (retryError: any) {
+                        if (retryError.name === 'AbortError') {
+                          return;
+                        }
+                      }
                     }
                     // 如果出错，继续执行跳转逻辑
                   }

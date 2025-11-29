@@ -597,6 +597,8 @@ const ForumPostDetail: React.FC = () => {
   // 计算 SEO 相关数据
   const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
   const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+  // 用于分享的描述（前30个字左右，在逗号或句号处截断）
+  const shareDescription = post ? extractDescription(post.content, 30) : '';
   const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
   const breadcrumbItems = post ? [
     { 
@@ -628,12 +630,12 @@ const ForumPostDetail: React.FC = () => {
             keywords={`${post.category?.name || ''},论坛,讨论,${t('forum.title') || 'Forum'}`}
             canonicalUrl={canonicalUrl}
             ogTitle={post.title}
-            ogDescription={seoDescription}
-            ogImage={`https://www.link2ur.com/static/og-default.jpg`}
+            ogDescription={shareDescription}
+            ogImage={`https://www.link2ur.com/static/favicon.png`}
             ogUrl={canonicalUrl}
             twitterTitle={post.title}
-            twitterDescription={seoDescription}
-            twitterImage={`https://www.link2ur.com/static/og-default.jpg`}
+            twitterDescription={shareDescription}
+            twitterImage={`https://www.link2ur.com/static/favicon.png`}
           />
           <ForumPostStructuredData 
             post={{
