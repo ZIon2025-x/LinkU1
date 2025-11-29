@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { message } from 'antd';
 import { TASK_TYPES, CITIES } from './Tasks';
 import api, { getPublicSystemSettings, fetchCurrentUser } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { compressImage } from '../utils/imageCompression';
+import SEOHead from '../components/SEOHead';
 
 // 移动端检测函数
 const isMobileDevice = () => {
@@ -39,6 +40,12 @@ const PublishTask: React.FC = () => {
     super_vip_enabled: true
   });
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // 生成canonical URL
+  const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
+    ? `https://www.link2ur.com${location.pathname}`
+    : 'https://www.link2ur.com/en/publish-task';
 
   // 移动端检测
   useEffect(() => {
@@ -234,6 +241,11 @@ const PublishTask: React.FC = () => {
       overscrollBehavior: 'contain',
       WebkitOverflowScrolling: 'touch'
     }}>
+      <SEOHead 
+        title={t('publishTask.pageTitle') || '发布任务 - Link²Ur'}
+        description={t('publishTask.pageDescription') || '在Link²Ur发布任务，寻找合适的服务提供者'}
+        noindex={true}
+      />
       {/* SEO优化：H1标签，可见但样式简洁 */}
       <h1 style={{
         position: 'absolute',

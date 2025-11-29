@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import LoginModal from '../components/LoginModal';
 import api from '../api';
 import SEOHead from '../components/SEOHead';
+import HreflangManager from '../components/HreflangManager';
 
 const { Text, Paragraph } = Typography;
 
@@ -65,9 +66,6 @@ const Register: React.FC = () => {
     suggestions: [],
     missing_requirements: []
   });
-  
-  // 生成canonical URL
-  const canonicalUrl = `https://www.link2ur.com${location.pathname}`;
 
   // 前端密码强度验证函数（当后端不可用时使用）
   const validatePasswordFrontend = (password: string) => {
@@ -310,9 +308,9 @@ const Register: React.FC = () => {
       <SEOHead 
         title="注册 - Link²Ur"
         description="注册Link²Ur账户，加入本地生活服务平台"
-        canonicalUrl={canonicalUrl}
         noindex={true}
       />
+      <HreflangManager type="page" path="/register" />
       {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',

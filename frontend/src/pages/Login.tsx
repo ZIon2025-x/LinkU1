@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import LoginModal from '../components/LoginModal';
 import SEOHead from '../components/SEOHead';
+import HreflangManager from '../components/HreflangManager';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -351,9 +352,9 @@ const Login: React.FC = () => {
       <SEOHead 
         title="登录 - Link²Ur"
         description="登录Link²Ur，探索本地生活服务机会"
-        canonicalUrl={canonicalUrl}
         noindex={true}
       />
+      <HreflangManager type="page" path="/login" />
       {/* SEO优化：可见的H1标签 */}
       <h1 style={{ 
         position: 'absolute',

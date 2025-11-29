@@ -155,10 +155,14 @@ async def add_noindex_header(request: Request, call_next):
     """为API端点添加noindex头，防止搜索引擎索引"""
     response = await call_next(request)
     
-    # 检查是否是API端点
-    if request.url.path.startswith("/api"):
-        response.headers["X-Robots-Tag"] = "noindex, nofollow"
-    elif request.url.hostname == "api.link2ur.com" or request.url.hostname == "api.link2ur.com/":
+    # 检查是否是API端点或API域名
+    is_api_path = request.url.path.startswith("/api")
+    is_api_domain = request.url.hostname and (
+        request.url.hostname == "api.link2ur.com" or 
+        request.url.hostname.startswith("api.link2ur.com")
+    )
+    
+    if is_api_path or is_api_domain:
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
     
     return response

@@ -241,12 +241,16 @@ const Home: React.FC = () => {
   const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   
-  // 生成canonical URL - 确保包含语言前缀
-  // 由于语言路由重定向，这里只会处理有语言前缀的路径（如 /en, /zh）
-  // 确保每个语言版本指向自己的 URL
-  const canonicalUrl = location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')
-    ? `https://www.link2ur.com${location.pathname}`
-    : 'https://www.link2ur.com/en'; // 默认情况下指向英文版
+  // 生成canonical URL - 确保包含语言前缀和尾部斜杠
+  // 统一格式：/en/ 和 /zh/（带尾部斜杠）
+  let canonicalUrl = 'https://www.link2ur.com/en/'; // 默认指向英文版
+  if (location.pathname.startsWith('/en') || location.pathname.startsWith('/zh')) {
+    // 确保路径以 / 结尾（对于根路径 /en 或 /zh）
+    const path = location.pathname === '/en' || location.pathname === '/zh'
+      ? `${location.pathname}/`
+      : location.pathname;
+    canonicalUrl = `https://www.link2ur.com${path}`;
+  }
   
   // Task types array - using translations
   const TASK_TYPES = [

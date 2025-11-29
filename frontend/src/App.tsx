@@ -10,6 +10,7 @@ import QueryPreservingRedirect from './components/QueryPreservingRedirect';
 import ScrollToTop from './components/ScrollToTop';
 import FaviconManager from './components/FaviconManager';
 import LanguageMetaManager from './components/LanguageMetaManager';
+import OrganizationStructuredData from './components/OrganizationStructuredData';
 import ErrorBoundary from './components/ErrorBoundary';
 import ErrorFallback from './components/ErrorFallback';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -339,6 +340,8 @@ function App() {
                   <ErrorBoundary>
                     <LanguageMetaManager />
                     <FaviconManager />
+                    {/* 全局 Organization 结构化数据 - 确保所有页面都能访问 */}
+                    <OrganizationStructuredData />
                     <ScrollToTop />
                     <LanguageRoutes />
                     <CookieManager />
