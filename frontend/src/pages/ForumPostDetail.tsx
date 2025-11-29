@@ -330,6 +330,16 @@ const ForumPostDetail: React.FC = () => {
         }
       });
       
+      // 强制移除所有描述标签（包括SEOHead创建的）
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const allOgDesc = document.querySelectorAll('meta[property="og:description"]');
+      allOgDesc.forEach(tag => tag.remove());
+      const allDesc = document.querySelectorAll('meta[name="description"]');
+      allDesc.forEach(tag => tag.remove());
+      const allTwitterDesc = document.querySelectorAll('meta[name="twitter:description"]');
+      allTwitterDesc.forEach(tag => tag.remove());
+      
       // 重新插入正确的帖子描述标签（只使用帖子信息）
       const finalWeixinDesc = document.createElement('meta');
       finalWeixinDesc.setAttribute('name', 'weixin:description');
@@ -352,11 +362,13 @@ const ForumPostDetail: React.FC = () => {
       document.head.insertBefore(finalTwitterDesc, document.head.firstChild);
       
       // 确保微信标题正确
+      const allWeixinTitle = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitle.forEach(tag => tag.remove());
       const finalWeixinTitle = document.createElement('meta');
       finalWeixinTitle.setAttribute('name', 'weixin:title');
       finalWeixinTitle.content = post.title;
       document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
-    }, 1000);
+    }, 2000); // 延迟2秒，确保在SEOHead执行后更新
   }, [post, shareDescription, canonicalUrl]);
 
   // 立即更新微信分享 meta 标签的函数
@@ -364,29 +376,17 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     
     // 限制描述长度在200字符内（微信分享建议不超过200字符）
-    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
     const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     
-    // 先移除所有可能包含默认描述的标签
+    // 强制移除所有描述标签（无条件移除，确保清理干净）
     const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
-    allDescriptions.forEach(tag => {
-      const metaTag = tag as HTMLMetaElement;
-      if (metaTag.content && (
-        metaTag.content.includes('Professional task publishing') ||
-        metaTag.content.includes('skill matching platform') ||
-        metaTag.content.includes('linking skilled people') ||
-        metaTag.content.includes('making value creation more efficient')
-      )) {
-        metaTag.remove();
-      }
-    });
+    allDescriptions.forEach(tag => tag.remove());
     
     // 强制更新微信分享描述（微信优先读取weixin:description）
-    const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
-    allWeixinDescriptions.forEach(tag => tag.remove());
     const weixinDescTag = document.createElement('meta');
     weixinDescTag.setAttribute('name', 'weixin:description');
-    weixinDescTag.content = shareDescription;
+    weixinDescTag.content = currentShareDescription;
     document.head.insertBefore(weixinDescTag, document.head.firstChild);
     
     // 强制更新微信分享标题
@@ -410,7 +410,7 @@ const ForumPostDetail: React.FC = () => {
     allOgDescriptions.forEach(tag => tag.remove());
     const ogDescTag = document.createElement('meta');
     ogDescTag.setAttribute('property', 'og:description');
-    ogDescTag.content = shareDescription;
+    ogDescTag.content = currentShareDescription;
     document.head.insertBefore(ogDescTag, document.head.firstChild);
     
     const existingOgTitle = document.querySelector('meta[property="og:title"]');
