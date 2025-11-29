@@ -176,7 +176,11 @@
 
   .content {
     padding: 16px 12px;
-    padding-top: 20px;
+    padding-top: 30px;
+  }
+
+  .toolbar {
+    margin-top: 10px;
   }
 
   .headerContainer {

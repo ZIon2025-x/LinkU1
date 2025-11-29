@@ -1111,8 +1111,21 @@ const ForumPostDetail: React.FC = () => {
 
           <Divider />
 
-          <div className={styles.postContent}>
+          <div className={styles.postContent} style={{ position: 'relative' }}>
             <SafeContent content={post.content} />
+            <div style={{ 
+              position: 'absolute', 
+              bottom: 0, 
+              right: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#999',
+              fontSize: '14px',
+              padding: '8px'
+            }}>
+              <MessageOutlined /> {post.reply_count} {t('forum.replies')}
+            </div>
           </div>
 
           <Divider />
@@ -1139,9 +1152,6 @@ const ForumPostDetail: React.FC = () => {
               >
                 {post.favorite_count}
               </Button>
-              <Text type="secondary">
-                <MessageOutlined /> {post.reply_count} {t('forum.replies')}
-              </Text>
               <Button
                 htmlType="button"
                 type="default"
