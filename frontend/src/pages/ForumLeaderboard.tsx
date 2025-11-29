@@ -77,10 +77,121 @@ const ForumLeaderboard: React.FC = () => {
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank === 1) return <TrophyOutlined style={{ color: '#FFD700' }} />;
-    if (rank === 2) return <TrophyOutlined style={{ color: '#C0C0C0' }} />;
-    if (rank === 3) return <TrophyOutlined style={{ color: '#CD7F32' }} />;
-    return <span className={styles.rankNumber}>{rank}</span>;
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return rank;
+  };
+
+  const renderLeaderboardContent = () => {
+    if (loading) {
+      return (
+        <div className={styles.loadingContainer}>
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (users.length === 0) {
+      return <Empty description={t('forum.noData')} />;
+    }
+
+    const topThree = users.slice(0, 3);
+    const restUsers = users.slice(3);
+
+    return (
+      <>
+        {/* 领奖台 - 前三名 */}
+        {topThree.length > 0 && (
+          <div className={styles.podiumContainer}>
+            {/* 第二名 */}
+            {topThree[1] && (
+              <div 
+                className={`${styles.podiumItem} ${styles.podium2}`}
+                onClick={() => navigate(`/${lang}/user/${topThree[1].user.id}`)}
+              >
+                <Avatar
+                  src={topThree[1].user.avatar}
+                  icon={<UserOutlined />}
+                  size={80}
+                  className={styles.podiumAvatar}
+                />
+                <div className={styles.podiumName}>{topThree[1].user.name}</div>
+                <div className={styles.podiumCount}>{topThree[1].count}</div>
+                <div className={styles.podiumBase}>
+                  <span style={{ fontSize: '32px' }}>🥈</span>
+                </div>
+              </div>
+            )}
+            
+            {/* 第一名 */}
+            {topThree[0] && (
+              <div 
+                className={`${styles.podiumItem} ${styles.podium1}`}
+                onClick={() => navigate(`/${lang}/user/${topThree[0].user.id}`)}
+              >
+                <Avatar
+                  src={topThree[0].user.avatar}
+                  icon={<UserOutlined />}
+                  size={100}
+                  className={styles.podiumAvatar}
+                />
+                <div className={styles.podiumName}>{topThree[0].user.name}</div>
+                <div className={styles.podiumCount}>{topThree[0].count}</div>
+                <div className={styles.podiumBase}>
+                  <span style={{ fontSize: '32px' }}>🥇</span>
+                </div>
+              </div>
+            )}
+            
+            {/* 第三名 */}
+            {topThree[2] && (
+              <div 
+                className={`${styles.podiumItem} ${styles.podium3}`}
+                onClick={() => navigate(`/${lang}/user/${topThree[2].user.id}`)}
+              >
+                <Avatar
+                  src={topThree[2].user.avatar}
+                  icon={<UserOutlined />}
+                  size={80}
+                  className={styles.podiumAvatar}
+                />
+                <div className={styles.podiumName}>{topThree[2].user.name}</div>
+                <div className={styles.podiumCount}>{topThree[2].count}</div>
+                <div className={styles.podiumBase}>
+                  <span style={{ fontSize: '32px' }}>🥉</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 其余用户列表 */}
+        {restUsers.length > 0 && (
+          <div className={styles.listAfterPodium}>
+            {restUsers.map((item) => (
+              <div
+                key={item.user.id}
+                className={styles.listItem}
+                onClick={() => navigate(`/${lang}/user/${item.user.id}`)}
+              >
+                <div className={styles.listRank}>{item.rank}</div>
+                <Avatar
+                  src={item.user.avatar}
+                  icon={<UserOutlined />}
+                  size={40}
+                  className={styles.listAvatar}
+                />
+                <div className={styles.listInfo}>
+                  <div className={styles.listName}>{item.user.name}</div>
+                </div>
+                <div className={styles.listCount}>{item.count}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
   };
 
   const getTabIcon = (type: string) => {
@@ -169,46 +280,7 @@ const ForumLeaderboard: React.FC = () => {
               } 
               key="posts"
             >
-              {loading ? (
-                <div className={styles.loadingContainer}>
-                  <Spin size="large" />
-                </div>
-              ) : users.length === 0 ? (
-                <Empty description={t('forum.noData')} />
-              ) : (
-                <div className={styles.leaderboardList}>
-                  {users.map((item, index) => (
-                    <Card
-                      key={item.user.id}
-                      className={`${styles.leaderboardItem} ${index < 3 ? styles.topThree : ''}`}
-                      hoverable
-                      onClick={() => navigate(`/${lang}/user/${item.user.id}`)}
-                    >
-                      <div className={styles.rankSection}>
-                        {getRankIcon(item.rank)}
-                      </div>
-                      <div className={styles.userSection}>
-                        <Avatar
-                          src={item.user.avatar}
-                          icon={<UserOutlined />}
-                          size="large"
-                        />
-                        <div className={styles.userInfo}>
-                          <Text strong>{item.user.name}</Text>
-                        </div>
-                      </div>
-                      <div className={styles.countSection}>
-                        <Text strong style={{ fontSize: 18 }}>
-                          {item.count}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {getTabTitle(activeTab)}
-                        </Text>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              {renderLeaderboardContent()}
             </TabPane>
 
             <TabPane 
@@ -219,46 +291,7 @@ const ForumLeaderboard: React.FC = () => {
               } 
               key="replies"
             >
-              {loading ? (
-                <div className={styles.loadingContainer}>
-                  <Spin size="large" />
-                </div>
-              ) : users.length === 0 ? (
-                <Empty description={t('forum.noData')} />
-              ) : (
-                <div className={styles.leaderboardList}>
-                  {users.map((item, index) => (
-                    <Card
-                      key={item.user.id}
-                      className={`${styles.leaderboardItem} ${index < 3 ? styles.topThree : ''}`}
-                      hoverable
-                      onClick={() => navigate(`/${lang}/user/${item.user.id}`)}
-                    >
-                      <div className={styles.rankSection}>
-                        {getRankIcon(item.rank)}
-                      </div>
-                      <div className={styles.userSection}>
-                        <Avatar
-                          src={item.user.avatar}
-                          icon={<UserOutlined />}
-                          size="large"
-                        />
-                        <div className={styles.userInfo}>
-                          <Text strong>{item.user.name}</Text>
-                        </div>
-                      </div>
-                      <div className={styles.countSection}>
-                        <Text strong style={{ fontSize: 18 }}>
-                          {item.count}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {getTabTitle(activeTab)}
-                        </Text>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              {renderLeaderboardContent()}
             </TabPane>
 
             <TabPane 
@@ -269,46 +302,7 @@ const ForumLeaderboard: React.FC = () => {
               } 
               key="likes"
             >
-              {loading ? (
-                <div className={styles.loadingContainer}>
-                  <Spin size="large" />
-                </div>
-              ) : users.length === 0 ? (
-                <Empty description={t('forum.noData')} />
-              ) : (
-                <div className={styles.leaderboardList}>
-                  {users.map((item, index) => (
-                    <Card
-                      key={item.user.id}
-                      className={`${styles.leaderboardItem} ${index < 3 ? styles.topThree : ''}`}
-                      hoverable
-                      onClick={() => navigate(`/${lang}/user/${item.user.id}`)}
-                    >
-                      <div className={styles.rankSection}>
-                        {getRankIcon(item.rank)}
-                      </div>
-                      <div className={styles.userSection}>
-                        <Avatar
-                          src={item.user.avatar}
-                          icon={<UserOutlined />}
-                          size="large"
-                        />
-                        <div className={styles.userInfo}>
-                          <Text strong>{item.user.name}</Text>
-                        </div>
-                      </div>
-                      <div className={styles.countSection}>
-                        <Text strong style={{ fontSize: 18 }}>
-                          {item.count}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {getTabTitle(activeTab)}
-                        </Text>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              {renderLeaderboardContent()}
             </TabPane>
           </Tabs>
         </Card>

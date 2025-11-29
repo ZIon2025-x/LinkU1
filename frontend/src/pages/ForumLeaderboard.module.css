@@ -62,61 +62,162 @@
   justify-content: flex-end;
 }
 
-.leaderboardList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.leaderboardItem {
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.leaderboardItem:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.leaderboardItem.topThree {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 255, 255, 1) 20%);
-  border-left: 4px solid #FFD700;
-}
-
-.rankSection {
-  width: 60px;
+/* 领奖台容器 */
+.podiumContainer {
   display: flex;
   justify-content: center;
+  align-items: flex-end;
+  gap: 20px;
+  margin: 40px 0;
+  padding: 20px;
+}
+
+/* 领奖台项目 */
+.podiumItem {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  flex: 1;
+  max-width: 200px;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.podiumItem:hover {
+  transform: translateY(-5px);
+}
+
+/* 第二名在左边 */
+.podium2 {
+  order: 1;
+}
+
+/* 第一名在中间 */
+.podium1 {
+  order: 2;
+}
+
+/* 第三名在右边 */
+.podium3 {
+  order: 3;
+}
+
+/* 领奖台头像 */
+.podiumAvatar {
+  margin-bottom: 12px;
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.podium1 .podiumAvatar {
+  width: 100px !important;
+  height: 100px !important;
+  border: 5px solid #ffd700;
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+.podium2 .podiumAvatar {
+  border: 5px solid #c0c0c0;
+  box-shadow: 0 6px 20px rgba(192, 192, 192, 0.4);
+}
+
+.podium3 .podiumAvatar {
+  border: 5px solid #cd7f32;
+  box-shadow: 0 6px 20px rgba(205, 127, 50, 0.4);
+}
+
+/* 领奖台用户名 */
+.podiumName {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+/* 领奖台数量 */
+.podiumCount {
   font-size: 24px;
   font-weight: bold;
+  color: #3b82f6;
+  margin-bottom: 12px;
 }
 
-.rankNumber {
-  font-size: 18px;
-  color: #999;
-}
-
-.userSection {
-  flex: 1;
+/* 领奖台底座 */
+.podiumBase {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  padding: 20px;
+  text-align: center;
+  color: white;
+  font-weight: bold;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
 }
 
-.userInfo {
-  display: flex;
-  flex-direction: column;
+.podium1 .podiumBase {
+  height: 120px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
 }
 
-.countSection {
+.podium2 .podiumBase {
+  height: 100px;
+  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+}
+
+.podium3 .podiumBase {
+  height: 80px;
+  background: linear-gradient(135deg, #cd7f32 0%, #e6a85c 100%);
+}
+
+/* 其余用户列表 */
+.listAfterPodium {
+  margin-top: 40px;
+}
+
+.listItem {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  min-width: 100px;
+  align-items: center;
+  padding: 16px;
+  margin-bottom: 8px;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.listItem:hover {
+  background: #f9fafb;
+  border-left-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.listRank {
+  width: 50px;
+  text-align: center;
+  font-weight: bold;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.listAvatar {
+  margin-right: 12px;
+}
+
+.listInfo {
+  flex: 1;
+}
+
+.listName {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.listCount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #3b82f6;
 }
 
 @media (max-width: 768px) {
@@ -139,18 +240,52 @@
     padding: 16px 12px;
   }
 
-  .leaderboardItem {
-    flex-wrap: wrap;
+  .podiumContainer {
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
   }
 
-  .rankSection {
-    width: 40px;
-  }
-
-  .countSection {
+  .podiumItem {
+    max-width: 100%;
     width: 100%;
-    align-items: flex-start;
-    margin-top: 8px;
+  }
+
+  .podium1,
+  .podium2,
+  .podium3 {
+    order: 0;
+  }
+
+  .podium1 .podiumAvatar {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  .podiumAvatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .podium1 .podiumBase {
+    height: 100px;
+  }
+
+  .podium2 .podiumBase {
+    height: 80px;
+  }
+
+  .podium3 .podiumBase {
+    height: 60px;
+  }
+
+  .listItem {
+    padding: 12px;
+  }
+
+  .listRank {
+    width: 40px;
+    font-size: 14px;
   }
 }
 
