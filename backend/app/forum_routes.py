@@ -438,6 +438,17 @@ async def get_categories(
     if include_latest_post:
         category_list = []
         for category in categories:
+            # 实时统计可见帖子数（确保与 latest_post 查询条件一致）
+            post_count_result = await db.execute(
+                select(func.count(models.ForumPost.id))
+                .where(
+                    models.ForumPost.category_id == category.id,
+                    models.ForumPost.is_deleted == False,
+                    models.ForumPost.is_visible == True
+                )
+            )
+            real_post_count = post_count_result.scalar() or 0
+            
             # 获取该板块的最新帖子
             latest_post_result = await db.execute(
                 select(models.ForumPost)
@@ -467,7 +478,7 @@ async def get_categories(
                 icon=category.icon,
                 sort_order=category.sort_order,
                 is_visible=category.is_visible,
-                post_count=category.post_count,
+                post_count=real_post_count,  # 使用实时统计的帖子数
                 last_post_at=category.last_post_at,
                 created_at=category.created_at,
                 updated_at=category.updated_at
