@@ -336,13 +336,44 @@ const ForumPostDetail: React.FC = () => {
     }
   };
 
+  // 提取帖子描述（前30个字左右，在逗号或句号处截断）
+  const extractDescription = (content: string, maxLength: number = 30): string => {
+    // 移除HTML标签
+    const plainContent = content.replace(/<[^>]*>/g, '').trim();
+    
+    // 如果内容长度小于等于最大长度，直接返回
+    if (plainContent.length <= maxLength) {
+      return plainContent;
+    }
+    
+    // 截取前maxLength+10个字符，以便找到合适的截断点
+    const truncated = plainContent.substring(0, maxLength + 10);
+    
+    // 查找最后一个逗号或句号的位置
+    const lastComma = truncated.lastIndexOf('，');
+    const lastPeriod = truncated.lastIndexOf('。');
+    const lastCommaEn = truncated.lastIndexOf(',');
+    const lastPeriodEn = truncated.lastIndexOf('.');
+    
+    // 找到最接近maxLength的截断点
+    const breakPoints = [lastComma, lastPeriod, lastCommaEn, lastPeriodEn].filter(pos => pos > 0 && pos <= maxLength);
+    
+    if (breakPoints.length > 0) {
+      const bestBreakPoint = Math.max(...breakPoints);
+      return truncated.substring(0, bestBreakPoint + 1);
+    }
+    
+    // 如果没有找到合适的截断点，在maxLength处截断
+    return truncated.substring(0, maxLength) + '...';
+  };
+
   const handleShare = async () => {
     if (!post) return;
     
     const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
-    const shareTitle = `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}`;
-    const plainContent = post.content.replace(/<[^>]*>/g, '').substring(0, 200);
-    const shareText = `${post.title}\n\n${plainContent}${plainContent.length >= 200 ? '...' : ''}\n\n${shareUrl}`;
+    const shareTitle = post.title;
+    const shareDescription = extractDescription(post.content, 30);
+    const shareText = `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`;
     
     // 尝试使用 Web Share API
     if (navigator.share) {
@@ -389,20 +420,22 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/posts/${post.id}`);
     const shareTitle = encodeURIComponent(post.title);
-    const plainContent = post.content.replace(/<[^>]*>/g, '').substring(0, 200);
-    const shareText = encodeURIComponent(`${post.title}\n\n${plainContent}${plainContent.length >= 200 ? '...' : ''}`);
+    const shareDescription = encodeURIComponent(extractDescription(post.content, 30));
     
     let shareWindowUrl = '';
     
     switch (platform) {
       case 'weibo':
-        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${shareTitle}`;
+        // 微博分享：标题和描述组合
+        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${shareTitle} ${shareDescription}`;
         break;
       case 'twitter':
-        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`;
+        // Twitter分享：标题和描述组合
+        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle} ${shareDescription}`;
         break;
       case 'facebook':
-        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+        // Facebook分享：使用标题和描述
+        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle} ${shareDescription}`;
         break;
       default:
         return;
