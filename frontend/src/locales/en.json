@@ -2696,6 +2696,7 @@
     "periodWeek": "This Week",
     "periodMonth": "This Month",
     "noData": "No data available",
-    "user": "User"
+    "user": "User",
+    "official": "Official"
   }
 }

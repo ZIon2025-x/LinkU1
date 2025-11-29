@@ -2361,6 +2361,7 @@ class UserInfo(BaseModel):
     id: str
     name: str
     avatar: Optional[str] = None
+    is_admin: Optional[bool] = False  # 是否为管理员
     
     class Config:
         from_attributes = True

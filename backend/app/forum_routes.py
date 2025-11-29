@@ -317,6 +317,56 @@ async def get_current_admin_async(
 
 # ==================== 工具函数 ====================
 
+async def build_user_info(
+    db: AsyncSession, 
+    user: models.User, 
+    request: Optional[Request] = None,
+    force_admin: bool = False
+) -> schemas.UserInfo:
+    """构建用户信息（包含管理员标识）
+    
+    Args:
+        db: 数据库会话
+        user: 用户对象
+        request: 请求对象（用于检查管理员会话）
+        force_admin: 强制标记为管理员（用于管理员发帖的情况，在管理员页面操作时）
+    """
+    if not user:
+        return schemas.UserInfo(
+            id="unknown",
+            name="已删除用户",
+            avatar=None,
+            is_admin=False
+        )
+    
+    # 如果强制标记为管理员（管理员在后台页面发帖/回复），直接返回
+    if force_admin:
+        return schemas.UserInfo(
+            id=user.id,
+            name=user.name,
+            avatar=user.avatar or None,
+            is_admin=True
+        )
+    
+    # 检查是否有管理员会话（仅在管理员页面操作时）
+    # 注意：这里不检查邮箱匹配，因为用户和管理员是独立的身份系统
+    is_admin = False
+    if request:
+        try:
+            admin_user = await get_current_admin_async(request, db)
+            if admin_user:
+                # 如果有管理员会话，说明是在管理员页面操作，标记为管理员
+                is_admin = True
+        except HTTPException:
+            pass
+    
+    return schemas.UserInfo(
+        id=user.id,
+        name=user.name,
+        avatar=user.avatar or None,
+        is_admin=is_admin
+    )
+
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
     # 简单的 Markdown 去除（移除常见标记）
@@ -544,18 +594,15 @@ async def get_categories(
                 # 确保 author 信息存在，如果作者被删除则使用默认值
                 author_info = None
                 if latest_post.author:
-                    author_info = schemas.UserInfo(
-                        id=latest_post.author.id,
-                        name=latest_post.author.name,
-                        avatar=latest_post.author.avatar or None
-                    )
+                    author_info = await build_user_info(db, latest_post.author)
                 else:
                     # 如果作者不存在（被删除），使用默认值
                     logger.warning(f"帖子 {latest_post.id} 的作者不存在（可能已被删除）")
                     author_info = schemas.UserInfo(
                         id="unknown",
                         name="已删除用户",
-                        avatar=None
+                        avatar=None,
+                        is_admin=False
                     )
                 
                 latest_post_info = schemas.LatestPostInfo(
@@ -873,11 +920,7 @@ async def get_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=schemas.UserInfo(
-                id=post.author.id,
-                name=post.author.name,
-                avatar=post.author.avatar or None
-            ),
+            author=await build_user_info(db, post.author),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -977,11 +1020,7 @@ async def get_post(
         title=post.title,
         content=post.content,
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-        author=schemas.UserInfo(
-            id=post.author.id,
-            name=post.author.name,
-            avatar=post.author.avatar or None
-        ),
+        author=await build_user_info(db, post.author),
         view_count=post.view_count,
         reply_count=post.reply_count,
         like_count=post.like_count,
@@ -1061,18 +1100,18 @@ async def create_post(
             headers={"X-Error-Code": "CATEGORY_HIDDEN"}
         )
     
+    # 检查是否有管理员会话（在管理员页面操作时）
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
     # 检查板块是否禁止用户发帖
     if category.is_admin_only:
-        # 检查用户是否为管理员
-        is_admin = False
-        try:
-            admin_user = await get_current_admin_async(request, db)
-            if admin_user:
-                is_admin = True
-        except HTTPException:
-            pass
-        
-        if not is_admin:
+        if not is_admin_user:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="该板块只允许管理员发帖",
@@ -1106,11 +1145,7 @@ async def create_post(
         title=db_post.title,
         content=db_post.content,
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
-        author=schemas.UserInfo(
-            id=db_post.author.id,
-            name=db_post.author.name,
-            avatar=db_post.author.avatar or None
-        ),
+        author=await build_user_info(db, db_post.author, request, force_admin=is_admin_user),
         view_count=db_post.view_count,
         reply_count=db_post.reply_count,
         like_count=db_post.like_count,
@@ -1130,6 +1165,7 @@ async def create_post(
 async def update_post(
     post_id: int,
     post: schemas.ForumPostUpdate,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -1185,6 +1221,15 @@ async def update_post(
         if db_post.category_id:
             await update_category_stats(db_post.category_id, db)
     
+    # 检查是否有管理员会话（在管理员页面操作时）
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
     await db.commit()
     await db.refresh(db_post, ["category", "author"])
     
@@ -1213,11 +1258,7 @@ async def update_post(
         title=db_post.title,
         content=db_post.content,
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
-        author=schemas.UserInfo(
-            id=db_post.author.id,
-            name=db_post.author.name,
-            avatar=db_post.author.avatar or None
-        ),
+        author=await build_user_info(db, db_post.author, request, force_admin=is_admin_user),
         view_count=db_post.view_count,
         reply_count=db_post.reply_count,
         like_count=db_post.like_count,
@@ -1789,7 +1830,7 @@ async def get_replies(
         )
         user_liked_replies = {row[0] for row in like_result.all()}
     
-    def convert_reply(reply_data, liked_set):
+    async def convert_reply(reply_data, liked_set):
         """递归转换回复为输出格式"""
         reply = reply_data["reply"]
         is_liked = reply.id in liked_set
@@ -1797,11 +1838,7 @@ async def get_replies(
         reply_out = schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=schemas.UserInfo(
-                id=reply.author.id,
-                name=reply.author.name,
-                avatar=reply.author.avatar or None
-            ),
+            author=await build_user_info(db, reply.author, request),
             parent_reply_id=reply.parent_reply_id,
             reply_level=reply.reply_level,
             like_count=reply.like_count,
@@ -1813,11 +1850,15 @@ async def get_replies(
         
         # 递归处理子回复
         for child_data in reply_data["children"]:
-            reply_out.replies.append(convert_reply(child_data, liked_set))
+            child_reply = await convert_reply(child_data, liked_set)
+            reply_out.replies.append(child_reply)
         
         return reply_out
     
-    reply_list = [convert_reply(item, user_liked_replies) for item in reply_tree]
+    reply_list = []
+    for item in reply_tree:
+        reply = await convert_reply(item, user_liked_replies)
+        reply_list.append(reply)
     
     return {
         "replies": reply_list,
@@ -1873,16 +1914,17 @@ async def create_reply(
             headers={"X-Error-Code": "DUPLICATE_REPLY"}
         )
     
-    # 检查是否为管理员
-    is_admin = False
+    # 检查是否有管理员会话（在管理员页面操作时）
+    is_admin_user = False
     try:
-        await get_current_admin_async(request, db)
-        is_admin = True
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
     except HTTPException:
         pass
     
     # 获取帖子（使用权限检查函数）
-    post = await get_post_with_permissions(post_id, current_user, is_admin, db)
+    post = await get_post_with_permissions(post_id, current_user, is_admin_user, db)
     
     # 检查帖子是否锁定
     if post.is_locked:
@@ -1982,11 +2024,7 @@ async def create_reply(
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=schemas.UserInfo(
-            id=db_reply.author.id,
-            name=db_reply.author.name,
-            avatar=db_reply.author.avatar or None
-        ),
+        author=await build_user_info(db, db_reply.author, request, force_admin=is_admin_user),
         parent_reply_id=db_reply.parent_reply_id,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
@@ -2001,6 +2039,7 @@ async def create_reply(
 async def update_reply(
     reply_id: int,
     reply: schemas.ForumReplyUpdate,
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -2033,6 +2072,16 @@ async def update_reply(
     # 更新内容
     db_reply.content = reply.content
     db_reply.updated_at = get_utc_time()
+    
+    # 检查是否有管理员会话（在管理员页面操作时）
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
     await db.commit()
     await db.refresh(db_reply, ["author"])
     
@@ -2050,11 +2099,7 @@ async def update_reply(
     return schemas.ForumReplyOut(
         id=db_reply.id,
         content=db_reply.content,
-        author=schemas.UserInfo(
-            id=db_reply.author.id,
-            name=db_reply.author.name,
-            avatar=db_reply.author.avatar or None
-        ),
+        author=await build_user_info(db, db_reply.author, request, force_admin=is_admin_user),
         parent_reply_id=db_reply.parent_reply_id,
         reply_level=db_reply.reply_level,
         like_count=db_reply.like_count,
@@ -2555,11 +2600,7 @@ async def search_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=schemas.UserInfo(
-                id=post.author.id,
-                name=post.author.name,
-                avatar=post.author.avatar or None
-            ),
+            author=await build_user_info(db, post.author),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -2952,11 +2993,7 @@ async def get_my_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=schemas.UserInfo(
-                id=post.author.id,
-                name=post.author.name,
-                avatar=post.author.avatar or None
-            ),
+            author=await build_user_info(db, post.author),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -3016,11 +3053,7 @@ async def get_my_replies(
         reply_list.append(schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
-            author=schemas.UserInfo(
-                id=reply.author.id,
-                name=reply.author.name,
-                avatar=reply.author.avatar or None
-            ),
+            author=await build_user_info(db, reply.author),
             parent_reply_id=reply.parent_reply_id,
             reply_level=reply.reply_level,
             like_count=reply.like_count,
@@ -3577,11 +3610,7 @@ async def get_hot_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=schemas.UserInfo(
-                id=post.author.id,
-                name=post.author.name,
-                avatar=post.author.avatar or None
-            ),
+            author=await build_user_info(db, post.author),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,

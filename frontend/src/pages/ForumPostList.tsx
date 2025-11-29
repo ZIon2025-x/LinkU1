@@ -35,6 +35,7 @@ interface ForumPost {
     id: string;
     name: string;
     avatar?: string;
+    is_admin?: boolean;
   };
   view_count: number;
   reply_count: number;
@@ -330,6 +331,9 @@ const ForumPostList: React.FC = () => {
                     <Space size="small" split="|">
                       <span>
                         <UserOutlined /> {post.author.name}
+                        {post.author.is_admin && (
+                          <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
+                        )}
                       </span>
                       <span>
                         <ClockCircleOutlined /> {formatRelativeTime(post.last_reply_at || post.created_at)}

@@ -35,6 +35,7 @@ interface ForumReply {
     id: string;
     name: string;
     avatar?: string;
+    is_admin?: boolean;
   };
   like_count: number;
   is_liked: boolean;
@@ -56,6 +57,7 @@ interface ForumPost {
     id: string;
     name: string;
     avatar?: string;
+    is_admin?: boolean;
   };
   view_count: number;
   reply_count: number;
@@ -342,6 +344,9 @@ const ForumPostDetail: React.FC = () => {
               size="small"
             />
             <Text strong>{reply.author.name}</Text>
+            {reply.author.is_admin && (
+              <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
+            )}
             <Text type="secondary" style={{ fontSize: 12 }}>
               <ClockCircleOutlined /> {formatRelativeTime(reply.created_at)}
             </Text>
@@ -546,6 +551,9 @@ const ForumPostDetail: React.FC = () => {
               <Space>
                 <Avatar src={post.author.avatar} icon={<UserOutlined />} />
                 <Text strong>{post.author.name}</Text>
+                {post.author.is_admin && (
+                  <Tag color="blue" style={{ marginLeft: 8 }}>{t('forum.official')}</Tag>
+                )}
               </Space>
               <Text type="secondary">
                 <ClockCircleOutlined /> {formatRelativeTime(post.created_at)}

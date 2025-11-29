@@ -1102,6 +1102,19 @@ const Home: React.FC = () => {
                           }}>
                             {post.author.name}
                           </span>
+                          {post.author.is_admin && (
+                            <span style={{
+                              fontSize: '11px',
+                              color: '#1890ff',
+                              backgroundColor: '#e6f7ff',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              marginLeft: '6px',
+                              border: '1px solid #91d5ff'
+                            }}>
+                              {language === 'zh' ? '官方' : 'Official'}
+                            </span>
+                          )}
                         </>
                       )}
                     </div>
