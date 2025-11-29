@@ -538,7 +538,36 @@ async def get_categories(
                     f"可能原因：查询条件不匹配或数据不一致"
                 )
             
-            # 构建板块信息（使用 Pydantic 模型）
+            # 添加最新帖子信息（如果存在）
+            latest_post_info = None
+            if latest_post:
+                # 确保 author 信息存在，如果作者被删除则使用默认值
+                author_info = None
+                if latest_post.author:
+                    author_info = schemas.UserInfo(
+                        id=latest_post.author.id,
+                        name=latest_post.author.name,
+                        avatar=latest_post.author.avatar or None
+                    )
+                else:
+                    # 如果作者不存在（被删除），使用默认值
+                    logger.warning(f"帖子 {latest_post.id} 的作者不存在（可能已被删除）")
+                    author_info = schemas.UserInfo(
+                        id="unknown",
+                        name="已删除用户",
+                        avatar=None
+                    )
+                
+                latest_post_info = schemas.LatestPostInfo(
+                    id=latest_post.id,
+                    title=latest_post.title,
+                    author=author_info,
+                    last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                    reply_count=latest_post.reply_count,
+                    view_count=latest_post.view_count
+                )
+            
+            # 构建板块信息（使用 Pydantic 模型，包含 latest_post）
             category_out = schemas.ForumCategoryOut(
                 id=category.id,
                 name=category.name,
@@ -546,46 +575,15 @@ async def get_categories(
                 icon=category.icon,
                 sort_order=category.sort_order,
                 is_visible=category.is_visible,
+                is_admin_only=getattr(category, 'is_admin_only', False),  # 兼容可能没有此字段的情况
                 post_count=real_post_count,  # 使用实时统计的帖子数
                 last_post_at=category.last_post_at,
                 created_at=category.created_at,
-                updated_at=category.updated_at
+                updated_at=category.updated_at,
+                latest_post=latest_post_info
             )
             
-            # 将 Pydantic 模型转换为字典，以便添加额外字段
-            category_dict = category_out.model_dump()
-            
-            # 添加最新帖子信息（如果存在）
-            if latest_post:
-                # 确保 author 信息存在，如果作者被删除则使用默认值
-                author_info = None
-                if latest_post.author:
-                    author_info = {
-                        "id": latest_post.author.id,
-                        "name": latest_post.author.name,
-                        "avatar": latest_post.author.avatar or None
-                    }
-                else:
-                    # 如果作者不存在（被删除），使用默认值
-                    logger.warning(f"帖子 {latest_post.id} 的作者不存在（可能已被删除）")
-                    author_info = {
-                        "id": "unknown",
-                        "name": "已删除用户",
-                        "avatar": None
-                    }
-                
-                category_dict["latest_post"] = {
-                    "id": latest_post.id,
-                    "title": latest_post.title,
-                    "author": author_info,
-                    "last_reply_at": latest_post.last_reply_at or latest_post.created_at,
-                    "reply_count": latest_post.reply_count,
-                    "view_count": latest_post.view_count
-                }
-            else:
-                category_dict["latest_post"] = None
-            
-            category_list.append(category_dict)
+            category_list.append(category_out)
         
         # 返回包含最新帖子信息的列表（注意：这会改变响应模型，但为了功能完整性暂时这样实现）
         latest_post_count = sum(1 for c in category_list if c.get('latest_post'))

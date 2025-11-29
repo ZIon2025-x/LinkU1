@@ -2328,6 +2328,7 @@ class ForumCategoryOut(ForumCategoryBase):
     last_post_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    latest_post: Optional["LatestPostInfo"] = None  # 最新帖子信息（可选，仅在 include_latest_post=True 时包含）
     
     class Config:
         from_attributes = True
@@ -2369,6 +2370,19 @@ class CategoryInfo(BaseModel):
     """板块基本信息"""
     id: int
     name: str
+    
+    class Config:
+        from_attributes = True
+
+
+class LatestPostInfo(BaseModel):
+    """最新帖子信息（用于板块预览）"""
+    id: int
+    title: str
+    author: Optional["UserInfo"] = None
+    last_reply_at: Optional[datetime.datetime] = None
+    reply_count: int = 0
+    view_count: int = 0
     
     class Config:
         from_attributes = True
