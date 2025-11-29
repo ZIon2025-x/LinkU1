@@ -305,20 +305,11 @@ const ForumPostDetail: React.FC = () => {
       }
     }, 1000);
     
-    // 在 SEOHead 组件执行后，再次确保微信标签正确（SEOHead 使用 useEffect，可能在 useLayoutEffect 之后执行）
+    // 再次更新（确保微信爬虫能抓取到，延迟更长时间确保在其他页面的useLayoutEffect之后执行）
     setTimeout(() => {
-      // 强制移除所有微信描述标签，然后重新创建
-      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
-      allWeixinDescriptions.forEach(tag => tag.remove());
-      
-      const newWeixinDescTag = document.createElement('meta');
-      newWeixinDescTag.setAttribute('name', 'weixin:description');
-      newWeixinDescTag.content = shareDescription;
-      document.head.insertBefore(newWeixinDescTag, document.head.firstChild);
-      
-      // 同时更新 og:description
-      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
-      allOgDescriptions.forEach(tag => {
+      // 移除所有包含默认描述的标签（包括所有类型的描述标签）
+      const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptionTags.forEach(tag => {
         const metaTag = tag as HTMLMetaElement;
         if (metaTag.content && (
           metaTag.content.includes('Professional task publishing') ||
@@ -330,11 +321,42 @@ const ForumPostDetail: React.FC = () => {
         }
       });
       
-      const ogDescTag = document.createElement('meta');
-      ogDescTag.setAttribute('property', 'og:description');
-      ogDescTag.content = shareDescription;
-      document.head.insertBefore(ogDescTag, document.head.firstChild);
-    }, 2000);
+      // 移除默认标题
+      const allTitleTags = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+      allTitleTags.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && metaTag.content === 'Link²Ur') {
+          metaTag.remove();
+        }
+      });
+      
+      // 重新插入正确的帖子描述标签（只使用帖子信息）
+      const finalWeixinDesc = document.createElement('meta');
+      finalWeixinDesc.setAttribute('name', 'weixin:description');
+      finalWeixinDesc.content = shareDescription;
+      document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+      
+      const finalOgDesc = document.createElement('meta');
+      finalOgDesc.setAttribute('property', 'og:description');
+      finalOgDesc.content = shareDescription;
+      document.head.insertBefore(finalOgDesc, document.head.firstChild);
+      
+      const finalDesc = document.createElement('meta');
+      finalDesc.name = 'description';
+      finalDesc.content = shareDescription;
+      document.head.insertBefore(finalDesc, document.head.firstChild);
+      
+      const finalTwitterDesc = document.createElement('meta');
+      finalTwitterDesc.name = 'twitter:description';
+      finalTwitterDesc.content = shareDescription;
+      document.head.insertBefore(finalTwitterDesc, document.head.firstChild);
+      
+      // 确保微信标题正确
+      const finalWeixinTitle = document.createElement('meta');
+      finalWeixinTitle.setAttribute('name', 'weixin:title');
+      finalWeixinTitle.content = post.title;
+      document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
+    }, 1000);
   }, [post, shareDescription, canonicalUrl]);
 
   // 立即更新微信分享 meta 标签的函数
@@ -661,13 +683,59 @@ const ForumPostDetail: React.FC = () => {
   const handleShare = async () => {
     if (!post) return;
     
+    // 计算分享描述（确保与组件顶层定义一致）
+    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    
     // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
     updateWeixinMetaTags();
     
+    // 强制移除所有描述标签（包括默认的和SEOHead创建的）
+    const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+    allDescriptionTags.forEach(tag => tag.remove());
+    
+    // 立即重新设置正确的描述（使用帖子内容）
+    const finalWeixinDesc = document.createElement('meta');
+    finalWeixinDesc.setAttribute('name', 'weixin:description');
+    finalWeixinDesc.content = currentShareDescription;
+    document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+    
+    const finalOgDesc = document.createElement('meta');
+    finalOgDesc.setAttribute('property', 'og:description');
+    finalOgDesc.content = currentShareDescription;
+    document.head.insertBefore(finalOgDesc, document.head.firstChild);
+    
+    const finalDesc = document.createElement('meta');
+    finalDesc.name = 'description';
+    finalDesc.content = currentShareDescription;
+    document.head.insertBefore(finalDesc, document.head.firstChild);
+    
+    const finalTwitterDesc = document.createElement('meta');
+    finalTwitterDesc.name = 'twitter:description';
+    finalTwitterDesc.content = currentShareDescription;
+    document.head.insertBefore(finalTwitterDesc, document.head.firstChild);
+    
+    // 多次更新，确保微信爬虫能读取到
+    setTimeout(() => {
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+    }, 100);
+    
+    setTimeout(() => {
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+    }, 500);
+    
     const shareUrl = `${window.location.origin}/${lang}/forum/post/${post.id}`;
     const shareTitle = post.title;
-    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
-    const shareText = `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`;
+    const shareText = `${shareTitle}\n\n${currentShareDescription}\n\n${shareUrl}`;
     
     // 尝试使用 Web Share API
     if (navigator.share) {
@@ -709,14 +777,25 @@ const ForumPostDetail: React.FC = () => {
   const handleShareToSocial = (platform: string) => {
     if (!post) return;
     
+    // 计算分享描述（限制在200字符内）
+    const currentShareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
+    
     // 如果是微信分享（通过二维码），立即更新 meta 标签
     if (platform === 'wechat') {
       updateWeixinMetaTags();
+      
+      // 强制更新微信描述标签
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
     }
     
-    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/posts/${post.id}`);
+    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/post/${post.id}`);
     const shareTitle = encodeURIComponent(post.title);
-    const shareDescription = encodeURIComponent(post.content.replace(/<[^>]*>/g, '').trim());
+    const shareDescription = encodeURIComponent(currentShareDescription);
     
     let shareWindowUrl = '';
     
