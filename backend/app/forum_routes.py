@@ -586,7 +586,7 @@ async def get_categories(
             category_list.append(category_out)
         
         # 返回包含最新帖子信息的列表（注意：这会改变响应模型，但为了功能完整性暂时这样实现）
-        latest_post_count = sum(1 for c in category_list if c.get('latest_post'))
+        latest_post_count = sum(1 for c in category_list if c.latest_post is not None)
         logger.info(f"✅ 返回 {len(category_list)} 个板块，其中 {latest_post_count} 个板块包含 latest_post")
         return {"categories": category_list}
     
