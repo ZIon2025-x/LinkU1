@@ -2121,7 +2121,7 @@ class ForumAdminOperationLog(Base):
     __tablename__ = "forum_admin_operation_logs"
     
     id = Column(Integer, primary_key=True, index=True)
-    operator_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    operator_id = Column(String(5), ForeignKey("admin_users.id", ondelete="CASCADE"), nullable=False)
     operation_type = Column(String(50), nullable=False)  # pin_post, unpin_post, feature_post, etc.
     target_type = Column(String(20), nullable=False)  # post, reply, user, category
     target_id = Column(Integer, nullable=False)
@@ -2133,7 +2133,7 @@ class ForumAdminOperationLog(Base):
     created_at = Column(DateTime(timezone=True), default=get_utc_time, nullable=False, server_default=func.now())
     
     # 关系
-    operator = relationship("User", foreign_keys=[operator_id])
+    operator = relationship("AdminUser", foreign_keys=[operator_id])
     
     __table_args__ = (
         Index("idx_admin_logs_operator", operator_id, created_at.desc()),

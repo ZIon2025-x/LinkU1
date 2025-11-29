@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉堡菜单样式示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .example-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .example-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .demo-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 150px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        /* 示例1: 经典三条线 */
+        .hamburger-1 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-1 span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: #333;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-1 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-1 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-1 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-1.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-1.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-1.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例2: 圆角样式 */
+        .hamburger-2 {
+            width: 32px;
+            height: 26px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-2 span {
+            display: block;
+            position: absolute;
+            height: 4px;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .hamburger-2 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-2 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-2 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-2.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-2.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        .hamburger-2.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例3: 细线条样式 */
+        .hamburger-3 {
+            width: 28px;
+            height: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-3 span {
+            display: block;
+            position: absolute;
+            height: 2px;
+            width: 100%;
+            background: #2c3e50;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-3 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-3 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-3 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-3.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            background: #e74c3c;
+        }
+
+        .hamburger-3.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-3.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+            background: #e74c3c;
+        }
+
+        /* 示例4: 粗线条样式 */
+        .hamburger-4 {
+            width: 35px;
+            height: 28px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-4 span {
+            display: block;
+            position: absolute;
+            height: 5px;
+            width: 100%;
+            background: #3498db;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .hamburger-4 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-4 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-4 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-4.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            background: #e74c3c;
+        }
+
+        .hamburger-4.active span:nth-child(2) {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        .hamburger-4.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+            background: #e74c3c;
+        }
+
+        /* 示例5: 点状样式 */
+        .hamburger-5 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger-5 span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background: #9b59b6;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-5.active span:nth-child(1) {
+            transform: rotate(45deg) translate(10px, 10px);
+        }
+
+        .hamburger-5.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-5.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(10px, -10px);
+        }
+
+        /* 示例6: 3D效果 */
+        .hamburger-6 {
+            width: 32px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+            perspective: 1000px;
+        }
+
+        .hamburger-6 span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: #27ae60;
+            border-radius: 3px;
+            transition: all 0.4s ease;
+            transform-style: preserve-3d;
+        }
+
+        .hamburger-6 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-6 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-6 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-6.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotateZ(45deg) rotateY(20deg);
+        }
+
+        .hamburger-6.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateY(-50%) rotateX(90deg);
+        }
+
+        .hamburger-6.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotateZ(-45deg) rotateY(-20deg);
+        }
+
+        /* 示例7: 弹性动画 */
+        .hamburger-7 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-7 span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: #f39c12;
+            border-radius: 3px;
+            transition: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+        }
+
+        .hamburger-7 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-7 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-7 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-7.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(135deg);
+        }
+
+        .hamburger-7.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateY(-50%) scale(0);
+        }
+
+        .hamburger-7.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-135deg);
+        }
+
+        /* 示例8: 渐变色彩 */
+        .hamburger-8 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-8 span {
+            display: block;
+            position: absolute;
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 200% 100%;
+            border-radius: 3px;
+            transition: all 0.4s ease;
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hamburger-8 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-8 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-8 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-8.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .hamburger-8.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-8.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .hamburger-8.active span {
+            animation: none;
+        }
+
+        .code-snippet {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        .code-snippet pre {
+            margin: 0;
+        }
+
+        .note {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍔 汉堡菜单样式示例</h1>
+        
+        <div class="examples-grid">
+            <!-- 示例1: 经典三条线 -->
+            <div class="example-card">
+                <div class="example-title">示例1: 经典三条线</div>
+                <div class="demo-area">
+                    <div class="hamburger-1" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-1" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">点击查看动画效果</div>
+            </div>
+
+            <!-- 示例2: 圆角样式 -->
+            <div class="example-card">
+                <div class="example-title">示例2: 圆角渐变</div>
+                <div class="demo-area">
+                    <div class="hamburger-2" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-2" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">圆角 + 渐变色彩</div>
+            </div>
+
+            <!-- 示例3: 细线条样式 -->
+            <div class="example-card">
+                <div class="example-title">示例3: 细线条</div>
+                <div class="demo-area">
+                    <div class="hamburger-3" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-3" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">细线条，激活时变红色</div>
+            </div>
+
+            <!-- 示例4: 粗线条样式 -->
+            <div class="example-card">
+                <div class="example-title">示例4: 粗线条带阴影</div>
+                <div class="demo-area">
+                    <div class="hamburger-4" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-4" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">粗线条 + 阴影效果</div>
+            </div>
+
+            <!-- 示例5: 点状样式 -->
+            <div class="example-card">
+                <div class="example-title">示例5: 圆角点状</div>
+                <div class="demo-area">
+                    <div class="hamburger-5" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-5" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">完全圆角的线条</div>
+            </div>
+
+            <!-- 示例6: 3D效果 -->
+            <div class="example-card">
+                <div class="example-title">示例6: 3D旋转效果</div>
+                <div class="demo-area">
+                    <div class="hamburger-6" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-6" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">3D透视旋转效果</div>
+            </div>
+
+            <!-- 示例7: 弹性动画 -->
+            <div class="example-card">
+                <div class="example-title">示例7: 弹性动画</div>
+                <div class="demo-area">
+                    <div class="hamburger-7" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-7" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">弹性缓动函数动画</div>
+            </div>
+
+            <!-- 示例8: 渐变色彩 -->
+            <div class="example-card">
+                <div class="example-title">示例8: 渐变流动</div>
+                <div class="demo-area">
+                    <div class="hamburger-8" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-8" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">渐变色彩流动效果</div>
+            </div>
+        </div>
+
+        <div style="background: white; border-radius: 15px; padding: 30px; margin-top: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <h2 style="color: #333; margin-bottom: 20px;">使用说明</h2>
+            <ul style="color: #666; line-height: 1.8;">
+                <li>点击任意汉堡菜单图标查看动画效果</li>
+                <li>所有示例都使用纯CSS实现，无需JavaScript（除了点击切换）</li>
+                <li>可以通过修改CSS变量来调整颜色、大小和动画速度</li>
+                <li>所有样式都支持响应式设计</li>
+                <li>可以轻松集成到React、Vue等框架中</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
+
