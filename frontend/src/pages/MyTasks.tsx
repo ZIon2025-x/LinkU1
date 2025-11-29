@@ -896,13 +896,8 @@ const MyTasks: React.FC = () => {
                 flex-shrink: 0 !important;
               }
               
-              /* 缩小汉堡菜单按钮 */
-              .hamburger-btn {
-                width: 38px !important;
-                height: 38px !important;
-                min-width: 38px !important;
-                flex-shrink: 0 !important;
-              }
+              /* 汉堡菜单按钮使用标准大小（与首页一致） */
+              /* 移除覆盖，使用组件默认的 24px x 18px */
             }
           `}</style>
         </div>

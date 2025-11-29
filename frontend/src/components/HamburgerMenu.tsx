@@ -281,6 +281,11 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             z-index: 1002;
             position: relative;
             overflow: visible;
+            /* 确保在所有设备上保持统一大小 */
+            min-width: 24px;
+            min-height: 18px;
+            max-width: 24px;
+            max-height: 18px;
           }
 
           .hamburger-line {
@@ -619,6 +624,18 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           
           .unread-dot {
             animation: pulse 1.5s ease-in-out infinite;
+          }
+
+          /* 移动端确保使用标准大小（与首页一致） */
+          @media (max-width: 767px) {
+            .hamburger-btn {
+              width: 24px !important;
+              height: 18px !important;
+              min-width: 24px !important;
+              min-height: 18px !important;
+              max-width: 24px !important;
+              max-height: 18px !important;
+            }
           }
 
           /* 平板和桌面端适配 */

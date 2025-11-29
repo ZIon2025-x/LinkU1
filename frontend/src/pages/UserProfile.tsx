@@ -313,21 +313,13 @@ const UserProfile: React.FC = () => {
               </div>
             </div>
             
+            {/* 用户名显示 */}
             <h1 style={{ 
-              position: 'absolute',
-              top: '-100px',
-              left: '-100px',
-              width: '1px',
-              height: '1px',
-              padding: '0',
-              margin: '0',
-              overflow: 'hidden',
-              clip: 'rect(0, 0, 0, 0)',
-              whiteSpace: 'nowrap',
-              border: '0',
-              fontSize: '1px',
-              color: 'transparent',
-              background: 'transparent'
+              fontSize: 32,
+              fontWeight: 700,
+              color: '#333',
+              marginBottom: 16,
+              textAlign: 'center'
             }}>
               {profile.user.name}
             </h1>

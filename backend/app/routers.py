@@ -1739,23 +1739,17 @@ def user_profile(
 
     # 获取用户的任务统计（限制数量以提高性能）
     tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
-    # 只显示公开的任务（is_public=1）或者用户自己查看自己的任务时显示所有任务
-    if current_user and current_user.id == user_id:
-        # 用户查看自己的任务，显示所有任务
-        posted_tasks = [t for t in tasks if t.poster_id == user_id]
-        taken_tasks = [t for t in tasks if t.taker_id == user_id]
-    else:
-        # 其他用户查看，只显示已完成且公开的任务
-        posted_tasks = [
-            t
-            for t in tasks
-            if t.poster_id == user_id and t.is_public == 1 and t.status == "completed"
-        ]
-        taken_tasks = [
-            t
-            for t in tasks
-            if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
-        ]
+    # 所有用户看到的任务列表都是一样的，只显示已完成且公开的任务，避免信息泄露
+    posted_tasks = [
+        t
+        for t in tasks
+        if t.poster_id == user_id and t.is_public == 1 and t.status == "completed"
+    ]
+    taken_tasks = [
+        t
+        for t in tasks
+        if t.taker_id == user_id and t.is_public == 1 and t.status == "completed"
+    ]
 
     # 计算用户接受的任务中完成的数量
     completed_taken_tasks = [t for t in taken_tasks if t.status == "completed"]
@@ -1783,7 +1777,8 @@ def user_profile(
     )
     avg_rating = float(avg_rating_result) if avg_rating_result is not None else 0.0
 
-    # 安全：只返回公开信息，敏感信息（email, phone）仅自己可见
+    # 安全：只返回公开信息，不返回敏感信息（email, phone）
+    # 所有用户看到的用户页面内容都是一样的，包括自己查看自己的页面，避免信息泄露
     user_data = {
         "id": user.id,  # 数据库已经存储格式化ID
         "name": user.name,
@@ -1796,11 +1791,6 @@ def user_profile(
         "task_count": user.task_count,
         "completed_task_count": user.completed_task_count,
     }
-    
-    # 只有查看自己的资料时才返回敏感信息
-    if current_user and current_user.id == user_id:
-        user_data["email"] = user.email
-        user_data["phone"] = user.phone
     
     return {
         "user": user_data,

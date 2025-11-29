@@ -833,16 +833,8 @@ const ForumPostDetail: React.FC = () => {
               src={reply.author.avatar} 
               icon={<UserOutlined />}
               size="small"
-              style={{ cursor: 'pointer' }}
-              onClick={() => navigate(`/${lang}/user/${reply.author.id}`)}
             />
-            <Text 
-              strong
-              style={{ cursor: 'pointer' }}
-              onClick={() => navigate(`/${lang}/user/${reply.author.id}`)}
-            >
-              {reply.author.name}
-            </Text>
+            <Text strong>{reply.author.name}</Text>
             {reply.author.is_admin && (
               <Tag color="blue" style={{ marginLeft: 8, fontSize: 11 }}>{t('forum.official')}</Tag>
             )}
@@ -1102,19 +1094,8 @@ const ForumPostDetail: React.FC = () => {
           <div className={styles.postMeta}>
             <Space split="|">
               <Space>
-                <Avatar 
-                  src={post.author.avatar} 
-                  icon={<UserOutlined />}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/${lang}/user/${post.author.id}`)}
-                />
-                <Text 
-                  strong 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/${lang}/user/${post.author.id}`)}
-                >
-                  {post.author.name}
-                </Text>
+                <Avatar src={post.author.avatar} icon={<UserOutlined />} />
+                <Text strong>{post.author.name}</Text>
                 {post.author.is_admin && (
                   <Tag color="blue" style={{ marginLeft: 8 }}>{t('forum.official')}</Tag>
                 )}
