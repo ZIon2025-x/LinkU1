@@ -310,7 +310,7 @@ const ForumPostDetail: React.FC = () => {
 
   const handleSubmitReport = async () => {
     if (!reportReason) {
-      message.warning(t('forum.reportReason') || '请选择举报原因');
+      message.warning(t('forum.reportReason'));
       return;
     }
     try {
@@ -320,7 +320,7 @@ const ForumPostDetail: React.FC = () => {
         reason: reportReason,
         description: reportDescription || undefined
       });
-      message.success(t('forum.reportSuccess') || '举报成功，我们会尽快处理');
+      message.success(t('forum.reportSuccess'));
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
@@ -636,7 +636,7 @@ const ForumPostDetail: React.FC = () => {
               onChange={(e) => setReplyContent(e.target.value)}
               maxLength={10000}
               showCount
-              aria-label={t('forum.replyPlaceholder') || '回复内容'}
+              aria-label={t('forum.replyPlaceholder')}
             />
             <div className={styles.replyActions}>
               <Button
@@ -676,33 +676,33 @@ const ForumPostDetail: React.FC = () => {
       >
         <div style={{ marginBottom: '16px' }}>
           <label htmlFor="report-reason" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-            {t('fleaMarket.reportReason') || '举报原因'} *
+            {t('forum.reportReason')} *
           </label>
           <Select
             id="report-reason"
             value={reportReason}
             onChange={(value) => setReportReason(value)}
             style={{ width: '100%' }}
-            placeholder={t('forum.reportReason') || '请选择举报原因'}
-            aria-label={t('fleaMarket.reportReason') || '举报原因'}
+            placeholder={t('forum.reportReason')}
+            aria-label={t('forum.reportReason')}
           >
-            <Option value="spam">{t('fleaMarket.reasonSpam') || '垃圾信息'}</Option>
-            <Option value="fraud">{t('fleaMarket.reasonFraud') || '欺诈'}</Option>
-            <Option value="inappropriate">{t('fleaMarket.reasonInappropriate') || '不当内容'}</Option>
-            <Option value="other">{t('fleaMarket.reasonOther') || '其他'}</Option>
+            <Option value="spam">{t('forum.reasonSpam')}</Option>
+            <Option value="fraud">{t('forum.reasonFraud')}</Option>
+            <Option value="inappropriate">{t('forum.reasonInappropriate')}</Option>
+            <Option value="other">{t('forum.reasonOther')}</Option>
           </Select>
         </div>
         <div>
           <label htmlFor="report-description" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-            {t('forum.reportDescription') || t('fleaMarket.reportDescription') || '详细描述'}
+            {t('forum.reportDescription')}
           </label>
           <TextArea
             id="report-description"
             value={reportDescription}
             onChange={(e) => setReportDescription(e.target.value)}
             rows={4}
-            aria-label={t('forum.reportDescription') || t('fleaMarket.reportDescription') || '详细描述'}
-            placeholder={t('forum.reportDescriptionPlaceholder') || t('fleaMarket.reportDescriptionPlaceholder') || '请详细描述举报原因...'}
+            aria-label={t('forum.reportDescription')}
+            placeholder={t('forum.reportDescriptionPlaceholder')}
             maxLength={500}
             showCount
           />
