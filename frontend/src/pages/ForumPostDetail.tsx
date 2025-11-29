@@ -110,7 +110,7 @@ const ForumPostDetail: React.FC = () => {
   const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
   // 用于分享的描述（使用全文，移除HTML标签）
   const shareDescription = post ? post.content.replace(/<[^>]*>/g, '').trim() : '';
-  const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
+  const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/post/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
 
   // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
   useLayoutEffect(() => {
@@ -618,7 +618,7 @@ const ForumPostDetail: React.FC = () => {
     // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
     updateWeixinMetaTags();
     
-    const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
+    const shareUrl = `${window.location.origin}/${lang}/forum/post/${post.id}`;
     const shareTitle = post.title;
     const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
     const shareText = `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`;
@@ -650,7 +650,7 @@ const ForumPostDetail: React.FC = () => {
 
   const handleCopyLink = async () => {
     if (!post) return;
-    const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
+    const shareUrl = `${window.location.origin}/${lang}/forum/post/${post.id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
       message.success(t('forum.linkCopied'));
@@ -1156,7 +1156,7 @@ const ForumPostDetail: React.FC = () => {
           {post && (
             <div style={{ textAlign: 'center' }}>
               <QRCode
-                value={`${window.location.origin}/${lang}/forum/posts/${post.id}`}
+                value={`${window.location.origin}/${lang}/forum/post/${post.id}`}
                 size={200}
                 style={{ marginBottom: 16 }}
               />
