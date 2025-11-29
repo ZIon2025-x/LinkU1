@@ -108,8 +108,8 @@ const ForumPostDetail: React.FC = () => {
   // 计算 SEO 相关数据（必须在所有 hooks 之后，但在 early return 之前）
   const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
   const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
-  // 用于分享的描述（使用全文，移除HTML标签）
-  const shareDescription = post ? post.content.replace(/<[^>]*>/g, '').trim() : '';
+  // 用于分享的描述（使用全文，移除HTML标签，限制长度在200字符内，微信分享建议不超过200字符）
+  const shareDescription = post ? post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200) : '';
   const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/post/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
 
   // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
@@ -304,14 +304,60 @@ const ForumPostDetail: React.FC = () => {
         document.head.insertBefore(weixinDesc, document.head.firstChild);
       }
     }, 1000);
+    
+    // 在 SEOHead 组件执行后，再次确保微信标签正确（SEOHead 使用 useEffect，可能在 useLayoutEffect 之后执行）
+    setTimeout(() => {
+      // 强制移除所有微信描述标签，然后重新创建
+      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDescriptions.forEach(tag => tag.remove());
+      
+      const newWeixinDescTag = document.createElement('meta');
+      newWeixinDescTag.setAttribute('name', 'weixin:description');
+      newWeixinDescTag.content = shareDescription;
+      document.head.insertBefore(newWeixinDescTag, document.head.firstChild);
+      
+      // 同时更新 og:description
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      allOgDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people') ||
+          metaTag.content.includes('making value creation more efficient')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      const ogDescTag = document.createElement('meta');
+      ogDescTag.setAttribute('property', 'og:description');
+      ogDescTag.content = shareDescription;
+      document.head.insertBefore(ogDescTag, document.head.firstChild);
+    }, 2000);
   }, [post, shareDescription, canonicalUrl]);
 
   // 立即更新微信分享 meta 标签的函数
   const updateWeixinMetaTags = useCallback(() => {
     if (!post) return;
     
-    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
+    // 限制描述长度在200字符内（微信分享建议不超过200字符）
+    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim().substring(0, 200);
     const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    
+    // 先移除所有可能包含默认描述的标签
+    const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+    allDescriptions.forEach(tag => {
+      const metaTag = tag as HTMLMetaElement;
+      if (metaTag.content && (
+        metaTag.content.includes('Professional task publishing') ||
+        metaTag.content.includes('skill matching platform') ||
+        metaTag.content.includes('linking skilled people') ||
+        metaTag.content.includes('making value creation more efficient')
+      )) {
+        metaTag.remove();
+      }
+    });
     
     // 强制更新微信分享描述（微信优先读取weixin:description）
     const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
