@@ -75,9 +75,23 @@ const Forum: React.FC = () => {
     try {
       setLoading(true);
       const response = await getForumCategories(true); // 包含最新帖子信息
-      setCategories(response.categories || []);
+      console.log('📋 板块API响应:', response);
+      const categoriesData = response.categories || [];
+      console.log('📋 板块数据:', categoriesData);
+      
+      // 调试：检查每个板块的 latest_post
+      categoriesData.forEach((cat: ForumCategory) => {
+        console.log(
+          `板块 ${cat.id} (${cat.name}): `,
+          `帖子数=${cat.post_count}, `,
+          `latest_post=${cat.latest_post ? '存在' : '不存在'}`,
+          cat.latest_post ? `, 标题=${cat.latest_post.title}` : ''
+        );
+      });
+      
+      setCategories(categoriesData);
     } catch (error: any) {
-      console.error('加载板块失败:', error);
+      console.error('❌ 加载板块失败:', error);
       // API失败时设置为空数组，显示"暂无板块"提示
       setCategories([]);
     } finally {

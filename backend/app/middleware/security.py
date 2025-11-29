@@ -33,10 +33,14 @@ async def security_headers_middleware(request: Request, call_next):
         "report-uri /api/csp-report;"  # CSP 违规报告
     )
     
-    response.headers["Content-Security-Policy"] = csp
-    response.headers["Content-Type-Options"] = "nosniff"
+    # 只对HTML响应设置CSP，API响应不需要
+    if "text/html" in response.headers.get("Content-Type", ""):
+        response.headers["Content-Security-Policy"] = csp
+    
+    # 必需的安全头
+    response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    # ⚠️ X-XSS-Protection 已废弃，移除
+    # ⚠️ X-XSS-Protection 已废弃，不设置
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
     return response

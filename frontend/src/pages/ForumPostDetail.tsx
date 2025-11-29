@@ -159,6 +159,7 @@ const ForumPostDetail: React.FC = () => {
   };
 
   const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!currentUser) {
       setShowLoginModal(true);
@@ -173,6 +174,7 @@ const ForumPostDetail: React.FC = () => {
   };
 
   const handleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!currentUser) {
       setShowLoginModal(true);
@@ -187,6 +189,7 @@ const ForumPostDetail: React.FC = () => {
   };
 
   const handleReplyLike = async (replyId: number, e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!currentUser) {
       setShowLoginModal(true);
@@ -312,10 +315,13 @@ const ForumPostDetail: React.FC = () => {
           </Space>
           <Space>
             <Button
+              htmlType="button"
               type="text"
               size="small"
               icon={reply.is_liked ? <LikeFilled /> : <LikeOutlined />}
               onClick={(e) => handleReplyLike(reply.id, e)}
+              aria-label={reply.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
+              title={reply.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
             >
               {reply.like_count}
             </Button>
@@ -528,16 +534,22 @@ const ForumPostDetail: React.FC = () => {
           <div className={styles.postActions}>
             <Space size="large">
               <Button
+                htmlType="button"
                 type={post.is_liked ? 'primary' : 'default'}
                 icon={post.is_liked ? <LikeFilled /> : <LikeOutlined />}
                 onClick={handleLike}
+                aria-label={post.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
+                title={post.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
               >
                 {post.like_count}
               </Button>
               <Button
+                htmlType="button"
                 type={post.is_favorited ? 'primary' : 'default'}
                 icon={post.is_favorited ? <StarFilled /> : <StarOutlined />}
                 onClick={handleFavorite}
+                aria-label={post.is_favorited ? t('forum.unfavorite') || '取消收藏' : t('forum.favorite') || '收藏'}
+                title={post.is_favorited ? t('forum.unfavorite') || '取消收藏' : t('forum.favorite') || '收藏'}
               >
                 {post.favorite_count}
               </Button>
@@ -584,12 +596,14 @@ const ForumPostDetail: React.FC = () => {
               </div>
             )}
             <TextArea
+              id="reply-content"
               rows={4}
               placeholder={t('forum.replyPlaceholder')}
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               maxLength={10000}
               showCount
+              aria-label={t('forum.replyPlaceholder') || '回复内容'}
             />
             <div className={styles.replyActions}>
               <Button
@@ -628,14 +642,16 @@ const ForumPostDetail: React.FC = () => {
         cancelText={t('common.cancel')}
       >
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+          <label htmlFor="report-reason" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             {t('fleaMarket.reportReason') || '举报原因'} *
           </label>
           <Select
+            id="report-reason"
             value={reportReason}
             onChange={(value) => setReportReason(value)}
             style={{ width: '100%' }}
             placeholder={t('forum.reportReason') || '请选择举报原因'}
+            aria-label={t('fleaMarket.reportReason') || '举报原因'}
           >
             <Option value="spam">{t('fleaMarket.reasonSpam') || '垃圾信息'}</Option>
             <Option value="fraud">{t('fleaMarket.reasonFraud') || '欺诈'}</Option>
@@ -644,13 +660,15 @@ const ForumPostDetail: React.FC = () => {
           </Select>
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+          <label htmlFor="report-description" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             {t('forum.reportDescription') || t('fleaMarket.reportDescription') || '详细描述'}
           </label>
           <TextArea
+            id="report-description"
             value={reportDescription}
             onChange={(e) => setReportDescription(e.target.value)}
             rows={4}
+            aria-label={t('forum.reportDescription') || t('fleaMarket.reportDescription') || '详细描述'}
             placeholder={t('forum.reportDescriptionPlaceholder') || t('fleaMarket.reportDescriptionPlaceholder') || '请详细描述举报原因...'}
             maxLength={500}
             showCount

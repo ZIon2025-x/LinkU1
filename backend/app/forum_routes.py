@@ -428,12 +428,15 @@ async def get_categories(
     - include_latest_post: 如果为 True，每个板块会包含最新帖子的简要信息（标题、作者、最后回复时间等）
     注意：分类列表只显示对普通用户可见的最新帖子（is_visible == True）
     """
+    logger.info(f"📥 获取板块列表请求: include_latest_post={include_latest_post}")
+    
     result = await db.execute(
         select(models.ForumCategory)
         .where(models.ForumCategory.is_visible == True)
         .order_by(models.ForumCategory.sort_order.asc(), models.ForumCategory.id.asc())
     )
     categories = result.scalars().all()
+    logger.info(f"📋 找到 {len(categories)} 个可见板块")
     
     # 如果需要包含最新帖子信息，需要手动构建响应
     if include_latest_post:
@@ -453,7 +456,16 @@ async def get_categories(
             # 获取该板块的最新可见帖子（只显示对普通用户可见的帖子）
             # 排序逻辑：优先按最后回复时间，如果没有回复（last_reply_at 为 NULL）则按创建时间
             # func.coalesce() 确保即使帖子没有回复，也会使用 created_at 进行排序并显示在预览中
+            latest_post = None
             try:
+                # 先检查是否有任何帖子（用于调试）
+                check_result = await db.execute(
+                    select(func.count(models.ForumPost.id))
+                    .where(models.ForumPost.category_id == category.id)
+                )
+                total_posts = check_result.scalar() or 0
+                logger.debug(f"板块 {category.id} 总帖子数（包括已删除/不可见）: {total_posts}")
+                
                 latest_post_result = await db.execute(
                     select(models.ForumPost)
                     .where(
@@ -473,23 +485,57 @@ async def get_categories(
                     )
                 )
                 latest_post = latest_post_result.scalar_one_or_none()
+                
+                if not latest_post and total_posts > 0:
+                    logger.debug(
+                        f"板块 {category.id} 查询条件: category_id={category.id}, "
+                        f"is_deleted=False, is_visible=True"
+                    )
             except Exception as e:
-                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                logger.error(f"❌ 查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
                 latest_post = None
             
-            # 调试：如果帖子数大于0但没有找到最新帖子，记录日志
+            # 详细调试日志
+            logger.info(
+                f"板块 {category.id} ({category.name}): "
+                f"可见帖子数={real_post_count}, "
+                f"找到最新帖子={'是' if latest_post else '否'}"
+            )
+            
+            if latest_post:
+                logger.info(
+                    f"板块 {category.id} 最新帖子: ID={latest_post.id}, "
+                    f"标题={latest_post.title[:50]}, "
+                    f"is_deleted={latest_post.is_deleted}, "
+                    f"is_visible={latest_post.is_visible}, "
+                    f"last_reply_at={latest_post.last_reply_at}, "
+                    f"created_at={latest_post.created_at}, "
+                    f"author={'存在' if latest_post.author else '不存在'}"
+                )
+            
+            # 调试：如果帖子数大于0但没有找到最新帖子，记录详细日志
             if real_post_count > 0 and not latest_post:
                 # 检查是否有帖子但不符合条件
                 all_posts_result = await db.execute(
                     select(models.ForumPost)
                     .where(models.ForumPost.category_id == category.id)
-                    .limit(5)
+                    .limit(10)
                 )
                 all_posts = all_posts_result.scalars().all()
+                
+                # 详细记录每个帖子的状态
+                post_details = []
+                for p in all_posts:
+                    post_details.append(
+                        f"ID={p.id}, is_deleted={p.is_deleted}, is_visible={p.is_visible}, "
+                        f"title={p.title[:30]}"
+                    )
+                
                 logger.warning(
-                    f"板块 {category.id} ({category.name}) 有 {real_post_count} 个可见帖子，但未找到最新可见帖子。"
-                    f"该板块共有 {len(all_posts)} 个帖子（包括已删除/不可见的）。"
-                    "可能原因：所有帖子都被标记为 is_deleted=True 或 is_visible=False"
+                    f"⚠️ 板块 {category.id} ({category.name}) 有 {real_post_count} 个可见帖子，但未找到最新可见帖子。\n"
+                    f"该板块共有 {len(all_posts)} 个帖子（包括已删除/不可见的）。\n"
+                    f"帖子详情：\n" + "\n".join(post_details) + "\n"
+                    f"可能原因：查询条件不匹配或数据不一致"
                 )
             
             # 构建板块信息（使用 Pydantic 模型）
@@ -542,6 +588,8 @@ async def get_categories(
             category_list.append(category_dict)
         
         # 返回包含最新帖子信息的列表（注意：这会改变响应模型，但为了功能完整性暂时这样实现）
+        latest_post_count = sum(1 for c in category_list if c.get('latest_post'))
+        logger.info(f"✅ 返回 {len(category_list)} 个板块，其中 {latest_post_count} 个板块包含 latest_post")
         return {"categories": category_list}
     
     # 标准返回（不包含最新帖子信息）
