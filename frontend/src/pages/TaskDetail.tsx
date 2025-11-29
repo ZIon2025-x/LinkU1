@@ -1864,10 +1864,6 @@ const TaskDetail: React.FC = () => {
     ? `${task.title} - Link²Ur ${language === 'zh' ? '任务详情' : 'Task Details'}`
     : 'Link²Ur - Task Details';
   
-  const seoDescription = task 
-    ? task.description?.replace(/<[^>]*>/g, '').slice(0, 160) || task.title
-    : 'Browse and apply for tasks on Link²Ur';
-  
   const canonicalUrl = task 
     ? `https://www.link2ur.com/${language}/tasks/${task.id}`
     : `https://www.link2ur.com/${language}/tasks`;

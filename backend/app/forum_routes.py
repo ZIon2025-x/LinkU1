@@ -3073,9 +3073,9 @@ async def get_my_replies(
 
 @router.get("/my/favorites", response_model=schemas.ForumFavoriteListResponse)
 async def get_my_favorites(
+    request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
