@@ -238,9 +238,11 @@ const Forum: React.FC = () => {
                     </div>
                     <div className={styles.latestPostMeta}>
                       <Space size="small" split="|">
-                        <span>
-                          <UserOutlined /> {category.latest_post.author.name}
-                        </span>
+                        {category.latest_post.author && (
+                          <span>
+                            <UserOutlined /> {category.latest_post.author.name}
+                          </span>
+                        )}
                         <span>
                           <ClockCircleOutlined /> {formatRelativeTime(category.latest_post.last_reply_at)}
                         </span>

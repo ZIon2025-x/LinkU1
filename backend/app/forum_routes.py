@@ -453,25 +453,44 @@ async def get_categories(
             # 获取该板块的最新可见帖子（只显示对普通用户可见的帖子）
             # 排序逻辑：优先按最后回复时间，如果没有回复（last_reply_at 为 NULL）则按创建时间
             # func.coalesce() 确保即使帖子没有回复，也会使用 created_at 进行排序并显示在预览中
-            latest_post_result = await db.execute(
-                select(models.ForumPost)
-                .where(
-                    models.ForumPost.category_id == category.id,
-                    models.ForumPost.is_deleted == False,
-                    models.ForumPost.is_visible == True
+            try:
+                latest_post_result = await db.execute(
+                    select(models.ForumPost)
+                    .where(
+                        models.ForumPost.category_id == category.id,
+                        models.ForumPost.is_deleted == False,
+                        models.ForumPost.is_visible == True
+                    )
+                    .order_by(
+                        func.coalesce(
+                            models.ForumPost.last_reply_at,
+                            models.ForumPost.created_at
+                        ).desc()
+                    )
+                    .limit(1)
+                    .options(
+                        selectinload(models.ForumPost.author)
+                    )
                 )
-                .order_by(
-                    func.coalesce(
-                        models.ForumPost.last_reply_at,
-                        models.ForumPost.created_at
-                    ).desc()
+                latest_post = latest_post_result.scalar_one_or_none()
+            except Exception as e:
+                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                latest_post = None
+            
+            # 调试：如果帖子数大于0但没有找到最新帖子，记录日志
+            if real_post_count > 0 and not latest_post:
+                # 检查是否有帖子但不符合条件
+                all_posts_result = await db.execute(
+                    select(models.ForumPost)
+                    .where(models.ForumPost.category_id == category.id)
+                    .limit(5)
                 )
-                .limit(1)
-                .options(
-                    selectinload(models.ForumPost.author)
+                all_posts = all_posts_result.scalars().all()
+                logger.warning(
+                    f"板块 {category.id} ({category.name}) 有 {real_post_count} 个可见帖子，但未找到最新可见帖子。"
+                    f"该板块共有 {len(all_posts)} 个帖子（包括已删除/不可见的）。"
+                    "可能原因：所有帖子都被标记为 is_deleted=True 或 is_visible=False"
                 )
-            )
-            latest_post = latest_post_result.scalar_one_or_none()
             
             # 构建板块信息（使用 Pydantic 模型）
             category_out = schemas.ForumCategoryOut(
@@ -492,14 +511,27 @@ async def get_categories(
             
             # 添加最新帖子信息（如果存在）
             if latest_post:
-                category_dict["latest_post"] = {
-                    "id": latest_post.id,
-                    "title": latest_post.title,
-                    "author": {
+                # 确保 author 信息存在，如果作者被删除则使用默认值
+                author_info = None
+                if latest_post.author:
+                    author_info = {
                         "id": latest_post.author.id,
                         "name": latest_post.author.name,
                         "avatar": latest_post.author.avatar or None
-                    } if latest_post.author else None,
+                    }
+                else:
+                    # 如果作者不存在（被删除），使用默认值
+                    logger.warning(f"帖子 {latest_post.id} 的作者不存在（可能已被删除）")
+                    author_info = {
+                        "id": "unknown",
+                        "name": "已删除用户",
+                        "avatar": None
+                    }
+                
+                category_dict["latest_post"] = {
+                    "id": latest_post.id,
+                    "title": latest_post.title,
+                    "author": author_info,
                     "last_reply_at": latest_post.last_reply_at or latest_post.created_at,
                     "reply_count": latest_post.reply_count,
                     "view_count": latest_post.view_count
@@ -3059,27 +3091,24 @@ async def get_my_likes(
     offset = (page - 1) * page_size
     query = query.offset(offset).limit(page_size)
     
-    # 加载关联数据
-    if target_type == "post" or target_type is None:
-        query = query.options(
-            selectinload(models.ForumLike.post).selectinload(models.ForumPost.category),
-            selectinload(models.ForumLike.post).selectinload(models.ForumPost.author)
-        )
-    if target_type == "reply" or target_type is None:
-        query = query.options(
-            selectinload(models.ForumLike.reply).selectinload(models.ForumReply.post),
-            selectinload(models.ForumLike.reply).selectinload(models.ForumReply.author)
-        )
-    
     result = await db.execute(query)
     likes = result.scalars().all()
     
     # 转换为输出格式
     like_list = []
     for like in likes:
-        if like.target_type == "post" and like.post:
-            post = like.post
-            if post.is_deleted == False and post.is_visible == True:
+        if like.target_type == "post":
+            # 手动查询关联的帖子
+            post_result = await db.execute(
+                select(models.ForumPost)
+                .where(models.ForumPost.id == like.target_id)
+                .options(
+                    selectinload(models.ForumPost.category),
+                    selectinload(models.ForumPost.author)
+                )
+            )
+            post = post_result.scalar_one_or_none()
+            if post and post.is_deleted == False and post.is_visible == True:
                 like_list.append({
                     "target_type": "post",
                     "post": {
@@ -3103,9 +3132,18 @@ async def get_my_likes(
                     },
                     "created_at": like.created_at
                 })
-        elif like.target_type == "reply" and like.reply:
-            reply = like.reply
-            if reply.is_deleted == False and reply.is_visible == True:
+        elif like.target_type == "reply":
+            # 手动查询关联的回复
+            reply_result = await db.execute(
+                select(models.ForumReply)
+                .where(models.ForumReply.id == like.target_id)
+                .options(
+                    selectinload(models.ForumReply.post),
+                    selectinload(models.ForumReply.author)
+                )
+            )
+            reply = reply_result.scalar_one_or_none()
+            if reply and reply.is_deleted == False and reply.is_visible == True:
                 like_list.append({
                     "target_type": "reply",
                     "reply": {
