@@ -198,6 +198,30 @@
   .postActions {
     flex-wrap: wrap;
     gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .postActions .ant-space {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+
+  .postActions .ant-space-item {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .postActions button {
+    flex: 1 1 auto;
+    min-width: 80px;
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .postActions .ant-typography {
+    font-size: 12px;
+    white-space: nowrap;
   }
 
   .repliesCard {
@@ -273,6 +297,20 @@
 
   .postContent {
     font-size: 14px;
+  }
+
+  .postActions {
+    gap: 6px;
+  }
+
+  .postActions button {
+    min-width: 70px;
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .postActions .ant-typography {
+    font-size: 11px;
   }
 
   .replyItem {

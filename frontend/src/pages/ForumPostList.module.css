@@ -147,22 +147,36 @@
   }
 
   .toolbar {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .searchAndSort {
-    flex-direction: column;
-    width: 100%;
+    flex-direction: row;
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
   }
 
-  .searchAndSort > * {
-    width: 100%;
+  .searchAndSort .ant-input-search {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .searchAndSort .ant-select {
+    flex: 0 0 auto;
+    min-width: 100px;
+  }
+
+  .toolbar button {
+    flex-shrink: 0;
   }
 
   .content {
     padding: 16px 12px;
+    padding-top: 20px;
   }
 
   .headerContainer {
