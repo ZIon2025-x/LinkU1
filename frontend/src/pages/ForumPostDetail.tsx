@@ -166,8 +166,15 @@ const ForumPostDetail: React.FC = () => {
       return;
     }
     try {
-      await toggleForumLike('post', Number(postId));
-      loadPost();
+      const response = await toggleForumLike('post', Number(postId));
+      // 直接更新本地状态，避免重新加载导致页面滚动
+      if (post) {
+        setPost({
+          ...post,
+          is_liked: response.liked,
+          like_count: response.like_count
+        });
+      }
     } catch (error: any) {
       message.error(error.response?.data?.detail || t('forum.error'));
     }
@@ -181,8 +188,15 @@ const ForumPostDetail: React.FC = () => {
       return;
     }
     try {
-      await toggleForumFavorite(Number(postId));
-      loadPost();
+      const response = await toggleForumFavorite(Number(postId));
+      // 直接更新本地状态，避免重新加载导致页面滚动
+      if (post) {
+        setPost({
+          ...post,
+          is_favorited: response.favorited,
+          favorite_count: response.favorite_count
+        });
+      }
     } catch (error: any) {
       message.error(error.response?.data?.detail || t('forum.error'));
     }
@@ -196,8 +210,27 @@ const ForumPostDetail: React.FC = () => {
       return;
     }
     try {
-      await toggleForumLike('reply', replyId);
-      loadReplies();
+      const response = await toggleForumLike('reply', replyId);
+      // 直接更新本地状态，避免重新加载导致页面滚动
+      setReplies(prevReplies => {
+        const updateReply = (reply: ForumReply): ForumReply => {
+          if (reply.id === replyId) {
+            return {
+              ...reply,
+              is_liked: response.liked,
+              like_count: response.like_count
+            };
+          }
+          if (reply.replies && reply.replies.length > 0) {
+            return {
+              ...reply,
+              replies: reply.replies.map(updateReply)
+            };
+          }
+          return reply;
+        };
+        return prevReplies.map(updateReply);
+      });
     } catch (error: any) {
       message.error(error.response?.data?.detail || t('forum.error'));
     }
