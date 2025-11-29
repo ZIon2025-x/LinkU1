@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select } from 'antd';
+import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select, Dropdown, QRCode } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, LikeOutlined, LikeFilled, 
   StarOutlined, StarFilled, UserOutlined, ClockCircleOutlined,
-  EditOutlined, DeleteOutlined, FlagOutlined, ArrowLeftOutlined
+  EditOutlined, DeleteOutlined, FlagOutlined, ArrowLeftOutlined,
+  ShareAltOutlined, CopyOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
@@ -102,6 +103,7 @@ const ForumPostDetail: React.FC = () => {
   const [reportTargetId, setReportTargetId] = useState<number>(0);
   const [reportReason, setReportReason] = useState<string>('');
   const [reportDescription, setReportDescription] = useState<string>('');
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     if (postId) {
@@ -332,6 +334,82 @@ const ForumPostDetail: React.FC = () => {
     } catch (error: any) {
       message.error(error.response?.data?.detail || t('forum.error'));
     }
+  };
+
+  const handleShare = async () => {
+    if (!post) return;
+    
+    const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
+    const shareTitle = `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}`;
+    const plainContent = post.content.replace(/<[^>]*>/g, '').substring(0, 200);
+    const shareText = `${post.title}\n\n${plainContent}${plainContent.length >= 200 ? '...' : ''}\n\n${shareUrl}`;
+    
+    // 尝试使用 Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        message.success(t('forum.shareSuccess'));
+        return;
+      } catch (error: any) {
+        // 用户取消分享，不做任何操作
+        if (error.name === 'AbortError') {
+          return;
+        }
+        // 如果出错，继续执行复制链接逻辑
+      }
+    }
+    
+    // 如果不支持 Web Share API 或失败，使用复制链接
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      message.success(t('forum.linkCopied'));
+    } catch (error) {
+      // 如果复制失败，显示分享模态框
+      setShowShareModal(true);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!post) return;
+    const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      message.success(t('forum.linkCopied'));
+      setShowShareModal(false);
+    } catch (error) {
+      message.error(t('forum.error'));
+    }
+  };
+
+  const handleShareToSocial = (platform: string) => {
+    if (!post) return;
+    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/posts/${post.id}`);
+    const shareTitle = encodeURIComponent(post.title);
+    const plainContent = post.content.replace(/<[^>]*>/g, '').substring(0, 200);
+    const shareText = encodeURIComponent(`${post.title}\n\n${plainContent}${plainContent.length >= 200 ? '...' : ''}`);
+    
+    let shareWindowUrl = '';
+    
+    switch (platform) {
+      case 'weibo':
+        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${shareTitle}`;
+        break;
+      case 'twitter':
+        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle}`;
+        break;
+      case 'facebook':
+        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`;
+        break;
+      default:
+        return;
+    }
+    
+    window.open(shareWindowUrl, '_blank', 'width=600,height=400');
+    setShowShareModal(false);
   };
 
   const renderReply = (reply: ForumReply, level: number = 0) => {
@@ -658,6 +736,15 @@ const ForumPostDetail: React.FC = () => {
               <Text type="secondary">
                 <MessageOutlined /> {post.reply_count} {t('forum.replies')}
               </Text>
+              <Button
+                htmlType="button"
+                type="default"
+                icon={<ShareAltOutlined />}
+                onClick={handleShare}
+                title={t('forum.share') || '分享'}
+              >
+                {t('forum.share')}
+              </Button>
               {currentUser && (
                 <Button
                   type="text"
@@ -776,6 +863,60 @@ const ForumPostDetail: React.FC = () => {
             showCount
           />
         </div>
+      </Modal>
+
+      <Modal
+        title={t('forum.sharePost')}
+        open={showShareModal}
+        onCancel={() => setShowShareModal(false)}
+        footer={null}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large" align="center">
+          {post && (
+            <div style={{ textAlign: 'center' }}>
+              <QRCode
+                value={`${window.location.origin}/${lang}/forum/posts/${post.id}`}
+                size={200}
+                style={{ marginBottom: 16 }}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('forum.shareToWeChat')}
+              </Text>
+            </div>
+          )}
+          <Divider />
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Button
+              type="default"
+              icon={<CopyOutlined />}
+              onClick={handleCopyLink}
+              block
+            >
+              {t('forum.copyLink')}
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('weibo')}
+              block
+            >
+              {t('forum.shareToWeibo')}
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('twitter')}
+              block
+            >
+              {t('forum.shareToTwitter')}
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('facebook')}
+              block
+            >
+              {t('forum.shareToFacebook')}
+            </Button>
+          </Space>
+        </Space>
       </Modal>
     </div>
   );

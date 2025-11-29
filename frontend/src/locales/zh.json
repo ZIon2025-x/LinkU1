@@ -2586,6 +2586,15 @@
     "periodMonth": "本月",
     "noData": "暂无数据",
     "user": "用户",
-    "official": "官方"
+    "official": "官方",
+    "share": "分享",
+    "sharePost": "分享帖子",
+    "copyLink": "复制链接",
+    "linkCopied": "链接已复制",
+    "shareToWeChat": "分享到微信",
+    "shareToWeibo": "分享到微博",
+    "shareToTwitter": "分享到Twitter",
+    "shareToFacebook": "分享到Facebook",
+    "shareSuccess": "分享成功"
   }
 }

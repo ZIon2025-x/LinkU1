@@ -2697,6 +2697,15 @@
     "periodMonth": "This Month",
     "noData": "No data available",
     "user": "User",
-    "official": "Official"
+    "official": "Official",
+    "share": "Share",
+    "sharePost": "Share Post",
+    "copyLink": "Copy Link",
+    "linkCopied": "Link Copied",
+    "shareToWeChat": "Share to WeChat",
+    "shareToWeibo": "Share to Weibo",
+    "shareToTwitter": "Share to Twitter",
+    "shareToFacebook": "Share to Facebook",
+    "shareSuccess": "Shared Successfully"
   }
 }
