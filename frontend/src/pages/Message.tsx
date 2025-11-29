@@ -26,7 +26,8 @@ import api, {
   createReview,
   getTaskReviews
 } from '../api';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -622,7 +623,7 @@ const MessagePage: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
 
   const location = useLocation();
-  const navigate = useNavigate();
+  const { navigate } = useLocalizedNavigation();
 
   // 从URL参数中获取任务ID（如果存在）
   useEffect(() => {

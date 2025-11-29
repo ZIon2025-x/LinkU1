@@ -3698,6 +3698,94 @@ async def get_user_forum_stats(
     }
 
 
+@router.get("/users/{user_id}/hot-posts", response_model=schemas.ForumPostListResponse)
+async def get_user_hot_posts(
+    user_id: str,
+    limit: int = Query(3, ge=1, le=10, description="返回数量"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取用户发布的最热门帖子"""
+    # 构建查询：获取指定用户的帖子
+    query = select(models.ForumPost).where(
+        models.ForumPost.author_id == user_id,
+        models.ForumPost.is_deleted == False,
+        models.ForumPost.is_visible == True
+    )
+    
+    # 热度排序：综合评分公式
+    hot_score = (
+        models.ForumPost.like_count * 5.0 +
+        models.ForumPost.reply_count * 3.0 +
+        models.ForumPost.view_count * 0.1
+    ) / func.pow(
+        func.extract('epoch', func.now() - models.ForumPost.created_at) / 3600.0 + 2.0,
+        1.5
+    )
+    query = query.order_by(hot_score.desc())
+    
+    # 限制数量
+    query = query.limit(limit)
+    
+    # 加载关联数据
+    query = query.options(
+        selectinload(models.ForumPost.category),
+        selectinload(models.ForumPost.author)
+    )
+    
+    result = await db.execute(query)
+    posts = result.scalars().all()
+    
+    # 转换为列表项格式
+    post_items = []
+    for post in posts:
+        # 检查当前用户是否已点赞/收藏
+        is_liked = False
+        is_favorited = False
+        if current_user:
+            like_result = await db.execute(
+                select(models.ForumLike).where(
+                    models.ForumLike.target_type == "post",
+                    models.ForumLike.target_id == post.id,
+                    models.ForumLike.user_id == current_user.id
+                )
+            )
+            is_liked = like_result.scalar_one_or_none() is not None
+            
+            favorite_result = await db.execute(
+                select(models.ForumFavorite).where(
+                    models.ForumFavorite.post_id == post.id,
+                    models.ForumFavorite.user_id == current_user.id
+                )
+            )
+            is_favorited = favorite_result.scalar_one_or_none() is not None
+        
+        post_items.append(schemas.ForumPostListItem(
+            id=post.id,
+            title=post.title,
+            content_preview=strip_markdown(post.content),
+            category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
+            author=await build_user_info(db, post.author),
+            view_count=post.view_count,
+            reply_count=post.reply_count,
+            like_count=post.like_count,
+            is_pinned=post.is_pinned,
+            is_featured=post.is_featured,
+            is_locked=post.is_locked,
+            is_visible=post.is_visible,
+            is_deleted=post.is_deleted,
+            created_at=post.created_at,
+            last_reply_at=post.last_reply_at
+        ))
+    
+    return {
+        "posts": post_items,
+        "total": len(post_items),
+        "page": 1,
+        "page_size": limit
+    }
+
+
 # ==================== 排行榜 API ====================
 
 @router.get("/leaderboard/posts")

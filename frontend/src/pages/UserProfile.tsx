@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices } from '../api';
+import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { message } from 'antd';
@@ -48,7 +48,7 @@ interface UserProfileType {
 }
 
 const UserProfile: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { userId } = useParams();
   const { navigate } = useLocalizedNavigation();
   const [profile, setProfile] = useState<UserProfileType | null>(null);
@@ -60,6 +60,8 @@ const UserProfile: React.FC = () => {
   const [loadingExpert, setLoadingExpert] = useState(false);
   const [showServiceDetailModal, setShowServiceDetailModal] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [hotPosts, setHotPosts] = useState<any[]>([]);
+  const [loadingHotPosts, setLoadingHotPosts] = useState(false);
 
   useEffect(() => {
     // 直接获取用户信息，HttpOnly Cookie会自动发送
@@ -70,6 +72,7 @@ const UserProfile: React.FC = () => {
     if (userId) {
       loadUserProfile();
       loadTaskExpertInfo();
+      loadHotPosts();
     }
   }, [userId]);
 
@@ -192,6 +195,26 @@ const UserProfile: React.FC = () => {
   const handleServiceClick = (serviceId: number) => {
     setSelectedServiceId(serviceId);
     setShowServiceDetailModal(true);
+  };
+
+  const loadHotPosts = async () => {
+    if (!userId) return;
+    
+    setLoadingHotPosts(true);
+    try {
+      const data = await getUserHotPosts(userId, 3);
+      setHotPosts(data.posts || []);
+    } catch (err: any) {
+      // 如果用户没有帖子或出错，忽略错误
+      setHotPosts([]);
+    } finally {
+      setLoadingHotPosts(false);
+    }
+  };
+
+  const handleViewPost = (postId: number) => {
+    const lang = language || 'zh';
+    navigate(`/${lang}/forum/post/${postId}`);
   };
 
   if (loading) {
@@ -857,6 +880,167 @@ const UserProfile: React.FC = () => {
               marginTop: 8
             }}>
               {t('userProfile.encourageReview')}
+            </div>
+          </div>
+        )}
+
+        {/* 最热门帖子 */}
+        {hotPosts.length > 0 && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: 20,
+            padding: 32,
+            marginBottom: 32,
+            boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{ 
+              fontSize: 24, 
+              fontWeight: 700, 
+              color: '#333',
+              marginBottom: 24,
+              textAlign: 'center',
+              background: 'linear-gradient(45deg, #667eea, #764ba2)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              🔥 最热门帖子
+            </h2>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {hotPosts.map((post, index) => (
+                <div 
+                  key={post.id} 
+                  onClick={() => handleViewPost(post.id)}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '20px 24px',
+                    background: index === 0 
+                      ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1))'
+                      : 'linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05))',
+                    borderRadius: 16,
+                    border: index === 0 
+                      ? '2px solid rgba(255, 193, 7, 0.3)'
+                      : '1px solid rgba(102, 126, 234, 0.1)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    position: 'relative'
+                  }}
+                  onMouseOver={(e) => {
+                    const target = e.currentTarget;
+                    target.style.transform = 'translateY(-2px)';
+                    target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.15)';
+                  }}
+                  onMouseOut={(e) => {
+                    const target = e.currentTarget;
+                    target.style.transform = 'translateY(0)';
+                    target.style.boxShadow = 'none';
+                  }}
+                >
+                  {index === 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      top: -10,
+                      right: 20,
+                      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                      color: '#fff',
+                      padding: '4px 12px',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      boxShadow: '0 4px 15px rgba(255, 193, 7, 0.4)'
+                    }}>
+                      🏆 最热
+                    </div>
+                  )}
+                  
+                  <div style={{ flex: 1 }}>
+                    <div style={{ 
+                      fontSize: 18, 
+                      fontWeight: 700, 
+                      color: '#333',
+                      marginBottom: 8,
+                      lineHeight: 1.3
+                    }}>
+                      {post.title}
+                    </div>
+                    {post.content_preview && (
+                      <div style={{ 
+                        fontSize: 14, 
+                        color: '#666',
+                        marginBottom: 8,
+                        lineHeight: 1.5,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {post.content_preview}
+                      </div>
+                    )}
+                    <div style={{ 
+                      fontSize: 12, 
+                      color: '#999',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16
+                    }}>
+                      <span>👁️ {post.view_count}</span>
+                      <span>💬 {post.reply_count}</span>
+                      <span>❤️ {post.like_count}</span>
+                      {post.category && (
+                        <span style={{
+                          padding: '2px 8px',
+                          background: 'rgba(102, 126, 234, 0.1)',
+                          borderRadius: 4,
+                          color: '#667eea',
+                          fontWeight: 600
+                        }}>
+                          {post.category.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginLeft: 16 }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewPost(post.id);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        border: '2px solid #667eea',
+                        borderRadius: 20,
+                        background: 'transparent',
+                        color: '#667eea',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: 700,
+                        transition: 'all 0.3s ease',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}
+                      onMouseOver={(e) => {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.background = '#667eea';
+                        target.style.color = '#fff';
+                        target.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseOut={(e) => {
+                        const target = e.target as HTMLButtonElement;
+                        target.style.background = 'transparent';
+                        target.style.color = '#667eea';
+                        target.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      查看
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

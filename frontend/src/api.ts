@@ -2503,6 +2503,14 @@ export const getMyForumReplies = async (params?: {
   return res.data;
 };
 
+// 获取用户最热门的帖子
+export const getUserHotPosts = async (userId: string, limit: number = 3) => {
+  const res = await api.get(`/api/forum/users/${userId}/hot-posts`, {
+    params: { limit }
+  });
+  return res.data;
+};
+
 export const getMyForumLikes = async (params?: {
   page?: number;
   page_size?: number;
