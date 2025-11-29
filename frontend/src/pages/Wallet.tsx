@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser, getPointsAccount, getPointsTransactions } from '../api';
 import api from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface PointsAccount {
   balance: number;  // 积分数量（整数，100积分 = £1.00）
@@ -30,6 +31,7 @@ interface PointsTransaction {
 
 const Wallet: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [balance, setBalance] = useState(0);  // 钱包余额（金额）
   const [transactions, setTransactions] = useState<any[]>([]);  // 钱包交易记录
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null);  // 积分账户
@@ -100,11 +102,11 @@ const Wallet: React.FC = () => {
   };
 
   const handleWithdraw = () => {
-    alert('提现功能开发中...');
+    alert(t('wallet.withdrawComingSoon'));
   };
 
   const handleRecharge = () => {
-    alert('充值功能开发中...');
+    alert(t('wallet.depositComingSoon'));
   };
 
   if (loading) {
@@ -204,7 +206,7 @@ const Wallet: React.FC = () => {
                 transition: 'all 0.3s ease'
               }}
             >
-              💰 余额
+              💰 {t('wallet.balance')}
             </button>
             <button
               onClick={() => setActiveTab('points')}
@@ -220,7 +222,7 @@ const Wallet: React.FC = () => {
                 transition: 'all 0.3s ease'
               }}
             >
-              ⭐ 积分
+              ⭐ {t('wallet.points')}
             </button>
           </div>
 
@@ -230,7 +232,7 @@ const Wallet: React.FC = () => {
               <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
                 £{balance.toFixed(2)}
               </div>
-              <div style={{ fontSize: '16px', opacity: 0.9 }}>当前余额</div>
+              <div style={{ fontSize: '16px', opacity: 0.9 }}>{t('wallet.currentBalance')}</div>
             </>
           )}
 
@@ -238,17 +240,17 @@ const Wallet: React.FC = () => {
           {activeTab === 'points' && (
             <>
               {pointsLoading ? (
-                <div style={{ fontSize: '16px', opacity: 0.9 }}>加载中...</div>
+                <div style={{ fontSize: '16px', opacity: 0.9 }}>{t('common.loading')}</div>
               ) : (
                 <>
                   <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '10px' }}>
                     {pointsAccount?.balance.toLocaleString() || 0} 积分
                   </div>
                   <div style={{ fontSize: '16px', opacity: 0.9, marginBottom: '4px' }}>
-                    当前积分余额
+                    {t('wallet.currentPointsBalance')}
                   </div>
                   <div style={{ fontSize: '14px', opacity: 0.8 }}>
-                    （等值约 £{pointsAccount?.balance_display || '0.00'}，仅供参考）
+                    {t('wallet.pointsEquivalent', { amount: pointsAccount?.balance_display || '0.00' })}
                   </div>
                 </>
               )}
@@ -287,7 +289,7 @@ const Wallet: React.FC = () => {
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(76, 175, 80, 0.3)';
               }}
             >
-              💳 充值
+              💳 {t('wallet.deposit')}
             </button>
             <button
               onClick={handleWithdraw}
@@ -312,7 +314,7 @@ const Wallet: React.FC = () => {
                 e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 152, 0, 0.3)';
               }}
             >
-              💸 提现
+              💸 {t('wallet.withdraw')}
             </button>
           </div>
         )}

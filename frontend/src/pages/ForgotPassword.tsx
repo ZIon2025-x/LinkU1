@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -25,6 +26,7 @@ const ErrorMsg = styled.div`
 `;
 
 const ForgotPassword: React.FC = () => {
+  const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -39,9 +41,9 @@ const ForgotPassword: React.FC = () => {
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
       setErrorMsg('');
-      setSuccessMsg('Password reset email sent. Please check your inbox.');
+      setSuccessMsg(t('auth.resetEmailSent'));
     } catch (err: any) {
-      let msg = 'Failed to send reset email';
+      let msg = t('auth.resetEmailFailed');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
           msg = err.response.data.detail;

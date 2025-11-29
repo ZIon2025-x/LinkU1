@@ -344,6 +344,10 @@ async def get_post_with_permissions(
     """获取帖子并检查权限（处理软删除和隐藏）"""
     result = await db.execute(
         select(models.ForumPost)
+        .options(
+            selectinload(models.ForumPost.category),
+            selectinload(models.ForumPost.author)
+        )
         .where(models.ForumPost.id == post_id)
         .where(models.ForumPost.is_deleted == False)
     )
@@ -1012,7 +1016,12 @@ async def update_post(
     """更新帖子"""
     # 获取帖子
     result = await db.execute(
-        select(models.ForumPost).where(models.ForumPost.id == post_id)
+        select(models.ForumPost)
+        .options(
+            selectinload(models.ForumPost.category),
+            selectinload(models.ForumPost.author)
+        )
+        .where(models.ForumPost.id == post_id)
     )
     db_post = result.scalar_one_or_none()
     

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import api, { fetchCurrentUser } from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 地点列表常量
 const LOCATION_OPTIONS = [
@@ -30,6 +31,7 @@ const isMobileDevice = () => {
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
@@ -231,7 +233,7 @@ const Settings: React.FC = () => {
         // 如果修改邮箱，需要验证码
         if (formData.email && formData.email !== user?.email) {
           if (!emailVerificationCode) {
-            message.error('修改邮箱需要验证码，请先发送验证码');
+            message.error(t('settings.emailVerificationRequired'));
             return;
           }
           updatePayload.email_verification_code = emailVerificationCode;
@@ -244,7 +246,7 @@ const Settings: React.FC = () => {
         // 如果修改手机号，需要验证码
         if (formData.phone && formData.phone !== user?.phone) {
           if (!phoneVerificationCode) {
-            message.error('修改手机号需要验证码，请先发送验证码');
+            message.error(t('settings.phoneVerificationRequired'));
             return;
           }
           updatePayload.phone_verification_code = phoneVerificationCode;
@@ -264,7 +266,7 @@ const Settings: React.FC = () => {
       // 如果既没有更新个人资料，也没有更新偏好，提示用户
       if (Object.keys(updatePayload).length === 0) {
         // 偏好已经保存，但为了用户体验，仍然显示成功消息
-        message.success('任务偏好已保存！');
+        message.success(t('settings.preferencesSaved'));
       }
       
       // ⚠️ 重新加载用户数据以获取最新的数据（使用fetchCurrentUser，利用缓存机制）
@@ -298,7 +300,7 @@ const Settings: React.FC = () => {
       setEmailCodeCountdown(0);
       setPhoneCodeCountdown(0);
       
-      message.success('设置已保存！');
+      message.success(t('settings.saved'));
       // 如果语言偏好改变，刷新页面以应用新语言
       const currentLang = localStorage.getItem('language') || 'zh';
       if (formData.language_preference !== currentLang) {
@@ -307,7 +309,7 @@ const Settings: React.FC = () => {
       }
     } catch (error) {
       console.error('保存设置失败:', error);
-      message.error('保存失败，请稍后重试');
+      message.error(t('settings.saveFailed'));
     }
   };
 
@@ -334,18 +336,18 @@ const Settings: React.FC = () => {
   };
 
   const handleChangePassword = () => {
-    message.info('修改密码功能开发中...');
+    message.info(t('settings.changePasswordComingSoon'));
   };
 
   // 发送邮箱修改验证码
   const handleSendEmailCode = async () => {
     if (!formData.email) {
-      message.error('请先输入新邮箱');
+      message.error(t('settings.pleaseEnterNewEmail'));
       return;
     }
     
     if (formData.email === user?.email) {
-      message.info('新邮箱与当前邮箱相同，无需修改');
+      message.info(t('settings.emailSameAsCurrent'));
       return;
     }
     
@@ -353,7 +355,7 @@ const Settings: React.FC = () => {
       await api.post('/api/users/profile/send-email-update-code', {
         new_email: formData.email
       });
-      message.success('验证码已发送到新邮箱，请查收');
+      message.success(t('settings.verificationCodeSentToEmail'));
       setEmailCodeSent(true);
       setEmailCodeCountdown(60);
       
@@ -375,12 +377,12 @@ const Settings: React.FC = () => {
   // 发送手机号修改验证码
   const handleSendPhoneCode = async () => {
     if (!formData.phone) {
-      message.error('请先输入新手机号');
+      message.error(t('settings.pleaseEnterNewPhone'));
       return;
     }
     
     if (formData.phone === user?.phone) {
-      message.info('新手机号与当前手机号相同，无需修改');
+      message.info(t('settings.phoneSameAsCurrent'));
       return;
     }
     
@@ -388,7 +390,7 @@ const Settings: React.FC = () => {
       await api.post('/api/users/profile/send-phone-update-code', {
         new_phone: formData.phone
       });
-      message.success('验证码已发送到新手机号，请查收');
+      message.success(t('settings.verificationCodeSentToPhone'));
       setPhoneCodeSent(true);
       setPhoneCodeCountdown(60);
       
@@ -409,12 +411,12 @@ const Settings: React.FC = () => {
 
   const handleDeleteAccount = () => {
     Modal.confirm({
-      title: '确认删除账户',
-      content: '确定要删除账户吗？此操作不可恢复！',
-      okText: '确定',
-      cancelText: '取消',
+      title: t('settings.confirmDeleteAccount'),
+      content: t('settings.confirmDeleteAccountMessage'),
+      okText: t('common.ok'),
+      cancelText: t('common.cancel'),
       onOk: () => {
-        message.info('删除账户功能开发中...');
+        message.info(t('settings.deleteAccountComingSoon'));
       }
     });
   };
@@ -427,7 +429,7 @@ const Settings: React.FC = () => {
       setSessions(Array.isArray(res.data.sessions) ? res.data.sessions : []);
     } catch (e: any) {
       console.error(e);
-      setSessionsError(e?.message || '加载会话失败');
+      setSessionsError(e?.message || t('settings.loadSessionsFailed'));
       setSessions([]);
     } finally {
       setSessionsLoading(false);
@@ -436,10 +438,10 @@ const Settings: React.FC = () => {
 
   const logoutOthers = async () => {
     Modal.confirm({
-      title: '确认登出其它设备',
-      content: '确定要登出其它设备吗？这会使其它设备立即失效。',
-      okText: '确定',
-      cancelText: '取消',
+      title: t('settings.confirmLogoutOthers'),
+      content: t('settings.confirmLogoutOthersMessage'),
+      okText: t('common.ok'),
+      cancelText: t('common.cancel'),
       onOk: async () => {
         try {
           setSessionsLoading(true);
@@ -448,11 +450,11 @@ const Settings: React.FC = () => {
           // 使用 api.post，自动处理 Cookie 和 CSRF token
           await api.post('/api/secure-auth/logout-others');
           await loadSessions();
-          message.success('已登出其它设备');
+          message.success(t('settings.loggedOutOtherDevices'));
         } catch (e: any) {
           console.error(e);
-          setSessionsError(e?.response?.data?.detail || e?.message || '登出其它设备失败');
-          message.error(e?.response?.data?.detail || e?.message || '登出其它设备失败');
+          setSessionsError(e?.response?.data?.detail || e?.message || t('settings.logoutOthersFailed'));
+          message.error(e?.response?.data?.detail || e?.message || t('settings.logoutOthersFailed'));
         } finally {
           setSessionsLoading(false);
         }
@@ -470,17 +472,17 @@ const Settings: React.FC = () => {
         fontSize: '18px',
         color: '#666'
       }}>
-        加载中...
+        {t('common.loading')}
       </div>
     );
   }
 
   const tabs = [
-    { id: 'profile', label: '个人资料', icon: '👤' },
-    { id: 'preferences', label: '任务偏好', icon: '🎯' },
-    { id: 'notifications', label: '通知设置', icon: '🔔' },
-    { id: 'privacy', label: '隐私设置', icon: '🔒' },
-    { id: 'security', label: '安全设置', icon: '🛡️' }
+    { id: 'profile', label: t('settings.profile'), icon: '👤' },
+    { id: 'preferences', label: t('settings.preferences'), icon: '🎯' },
+    { id: 'notifications', label: t('settings.notifications'), icon: '🔔' },
+    { id: 'privacy', label: t('settings.privacy'), icon: '🔒' },
+    { id: 'security', label: t('settings.security'), icon: '🛡️' }
   ];
 
   return (
@@ -535,7 +537,7 @@ const Settings: React.FC = () => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            ← {isMobile ? '返回' : '返回首页'}
+            ← {isMobile ? t('common.back') : t('settings.backToHome')}
           </button>
           <h1 style={{ 
             position: 'absolute',
@@ -554,7 +556,7 @@ const Settings: React.FC = () => {
             background: 'transparent'
           }}>⚙️ 设置</h1>
           <div style={{ fontSize: isMobile ? '14px' : '16px', opacity: 0.9, marginTop: isMobile ? '8px' : '0' }}>
-            {isMobile ? '账户设置' : '管理您的账户设置和偏好'}
+            {isMobile ? t('settings.accountSettings') : t('settings.manageAccountSettings')}
           </div>
         </div>
 
@@ -634,7 +636,7 @@ const Settings: React.FC = () => {
             {activeTab === 'profile' && (
               <div>
                 <h2 style={{ color: '#333', marginBottom: isMobile ? '16px' : '20px', fontSize: isMobile ? '18px' : '20px' }}>
-                  👤 个人资料
+                  👤 {t('settings.profile')}
                 </h2>
                 
                 <div style={{ 
@@ -674,7 +676,7 @@ const Settings: React.FC = () => {
                       fontSize: isMobile ? '15px' : '14px',
                       width: isMobile ? 'auto' : 'auto'
                     }}>
-                      更换头像
+                      {t('settings.changeAvatar')}
                     </button>
                   </div>
                 </div>
@@ -694,7 +696,7 @@ const Settings: React.FC = () => {
                       type="text"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="请输入用户名（3-50个字符）"
+                      placeholder={t('settings.usernamePlaceholder')}
                       style={{
                         width: '100%',
                         padding: isMobile ? '14px' : '12px',
@@ -707,7 +709,7 @@ const Settings: React.FC = () => {
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#999' }}>
                       {(() => {
                         if (!user?.name_updated_at) {
-                          return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                          return t('settings.usernameHint');
                         }
                         try {
                           const lastUpdate = new Date(user.name_updated_at);
@@ -715,17 +717,17 @@ const Settings: React.FC = () => {
                           const daysDiff = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
                           const daysLeft = 30 - daysDiff;
                           if (daysLeft > 0) {
-                            return `用户名一个月内只能修改一次，距离下次可修改还有 ${daysLeft} 天`;
+                            return t('settings.usernameHintDaysLeft', { days: daysLeft });
                           } else {
-                            return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                            return t('settings.usernameHint');
                           }
                         } catch (e) {
-                          return '可以修改用户名（用户名唯一，且一个月内只能修改一次）';
+                          return t('settings.usernameHint');
                         }
                       })()}
                     </p>
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: '12px', color: '#666' }}>
-                      用户名支持中文、英文字母、数字、下划线和连字符，不能以数字开头，不能包含空格
+                      {t('settings.usernameRules')}
                     </p>
                   </div>
 
@@ -737,7 +739,7 @@ const Settings: React.FC = () => {
                       color: '#333',
                       fontSize: isMobile ? '14px' : '16px'
                     }}>
-                      邮箱 {!formData.email && <span style={{ color: '#999', fontSize: '12px', fontWeight: 'normal' }}>(可选)</span>}
+                      {t('settings.email')} {!formData.email && <span style={{ color: '#999', fontSize: '12px', fontWeight: 'normal' }}>({t('settings.optional')})</span>}
                     </label>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
                       <input
@@ -748,7 +750,7 @@ const Settings: React.FC = () => {
                           setEmailCodeSent(false);
                           setEmailVerificationCode('');
                         }}
-                        placeholder="请输入邮箱（可选）"
+                        placeholder={t('settings.emailPlaceholder')}
                         style={{
                           flex: 1,
                           padding: isMobile ? '14px' : '12px',
@@ -774,7 +776,7 @@ const Settings: React.FC = () => {
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          {emailCodeCountdown > 0 ? `${emailCodeCountdown}秒` : '发送验证码'}
+                          {emailCodeCountdown > 0 ? `${emailCodeCountdown}${t('settings.seconds')}` : t('settings.sendVerificationCode')}
                         </button>
                       )}
                     </div>
@@ -786,7 +788,7 @@ const Settings: React.FC = () => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                           setEmailVerificationCode(value);
                         }}
-                        placeholder="请输入6位验证码"
+                        placeholder={t('settings.verificationCodePlaceholder')}
                         maxLength={6}
                         style={{
                           width: '100%',
@@ -801,10 +803,10 @@ const Settings: React.FC = () => {
                     )}
                     <p style={{ marginTop: '4px', marginBottom: '0', fontSize: isMobile ? '11px' : '12px', color: '#999' }}>
                       {formData.email && formData.email !== user?.email 
-                        ? '修改邮箱需要验证码验证，验证码将发送到新邮箱' 
+                        ? t('settings.emailModificationHint') 
                         : formData.email 
-                          ? '可以修改邮箱地址' 
-                          : '可以在此绑定或修改邮箱地址'}
+                          ? t('settings.emailCanModify') 
+                          : t('settings.emailCanBind')}
                     </p>
                   </div>
 
@@ -869,7 +871,7 @@ const Settings: React.FC = () => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                           setPhoneVerificationCode(value);
                         }}
-                        placeholder="请输入6位验证码"
+                        placeholder={t('settings.verificationCodePlaceholder')}
                         maxLength={6}
                         style={{
                           width: '100%',

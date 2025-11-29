@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import LoginModal from '../components/LoginModal';
 import api from '../api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Wrapper = styled.div`
   min-height: 80vh;
@@ -26,6 +27,7 @@ const ErrorMsg = styled.div`
 `;
 
 const ResetPassword: React.FC = () => {
+  const { t } = useLanguage();
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -41,12 +43,12 @@ const ResetPassword: React.FC = () => {
         { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
       );
       setErrorMsg('');
-      setSuccessMsg('Password reset successful! Redirecting to login...');
+      setSuccessMsg(t('auth.resetPasswordSuccess'));
       setTimeout(() => {
         setShowLoginModal(true);
       }, 2000);
     } catch (err: any) {
-      let msg = 'Password reset failed';
+      let msg = t('auth.resetPasswordFailed');
       if (err?.response?.data?.detail) {
         if (typeof err.response.data.detail === 'string') {
           msg = err.response.data.detail;
@@ -84,27 +86,27 @@ const ResetPassword: React.FC = () => {
         color: 'transparent',
         background: 'transparent'
       }}>
-        重置密码 - Link²Ur
+        {t('auth.resetPassword')} - Link²Ur
       </h1>
-      <StyledCard title="Reset Password">
+      <StyledCard title={t('auth.resetPassword')}>
         {errorMsg && <ErrorMsg>{errorMsg}</ErrorMsg>}
         {successMsg && <div style={{ color: '#52c41a', marginBottom: 12, textAlign: 'center' }}>{successMsg}</div>}
         <Form layout="vertical" onFinish={onFinish}>
           <Form.Item 
-            label="New Password" 
+            label={t('auth.newPassword')} 
             name="password" 
             rules={[
-              { required: true, message: '请输入新密码' }
+              { required: true, message: t('auth.newPasswordRequired') }
             ]}
           > 
-            <Input.Password placeholder="Enter your new password (min 8 chars, must contain letters and numbers)" />
+            <Input.Password placeholder={t('auth.newPasswordPlaceholder')} />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block>Reset Password</Button>
+            <Button type="primary" htmlType="submit" block>{t('auth.resetPassword')}</Button>
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Button type="link" onClick={() => setShowLoginModal(true)}>Back to Login</Button>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>{t('auth.backToLogin')}</Button>
         </div>
       </StyledCard>
 
