@@ -105,42 +105,11 @@ const ForumPostDetail: React.FC = () => {
   const [reportDescription, setReportDescription] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // 提取帖子描述（前30个字左右，在逗号或句号处截断）
-  const extractDescription = (content: string, maxLength: number = 30): string => {
-    // 移除HTML标签
-    const plainContent = content.replace(/<[^>]*>/g, '').trim();
-    
-    // 如果内容长度小于等于最大长度，直接返回
-    if (plainContent.length <= maxLength) {
-      return plainContent;
-    }
-    
-    // 截取前maxLength+10个字符，以便找到合适的截断点
-    const truncated = plainContent.substring(0, maxLength + 10);
-    
-    // 查找最后一个逗号或句号的位置
-    const lastComma = truncated.lastIndexOf('，');
-    const lastPeriod = truncated.lastIndexOf('。');
-    const lastCommaEn = truncated.lastIndexOf(',');
-    const lastPeriodEn = truncated.lastIndexOf('.');
-    
-    // 找到最接近maxLength的截断点
-    const breakPoints = [lastComma, lastPeriod, lastCommaEn, lastPeriodEn].filter(pos => pos > 0 && pos <= maxLength);
-    
-    if (breakPoints.length > 0) {
-      const bestBreakPoint = Math.max(...breakPoints);
-      return truncated.substring(0, bestBreakPoint + 1);
-    }
-    
-    // 如果没有找到合适的截断点，在maxLength处截断
-    return truncated.substring(0, maxLength) + '...';
-  };
-
   // 计算 SEO 相关数据（必须在所有 hooks 之后，但在 early return 之前）
   const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
   const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
-  // 用于分享的描述（前30个字左右，在逗号或句号处截断）
-  const shareDescription = post ? extractDescription(post.content, 30) : '';
+  // 用于分享的描述（使用全文，移除HTML标签）
+  const shareDescription = post ? post.content.replace(/<[^>]*>/g, '').trim() : '';
   const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
 
   // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
@@ -479,7 +448,7 @@ const ForumPostDetail: React.FC = () => {
     
     const shareUrl = `${window.location.origin}/${lang}/forum/posts/${post.id}`;
     const shareTitle = post.title;
-    const shareDescription = extractDescription(post.content, 30);
+    const shareDescription = post.content.replace(/<[^>]*>/g, '').trim();
     const shareText = `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`;
     
     // 尝试使用 Web Share API
@@ -527,7 +496,7 @@ const ForumPostDetail: React.FC = () => {
     if (!post) return;
     const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/posts/${post.id}`);
     const shareTitle = encodeURIComponent(post.title);
-    const shareDescription = encodeURIComponent(extractDescription(post.content, 30));
+    const shareDescription = encodeURIComponent(post.content.replace(/<[^>]*>/g, '').trim());
     
     let shareWindowUrl = '';
     
