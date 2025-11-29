@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -270,6 +270,10 @@ const Home: React.FC = () => {
   // 热门达人相关状态
   const [hotExperts, setHotExperts] = useState<any[]>([]);
   const [loadingExperts, setLoadingExperts] = useState(false);
+  
+  // 热门帖子相关状态
+  const [hotPosts, setHotPosts] = useState<any[]>([]);
+  const [loadingHotPosts, setLoadingHotPosts] = useState(false);
 
   // 移动端检测
   const [isMobile, setIsMobile] = useState(false);
@@ -506,6 +510,21 @@ const Home: React.FC = () => {
         setTasks([]);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  // 获取热门帖子数据 - 显示前3个
+  useEffect(() => {
+    setLoadingHotPosts(true);
+    getHotForumPosts({ limit: 3 })
+      .then(data => {
+        const postsList = data.posts || [];
+        setHotPosts(postsList.slice(0, 3)); // 只取前3个
+      })
+      .catch(error => {
+        console.error('获取热门帖子数据失败:', error);
+        setHotPosts([]);
+      })
+      .finally(() => setLoadingHotPosts(false));
   }, []);
 
   // 获取热门达人数据 - 显示前3个
@@ -890,6 +909,450 @@ const Home: React.FC = () => {
         </div>
       </section>
       
+      {/* 热门帖子区域 */}
+      <section className={styles.featuresSection} style={{ background: '#f8fafc' }}>
+        <div className={styles.featuresContainer}>
+          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
+            <h2 className={styles.featuresTitle} style={{ color: '#1f2937', margin: 0 }}>
+              {t('forum.hotPosts') || '热门帖子'}
+            </h2>
+            <button
+              onClick={() => navigate('/forum')}
+              style={{
+                position: isMobile ? 'relative' : 'absolute',
+                right: isMobile ? 'auto' : 0,
+                top: isMobile ? 'auto' : '50%',
+                transform: isMobile ? 'none' : 'translateY(-50%)',
+                marginTop: isMobile ? '12px' : 0,
+                padding: isMobile ? '8px 16px' : '8px 20px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: isMobile ? '13px' : '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: isMobile ? 'inline-block' : 'block'
+              }}
+              onMouseEnter={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#059669';
+                  e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#10b981';
+                  e.currentTarget.style.transform = 'translateY(-50%)';
+                }
+              }}
+            >
+              {t('common.more') || '更多'} →
+            </button>
+          </div>
+          <p className={styles.featuresSubtitle} style={{ color: '#6b7280' }}>
+            {t('forum.hotPostsSubtitle') || '发现社区最受欢迎的讨论'}
+          </p>
+          
+          {loadingHotPosts ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>🔄 {t('common.loading') || '加载中...'}</div>
+            </div>
+          ) : hotPosts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>{t('forum.noPosts') || '暂无热门帖子'}</div>
+            </div>
+          ) : (
+            <div className={styles.featuresGrid} style={{ 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: isMobile ? '20px' : '24px'
+            }}>
+              {hotPosts.map((post: any) => {
+                const formatDate = (dateString: string) => {
+                  try {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const diff = now.getTime() - date.getTime();
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    
+                    if (days > 0) {
+                      return `${days}天前`;
+                    } else if (hours > 0) {
+                      return `${hours}小时前`;
+                    } else if (minutes > 0) {
+                      return `${minutes}分钟前`;
+                    } else {
+                      return '刚刚';
+                    }
+                  } catch {
+                    return dateString;
+                  }
+                };
+                
+                return (
+                  <div
+                    key={post.id}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: isMobile ? '16px' : '24px',
+                      padding: isMobile ? '20px' : '28px',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(-5px)';
+                        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.12)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
+                      }
+                    }}
+                    onClick={() => navigate(`/forum/post/${post.id}`)}
+                  >
+                    {/* 板块标签 */}
+                    {post.category && (
+                      <div style={{
+                        marginBottom: '12px'
+                      }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          background: '#f1f5f9',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          color: '#475569',
+                          border: '1px solid #e2e8f0',
+                          display: 'inline-block'
+                        }}>
+                          📌 {post.category.name}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* 标题 */}
+                    <h3 style={{
+                      fontSize: isMobile ? '16px' : '18px',
+                      fontWeight: '700',
+                      color: '#1a202c',
+                      marginBottom: isMobile ? '12px' : '16px',
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      lineHeight: '1.4'
+                    }}>
+                      {post.title}
+                    </h3>
+                    
+                    {/* 内容预览 */}
+                    {post.content_preview && (
+                      <p style={{
+                        color: '#4a5568',
+                        fontSize: isMobile ? '13px' : '14px',
+                        lineHeight: '1.6',
+                        marginBottom: isMobile ? '12px' : '16px',
+                        margin: 0,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        flex: 1
+                      }}>
+                        {post.content_preview}
+                      </p>
+                    )}
+                    
+                    {/* 作者信息 */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      {post.author && (
+                        <>
+                          <img
+                            src={post.author.avatar || 'https://via.placeholder.com/32'}
+                            alt={post.author.name}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '1px solid #e2e8f0'
+                            }}
+                          />
+                          <span style={{
+                            fontSize: '13px',
+                            color: '#64748b',
+                            fontWeight: '500'
+                          }}>
+                            {post.author.name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    
+                    {/* 统计信息 */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: isMobile ? '12px' : '16px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid #e2e8f0',
+                      fontSize: '12px',
+                      color: '#64748b'
+                    }}>
+                      <span>👁️ {post.view_count || 0}</span>
+                      <span>💬 {post.reply_count || 0}</span>
+                      <span>❤️ {post.like_count || 0}</span>
+                      {post.created_at && (
+                        <span style={{ marginLeft: 'auto' }}>
+                          {formatDate(post.created_at)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+      
+      {/* 最新任务区块 - 重新设计 */}
+      <main className={styles.tasksSection}>
+        <div className={styles.tasksHeader}>
+          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
+            <h2 className={styles.tasksTitle} style={{ margin: 0 }}>
+              {t('home.recentTasks')}
+            </h2>
+            <button
+              onClick={() => navigate('/tasks')}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                padding: '8px 20px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#059669';
+                e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#10b981';
+                e.currentTarget.style.transform = 'translateY(-50%)';
+              }}
+            >
+              {t('common.more') || '更多'} →
+            </button>
+          </div>
+          <p className={styles.tasksSubtitle}>
+            {t('home.subtitle')}
+          </p>
+        </div>
+        {/* 任务卡片列表 - 重新设计 */}
+        {loading ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingText}>🔄 {t('home.loadingTasks')}</div>
+          </div>
+        ) : tasks.length === 0 ? (
+          <div className={styles.emptyContainer}>
+            <div className={styles.emptyIcon}>📝</div>
+            <div className={styles.emptyTitle}>{t('home.noTasksAvailable')}</div>
+            <div className={styles.emptyDesc}>{t('home.noTasksDesc')}</div>
+          </div>
+        ) : (
+          <div className={styles.tasksGrid}>
+            {tasks.map(task => {
+              // 判断是否应该对非相关用户隐藏真实状态（显示为open）
+              const shouldHideStatus = () => {
+                if (!task || !user) return false;
+                const isPoster = task.poster_id === user.id;
+                const isTaker = task.taker_id === user.id;
+                
+                // 如果用户不是发布者或接收者，且状态是taken，应显示为open
+                if (!isPoster && !isTaker && task.status === 'taken') {
+                  return true;
+                }
+                return false;
+              };
+              
+              // 获取显示的状态
+              const displayStatus = shouldHideStatus() ? 'open' : task.status;
+              
+              // 任务等级标签样式
+              const getTaskLevelStyle = (level: string) => {
+                switch (level) {
+                  case 'vip':
+                    return {
+                      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                      color: '#8B4513',
+                      border: '2px solid #FFD700',
+                      boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)'
+                    };
+                  case 'super':
+                    return {
+                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
+                      color: '#fff',
+                      border: '2px solid #FF4757',
+                      boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)'
+                    };
+                  default:
+                    return {
+                      background: '#f8f9fa',
+                      color: '#6c757d',
+                      border: '1px solid #dee2e6'
+                    };
+                }
+              };
+
+              const getTaskLevelText = (level: string) => {
+                switch (level) {
+                  case 'vip':
+                    return t('home.vipTask');
+                  case 'super':
+                    return t('home.superTask');
+                  default:
+                    return t('home.normalTask');
+                }
+              };
+
+              return (
+                <div 
+                  key={task.id} 
+                  className={styles.taskCard}
+                  onClick={() => {
+                    setSelectedTaskId(task.id);
+                    setShowTaskDetailModal(true);
+                  }}
+                >
+                  {/* 任务等级标签 */}
+                  {task.task_level && task.task_level !== 'normal' && (
+                    <div className={`${styles.taskLevelBadge} ${
+                      task.task_level === 'vip' ? styles.taskLevelBadgeVip : 
+                      task.task_level === 'super' ? styles.taskLevelBadgeSuper : ''
+                    }`}>
+                      {getTaskLevelText(task.task_level)}
+                    </div>
+                  )}
+                  
+                  <div>
+                    <div className={styles.taskTitle}>
+                      <TaskTitle
+                        title={task.title}
+                        language={language}
+                        style={{
+                          fontSize: 'inherit',
+                          fontWeight: 'inherit',
+                          color: 'inherit',
+                          lineHeight: 'inherit'
+                        }}
+                      />
+                    </div>
+                    
+                    <div className={styles.taskInfoRow}>
+                      <span className={styles.taskTypeBadge}>
+                        {task.task_type}
+                      </span>
+                      <span className={`${styles.taskLocationBadge} ${
+                        task.location === 'Online' ? styles.taskLocationOnline : styles.taskLocationOffline
+                      }`}>
+                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
+                      </span>
+                    </div>
+                    
+                    <div className={styles.taskDescription}>
+                      {task.description}
+                    </div>
+                    {/* 任务状态和时间信息 */}
+                    <div className={styles.taskStatusContainer}>
+                      <div className={styles.taskStatusIndicator}>
+                        <div 
+                          className={styles.taskStatusDot}
+                          style={{
+                            background: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                       displayStatus === 'in_progress' ? '#4299e1' : 
+                                       displayStatus === 'completed' ? '#9f7aea' : 
+                                       displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
+                          }}
+                        />
+                        <span 
+                          className={styles.taskStatusText}
+                          style={{
+                            color: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
+                                   displayStatus === 'in_progress' ? '#4299e1' : 
+                                   displayStatus === 'completed' ? '#9f7aea' : 
+                                   displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
+                          }}
+                        >
+                          {(displayStatus === 'open' || displayStatus === 'taken') ? t('taskStatuses.published') :
+                           displayStatus === 'in_progress' ? t('taskStatuses.inProgress') :
+                           displayStatus === 'completed' ? t('taskStatuses.completed') :
+                           displayStatus === 'cancelled' ? t('taskStatuses.cancelled') : displayStatus}
+                        </span>
+                      </div>
+                    </div>
+                      
+                    {(task.status === 'open' || task.status === 'taken') && (
+                        <div className={`${styles.taskTimeRemaining} ${
+                          isExpiringSoon(task.deadline) ? styles.taskTimeRemainingSoon : styles.taskTimeRemainingNormal
+                        }`}>
+                          ⏰ {getRemainTime(task.deadline, t)}
+                        </div>
+                    )}
+                  </div>
+                  
+                  {/* 底部价格和操作区域 */}
+                  <div className={styles.taskRewardContainer}>
+                    <div className={styles.taskRewardInfo}>
+                      <span className={styles.taskRewardAmount}>
+                        £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
+                      </span>
+                      <span className={styles.taskRewardLabel}>
+                        {t('home.taskReward')}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTaskId(task.id);
+                        setShowTaskDetailModal(true);
+                      }} 
+                      className={styles.taskViewButton}
+                    >
+                      {t('home.viewDetails')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+      
       {/* 热门达人区域 */}
       <section className={styles.featuresSection} style={{ background: '#fff' }}>
         <div className={styles.featuresContainer}>
@@ -1221,261 +1684,6 @@ const Home: React.FC = () => {
               })}
             </div>
           )}
-        </div>
-      </section>
-      {/* 最新任务区块 - 重新设计 */}
-      <main className={styles.tasksSection}>
-        <div className={styles.tasksHeader}>
-          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
-            <h2 className={styles.tasksTitle} style={{ margin: 0 }}>
-              {t('home.recentTasks')}
-            </h2>
-            <button
-              onClick={() => navigate('/tasks')}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                padding: '8px 20px',
-                background: '#10b981',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#059669';
-                e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#10b981';
-                e.currentTarget.style.transform = 'translateY(-50%)';
-              }}
-            >
-              {t('common.more') || '更多'} →
-            </button>
-          </div>
-          <p className={styles.tasksSubtitle}>
-            {t('home.subtitle')}
-          </p>
-        </div>
-        {/* 任务卡片列表 - 重新设计 */}
-        {loading ? (
-          <div className={styles.loadingContainer}>
-            <div className={styles.loadingText}>🔄 {t('home.loadingTasks')}</div>
-          </div>
-        ) : tasks.length === 0 ? (
-          <div className={styles.emptyContainer}>
-            <div className={styles.emptyIcon}>📝</div>
-            <div className={styles.emptyTitle}>{t('home.noTasksAvailable')}</div>
-            <div className={styles.emptyDesc}>{t('home.noTasksDesc')}</div>
-          </div>
-        ) : (
-          <div className={styles.tasksGrid}>
-            {tasks.map(task => {
-              // 判断是否应该对非相关用户隐藏真实状态（显示为open）
-              const shouldHideStatus = () => {
-                if (!task || !user) return false;
-                const isPoster = task.poster_id === user.id;
-                const isTaker = task.taker_id === user.id;
-                
-                // 如果用户不是发布者或接收者，且状态是taken，应显示为open
-                if (!isPoster && !isTaker && task.status === 'taken') {
-                  return true;
-                }
-                return false;
-              };
-              
-              // 获取显示的状态
-              const displayStatus = shouldHideStatus() ? 'open' : task.status;
-              
-              // 任务等级标签样式
-              const getTaskLevelStyle = (level: string) => {
-                switch (level) {
-                  case 'vip':
-                    return {
-                      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                      color: '#8B4513',
-                      border: '2px solid #FFD700',
-                      boxShadow: '0 2px 8px rgba(255, 215, 0, 0.3)'
-                    };
-                  case 'super':
-                    return {
-                      background: 'linear-gradient(135deg, #FF6B6B, #FF4757)',
-                      color: '#fff',
-                      border: '2px solid #FF4757',
-                      boxShadow: '0 2px 8px rgba(255, 107, 107, 0.3)'
-                    };
-                  default:
-                    return {
-                      background: '#f8f9fa',
-                      color: '#6c757d',
-                      border: '1px solid #dee2e6'
-                    };
-                }
-              };
-
-              const getTaskLevelText = (level: string) => {
-                switch (level) {
-                  case 'vip':
-                    return t('home.vipTask');
-                  case 'super':
-                    return t('home.superTask');
-                  default:
-                    return t('home.normalTask');
-                }
-              };
-
-              return (
-                <div 
-                  key={task.id} 
-                  className={styles.taskCard}
-                  onClick={() => {
-                    setSelectedTaskId(task.id);
-                    setShowTaskDetailModal(true);
-                  }}
-                >
-                  {/* 任务等级标签 */}
-                  {task.task_level && task.task_level !== 'normal' && (
-                    <div className={`${styles.taskLevelBadge} ${
-                      task.task_level === 'vip' ? styles.taskLevelBadgeVip : 
-                      task.task_level === 'super' ? styles.taskLevelBadgeSuper : ''
-                    }`}>
-                      {getTaskLevelText(task.task_level)}
-                    </div>
-                  )}
-                  
-                  <div>
-                    <div className={styles.taskTitle}>
-                      <TaskTitle
-                        title={task.title}
-                        language={language}
-                        style={{
-                          fontSize: 'inherit',
-                          fontWeight: 'inherit',
-                          color: 'inherit',
-                          lineHeight: 'inherit'
-                        }}
-                      />
-                    </div>
-                    
-                    <div className={styles.taskInfoRow}>
-                      <span className={styles.taskTypeBadge}>
-                        {task.task_type}
-                      </span>
-                      <span className={`${styles.taskLocationBadge} ${
-                        task.location === 'Online' ? styles.taskLocationOnline : styles.taskLocationOffline
-                      }`}>
-                        {task.location === 'Online' ? '🌐' : '📍'} {task.location}
-                      </span>
-                    </div>
-                    
-                    <div className={styles.taskDescription}>
-                      {task.description}
-                    </div>
-                    {/* 任务状态和时间信息 */}
-                    <div className={styles.taskStatusContainer}>
-                      <div className={styles.taskStatusIndicator}>
-                        <div 
-                          className={styles.taskStatusDot}
-                          style={{
-                            background: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
-                                       displayStatus === 'in_progress' ? '#4299e1' : 
-                                       displayStatus === 'completed' ? '#9f7aea' : 
-                                       displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
-                          }}
-                        />
-                        <span 
-                          className={styles.taskStatusText}
-                          style={{
-                            color: (displayStatus === 'open' || displayStatus === 'taken') ? '#48bb78' : 
-                                   displayStatus === 'in_progress' ? '#4299e1' : 
-                                   displayStatus === 'completed' ? '#9f7aea' : 
-                                   displayStatus === 'cancelled' ? '#f56565' : '#a0aec0'
-                          }}
-                        >
-                          {(displayStatus === 'open' || displayStatus === 'taken') ? t('taskStatuses.published') :
-                           displayStatus === 'in_progress' ? t('taskStatuses.inProgress') :
-                           displayStatus === 'completed' ? t('taskStatuses.completed') :
-                           displayStatus === 'cancelled' ? t('taskStatuses.cancelled') : displayStatus}
-                        </span>
-                      </div>
-                    </div>
-                      
-                    {(task.status === 'open' || task.status === 'taken') && (
-                        <div className={`${styles.taskTimeRemaining} ${
-                          isExpiringSoon(task.deadline) ? styles.taskTimeRemainingSoon : styles.taskTimeRemainingNormal
-                        }`}>
-                          ⏰ {getRemainTime(task.deadline, t)}
-                        </div>
-                    )}
-                  </div>
-                  
-                  {/* 底部价格和操作区域 */}
-                  <div className={styles.taskRewardContainer}>
-                    <div className={styles.taskRewardInfo}>
-                      <span className={styles.taskRewardAmount}>
-                        £{((task.base_reward ?? task.reward) || 0).toFixed(2)}
-                      </span>
-                      <span className={styles.taskRewardLabel}>
-                        {t('home.taskReward')}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedTaskId(task.id);
-                        setShowTaskDetailModal(true);
-                      }} 
-                      className={styles.taskViewButton}
-                    >
-                      {t('home.viewDetails')}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-      {/* 平台公告区块 - 使用多种方法防止搜索引擎抓取为描述 */}
-      {/* 注意：此区块内容不应被搜索引擎抓取，仅用于用户查看 */}
-      <section 
-        style={{background: '#f8fbff', padding: '48px 0'}}
-        data-nosnippet="true"
-        data-noindex="true"
-        aria-hidden="true"
-      >
-        <div style={{maxWidth: 900, margin: '0 auto', textAlign: 'center'}}>
-          <h3 
-            style={{fontSize: 24, fontWeight: 700, marginBottom: 32, color: '#A67C52'}} 
-            data-nosnippet="true"
-            data-noindex="true"
-            aria-hidden="true"
-          >
-            {t('home.announcementTitle')}
-          </h3>
-          <div style={{display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap'}}>
-            <div 
-              style={{minWidth: 260, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e6f7ff', padding: 24, marginBottom: 16, borderLeft: '6px solid #A67C52'}}
-              data-nosnippet="true"
-              data-noindex="true"
-              aria-hidden="true"
-            >
-              {/* 使用注释包裹内容，进一步防止抓取 */}
-              {/*googleoff: snippet*/}
-              {/*googleoff: index*/}
-              {t('home.announcementContent')}
-              <br/>
-              <span style={{color: '#888', fontSize: '14px'}}>{t('home.announcementDate')}</span>
-              {/*googleon: index*/}
-              {/*googleon: snippet*/}
-            </div>
-          </div>
         </div>
       </section>
       {/* 底部信息区块 */}
