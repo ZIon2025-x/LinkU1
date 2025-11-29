@@ -1718,7 +1718,7 @@ def get_my_tasks(
 
 @router.get("/profile/{user_id}")
 def user_profile(
-    user_id: str, current_user=Depends(get_current_user_secure_sync_csrf), db: Session = Depends(get_db)
+    user_id: str, current_user: Optional[models.User] = Depends(get_current_user_optional), db: Session = Depends(get_db)
 ):
     # 尝试直接查找
     user = crud.get_user_by_id(db, user_id)
@@ -1740,7 +1740,7 @@ def user_profile(
     # 获取用户的任务统计（限制数量以提高性能）
     tasks = crud.get_user_tasks(db, user_id, limit=100)  # 限制为最近100个任务
     # 只显示公开的任务（is_public=1）或者用户自己查看自己的任务时显示所有任务
-    if current_user.id == user_id:
+    if current_user and current_user.id == user_id:
         # 用户查看自己的任务，显示所有任务
         posted_tasks = [t for t in tasks if t.poster_id == user_id]
         taken_tasks = [t for t in tasks if t.taker_id == user_id]
@@ -1798,7 +1798,7 @@ def user_profile(
     }
     
     # 只有查看自己的资料时才返回敏感信息
-    if current_user.id == user_id:
+    if current_user and current_user.id == user_id:
         user_data["email"] = user.email
         user_data["phone"] = user.phone
     
