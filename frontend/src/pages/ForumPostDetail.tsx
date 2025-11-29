@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal } from 'antd';
+import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select } from 'antd';
 import { 
   MessageOutlined, EyeOutlined, LikeOutlined, LikeFilled, 
   StarOutlined, StarFilled, UserOutlined, ClockCircleOutlined,
@@ -26,6 +26,7 @@ import styles from './ForumPostDetail.module.css';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 interface ForumReply {
   id: number;
@@ -91,6 +92,11 @@ const ForumPostDetail: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTargetType, setReportTargetType] = useState<'post' | 'reply'>('post');
+  const [reportTargetId, setReportTargetId] = useState<number>(0);
+  const [reportReason, setReportReason] = useState<string>('');
+  const [reportDescription, setReportDescription] = useState<string>('');
 
   useEffect(() => {
     if (postId) {
@@ -259,23 +265,32 @@ const ForumPostDetail: React.FC = () => {
   };
 
   const handleReport = (targetType: 'post' | 'reply', targetId: number) => {
-    Modal.confirm({
-      title: t('forum.report'),
-      content: t('forum.reportReason'),
-      onOk: async () => {
-        try {
-          await createForumReport({
-            target_type: targetType,
-            target_id: targetId,
-            reason: 'other',
-            description: ''
-          });
-          message.success(t('forum.reportSuccess'));
-        } catch (error: any) {
-          message.error(error.response?.data?.detail || t('forum.error'));
-        }
-      }
-    });
+    setReportTargetType(targetType);
+    setReportTargetId(targetId);
+    setReportReason('');
+    setReportDescription('');
+    setShowReportModal(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason) {
+      message.warning(t('forum.reportReason') || '请选择举报原因');
+      return;
+    }
+    try {
+      await createForumReport({
+        target_type: reportTargetType,
+        target_id: reportTargetId,
+        reason: reportReason,
+        description: reportDescription || undefined
+      });
+      message.success(t('forum.reportSuccess') || '举报成功，我们会尽快处理');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDescription('');
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || t('forum.error'));
+    }
   };
 
   const renderReply = (reply: ForumReply, level: number = 0) => {
@@ -599,6 +614,49 @@ const ForumPostDetail: React.FC = () => {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
+
+      <Modal
+        title={t('forum.report')}
+        open={showReportModal}
+        onOk={handleSubmitReport}
+        onCancel={() => {
+          setShowReportModal(false);
+          setReportReason('');
+          setReportDescription('');
+        }}
+        okText={t('common.submit')}
+        cancelText={t('common.cancel')}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            {t('fleaMarket.reportReason') || '举报原因'} *
+          </label>
+          <Select
+            value={reportReason}
+            onChange={(value) => setReportReason(value)}
+            style={{ width: '100%' }}
+            placeholder={t('forum.reportReason') || '请选择举报原因'}
+          >
+            <Option value="spam">{t('fleaMarket.reasonSpam') || '垃圾信息'}</Option>
+            <Option value="fraud">{t('fleaMarket.reasonFraud') || '欺诈'}</Option>
+            <Option value="inappropriate">{t('fleaMarket.reasonInappropriate') || '不当内容'}</Option>
+            <Option value="other">{t('fleaMarket.reasonOther') || '其他'}</Option>
+          </Select>
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            {t('forum.reportDescription') || t('fleaMarket.reportDescription') || '详细描述'}
+          </label>
+          <TextArea
+            value={reportDescription}
+            onChange={(e) => setReportDescription(e.target.value)}
+            rows={4}
+            placeholder={t('forum.reportDescriptionPlaceholder') || t('fleaMarket.reportDescriptionPlaceholder') || '请详细描述举报原因...'}
+            maxLength={500}
+            showCount
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

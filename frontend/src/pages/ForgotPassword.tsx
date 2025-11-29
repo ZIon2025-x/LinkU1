@@ -81,21 +81,21 @@ const ForgotPassword: React.FC = () => {
         color: 'transparent',
         background: 'transparent'
       }}>
-        忘记密码 - Link²Ur
+        {t('auth.forgotPassword')} - Link²Ur
       </h1>
-      <StyledCard title="Forgot Password">
+      <StyledCard title={t('auth.forgotPassword')}>
         {errorMsg && <ErrorMsg>{errorMsg}</ErrorMsg>}
         {successMsg && <div style={{ color: '#52c41a', marginBottom: 12, textAlign: 'center' }}>{successMsg}</div>}
         <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}> 
-            <Input placeholder="Enter your email" />
+          <Form.Item label={t('common.email')} name="email" rules={[{ required: true, type: 'email' }]}> 
+            <Input placeholder={t('auth.emailPlaceholder')} />
           </Form.Item>
           <Form.Item>
-            <Button type="primary" htmlType="submit" block>Send Reset Email</Button>
+            <Button type="primary" htmlType="submit" block>{t('auth.sendResetEmail')}</Button>
           </Form.Item>
         </Form>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <Button type="link" onClick={() => setShowLoginModal(true)}>Back to Login</Button>
+          <Button type="link" onClick={() => setShowLoginModal(true)}>{t('auth.backToLogin')}</Button>
         </div>
       </StyledCard>
 

@@ -91,8 +91,17 @@ const SafeContent: React.FC<SafeContentProps> = ({
       />
     );
   } else {
-    // 纯文本内容：React 自动转义（默认安全）
-    return <div className={className}>{content}</div>;
+    // 纯文本内容：保留换行符
+    // 使用 CSS white-space: pre-wrap 来保留换行和空格
+    // React 会自动转义 HTML 特殊字符（默认安全）
+    return (
+      <div 
+        className={className}
+        style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+      >
+        {content}
+      </div>
+    );
   }
 };
 
