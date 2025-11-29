@@ -47,8 +47,25 @@ const CanonicalLink: React.FC<CanonicalLinkProps> = ({ url }) => {
         normalizedPath = normalizedPath.slice(0, -1);
       }
       
-      // 构建完整的canonical URL（不包含查询参数）
-      canonicalLink.href = `${baseUrl}${normalizedPath}`;
+      // URL 参数清理策略（强制执行）
+      // 如果传入了 url，也需要清理参数
+      let finalUrl = url || `${baseUrl}${normalizedPath}`;
+      
+      // 如果 URL 包含查询参数，需要清理
+      if (finalUrl.includes('?')) {
+        const urlObj = new URL(finalUrl);
+        // 移除所有追踪参数（必须）
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'share', 'source'].forEach(param => {
+          urlObj.searchParams.delete(param);
+        });
+        // 移除 page=1（强制执行，避免重复页面）
+        if (urlObj.searchParams.get('page') === '1') {
+          urlObj.searchParams.delete('page');
+        }
+        finalUrl = urlObj.toString();
+      }
+      
+      canonicalLink.href = finalUrl;
     }
 
     // 添加到head

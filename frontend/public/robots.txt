@@ -1,15 +1,20 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow: /api/
-Disallow: /admin/
-Disallow: /customer-service/
-Disallow: /static/private/
+# ⚠️ 重要：Allow 必须写在 Disallow 前面，否则会被覆盖
+# 允许动态 sitemap 和 og 图片（这些是 SEO 必需的）
+Allow: /api/sitemap.xml
+Allow: /api/og-image/
 Allow: /static/public/
 Allow: /favicon.ico
 Allow: /favicon.png
 Allow: /static/favicon.ico
 Allow: /static/favicon.png
 Allow: /
+# 精准匹配 API 路径（避免误禁 /api-docs 等）
+Disallow: /api/v*
+Disallow: /admin/
+Disallow: /customer-service/
+Disallow: /static/private/
 
 # 特定搜索引擎优化
 User-agent: Googlebot

@@ -39,9 +39,13 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       document.title = title;
     }
 
-    // 更新或创建meta标签
+    // 更新或创建meta标签（只清理带有 data-seo-head 属性的标签）
     const updateMetaTag = (name: string, content: string, property?: boolean) => {
       const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      // 先清理所有带有 data-seo-head 属性的同名标签
+      const existingTags = document.querySelectorAll(`${selector}[data-seo-head="true"]`);
+      existingTags.forEach(tag => tag.remove());
+      
       let metaTag = document.querySelector(selector) as HTMLMetaElement;
       
       if (!metaTag) {
@@ -51,7 +55,12 @@ const SEOHead: React.FC<SEOHeadProps> = ({
         } else {
           metaTag.setAttribute('name', name);
         }
+        // 添加 data-seo-head 属性，标识这是 SEOHead 组件创建的标签
+        metaTag.setAttribute('data-seo-head', 'true');
         document.head.appendChild(metaTag);
+      } else {
+        // 如果标签已存在，确保添加 data-seo-head 属性
+        metaTag.setAttribute('data-seo-head', 'true');
       }
       
       metaTag.content = content;
@@ -80,14 +89,15 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
     // 更新description - 确保在head最前面，优先被搜索引擎读取
     if (description) {
-      // 先移除所有旧的description标签
-      const allDescriptions = document.querySelectorAll('meta[name="description"]');
+      // 先移除所有带有 data-seo-head 属性的旧description标签
+      const allDescriptions = document.querySelectorAll('meta[name="description"][data-seo-head="true"]');
       allDescriptions.forEach(tag => tag.remove());
       
       // 创建新的description标签并插入到head最前面
       const descTag = document.createElement('meta');
       descTag.name = 'description';
       descTag.content = description;
+      descTag.setAttribute('data-seo-head', 'true');
       document.head.insertBefore(descTag, document.head.firstChild);
     }
 
@@ -102,25 +112,27 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
     // 更新Open Graph标签 - 确保在head最前面，优先被搜索引擎读取
     if (ogTitle) {
-      // 先移除所有旧的og:title标签
-      const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+      // 先移除所有带有 data-seo-head 属性的旧og:title标签
+      const allOgTitles = document.querySelectorAll('meta[property="og:title"][data-seo-head="true"]');
       allOgTitles.forEach(tag => tag.remove());
       
       // 创建新的og:title标签并插入到head最前面
       const ogTitleTag = document.createElement('meta');
       ogTitleTag.setAttribute('property', 'og:title');
       ogTitleTag.content = ogTitle;
+      ogTitleTag.setAttribute('data-seo-head', 'true');
       document.head.insertBefore(ogTitleTag, document.head.firstChild);
     }
     if (ogDescription) {
-      // 先移除所有旧的og:description标签
-      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      // 先移除所有带有 data-seo-head 属性的旧og:description标签
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"][data-seo-head="true"]');
       allOgDescriptions.forEach(tag => tag.remove());
       
       // 创建新的og:description标签并插入到head最前面
       const ogDescTag = document.createElement('meta');
       ogDescTag.setAttribute('property', 'og:description');
       ogDescTag.content = ogDescription;
+      ogDescTag.setAttribute('data-seo-head', 'true');
       document.head.insertBefore(ogDescTag, document.head.firstChild);
     }
     // ogImage的处理移到后面，确保转换为完整URL并添加微信标签
@@ -139,13 +151,28 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('twitter:image', twitterImage);
     }
 
+    // og:image 强制校验和 fallback
+    const isValidOgImage = (imageUrl: string): boolean => {
+      // 简化版：检查 URL 是否包含已知的大图标识
+      // 实际项目中可以异步加载图片检查尺寸
+      return imageUrl.includes('og-') || imageUrl.includes('1200x630') || imageUrl.includes('og-default');
+    };
+    
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
     if (ogImage) {
-      // 确保og:image是完整URL（微信需要绝对URL），添加版本号避免缓存问题
-      const fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}${ogImage.includes('?') ? '' : '?v=2'}`;
+      // 确保og:image是完整URL（微信需要绝对URL）
+      let fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
+      
+      // 如果图片尺寸太小，强制 fallback 到默认大图
+      if (!isValidOgImage(fullOgImage)) {
+        fullOgImage = 'https://www.link2ur.com/static/og-default.jpg'; // 1200×630 的默认图
+      }
+      
+      // 添加版本号避免缓存问题
+      fullOgImage = fullOgImage.includes('?') ? fullOgImage : `${fullOgImage}?v=2`;
       
       // 强制移除旧的og:image标签（确保更新）
-      const existingOgImage = document.querySelector('meta[property="og:image"]');
+      const existingOgImage = document.querySelector('meta[property="og:image"][data-seo-head="true"]');
       if (existingOgImage) {
         existingOgImage.remove();
       }
@@ -157,7 +184,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('og:image:type', 'image/png', true);
       
       // 微信分享图片（完整URL）
-      const existingWeixinImage = document.querySelector('meta[name="weixin:image"]');
+      const existingWeixinImage = document.querySelector('meta[name="weixin:image"][data-seo-head="true"]');
       if (existingWeixinImage) {
         existingWeixinImage.remove();
       }

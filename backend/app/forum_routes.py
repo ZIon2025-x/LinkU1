@@ -3071,10 +3071,11 @@ async def get_my_replies(
     }
 
 
-@router.get("/favorites", response_model=schemas.ForumFavoriteListResponse)
+@router.get("/my/favorites", response_model=schemas.ForumFavoriteListResponse)
 async def get_my_favorites(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    request: Request,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
@@ -3116,11 +3117,7 @@ async def get_my_favorites(
                     title=post.title,
                     content_preview=strip_markdown(post.content),
                     category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-                    author=schemas.UserInfo(
-                        id=post.author.id,
-                        name=post.author.name,
-                        avatar=post.author.avatar or None
-                    ),
+                    author=await build_user_info(db, post.author, request),
                     view_count=post.view_count,
                     reply_count=post.reply_count,
                     like_count=post.like_count,

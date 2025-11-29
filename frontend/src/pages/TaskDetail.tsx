@@ -11,6 +11,10 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SEOHead from '../components/SEOHead';
+import TaskStructuredData from '../components/TaskStructuredData';
+import HreflangManager from '../components/HreflangManager';
+import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useTranslation } from '../hooks/useTranslation';
@@ -1855,8 +1859,60 @@ const TaskDetail: React.FC = () => {
     );
   }
 
+  // 计算 SEO 相关数据
+  const seoTitle = task 
+    ? `${task.title} - Link²Ur ${language === 'zh' ? '任务详情' : 'Task Details'}`
+    : 'Link²Ur - Task Details';
+  
+  const seoDescription = task 
+    ? task.description?.replace(/<[^>]*>/g, '').slice(0, 160) || task.title
+    : 'Browse and apply for tasks on Link²Ur';
+  
+  const canonicalUrl = task 
+    ? `https://www.link2ur.com/${language}/tasks/${task.id}`
+    : `https://www.link2ur.com/${language}/tasks`;
+  
+  const breadcrumbItems = task ? [
+    { 
+      name: language === 'zh' ? '首页' : 'Home', 
+      url: `https://www.link2ur.com/${language}` 
+    },
+    { 
+      name: language === 'zh' ? '任务' : 'Tasks', 
+      url: `https://www.link2ur.com/${language}/tasks` 
+    },
+    { 
+      name: task.title, 
+      url: canonicalUrl 
+    }
+  ] : [];
+
   return (
     <div>
+      {/* SEO 组件 */}
+      {task && (
+        <>
+          <SEOHead
+            title={seoTitle}
+            description={seoDescription}
+            keywords={`${task.task_type},任务,${task.location},兼职`}
+            canonicalUrl={canonicalUrl}
+            ogTitle={task.title}
+            ogDescription={seoDescription}
+            ogImage={task.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+            ogUrl={canonicalUrl}
+            twitterTitle={task.title}
+            twitterDescription={seoDescription}
+            twitterImage={task.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+          />
+          <TaskStructuredData task={task} language={language} />
+          <HreflangManager type="task" id={task.id} />
+          {breadcrumbItems.length > 0 && (
+            <BreadcrumbStructuredData items={breadcrumbItems} />
+          )}
+        </>
+      )}
+      
       {/* 顶部导航栏 */}
       <header style={{position: 'fixed', top: 0, left: 0, width: '100%', background: '#fff', zIndex: 100, boxShadow: '0 2px 8px #e6f7ff'}}>
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, maxWidth: 1200, margin: '0 auto', padding: '0 24px'}}>

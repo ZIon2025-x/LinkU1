@@ -15,6 +15,7 @@ import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import SEOHead from '../components/SEOHead';
+import HreflangManager from '../components/HreflangManager';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
@@ -804,6 +805,7 @@ const Home: React.FC = () => {
         ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
+      <HreflangManager type="page" path="/" />
       {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>

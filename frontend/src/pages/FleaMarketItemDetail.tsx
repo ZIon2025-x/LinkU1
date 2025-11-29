@@ -16,6 +16,9 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import api from '../api';
 import SEOHead from '../components/SEOHead';
+import FleaMarketStructuredData from '../components/FleaMarketStructuredData';
+import HreflangManager from '../components/HreflangManager';
+import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
 import styles from './FleaMarketItemDetail.module.css';
 
 const { TextArea } = Input;
@@ -245,12 +248,56 @@ const FleaMarketItemDetail: React.FC = () => {
     );
   }
   
+  // 计算 SEO 相关数据
+  const seoTitle = `${item.title} - ${t('fleaMarket.pageTitle') || 'Link²Ur 跳蚤市场'}`;
+  const seoDescription = item.description.replace(/<[^>]*>/g, '').substring(0, 160) || item.title;
+  const canonicalUrl = `https://www.link2ur.com/${language}/flea-market/${item.id}`;
+  const breadcrumbItems = [
+    { 
+      name: language === 'zh' ? '首页' : 'Home', 
+      url: `https://www.link2ur.com/${language}` 
+    },
+    { 
+      name: language === 'zh' ? '跳蚤市场' : 'Flea Market', 
+      url: `https://www.link2ur.com/${language}/flea-market` 
+    },
+    { 
+      name: item.title, 
+      url: canonicalUrl 
+    }
+  ];
+
   return (
     <div className={styles.container}>
+      {/* SEO 组件 */}
       <SEOHead
-        title={`${item.title} - ${t('fleaMarket.pageTitle')}`}
-        description={item.description.substring(0, 160)}
+        title={seoTitle}
+        description={seoDescription}
+        keywords={`${item.category || ''},跳蚤市场,二手商品,${item.location || ''}`}
+        canonicalUrl={canonicalUrl}
+        ogTitle={item.title}
+        ogDescription={seoDescription}
+        ogImage={item.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
+        ogUrl={canonicalUrl}
+        twitterTitle={item.title}
+        twitterDescription={seoDescription}
+        twitterImage={item.images?.[0] || `https://www.link2ur.com/static/og-default.jpg`}
       />
+      <FleaMarketStructuredData 
+        item={{
+          id: parseInt(item.id),
+          title: item.title,
+          description: item.description,
+          price: item.price,
+          images: item.images || [],
+          location: item.location || '',
+          category: item.category || '',
+          created_at: item.created_at
+        }}
+        language={language}
+      />
+      <HreflangManager type="flea-market" id={parseInt(item.id)} />
+      <BreadcrumbStructuredData items={breadcrumbItems} />
       
       {/* 返回按钮 */}
       <Button

@@ -47,17 +47,17 @@ const LanguageMetaManager: React.FC = () => {
       metaTag.content = content;
     };
 
-    // 根据语言设置og:locale
+    // 根据语言设置og:locale（注意英国站使用 en_GB）
     const localeMap: { [key: string]: string } = {
-      'en': 'en_US',
+      'en': 'en_GB',  // 英国英语
       'zh': 'zh_CN'
     };
-    const ogLocale = localeMap[currentLang] || 'en_US';
+    const ogLocale = localeMap[currentLang] || 'en_GB';
     updateMetaTag('og:locale', ogLocale, true);
 
     // 如果有中文locale，也添加zh_CN
     if (currentLang === 'zh') {
-      updateMetaTag('og:locale:alternate', 'en_US', true);
+      updateMetaTag('og:locale:alternate', 'en_GB', true);
     } else {
       updateMetaTag('og:locale:alternate', 'zh_CN', true);
     }

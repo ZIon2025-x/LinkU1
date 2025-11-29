@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.deps import get_db
-from app.models import Task
+from app.models import Task, FleaMarketItem, ForumPost
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -26,13 +26,11 @@ def generate_sitemap(db: Session = Depends(get_db)):
         # 获取当前UTC时间
         now_utc = get_utc_time()
         
-        # 获取所有开放且未过期的任务（包括灵活模式任务，deadline 为 NULL）
+        # 获取所有开放的任务（只依赖状态，不依赖 deadline）
+        # 注意：deadline 判断由业务逻辑处理，这里只关注状态
+        # 如果任务状态是 open 但 deadline 已过期，业务层应该负责关闭，而不是在 sitemap 层过滤
         tasks = db.query(Task).filter(
-            Task.status == "open",
-            or_(
-                Task.deadline > now_utc,  # 有截止日期且未过期
-                Task.deadline.is_(None)  # 灵活模式（无截止日期）
-            )
+            Task.status == "open"
         ).order_by(Task.created_at.desc()).all()
         
         # 构建sitemap XML
@@ -51,6 +49,10 @@ def generate_sitemap(db: Session = Depends(get_db)):
             ("/zh", "0.9", "daily"),
             ("/en/tasks", "0.8", "daily"),
             ("/zh/tasks", "0.8", "daily"),
+            ("/en/flea-market", "0.8", "daily"),  # 新增
+            ("/zh/flea-market", "0.8", "daily"),  # 新增
+            ("/en/forum", "0.8", "daily"),        # 新增
+            ("/zh/forum", "0.8", "daily"),        # 新增
         ]
         
         for path, priority, changefreq in main_pages:
@@ -63,8 +65,6 @@ def generate_sitemap(db: Session = Depends(get_db)):
         
         # 添加所有任务详情页
         for task in tasks:
-            # 任务详情页URL格式：/en/tasks/{task_id} 或 /zh/tasks/{task_id}
-            # 为了SEO，我们同时添加英文和中文版本
             task_lastmod = task.updated_at.strftime("%Y-%m-%d") if task.updated_at else task.created_at.strftime("%Y-%m-%d")
             
             for lang in ["en", "zh"]:
@@ -75,6 +75,47 @@ def generate_sitemap(db: Session = Depends(get_db)):
                 sitemap_lines.append(f'    <priority>0.7</priority>')
                 sitemap_lines.append(f'  </url>')
         
+        # 添加跳蚤市场商品（计划中）
+        try:
+            items = db.query(FleaMarketItem).filter(
+                FleaMarketItem.status == 'active'
+            ).all()
+            
+            for item in items:
+                item_lastmod = item.updated_at.strftime("%Y-%m-%d") if item.updated_at else item.created_at.strftime("%Y-%m-%d")
+                
+                for lang in ["en", "zh"]:
+                    sitemap_lines.append(f'  <url>')
+                    sitemap_lines.append(f'    <loc>{base_url}/{lang}/flea-market/{item.id}</loc>')
+                    sitemap_lines.append(f'    <lastmod>{item_lastmod}</lastmod>')
+                    sitemap_lines.append(f'    <changefreq>weekly</changefreq>')
+                    sitemap_lines.append(f'    <priority>0.6</priority>')
+                    sitemap_lines.append(f'  </url>')
+        except Exception as e:
+            logger.warning(f"添加跳蚤市场商品到sitemap失败: {e}")
+        
+        # 添加论坛帖子（计划中）
+        try:
+            posts = db.query(ForumPost).filter(
+                and_(
+                    ForumPost.is_deleted == False,  # 使用 == False 而不是 is_(False)，因为这是 SQLAlchemy 的布尔比较
+                    ForumPost.is_visible == True
+                )
+            ).all()
+            
+            for post in posts:
+                post_lastmod = post.updated_at.strftime("%Y-%m-%d") if post.updated_at else post.created_at.strftime("%Y-%m-%d")
+                
+                for lang in ["en", "zh"]:
+                    sitemap_lines.append(f'  <url>')
+                    sitemap_lines.append(f'    <loc>{base_url}/{lang}/forum/posts/{post.id}</loc>')
+                    sitemap_lines.append(f'    <lastmod>{post_lastmod}</lastmod>')
+                    sitemap_lines.append(f'    <changefreq>weekly</changefreq>')
+                    sitemap_lines.append(f'    <priority>0.6</priority>')
+                    sitemap_lines.append(f'  </url>')
+        except Exception as e:
+            logger.warning(f"添加论坛帖子到sitemap失败: {e}")
+        
         sitemap_lines.append('</urlset>')
         sitemap_xml = '\n'.join(sitemap_lines)
         
@@ -82,11 +123,12 @@ def generate_sitemap(db: Session = Depends(get_db)):
             content=sitemap_xml,
             media_type="application/xml",
             headers={
-                "Cache-Control": "public, max-age=3600"  # 缓存1小时
+                "Cache-Control": "public, max-age=43200"  # 缓存12小时（任务数量多时生成较慢，建议延长缓存）
+                # 如果任务数量 > 10,000，建议改为 86400（24小时）或加一层 Redis 缓存
             }
         )
     except Exception as e:
-        logger.error(f"生成sitemap失败: {e}")
+        logger.error(f"生成sitemap失败: {e}", exc_info=True)
         # 返回基础sitemap，至少包含主要页面
         fallback_sitemap = f'''<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

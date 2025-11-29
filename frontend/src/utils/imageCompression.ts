@@ -104,6 +104,3 @@ export async function compressImages(
   return compressedFiles;
 }
 
-
-
-

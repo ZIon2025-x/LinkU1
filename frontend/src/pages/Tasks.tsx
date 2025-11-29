@@ -19,6 +19,7 @@ import HamburgerMenu from '../components/HamburgerMenu';
 import NotificationButton from '../components/NotificationButton';
 import NotificationPanel from '../components/NotificationPanel';
 import SEOHead from '../components/SEOHead';
+import HreflangManager from '../components/HreflangManager';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { useTaskFilters } from '../hooks/useTaskFilters';
@@ -1777,6 +1778,7 @@ const Tasks: React.FC = () => {
         ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
+      <HreflangManager type="page" path="/tasks" />
 
       {/* 顶部导航栏 - 使用汉堡菜单 */}
       <header className={styles.header}>

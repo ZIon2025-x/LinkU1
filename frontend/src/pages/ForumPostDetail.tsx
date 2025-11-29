@@ -16,6 +16,9 @@ import {
 } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
+import ForumPostStructuredData from '../components/ForumPostStructuredData';
+import HreflangManager from '../components/HreflangManager';
+import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
@@ -480,12 +483,70 @@ const ForumPostDetail: React.FC = () => {
     );
   }
 
+  // 计算 SEO 相关数据
+  const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
+  const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+  const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
+  const breadcrumbItems = post ? [
+    { 
+      name: language === 'zh' ? '首页' : 'Home', 
+      url: `https://www.link2ur.com/${lang}` 
+    },
+    { 
+      name: language === 'zh' ? '论坛' : 'Forum', 
+      url: `https://www.link2ur.com/${lang}/forum` 
+    },
+    { 
+      name: post.category?.name || (language === 'zh' ? '帖子' : 'Post'), 
+      url: post.category ? `https://www.link2ur.com/${lang}/forum/category/${post.category.id}` : `https://www.link2ur.com/${lang}/forum`
+    },
+    { 
+      name: post.title, 
+      url: canonicalUrl 
+    }
+  ] : [];
+
   return (
     <div className={styles.container}>
-      <SEOHead 
-        title={post.title}
-        description={post.content.substring(0, 200)}
-      />
+      {/* SEO 组件 */}
+      {post && (
+        <>
+          <SEOHead 
+            title={seoTitle}
+            description={seoDescription}
+            keywords={`${post.category?.name || ''},论坛,讨论,${t('forum.title') || 'Forum'}`}
+            canonicalUrl={canonicalUrl}
+            ogTitle={post.title}
+            ogDescription={seoDescription}
+            ogImage={`https://www.link2ur.com/static/og-default.jpg`}
+            ogUrl={canonicalUrl}
+            twitterTitle={post.title}
+            twitterDescription={seoDescription}
+            twitterImage={`https://www.link2ur.com/static/og-default.jpg`}
+          />
+          <ForumPostStructuredData 
+            post={{
+              id: post.id,
+              title: post.title,
+              content: post.content,
+              author: {
+                id: post.author.id,
+                name: post.author.name
+              },
+              created_at: post.created_at,
+              updated_at: post.updated_at,
+              view_count: post.view_count,
+              like_count: post.like_count,
+              category: post.category?.name
+            }}
+            language={lang}
+          />
+          <HreflangManager type="forum-post" id={post.id} />
+          {breadcrumbItems.length > 0 && (
+            <BreadcrumbStructuredData items={breadcrumbItems} />
+          )}
+        </>
+      )}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
           <div className={styles.logo} onClick={() => navigate(`/${lang}/forum`)} style={{ cursor: 'pointer' }}>
