@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message, Modal } from 'antd';
 import { compressImage } from '../utils/imageCompression';
+import styles from './AdminDashboard.module.css';
 import api, { 
   getDashboardStats, 
   getUsersForAdmin, 
@@ -57,7 +58,10 @@ import api, {
   getForumReports,
   processForumReport,
   getFleaMarketReports,
-  processFleaMarketReport
+  processFleaMarketReport,
+  getFleaMarketItemsAdmin,
+  updateFleaMarketItemAdmin,
+  deleteFleaMarketItemAdmin
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -319,6 +323,20 @@ const AdminDashboard: React.FC = () => {
   const [fleaMarketReportsTotal, setFleaMarketReportsTotal] = useState(0);
   const [fleaMarketReportsLoading, setFleaMarketReportsLoading] = useState(false);
   const [fleaMarketReportsStatusFilter, setFleaMarketReportsStatusFilter] = useState<'pending' | 'reviewing' | 'resolved' | 'rejected' | undefined>(undefined);
+  
+  // 商品管理状态
+  const [fleaMarketItems, setFleaMarketItems] = useState<any[]>([]);
+  const [fleaMarketItemsPage, setFleaMarketItemsPage] = useState(1);
+  const [fleaMarketItemsTotal, setFleaMarketItemsTotal] = useState(0);
+  const [fleaMarketItemsLoading, setFleaMarketItemsLoading] = useState(false);
+  const [fleaMarketItemsFilter, setFleaMarketItemsFilter] = useState<{
+    category?: string;
+    keyword?: string;
+    status?: string;
+    seller_id?: string;
+  }>({});
+  const [showFleaMarketItemModal, setShowFleaMarketItemModal] = useState(false);
+  const [fleaMarketItemForm, setFleaMarketItemForm] = useState<any>({});
   const [showReportProcessModal, setShowReportProcessModal] = useState(false);
   const [currentReport, setCurrentReport] = useState<any>(null);
   const [reportProcessForm, setReportProcessForm] = useState({
@@ -690,118 +708,68 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const renderDashboard = () => (
-    <div style={{ marginTop: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>数据概览</h2>
+  // 使用useMemo优化统计数据渲染
+  const statsCards = useMemo(() => {
+    if (!stats) return null;
+    return (
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>总用户数</h3>
+          <p className={styles.statValue}>{stats.total_users}</p>
+        </div>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>总任务数</h3>
+          <p className={styles.statValue}>{stats.total_tasks}</p>
+        </div>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>客服数量</h3>
+          <p className={styles.statValue}>{stats.total_customer_service}</p>
+        </div>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>活跃会话</h3>
+          <p className={styles.statValue}>{stats.active_sessions}</p>
+        </div>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>总收入</h3>
+          <p className={styles.statValue}>£{stats.total_revenue.toFixed(2)}</p>
+        </div>
+        <div className={styles.statCard}>
+          <h3 className={styles.statLabel}>平均评分</h3>
+          <p className={styles.statValue}>{stats.avg_rating.toFixed(1)}</p>
+        </div>
+      </div>
+    );
+  }, [stats]);
+
+  const renderDashboard = useCallback(() => (
+    <div className={styles.dashboardSection}>
+      <div className={styles.dashboardHeader}>
+        <h2 className={styles.dashboardTitle}>数据概览</h2>
         <button
           onClick={handleCleanupOldTasks}
           disabled={cleanupLoading}
+          className={`${styles.btn} ${styles.btnDanger}`}
           style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: cleanupLoading ? '#ccc' : '#dc3545',
-            color: 'white',
-            cursor: cleanupLoading ? 'not-allowed' : 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            opacity: cleanupLoading ? 0.6 : 1,
+            cursor: cleanupLoading ? 'not-allowed' : 'pointer'
           }}
         >
           {cleanupLoading ? (
             <>
-              <span style={{
-                display: 'inline-block',
-                width: '14px',
-                height: '14px',
-                border: '2px solid #fff',
-                borderTop: '2px solid transparent',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }}></span>
+              <span className={styles.spinner} style={{ width: '14px', height: '14px', borderWidth: '2px' }}></span>
               清理中...
             </>
           ) : (
-            <>
-              🗑️ 一键清理已完成和过期任务文件
-            </>
+            <>🗑️ 一键清理已完成和过期任务文件</>
           )}
         </button>
       </div>
-      {stats && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          marginTop: '20px'
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>总用户数</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{stats.total_users}</p>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>总任务数</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{stats.total_tasks}</p>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>客服数量</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{stats.total_customer_service}</p>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>活跃会话</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{stats.active_sessions}</p>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>总收入</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>£{stats.total_revenue.toFixed(2)}</p>
-          </div>
-          <div style={{
-            background: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            textAlign: 'center'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>平均评分</h3>
-            <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>{stats.avg_rating.toFixed(1)}</p>
-          </div>
-        </div>
-      )}
+      {statsCards}
     </div>
-  );
+  ), [stats, cleanupLoading, handleCleanupOldTasks]);
 
   const renderUsers = () => (
     <div>
@@ -1089,84 +1057,50 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderPersonnelManagement = () => (
+  const renderPersonnelManagement = useCallback(() => (
     <div>
       <h2>人员管理</h2>
       
       {/* 管理员管理 */}
-      <div style={{
-        background: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{ color: '#dc3545', marginBottom: '15px' }}>管理员管理</h3>
+      <div className={styles.card}>
+        <h3 className={styles.cardTitle}>管理员管理</h3>
         
         {/* 创建新管理员 */}
         <div style={{ marginBottom: '20px' }}>
-          <h4>创建新管理员</h4>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <h4 className={styles.cardSubtitle}>创建新管理员</h4>
+          <div className={styles.formGroup}>
             <input
               type="text"
               placeholder="管理员姓名"
               value={newAdminUser.name}
               onChange={(e) => setNewAdminUser({...newAdminUser, name: e.target.value})}
-              style={{
-                flex: 1,
-                minWidth: '120px',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              className={styles.formInput}
             />
             <input
               type="text"
               placeholder="登录用户名"
               value={newAdminUser.username}
               onChange={(e) => setNewAdminUser({...newAdminUser, username: e.target.value})}
-              style={{
-                flex: 1,
-                minWidth: '120px',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              className={styles.formInput}
             />
             <input
               type="email"
               placeholder="邮箱"
               value={newAdminUser.email}
               onChange={(e) => setNewAdminUser({...newAdminUser, email: e.target.value})}
-              style={{
-                flex: 1,
-                minWidth: '180px',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              className={styles.formInputEmail}
             />
             <input
               type="password"
               placeholder="密码"
               value={newAdminUser.password}
               onChange={(e) => setNewAdminUser({...newAdminUser, password: e.target.value})}
-              style={{
-                flex: 1,
-                minWidth: '120px',
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              className={styles.formInput}
             />
             <select
               value={newAdminUser.is_super_admin}
               onChange={(e) => setNewAdminUser({...newAdminUser, is_super_admin: parseInt(e.target.value)})}
-              style={{
-                padding: '8px',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
+              className={styles.formSelect}
             >
               <option value={0}>普通管理员</option>
               <option value={1}>超级管理员</option>
@@ -1174,15 +1108,7 @@ const AdminDashboard: React.FC = () => {
             <button
               onClick={handleCreateAdminUser}
               disabled={loading}
-              style={{
-                padding: '8px 16px',
-                border: 'none',
-                background: loading ? '#ccc' : '#dc3545',
-                color: 'white',
-                borderRadius: '4px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1
-              }}
+              className={`${styles.formButton} ${styles.formButtonDanger}`}
             >
               {loading ? '创建中...' : '创建管理员'}
             </button>
@@ -1464,9 +1390,9 @@ const AdminDashboard: React.FC = () => {
       </div>
       </div>
     </div>
-  );
+  ), [newAdminUser, newCustomerService, adminUsers, customerServices, loading, handleCreateAdminUser, handleCreateCustomerService, handleDeleteAdminUser, handleDeleteCustomerService, openSendNotificationModal]);
 
-  const renderTaskExperts = () => (
+  const renderTaskExperts = useCallback(() => (
     <div>
       <h2>任务达人管理</h2>
       
@@ -3706,53 +3632,34 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates]);
 
-  const renderNotifications = () => (
+  const renderNotifications = useCallback(() => (
     <div>
       <h2>发送通知</h2>
-      <div style={{
-        background: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        marginBottom: '20px'
-      }}>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>通知标题：</label>
+      <div className={styles.card}>
+        <div className={styles.modalFormGroup}>
+          <label className={styles.formLabel}>通知标题：</label>
           <input
             type="text"
             placeholder="请输入通知标题"
             value={notificationForm.title}
             onChange={(e) => setNotificationForm({...notificationForm, title: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              marginTop: '5px'
-            }}
+            className={styles.formInputFull}
           />
         </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>通知内容：</label>
+        <div className={styles.modalFormGroup}>
+          <label className={styles.formLabel}>通知内容：</label>
           <textarea
             placeholder="请输入通知内容"
             value={notificationForm.content}
             onChange={(e) => setNotificationForm({...notificationForm, content: e.target.value})}
             rows={4}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              marginTop: '5px',
-              resize: 'vertical'
-            }}
+            className={styles.formTextarea}
           />
         </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>目标用户ID（留空发送给所有用户）：</label>
+        <div className={styles.modalFormGroup}>
+          <label className={styles.formLabel}>目标用户ID（留空发送给所有用户）：</label>
           <input
             type="text"
             placeholder="用逗号分隔多个用户ID，如：1,2,3"
@@ -3760,67 +3667,42 @@ const AdminDashboard: React.FC = () => {
               const ids = e.target.value.split(',').map(id => id.trim()).filter(id => id.length > 0);
               setNotificationForm({...notificationForm, user_ids: ids});
             }}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              marginTop: '5px'
-            }}
+            className={styles.formInputFull}
           />
-          <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+          <small className={styles.formHint}>
             提示：留空用户ID将发送给所有用户，填写用户ID将只发送给指定用户
           </small>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className={styles.formActions}>
           <button
             onClick={handleSendNotification}
             disabled={loading || !notificationForm.title || !notificationForm.content}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              background: loading || !notificationForm.title || !notificationForm.content ? '#ccc' : '#007bff',
-              color: 'white',
-              borderRadius: '4px',
-              cursor: loading || !notificationForm.title || !notificationForm.content ? 'not-allowed' : 'pointer',
-              opacity: loading || !notificationForm.title || !notificationForm.content ? 0.6 : 1
-            }}
+            className={`${styles.formButton} ${styles.formButtonPrimary}`}
+            style={{ opacity: loading || !notificationForm.title || !notificationForm.content ? 0.6 : 1 }}
           >
             {loading ? '发送中...' : '发送通知'}
           </button>
           <button
             onClick={() => setNotificationForm({ title: '', content: '', user_ids: [] })}
-            style={{
-              padding: '10px 20px',
-              border: '1px solid #ddd',
-              background: 'white',
-              color: '#666',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
+            className={styles.formButtonClear}
           >
             清空表单
           </button>
         </div>
       </div>
       
-      <div style={{
-        background: '#f8f9fa',
-        padding: '15px',
-        borderRadius: '8px',
-        border: '1px solid #e9ecef'
-      }}>
-        <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>通知发送说明：</h4>
-        <ul style={{ margin: 0, paddingLeft: '20px', color: '#666' }}>
-          <li>通知标题和内容为必填项</li>
-          <li>用户ID留空时，通知将发送给所有用户</li>
-          <li>填写用户ID时，通知只发送给指定用户</li>
-          <li>多个用户ID用逗号分隔，如：1,2,3</li>
-          <li>发送后用户将在通知中心收到此消息</li>
+      <div className={styles.infoBox}>
+        <h4 className={styles.infoBoxTitle}>通知发送说明：</h4>
+        <ul className={styles.infoBoxList}>
+          <li className={styles.infoBoxItem}>通知标题和内容为必填项</li>
+          <li className={styles.infoBoxItem}>用户ID留空时，通知将发送给所有用户</li>
+          <li className={styles.infoBoxItem}>填写用户ID时，通知只发送给指定用户</li>
+          <li className={styles.infoBoxItem}>多个用户ID用逗号分隔，如：1,2,3</li>
+          <li className={styles.infoBoxItem}>发送后用户将在通知中心收到此消息</li>
         </ul>
       </div>
     </div>
-  );
+  ), [notificationForm, loading, handleSendNotification]);
 
   // 邀请码管理相关函数
   const handleCreateInvitationCode = async () => {
@@ -3977,7 +3859,7 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const renderInvitationCodes = () => (
+  const renderInvitationCodes = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>邀请码管理</h2>
@@ -4444,7 +4326,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [invitationCodes, invitationCodesPage, invitationCodesTotal, invitationCodesStatusFilter, showInvitationCodeModal, invitationCodeForm, setInvitationCodeForm, setShowInvitationCodeModal, setInvitationCodesStatusFilter, setInvitationCodesPage, loadDashboardData, handleCreateInvitationCode, handleUpdateInvitationCode, handleDeleteInvitationCode, getInvitationCodeDetail]);
 
   // 论坛板块管理相关函数
   const handleCreateForumCategory = async () => {
@@ -4556,10 +4438,32 @@ const AdminDashboard: React.FC = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, forumPostsPage, forumPostFilter.category_id, forumPostFilter.is_deleted, forumPostFilter.is_visible]);
+  }, [activeTab, forumPostsPage, forumPostFilter.category_id, forumPostFilter.is_deleted, forumPostFilter.is_visible, forumCategories.length]);
 
-  // 加载论坛帖子
-  const loadForumPosts = async () => {
+  // 退出登录处理函数 - 使用useCallback优化
+  const handleLogout = useCallback(async () => {
+    try {
+      await adminLogout();
+      message.success('退出登录成功');
+      navigate('/admin/login');
+    } catch (error: any) {
+      console.error('退出登录失败:', error);
+      document.cookie.split(";").forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      });
+      navigate('/admin/login');
+    }
+  }, [navigate]);
+
+  // 标签页切换处理函数 - 使用useCallback优化
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+  }, []);
+
+  // 加载论坛帖子 - 使用useCallback优化
+  const loadForumPosts = useCallback(async () => {
     setForumPostsLoading(true);
     try {
       const params: any = {
@@ -4587,7 +4491,7 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setForumPostsLoading(false);
     }
-  };
+  }, [forumPostsPage, forumPostFilter]);
 
   // 创建/更新论坛帖子
   const handleCreateForumPost = async () => {
@@ -4651,7 +4555,7 @@ const AdminDashboard: React.FC = () => {
     setShowForumPostModal(true);
   };
 
-  const renderForumCategories = () => (
+  const renderForumCategories = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>论坛板块管理</h2>
@@ -4960,9 +4864,9 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [forumCategories, showForumCategoryModal, forumCategoryForm, handleCreateForumCategory, handleUpdateForumCategory, handleDeleteForumCategory, handleEditForumCategory, setForumCategoryForm, setShowForumCategoryModal]);
 
-  const renderForumPosts = () => (
+  const renderForumPosts = useCallback(() => (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>论坛内容管理</h2>
@@ -5104,20 +5008,20 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td style={{ padding: '12px' }}>{post.category?.name || '-'}</td>
                   <td style={{ padding: '12px' }}>{post.author?.name || '-'}</td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {post.is_deleted && <span style={{ padding: '2px 6px', background: '#f8d7da', color: '#721c24', borderRadius: '4px', fontSize: '12px' }}>已删除</span>}
-                      {!post.is_visible && <span style={{ padding: '2px 6px', background: '#fff3cd', color: '#856404', borderRadius: '4px', fontSize: '12px' }}>已隐藏</span>}
-                      {post.is_pinned && <span style={{ padding: '2px 6px', background: '#d1ecf1', color: '#0c5460', borderRadius: '4px', fontSize: '12px' }}>置顶</span>}
-                      {post.is_featured && <span style={{ padding: '2px 6px', background: '#d4edda', color: '#155724', borderRadius: '4px', fontSize: '12px' }}>加精</span>}
-                      {post.is_locked && <span style={{ padding: '2px 6px', background: '#f8d7da', color: '#721c24', borderRadius: '4px', fontSize: '12px' }}>锁定</span>}
+                  <td className={styles.tableBody}>
+                    <div className={styles.statusTags}>
+                      {post.is_deleted && <span className={`${styles.statusTag} ${styles.statusTagDeleted}`}>已删除</span>}
+                      {!post.is_visible && <span className={`${styles.statusTag} ${styles.statusTagHidden}`}>已隐藏</span>}
+                      {post.is_pinned && <span className={`${styles.statusTag} ${styles.statusTagPinned}`}>置顶</span>}
+                      {post.is_featured && <span className={`${styles.statusTag} ${styles.statusTagFeatured}`}>加精</span>}
+                      {post.is_locked && <span className={`${styles.statusTag} ${styles.statusTagLocked}`}>锁定</span>}
                     </div>
                   </td>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <td className={styles.tableBody}>
+                    <div className={styles.actionButtonGroupSmall}>
                       <button
                         onClick={() => handleEditForumPost(post)}
-                        style={{ padding: '4px 8px', border: '1px solid #007bff', background: 'white', color: '#007bff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        className={`${styles.actionButtonSmall} ${styles.actionButtonSmallPrimary}`}
                       >
                         编辑
                       </button>
@@ -5132,7 +5036,7 @@ const AdminDashboard: React.FC = () => {
                               message.error(error?.response?.data?.detail || '操作失败');
                             }
                           }}
-                          style={{ padding: '4px 8px', border: '1px solid #28a745', background: 'white', color: '#28a745', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          className={`${styles.actionButtonSmall} ${styles.actionButtonSmallSuccess}`}
                         >
                           置顶
                         </button>
@@ -5148,7 +5052,7 @@ const AdminDashboard: React.FC = () => {
                               message.error(error?.response?.data?.detail || '操作失败');
                             }
                           }}
-                          style={{ padding: '4px 8px', border: '1px solid #ffc107', background: 'white', color: '#ffc107', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          className={`${styles.actionButtonSmall} ${styles.actionButtonSmallWarning}`}
                         >
                           取消置顶
                         </button>
@@ -5164,7 +5068,7 @@ const AdminDashboard: React.FC = () => {
                               message.error(error?.response?.data?.detail || '操作失败');
                             }
                           }}
-                          style={{ padding: '4px 8px', border: '1px solid #ffc107', background: 'white', color: '#ffc107', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          className={`${styles.actionButtonSmall} ${styles.actionButtonSmallWarning}`}
                         >
                           加精
                         </button>
@@ -5180,7 +5084,7 @@ const AdminDashboard: React.FC = () => {
                               message.error(error?.response?.data?.detail || '操作失败');
                             }
                           }}
-                          style={{ padding: '4px 8px', border: '1px solid #6c757d', background: 'white', color: '#6c757d', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          className={`${styles.actionButtonSmall} ${styles.actionButtonSmallSecondary}`}
                         >
                           取消加精
                         </button>
@@ -5196,7 +5100,7 @@ const AdminDashboard: React.FC = () => {
                               message.error(error?.response?.data?.detail || '操作失败');
                             }
                           }}
-                          style={{ padding: '4px 8px', border: '1px solid #dc3545', background: 'white', color: '#dc3545', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          className={`${styles.actionButtonSmall} ${styles.actionButtonSmallDanger}`}
                         >
                           锁定
                         </button>
@@ -5407,10 +5311,10 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  );
+  ), [forumPostFilter, forumCategories, forumPosts, forumPostsLoading, forumPostsPage, forumPostsTotal, loadForumPosts, handleEditForumPost, pinForumPost, unpinForumPost, featureForumPost, unfeatureForumPost, lockForumPost, unlockForumPost, restoreForumPost, unhideForumPost, deleteForumPost, setForumPostFilter, setForumPostsPage, setShowForumPostModal, setForumPostForm]);
 
-  // 加载论坛举报
-  const loadForumReports = async () => {
+  // 加载论坛举报 - 使用useCallback优化
+  const loadForumReports = useCallback(async () => {
     setForumReportsLoading(true);
     try {
       const response = await getForumReports({
@@ -5426,10 +5330,10 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setForumReportsLoading(false);
     }
-  };
+  }, [forumReportsStatusFilter, forumReportsPage]);
 
-  // 加载跳蚤市场举报
-  const loadFleaMarketReports = async () => {
+  // 加载跳蚤市场举报 - 使用useCallback优化
+  const loadFleaMarketReports = useCallback(async () => {
     setFleaMarketReportsLoading(true);
     try {
       const response = await getFleaMarketReports({
@@ -5445,7 +5349,7 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setFleaMarketReportsLoading(false);
     }
-  };
+  }, [fleaMarketReportsStatusFilter, fleaMarketReportsPage]);
 
   // 处理举报
   const [targetInfo, setTargetInfo] = useState<any>(null);
@@ -5590,6 +5494,93 @@ const AdminDashboard: React.FC = () => {
 
   const [reportSubTab, setReportSubTab] = useState<'forum' | 'flea_market'>('forum');
 
+  // 加载商品列表 - 使用useCallback优化
+  const loadFleaMarketItems = useCallback(async () => {
+    setFleaMarketItemsLoading(true);
+    try {
+      const params: any = {
+        page: fleaMarketItemsPage,
+        page_size: 20
+      };
+      if (fleaMarketItemsFilter.category) {
+        params.category = fleaMarketItemsFilter.category;
+      }
+      if (fleaMarketItemsFilter.keyword) {
+        params.keyword = fleaMarketItemsFilter.keyword;
+      }
+      if (fleaMarketItemsFilter.status) {
+        params.status_filter = fleaMarketItemsFilter.status;
+      }
+      if (fleaMarketItemsFilter.seller_id) {
+        params.seller_id = fleaMarketItemsFilter.seller_id;
+      }
+      const response = await getFleaMarketItemsAdmin(params);
+      setFleaMarketItems(response.items || []);
+      setFleaMarketItemsTotal(response.total || 0);
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '加载商品列表失败');
+    } finally {
+      setFleaMarketItemsLoading(false);
+    }
+  }, [fleaMarketItemsPage, fleaMarketItemsFilter]);
+
+  // 处理商品编辑
+  const handleEditFleaMarketItem = (item: any) => {
+    setFleaMarketItemForm({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      price: item.price,
+      images: item.images || [],
+      location: item.location,
+      category: item.category,
+      status: item.status
+    });
+    setShowFleaMarketItemModal(true);
+  };
+
+  // 处理商品保存
+  const handleSaveFleaMarketItem = async () => {
+    try {
+      if (!fleaMarketItemForm.id) {
+        message.error('商品ID不存在');
+        return;
+      }
+      await updateFleaMarketItemAdmin(fleaMarketItemForm.id, {
+        title: fleaMarketItemForm.title,
+        description: fleaMarketItemForm.description,
+        price: fleaMarketItemForm.price,
+        images: fleaMarketItemForm.images,
+        location: fleaMarketItemForm.location,
+        category: fleaMarketItemForm.category,
+        status: fleaMarketItemForm.status
+      });
+      message.success('商品更新成功！');
+      setShowFleaMarketItemModal(false);
+      setFleaMarketItemForm({});
+      loadFleaMarketItems();
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '更新失败');
+    }
+  };
+
+  // 处理商品删除
+  const handleDeleteFleaMarketItem = (itemId: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这个商品吗？',
+      onOk: async () => {
+        try {
+          await deleteFleaMarketItemAdmin(itemId);
+          message.success('商品删除成功！');
+          loadFleaMarketItems();
+        } catch (error: any) {
+          message.error(error.response?.data?.detail || '删除失败');
+        }
+      }
+    });
+  };
+
   // 当切换到举报管理标签页时，自动加载数据
   useEffect(() => {
     if (activeTab === 'reports') {
@@ -5602,7 +5593,7 @@ const AdminDashboard: React.FC = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, reportSubTab, forumReportsPage, forumReportsStatusFilter, fleaMarketReportsPage, fleaMarketReportsStatusFilter]);
+  }, [activeTab, reportSubTab, forumReportsPage, forumReportsStatusFilter, fleaMarketReportsPage, fleaMarketReportsStatusFilter, loadForumReports, loadFleaMarketReports]);
 
   const renderReports = () => (
     <div>
@@ -6283,16 +6274,277 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 渲染商品列表
+  const renderFleaMarketItems = () => {
+    const statusColors: { [key: string]: string } = {
+      active: '#52c41a',
+      sold: '#1890ff',
+      deleted: '#ff4d4f',
+      pending: '#faad14'
+    };
+
+    return (
+      <div style={{ marginTop: '20px' }}>
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="搜索关键词（标题/描述）"
+            value={fleaMarketItemsFilter.keyword || ''}
+            onChange={(e) => setFleaMarketItemsFilter({ ...fleaMarketItemsFilter, keyword: e.target.value })}
+            style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px', width: '200px' }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                setFleaMarketItemsPage(1);
+                loadFleaMarketItems();
+              }
+            }}
+          />
+          <select
+            value={fleaMarketItemsFilter.status || ''}
+            onChange={(e) => setFleaMarketItemsFilter({ ...fleaMarketItemsFilter, status: e.target.value || undefined })}
+            style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+          >
+            <option value="">全部状态</option>
+            <option value="active">在售</option>
+            <option value="sold">已售出</option>
+            <option value="deleted">已删除</option>
+            <option value="pending">待审核</option>
+          </select>
+          <select
+            value={fleaMarketItemsFilter.category || ''}
+            onChange={(e) => setFleaMarketItemsFilter({ ...fleaMarketItemsFilter, category: e.target.value || undefined })}
+            style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+          >
+            <option value="">全部分类</option>
+            <option value="Electronics">电子产品</option>
+            <option value="Furniture">家具</option>
+            <option value="Clothing">服装</option>
+            <option value="Books">书籍</option>
+            <option value="Sports">运动用品</option>
+            <option value="Other">其他</option>
+          </select>
+          <button
+            onClick={() => {
+              setFleaMarketItemsPage(1);
+              loadFleaMarketItems();
+            }}
+            style={{ padding: '8px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+          >
+            搜索
+          </button>
+        </div>
+
+        {fleaMarketItemsLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>加载中...</div>
+        ) : (
+          <>
+            <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8f9fa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>商品ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>标题</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>价格</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>分类</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>卖家</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>创建时间</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fleaMarketItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                        暂无商品
+                      </td>
+                    </tr>
+                  ) : (
+                    fleaMarketItems.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '12px' }}>{item.id}</td>
+                        <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.title}
+                        </td>
+                        <td style={{ padding: '12px' }}>£{item.price}</td>
+                        <td style={{ padding: '12px' }}>{item.category}</td>
+                        <td style={{ padding: '12px' }}>{item.seller_name}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            background: statusColors[item.status] || '#999',
+                            color: 'white',
+                            fontSize: '12px'
+                          }}>
+                            {item.status === 'active' ? '在售' : item.status === 'sold' ? '已售出' : item.status === 'deleted' ? '已删除' : item.status === 'pending' ? '待审核' : item.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>
+                          {dayjs(item.created_at).format('YYYY-MM-DD HH:mm')}
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <button
+                            onClick={() => handleEditFleaMarketItem(item)}
+                            style={{ marginRight: '8px', padding: '4px 8px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            编辑
+                          </button>
+                          {item.status !== 'deleted' && (
+                            <button
+                              onClick={() => handleDeleteFleaMarketItem(item.id)}
+                              style={{ padding: '4px 8px', background: '#ff4d4f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                            >
+                              删除
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#666' }}>
+                共 {fleaMarketItemsTotal} 条记录
+              </span>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    if (fleaMarketItemsPage > 1) {
+                      setFleaMarketItemsPage(fleaMarketItemsPage - 1);
+                    }
+                  }}
+                  disabled={fleaMarketItemsPage === 1}
+                  style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '4px', cursor: fleaMarketItemsPage === 1 ? 'not-allowed' : 'pointer', opacity: fleaMarketItemsPage === 1 ? 0.5 : 1 }}
+                >
+                  上一页
+                </button>
+                <span style={{ padding: '8px', color: '#666' }}>
+                  第 {fleaMarketItemsPage} 页，共 {Math.ceil(fleaMarketItemsTotal / 20)} 页
+                </span>
+                <button
+                  onClick={() => {
+                    if (fleaMarketItemsPage < Math.ceil(fleaMarketItemsTotal / 20)) {
+                      setFleaMarketItemsPage(fleaMarketItemsPage + 1);
+                    }
+                  }}
+                  disabled={fleaMarketItemsPage >= Math.ceil(fleaMarketItemsTotal / 20)}
+                  style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '4px', cursor: fleaMarketItemsPage >= Math.ceil(fleaMarketItemsTotal / 20) ? 'not-allowed' : 'pointer', opacity: fleaMarketItemsPage >= Math.ceil(fleaMarketItemsTotal / 20) ? 0.5 : 1 }}
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 商品编辑模态框 */}
+        {showFleaMarketItemModal && (
+          <Modal
+            title="编辑商品"
+            open={showFleaMarketItemModal}
+            onOk={handleSaveFleaMarketItem}
+            onCancel={() => {
+              setShowFleaMarketItemModal(false);
+              setFleaMarketItemForm({});
+            }}
+            width={800}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>标题：</label>
+                <input
+                  type="text"
+                  value={fleaMarketItemForm.title || ''}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, title: e.target.value })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>描述：</label>
+                <textarea
+                  value={fleaMarketItemForm.description || ''}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, description: e.target.value })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', minHeight: '100px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>价格：</label>
+                <input
+                  type="number"
+                  value={fleaMarketItemForm.price || ''}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, price: parseFloat(e.target.value) })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>分类：</label>
+                <select
+                  value={fleaMarketItemForm.category || ''}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, category: e.target.value })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                >
+                  <option value="Electronics">电子产品</option>
+                  <option value="Furniture">家具</option>
+                  <option value="Clothing">服装</option>
+                  <option value="Books">书籍</option>
+                  <option value="Sports">运动用品</option>
+                  <option value="Other">其他</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>位置：</label>
+                <input
+                  type="text"
+                  value={fleaMarketItemForm.location || ''}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, location: e.target.value })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>状态：</label>
+                <select
+                  value={fleaMarketItemForm.status || 'active'}
+                  onChange={(e) => setFleaMarketItemForm({ ...fleaMarketItemForm, status: e.target.value })}
+                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                >
+                  <option value="active">在售</option>
+                  <option value="sold">已售出</option>
+                  <option value="deleted">已删除</option>
+                  <option value="pending">待审核</option>
+                </select>
+              </div>
+            </div>
+          </Modal>
+        )}
+      </div>
+    );
+  };
+
+  // 标签页按钮样式函数 - 使用CSS类
+  const getTabButtonClassName = (isActive: boolean, specialColor?: string) => {
+    const baseClass = styles.tabButton;
+    if (specialColor) {
+      return `${baseClass} ${styles.tabButtonSpecial}`;
+    }
+    return isActive 
+      ? `${baseClass} ${styles.tabButtonActive}` 
+      : `${baseClass} ${styles.tabButtonInactive}`;
+  };
+
+  // 使用useMemo缓存样式对象（如果必须使用内联样式）
+  const specialButtonStyles = useMemo(() => ({
+    green: { background: '#28a745' },
+    cyan: { background: '#17a2b8' },
+    purple: { background: '#6f42c1' },
+    orange: { background: '#ff6b35' }
+  }), []);
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        paddingBottom: '10px',
-        borderBottom: '1px solid #eee'
-      }}>
+    <div className={styles.container}>
+      <div className={styles.header}>
         <h1 style={{ 
           position: 'absolute',
           top: '-100px',
@@ -6309,7 +6561,8 @@ const AdminDashboard: React.FC = () => {
           color: 'transparent',
           background: 'transparent'
         }}>管理后台</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h2 className={styles.headerTitle}>管理后台</h2>
+        <div className={styles.headerActions}>
           {/* 提醒按钮 */}
           <NotificationBell 
             ref={notificationBellRef}
@@ -6318,314 +6571,153 @@ const AdminDashboard: React.FC = () => {
           />
           <button 
             onClick={() => navigate('/')}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: '#007bff',
-              color: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
+            className={`${styles.btn} ${styles.btnPrimary}`}
           >
             返回首页
           </button>
           <button 
-            onClick={async () => {
-              try {
-                await adminLogout();
-                message.success('退出登录成功');
-                // 跳转到登录页
-                navigate('/admin/login');
-              } catch (error: any) {
-                console.error('退出登录失败:', error);
-                // 即使API失败，也清除cookie并跳转
-                document.cookie.split(";").forEach((c) => {
-                  const eqPos = c.indexOf("=");
-                  const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-                  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-                });
-                navigate('/admin/login');
-              }
-            }}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              background: '#dc3545',
-              color: 'white',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
+            onClick={handleLogout}
+            className={`${styles.btn} ${styles.btnDanger}`}
           >
             退出登录
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'dashboard' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'dashboard' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          数据概览
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'users' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'users' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('users')}
-        >
-          用户管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'personnel' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'personnel' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('personnel')}
-        >
-          人员管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: '#28a745',
-            color: 'white',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => setShowTaskManagement(true)}
-        >
-          任务管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: '#17a2b8',
-            color: 'white',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => setShowCustomerServiceManagement(true)}
-        >
-          客服管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: '#6f42c1',
-            color: 'white',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => setShowSystemSettings(true)}
-        >
-          系统设置
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: '#ff6b35',
-            color: 'white',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => setShowJobPositionManagement(true)}
-        >
-          岗位管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'task-experts' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'task-experts' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500',
-            marginRight: '10px'
-          }}
-          onClick={() => {
-            setActiveTab('task-experts');
-            setTaskExpertSubTab('list'); // 默认显示列表
-          }}
-        >
-          任务达人
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'notifications' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'notifications' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('notifications')}
-        >
-          发送通知
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'invitation-codes' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'invitation-codes' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('invitation-codes')}
-        >
-          邀请码管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'forum-categories' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'forum-categories' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('forum-categories')}
-        >
-          论坛板块管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'forum-posts' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'forum-posts' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('forum-posts')}
-        >
-          论坛内容管理
-        </button>
-        <button 
-          style={{
-            padding: '10px 20px',
-            border: 'none',
-            background: activeTab === 'reports' ? '#007bff' : '#f0f0f0',
-            color: activeTab === 'reports' ? 'white' : 'black',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-          onClick={() => setActiveTab('reports')}
-        >
-          举报管理
-        </button>
+      {/* 标签页导航 - 分组显示 */}
+      <div style={{ marginBottom: '20px' }}>
+        {/* 核心管理 */}
+        <div className={styles.tabGroup}>
+          <div className={styles.tabGroupTitle}>核心管理</div>
+          <div className={styles.tabButtons}>
+            <button 
+              className={getTabButtonClassName(activeTab === 'dashboard')}
+              onClick={() => handleTabChange('dashboard')}
+            >
+              📊 数据概览
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'users')}
+              onClick={() => handleTabChange('users')}
+            >
+              👥 用户管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'personnel')}
+              onClick={() => handleTabChange('personnel')}
+            >
+              👨‍💼 人员管理
+            </button>
+          </div>
+        </div>
+
+        {/* 内容管理 */}
+        <div className={styles.tabGroup}>
+          <div className={styles.tabGroupTitle}>内容管理</div>
+          <div className={styles.tabButtons}>
+            <button 
+              className={getTabButtonClassName(activeTab === 'forum-categories')}
+              onClick={() => handleTabChange('forum-categories')}
+            >
+              📁 论坛板块管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'forum-posts')}
+              onClick={() => handleTabChange('forum-posts')}
+            >
+              📝 论坛内容管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'flea-market-items')}
+              onClick={() => handleTabChange('flea-market-items')}
+            >
+              🛒 商品管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'reports')}
+              onClick={() => handleTabChange('reports')}
+            >
+              🚨 举报管理
+            </button>
+          </div>
+        </div>
+
+        {/* 系统功能 */}
+        <div className={styles.tabGroup}>
+          <div className={styles.tabGroupTitle}>系统功能</div>
+          <div className={styles.tabButtons}>
+            <button 
+              className={getTabButtonClassName(false, 'green')}
+              style={specialButtonStyles.green}
+              onClick={() => setShowTaskManagement(true)}
+            >
+              ✅ 任务管理
+            </button>
+            <button 
+              className={getTabButtonClassName(false, 'cyan')}
+              style={specialButtonStyles.cyan}
+              onClick={() => setShowCustomerServiceManagement(true)}
+            >
+              💬 客服管理
+            </button>
+            <button 
+              className={getTabButtonClassName(false, 'purple')}
+              style={specialButtonStyles.purple}
+              onClick={() => setShowSystemSettings(true)}
+            >
+              ⚙️ 系统设置
+            </button>
+            <button 
+              className={getTabButtonClassName(false, 'orange')}
+              style={specialButtonStyles.orange}
+              onClick={() => setShowJobPositionManagement(true)}
+            >
+              💼 岗位管理
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'task-experts')}
+              onClick={() => {
+                handleTabChange('task-experts');
+                setTaskExpertSubTab('list');
+              }}
+            >
+              ⭐ 任务达人
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'notifications')}
+              onClick={() => handleTabChange('notifications')}
+            >
+              📢 发送通知
+            </button>
+            <button 
+              className={getTabButtonClassName(activeTab === 'invitation-codes')}
+              onClick={() => handleTabChange('invitation-codes')}
+            >
+              🎫 邀请码管理
+            </button>
+          </div>
+        </div>
       </div>
 
       <div>
         {loading && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '40px',
-            background: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            marginBottom: '20px'
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                border: '4px solid #f3f3f3',
-                borderTop: '4px solid #007bff',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }}></div>
-              <span style={{ color: '#666', fontSize: '16px' }}>加载中...</span>
+          <div className={styles.loadingContainer}>
+            <div className={styles.loadingSpinner}>
+              <div className={styles.spinner}></div>
+              <span className={styles.loadingText}>加载中...</span>
             </div>
           </div>
         )}
 
         {error && (
-          <div style={{
-            background: '#f8d7da',
-            color: '#721c24',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            border: '1px solid #f5c6cb'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '18px' }}>⚠️</span>
+          <div className={styles.errorContainer}>
+            <div className={styles.errorContent}>
+              <span className={styles.emptyIcon}>⚠️</span>
               <span>{error}</span>
             </div>
             <button
               onClick={() => setError(null)}
-              style={{
-                marginTop: '10px',
-                padding: '5px 10px',
-                border: 'none',
-                background: '#721c24',
-                color: 'white',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
+              className={styles.errorCloseBtn}
             >
               关闭
             </button>
@@ -6633,7 +6725,7 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {!loading && !error && (
-          <>
+          <div className={styles.content}>
             {activeTab === 'dashboard' && renderDashboard()}
             {activeTab === 'users' && renderUsers()}
             {activeTab === 'personnel' && renderPersonnelManagement()}
@@ -6643,7 +6735,8 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'forum-categories' && renderForumCategories()}
             {activeTab === 'forum-posts' && renderForumPosts()}
             {activeTab === 'reports' && renderReports()}
-          </>
+            {activeTab === 'flea-market-items' && renderFleaMarketItems()}
+          </div>
         )}
       </div>
 

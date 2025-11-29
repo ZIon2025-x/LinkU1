@@ -2154,3 +2154,219 @@ async def process_flea_market_report(
             "admin_comment": report.admin_comment
         }
     }
+
+
+# ==================== 商品管理API（管理员）====================
+
+@flea_market_router.get("/admin/items", response_model=dict)
+async def get_flea_market_items_admin(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    category: Optional[str] = Query(None),
+    keyword: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None),
+    seller_id: Optional[str] = Query(None),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """获取商品列表（管理员，可查看所有状态）"""
+    try:
+        # 构建查询
+        query = select(models.FleaMarketItem)
+        
+        # 状态筛选（管理员可以查看所有状态）
+        if status_filter:
+            query = query.where(models.FleaMarketItem.status == status_filter)
+        
+        # 卖家筛选
+        if seller_id:
+            query = query.where(models.FleaMarketItem.seller_id == seller_id)
+        
+        # 分类筛选
+        if category:
+            query = query.where(models.FleaMarketItem.category == category)
+        
+        # 关键词搜索（标题和描述）
+        if keyword:
+            keyword_pattern = f"%{keyword}%"
+            query = query.where(
+                or_(
+                    models.FleaMarketItem.title.ilike(keyword_pattern),
+                    models.FleaMarketItem.description.ilike(keyword_pattern),
+                )
+            )
+        
+        # 排序：按created_at DESC
+        query = query.order_by(
+            models.FleaMarketItem.created_at.desc()
+        )
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 分页
+        skip = (page - 1) * page_size
+        query = query.offset(skip).limit(page_size)
+        
+        # 执行查询
+        result = await db.execute(query)
+        items = result.scalars().all()
+        
+        # 构建响应
+        processed_items = []
+        for item in items:
+            images = []
+            if item.images:
+                try:
+                    images = json.loads(item.images) if isinstance(item.images, str) else item.images
+                except:
+                    images = []
+            
+            # 获取卖家信息
+            seller_result = await db.execute(
+                select(models.User).where(models.User.id == item.seller_id)
+            )
+            seller = seller_result.scalar_one_or_none()
+            
+            processed_items.append({
+                "id": format_flea_market_id(item.id),
+                "title": item.title,
+                "description": item.description,
+                "price": float(item.price) if item.price else 0,
+                "currency": item.currency or "GBP",
+                "images": images,
+                "location": item.location,
+                "category": item.category,
+                "status": item.status,
+                "seller_id": item.seller_id,
+                "seller_name": seller.name if seller else "未知用户",
+                "view_count": item.view_count or 0,
+                "refreshed_at": format_iso_utc(item.refreshed_at) if item.refreshed_at else None,
+                "created_at": format_iso_utc(item.created_at),
+                "updated_at": format_iso_utc(item.updated_at),
+            })
+        
+        return {
+            "items": processed_items,
+            "page": page,
+            "page_size": page_size,
+            "total": total
+        }
+    except Exception as e:
+        logger.error(f"获取商品列表失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取商品列表失败"
+        )
+
+
+@flea_market_router.put("/admin/items/{item_id}", response_model=dict)
+async def update_flea_market_item_admin(
+    item_id: str,
+    item_data: dict = Body(...),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员编辑商品"""
+    try:
+        # 解析ID
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 更新字段
+        if "title" in item_data:
+            item.title = item_data["title"]
+        if "description" in item_data:
+            item.description = item_data["description"]
+        if "price" in item_data:
+            item.price = Decimal(str(item_data["price"]))
+        if "images" in item_data:
+            item.images = json.dumps(item_data["images"]) if item_data["images"] else None
+        if "location" in item_data:
+            item.location = item_data["location"]
+        if "category" in item_data:
+            item.category = item_data["category"]
+        if "status" in item_data:
+            item.status = item_data["status"]
+        
+        await db.commit()
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
+        
+        return {
+            "success": True,
+            "message": "商品更新成功",
+            "data": {
+                "id": format_flea_market_id(item.id),
+                "title": item.title,
+                "status": item.status
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"更新商品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="更新商品失败"
+        )
+
+
+@flea_market_router.delete("/admin/items/{item_id}", response_model=dict)
+async def delete_flea_market_item_admin(
+    item_id: str,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员删除商品"""
+    try:
+        # 解析ID
+        db_id = parse_flea_market_id(item_id)
+        
+        # 查询商品
+        result = await db.execute(
+            select(models.FleaMarketItem).where(models.FleaMarketItem.id == db_id)
+        )
+        item = result.scalar_one_or_none()
+        
+        if not item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="商品不存在"
+            )
+        
+        # 删除商品（软删除）
+        item.status = "deleted"
+        await db.commit()
+        
+        # 清除缓存
+        invalidate_item_cache(item.id)
+        
+        return {
+            "success": True,
+            "message": "商品已删除"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除商品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="删除商品失败"
+        )

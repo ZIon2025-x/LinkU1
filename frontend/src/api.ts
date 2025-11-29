@@ -2652,4 +2652,41 @@ export const processFleaMarketReport = async (reportId: number, data: {
   return res.data;
 };
 
+// 跳蚤市场商品管理API（管理员）
+export const getFleaMarketItemsAdmin = async (params?: {
+  page?: number;
+  page_size?: number;
+  category?: string;
+  keyword?: string;
+  status_filter?: string;
+  seller_id?: string;
+}) => {
+  const res = await api.get('/api/flea-market/admin/items', { params });
+  return res.data;
+};
+
+export const updateFleaMarketItemAdmin = async (itemId: string, data: {
+  title?: string;
+  description?: string;
+  price?: number;
+  images?: string[];
+  location?: string;
+  category?: string;
+  status?: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.put(`/api/flea-market/admin/items/${itemId}`, data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const deleteFleaMarketItemAdmin = async (itemId: string) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/flea-market/admin/items/${itemId}`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
 export default api; 
