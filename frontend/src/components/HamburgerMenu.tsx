@@ -267,7 +267,7 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           }
 
 
-          /* 汉堡菜单按钮 */
+          /* 汉堡菜单按钮 - 渐变流动效果 */
           .hamburger-btn {
             background: none;
             border: none;
@@ -275,8 +275,8 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             display: flex;
             flex-direction: column;
             justify-content: space-around;
-            width: 30px;
-            height: 24px;
+            width: 24px;
+            height: 18px;
             padding: 0;
             z-index: 1002;
             position: relative;
@@ -284,39 +284,56 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
           }
 
           .hamburger-line {
+            position: absolute;
             width: 100%;
-            height: 3px;
-            background: #3b82f6; /* 蓝色 */
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 200% 100%;
             border-radius: 2px;
-            transition: all 0.3s linear;
-            transform-origin: 1px;
+            transition: all 0.4s ease;
+            animation: gradient-shift 3s ease infinite;
+          }
+
+          @keyframes gradient-shift {
+            0%, 100% { 
+              background-position: 0% 50%; 
+            }
+            50% { 
+              background-position: 100% 50%; 
+            }
           }
 
           .hamburger-line:nth-child(1) {
-            transform: none;
+            top: 0;
           }
 
           .hamburger-line:nth-child(2) {
-            opacity: 1;
-            transform: none;
+            top: 50%;
+            transform: translateY(-50%);
           }
 
           .hamburger-line:nth-child(3) {
-            transform: none;
+            bottom: 0;
           }
 
-          /* 汉堡按钮保持原样，不变形 */
+          /* 激活状态 - 变成X，停止动画并变为红色渐变 */
+          .hamburger-line.open {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            animation: none;
+          }
+
           .hamburger-line.open:nth-child(1) {
-            transform: none;
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
           }
 
           .hamburger-line.open:nth-child(2) {
-            opacity: 1;
-            transform: none;
+            opacity: 0;
           }
 
           .hamburger-line.open:nth-child(3) {
-            transform: none;
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
           }
 
           /* 菜单展开时隐藏汉堡按钮 */

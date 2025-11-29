@@ -451,6 +451,8 @@ async def get_categories(
             real_post_count = post_count_result.scalar() or 0
             
             # 获取该板块的最新可见帖子（只显示对普通用户可见的帖子）
+            # 排序逻辑：优先按最后回复时间，如果没有回复（last_reply_at 为 NULL）则按创建时间
+            # func.coalesce() 确保即使帖子没有回复，也会使用 created_at 进行排序并显示在预览中
             latest_post_result = await db.execute(
                 select(models.ForumPost)
                 .where(

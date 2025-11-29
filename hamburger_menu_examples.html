@@ -438,6 +438,583 @@
             animation: none;
         }
 
+        /* 示例9: 点状圆形按钮 */
+        .hamburger-9 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger-9 span {
+            width: 8px;
+            height: 8px;
+            background: #e74c3c;
+            border-radius: 50%;
+            transition: all 0.4s ease;
+            display: block;
+        }
+
+        .hamburger-9.active span:nth-child(1) {
+            transform: translate(11px, 11px) rotate(45deg);
+            border-radius: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        .hamburger-9.active span:nth-child(2) {
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        .hamburger-9.active span:nth-child(3) {
+            transform: translate(11px, -11px) rotate(-45deg);
+            border-radius: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        /* 示例10: 加号变X */
+        .hamburger-10 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-10 span {
+            position: absolute;
+            background: #2c3e50;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-10 span:nth-child(1) {
+            width: 100%;
+            height: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-10 span:nth-child(2) {
+            width: 3px;
+            height: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .hamburger-10.active span:nth-child(1) {
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-10.active span:nth-child(2) {
+            transform: translateX(-50%) rotate(45deg);
+        }
+
+        /* 示例11: 双线样式 */
+        .hamburger-11 {
+            width: 30px;
+            height: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-11 span {
+            position: absolute;
+            height: 2px;
+            width: 100%;
+            background: #16a085;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-11 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-11 span:nth-child(2) {
+            top: 9px;
+        }
+
+        .hamburger-11 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-11 span:nth-child(4) {
+            top: 18px;
+        }
+
+        .hamburger-11.active span:nth-child(1) {
+            top: 9px;
+            transform: rotate(45deg);
+        }
+
+        .hamburger-11.active span:nth-child(2),
+        .hamburger-11.active span:nth-child(3) {
+            opacity: 0;
+        }
+
+        .hamburger-11.active span:nth-child(4) {
+            top: 9px;
+            transform: rotate(-45deg);
+        }
+
+        /* 示例12: 斜线排列 */
+        .hamburger-12 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-12 span {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #8e44ad;
+            border-radius: 3px;
+            transition: all 0.4s ease;
+        }
+
+        .hamburger-12 span:nth-child(1) {
+            top: 5px;
+            transform: rotate(15deg);
+        }
+
+        .hamburger-12 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-12 span:nth-child(3) {
+            bottom: 5px;
+            transform: rotate(-15deg);
+        }
+
+        .hamburger-12.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-12.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-12.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例13: 霓虹灯效果 */
+        .hamburger-13 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-13 span {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #00ffff;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-13 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-13 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-13 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-13.active span {
+            background: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+        }
+
+        .hamburger-13.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-13.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-13.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例14: 箭头样式 */
+        .hamburger-14 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-14 span {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #e67e22;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-14 span:nth-child(1) {
+            top: 0;
+            width: 60%;
+        }
+
+        .hamburger-14 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-14 span:nth-child(3) {
+            bottom: 0;
+            width: 60%;
+            right: 0;
+        }
+
+        .hamburger-14.active span:nth-child(1) {
+            top: 50%;
+            width: 100%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-14.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-14.active span:nth-child(3) {
+            bottom: 50%;
+            width: 100%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例15: 波浪效果 */
+        .hamburger-15 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-15 span {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #1abc9c;
+            border-radius: 10px;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .hamburger-15 span:nth-child(1) {
+            top: 0;
+            transform-origin: left;
+        }
+
+        .hamburger-15 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-15 span:nth-child(3) {
+            bottom: 0;
+            transform-origin: right;
+        }
+
+        .hamburger-15.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg) scaleX(1.2);
+        }
+
+        .hamburger-15.active span:nth-child(2) {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0);
+        }
+
+        .hamburger-15.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg) scaleX(1.2);
+        }
+
+        /* 示例16: 毛玻璃效果 */
+        .hamburger-16 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 8px 5px;
+        }
+
+        .hamburger-16 span {
+            position: absolute;
+            width: calc(100% - 10px);
+            height: 2px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            left: 5px;
+        }
+
+        .hamburger-16 span:nth-child(1) {
+            top: 5px;
+        }
+
+        .hamburger-16 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-16 span:nth-child(3) {
+            bottom: 5px;
+        }
+
+        .hamburger-16.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-16.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-16.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例17: 双圆点 */
+        .hamburger-17 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hamburger-17 span {
+            width: 6px;
+            height: 6px;
+            background: #c0392b;
+            border-radius: 50%;
+            transition: all 0.4s ease;
+            display: block;
+        }
+
+        .hamburger-17 span:nth-child(1) {
+            align-self: flex-start;
+        }
+
+        .hamburger-17 span:nth-child(2) {
+            align-self: center;
+        }
+
+        .hamburger-17 span:nth-child(3) {
+            align-self: flex-end;
+        }
+
+        .hamburger-17.active span {
+            width: 3px;
+            height: 20px;
+            border-radius: 2px;
+            align-self: center;
+        }
+
+        .hamburger-17.active span:nth-child(1) {
+            transform: rotate(45deg) translate(8px, 8px);
+        }
+
+        .hamburger-17.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-17.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(8px, -8px);
+        }
+
+        /* 示例18: 虚线样式 */
+        .hamburger-18 {
+            width: 30px;
+            height: 24px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-18 span {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                #34495e 0px,
+                #34495e 4px,
+                transparent 4px,
+                transparent 8px
+            );
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-18 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-18 span:nth-child(2) {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .hamburger-18 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-18.active span {
+            background: #e74c3c;
+        }
+
+        .hamburger-18.active span:nth-child(1) {
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .hamburger-18.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-18.active span:nth-child(3) {
+            bottom: 50%;
+            transform: translateY(50%) rotate(-45deg);
+        }
+
+        /* 示例19: 双层效果 */
+        .hamburger-19 {
+            width: 32px;
+            height: 26px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-19 span {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: #3498db;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.3);
+        }
+
+        .hamburger-19 span:nth-child(1) {
+            top: 0;
+        }
+
+        .hamburger-19 span:nth-child(2) {
+            top: 11px;
+        }
+
+        .hamburger-19 span:nth-child(3) {
+            bottom: 0;
+        }
+
+        .hamburger-19.active span {
+            box-shadow: 0 0 0 1px #e74c3c;
+            background: #e74c3c;
+        }
+
+        .hamburger-19.active span:nth-child(1) {
+            top: 11px;
+            transform: rotate(45deg);
+        }
+
+        .hamburger-19.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-19.active span:nth-child(3) {
+            bottom: 11px;
+            transform: rotate(-45deg);
+        }
+
+        /* 示例20: 旋转方块 */
+        .hamburger-20 {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hamburger-20 span {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #9b59b6;
+            border-radius: 2px;
+            transition: all 0.4s ease;
+        }
+
+        .hamburger-20 span:nth-child(1) {
+            top: 0;
+            left: 0;
+        }
+
+        .hamburger-20 span:nth-child(2) {
+            top: 0;
+            right: 0;
+        }
+
+        .hamburger-20 span:nth-child(3) {
+            bottom: 0;
+            left: 0;
+        }
+
+        .hamburger-20 span:nth-child(4) {
+            bottom: 0;
+            right: 0;
+        }
+
+        .hamburger-20.active span {
+            width: 3px;
+            height: 20px;
+            border-radius: 0;
+        }
+
+        .hamburger-20.active span:nth-child(1) {
+            top: 5px;
+            left: 13.5px;
+            transform: rotate(45deg);
+        }
+
+        .hamburger-20.active span:nth-child(2),
+        .hamburger-20.active span:nth-child(3) {
+            opacity: 0;
+        }
+
+        .hamburger-20.active span:nth-child(4) {
+            bottom: 5px;
+            right: 13.5px;
+            transform: rotate(-45deg);
+        }
+
         .code-snippet {
             background: #2d2d2d;
             color: #f8f8f2;
@@ -624,6 +1201,248 @@
 &lt;/div&gt;</pre>
                 </div>
                 <div class="note">渐变色彩流动效果</div>
+            </div>
+
+            <!-- 示例9: 点状圆形按钮 -->
+            <div class="example-card">
+                <div class="example-title">示例9: 点状变线条</div>
+                <div class="demo-area">
+                    <div class="hamburger-9" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-9" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">圆形点变成X线条</div>
+            </div>
+
+            <!-- 示例10: 加号变X -->
+            <div class="example-card">
+                <div class="example-title">示例10: 加号变X</div>
+                <div class="demo-area">
+                    <div class="hamburger-10" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-10" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">加号旋转成X</div>
+            </div>
+
+            <!-- 示例11: 双线样式 -->
+            <div class="example-card">
+                <div class="example-title">示例11: 四线变X</div>
+                <div class="demo-area">
+                    <div class="hamburger-11" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-11" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">四条线变成X</div>
+            </div>
+
+            <!-- 示例12: 斜线排列 -->
+            <div class="example-card">
+                <div class="example-title">示例12: 斜线排列</div>
+                <div class="demo-area">
+                    <div class="hamburger-12" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-12" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">初始为斜线排列</div>
+            </div>
+
+            <!-- 示例13: 霓虹灯效果 -->
+            <div class="example-card">
+                <div class="example-title">示例13: 霓虹灯效果</div>
+                <div class="demo-area" style="background: #1a1a1a;">
+                    <div class="hamburger-13" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-13" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">霓虹灯发光效果</div>
+            </div>
+
+            <!-- 示例14: 箭头样式 -->
+            <div class="example-card">
+                <div class="example-title">示例14: 箭头样式</div>
+                <div class="demo-area">
+                    <div class="hamburger-14" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-14" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">不对称箭头样式</div>
+            </div>
+
+            <!-- 示例15: 波浪效果 -->
+            <div class="example-card">
+                <div class="example-title">示例15: 波浪弹性</div>
+                <div class="demo-area">
+                    <div class="hamburger-15" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-15" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">波浪弹性动画</div>
+            </div>
+
+            <!-- 示例16: 毛玻璃效果 -->
+            <div class="example-card">
+                <div class="example-title">示例16: 毛玻璃效果</div>
+                <div class="demo-area" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="hamburger-16" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-16" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">毛玻璃背景模糊</div>
+            </div>
+
+            <!-- 示例17: 双圆点 -->
+            <div class="example-card">
+                <div class="example-title">示例17: 圆点变X</div>
+                <div class="demo-area">
+                    <div class="hamburger-17" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-17" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">三个圆点变成X</div>
+            </div>
+
+            <!-- 示例18: 虚线样式 -->
+            <div class="example-card">
+                <div class="example-title">示例18: 虚线样式</div>
+                <div class="demo-area">
+                    <div class="hamburger-18" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-18" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">虚线变成实线X</div>
+            </div>
+
+            <!-- 示例19: 双层效果 -->
+            <div class="example-card">
+                <div class="example-title">示例19: 双层边框</div>
+                <div class="demo-area">
+                    <div class="hamburger-19" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-19" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">双层边框效果</div>
+            </div>
+
+            <!-- 示例20: 旋转方块 -->
+            <div class="example-card">
+                <div class="example-title">示例20: 四方块变X</div>
+                <div class="demo-area">
+                    <div class="hamburger-20" onclick="this.classList.toggle('active')">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="code-snippet">
+                    <pre>&lt;div class="hamburger-20" onclick="this.classList.toggle('active')"&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+  &lt;span&gt;&lt;/span&gt;
+&lt;/div&gt;</pre>
+                </div>
+                <div class="note">四个方块变成X</div>
             </div>
         </div>
 
