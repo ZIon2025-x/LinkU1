@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Spin, Empty, Typography, Space, Tag, Button, Input, Avatar, Divider, message, Modal, Select, Dropdown, QRCode } from 'antd';
 import { 
@@ -104,6 +104,144 @@ const ForumPostDetail: React.FC = () => {
   const [reportReason, setReportReason] = useState<string>('');
   const [reportDescription, setReportDescription] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // 提取帖子描述（前30个字左右，在逗号或句号处截断）
+  const extractDescription = (content: string, maxLength: number = 30): string => {
+    // 移除HTML标签
+    const plainContent = content.replace(/<[^>]*>/g, '').trim();
+    
+    // 如果内容长度小于等于最大长度，直接返回
+    if (plainContent.length <= maxLength) {
+      return plainContent;
+    }
+    
+    // 截取前maxLength+10个字符，以便找到合适的截断点
+    const truncated = plainContent.substring(0, maxLength + 10);
+    
+    // 查找最后一个逗号或句号的位置
+    const lastComma = truncated.lastIndexOf('，');
+    const lastPeriod = truncated.lastIndexOf('。');
+    const lastCommaEn = truncated.lastIndexOf(',');
+    const lastPeriodEn = truncated.lastIndexOf('.');
+    
+    // 找到最接近maxLength的截断点
+    const breakPoints = [lastComma, lastPeriod, lastCommaEn, lastPeriodEn].filter(pos => pos > 0 && pos <= maxLength);
+    
+    if (breakPoints.length > 0) {
+      const bestBreakPoint = Math.max(...breakPoints);
+      return truncated.substring(0, bestBreakPoint + 1);
+    }
+    
+    // 如果没有找到合适的截断点，在maxLength处截断
+    return truncated.substring(0, maxLength) + '...';
+  };
+
+  // 计算 SEO 相关数据（必须在所有 hooks 之后，但在 early return 之前）
+  const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
+  const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+  // 用于分享的描述（前30个字左右，在逗号或句号处截断）
+  const shareDescription = post ? extractDescription(post.content, 30) : '';
+  const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
+
+  // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
+  useLayoutEffect(() => {
+    // 移除所有默认的微信分享标签
+    const removeDefaultTags = () => {
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+      const allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+      const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+      
+      allWeixinTitles.forEach(tag => tag.remove());
+      allWeixinDescriptions.forEach(tag => tag.remove());
+      allWeixinImages.forEach(tag => tag.remove());
+      allOgTitles.forEach(tag => tag.remove());
+      allOgDescriptions.forEach(tag => tag.remove());
+    };
+    
+    // 立即移除默认标签
+    removeDefaultTags();
+  }, []);
+
+  // 立即设置微信分享的 meta 标签（使用 useLayoutEffect 确保在 DOM 渲染前执行）
+  useLayoutEffect(() => {
+    if (!post) return;
+
+    const updateMetaTag = (name: string, content: string, property?: boolean) => {
+      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      const allTags = document.querySelectorAll(selector);
+      allTags.forEach(tag => tag.remove());
+      
+      const metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
+      }
+      metaTag.content = content;
+      document.head.insertBefore(metaTag, document.head.firstChild);
+    };
+
+    // 设置微信分享标题（微信优先读取）
+    const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+    allWeixinTitles.forEach(tag => tag.remove());
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = post.title;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+
+    // 设置微信分享描述（微信优先读取）
+    const allWeixinDescriptions = document.querySelectorAll('meta[name="weixin:description"]');
+    allWeixinDescriptions.forEach(tag => tag.remove());
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = shareDescription;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+
+    // 设置微信分享图片
+    const shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    const weixinImageTag = document.createElement('meta');
+    weixinImageTag.setAttribute('name', 'weixin:image');
+    weixinImageTag.content = shareImageUrl;
+    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+
+    // 设置 Open Graph 标签（微信也会读取作为备选）
+    updateMetaTag('og:title', post.title, true);
+    updateMetaTag('og:description', shareDescription, true);
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:url', canonicalUrl, true);
+    updateMetaTag('og:type', 'article', true);
+
+    // 多次更新确保微信爬虫能读取到（微信爬虫可能在页面加载的不同阶段抓取）
+    setTimeout(() => {
+      const weixinTitle = document.querySelector('meta[name="weixin:title"]') as HTMLMetaElement;
+      if (weixinTitle) {
+        weixinTitle.content = post.title;
+        document.head.insertBefore(weixinTitle, document.head.firstChild);
+      }
+      const weixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
+      if (weixinDesc) {
+        weixinDesc.content = shareDescription;
+        document.head.insertBefore(weixinDesc, document.head.firstChild);
+      }
+    }, 100);
+
+    setTimeout(() => {
+      const weixinTitle = document.querySelector('meta[name="weixin:title"]') as HTMLMetaElement;
+      if (weixinTitle) {
+        weixinTitle.content = post.title;
+        document.head.insertBefore(weixinTitle, document.head.firstChild);
+      }
+      const weixinDesc = document.querySelector('meta[name="weixin:description"]') as HTMLMetaElement;
+      if (weixinDesc) {
+        weixinDesc.content = shareDescription;
+        document.head.insertBefore(weixinDesc, document.head.firstChild);
+      }
+    }, 1000);
+  }, [post, shareDescription, canonicalUrl]);
 
   useEffect(() => {
     if (postId) {
@@ -336,37 +474,6 @@ const ForumPostDetail: React.FC = () => {
     }
   };
 
-  // 提取帖子描述（前30个字左右，在逗号或句号处截断）
-  const extractDescription = (content: string, maxLength: number = 30): string => {
-    // 移除HTML标签
-    const plainContent = content.replace(/<[^>]*>/g, '').trim();
-    
-    // 如果内容长度小于等于最大长度，直接返回
-    if (plainContent.length <= maxLength) {
-      return plainContent;
-    }
-    
-    // 截取前maxLength+10个字符，以便找到合适的截断点
-    const truncated = plainContent.substring(0, maxLength + 10);
-    
-    // 查找最后一个逗号或句号的位置
-    const lastComma = truncated.lastIndexOf('，');
-    const lastPeriod = truncated.lastIndexOf('。');
-    const lastCommaEn = truncated.lastIndexOf(',');
-    const lastPeriodEn = truncated.lastIndexOf('.');
-    
-    // 找到最接近maxLength的截断点
-    const breakPoints = [lastComma, lastPeriod, lastCommaEn, lastPeriodEn].filter(pos => pos > 0 && pos <= maxLength);
-    
-    if (breakPoints.length > 0) {
-      const bestBreakPoint = Math.max(...breakPoints);
-      return truncated.substring(0, bestBreakPoint + 1);
-    }
-    
-    // 如果没有找到合适的截断点，在maxLength处截断
-    return truncated.substring(0, maxLength) + '...';
-  };
-
   const handleShare = async () => {
     if (!post) return;
     
@@ -594,12 +701,6 @@ const ForumPostDetail: React.FC = () => {
     );
   }
 
-  // 计算 SEO 相关数据
-  const seoTitle = post ? `${post.title} - Link²Ur ${t('forum.title') || 'Forum'}` : 'Link²Ur Forum';
-  const seoDescription = post ? post.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
-  // 用于分享的描述（前30个字左右，在逗号或句号处截断）
-  const shareDescription = post ? extractDescription(post.content, 30) : '';
-  const canonicalUrl = post ? `https://www.link2ur.com/${lang}/forum/posts/${post.id}` : `https://www.link2ur.com/${lang}/forum`;
   const breadcrumbItems = post ? [
     { 
       name: language === 'zh' ? '首页' : 'Home', 
