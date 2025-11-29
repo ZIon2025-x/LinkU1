@@ -1770,10 +1770,10 @@ const Tasks: React.FC = () => {
     <div className={styles.pageContainer}>
       {/* SEO优化 - 添加canonical URL防止重复索引 */}
       <SEOHead 
-        title={t('tasks.pageTitle')}
+        title={t('tasks.pageTitle') || 'Task Hall - Find Skill Services & Part-time Opportunities | Link²Ur'}
         description={t('tasks.seoDescription')}
         canonicalUrl={canonicalUrl}
-        ogTitle={t('tasks.pageTitle')}
+        ogTitle={t('tasks.pageTitle') || 'Task Hall - Find Skill Services & Part-time Opportunities | Link²Ur'}
         ogDescription={t('tasks.seoDescription')}
         ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}

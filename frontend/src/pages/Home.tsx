@@ -252,6 +252,20 @@ const Home: React.FC = () => {
     canonicalUrl = `https://www.link2ur.com${path}`;
   }
   
+  // 生成页面标题 - 使用翻译文件中的标题
+  const pageTitle = t('home.pageTitle') || (language === 'zh' 
+    ? 'Link²Ur - 专业任务发布和技能匹配平台 | 首页'
+    : 'Link²Ur - Professional Task Publishing and Skill Matching Platform');
+  
+  // 生成唯一的 meta description - 根据路径和语言创建不同的描述
+  const metaDescription = location.pathname === '/' || location.pathname === ''
+    ? (language === 'zh' 
+      ? '欢迎来到Link²Ur - 专业任务发布与技能匹配平台。连接有技能的人与需要帮助的人，提供家政、跑腿、校园、二手等多类型任务服务。立即开始！'
+      : 'Welcome to Link²Ur - Professional task publishing and skill matching platform. Connect skilled people with those who need help. Start now!')
+    : (t('home.metaDescription') || (language === 'zh'
+      ? 'Link²Ur是专业任务发布与技能匹配平台，连接有技能的人与需要帮助的人。提供家政、跑腿、校园、二手等多类型任务服务。让价值创造更高效，立即开始！'
+      : 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'));
+  
   // Task types array - using translations
   const TASK_TYPES = [
     t('taskCategories.housekeeping'),
@@ -687,7 +701,14 @@ const Home: React.FC = () => {
     }
     
     // 强制更新meta description，确保在head最前面
-    const description = t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.';
+    // 使用与SEOHead相同的描述逻辑
+    const description = location.pathname === '/' || location.pathname === ''
+      ? (language === 'zh' 
+        ? '欢迎来到Link²Ur - 专业任务发布与技能匹配平台。连接有技能的人与需要帮助的人，提供家政、跑腿、校园、二手等多类型任务服务。立即开始！'
+        : 'Welcome to Link²Ur - Professional task publishing and skill matching platform. Connect skilled people with those who need help. Start now!')
+      : (t('home.metaDescription') || (language === 'zh'
+        ? 'Link²Ur是专业任务发布与技能匹配平台，连接有技能的人与需要帮助的人。提供家政、跑腿、校园、二手等多类型任务服务。让价值创造更高效，立即开始！'
+        : 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'));
     
     // 移除所有旧的description标签（包括可能包含公告内容的标签）
     const allDescriptions = document.querySelectorAll('meta[name="description"]');
@@ -801,11 +822,11 @@ const Home: React.FC = () => {
   return (
     <div>
       <SEOHead 
-        title={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
-        description={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
+        title={pageTitle}
+        description={metaDescription}
         canonicalUrl={canonicalUrl}
-        ogTitle={t('home.pageTitle') || 'Link²Ur - Connect, Capability, Create'}
-        ogDescription={t('home.metaDescription') || 'Link²Ur - Professional task publishing and skill matching platform, connecting skilled people with those who need help, making value creation more efficient.'}
+        ogTitle={pageTitle}
+        ogDescription={metaDescription}
         ogImage="/static/favicon.png"
         ogUrl={canonicalUrl}
       />
