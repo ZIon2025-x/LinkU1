@@ -206,7 +206,7 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/sitemap.xml"
+      "destination": "https://api.link2ur.com/sitemap.xml"
     },
     {
       "source": "/robots.txt",

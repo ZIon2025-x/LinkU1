@@ -29,10 +29,8 @@ User-agent: Baiduspider
 Allow: /
 Crawl-delay: 2
 
-# Sitemap location - 使用动态生成的sitemap（包含所有任务）
+# Sitemap location - 使用动态生成的sitemap（包含所有任务、商品、帖子等）
 Sitemap: https://www.link2ur.com/sitemap.xml
-# 如果前端部署在Vercel，也可以使用后端API的sitemap
-Sitemap: https://api.link2ur.com/sitemap.xml
 
 # 爬取延迟
 Crawl-delay: 1
