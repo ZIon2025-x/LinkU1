@@ -426,6 +426,7 @@ async def get_categories(
     
     可选参数：
     - include_latest_post: 如果为 True，每个板块会包含最新帖子的简要信息（标题、作者、最后回复时间等）
+    注意：分类列表只显示对普通用户可见的最新帖子（is_visible == True）
     """
     result = await db.execute(
         select(models.ForumCategory)
@@ -438,7 +439,7 @@ async def get_categories(
     if include_latest_post:
         category_list = []
         for category in categories:
-            # 实时统计可见帖子数（确保与 latest_post 查询条件一致）
+            # 实时统计可见帖子数（对普通用户可见的帖子）
             post_count_result = await db.execute(
                 select(func.count(models.ForumPost.id))
                 .where(
@@ -449,7 +450,7 @@ async def get_categories(
             )
             real_post_count = post_count_result.scalar() or 0
             
-            # 获取该板块的最新帖子
+            # 获取该板块的最新可见帖子（只显示对普通用户可见的帖子）
             latest_post_result = await db.execute(
                 select(models.ForumPost)
                 .where(
@@ -557,7 +558,7 @@ async def create_category(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="create_category",
         target_type="category",
         target_id=db_category.id,
@@ -613,7 +614,7 @@ async def update_category(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="update_category",
         target_type="category",
         target_id=category_id,
@@ -649,7 +650,7 @@ async def delete_category(
     
     # 记录管理员操作日志（在删除前记录）
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="delete_category",
         target_type="category",
         target_id=category_id,
@@ -673,15 +674,41 @@ async def get_posts(
     page_size: int = Query(20, ge=1, le=100),
     sort: str = Query("last_reply", regex="^(latest|last_reply|hot|replies|likes)$"),
     q: Optional[str] = Query(None),
+    is_deleted: Optional[bool] = Query(None, description="是否已删除（管理员筛选）"),
+    is_visible: Optional[bool] = Query(None, description="是否可见（管理员筛选）"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取帖子列表"""
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
     # 构建基础查询
-    query = select(models.ForumPost).where(
-        models.ForumPost.is_deleted == False,
-        models.ForumPost.is_visible == True
-    )
+    query = select(models.ForumPost)
+    
+    # 如果不是管理员，只显示未删除且可见的帖子
+    if not is_admin:
+        query = query.where(
+            models.ForumPost.is_deleted == False,
+            models.ForumPost.is_visible == True
+        )
+    else:
+        # 管理员可以根据参数筛选
+        if is_deleted is not None:
+            query = query.where(models.ForumPost.is_deleted == is_deleted)
+        else:
+            # 默认不显示已删除的帖子
+            query = query.where(models.ForumPost.is_deleted == False)
+        
+        if is_visible is not None:
+            query = query.where(models.ForumPost.is_visible == is_visible)
+        # 如果 is_visible 为 None，显示所有可见性状态的帖子
     
     # 板块筛选
     if category_id:
@@ -777,6 +804,8 @@ async def get_posts(
             is_pinned=post.is_pinned,
             is_featured=post.is_featured,
             is_locked=post.is_locked,
+            is_visible=post.is_visible,
+            is_deleted=post.is_deleted,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -1198,7 +1227,7 @@ async def pin_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="pin_post",
         target_type="post",
         target_id=post_id,
@@ -1248,7 +1277,7 @@ async def unpin_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="unpin_post",
         target_type="post",
         target_id=post_id,
@@ -1287,7 +1316,7 @@ async def feature_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="feature_post",
         target_type="post",
         target_id=post_id,
@@ -1337,7 +1366,7 @@ async def unfeature_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="unfeature_post",
         target_type="post",
         target_id=post_id,
@@ -1376,7 +1405,7 @@ async def lock_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="lock_post",
         target_type="post",
         target_id=post_id,
@@ -1415,7 +1444,7 @@ async def unlock_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="unlock_post",
         target_type="post",
         target_id=post_id,
@@ -1466,7 +1495,7 @@ async def restore_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="restore_post",
         target_type="post",
         target_id=post_id,
@@ -1516,7 +1545,7 @@ async def unhide_post(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="unhide_post",
         target_type="post",
         target_id=post_id,
@@ -1528,6 +1557,56 @@ async def unhide_post(
     await db.commit()
     
     return {"id": post.id, "is_visible": True, "message": "帖子已取消隐藏"}
+
+
+@router.post("/posts/{post_id}/hide")
+async def hide_post(
+    post_id: int,
+    request: Request,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """隐藏帖子（管理员）"""
+    result = await db.execute(
+        select(models.ForumPost).where(models.ForumPost.id == post_id)
+    )
+    post = result.scalar_one_or_none()
+    
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="帖子不存在"
+        )
+    
+    if not post.is_visible:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="帖子已被隐藏"
+        )
+    
+    # 隐藏帖子
+    post.is_visible = False
+    post.updated_at = get_utc_time()
+    await db.flush()
+    
+    # 更新板块统计（仅当帖子未被删除时）
+    if not post.is_deleted:
+        await update_category_stats(post.category_id, db)
+    
+    # 记录管理员操作日志
+    await log_admin_operation(
+        operator_id=current_admin.id,
+        operation_type="hide_post",
+        target_type="post",
+        target_id=post_id,
+        action="hide",
+        request=request,
+        db=db
+    )
+    
+    await db.commit()
+    
+    return {"id": post.id, "is_visible": False, "message": "帖子已隐藏"}
 
 
 # ==================== 回复 API ====================
@@ -2024,7 +2103,7 @@ async def restore_reply(
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="restore_reply",
         target_type="reply",
         target_id=reply_id,
@@ -2407,6 +2486,8 @@ async def search_posts(
             is_pinned=post.is_pinned,
             is_featured=post.is_featured,
             is_locked=post.is_locked,
+            is_visible=post.is_visible,
+            is_deleted=post.is_deleted,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -2579,14 +2660,16 @@ async def process_report(
     
     # 更新举报状态
     report.status = process.status
-    report.processor_id = current_admin.user_id
+    # processor_id 是外键到 users.id，但管理员ID是 admin_users.id，类型不匹配
+    # 因此设置为 NULL，管理员信息通过操作日志追踪
+    report.processor_id = None
     report.processed_at = get_utc_time()
     report.action = process.action
     await db.flush()
     
     # 记录管理员操作日志
     await log_admin_operation(
-        operator_id=current_admin.user_id,
+        operator_id=current_admin.id,
         operation_type="process_report",
         target_type="report",
         target_id=report_id,
@@ -2800,6 +2883,8 @@ async def get_my_posts(
             is_pinned=post.is_pinned,
             is_featured=post.is_featured,
             is_locked=post.is_locked,
+            is_visible=post.is_visible,
+            is_deleted=post.is_deleted,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
@@ -2929,6 +3014,8 @@ async def get_my_favorites(
                     is_pinned=post.is_pinned,
                     is_featured=post.is_featured,
                     is_locked=post.is_locked,
+                    is_visible=post.is_visible,
+                    is_deleted=post.is_deleted,
                     created_at=post.created_at,
                     last_reply_at=post.last_reply_at
                 ),
@@ -3415,6 +3502,8 @@ async def get_hot_posts(
             is_pinned=post.is_pinned,
             is_featured=post.is_featured,
             is_locked=post.is_locked,
+            is_visible=post.is_visible,
+            is_deleted=post.is_deleted,
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))

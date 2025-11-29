@@ -54,6 +54,7 @@ import api, {
   lockForumPost,
   unlockForumPost,
   restoreForumPost,
+  hideForumPost,
   unhideForumPost,
   getForumReports,
   processForumReport,
@@ -5121,6 +5122,22 @@ const AdminDashboard: React.FC = () => {
                           解锁
                         </button>
                       )}
+                      {post.is_visible && !post.is_deleted && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await hideForumPost(post.id);
+                              message.success('已隐藏');
+                              await loadForumPosts();
+                            } catch (error: any) {
+                              message.error(error?.response?.data?.detail || '操作失败');
+                            }
+                          }}
+                          style={{ padding: '4px 8px', border: '1px solid #ffc107', background: 'white', color: '#ffc107', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          隐藏
+                        </button>
+                      )}
                       {!post.is_visible && (
                         <button
                           onClick={async () => {
@@ -5413,8 +5430,7 @@ const AdminDashboard: React.FC = () => {
           await deleteForumPost(targetInfo.id);
           message.success('帖子已删除');
         } else if (action === 'hide_post' && targetInfo.type === 'post') {
-          // 隐藏帖子需要调用隐藏API，这里暂时用删除代替
-          await deleteForumPost(targetInfo.id);
+          await hideForumPost(targetInfo.id);
           message.success('帖子已隐藏');
         } else if (action === 'lock_post' && targetInfo.type === 'post') {
           await lockForumPost(targetInfo.id);

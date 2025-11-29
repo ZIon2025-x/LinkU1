@@ -2602,6 +2602,14 @@ export const restoreForumPost = async (postId: number) => {
   return res.data;
 };
 
+export const hideForumPost = async (postId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(`/api/forum/posts/${postId}/hide`, {}, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
 export const unhideForumPost = async (postId: number) => {
   const token = await getCSRFToken();
   const res = await api.post(`/api/forum/posts/${postId}/unhide`, {}, {

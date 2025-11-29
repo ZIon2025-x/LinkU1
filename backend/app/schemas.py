@@ -2411,6 +2411,8 @@ class ForumPostListItem(BaseModel):
     is_pinned: bool
     is_featured: bool
     is_locked: bool
+    is_visible: bool  # 是否可见（管理员需要此字段）
+    is_deleted: bool  # 是否已删除（管理员需要此字段）
     created_at: datetime.datetime
     last_reply_at: Optional[datetime.datetime] = None
     
