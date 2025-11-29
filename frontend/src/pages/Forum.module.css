@@ -151,6 +151,7 @@
 @media (max-width: 768px) {
   .categoriesGrid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
   
   .header {
@@ -159,6 +160,62 @@
   
   .content {
     padding: 16px 12px;
+  }
+
+  .categoryCard {
+    padding: 16px;
+  }
+
+  .categoryIcon {
+    font-size: 32px;
+  }
+
+  .categoryName {
+    font-size: 16px;
+  }
+
+  .categoryDescription {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 8px;
+  }
+
+  .content {
+    padding: 12px 8px;
+  }
+
+  .categoriesGrid {
+    gap: 8px;
+  }
+
+  .categoryCard {
+    padding: 12px;
+  }
+
+  .categoryIcon {
+    font-size: 28px;
+  }
+
+  .categoryName {
+    font-size: 14px;
+  }
+
+  .categoryDescription {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .content {
+    padding: 10px 6px;
+  }
+
+  .categoryCard {
+    padding: 10px;
   }
 }
 

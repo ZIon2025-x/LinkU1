@@ -80,8 +80,71 @@
     margin-top: 8px !important;
   }
 
+  .headerContainer {
+    padding: 0 12px;
+    height: 50px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .headerSpacer {
+    height: 50px;
+  }
+
   .content {
     padding: 16px 12px;
+  }
+
+  .formCard {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerContainer {
+    padding: 0 8px;
+    height: 48px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .headerSpacer {
+    height: 48px;
+  }
+
+  .content {
+    padding: 12px 8px;
+  }
+
+  .formCard {
+    padding: 12px;
+  }
+
+  .formActions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .formActions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerContainer {
+    padding: 0 6px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .content {
+    padding: 10px 6px;
   }
 }
 

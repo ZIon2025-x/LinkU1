@@ -101,6 +101,19 @@
 }
 
 @media (max-width: 768px) {
+  .headerContainer {
+    padding: 0 12px;
+    height: 50px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .headerSpacer {
+    height: 50px;
+  }
+
   .header {
     padding: 12px;
     flex-wrap: wrap;
@@ -118,6 +131,39 @@
 
   .content {
     padding: 16px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerContainer {
+    padding: 0 8px;
+    height: 48px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .headerSpacer {
+    height: 48px;
+  }
+
+  .content {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerContainer {
+    padding: 0 6px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .content {
+    padding: 10px 6px;
   }
 }
 

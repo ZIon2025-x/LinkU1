@@ -287,5 +287,111 @@
     width: 40px;
     font-size: 14px;
   }
+
+  .headerContainer {
+    padding: 0 12px;
+    height: 50px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .headerSpacer {
+    height: 50px;
+  }
+
+  .podiumName {
+    font-size: 14px;
+  }
+
+  .podiumCount {
+    font-size: 20px;
+  }
+
+  .listName {
+    font-size: 14px;
+  }
+
+  .listCount {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerContainer {
+    padding: 0 8px;
+    height: 48px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .headerSpacer {
+    height: 48px;
+  }
+
+  .content {
+    padding: 12px 8px;
+  }
+
+  .podiumContainer {
+    gap: 20px;
+    padding: 16px;
+  }
+
+  .podium1 .podiumAvatar {
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  .podiumAvatar {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .podiumName {
+    font-size: 13px;
+  }
+
+  .podiumCount {
+    font-size: 18px;
+  }
+
+  .listItem {
+    padding: 10px;
+  }
+
+  .listRank {
+    width: 35px;
+    font-size: 13px;
+  }
+
+  .listName {
+    font-size: 13px;
+  }
+
+  .listCount {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerContainer {
+    padding: 0 6px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .content {
+    padding: 10px 6px;
+  }
+
+  .podiumContainer {
+    padding: 12px;
+  }
 }
 

@@ -713,5 +713,97 @@
     display: flex;
     align-items: center;
   }
+
+  .headerContainer {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .headerLogo {
+    font-size: 20px;
+  }
+
+  .taskCard {
+    padding: 12px;
+  }
+
+  .taskTitle {
+    font-size: 16px;
+  }
+
+  .taskDescription {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tasksGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .headerContainer {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .headerLogo {
+    font-size: 18px;
+  }
+
+  .searchSection {
+    margin-top: 8px;
+  }
+
+  .searchInputContainer input {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .taskCard {
+    padding: 10px;
+  }
+
+  .taskTitle {
+    font-size: 14px;
+  }
+
+  .taskDescription {
+    font-size: 12px;
+  }
+
+  .locationDropdown {
+    max-width: 160px;
+    min-width: 140px;
+  }
+
+  .locationDropdownItem {
+    padding: 12px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerContainer {
+    padding: 6px;
+  }
+
+  .headerLogo {
+    font-size: 16px;
+  }
+
+  .searchSection {
+    margin-top: 6px;
+  }
+
+  .searchInputContainer input {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .taskCard {
+    padding: 8px;
+  }
 }
 

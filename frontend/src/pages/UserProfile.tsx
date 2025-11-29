@@ -1051,6 +1051,192 @@ const UserProfile: React.FC = () => {
           loadTaskExpertInfo();
         }}
       />
+
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          /* 移动端适配 */
+          @media (max-width: 768px) {
+            /* 容器移动端优化 */
+            div[style*="maxWidth: 1200"] {
+              padding: 0 12px !important;
+            }
+
+            /* 用户基本信息卡片移动端优化 */
+            div[style*="padding: 40"] {
+              padding: 24px 16px !important;
+              border-radius: 16px !important;
+              margin-bottom: 20px !important;
+            }
+
+            /* 头像移动端优化 */
+            img[alt="头像"] {
+              width: 100px !important;
+              height: 100px !important;
+            }
+
+            /* 用户名移动端优化 */
+            h1[style*="fontSize: 32"] {
+              font-size: 24px !important;
+              margin-bottom: 12px !important;
+            }
+
+            /* 等级和评分标签移动端优化 */
+            div[style*="display: flex"][style*="justifyContent: center"][style*="gap: 24"] {
+              gap: 12px !important;
+              flex-wrap: wrap !important;
+            }
+
+            div[style*="padding: '8px 20px'"] {
+              padding: 6px 16px !important;
+              font-size: 12px !important;
+            }
+
+            /* 任务达人信息移动端优化 */
+            div[style*="padding: '16px 24px'"][style*="background: linear-gradient"] {
+              padding: 12px 16px !important;
+            }
+
+            /* 服务菜单移动端优化 */
+            h3[style*="fontSize: 18"] {
+              font-size: 16px !important;
+              margin-bottom: 12px !important;
+            }
+
+            div[style*="display: flex"][style*="flexDirection: column"][style*="gap: 12"] {
+              gap: 8px !important;
+            }
+
+            div[style*="padding: '16px'"] {
+              padding: 12px !important;
+            }
+
+            /* 详细统计信息卡片移动端优化 */
+            div[style*="padding: 32"] {
+              padding: 20px 16px !important;
+              border-radius: 16px !important;
+              margin-bottom: 20px !important;
+            }
+
+            h2[style*="fontSize: 24"] {
+              font-size: 20px !important;
+              margin-bottom: 16px !important;
+            }
+
+            /* 统计网格移动端优化 */
+            div[style*="gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'"] {
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 12px !important;
+            }
+
+            div[style*="padding: 24"][style*="textAlign: center"] {
+              padding: 16px 12px !important;
+            }
+
+            div[style*="fontSize: 32"][style*="fontWeight: 800"] {
+              font-size: 24px !important;
+            }
+
+            div[style*="fontSize: 14"][style*="opacity: 0.9"] {
+              font-size: 12px !important;
+            }
+
+            /* 最近任务卡片移动端优化 */
+            div[style*="padding: 32"][style*="marginBottom: 32"] {
+              padding: 20px 16px !important;
+              margin-bottom: 20px !important;
+              border-radius: 16px !important;
+            }
+
+            h2[style*="fontSize: 24"][style*="fontWeight: 700"] {
+              font-size: 20px !important;
+              margin-bottom: 16px !important;
+            }
+
+            /* 任务卡片移动端优化 */
+            div[style*="padding: '20px'"] {
+              padding: 16px 12px !important;
+              border-radius: 12px !important;
+            }
+
+            div[style*="fontSize: 18"][style*="fontWeight: 600"] {
+              font-size: 16px !important;
+            }
+
+            div[style*="fontSize: 14"][style*="color: '#666'"] {
+              font-size: 12px !important;
+            }
+
+            /* 用户评价卡片移动端优化 */
+            div[style*="padding: 32"][style*="marginBottom: 32"] {
+              padding: 20px 16px !important;
+              margin-bottom: 20px !important;
+            }
+
+            /* 评价项移动端优化 */
+            div[style*="padding: '20px'"] {
+              padding: 16px 12px !important;
+            }
+
+            div[style*="fontSize: 16"][style*="fontWeight: 600"] {
+              font-size: 14px !important;
+            }
+
+            div[style*="fontSize: 14"][style*="color: '#666'"] {
+              font-size: 12px !important;
+              line-height: 1.5 !important;
+            }
+          }
+
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 0 8px !important;
+            }
+
+            div[style*="padding: 24px 16px"] {
+              padding: 16px 12px !important;
+            }
+
+            img[alt="头像"] {
+              width: 80px !important;
+              height: 80px !important;
+            }
+
+            h1[style*="fontSize: 24"] {
+              font-size: 20px !important;
+            }
+
+            div[style*="gridTemplateColumns: 'repeat(2, 1fr)'"] {
+              grid-template-columns: 1fr !important;
+              gap: 8px !important;
+            }
+
+            div[style*="padding: 16px 12px"] {
+              padding: 12px 8px !important;
+            }
+
+            div[style*="fontSize: 24"] {
+              font-size: 20px !important;
+            }
+          }
+
+          /* 极小屏幕优化 */
+          @media (max-width: 360px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 0 6px !important;
+            }
+
+            div[style*="padding: 16px 12px"] {
+              padding: 12px 8px !important;
+            }
+
+            h1[style*="fontSize: 20"] {
+              font-size: 18px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

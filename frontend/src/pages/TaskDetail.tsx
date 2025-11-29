@@ -3977,6 +3977,122 @@ const TaskDetail: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          /* 移动端适配 */
+          @media (max-width: 768px) {
+            /* 外层容器移动端优化 */
+            div[style*="padding: '20px'"] {
+              padding: 12px !important;
+            }
+
+            /* 主内容卡片移动端优化 */
+            div[style*="maxWidth: '900px'"] {
+              padding: 20px 16px !important;
+              border-radius: 16px !important;
+            }
+
+            /* 标题区域移动端优化 */
+            div[style*="display: flex"][style*="alignItems: center"] {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+              gap: 12px !important;
+            }
+
+            /* 标题文字移动端优化 */
+            h2[style*="fontSize: 28"] {
+              font-size: 20px !important;
+              line-height: 1.4 !important;
+            }
+
+            /* 任务信息网格移动端优化 */
+            div[style*="display: grid"][style*="gridTemplateColumns"] {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+
+            /* 描述区域移动端优化 */
+            div[style*="padding: '24px'"] {
+              padding: 16px !important;
+            }
+
+            /* 按钮组移动端优化 */
+            div[style*="display: flex"][style*="gap: '12px'"] {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+
+            button[style*="padding: '12px 24px'"] {
+              width: 100% !important;
+              padding: 12px 16px !important;
+              font-size: 14px !important;
+            }
+
+            /* 参与者列表移动端优化 */
+            div[style*="display: flex"][style*="flexDirection: column"] {
+              gap: 12px !important;
+            }
+
+            /* 申请者列表移动端优化 */
+            div[style*="padding: '16px'"] {
+              padding: 12px !important;
+            }
+
+            /* 评价区域移动端优化 */
+            div[style*="padding: '24px'"] {
+              padding: 16px !important;
+            }
+
+            /* 推荐任务移动端优化 */
+            div[style*="display: grid"][style*="gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))'"] {
+              grid-template-columns: 1fr !important;
+              gap: 12px !important;
+            }
+          }
+
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            div[style*="padding: '12px'"] {
+              padding: 8px !important;
+            }
+
+            div[style*="maxWidth: '900px'"] {
+              padding: 16px 12px !important;
+              border-radius: 12px !important;
+            }
+
+            h2[style*="fontSize: 20"] {
+              font-size: 18px !important;
+            }
+
+            div[style*="padding: '16px'"] {
+              padding: 12px !important;
+            }
+
+            button[style*="padding: '12px 16px'"] {
+              padding: 10px 12px !important;
+              font-size: 13px !important;
+            }
+          }
+
+          /* 极小屏幕优化 */
+          @media (max-width: 360px) {
+            div[style*="padding: '8px'"] {
+              padding: 6px !important;
+            }
+
+            div[style*="maxWidth: '900px'"] {
+              padding: 12px 8px !important;
+            }
+
+            h2[style*="fontSize: 18"] {
+              font-size: 16px !important;
+            }
+          }
+        `}
+      </style>
       </div>
     </div>
   );

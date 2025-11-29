@@ -126,5 +126,55 @@
     gap: 12px;
     align-items: stretch;
   }
+
+  .headerContainer {
+    padding: 0 12px;
+    height: 50px;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .headerSpacer {
+    height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerContainer {
+    padding: 0 8px;
+    height: 48px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .headerSpacer {
+    height: 48px;
+  }
+
+  .content {
+    padding: 12px 8px;
+  }
+
+  .notificationCard {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .headerContainer {
+    padding: 0 6px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .content {
+    padding: 10px 6px;
+  }
 }
 
