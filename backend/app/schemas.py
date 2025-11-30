@@ -2678,6 +2678,7 @@ class CustomLeaderboardCreate(CustomLeaderboardBase):
 class CustomLeaderboardOut(CustomLeaderboardBase):
     id: int
     applicant_id: str
+    applicant: Optional[UserInfo] = None  # 申请者信息（可选，需要时加载）
     status: str
     item_count: int
     vote_count: int

@@ -342,14 +342,12 @@ const CustomLeaderboardsTab: React.FC = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                   }}>
-                    {leaderboard.applicant && (
-                      <div style={{
-                        fontSize: 12,
-                        color: '#999'
-                      }}>
-                        申请者：{leaderboard.applicant.name || leaderboard.applicant_id || '匿名'}
-                      </div>
-                    )}
+                    <div style={{
+                      fontSize: 12,
+                      color: '#999'
+                    }}>
+                      申请者：{leaderboard.applicant?.name || leaderboard.applicant_id || '匿名'}
+                    </div>
                     <button
                       style={{
                         padding: '6px 16px',

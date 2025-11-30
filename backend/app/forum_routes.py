@@ -422,6 +422,21 @@ async def get_post_with_permissions(
     return post
 
 
+async def get_post_display_view_count(post_id: int, db_view_count: int) -> int:
+    """获取帖子的显示浏览量（数据库值 + Redis增量）"""
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            redis_key = f"forum:post:view_count:{post_id}"
+            redis_view_count = int(redis_client.get(redis_key) or 0)
+            if redis_view_count > 0:
+                return db_view_count + redis_view_count
+    except Exception as e:
+        logger.debug(f"Redis view count query failed for post {post_id}: {e}")
+    return db_view_count
+
+
 async def update_category_stats(category_id: int, db: AsyncSession):
     """更新板块统计信息"""
     # 统计可见帖子数
@@ -605,13 +620,16 @@ async def get_categories(
                         is_admin=False
                     )
                 
+                # 计算最新帖子的浏览量（数据库值 + Redis增量）
+                display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                
                 latest_post_info = schemas.LatestPostInfo(
                     id=latest_post.id,
                     title=latest_post.title,
                     author=author_info,
                     last_reply_at=latest_post.last_reply_at or latest_post.created_at,
                     reply_count=latest_post.reply_count,
-                    view_count=latest_post.view_count
+                    view_count=display_view_count
                 )
             
             # 构建板块信息（使用 Pydantic 模型，包含 latest_post）
@@ -807,7 +825,7 @@ async def get_posts(
     request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取帖子列表"""
+    """获取帖子列表（包含Redis增量的浏览量）"""
     # 检查是否为管理员
     is_admin = False
     try:
@@ -915,13 +933,16 @@ async def get_posts(
             )
             is_favorited = favorite_result.scalar_one_or_none() is not None
         
+        # 计算帖子的浏览量（数据库值 + Redis增量）
+        display_view_count = await get_post_display_view_count(post.id, post.view_count)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await build_user_info(db, post.author),
-            view_count=post.view_count,
+            view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
             is_pinned=post.is_pinned,

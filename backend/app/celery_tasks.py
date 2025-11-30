@@ -416,13 +416,14 @@ if CELERY_AVAILABLE:
     )
     def sync_forum_view_counts_task(self):
         """同步论坛帖子浏览数从 Redis 到数据库 - Celery任务包装（每5分钟执行）"""
+        logger.info("🔄 开始执行同步论坛浏览量任务")
         start_time = time.time()
         task_name = 'sync_forum_view_counts_task'
         lock_key = 'forum:sync_view_counts:lock'
         
         # 获取分布式锁，防止多实例重复执行
         if not get_redis_distributed_lock(lock_key, lock_ttl=600):  # 锁10分钟
-            logger.info("同步论坛浏览数任务已在其他实例执行，跳过")
+            logger.warning("⚠️ 同步论坛浏览数任务已在其他实例执行，跳过本次执行")
             return {"status": "skipped", "message": "Task already running in another instance"}
         
         try:
@@ -443,19 +444,32 @@ if CELERY_AVAILABLE:
                 keys = redis_client.keys(pattern)
                 
                 if not keys:
-                    logger.debug("没有需要同步的论坛浏览数")
+                    logger.info("ℹ️ 没有需要同步的论坛浏览数（Redis 中没有 forum:post:view_count:* keys）")
                     return {"status": "success", "message": "No view counts to sync", "synced_count": 0}
                 
                 synced_count = 0
+                failed_count = 0
+                synced_keys = []  # 记录成功同步的 keys，用于后续删除
+                
                 for key in keys:
                     try:
+                        # 处理 bytes 类型的 key（Redis 二进制模式）
+                        if isinstance(key, bytes):
+                            key_str = key.decode('utf-8')
+                        else:
+                            key_str = str(key)
+                        
                         # 从 key 中提取 post_id
-                        post_id = int(key.split(":")[-1])
+                        post_id = int(key_str.split(":")[-1])
                         
                         # 获取 Redis 中的增量
                         redis_increment = redis_client.get(key)
                         if redis_increment:
-                            increment = int(redis_increment)
+                            # 处理 bytes 类型的值
+                            if isinstance(redis_increment, bytes):
+                                increment = int(redis_increment.decode('utf-8'))
+                            else:
+                                increment = int(redis_increment)
                             
                             if increment > 0:
                                 # 更新数据库中的浏览数
@@ -464,22 +478,43 @@ if CELERY_AVAILABLE:
                                     .where(ForumPost.id == post_id)
                                     .values(view_count=ForumPost.view_count + increment)
                                 )
-                                
-                                # 删除 Redis key（已同步）
-                                redis_client.delete(key)
                                 synced_count += 1
+                                synced_keys.append(key)  # 记录成功同步的 key
                     except (ValueError, TypeError) as e:
                         logger.warning(f"处理浏览数 key {key} 时出错: {e}")
+                        failed_count += 1
                         continue
                     except Exception as e:
                         logger.error(f"同步帖子 {key} 浏览数失败: {e}")
+                        failed_count += 1
                         continue
                 
+                # 先提交数据库事务
                 db.commit()
+                
+                # 数据库提交成功后，删除已同步的 Redis keys
+                deleted_count = 0
+                for key in synced_keys:
+                    try:
+                        redis_client.delete(key)
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.warning(f"删除 Redis key {key} 失败: {e}")
+                        # 继续处理其他 key
+                
                 duration = time.time() - start_time
-                logger.info(f"同步论坛浏览数完成，同步了 {synced_count} 个帖子 (耗时: {duration:.2f}秒)")
+                if failed_count > 0:
+                    logger.warning(f"✅ 同步论坛浏览数完成，同步了 {synced_count} 个帖子，失败 {failed_count} 个 (耗时: {duration:.2f}秒)")
+                else:
+                    logger.info(f"✅ 同步论坛浏览数完成，同步了 {synced_count} 个帖子 (耗时: {duration:.2f}秒)")
                 _record_task_metrics(task_name, "success", duration)
-                return {"status": "success", "message": f"Synced {synced_count} post view counts", "synced_count": synced_count}
+                return {
+                    "status": "success", 
+                    "message": f"Synced {synced_count} post view counts", 
+                    "synced_count": synced_count,
+                    "failed_count": failed_count,
+                    "deleted_keys": deleted_count
+                }
             finally:
                 db.close()
                 # 释放分布式锁
@@ -503,13 +538,14 @@ if CELERY_AVAILABLE:
     )
     def sync_leaderboard_view_counts_task(self):
         """同步榜单浏览数从 Redis 到数据库 - Celery任务包装（每5分钟执行）"""
+        logger.info("🔄 开始执行同步榜单浏览量任务")
         start_time = time.time()
         task_name = 'sync_leaderboard_view_counts_task'
         lock_key = 'leaderboard:sync_view_counts:lock'
         
         # 获取分布式锁，防止多实例重复执行
         if not get_redis_distributed_lock(lock_key, lock_ttl=600):  # 锁10分钟
-            logger.info("同步榜单浏览数任务已在其他实例执行，跳过")
+            logger.warning("⚠️ 同步榜单浏览数任务已在其他实例执行，跳过本次执行")
             return {"status": "skipped", "message": "Task already running in another instance"}
         
         try:
@@ -530,19 +566,32 @@ if CELERY_AVAILABLE:
                 keys = redis_client.keys(pattern)
                 
                 if not keys:
-                    logger.debug("没有需要同步的榜单浏览数")
+                    logger.info("ℹ️ 没有需要同步的榜单浏览数（Redis 中没有 leaderboard:view_count:* keys）")
                     return {"status": "success", "message": "No view counts to sync", "synced_count": 0}
                 
                 synced_count = 0
+                failed_count = 0
+                synced_keys = []  # 记录成功同步的 keys，用于后续删除
+                
                 for key in keys:
                     try:
+                        # 处理 bytes 类型的 key（Redis 二进制模式）
+                        if isinstance(key, bytes):
+                            key_str = key.decode('utf-8')
+                        else:
+                            key_str = str(key)
+                        
                         # 从 key 中提取 leaderboard_id
-                        leaderboard_id = int(key.split(":")[-1])
+                        leaderboard_id = int(key_str.split(":")[-1])
                         
                         # 获取 Redis 中的增量
                         redis_increment = redis_client.get(key)
                         if redis_increment:
-                            increment = int(redis_increment)
+                            # 处理 bytes 类型的值
+                            if isinstance(redis_increment, bytes):
+                                increment = int(redis_increment.decode('utf-8'))
+                            else:
+                                increment = int(redis_increment)
                             
                             if increment > 0:
                                 # 更新数据库中的浏览数
@@ -551,22 +600,43 @@ if CELERY_AVAILABLE:
                                     .where(CustomLeaderboard.id == leaderboard_id)
                                     .values(view_count=CustomLeaderboard.view_count + increment)
                                 )
-                                
-                                # 删除 Redis key（已同步）
-                                redis_client.delete(key)
                                 synced_count += 1
+                                synced_keys.append(key)  # 记录成功同步的 key
                     except (ValueError, TypeError) as e:
                         logger.warning(f"处理榜单浏览数 key {key} 时出错: {e}")
+                        failed_count += 1
                         continue
                     except Exception as e:
                         logger.error(f"同步榜单 {key} 浏览数失败: {e}")
+                        failed_count += 1
                         continue
                 
+                # 先提交数据库事务
                 db.commit()
+                
+                # 数据库提交成功后，删除已同步的 Redis keys
+                deleted_count = 0
+                for key in synced_keys:
+                    try:
+                        redis_client.delete(key)
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.warning(f"删除 Redis key {key} 失败: {e}")
+                        # 继续处理其他 key
+                
                 duration = time.time() - start_time
-                logger.info(f"同步榜单浏览数完成，同步了 {synced_count} 个榜单 (耗时: {duration:.2f}秒)")
+                if failed_count > 0:
+                    logger.warning(f"✅ 同步榜单浏览数完成，同步了 {synced_count} 个榜单，失败 {failed_count} 个 (耗时: {duration:.2f}秒)")
+                else:
+                    logger.info(f"✅ 同步榜单浏览数完成，同步了 {synced_count} 个榜单 (耗时: {duration:.2f}秒)")
                 _record_task_metrics(task_name, "success", duration)
-                return {"status": "success", "message": f"Synced {synced_count} leaderboard view counts", "synced_count": synced_count}
+                return {
+                    "status": "success", 
+                    "message": f"Synced {synced_count} leaderboard view counts", 
+                    "synced_count": synced_count,
+                    "failed_count": failed_count,
+                    "deleted_keys": deleted_count
+                }
             finally:
                 db.close()
                 # 释放分布式锁

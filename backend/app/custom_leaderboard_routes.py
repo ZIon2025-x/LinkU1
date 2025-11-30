@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from typing import Optional, List
 from app.deps import get_async_db_dependency
 from app import models, schemas
@@ -379,44 +380,64 @@ async def get_leaderboards(
     elif sort == "items":
         base_query = base_query.order_by(models.CustomLeaderboard.item_count.desc())
     
+    # 加载申请者关系
+    query = base_query.options(selectinload(models.CustomLeaderboard.applicant))
+    
     # 分页
-    query = base_query.offset(offset).limit(limit)
+    query = query.offset(offset).limit(limit)
     result = await db.execute(query)
     leaderboards = result.scalars().all()
     
-    # 计算每个榜单的浏览量（数据库值 + Redis增量）
-    try:
-        from app.redis_cache import get_redis_client
-        redis_client = get_redis_client()
-        
-        if redis_client:
-            # 批量获取Redis中的浏览量增量
-            for leaderboard in leaderboards:
+    # 计算每个榜单的浏览量（数据库值 + Redis增量）并构建返回数据
+    from app.forum_routes import build_user_info
+    
+    leaderboard_items = []
+    for leaderboard in leaderboards:
+        # 计算浏览量
+        try:
+            from app.redis_cache import get_redis_client
+            redis_client = get_redis_client()
+            
+            if redis_client:
                 redis_key = f"leaderboard:view_count:{leaderboard.id}"
                 redis_view_count = int(redis_client.get(redis_key) or 0)
                 if redis_view_count > 0:
-                    # 创建临时属性存储显示用的浏览量
-                    leaderboard.display_view_count = leaderboard.view_count + redis_view_count
+                    display_view_count = leaderboard.view_count + redis_view_count
                 else:
-                    leaderboard.display_view_count = leaderboard.view_count
-        else:
-            # Redis不可用，使用数据库值
-            for leaderboard in leaderboards:
-                leaderboard.display_view_count = leaderboard.view_count
-    except Exception as e:
-        # Redis操作失败，使用数据库值
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.debug(f"Redis view count query failed, using DB values: {e}")
-        for leaderboard in leaderboards:
-            leaderboard.display_view_count = leaderboard.view_count
-    
-    # 将display_view_count赋值给view_count，以便Schema正确序列化
-    for leaderboard in leaderboards:
-        leaderboard.view_count = getattr(leaderboard, 'display_view_count', leaderboard.view_count)
+                    display_view_count = leaderboard.view_count
+            else:
+                display_view_count = leaderboard.view_count
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Redis view count query failed, using DB values: {e}")
+            display_view_count = leaderboard.view_count
+        
+        # 构建申请者信息
+        applicant_info = None
+        if leaderboard.applicant:
+            applicant_info = await build_user_info(db, leaderboard.applicant)
+        
+        # 创建返回对象
+        leaderboard_dict = {
+            "id": leaderboard.id,
+            "name": leaderboard.name,
+            "location": leaderboard.location,
+            "description": leaderboard.description,
+            "cover_image": leaderboard.cover_image,
+            "applicant_id": leaderboard.applicant_id,
+            "applicant": applicant_info,
+            "status": leaderboard.status,
+            "item_count": leaderboard.item_count,
+            "vote_count": leaderboard.vote_count,
+            "view_count": display_view_count,
+            "created_at": leaderboard.created_at,
+            "updated_at": leaderboard.updated_at
+        }
+        leaderboard_items.append(leaderboard_dict)
     
     return {
-        "items": leaderboards,
+        "items": leaderboard_items,
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -432,7 +453,13 @@ async def get_leaderboard_detail(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取榜单详情"""
-    leaderboard = await db.get(models.CustomLeaderboard, leaderboard_id)
+    # 加载申请者关系
+    result = await db.execute(
+        select(models.CustomLeaderboard)
+        .options(selectinload(models.CustomLeaderboard.applicant))
+        .where(models.CustomLeaderboard.id == leaderboard_id)
+    )
+    leaderboard = result.scalar_one_or_none()
     
     if not leaderboard or leaderboard.status != "active":
         raise HTTPException(
@@ -483,9 +510,28 @@ async def get_leaderboard_detail(
         # 如果使用了 Redis，返回数据库值 + Redis 中的增量
         display_view_count = leaderboard.view_count + redis_view_count
     
+    # 构建申请者信息
+    from app.forum_routes import build_user_info
+    applicant_info = None
+    if leaderboard.applicant:
+        applicant_info = await build_user_info(db, leaderboard.applicant)
+    
     # 创建返回对象，使用计算后的浏览量
-    result = schemas.CustomLeaderboardOut.from_orm(leaderboard)
-    result.view_count = display_view_count
+    result = schemas.CustomLeaderboardOut(
+        id=leaderboard.id,
+        name=leaderboard.name,
+        location=leaderboard.location,
+        description=leaderboard.description,
+        cover_image=leaderboard.cover_image,
+        applicant_id=leaderboard.applicant_id,
+        applicant=applicant_info,
+        status=leaderboard.status,
+        item_count=leaderboard.item_count,
+        vote_count=leaderboard.vote_count,
+        view_count=display_view_count,
+        created_at=leaderboard.created_at,
+        updated_at=leaderboard.updated_at
+    )
     
     return result
 
