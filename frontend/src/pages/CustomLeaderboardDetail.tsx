@@ -1099,13 +1099,43 @@ const CustomLeaderboardDetail: React.FC = () => {
             description={seoDescription}
             keywords={seoKeywords}
             canonicalUrl={canonicalUrl}
-            ogTitle={leaderboard.name}
-            ogDescription={seoDescription}
-            ogImage={leaderboard.cover_image || `https://www.link2ur.com/static/favicon.png`}
+            ogTitle={`${leaderboard.name} - Link²Ur榜单`}
+            ogDescription={leaderboard.description ? leaderboard.description.substring(0, 200) : seoDescription}
+            ogImage={(() => {
+              // 确保图片URL是完整的HTTPS URL
+              if (!leaderboard.cover_image) {
+                return `https://www.link2ur.com/static/favicon.png`;
+              }
+              const coverImageUrl = leaderboard.cover_image;
+              if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+                return coverImageUrl;
+              } else if (coverImageUrl.startsWith('//')) {
+                return `https:${coverImageUrl}`;
+              } else if (coverImageUrl.startsWith('/')) {
+                return `https://www.link2ur.com${coverImageUrl}`;
+              } else {
+                return `https://www.link2ur.com/${coverImageUrl}`;
+              }
+            })()}
             ogUrl={canonicalUrl}
             twitterTitle={leaderboard.name}
-            twitterDescription={seoDescription}
-            twitterImage={leaderboard.cover_image || `https://www.link2ur.com/static/favicon.png`}
+            twitterDescription={leaderboard.description ? leaderboard.description.substring(0, 200) : seoDescription}
+            twitterImage={(() => {
+              // 确保图片URL是完整的HTTPS URL
+              if (!leaderboard.cover_image) {
+                return `https://www.link2ur.com/static/favicon.png`;
+              }
+              const coverImageUrl = leaderboard.cover_image;
+              if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+                return coverImageUrl;
+              } else if (coverImageUrl.startsWith('//')) {
+                return `https:${coverImageUrl}`;
+              } else if (coverImageUrl.startsWith('/')) {
+                return `https://www.link2ur.com${coverImageUrl}`;
+              } else {
+                return `https://www.link2ur.com/${coverImageUrl}`;
+              }
+            })()}
           />
           {/* 结构化数据 - 使用ItemList类型表示榜单 */}
           <script
