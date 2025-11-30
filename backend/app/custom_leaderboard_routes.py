@@ -313,7 +313,7 @@ async def apply_leaderboard(
 
 # ==================== 榜单列表 ====================
 
-@router.get("/", response_model=schemas.CustomLeaderboardListResponse)
+@router.get("", response_model=schemas.CustomLeaderboardListResponse)
 async def get_leaderboards(
     location: Optional[str] = Query(None, description="地区筛选"),
     status: Optional[str] = Query("active", description="状态筛选：active（公开接口仅支持active）"),
@@ -1160,4 +1160,330 @@ async def like_vote_comment(
             "like_count": vote.like_count or 0,
             "liked": True
         }
+
+
+# ==================== 举报功能 ====================
+
+@router.post("/{leaderboard_id}/report", response_model=dict)
+@rate_limit("api_write", limit=5, window=300)  # 5次/5分钟
+async def report_leaderboard(
+    leaderboard_id: int,
+    report_data: schemas.LeaderboardReportCreate,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """用户举报榜单"""
+    # 检查榜单是否存在
+    leaderboard = await db.get(models.CustomLeaderboard, leaderboard_id)
+    if not leaderboard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="榜单不存在"
+        )
+    
+    # 输入验证和清理
+    report_data.reason = report_data.reason.strip() if report_data.reason else ""
+    if not report_data.reason or len(report_data.reason) < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="举报原因不能为空"
+        )
+    if len(report_data.reason) > 500:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="举报原因不能超过500个字符"
+        )
+    
+    if report_data.description:
+        report_data.description = report_data.description.strip()
+        if len(report_data.description) > 2000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="详细描述不能超过2000个字符"
+            )
+    
+    # 检查是否已举报（pending状态）
+    existing = await db.execute(
+        select(models.LeaderboardReport).where(
+            and_(
+                models.LeaderboardReport.leaderboard_id == leaderboard_id,
+                models.LeaderboardReport.reporter_id == current_user.id,
+                models.LeaderboardReport.status == "pending"
+            )
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已经举报过该榜单，请等待管理员处理"
+        )
+    
+    # 创建举报
+    new_report = models.LeaderboardReport(
+        leaderboard_id=leaderboard_id,
+        reporter_id=current_user.id,
+        reason=report_data.reason,
+        description=report_data.description,
+        status="pending"
+    )
+    
+    db.add(new_report)
+    
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已经举报过该榜单，请等待管理员处理"
+        )
+    
+    return {
+        "success": True,
+        "message": "举报已提交，我们会尽快处理"
+    }
+
+
+@router.post("/items/{item_id}/report", response_model=dict)
+@rate_limit("api_write", limit=5, window=300)  # 5次/5分钟
+async def report_item(
+    item_id: int,
+    report_data: schemas.ItemReportCreate,
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """用户举报竞品"""
+    # 检查竞品是否存在
+    item = await db.get(models.LeaderboardItem, item_id)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="竞品不存在"
+        )
+    
+    # 检查榜单是否存在且为active状态
+    leaderboard = await db.get(models.CustomLeaderboard, item.leaderboard_id)
+    if not leaderboard or leaderboard.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="榜单不存在或未激活"
+        )
+    
+    # 输入验证和清理
+    report_data.reason = report_data.reason.strip() if report_data.reason else ""
+    if not report_data.reason or len(report_data.reason) < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="举报原因不能为空"
+        )
+    if len(report_data.reason) > 500:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="举报原因不能超过500个字符"
+        )
+    
+    if report_data.description:
+        report_data.description = report_data.description.strip()
+        if len(report_data.description) > 2000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="详细描述不能超过2000个字符"
+            )
+    
+    # 检查是否已举报（pending状态）
+    existing = await db.execute(
+        select(models.ItemReport).where(
+            and_(
+                models.ItemReport.item_id == item_id,
+                models.ItemReport.reporter_id == current_user.id,
+                models.ItemReport.status == "pending"
+            )
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已经举报过该竞品，请等待管理员处理"
+        )
+    
+    # 创建举报
+    new_report = models.ItemReport(
+        item_id=item_id,
+        reporter_id=current_user.id,
+        reason=report_data.reason,
+        description=report_data.description,
+        status="pending"
+    )
+    
+    db.add(new_report)
+    
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已经举报过该竞品，请等待管理员处理"
+        )
+    
+    return {
+        "success": True,
+        "message": "举报已提交，我们会尽快处理"
+    }
+
+
+# ==================== 管理员查看举报列表 ====================
+
+@router.get("/admin/reports")
+async def get_reports_admin(
+    report_type: str = Query(..., regex="^(leaderboard|item)$", description="举报类型：leaderboard(榜单), item(竞品)"),
+    status: Optional[str] = Query("all", description="状态筛选：pending, reviewed, dismissed, all"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员专用：查看举报列表"""
+    if report_type == "leaderboard":
+        base_query = select(models.LeaderboardReport)
+        
+        if status == "pending":
+            base_query = base_query.where(models.LeaderboardReport.status == "pending")
+        elif status == "reviewed":
+            base_query = base_query.where(models.LeaderboardReport.status == "reviewed")
+        elif status == "dismissed":
+            base_query = base_query.where(models.LeaderboardReport.status == "dismissed")
+        # status == "all" 时显示所有
+        
+        base_query = base_query.order_by(models.LeaderboardReport.created_at.desc())
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 分页
+        query = base_query.offset(offset).limit(limit)
+        result = await db.execute(query)
+        reports = result.scalars().all()
+        
+        # 手动构建返回数据
+        items = []
+        for r in reports:
+            items.append({
+                "id": r.id,
+                "leaderboard_id": r.leaderboard_id,
+                "reporter_id": r.reporter_id,
+                "reason": r.reason,
+                "description": r.description,
+                "status": r.status,
+                "reviewed_by": r.reviewed_by,
+                "reviewed_at": r.reviewed_at,
+                "admin_comment": r.admin_comment,
+                "created_at": r.created_at,
+                "updated_at": r.updated_at
+            })
+    else:  # item
+        base_query = select(models.ItemReport)
+        
+        if status == "pending":
+            base_query = base_query.where(models.ItemReport.status == "pending")
+        elif status == "reviewed":
+            base_query = base_query.where(models.ItemReport.status == "reviewed")
+        elif status == "dismissed":
+            base_query = base_query.where(models.ItemReport.status == "dismissed")
+        # status == "all" 时显示所有
+        
+        base_query = base_query.order_by(models.ItemReport.created_at.desc())
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 分页
+        query = base_query.offset(offset).limit(limit)
+        result = await db.execute(query)
+        reports = result.scalars().all()
+        
+        # 手动构建返回数据
+        items = []
+        for r in reports:
+            items.append({
+                "id": r.id,
+                "item_id": r.item_id,
+                "reporter_id": r.reporter_id,
+                "reason": r.reason,
+                "description": r.description,
+                "status": r.status,
+                "reviewed_by": r.reviewed_by,
+                "reviewed_at": r.reviewed_at,
+                "admin_comment": r.admin_comment,
+                "created_at": r.created_at,
+                "updated_at": r.updated_at
+            })
+    
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + limit < total
+    }
+
+
+# ==================== 管理员处理举报 ====================
+
+@router.post("/admin/reports/{report_id}/review")
+async def review_report(
+    report_id: int,
+    report_type: str = Query(..., regex="^(leaderboard|item)$", description="举报类型"),
+    action: str = Query(..., regex="^(reviewed|dismissed)$", description="处理动作：reviewed(已处理), dismissed(已驳回)"),
+    admin_comment: Optional[str] = None,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员处理举报"""
+    if report_type == "leaderboard":
+        report = await db.get(models.LeaderboardReport, report_id)
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="举报记录不存在"
+            )
+    else:  # item
+        report = await db.get(models.ItemReport, report_id)
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="举报记录不存在"
+            )
+    
+    if report.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="该举报已处理"
+        )
+    
+    # 清理管理员意见
+    if admin_comment:
+        admin_comment = admin_comment.strip()
+        if len(admin_comment) > 2000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="处理意见不能超过2000个字符"
+            )
+    
+    # 更新举报状态
+    report.status = action
+    report.reviewed_by = current_admin.id
+    report.reviewed_at = get_utc_time()
+    report.admin_comment = admin_comment
+    
+    await db.commit()
+    
+    return {
+        "message": f"举报已{action}",
+        "status": action
+    }
 

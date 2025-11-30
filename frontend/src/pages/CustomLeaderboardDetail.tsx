@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload } from 'antd';
-import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
+import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import {
   getCustomLeaderboardDetail,
   getLeaderboardItems,
   submitLeaderboardItem,
-  voteLeaderboardItem
+  voteLeaderboardItem,
+  reportLeaderboard
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
@@ -31,6 +32,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [form] = Form.useForm();
   const [voteForm] = Form.useForm();
+  const [reportForm] = Form.useForm();
+  const [showReportModal, setShowReportModal] = useState(false);
   const [sortBy, setSortBy] = useState<'vote_score' | 'net_votes' | 'upvotes' | 'created_at'>('vote_score');
   const [pagination, setPagination] = useState({
     current: 1,
@@ -298,7 +301,7 @@ const CustomLeaderboardDetail: React.FC = () => {
             {leaderboard.description && (
               <p style={{ marginTop: 16, color: '#666' }}>{leaderboard.description}</p>
             )}
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -311,6 +314,19 @@ const CustomLeaderboardDetail: React.FC = () => {
                 }}
               >
                 新增竞品
+              </Button>
+              <Button
+                danger
+                icon={<ExclamationCircleOutlined />}
+                onClick={() => {
+                  if (!user) {
+                    message.warning('请先登录');
+                    return;
+                  }
+                  setShowReportModal(true);
+                }}
+              >
+                举报榜单
               </Button>
             </div>
           </div>
@@ -604,6 +620,73 @@ const CustomLeaderboardDetail: React.FC = () => {
                 </div>
               )}
             </Upload>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 举报弹窗 */}
+      <Modal
+        title="举报榜单"
+        open={showReportModal}
+        onCancel={() => {
+          setShowReportModal(false);
+          reportForm.resetFields();
+        }}
+        onOk={() => reportForm.submit()}
+        width={500}
+      >
+        <Form
+          form={reportForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              await reportLeaderboard(Number(leaderboardId), {
+                reason: values.reason,
+                description: values.description
+              });
+              message.success('举报已提交，我们会尽快处理');
+              setShowReportModal(false);
+              reportForm.resetFields();
+            } catch (error: any) {
+              console.error('举报失败:', error);
+              const errorMsg = error.response?.data?.detail || error.message || '举报失败';
+              
+              if (error.response?.status === 409) {
+                message.warning(errorMsg);
+              } else if (error.response?.status === 401) {
+                message.error('请先登录');
+              } else {
+                message.error(errorMsg);
+              }
+            }
+          }}
+        >
+          <Form.Item
+            name="reason"
+            label="举报原因"
+            rules={[
+              { required: true, message: '请输入举报原因' },
+              { max: 500, message: '举报原因不能超过500字' }
+            ]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="请详细说明举报原因，例如：内容不当、虚假信息、恶意刷票等"
+              showCount
+              maxLength={500}
+            />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="详细描述（可选）"
+            rules={[{ max: 2000, message: '详细描述不能超过2000字' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="可以补充更多详细信息，帮助我们更好地处理您的举报"
+              showCount
+              maxLength={2000}
+            />
           </Form.Item>
         </Form>
       </Modal>

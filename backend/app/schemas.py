@@ -2786,3 +2786,62 @@ class LeaderboardVoteListResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
+
+# ==================== 举报相关 Schemas ====================
+
+class LeaderboardReportCreate(BaseModel):
+    """榜单举报创建"""
+    reason: str = Field(..., min_length=1, max_length=500, description="举报原因")
+    description: Optional[str] = Field(None, max_length=2000, description="详细描述（可选）")
+
+
+class ItemReportCreate(BaseModel):
+    """竞品举报创建"""
+    reason: str = Field(..., min_length=1, max_length=500, description="举报原因")
+    description: Optional[str] = Field(None, max_length=2000, description="详细描述（可选）")
+
+
+class LeaderboardReportOut(BaseModel):
+    """榜单举报输出"""
+    id: int
+    leaderboard_id: int
+    reporter_id: str
+    reason: str
+    description: Optional[str] = None
+    status: str
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    admin_comment: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ItemReportOut(BaseModel):
+    """竞品举报输出"""
+    id: int
+    item_id: int
+    reporter_id: str
+    reason: str
+    description: Optional[str] = None
+    status: str
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime.datetime] = None
+    admin_comment: Optional[str] = None
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ReportListResponse(BaseModel):
+    """举报列表分页响应"""
+    items: List[LeaderboardReportOut]  # 或 List[ItemReportOut]，根据类型使用
+    total: int
+    limit: int
+    offset: int
+    has_more: bool

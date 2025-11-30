@@ -7,7 +7,7 @@ import {
 import { 
   LikeOutlined, DislikeOutlined, ArrowLeftOutlined, TrophyOutlined,
   PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UserOutlined,
-  MessageOutlined, ClockCircleOutlined
+  MessageOutlined, ClockCircleOutlined, ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
@@ -16,7 +16,8 @@ import {
   getLeaderboardItemDetail,
   getLeaderboardItemVotes,
   voteLeaderboardItem,
-  likeVoteComment
+  likeVoteComment,
+  reportLeaderboardItem
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { compressImage } from '../utils/imageCompression';
@@ -40,6 +41,8 @@ const LeaderboardItemDetail: React.FC = () => {
   const [currentVoteType, setCurrentVoteType] = useState<'upvote' | 'downvote' | null>(null);
   const [user, setUser] = useState<any>(null);
   const [voteForm] = Form.useForm();
+  const [reportForm] = Form.useForm();
+  const [showReportModal, setShowReportModal] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -371,6 +374,20 @@ const LeaderboardItemDetail: React.FC = () => {
                 >
                   点踩 {item.downvotes}
                 </Button>
+                <Button
+                  danger
+                  icon={<ExclamationCircleOutlined />}
+                  size="large"
+                  onClick={() => {
+                    if (!user) {
+                      message.warning('请先登录');
+                      return;
+                    }
+                    setShowReportModal(true);
+                  }}
+                >
+                  举报
+                </Button>
               </Space>
             </div>
 
@@ -411,7 +428,19 @@ const LeaderboardItemDetail: React.FC = () => {
           ) : votes.length > 0 ? (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {votes.map((vote) => (
+                {votes.map((vote, index) => {
+                  // 为匿名留言分配序号（按时间顺序）
+                  let anonymousCount = 0;
+                  for (let i = 0; i <= index; i++) {
+                    if (votes[i].is_anonymous) {
+                      anonymousCount++;
+                    }
+                  }
+                  const displayName = vote.is_anonymous 
+                    ? `匿名用户 #${anonymousCount}` 
+                    : (vote.user_id ? `用户 ${vote.user_id}` : '未知用户');
+                  
+                  return (
                   <Card key={vote.id} size="small" style={{ borderRadius: 8 }}>
                     <div style={{ display: 'flex', gap: 12 }}>
                       {/* 用户头像 */}
@@ -432,7 +461,7 @@ const LeaderboardItemDetail: React.FC = () => {
                               <DislikeOutlined style={{ color: '#ff4d4f' }} />
                             )}
                             <Text strong>
-                              {vote.is_anonymous ? '匿名用户' : (vote.user_id ? `用户 ${vote.user_id}` : '未知用户')}
+                              {displayName}
                             </Text>
                             {vote.is_anonymous && (
                               <Tag color="default" style={{ fontSize: 12 }}>匿名</Tag>
@@ -531,6 +560,73 @@ const LeaderboardItemDetail: React.FC = () => {
             valuePropName="checked"
           >
             <Checkbox>匿名投票/留言</Checkbox>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 举报弹窗 */}
+      <Modal
+        title="举报竞品"
+        open={showReportModal}
+        onCancel={() => {
+          setShowReportModal(false);
+          reportForm.resetFields();
+        }}
+        onOk={() => reportForm.submit()}
+        width={500}
+      >
+        <Form
+          form={reportForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            try {
+              await reportLeaderboardItem(Number(itemId), {
+                reason: values.reason,
+                description: values.description
+              });
+              message.success('举报已提交，我们会尽快处理');
+              setShowReportModal(false);
+              reportForm.resetFields();
+            } catch (error: any) {
+              console.error('举报失败:', error);
+              const errorMsg = error.response?.data?.detail || error.message || '举报失败';
+              
+              if (error.response?.status === 409) {
+                message.warning(errorMsg);
+              } else if (error.response?.status === 401) {
+                message.error('请先登录');
+              } else {
+                message.error(errorMsg);
+              }
+            }
+          }}
+        >
+          <Form.Item
+            name="reason"
+            label="举报原因"
+            rules={[
+              { required: true, message: '请输入举报原因' },
+              { max: 500, message: '举报原因不能超过500字' }
+            ]}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="请详细说明举报原因，例如：虚假信息、恶意刷票、内容不当等"
+              showCount
+              maxLength={500}
+            />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="详细描述（可选）"
+            rules={[{ max: 2000, message: '详细描述不能超过2000字' }]}
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="可以补充更多详细信息，帮助我们更好地处理您的举报"
+              showCount
+              maxLength={2000}
+            />
           </Form.Item>
         </Form>
       </Modal>

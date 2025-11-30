@@ -2819,4 +2819,28 @@ export const likeVoteComment = async (voteId: number) => {
   return res.data;
 };
 
+export const reportLeaderboard = async (leaderboardId: number, data: { reason: string; description?: string }) => {
+  const token = await getCSRFToken();
+  const res = await api.post(
+    `/api/custom-leaderboards/${leaderboardId}/report`,
+    data,
+    {
+      headers: { 'X-CSRF-Token': token }
+    }
+  );
+  return res.data;
+};
+
+export const reportLeaderboardItem = async (itemId: number, data: { reason: string; description?: string }) => {
+  const token = await getCSRFToken();
+  const res = await api.post(
+    `/api/custom-leaderboards/items/${itemId}/report`,
+    data,
+    {
+      headers: { 'X-CSRF-Token': token }
+    }
+  );
+  return res.data;
+};
+
 export default api; 

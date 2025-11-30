@@ -2322,3 +2322,59 @@ class VoteCommentLike(Base):
         UniqueConstraint('vote_id', 'user_id', name='uq_vote_comment_like'),  # 每个用户对每条留言只能点一次赞
         Index('idx_comment_like_vote_user', 'vote_id', 'user_id'),
     )
+
+
+class LeaderboardReport(Base):
+    """榜单举报表"""
+    __tablename__ = "leaderboard_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    leaderboard_id = Column(Integer, ForeignKey("custom_leaderboards.id", ondelete="CASCADE"), nullable=False)
+    reporter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason = Column(String(500), nullable=False)  # 举报原因
+    description = Column(Text, nullable=True)  # 详细描述
+    status = Column(String(20), nullable=False, default="pending")  # pending, reviewed, dismissed
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核人
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    admin_comment = Column(Text, nullable=True)  # 管理员处理意见
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    leaderboard = relationship("CustomLeaderboard", backref="reports")
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    reviewer = relationship("AdminUser", foreign_keys=[reviewed_by])
+    
+    __table_args__ = (
+        UniqueConstraint('leaderboard_id', 'reporter_id', name='uq_leaderboard_report'),  # 每个用户对每个榜单只能举报一次
+        Index('idx_leaderboard_report_status', 'status'),
+        Index('idx_leaderboard_report_created_at', 'created_at'),
+    )
+
+
+class ItemReport(Base):
+    """竞品举报表"""
+    __tablename__ = "item_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("leaderboard_items.id", ondelete="CASCADE"), nullable=False)
+    reporter_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason = Column(String(500), nullable=False)  # 举报原因
+    description = Column(Text, nullable=True)  # 详细描述
+    status = Column(String(20), nullable=False, default="pending")  # pending, reviewed, dismissed
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 审核人
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    admin_comment = Column(Text, nullable=True)  # 管理员处理意见
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    item = relationship("LeaderboardItem", backref="reports")
+    reporter = relationship("User", foreign_keys=[reporter_id])
+    reviewer = relationship("AdminUser", foreign_keys=[reviewed_by])
+    
+    __table_args__ = (
+        UniqueConstraint('item_id', 'reporter_id', name='uq_item_report'),  # 每个用户对每个竞品只能举报一次
+        Index('idx_item_report_status', 'status'),
+        Index('idx_item_report_created_at', 'created_at'),
+    )
