@@ -1753,7 +1753,7 @@ async def review_report(
 
 @router.get("/admin/items", response_model=schemas.LeaderboardItemListResponse)
 async def get_items_admin(
-    leaderboard_id: Optional[int] = Query(None, description="榜单ID筛选"),
+    leaderboard_id: Optional[str] = Query(None, description="榜单ID筛选"),
     status: Optional[str] = Query("all", description="状态筛选：approved, all"),
     keyword: Optional[str] = Query(None, description="关键词搜索（竞品名称、描述）"),
     limit: int = Query(50, ge=1, le=200),
@@ -1762,10 +1762,23 @@ async def get_items_admin(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """管理员专用：获取竞品列表"""
+    # 处理 leaderboard_id：将空字符串转换为 None，并尝试解析为整数
+    leaderboard_id_int = None
+    if leaderboard_id:
+        leaderboard_id = leaderboard_id.strip()
+        if leaderboard_id:
+            try:
+                leaderboard_id_int = int(leaderboard_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="榜单ID必须是有效的整数"
+                )
+    
     base_query = select(models.LeaderboardItem)
     
-    if leaderboard_id:
-        base_query = base_query.where(models.LeaderboardItem.leaderboard_id == leaderboard_id)
+    if leaderboard_id_int:
+        base_query = base_query.where(models.LeaderboardItem.leaderboard_id == leaderboard_id_int)
     
     if status == "approved":
         base_query = base_query.where(models.LeaderboardItem.status == "approved")
