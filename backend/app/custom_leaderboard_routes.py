@@ -233,6 +233,150 @@ async def get_votes_admin(
     return votes_out
 
 
+# ==================== 管理员获取竞品列表 ====================
+
+@router.get("/admin/items", response_model=schemas.LeaderboardItemListResponse)
+async def get_items_admin(
+    leaderboard_id: Optional[str] = Query(None, description="榜单ID筛选"),
+    status: Optional[str] = Query("all", description="状态筛选：approved, all"),
+    keyword: Optional[str] = Query(None, description="关键词搜索（竞品名称、描述）"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员专用：获取竞品列表"""
+    # 处理 leaderboard_id：将空字符串转换为 None，并尝试解析为整数
+    leaderboard_id_int = None
+    if leaderboard_id is not None:
+        # 如果是字符串，去除空格
+        if isinstance(leaderboard_id, str):
+            leaderboard_id = leaderboard_id.strip()
+            if not leaderboard_id:  # 空字符串
+                leaderboard_id = None
+        # 如果仍然有值，尝试解析为整数
+        if leaderboard_id is not None:
+            try:
+                leaderboard_id_int = int(leaderboard_id)
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="榜单ID必须是有效的整数"
+                )
+    
+    base_query = select(models.LeaderboardItem)
+    
+    if leaderboard_id_int:
+        base_query = base_query.where(models.LeaderboardItem.leaderboard_id == leaderboard_id_int)
+    
+    if status == "approved":
+        base_query = base_query.where(models.LeaderboardItem.status == "approved")
+    # status == "all" 时显示所有
+    
+    if keyword:
+        keyword = keyword.strip()
+        if len(keyword) > 0:
+            keyword_pattern = f"%{keyword}%"
+            base_query = base_query.where(
+                or_(
+                    models.LeaderboardItem.name.ilike(keyword_pattern),
+                    models.LeaderboardItem.description.ilike(keyword_pattern)
+                )
+            )
+    
+    # 计算总数
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 排序：按创建时间倒序
+    base_query = base_query.order_by(models.LeaderboardItem.created_at.desc())
+    
+    # 分页
+    query = base_query.offset(offset).limit(limit)
+    result = await db.execute(query)
+    items = result.scalars().all()
+    
+    # 构建返回数据
+    items_out = []
+    for item in items:
+        try:
+            images_list = None
+            if item.images:
+                try:
+                    images_list = json.loads(item.images)
+                except Exception:
+                    images_list = None
+            
+            # 确保 created_at 和 updated_at 不为 None（处理旧数据）
+            created_at = item.created_at if item.created_at is not None else get_utc_time()
+            updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
+            
+            # 确保所有必需字段的类型正确，特别是 leaderboard_id 必须是整数
+            # 如果转换失败，跳过这条记录并记录错误
+            if item.leaderboard_id is None:
+                logger.warning(f"跳过记录 {item.id}：leaderboard_id 为 None")
+                continue
+            
+            try:
+                leaderboard_id_int = int(item.leaderboard_id)
+            except (ValueError, TypeError) as e:
+                logger.error(f"跳过记录 {item.id}：无法将 leaderboard_id 转换为整数: {item.leaderboard_id} (类型: {type(item.leaderboard_id)}), 错误: {e}")
+                continue
+            
+            item_dict = {
+                "id": int(item.id) if item.id is not None else 0,
+                "leaderboard_id": leaderboard_id_int,
+                "name": str(item.name) if item.name else "",
+                "description": item.description if item.description else None,
+                "address": item.address if item.address else None,
+                "phone": item.phone if item.phone else None,
+                "website": item.website if item.website else None,
+                "images": images_list,
+                "submitted_by": str(item.submitted_by) if item.submitted_by else "",
+                "status": str(item.status) if item.status else "approved",
+                "upvotes": int(item.upvotes) if item.upvotes is not None else 0,
+                "downvotes": int(item.downvotes) if item.downvotes is not None else 0,
+                "net_votes": int(item.net_votes) if item.net_votes is not None else 0,
+                "vote_score": float(item.vote_score) if item.vote_score is not None else 0.0,
+                "user_vote": None,
+                "user_vote_comment": None,
+                "user_vote_is_anonymous": None,
+                "display_comment": None,
+                "display_comment_type": None,
+                "display_comment_info": None,
+                "created_at": created_at,
+                "updated_at": updated_at
+            }
+            items_out.append(item_dict)
+        except Exception as e:
+            logger.error(f"处理竞品记录 {item.id} 时出错: {e}", exc_info=True)
+            continue
+    
+    # 使用 Pydantic 模型进行验证，确保类型正确
+    # 先验证每个 item，如果验证失败会抛出异常，这样我们可以捕获并记录
+    validated_items = []
+    for idx, item_dict in enumerate(items_out):
+        try:
+            # 记录第一个 item 的详细信息以便调试
+            if idx == 0 and items_out:
+                logger.debug(f"验证第一个竞品数据: leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}")
+            validated_item = schemas.LeaderboardItemOut(**item_dict)
+            validated_items.append(validated_item)
+        except Exception as e:
+            logger.error(f"验证竞品数据失败 (索引 {idx}): leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}, 完整数据={item_dict}, 错误: {e}", exc_info=True)
+            # 跳过验证失败的记录
+            continue
+    
+    return schemas.LeaderboardItemListResponse(
+        items=validated_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + limit < total
+    )
+
+
 # ==================== 榜单申请 ====================
 
 @router.post("/apply", response_model=schemas.CustomLeaderboardOut)
@@ -1759,150 +1903,6 @@ async def review_report(
         "message": f"举报已{action}",
         "status": action
     }
-
-
-# ==================== 管理员获取竞品列表 ====================
-
-@router.get("/admin/items", response_model=schemas.LeaderboardItemListResponse)
-async def get_items_admin(
-    leaderboard_id: Optional[str] = Query(None, description="榜单ID筛选"),
-    status: Optional[str] = Query("all", description="状态筛选：approved, all"),
-    keyword: Optional[str] = Query(None, description="关键词搜索（竞品名称、描述）"),
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-    current_admin: models.AdminUser = Depends(get_current_admin_async),
-    db: AsyncSession = Depends(get_async_db_dependency),
-):
-    """管理员专用：获取竞品列表"""
-    # 处理 leaderboard_id：将空字符串转换为 None，并尝试解析为整数
-    leaderboard_id_int = None
-    if leaderboard_id is not None:
-        # 如果是字符串，去除空格
-        if isinstance(leaderboard_id, str):
-            leaderboard_id = leaderboard_id.strip()
-            if not leaderboard_id:  # 空字符串
-                leaderboard_id = None
-        # 如果仍然有值，尝试解析为整数
-        if leaderboard_id is not None:
-            try:
-                leaderboard_id_int = int(leaderboard_id)
-            except (ValueError, TypeError):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="榜单ID必须是有效的整数"
-                )
-    
-    base_query = select(models.LeaderboardItem)
-    
-    if leaderboard_id_int:
-        base_query = base_query.where(models.LeaderboardItem.leaderboard_id == leaderboard_id_int)
-    
-    if status == "approved":
-        base_query = base_query.where(models.LeaderboardItem.status == "approved")
-    # status == "all" 时显示所有
-    
-    if keyword:
-        keyword = keyword.strip()
-        if len(keyword) > 0:
-            keyword_pattern = f"%{keyword}%"
-            base_query = base_query.where(
-                or_(
-                    models.LeaderboardItem.name.ilike(keyword_pattern),
-                    models.LeaderboardItem.description.ilike(keyword_pattern)
-                )
-            )
-    
-    # 计算总数
-    count_query = select(func.count()).select_from(base_query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-    
-    # 排序：按创建时间倒序
-    base_query = base_query.order_by(models.LeaderboardItem.created_at.desc())
-    
-    # 分页
-    query = base_query.offset(offset).limit(limit)
-    result = await db.execute(query)
-    items = result.scalars().all()
-    
-    # 构建返回数据
-    items_out = []
-    for item in items:
-        try:
-            images_list = None
-            if item.images:
-                try:
-                    images_list = json.loads(item.images)
-                except Exception:
-                    images_list = None
-            
-            # 确保 created_at 和 updated_at 不为 None（处理旧数据）
-            created_at = item.created_at if item.created_at is not None else get_utc_time()
-            updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
-            
-            # 确保所有必需字段的类型正确，特别是 leaderboard_id 必须是整数
-            # 如果转换失败，跳过这条记录并记录错误
-            if item.leaderboard_id is None:
-                logger.warning(f"跳过记录 {item.id}：leaderboard_id 为 None")
-                continue
-            
-            try:
-                leaderboard_id_int = int(item.leaderboard_id)
-            except (ValueError, TypeError) as e:
-                logger.error(f"跳过记录 {item.id}：无法将 leaderboard_id 转换为整数: {item.leaderboard_id} (类型: {type(item.leaderboard_id)}), 错误: {e}")
-                continue
-            
-            item_dict = {
-                "id": int(item.id) if item.id is not None else 0,
-                "leaderboard_id": leaderboard_id_int,
-                "name": str(item.name) if item.name else "",
-                "description": item.description if item.description else None,
-                "address": item.address if item.address else None,
-                "phone": item.phone if item.phone else None,
-                "website": item.website if item.website else None,
-                "images": images_list,
-                "submitted_by": str(item.submitted_by) if item.submitted_by else "",
-                "status": str(item.status) if item.status else "approved",
-                "upvotes": int(item.upvotes) if item.upvotes is not None else 0,
-                "downvotes": int(item.downvotes) if item.downvotes is not None else 0,
-                "net_votes": int(item.net_votes) if item.net_votes is not None else 0,
-                "vote_score": float(item.vote_score) if item.vote_score is not None else 0.0,
-                "user_vote": None,
-                "user_vote_comment": None,
-                "user_vote_is_anonymous": None,
-                "display_comment": None,
-                "display_comment_type": None,
-                "display_comment_info": None,
-                "created_at": created_at,
-                "updated_at": updated_at
-            }
-            items_out.append(item_dict)
-        except Exception as e:
-            logger.error(f"处理竞品记录 {item.id} 时出错: {e}", exc_info=True)
-            continue
-    
-    # 使用 Pydantic 模型进行验证，确保类型正确
-    # 先验证每个 item，如果验证失败会抛出异常，这样我们可以捕获并记录
-    validated_items = []
-    for idx, item_dict in enumerate(items_out):
-        try:
-            # 记录第一个 item 的详细信息以便调试
-            if idx == 0 and items_out:
-                logger.debug(f"验证第一个竞品数据: leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}")
-            validated_item = schemas.LeaderboardItemOut(**item_dict)
-            validated_items.append(validated_item)
-        except Exception as e:
-            logger.error(f"验证竞品数据失败 (索引 {idx}): leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}, 完整数据={item_dict}, 错误: {e}", exc_info=True)
-            # 跳过验证失败的记录
-            continue
-    
-    return schemas.LeaderboardItemListResponse(
-        items=validated_items,
-        total=total,
-        limit=limit,
-        offset=offset,
-        has_more=offset + limit < total
-    )
 
 
 # ==================== 管理员删除竞品 ====================
