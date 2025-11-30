@@ -62,7 +62,8 @@ import api, {
   processFleaMarketReport,
   getFleaMarketItemsAdmin,
   updateFleaMarketItemAdmin,
-  deleteFleaMarketItemAdmin
+  deleteFleaMarketItemAdmin,
+  getLeaderboardVotesAdmin
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -346,6 +347,18 @@ const AdminDashboard: React.FC = () => {
     admin_comment: ''
   });
 
+  // 投票记录管理相关状态
+  const [leaderboardVotes, setLeaderboardVotes] = useState<any[]>([]);
+  const [leaderboardVotesPage, setLeaderboardVotesPage] = useState(1);
+  const [leaderboardVotesTotal, setLeaderboardVotesTotal] = useState(0);
+  const [leaderboardVotesLoading, setLeaderboardVotesLoading] = useState(false);
+  const [leaderboardVotesFilter, setLeaderboardVotesFilter] = useState<{
+    item_id?: number;
+    leaderboard_id?: number;
+    is_anonymous?: boolean;
+    keyword?: string;
+  }>({});
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -396,6 +409,8 @@ const AdminDashboard: React.FC = () => {
           setForumCategories(categoriesData.categories || []);
         }
         await loadForumPosts();
+      } else if (activeTab === 'leaderboard-votes') {
+        await loadLeaderboardVotes();
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -5597,6 +5612,37 @@ const AdminDashboard: React.FC = () => {
     });
   };
 
+  // 加载投票记录
+  const loadLeaderboardVotes = useCallback(async () => {
+    setLeaderboardVotesLoading(true);
+    try {
+      const offset = (leaderboardVotesPage - 1) * 50;
+      const data = await getLeaderboardVotesAdmin({
+        ...leaderboardVotesFilter,
+        limit: 50,
+        offset
+      });
+      setLeaderboardVotes(Array.isArray(data) ? data : []);
+      // 注意：API返回的是数组，没有total字段，这里需要根据实际情况调整
+      setLeaderboardVotesTotal(Array.isArray(data) ? data.length : 0);
+    } catch (error: any) {
+      console.error('加载投票记录失败:', error);
+      message.error(error.response?.data?.detail || '加载投票记录失败');
+    } finally {
+      setLeaderboardVotesLoading(false);
+    }
+  }, [leaderboardVotesPage, leaderboardVotesFilter]);
+
+  // 当切换到投票记录管理标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'leaderboard-votes') {
+      const timer = setTimeout(() => {
+        loadLeaderboardVotes();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, leaderboardVotesPage, leaderboardVotesFilter, loadLeaderboardVotes]);
+
   // 当切换到举报管理标签页时，自动加载数据
   useEffect(() => {
     if (activeTab === 'reports') {
@@ -6539,6 +6585,297 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
+  // 渲染投票记录管理
+  const renderLeaderboardVotes = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>投票记录管理</h2>
+      </div>
+
+      {/* 筛选 */}
+      <div style={{
+        background: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        marginBottom: '20px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '10px',
+        alignItems: 'center'
+      }}>
+        <input
+          type="number"
+          placeholder="竞品ID"
+          value={leaderboardVotesFilter.item_id || ''}
+          onChange={(e) => setLeaderboardVotesFilter({
+            ...leaderboardVotesFilter,
+            item_id: e.target.value ? parseInt(e.target.value) : undefined
+          })}
+          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd', width: '120px' }}
+        />
+        <input
+          type="number"
+          placeholder="榜单ID"
+          value={leaderboardVotesFilter.leaderboard_id || ''}
+          onChange={(e) => setLeaderboardVotesFilter({
+            ...leaderboardVotesFilter,
+            leaderboard_id: e.target.value ? parseInt(e.target.value) : undefined
+          })}
+          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd', width: '120px' }}
+        />
+        <select
+          value={leaderboardVotesFilter.is_anonymous === undefined ? '' : leaderboardVotesFilter.is_anonymous ? 'true' : 'false'}
+          onChange={(e) => setLeaderboardVotesFilter({
+            ...leaderboardVotesFilter,
+            is_anonymous: e.target.value === '' ? undefined : e.target.value === 'true'
+          })}
+          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+        >
+          <option value="">全部</option>
+          <option value="true">匿名</option>
+          <option value="false">非匿名</option>
+        </select>
+        <input
+          type="text"
+          placeholder="搜索用户名/留言内容"
+          value={leaderboardVotesFilter.keyword || ''}
+          onChange={(e) => setLeaderboardVotesFilter({
+            ...leaderboardVotesFilter,
+            keyword: e.target.value || undefined
+          })}
+          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd', flex: 1, minWidth: '200px' }}
+        />
+        <button
+          onClick={() => {
+            setLeaderboardVotesPage(1);
+            loadLeaderboardVotes();
+          }}
+          style={{
+            padding: '8px 16px',
+            border: 'none',
+            background: '#007bff',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          搜索
+        </button>
+        <button
+          onClick={() => {
+            setLeaderboardVotesFilter({});
+            setLeaderboardVotesPage(1);
+            loadLeaderboardVotes();
+          }}
+          style={{
+            padding: '8px 16px',
+            border: 'none',
+            background: '#6c757d',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          重置
+        </button>
+      </div>
+
+      {/* 投票记录列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'auto'
+      }}>
+        {leaderboardVotesLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : leaderboardVotes.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无投票记录</div>
+        ) : (
+          <>
+            {/* 桌面端表格 */}
+            <div className="desktop-votes-table" style={{ display: 'block' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+                <thead>
+                  <tr style={{ background: '#f8f9fa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>竞品ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>用户ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>投票类型</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>留言</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>匿名</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>创建时间</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboardVotes.map((vote) => (
+                    <tr key={vote.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '12px' }}>{vote.id}</td>
+                      <td style={{ padding: '12px' }}>{vote.item_id}</td>
+                      <td style={{ padding: '12px' }}>
+                        {vote.is_anonymous ? (
+                          <span style={{ color: '#999', fontStyle: 'italic' }}>匿名</span>
+                        ) : (
+                          vote.user_id
+                        )}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          background: vote.vote_type === 'upvote' ? '#52c41a' : '#ff4d4f',
+                          color: 'white',
+                          fontSize: '12px'
+                        }}>
+                          {vote.vote_type === 'upvote' ? '👍 点赞' : '👎 点踩'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {vote.comment || <span style={{ color: '#999', fontStyle: 'italic' }}>（无留言）</span>}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {vote.is_anonymous ? (
+                          <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>是</span>
+                        ) : (
+                          <span style={{ color: '#52c41a' }}>否</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>
+                        {new Date(vote.created_at).toLocaleString('zh-CN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 移动端卡片 */}
+            <div className="mobile-votes-cards" style={{ display: 'none' }}>
+              {leaderboardVotes.map((vote) => (
+                <div key={vote.id} style={{
+                  padding: '16px',
+                  borderBottom: '1px solid #f0f0f0',
+                  background: 'white'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '16px' }}>ID: {vote.id}</span>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: vote.vote_type === 'upvote' ? '#52c41a' : '#ff4d4f',
+                      color: 'white',
+                      fontSize: '12px'
+                    }}>
+                      {vote.vote_type === 'upvote' ? '👍 点赞' : '👎 点踩'}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666' }}>
+                    <div>竞品ID: {vote.item_id}</div>
+                    <div>用户ID: {vote.is_anonymous ? <span style={{ color: '#999', fontStyle: 'italic' }}>匿名</span> : vote.user_id}</div>
+                    <div>匿名: {vote.is_anonymous ? <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>是</span> : <span style={{ color: '#52c41a' }}>否</span>}</div>
+                  </div>
+                  {vote.comment && (
+                    <div style={{ marginBottom: '8px', padding: '8px', background: '#f5f5f5', borderRadius: '4px', fontSize: '14px' }}>
+                      {vote.comment}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '12px', color: '#999' }}>
+                    {new Date(vote.created_at).toLocaleString('zh-CN')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          @media (max-width: 768px) {
+            .desktop-votes-table {
+              display: none !important;
+            }
+            .mobile-votes-cards {
+              display: block !important;
+            }
+            
+            /* 筛选区域移动端优化 */
+            div[style*="display: flex"][style*="flexWrap: wrap"] {
+              flex-direction: column !important;
+            }
+            
+            div[style*="display: flex"][style*="flexWrap: wrap"] input,
+            div[style*="display: flex"][style*="flexWrap: wrap"] select {
+              width: 100% !important;
+              margin-bottom: 8px !important;
+            }
+            
+            div[style*="display: flex"][style*="flexWrap: wrap"] button {
+              width: 100% !important;
+              margin-bottom: 8px !important;
+            }
+          }
+          
+          @media (min-width: 769px) {
+            .desktop-votes-table {
+              display: block !important;
+            }
+            .mobile-votes-cards {
+              display: none !important;
+            }
+          }
+        `}
+      </style>
+
+      {/* 分页 */}
+      {leaderboardVotesTotal > 0 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+          <button
+            onClick={() => {
+              if (leaderboardVotesPage > 1) {
+                setLeaderboardVotesPage(leaderboardVotesPage - 1);
+              }
+            }}
+            disabled={leaderboardVotesPage === 1}
+            style={{
+              padding: '8px 16px',
+              margin: '0 4px',
+              border: '1px solid #ddd',
+              background: leaderboardVotesPage === 1 ? '#f0f0f0' : 'white',
+              cursor: leaderboardVotesPage === 1 ? 'not-allowed' : 'pointer',
+              borderRadius: '4px'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', display: 'inline-block' }}>
+            第 {leaderboardVotesPage} 页
+          </span>
+          <button
+            onClick={() => {
+              if (leaderboardVotes.length === 50) {
+                setLeaderboardVotesPage(leaderboardVotesPage + 1);
+              }
+            }}
+            disabled={leaderboardVotes.length < 50}
+            style={{
+              padding: '8px 16px',
+              margin: '0 4px',
+              border: '1px solid #ddd',
+              background: leaderboardVotes.length < 50 ? '#f0f0f0' : 'white',
+              cursor: leaderboardVotes.length < 50 ? 'not-allowed' : 'pointer',
+              borderRadius: '4px'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   // 标签页按钮样式函数 - 使用CSS类
   const getTabButtonClassName = (isActive: boolean, specialColor?: string) => {
     const baseClass = styles.tabButton;
@@ -6650,6 +6987,12 @@ const AdminDashboard: React.FC = () => {
               🛒 商品管理
             </button>
             <button 
+              className={getTabButtonClassName(activeTab === 'leaderboard-votes')}
+              onClick={() => handleTabChange('leaderboard-votes')}
+            >
+              📊 投票记录
+            </button>
+            <button 
               className={getTabButtonClassName(activeTab === 'reports')}
               onClick={() => handleTabChange('reports')}
             >
@@ -6752,6 +7095,8 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'forum-posts' && renderForumPosts()}
             {activeTab === 'reports' && renderReports()}
             {activeTab === 'flea-market-items' && renderFleaMarketItems()}
+            {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
+            {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
           </div>
         )}
       </div>

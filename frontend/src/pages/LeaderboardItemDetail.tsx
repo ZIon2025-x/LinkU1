@@ -500,7 +500,8 @@ const LeaderboardItemDetail: React.FC = () => {
                       </div>
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
 
               {/* 分页 */}
@@ -630,6 +631,132 @@ const LeaderboardItemDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          /* 移动端适配 */
+          @media (max-width: 768px) {
+            /* 外层容器移动端优化 */
+            div[style*="maxWidth: 1200"] {
+              padding: 12px !important;
+            }
+
+            /* 返回按钮移动端优化 */
+            .ant-btn {
+              margin-bottom: 12px !important;
+              width: 100% !important;
+            }
+
+            /* 竞品详情卡片移动端优化 */
+            .ant-card {
+              margin-bottom: 16px !important;
+            }
+
+            /* 竞品信息布局移动端优化 */
+            div[style*="display: flex"][style*="gap: 24"] {
+              flex-direction: column !important;
+              gap: 16px !important;
+            }
+
+            /* 图片移动端优化 */
+            .ant-image {
+              width: 100% !important;
+              max-width: 100% !important;
+            }
+
+            img[alt="${item?.name}"] {
+              width: 100% !important;
+              height: auto !important;
+            }
+
+            /* 标题移动端优化 */
+            h2.ant-typography {
+              font-size: 20px !important;
+            }
+
+            /* 投票统计移动端优化 */
+            div[style*="display: flex"][style*="justifyContent: space-between"] {
+              flex-direction: column !important;
+              gap: 16px !important;
+            }
+
+            div[style*="display: flex"][style*="size: large"] {
+              flex-wrap: wrap !important;
+              gap: 8px !important;
+            }
+
+            div[style*="display: flex"][style*="size: large"] button {
+              flex: 1 1 calc(50% - 4px) !important;
+              min-width: calc(50% - 4px) !important;
+            }
+
+            /* 留言列表移动端优化 */
+            div[style*="display: flex"][style*="flexDirection: column"][style*="gap: 16"] {
+              gap: 12px !important;
+            }
+
+            /* 留言卡片移动端优化 */
+            .ant-card-small {
+              border-radius: 8px !important;
+            }
+
+            div[style*="display: flex"][style*="gap: 12"] {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+
+            /* 留言内容移动端优化 */
+            .ant-typography {
+              font-size: 14px !important;
+            }
+
+            /* 点赞按钮移动端优化 */
+            div[style*="marginTop: 8"] button {
+              width: 100% !important;
+            }
+
+            /* 分页移动端优化 */
+            .ant-pagination {
+              margin-top: 16px !important;
+            }
+          }
+
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 8px !important;
+            }
+
+            h2.ant-typography {
+              font-size: 18px !important;
+            }
+
+            div[style*="fontSize: 24"] {
+              font-size: 20px !important;
+            }
+
+            .ant-card-body {
+              padding: 10px !important;
+            }
+          }
+
+          /* 极小屏幕优化 */
+          @media (max-width: 360px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 6px !important;
+            }
+
+            h2.ant-typography {
+              font-size: 16px !important;
+            }
+
+            div[style*="fontSize: 20"] {
+              font-size: 18px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };

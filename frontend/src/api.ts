@@ -2843,4 +2843,16 @@ export const reportLeaderboardItem = async (itemId: number, data: { reason: stri
   return res.data;
 };
 
+export const getLeaderboardVotesAdmin = async (params?: {
+  item_id?: number;
+  leaderboard_id?: number;
+  is_anonymous?: boolean;
+  keyword?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const res = await api.get('/api/custom-leaderboards/admin/votes', { params });
+  return res.data;
+};
+
 export default api; 

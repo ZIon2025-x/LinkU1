@@ -729,6 +729,124 @@ const CustomLeaderboardDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 移动端响应式样式 */}
+      <style>
+        {`
+          /* 移动端适配 */
+          @media (max-width: 768px) {
+            /* 外层容器移动端优化 */
+            div[style*="maxWidth: 1200"] {
+              padding: 12px !important;
+            }
+
+            /* 榜单头部卡片移动端优化 */
+            .ant-card {
+              margin-bottom: 16px !important;
+            }
+
+            /* 榜单头部布局移动端优化 */
+            div[style*="display: flex"][style*="alignItems: start"][style*="gap: 16"] {
+              flex-direction: column !important;
+              gap: 12px !important;
+            }
+
+            /* 封面图片移动端优化 */
+            img[alt="${leaderboard?.name}"] {
+              width: 100% !important;
+              height: auto !important;
+              max-width: 100% !important;
+            }
+
+            /* 标题移动端优化 */
+            h1[style*="margin: 0"] {
+              font-size: 20px !important;
+              flex-wrap: wrap !important;
+            }
+
+            /* 标签组移动端优化 */
+            .ant-space {
+              flex-wrap: wrap !important;
+              gap: 8px !important;
+            }
+
+            /* 按钮组移动端优化 */
+            div[style*="display: flex"][style*="gap: 8"] {
+              flex-direction: column !important;
+              width: 100% !important;
+            }
+
+            div[style*="display: flex"][style*="gap: 8"] button {
+              width: 100% !important;
+              margin-bottom: 8px !important;
+            }
+
+            /* 排序选择移动端优化 */
+            div[style*="display: flex"][style*="justifyContent: space-between"] {
+              flex-direction: column !important;
+              gap: 12px !important;
+            }
+
+            /* 竞品列表移动端优化 */
+            div[style*="display: flex"][style*="flexDirection: column"][style*="gap: 16"] {
+              gap: 12px !important;
+            }
+
+            /* 竞品卡片移动端优化 */
+            .ant-card-body {
+              padding: 12px !important;
+            }
+
+            /* 竞品信息布局移动端优化 */
+            div[style*="display: flex"][style*="gap: 12"] {
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+
+            /* 投票按钮移动端优化 */
+            .ant-space-item button {
+              width: 100% !important;
+              margin-bottom: 8px !important;
+            }
+
+            /* 分页移动端优化 */
+            .ant-pagination {
+              margin-top: 16px !important;
+            }
+          }
+
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 8px !important;
+            }
+
+            h1[style*="margin: 0"] {
+              font-size: 18px !important;
+            }
+
+            .ant-tag {
+              font-size: 12px !important;
+              padding: 2px 8px !important;
+            }
+
+            .ant-card-body {
+              padding: 10px !important;
+            }
+          }
+
+          /* 极小屏幕优化 */
+          @media (max-width: 360px) {
+            div[style*="maxWidth: 1200"] {
+              padding: 6px !important;
+            }
+
+            h1[style*="margin: 0"] {
+              font-size: 16px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };
