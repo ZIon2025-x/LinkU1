@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, update
+from sqlalchemy import select, and_, or_, func, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
@@ -1967,7 +1967,23 @@ async def delete_item_admin(
     )
     item_vote_count = vote_count_result.scalar() or 0
     
+    # 查询该竞品的举报数量（用于记录日志）
+    report_count_result = await db.execute(
+        select(func.count()).select_from(
+            select(models.ItemReport).where(
+                models.ItemReport.item_id == item_id
+            ).subquery()
+        )
+    )
+    item_report_count = report_count_result.scalar() or 0
+    
     try:
+        # 先删除相关的举报记录（避免外键约束问题）
+        # 虽然外键有 ondelete="CASCADE"，但为了确保 SQLAlchemy ORM 正确处理，我们手动删除
+        await db.execute(
+            delete(models.ItemReport).where(models.ItemReport.item_id == item_id)
+        )
+        
         # 删除竞品（级联删除投票记录，因为模型中有 cascade="all, delete-orphan"）
         await db.delete(item)
         
@@ -1980,7 +1996,7 @@ async def delete_item_admin(
         # 删除图片文件夹（在数据库提交成功后）
         delete_leaderboard_item_images(item_id)
         
-        logger.info(f"管理员 {current_admin.id} 删除竞品 {item_id}，更新榜单 {leaderboard.id} 统计：item_count={leaderboard.item_count}, vote_count={leaderboard.vote_count}")
+        logger.info(f"管理员 {current_admin.id} 删除竞品 {item_id}，删除了 {item_report_count} 条举报记录，更新榜单 {leaderboard.id} 统计：item_count={leaderboard.item_count}, vote_count={leaderboard.vote_count}")
         
         return {
             "success": True,
