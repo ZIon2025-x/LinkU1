@@ -681,6 +681,11 @@ async def submit_item(
             detail="该榜单中已存在相同名称的竞品"
         )
     
+    # 处理图片字段：如果是空数组或None，保存为None；否则保存为JSON字符串
+    images_json = None
+    if item_data.images and len(item_data.images) > 0:
+        images_json = json.dumps(item_data.images)
+    
     new_item = models.LeaderboardItem(
         leaderboard_id=item_data.leaderboard_id,
         name=item_data.name,
@@ -688,7 +693,7 @@ async def submit_item(
         address=item_data.address,
         phone=item_data.phone,
         website=item_data.website,
-        images=json.dumps(item_data.images) if item_data.images else None,
+        images=images_json,
         submitted_by=current_user.id,
         status="approved"
     )
@@ -753,10 +758,18 @@ async def submit_item(
             
             # 如果有图片被移动，更新数据库中的图片URL
             if updated_images != item_data.images:
-                new_item.images = json.dumps(updated_images)
+                new_item.images = json.dumps(updated_images) if updated_images else None
                 await db.commit()
                 await db.refresh(new_item)
                 logger.info(f"已更新竞品 {new_item.id} 的图片URL")
+            # 如果没有图片被移动，但item_data.images不为空，确保保存了图片URL
+            elif item_data.images and len(item_data.images) > 0:
+                # 如果数据库中的images为空，但item_data.images不为空，说明初始保存时可能有问题，重新保存
+                if not new_item.images:
+                    new_item.images = json.dumps(item_data.images)
+                    await db.commit()
+                    await db.refresh(new_item)
+                    logger.info(f"重新保存竞品 {new_item.id} 的图片URL")
             
             # 删除临时目录（如果为空或所有文件都已移动）
             try:

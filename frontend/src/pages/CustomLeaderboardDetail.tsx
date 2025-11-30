@@ -355,11 +355,14 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   const handleSubmitItem = async (values: any) => {
     try {
-      await submitLeaderboardItem({
+      // 确保images字段正确传递：如果有图片就传递数组，没有就传递空数组（而不是undefined）
+      const submitData = {
         leaderboard_id: Number(leaderboardId),
         ...values,
-        images: uploadingImages.length > 0 ? uploadingImages : undefined
-      });
+        images: uploadingImages.length > 0 ? uploadingImages : []
+      };
+      console.log('提交竞品数据:', submitData);
+      await submitLeaderboardItem(submitData);
       message.success('竞品新增成功');
       setShowSubmitModal(false);
       form.resetFields();
