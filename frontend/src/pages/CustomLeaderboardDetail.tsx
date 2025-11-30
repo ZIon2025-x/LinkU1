@@ -79,14 +79,35 @@ const CustomLeaderboardDetail: React.FC = () => {
     if (leaderboard.cover_image) {
       // 确保图片URL是绝对路径
       const coverImageUrl = leaderboard.cover_image;
+      console.log('[微信分享] 原始封面图片URL:', coverImageUrl);
+      
+      // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
       if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+        // 已经是完整URL
         shareImageUrl = coverImageUrl;
+      } else if (coverImageUrl.startsWith('//')) {
+        // 协议相对URL，需要添加https:
+        shareImageUrl = `https:${coverImageUrl}`;
       } else if (coverImageUrl.startsWith('/')) {
+        // 绝对路径，拼接域名
         shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+      } else if (coverImageUrl.includes('://')) {
+        // 包含协议但格式不标准，尝试提取
+        const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
+        if (match) {
+          shareImageUrl = match[0];
+        } else {
+          shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        }
       } else {
+        // 相对路径，拼接域名
         shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
       }
+      
+      console.log('[微信分享] 处理后的分享图片URL:', shareImageUrl);
     }
+    console.log('最终分享图片URL:', shareImageUrl);
+    console.log('分享描述:', currentShareDescription);
     
     // 分享标题：榜单名称 + 平台名称
     const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
