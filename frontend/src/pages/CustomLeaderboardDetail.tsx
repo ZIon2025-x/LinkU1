@@ -87,6 +87,37 @@ const CustomLeaderboardDetail: React.FC = () => {
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 参考任务分享的实现方式
   useLayoutEffect(() => {
+    // 首先移除所有默认的描述标签（在设置新标签之前，确保不会被默认标签覆盖）
+    const removeAllDefaultDescriptions = () => {
+      // 移除所有包含默认平台描述的标签
+      const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people') ||
+          metaTag.content.includes('making value creation more efficient') ||
+          metaTag.content === 'Link²Ur' ||
+          metaTag.content.includes('Link²Ur Forum')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除默认标题
+      const allTitles = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+      allTitles.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (metaTag.content === 'Link²Ur' || metaTag.content.includes('Link²Ur Forum'))) {
+          metaTag.remove();
+        }
+      });
+    };
+    
+    // 立即移除所有默认标签
+    removeAllDefaultDescriptions();
+    
     if (!leaderboard) return;
     
     // 直接使用榜单描述，限制长度在200字符内（微信分享建议不超过200字符）
@@ -345,6 +376,61 @@ const CustomLeaderboardDetail: React.FC = () => {
       moveToTop('meta[property="og:description"]');
       moveToTop('meta[property="og:image"]');
     }, 500);
+    
+    // 再次更新（确保微信爬虫能抓取到，延迟更长时间确保在其他页面的useLayoutEffect之后执行）
+    // 参考TaskDetail的实现，在1000ms后再次移除所有默认标签并重新插入正确的标签
+    setTimeout(() => {
+      // 移除所有包含默认描述的标签（包括所有类型的描述标签）
+      const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptionTags.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people') ||
+          metaTag.content.includes('making value creation more efficient') ||
+          metaTag.content === 'Link²Ur' ||
+          metaTag.content.includes('Link²Ur Forum')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除默认标题
+      const allTitleTags = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+      allTitleTags.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (metaTag.content === 'Link²Ur' || metaTag.content.includes('Link²Ur Forum'))) {
+          metaTag.remove();
+        }
+      });
+      
+      // 重新插入正确的榜单描述标签（只使用榜单信息）
+      const finalWeixinDesc = document.createElement('meta');
+      finalWeixinDesc.setAttribute('name', 'weixin:description');
+      finalWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+      
+      const finalOgDesc = document.createElement('meta');
+      finalOgDesc.setAttribute('property', 'og:description');
+      finalOgDesc.content = currentShareDescription;
+      document.head.insertBefore(finalOgDesc, document.head.firstChild);
+      
+      const finalDesc = document.createElement('meta');
+      finalDesc.name = 'description';
+      finalDesc.content = currentShareDescription;
+      document.head.insertBefore(finalDesc, document.head.firstChild);
+      
+      const finalWeixinTitle = document.createElement('meta');
+      finalWeixinTitle.setAttribute('name', 'weixin:title');
+      finalWeixinTitle.content = shareTitle;
+      document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
+      
+      const finalWeixinImage = document.createElement('meta');
+      finalWeixinImage.setAttribute('name', 'weixin:image');
+      finalWeixinImage.content = shareImageUrl;
+      document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+    }, 1000); // 延迟1秒，确保在其他页面的useLayoutEffect之后执行
   }, [leaderboard, canonicalUrl]);
 
   // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
