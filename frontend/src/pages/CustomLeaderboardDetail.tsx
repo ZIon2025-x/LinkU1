@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload } from 'antd';
-import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload, QRCode, Typography, Divider } from 'antd';
+import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import {
@@ -23,6 +23,7 @@ import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import styles from './ForumLeaderboard.module.css';
 
 const { Option } = Select;
+const { Text } = Typography;
 
 const CustomLeaderboardDetail: React.FC = () => {
   const { lang: langParam, leaderboardId } = useParams<{ lang: string; leaderboardId: string }>();
@@ -57,6 +58,88 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  // 用于分享的描述（使用榜单描述，限制长度在200字符内，微信分享建议不超过200字符）
+  const shareDescription = leaderboard ? (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200) : '';
+  const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/forum/leaderboard/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
+
+  // 立即更新微信分享 meta 标签的函数
+  const updateWeixinMetaTags = useCallback(() => {
+    if (!leaderboard) return;
+    
+    // 限制描述长度在200字符内（微信分享建议不超过200字符）
+    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    const shareImageUrl = leaderboard.cover_image || `${window.location.origin}/static/favicon.png?v=2`;
+    
+    // 强制移除所有描述标签（无条件移除，确保清理干净）
+    const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+    allDescriptions.forEach(tag => tag.remove());
+    
+    // 强制更新微信分享描述（微信优先读取weixin:description）
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = currentShareDescription;
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
+    
+    // 设置微信分享标题
+    const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+    allWeixinTitles.forEach(tag => tag.remove());
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = leaderboard.name;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+    
+    // 设置微信分享图片
+    const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+    allWeixinImages.forEach(tag => tag.remove());
+    const weixinImageTag = document.createElement('meta');
+    weixinImageTag.setAttribute('name', 'weixin:image');
+    weixinImageTag.content = shareImageUrl;
+    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+    
+    // 设置 Open Graph 标签（微信也会读取作为备选）
+    const updateMetaTag = (name: string, content: string, property?: boolean) => {
+      const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+      const allTags = document.querySelectorAll(selector);
+      allTags.forEach(tag => tag.remove());
+      
+      const metaTag = document.createElement('meta');
+      if (property) {
+        metaTag.setAttribute('property', name);
+      } else {
+        metaTag.setAttribute('name', name);
+      }
+      metaTag.content = content;
+      document.head.insertBefore(metaTag, document.head.firstChild);
+    };
+    
+    updateMetaTag('og:title', leaderboard.name, true);
+    updateMetaTag('og:description', currentShareDescription, true);
+    updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:url', canonicalUrl, true);
+    updateMetaTag('og:type', 'website', true);
+  }, [leaderboard, canonicalUrl]);
+
+  // 立即设置微信分享的 meta 标签（使用 useLayoutEffect 确保在 DOM 渲染前执行）
+  useLayoutEffect(() => {
+    if (!leaderboard) return;
+    
+    updateWeixinMetaTags();
+    
+    // 多次更新确保微信爬虫能读取到（微信爬虫可能在页面加载的不同阶段抓取）
+    setTimeout(() => {
+      updateWeixinMetaTags();
+    }, 100);
+    
+    setTimeout(() => {
+      updateWeixinMetaTags();
+    }, 1000);
+    
+    setTimeout(() => {
+      updateWeixinMetaTags();
+    }, 2000);
+  }, [leaderboard, updateWeixinMetaTags]);
 
   useEffect(() => {
     if (leaderboardId) {
@@ -408,6 +491,139 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
   };
 
+  const handleShare = async () => {
+    if (!leaderboard) return;
+    
+    // 计算分享描述
+    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    
+    // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
+    updateWeixinMetaTags();
+    
+    // 强制移除所有描述标签（包括默认的和SEOHead创建的）
+    const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+    allDescriptionTags.forEach(tag => tag.remove());
+    
+    // 立即重新设置正确的描述
+    const finalWeixinDesc = document.createElement('meta');
+    finalWeixinDesc.setAttribute('name', 'weixin:description');
+    finalWeixinDesc.content = currentShareDescription;
+    document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
+    
+    const finalOgDesc = document.createElement('meta');
+    finalOgDesc.setAttribute('property', 'og:description');
+    finalOgDesc.content = currentShareDescription;
+    document.head.insertBefore(finalOgDesc, document.head.firstChild);
+    
+    const finalDesc = document.createElement('meta');
+    finalDesc.name = 'description';
+    finalDesc.content = currentShareDescription;
+    document.head.insertBefore(finalDesc, document.head.firstChild);
+    
+    // 多次更新，确保微信爬虫能读取到
+    setTimeout(() => {
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+    }, 100);
+    
+    setTimeout(() => {
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+    }, 500);
+    
+    const shareUrl = `${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`;
+    const shareTitle = leaderboard.name;
+    const shareText = `${shareTitle}\n\n${currentShareDescription}\n\n${shareUrl}`;
+    
+    // 尝试使用 Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        message.success('分享成功');
+        return;
+      } catch (error: any) {
+        // 用户取消分享，不做任何操作
+        if (error.name === 'AbortError') {
+          return;
+        }
+        // 如果出错，继续执行复制链接逻辑
+      }
+    }
+    
+    // 如果不支持 Web Share API 或失败，显示分享模态框
+    updateWeixinMetaTags();
+    setShowShareModal(true);
+  };
+
+  const handleCopyLink = async () => {
+    if (!leaderboard) return;
+    const shareUrl = `${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      message.success('链接已复制到剪贴板');
+      setShowShareModal(false);
+    } catch (error) {
+      message.error('复制失败');
+    }
+  };
+
+  const handleShareToSocial = (platform: string) => {
+    if (!leaderboard) return;
+    
+    // 计算分享描述（限制在200字符内）
+    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    
+    // 如果是微信分享（通过二维码），立即更新 meta 标签
+    if (platform === 'wechat') {
+      updateWeixinMetaTags();
+      
+      // 强制更新微信描述标签
+      const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
+      allWeixinDesc.forEach(tag => tag.remove());
+      const newWeixinDesc = document.createElement('meta');
+      newWeixinDesc.setAttribute('name', 'weixin:description');
+      newWeixinDesc.content = currentShareDescription;
+      document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+    }
+    
+    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`);
+    const shareTitle = encodeURIComponent(leaderboard.name);
+    const shareDescription = encodeURIComponent(currentShareDescription);
+    
+    let shareWindowUrl = '';
+    
+    switch (platform) {
+      case 'weibo':
+        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${shareTitle} ${shareDescription}`;
+        break;
+      case 'twitter':
+        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle} ${shareDescription}`;
+        break;
+      case 'facebook':
+        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle} ${shareDescription}`;
+        break;
+      default:
+        return;
+    }
+    
+    if (shareWindowUrl) {
+      window.open(shareWindowUrl, '_blank', 'width=600,height=400');
+    }
+    setShowShareModal(false);
+  };
+
   if (loading) {
     return <Spin size="large" />;
   }
@@ -493,6 +709,12 @@ const CustomLeaderboardDetail: React.FC = () => {
                 新增竞品
               </Button>
               <Button
+                icon={<ShareAltOutlined />}
+                onClick={handleShare}
+              >
+                分享榜单
+              </Button>
+              <Button
                 danger
                 icon={<ExclamationCircleOutlined />}
                 onClick={() => {
@@ -557,6 +779,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                 return (
                   <Card 
                     key={item.id} 
+                    className="leaderboard-item-card"
                     style={{ 
                       borderRadius: 8,
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -564,15 +787,15 @@ const CustomLeaderboardDetail: React.FC = () => {
                     }}
                   >
                     {/* 卡片头部：排名、信息、投票 */}
-                    <div style={{ 
+                    <div className="item-card-header" style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'start',
                       marginBottom: 12
                     }}>
                       {/* 左侧：排名和信息 */}
-                      <div style={{ display: 'flex', alignItems: 'start', flex: 1 }}>
-                        <span style={{
+                      <div className="item-card-content" style={{ display: 'flex', alignItems: 'start', flex: 1 }}>
+                        <span className="item-rank" style={{
                           fontSize: 24,
                           fontWeight: 'bold',
                           color: isTop3 ? '#ffc107' : '#666',
@@ -581,14 +804,16 @@ const CustomLeaderboardDetail: React.FC = () => {
                         }}>
                           #{globalIndex}
                         </span>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div 
+                            className="item-name"
                             style={{ 
                               fontSize: 20, 
                               fontWeight: 600, 
                               marginBottom: 8,
                               cursor: 'pointer',
-                              color: '#333'
+                              color: '#333',
+                              wordBreak: 'break-word'
                             }}
                             onClick={() => {
                               const lang = language || 'zh';
@@ -604,26 +829,29 @@ const CustomLeaderboardDetail: React.FC = () => {
                             {item.name}
                           </div>
                           {item.description && (
-                            <div style={{ 
+                            <div className="item-description" style={{ 
                               color: '#666', 
                               lineHeight: 1.6,
-                              marginBottom: 8 
+                              marginBottom: 8,
+                              fontSize: 14,
+                              wordBreak: 'break-word'
                             }}>
                               {item.description}
                             </div>
                           )}
                           {item.address && (
-                            <div style={{ 
+                            <div className="item-address" style={{ 
                               fontSize: 12, 
                               color: '#999',
-                              marginBottom: 8
+                              marginBottom: 8,
+                              wordBreak: 'break-word'
                             }}>
                               📍 {item.address}
                             </div>
                           )}
                           {/* 图片展示 */}
                           {images && images.length > 0 && (
-                            <div style={{ 
+                            <div className="item-images" style={{ 
                               display: 'flex', 
                               gap: 8, 
                               marginTop: 12,
@@ -653,22 +881,25 @@ const CustomLeaderboardDetail: React.FC = () => {
                       </div>
                       
                       {/* 右侧：投票区域 */}
-                      <div style={{ 
+                      <div className="item-vote-section" style={{ 
                         display: 'flex', 
                         flexDirection: 'column', 
                         alignItems: 'center', 
                         gap: 8,
-                        minWidth: 80
+                        minWidth: 80,
+                        flexShrink: 0
                       }}>
                         <Button
                           type={item.user_vote === 'upvote' ? 'primary' : 'default'}
                           icon={<LikeOutlined />}
                           onClick={() => handleVote(item.id, 'upvote')}
+                          className="vote-button vote-up"
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
-                            border: '1px solid #d9d9d9'
+                            border: '1px solid #d9d9d9',
+                            minWidth: 80
                           }}
                         >
                           <span style={{ fontSize: 16, fontWeight: 600 }}>{item.upvotes}</span>
@@ -678,16 +909,18 @@ const CustomLeaderboardDetail: React.FC = () => {
                           type={item.user_vote === 'downvote' ? 'primary' : 'default'}
                           icon={<DislikeOutlined />}
                           onClick={() => handleVote(item.id, 'downvote')}
+                          className="vote-button vote-down"
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 6,
-                            border: '1px solid #d9d9d9'
+                            border: '1px solid #d9d9d9',
+                            minWidth: 80
                           }}
                         >
                           <span style={{ fontSize: 16, fontWeight: 600 }}>{item.downvotes}</span>
                         </Button>
-                        <div style={{ fontSize: 12, color: '#999' }}>
+                        <div className="item-score" style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
                           得分: {item.vote_score.toFixed(2)}
                         </div>
                       </div>
@@ -695,7 +928,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                     
                     {/* 留言显示：优先显示用户自己的留言，如果没有则显示最多赞的留言 */}
                     {item.display_comment && (
-                      <div style={{
+                      <div className="item-comment" style={{
                         marginTop: 12,
                         padding: 12,
                         background: item.display_comment_type === 'user' ? '#f5f5f5' : '#fff7e6',
@@ -1070,13 +1303,19 @@ const CustomLeaderboardDetail: React.FC = () => {
 
             /* 按钮组移动端优化 */
             div[style*="display: flex"][style*="gap: 8"] {
-              flex-direction: column !important;
-              width: 100% !important;
+              flex-wrap: wrap !important;
+              gap: 8px !important;
             }
 
             div[style*="display: flex"][style*="gap: 8"] button {
-              width: 100% !important;
-              margin-bottom: 8px !important;
+              flex: 1 1 calc(50% - 4px) !important;
+              min-width: calc(50% - 4px) !important;
+              font-size: 13px !important;
+            }
+
+            /* 确保按钮文字不换行 */
+            div[style*="display: flex"][style*="gap: 8"] button span {
+              white-space: nowrap !important;
             }
 
             /* 排序选择移动端优化 */
@@ -1091,20 +1330,81 @@ const CustomLeaderboardDetail: React.FC = () => {
             }
 
             /* 竞品卡片移动端优化 */
-            .ant-card-body {
+            .leaderboard-item-card .ant-card-body {
               padding: 12px !important;
             }
 
-            /* 竞品信息布局移动端优化 */
-            div[style*="display: flex"][style*="gap: 12"] {
+            /* 竞品卡片头部移动端布局 */
+            .item-card-header {
               flex-direction: column !important;
-              gap: 8px !important;
+              gap: 16px !important;
+            }
+
+            /* 竞品内容区域移动端优化 */
+            .item-card-content {
+              width: 100% !important;
+            }
+
+            /* 排名数字移动端优化 */
+            .item-rank {
+              font-size: 20px !important;
+              margin-right: 8px !important;
+            }
+
+            /* 竞品名称移动端优化 */
+            .item-name {
+              font-size: 18px !important;
+            }
+
+            /* 竞品描述移动端优化 */
+            .item-description {
+              font-size: 13px !important;
+              line-height: 1.5 !important;
+            }
+
+            /* 地址移动端优化 */
+            .item-address {
+              font-size: 11px !important;
+            }
+
+            /* 图片展示移动端优化 */
+            .item-images .ant-image {
+              width: 80px !important;
+              height: 80px !important;
+            }
+
+            /* 投票区域移动端优化 - 改为横向布局 */
+            .item-vote-section {
+              flex-direction: row !important;
+              width: 100% !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+              padding-top: 12px !important;
+              border-top: 1px solid #f0f0f0 !important;
+              margin-top: 8px !important;
             }
 
             /* 投票按钮移动端优化 */
-            .ant-space-item button {
-              width: 100% !important;
-              margin-bottom: 8px !important;
+            .vote-button {
+              flex: 1 !important;
+              min-width: 0 !important;
+              max-width: calc(50% - 8px) !important;
+            }
+
+            .vote-button span {
+              font-size: 14px !important;
+            }
+
+            /* 得分移动端优化 */
+            .item-score {
+              display: none !important;
+            }
+
+            /* 留言区域移动端优化 */
+            .item-comment {
+              font-size: 13px !important;
+              padding: 10px !important;
+              margin-top: 12px !important;
             }
 
             /* 分页移动端优化 */
@@ -1128,8 +1428,44 @@ const CustomLeaderboardDetail: React.FC = () => {
               padding: 2px 8px !important;
             }
 
-            .ant-card-body {
+            .leaderboard-item-card .ant-card-body {
               padding: 10px !important;
+            }
+
+            /* 排名数字超小屏幕优化 */
+            .item-rank {
+              font-size: 18px !important;
+            }
+
+            /* 竞品名称超小屏幕优化 */
+            .item-name {
+              font-size: 16px !important;
+            }
+
+            /* 竞品描述超小屏幕优化 */
+            .item-description {
+              font-size: 12px !important;
+            }
+
+            /* 图片展示超小屏幕优化 */
+            .item-images .ant-image {
+              width: 70px !important;
+              height: 70px !important;
+            }
+
+            /* 投票按钮超小屏幕优化 */
+            .vote-button {
+              padding: 4px 8px !important;
+            }
+
+            .vote-button span {
+              font-size: 13px !important;
+            }
+
+            /* 留言区域超小屏幕优化 */
+            .item-comment {
+              font-size: 12px !important;
+              padding: 8px !important;
             }
           }
 
@@ -1141,6 +1477,32 @@ const CustomLeaderboardDetail: React.FC = () => {
 
             h1[style*="margin: 0"] {
               font-size: 16px !important;
+            }
+
+            /* 排名数字极小屏幕优化 */
+            .item-rank {
+              font-size: 16px !important;
+            }
+
+            /* 竞品名称极小屏幕优化 */
+            .item-name {
+              font-size: 15px !important;
+            }
+
+            /* 图片展示极小屏幕优化 */
+            .item-images .ant-image {
+              width: 60px !important;
+              height: 60px !important;
+            }
+
+            /* 投票按钮极小屏幕优化 */
+            .vote-button {
+              padding: 4px 6px !important;
+              font-size: 12px !important;
+            }
+
+            .vote-button span {
+              font-size: 12px !important;
             }
           }
         `}
@@ -1166,6 +1528,61 @@ const CustomLeaderboardDetail: React.FC = () => {
           setShowForgotPasswordModal(false);
         }}
       />
+
+      {/* 分享模态框 */}
+      <Modal
+        title="分享榜单"
+        open={showShareModal}
+        onCancel={() => setShowShareModal(false)}
+        footer={null}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large" align="center">
+          {leaderboard && (
+            <div style={{ textAlign: 'center' }}>
+              <QRCode
+                value={`${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`}
+                size={200}
+                style={{ marginBottom: 16 }}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                扫描二维码分享到微信
+              </Text>
+            </div>
+          )}
+          <Divider />
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Button
+              type="default"
+              icon={<CopyOutlined />}
+              onClick={handleCopyLink}
+              block
+            >
+              复制链接
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('weibo')}
+              block
+            >
+              分享到微博
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('twitter')}
+              block
+            >
+              分享到 Twitter
+            </Button>
+            <Button
+              type="default"
+              onClick={() => handleShareToSocial('facebook')}
+              block
+            >
+              分享到 Facebook
+            </Button>
+          </Space>
+        </Space>
+      </Modal>
     </div>
   );
 };

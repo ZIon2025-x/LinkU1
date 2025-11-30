@@ -864,6 +864,9 @@ const FleaMarketPage: React.FC = () => {
                 placeholder={t('fleaMarket.locationFilterPlaceholder')}
                 value={selectedLocation}
                 onChange={(value) => setSelectedLocation(value || undefined)}
+                onClear={() => {
+                  setSelectedLocation(undefined);
+                }}
                 allowClear
                 size="large"
                 style={{ width: '100%' }}

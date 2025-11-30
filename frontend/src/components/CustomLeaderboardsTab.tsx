@@ -141,7 +141,13 @@ const CustomLeaderboardsTab: React.FC = () => {
           style={{ width: 150 }}
           allowClear
           value={selectedLocation}
-          onChange={setSelectedLocation}
+          onChange={(value) => {
+            setSelectedLocation(value || '');
+          }}
+          onClear={() => {
+            setSelectedLocation('');
+          }}
+          getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
         >
           {LOCATIONS.map(loc => (
             <Option key={loc} value={loc}>{loc}</Option>
@@ -448,6 +454,50 @@ const CustomLeaderboardsTab: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 移动端样式优化 */}
+      <style>
+        {`
+          /* 移动端 Select 清除按钮优化 */
+          @media (max-width: 768px) {
+            /* 确保清除按钮在移动端可点击 */
+            .ant-select-clear {
+              pointer-events: auto !important;
+              touch-action: manipulation !important;
+              -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+              z-index: 10 !important;
+            }
+
+            /* 增加清除按钮的点击区域 */
+            .ant-select-clear-icon {
+              width: 20px !important;
+              height: 20px !important;
+              padding: 4px !important;
+              margin: 0 !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              pointer-events: auto !important;
+              touch-action: manipulation !important;
+            }
+
+            /* 确保清除按钮不被遮挡 */
+            .ant-select-selector {
+              position: relative !important;
+            }
+
+            .ant-select-selection-item {
+              padding-right: 24px !important;
+            }
+
+            /* 防止点击清除按钮时触发下拉菜单 */
+            .ant-select-clear-icon:active {
+              background-color: rgba(0, 0, 0, 0.06) !important;
+              border-radius: 50% !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 };
