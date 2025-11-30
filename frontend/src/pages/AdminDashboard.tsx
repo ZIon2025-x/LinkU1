@@ -5689,7 +5689,7 @@ const AdminDashboard: React.FC = () => {
   const handleOpenReviewModal = (leaderboard: any, action: 'approve' | 'reject') => {
     setSelectedLeaderboardForReview(leaderboard);
     setLeaderboardReviewComment('');
-    setReviewingLeaderboard(leaderboard.id);
+    setReviewingLeaderboard(null); // 打开弹窗时重置，只有在提交时才设置
     setShowLeaderboardReviewModal(true);
   };
 
@@ -7128,6 +7128,7 @@ const AdminDashboard: React.FC = () => {
                   setShowLeaderboardReviewModal(false);
                   setSelectedLeaderboardForReview(null);
                   setLeaderboardReviewComment('');
+                  setReviewingLeaderboard(null); // 取消时重置状态
                 }}
                 style={{
                   padding: '8px 16px',
