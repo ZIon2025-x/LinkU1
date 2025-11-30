@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Checkbox, Select, Pagination, Image, Upload } from 'antd';
 import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
@@ -44,12 +44,23 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadingFileList, setUploadingFileList] = useState<any[]>([]);
+  const previewUrlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (leaderboardId) {
       loadData();
       fetchCurrentUser().then(setUser).catch(() => setUser(null));
     }
+    
+    // 组件卸载时清理所有临时预览 URL
+    return () => {
+      previewUrlsRef.current.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      previewUrlsRef.current.clear();
+    };
   }, [leaderboardId, sortBy]);
 
   const loadData = async (page: number = 1) => {
@@ -215,18 +226,36 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleImageChange = (info: any) => {
     const { file, fileList } = info;
     
-    // 当用户选择新文件时
-    if (file.status === undefined && file.originFileObj) {
+    // 当用户选择新文件时（beforeUpload 返回 false 时，file 没有 status 或 status 为 undefined）
+    // 检查是否有 originFileObj，这表示是新选择的文件
+    if (file.originFileObj && (file.status === undefined || file.status === 'uploading')) {
       const fileToUpload = file.originFileObj;
+      
+      // 检查是否已经在列表中（避免重复添加）
+      const existingFile = uploadingFileList.find(f => 
+        f.originFileObj === fileToUpload || 
+        (f.name === fileToUpload.name && f.size === fileToUpload.size)
+      );
+      
+      if (existingFile) {
+        // 文件已存在，不重复添加
+        return;
+      }
+      
       const tempId = `temp-${Date.now()}-${Math.random()}`;
       
-      // 立即添加到上传列表，显示上传中状态
+      // 创建临时预览 URL
+      const previewUrl = URL.createObjectURL(fileToUpload);
+      previewUrlsRef.current.add(previewUrl);
+      
+      // 立即添加到上传列表，显示上传中状态和预览
       const newFile = {
         uid: tempId,
         name: fileToUpload.name,
         status: 'uploading' as const,
-        url: URL.createObjectURL(fileToUpload), // 临时预览
-        originFileObj: fileToUpload
+        url: previewUrl, // 临时预览 URL
+        originFileObj: fileToUpload,
+        thumbUrl: previewUrl // 缩略图预览
       };
       
       setUploadingFileList(prev => [...prev, newFile]);
@@ -236,10 +265,16 @@ const CustomLeaderboardDetail: React.FC = () => {
         try {
           const url = await handleImageUpload(fileToUpload);
           
+          // 清理临时预览 URL
+          if (newFile.url && previewUrlsRef.current.has(newFile.url)) {
+            URL.revokeObjectURL(newFile.url);
+            previewUrlsRef.current.delete(newFile.url);
+          }
+          
           // 更新文件状态为完成
           setUploadingFileList(prev => prev.map(f => 
             f.uid === tempId 
-              ? { ...f, status: 'done' as const, url }
+              ? { ...f, status: 'done' as const, url, thumbUrl: url }
               : f
           ));
           
@@ -247,6 +282,12 @@ const CustomLeaderboardDetail: React.FC = () => {
           setUploadingImages(prev => [...prev, url]);
           message.success('图片上传成功');
         } catch (error) {
+          // 清理临时预览 URL
+          if (newFile.url && previewUrlsRef.current.has(newFile.url)) {
+            URL.revokeObjectURL(newFile.url);
+            previewUrlsRef.current.delete(newFile.url);
+          }
+          
           // 上传失败，移除该文件
           setUploadingFileList(prev => prev.filter(f => f.uid !== tempId));
           // 错误已在handleImageUpload中处理
@@ -256,6 +297,16 @@ const CustomLeaderboardDetail: React.FC = () => {
     
     // 处理文件列表变化（删除等）
     if (file.status === 'removed') {
+      // 清理预览 URL
+      if (file.url && file.url.startsWith('blob:') && previewUrlsRef.current.has(file.url)) {
+        URL.revokeObjectURL(file.url);
+        previewUrlsRef.current.delete(file.url);
+      }
+      if (file.thumbUrl && file.thumbUrl.startsWith('blob:') && previewUrlsRef.current.has(file.thumbUrl)) {
+        URL.revokeObjectURL(file.thumbUrl);
+        previewUrlsRef.current.delete(file.thumbUrl);
+      }
+      
       // 从上传列表中移除
       setUploadingFileList(prev => prev.filter(f => f.uid !== file.uid));
     }
@@ -275,7 +326,21 @@ const CustomLeaderboardDetail: React.FC = () => {
       message.success('竞品新增成功');
       setShowSubmitModal(false);
       form.resetFields();
+      
+      // 清理所有临时预览 URL
+      uploadingFileList.forEach(file => {
+        if (file.url && file.url.startsWith('blob:') && previewUrlsRef.current.has(file.url)) {
+          URL.revokeObjectURL(file.url);
+          previewUrlsRef.current.delete(file.url);
+        }
+        if (file.thumbUrl && file.thumbUrl.startsWith('blob:') && previewUrlsRef.current.has(file.thumbUrl)) {
+          URL.revokeObjectURL(file.thumbUrl);
+          previewUrlsRef.current.delete(file.thumbUrl);
+        }
+      });
+      
       setUploadingImages([]);
+      setUploadingFileList([]);
       // 重置到第一页并重新加载
       setPagination(prev => ({ ...prev, current: 1 }));
       loadData(1);
