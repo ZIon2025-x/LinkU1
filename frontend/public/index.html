@@ -120,22 +120,44 @@
         var isLeaderboardDetailPage = /\/leaderboard\/custom\/\d+/.test(window.location.pathname);
         
         if (isTaskDetailPage || isForumPostPage || isLeaderboardDetailPage) {
-          // 立即移除默认的微信分享标签，详情页会通过React动态设置正确的标签
-          var weixinDesc = document.querySelector('meta[name="weixin:description"]');
-          var weixinTitle = document.querySelector('meta[name="weixin:title"]');
-          var weixinImage = document.querySelector('meta[name="weixin:image"]');
-          var ogDesc = document.querySelector('meta[property="og:description"]');
-          var ogTitle = document.querySelector('meta[property="og:title"]');
-          var ogImage = document.querySelector('meta[property="og:image"]');
-          var description = document.querySelector('meta[name="description"]');
+          // 立即移除所有默认的微信分享标签（使用querySelectorAll移除所有匹配的标签），详情页会通过React动态设置正确的标签
+          // 移除所有 weixin:description 标签
+          var allWeixinDescs = document.querySelectorAll('meta[name="weixin:description"]');
+          allWeixinDescs.forEach(function(tag) { tag.remove(); });
           
-          if (weixinDesc) weixinDesc.remove();
-          if (weixinTitle) weixinTitle.remove();
-          if (weixinImage) weixinImage.remove();
-          if (ogDesc) ogDesc.remove();
-          if (ogTitle) ogTitle.remove();
-          if (ogImage) ogImage.remove();
-          if (description) description.remove();
+          // 移除所有 weixin:title 标签
+          var allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+          allWeixinTitles.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 weixin:image 标签（关键：移除所有，确保没有默认图片残留）
+          var allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+          allWeixinImages.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 og:description 标签
+          var allOgDescs = document.querySelectorAll('meta[property="og:description"]');
+          allOgDescs.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 og:title 标签
+          var allOgTitles = document.querySelectorAll('meta[property="og:title"]');
+          allOgTitles.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 og:image 标签（关键：移除所有，确保没有默认图片残留）
+          var allOgImages = document.querySelectorAll('meta[property="og:image"]');
+          allOgImages.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 og:image 相关属性标签
+          var allOgImageWidths = document.querySelectorAll('meta[property="og:image:width"]');
+          allOgImageWidths.forEach(function(tag) { tag.remove(); });
+          var allOgImageHeights = document.querySelectorAll('meta[property="og:image:height"]');
+          allOgImageHeights.forEach(function(tag) { tag.remove(); });
+          var allOgImageTypes = document.querySelectorAll('meta[property="og:image:type"]');
+          allOgImageTypes.forEach(function(tag) { tag.remove(); });
+          
+          // 移除所有 description 标签
+          var allDescriptions = document.querySelectorAll('meta[name="description"]');
+          allDescriptions.forEach(function(tag) { tag.remove(); });
+          
+          console.log('[index.html] 已移除所有默认的微信和OG标签，等待React设置正确的标签');
         }
       })();
     </script>
