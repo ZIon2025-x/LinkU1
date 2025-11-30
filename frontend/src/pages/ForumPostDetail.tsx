@@ -453,8 +453,7 @@ const ForumPostDetail: React.FC = () => {
     if (postId) {
       loadPost();
       loadReplies();
-      // 增加浏览数
-      incrementPostViewCount(Number(postId)).catch(() => {});
+      // 注意：浏览数会在 getForumPost 接口中自动增加，无需单独调用
     }
     const loadUserData = async () => {
       try {

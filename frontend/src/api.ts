@@ -2855,4 +2855,33 @@ export const getLeaderboardVotesAdmin = async (params?: {
   return res.data;
 };
 
+// 获取所有状态的榜单列表（管理员专用）
+export const getCustomLeaderboardsAdmin = async (params?: {
+  location?: string;
+  status?: 'all' | 'active' | 'pending' | 'rejected';
+  limit?: number;
+  offset?: number;
+}) => {
+  const res = await api.get('/api/custom-leaderboards/admin/all', { params });
+  return res.data;
+};
+
+// 审核榜单（管理员专用）
+export const reviewCustomLeaderboard = async (
+  leaderboardId: number,
+  action: 'approve' | 'reject',
+  comment?: string
+) => {
+  const token = localStorage.getItem('csrf_token');
+  const res = await api.post(
+    `/api/custom-leaderboards/${leaderboardId}/review`,
+    null,
+    {
+      params: { action, comment },
+      headers: { 'X-CSRF-Token': token }
+    }
+  );
+  return res.data;
+};
+
 export default api; 

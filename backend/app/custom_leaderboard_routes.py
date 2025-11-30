@@ -409,10 +409,54 @@ async def get_leaderboard_detail(
             detail="榜单不存在或未激活"
         )
     
-    leaderboard.view_count += 1
+    # 增加浏览次数
+    # 优化方案：使用 Redis 累加，定时批量落库（由 Celery 任务处理）
+    # 当前实现：如果 Redis 可用则使用 Redis，否则直接更新数据库
+    redis_view_count = 0
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            # 使用 Redis 累加浏览数（存储增量）
+            redis_key = f"leaderboard:view_count:{leaderboard_id}"
+            # incr 返回增加后的值（如果 key 不存在则创建并设置为1）
+            redis_client.incr(redis_key)
+            # 获取 Redis 中的总值（包括本次增加的1）
+            redis_view_count = int(redis_client.get(redis_key) or 0)
+            # 设置过期时间（7天），防止 key 无限增长
+            redis_client.expire(redis_key, 7 * 24 * 3600)
+            # 注意：Redis 中的增量会由后台任务定期同步到数据库
+            # 这里不更新数据库，减少数据库写入压力
+        else:
+            # Redis 不可用，直接更新数据库
+            leaderboard.view_count += 1
+            await db.flush()
+    except Exception as e:
+        # Redis 操作失败，回退到直接更新数据库
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Redis view count increment failed, falling back to DB: {e}")
+        leaderboard.view_count += 1
+        await db.flush()
+    
     await db.commit()
     
-    return leaderboard
+    # 刷新对象以获取最新的 view_count（如果直接更新了数据库）
+    if redis_view_count == 0:
+        await db.refresh(leaderboard)
+    
+    # 计算返回给用户的浏览量（数据库值 + Redis中的增量）
+    display_view_count = leaderboard.view_count
+    if redis_view_count > 0:
+        # 如果使用了 Redis，返回数据库值 + Redis 中的增量
+        display_view_count = leaderboard.view_count + redis_view_count
+    
+    # 创建返回对象，使用计算后的浏览量
+    result = schemas.CustomLeaderboardOut.from_orm(leaderboard)
+    result.view_count = display_view_count
+    
+    return result
 
 
 # ==================== 榜单审核（管理员） ====================

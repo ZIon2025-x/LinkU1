@@ -969,6 +969,7 @@ async def get_post(
     # 增加浏览次数
     # 优化方案：使用 Redis 累加，定时批量落库（由 Celery 任务处理）
     # 当前实现：如果 Redis 可用则使用 Redis，否则直接更新数据库
+    redis_view_count = 0
     try:
         from app.redis_cache import get_redis_client
         redis_client = get_redis_client()
@@ -976,11 +977,13 @@ async def get_post(
         if redis_client:
             # 使用 Redis 累加浏览数（存储增量）
             redis_key = f"forum:post:view_count:{post_id}"
+            # incr 返回增加后的值（如果 key 不存在则创建并设置为1）
             redis_client.incr(redis_key)
+            # 获取 Redis 中的总值（包括本次增加的1）
+            redis_view_count = int(redis_client.get(redis_key) or 0)
             # 设置过期时间（7天），防止 key 无限增长
             redis_client.expire(redis_key, 7 * 24 * 3600)
-            # 注意：返回给用户的浏览数使用数据库中的值
-            # Redis 中的增量会由后台任务定期同步到数据库
+            # 注意：Redis 中的增量会由后台任务定期同步到数据库
             # 这里不更新数据库，减少数据库写入压力
         else:
             # Redis 不可用，直接更新数据库
@@ -993,6 +996,12 @@ async def get_post(
         await db.flush()
     
     await db.commit()
+    
+    # 计算返回给用户的浏览量（数据库值 + Redis中的增量）
+    display_view_count = post.view_count
+    if redis_view_count > 0:
+        # 如果使用了 Redis，返回数据库值 + Redis 中的增量
+        display_view_count = post.view_count + redis_view_count
     
     # 检查当前用户是否已点赞/收藏
     is_liked = False
@@ -1021,7 +1030,7 @@ async def get_post(
         content=post.content,
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
         author=await build_user_info(db, post.author),
-        view_count=post.view_count,
+        view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
         reply_count=post.reply_count,
         like_count=post.like_count,
         favorite_count=post.favorite_count,

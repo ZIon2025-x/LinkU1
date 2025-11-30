@@ -63,7 +63,9 @@ import api, {
   getFleaMarketItemsAdmin,
   updateFleaMarketItemAdmin,
   deleteFleaMarketItemAdmin,
-  getLeaderboardVotesAdmin
+  getLeaderboardVotesAdmin,
+  getCustomLeaderboardsAdmin,
+  reviewCustomLeaderboard
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -359,6 +361,15 @@ const AdminDashboard: React.FC = () => {
     keyword?: string;
   }>({});
 
+  // 榜单审核相关状态
+  const [pendingLeaderboards, setPendingLeaderboards] = useState<any[]>([]);
+  const [leaderboardsPage, setLeaderboardsPage] = useState(1);
+  const [leaderboardsLoading, setLeaderboardsLoading] = useState(false);
+  const [reviewingLeaderboard, setReviewingLeaderboard] = useState<number | null>(null);
+  const [leaderboardReviewComment, setLeaderboardReviewComment] = useState('');
+  const [showLeaderboardReviewModal, setShowLeaderboardReviewModal] = useState(false);
+  const [selectedLeaderboardForReview, setSelectedLeaderboardForReview] = useState<any>(null);
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -411,6 +422,8 @@ const AdminDashboard: React.FC = () => {
         await loadForumPosts();
       } else if (activeTab === 'leaderboard-votes') {
         await loadLeaderboardVotes();
+      } else if (activeTab === 'leaderboard-review') {
+        await loadPendingLeaderboards();
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -5643,6 +5656,68 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab, leaderboardVotesPage, leaderboardVotesFilter, loadLeaderboardVotes]);
 
+  // 加载待审核榜单列表
+  const loadPendingLeaderboards = useCallback(async () => {
+    setLeaderboardsLoading(true);
+    try {
+      const offset = (leaderboardsPage - 1) * 20;
+      const data = await getCustomLeaderboardsAdmin({
+        status: 'pending',
+        limit: 20,
+        offset
+      });
+      setPendingLeaderboards(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('加载待审核榜单失败:', error);
+      message.error(error.response?.data?.detail || '加载待审核榜单失败');
+    } finally {
+      setLeaderboardsLoading(false);
+    }
+  }, [leaderboardsPage]);
+
+  // 当切换到榜单审核标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'leaderboard-review') {
+      const timer = setTimeout(() => {
+        loadPendingLeaderboards();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, leaderboardsPage, loadPendingLeaderboards]);
+
+  // 打开审核弹窗
+  const handleOpenReviewModal = (leaderboard: any, action: 'approve' | 'reject') => {
+    setSelectedLeaderboardForReview(leaderboard);
+    setLeaderboardReviewComment('');
+    setReviewingLeaderboard(leaderboard.id);
+    setShowLeaderboardReviewModal(true);
+  };
+
+  // 提交审核
+  const handleSubmitReview = async (action: 'approve' | 'reject') => {
+    if (!selectedLeaderboardForReview) return;
+    
+    setReviewingLeaderboard(selectedLeaderboardForReview.id);
+    try {
+      await reviewCustomLeaderboard(
+        selectedLeaderboardForReview.id,
+        action,
+        leaderboardReviewComment || undefined
+      );
+      message.success(`榜单已${action === 'approve' ? '批准' : '拒绝'}`);
+      setShowLeaderboardReviewModal(false);
+      setSelectedLeaderboardForReview(null);
+      setLeaderboardReviewComment('');
+      // 重新加载列表
+      await loadPendingLeaderboards();
+    } catch (error: any) {
+      console.error('审核失败:', error);
+      message.error(error.response?.data?.detail || '审核失败');
+    } finally {
+      setReviewingLeaderboard(null);
+    }
+  };
+
   // 当切换到举报管理标签页时，自动加载数据
   useEffect(() => {
     if (activeTab === 'reports') {
@@ -6876,6 +6951,232 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 渲染榜单审核管理
+  const renderLeaderboardReview = () => (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>榜单审核管理</h2>
+        <button
+          onClick={loadPendingLeaderboards}
+          style={{
+            padding: '8px 16px',
+            border: 'none',
+            background: '#007bff',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          刷新
+        </button>
+      </div>
+
+      {/* 待审核榜单列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'auto'
+      }}>
+        {leaderboardsLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : pendingLeaderboards.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无待审核榜单</div>
+        ) : (
+          <div style={{ padding: '20px' }}>
+            {pendingLeaderboards.map((leaderboard) => (
+              <div
+                key={leaderboard.id}
+                style={{
+                  padding: '20px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  background: '#fafafa'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold' }}>
+                      {leaderboard.name}
+                    </h3>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      <span style={{ marginRight: '16px' }}>📍 地区：{leaderboard.location}</span>
+                      <span style={{ marginRight: '16px' }}>👤 申请人ID：{leaderboard.applicant_id}</span>
+                      <span>📅 申请时间：{new Date(leaderboard.created_at).toLocaleString('zh-CN')}</span>
+                    </div>
+                    {leaderboard.description && (
+                      <div style={{ marginBottom: '12px', padding: '12px', background: 'white', borderRadius: '4px', fontSize: '14px', color: '#333' }}>
+                        <strong>描述：</strong>{leaderboard.description}
+                      </div>
+                    )}
+                    {leaderboard.application_reason && (
+                      <div style={{ marginBottom: '12px', padding: '12px', background: '#fff7e6', borderRadius: '4px', fontSize: '14px', color: '#333' }}>
+                        <strong>申请理由：</strong>{leaderboard.application_reason}
+                      </div>
+                    )}
+                    {leaderboard.cover_image && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <img
+                          src={leaderboard.cover_image}
+                          alt="封面"
+                          style={{ maxWidth: '200px', maxHeight: '150px', borderRadius: '4px', objectFit: 'cover' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => handleOpenReviewModal(leaderboard, 'approve')}
+                    disabled={reviewingLeaderboard === leaderboard.id}
+                    style={{
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: reviewingLeaderboard === leaderboard.id ? '#ccc' : '#52c41a',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: reviewingLeaderboard === leaderboard.id ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {reviewingLeaderboard === leaderboard.id ? '处理中...' : '✓ 批准'}
+                  </button>
+                  <button
+                    onClick={() => handleOpenReviewModal(leaderboard, 'reject')}
+                    disabled={reviewingLeaderboard === leaderboard.id}
+                    style={{
+                      padding: '8px 16px',
+                      border: 'none',
+                      background: reviewingLeaderboard === leaderboard.id ? '#ccc' : '#ff4d4f',
+                      color: 'white',
+                      borderRadius: '4px',
+                      cursor: reviewingLeaderboard === leaderboard.id ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {reviewingLeaderboard === leaderboard.id ? '处理中...' : '✗ 拒绝'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 审核弹窗 */}
+      <Modal
+        title={selectedLeaderboardForReview ? `审核榜单：${selectedLeaderboardForReview.name}` : '审核榜单'}
+        open={showLeaderboardReviewModal}
+        onCancel={() => {
+          setShowLeaderboardReviewModal(false);
+          setSelectedLeaderboardForReview(null);
+          setLeaderboardReviewComment('');
+        }}
+        footer={null}
+        width={600}
+      >
+        {selectedLeaderboardForReview && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <strong>榜单名称：</strong>{selectedLeaderboardForReview.name}
+            </div>
+            <div>
+              <strong>地区：</strong>{selectedLeaderboardForReview.location}
+            </div>
+            {selectedLeaderboardForReview.description && (
+              <div>
+                <strong>描述：</strong>
+                <div style={{ marginTop: '8px', padding: '8px', background: '#f5f5f5', borderRadius: '4px' }}>
+                  {selectedLeaderboardForReview.description}
+                </div>
+              </div>
+            )}
+            {selectedLeaderboardForReview.application_reason && (
+              <div>
+                <strong>申请理由：</strong>
+                <div style={{ marginTop: '8px', padding: '8px', background: '#fff7e6', borderRadius: '4px' }}>
+                  {selectedLeaderboardForReview.application_reason}
+                </div>
+              </div>
+            )}
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                审核意见（可选）：
+              </label>
+              <textarea
+                value={leaderboardReviewComment}
+                onChange={(e) => setLeaderboardReviewComment(e.target.value)}
+                placeholder="请输入审核意见..."
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  minHeight: '100px',
+                  resize: 'vertical'
+                }}
+                maxLength={500}
+              />
+              <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                {leaderboardReviewComment.length}/500
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button
+                onClick={() => {
+                  setShowLeaderboardReviewModal(false);
+                  setSelectedLeaderboardForReview(null);
+                  setLeaderboardReviewComment('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  background: 'white',
+                  color: '#333',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={() => handleSubmitReview('reject')}
+                disabled={reviewingLeaderboard === selectedLeaderboardForReview.id}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  background: reviewingLeaderboard === selectedLeaderboardForReview.id ? '#ccc' : '#ff4d4f',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: reviewingLeaderboard === selectedLeaderboardForReview.id ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                {reviewingLeaderboard === selectedLeaderboardForReview.id ? '处理中...' : '拒绝'}
+              </button>
+              <button
+                onClick={() => handleSubmitReview('approve')}
+                disabled={reviewingLeaderboard === selectedLeaderboardForReview.id}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  background: reviewingLeaderboard === selectedLeaderboardForReview.id ? '#ccc' : '#52c41a',
+                  color: 'white',
+                  borderRadius: '4px',
+                  cursor: reviewingLeaderboard === selectedLeaderboardForReview.id ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                {reviewingLeaderboard === selectedLeaderboardForReview.id ? '处理中...' : '批准'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+
   // 标签页按钮样式函数 - 使用CSS类
   const getTabButtonClassName = (isActive: boolean, specialColor?: string) => {
     const baseClass = styles.tabButton;
@@ -6993,6 +7294,12 @@ const AdminDashboard: React.FC = () => {
               📊 投票记录
             </button>
             <button 
+              className={getTabButtonClassName(activeTab === 'leaderboard-review')}
+              onClick={() => handleTabChange('leaderboard-review')}
+            >
+              ✅ 榜单审核
+            </button>
+            <button 
               className={getTabButtonClassName(activeTab === 'reports')}
               onClick={() => handleTabChange('reports')}
             >
@@ -7096,7 +7403,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'reports' && renderReports()}
             {activeTab === 'flea-market-items' && renderFleaMarketItems()}
             {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
-            {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
+            {activeTab === 'leaderboard-review' && renderLeaderboardReview()}
           </div>
         )}
       </div>
