@@ -5,6 +5,10 @@
 
 import json
 import math
+import os
+import shutil
+import logging
+from pathlib import Path
 from fastapi import APIRouter, Depends, Query, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, update
@@ -15,6 +19,9 @@ from app.deps import get_async_db_dependency
 from app import models, schemas
 from app.utils.time_utils import get_utc_time
 from app.rate_limiting import rate_limit
+from app.config import Config
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/custom-leaderboards", tags=["Custom Leaderboards"])
 
@@ -699,6 +706,66 @@ async def submit_item(
         )
     
     await db.refresh(new_item)
+    
+    # 移动临时图片到正式目录并更新URL（如果使用了临时目录）
+    if item_data.images:
+        # 检测部署环境
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        if RAILWAY_ENVIRONMENT:
+            base_dir = Path("/data/uploads/public/images")
+        else:
+            base_dir = Path("uploads/public/images")
+        
+        temp_dir = base_dir / "leaderboard_items" / f"temp_{current_user.id}"
+        item_dir = base_dir / "leaderboard_items" / str(new_item.id)
+        base_url = Config.FRONTEND_URL.rstrip('/')
+        updated_images = []
+        
+        if temp_dir.exists():
+            item_dir.mkdir(parents=True, exist_ok=True)
+            # 移动临时目录中的图片文件并更新URL
+            moved_count = 0
+            for image_url in item_data.images:
+                try:
+                    # 检查是否是临时文件夹的图片
+                    if f"/uploads/images/leaderboard_items/temp_{current_user.id}/" in image_url:
+                        # 从URL中提取文件名
+                        filename = image_url.split('/')[-1]
+                        temp_file = temp_dir / filename
+                        if temp_file.exists():
+                            item_file = item_dir / filename
+                            temp_file.rename(item_file)
+                            moved_count += 1
+                            # 更新URL为正式目录
+                            new_url = f"{base_url}/uploads/images/leaderboard_items/{new_item.id}/{filename}"
+                            updated_images.append(new_url)
+                            logger.info(f"移动临时图片到竞品目录并更新URL: {filename} -> {new_url}")
+                        else:
+                            # 文件不存在，保持原URL（可能是其他来源的图片）
+                            updated_images.append(image_url)
+                            logger.warning(f"临时图片文件不存在，保持原URL: {filename}")
+                    else:
+                        # 不是临时图片，保持原URL
+                        updated_images.append(image_url)
+                except Exception as e:
+                    logger.warning(f"移动图片文件失败: {e}，保持原URL")
+                    updated_images.append(image_url)
+            
+            # 如果有图片被移动，更新数据库中的图片URL
+            if updated_images != item_data.images:
+                new_item.images = json.dumps(updated_images)
+                await db.commit()
+                await db.refresh(new_item)
+                logger.info(f"已更新竞品 {new_item.id} 的图片URL")
+            
+            # 删除临时目录（如果为空或所有文件都已移动）
+            try:
+                remaining_files = list(temp_dir.iterdir())
+                if not remaining_files:
+                    temp_dir.rmdir()
+                    logger.info(f"删除空的临时目录: {temp_dir}")
+            except Exception as e:
+                logger.debug(f"删除临时目录失败（可能不为空）: {temp_dir}: {e}")
     
     # 构建返回数据，解析images字段
     images_list = None
