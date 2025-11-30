@@ -309,12 +309,9 @@ const CustomLeaderboardDetail: React.FC = () => {
             previewUrlsRef.current.delete(newFile.url);
           }
           
-          // 更新文件状态为完成
-          setUploadingFileList(prev => prev.map(f => 
-            f.uid === tempId 
-              ? { ...f, status: 'done' as const, url, thumbUrl: url }
-              : f
-          ));
+          // 上传成功后，从上传列表中移除，只保留在已上传图片列表中
+          // 这样可以避免在 fileList 中重复显示
+          setUploadingFileList(prev => prev.filter(f => f.uid !== tempId));
           
           // 添加到已上传图片列表
           setUploadingImages(prev => [...prev, url]);
@@ -491,133 +488,193 @@ const CustomLeaderboardDetail: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {items.map((item, index) => {
                 const globalIndex = (pagination.current - 1) * pagination.pageSize + index + 1;
+                const isTop3 = globalIndex <= 3;
+                // 处理图片数据（可能是字符串或数组）
+                let images: string[] = [];
+                if (item.images) {
+                  if (typeof item.images === 'string') {
+                    try {
+                      images = JSON.parse(item.images);
+                    } catch {
+                      images = [];
+                    }
+                  } else if (Array.isArray(item.images)) {
+                    images = item.images;
+                  }
+                }
+                
                 return (
-                  <Card key={item.id} style={{ borderRadius: 8 }}>
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      {/* 排名和图片 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <div style={{
-                          width: 50,
-                          height: 50,
-                          borderRadius: '50%',
-                          background: globalIndex <= 3 ? '#ffc107' : '#f0f0f0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 20,
+                  <Card 
+                    key={item.id} 
+                    style={{ 
+                      borderRadius: 8,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      padding: 20
+                    }}
+                  >
+                    {/* 卡片头部：排名、信息、投票 */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'start',
+                      marginBottom: 12
+                    }}>
+                      {/* 左侧：排名和信息 */}
+                      <div style={{ display: 'flex', alignItems: 'start', flex: 1 }}>
+                        <span style={{
+                          fontSize: 24,
                           fontWeight: 'bold',
-                          color: globalIndex <= 3 ? '#fff' : '#666'
+                          color: isTop3 ? '#ffc107' : '#666',
+                          marginRight: 12,
+                          flexShrink: 0
                         }}>
-                          {globalIndex <= 3 ? '🏆' : `#${globalIndex}`}
-                        </div>
-                        {item.images && item.images.length > 0 && (
-                          <Image
-                            src={item.images[0]}
-                            alt={item.name}
-                            width={80}
-                            height={80}
-                            style={{ objectFit: 'cover', borderRadius: 8 }}
-                            preview={{
-                              src: item.images[0],
-                              mask: '查看大图'
+                          #{globalIndex}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <div 
+                            style={{ 
+                              fontSize: 20, 
+                              fontWeight: 600, 
+                              marginBottom: 8,
+                              cursor: 'pointer',
+                              color: '#333'
                             }}
-                          />
-                        )}
+                            onClick={() => {
+                              const lang = language || 'zh';
+                              navigate(`/${lang}/leaderboard/item/${item.id}?leaderboardId=${leaderboardId}`);
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#1890ff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = '#333';
+                            }}
+                          >
+                            {item.name}
+                          </div>
+                          {item.description && (
+                            <div style={{ 
+                              color: '#666', 
+                              lineHeight: 1.6,
+                              marginBottom: 8 
+                            }}>
+                              {item.description}
+                            </div>
+                          )}
+                          {item.address && (
+                            <div style={{ 
+                              fontSize: 12, 
+                              color: '#999',
+                              marginBottom: 8
+                            }}>
+                              📍 {item.address}
+                            </div>
+                          )}
+                          {/* 图片展示 */}
+                          {images && images.length > 0 && (
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: 8, 
+                              marginTop: 12,
+                              flexWrap: 'wrap'
+                            }}>
+                              <Image.PreviewGroup>
+                                {images.map((imgUrl: string, imgIndex: number) => (
+                                  <Image
+                                    key={imgIndex}
+                                    src={imgUrl}
+                                    alt={`${item.name} - 图片 ${imgIndex + 1}`}
+                                    width={100}
+                                    height={100}
+                                    style={{ 
+                                      objectFit: 'cover', 
+                                      borderRadius: 4,
+                                      border: '1px solid #e8e8e8',
+                                      cursor: 'pointer'
+                                    }}
+                                    preview
+                                  />
+                                ))}
+                              </Image.PreviewGroup>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* 内容 */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 8 }}>
-                          <div>
-                            <h2 
-                              style={{ margin: 0, fontSize: 20, fontWeight: 600, cursor: 'pointer' }}
-                              onClick={() => {
-                                const lang = language || 'zh';
-                                navigate(`/${lang}/leaderboard/item/${item.id}?leaderboardId=${leaderboardId}`);
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = '#1890ff';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'inherit';
-                              }}
-                            >
-                              {item.name}
-                            </h2>
-                            {item.description && (
-                              <p style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>{item.description}</p>
-                            )}
-                            <Space direction="vertical" size="small" style={{ fontSize: 12, color: '#999' }}>
-                              {item.address && (
-                                <div>
-                                  <EnvironmentOutlined /> {item.address}
-                                </div>
-                              )}
-                              {item.phone && (
-                                <div>
-                                  <PhoneOutlined /> {item.phone}
-                                </div>
-                              )}
-                              {item.website && (
-                                <div>
-                                  <GlobalOutlined /> <a href={item.website} target="_blank" rel="noopener noreferrer">{item.website}</a>
-                                </div>
-                              )}
-                            </Space>
-                          </div>
-              
-                          {/* 投票按钮 */}
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 100 }}>
-                            <Button
-                              type={item.user_vote === 'upvote' ? 'primary' : 'default'}
-                              icon={<LikeOutlined />}
-                              onClick={() => handleVote(item.id, 'upvote')}
-                              size="large"
-                            >
-                              {item.upvotes}
-                            </Button>
-                            <Button
-                              danger={item.user_vote === 'downvote'}
-                              type={item.user_vote === 'downvote' ? 'primary' : 'default'}
-                              icon={<DislikeOutlined />}
-                              onClick={() => handleVote(item.id, 'downvote')}
-                              size="large"
-                            >
-                              {item.downvotes}
-                            </Button>
-                            <div style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
-                              净赞: <span style={{ fontWeight: 600, color: item.net_votes >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                                {item.net_votes > 0 ? '+' : ''}{item.net_votes}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: 11, color: '#999' }}>
-                              得分: {item.vote_score.toFixed(2)}
-                            </div>
-                          </div>
+                      {/* 右侧：投票区域 */}
+                      <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: 8,
+                        minWidth: 80
+                      }}>
+                        <Button
+                          type={item.user_vote === 'upvote' ? 'primary' : 'default'}
+                          icon={<LikeOutlined />}
+                          onClick={() => handleVote(item.id, 'upvote')}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            border: '1px solid #d9d9d9'
+                          }}
+                        >
+                          <span style={{ fontSize: 16, fontWeight: 600 }}>{item.upvotes}</span>
+                        </Button>
+                        <Button
+                          danger={item.user_vote === 'downvote'}
+                          type={item.user_vote === 'downvote' ? 'primary' : 'default'}
+                          icon={<DislikeOutlined />}
+                          onClick={() => handleVote(item.id, 'downvote')}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            border: '1px solid #d9d9d9'
+                          }}
+                        >
+                          <span style={{ fontSize: 16, fontWeight: 600 }}>{item.downvotes}</span>
+                        </Button>
+                        <div style={{ fontSize: 12, color: '#999' }}>
+                          得分: {item.vote_score.toFixed(2)}
                         </div>
-                        
-                        {/* 显示用户自己的投票留言 */}
-                        {item.user_vote_comment && (
-                          <div style={{
-                            marginTop: 12,
-                            padding: 12,
-                            background: item.user_vote === 'upvote' ? '#f6ffed' : '#fff1f0',
-                            border: `1px solid ${item.user_vote === 'upvote' ? '#b7eb8f' : '#ffccc7'}`,
-                            borderRadius: 8,
-                            fontSize: 14,
-                            color: '#666'
-                          }}>
-                            <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
-                              {item.user_vote_is_anonymous && (
-                                <Tag color="default" style={{ fontSize: 12 }}>匿名</Tag>
-                              )}
-                            </div>
-                            <div>{item.user_vote_comment}</div>
-                          </div>
-                        )}
                       </div>
                     </div>
+                    
+                    {/* 用户留言 */}
+                    {item.user_vote_comment && (
+                      <div style={{
+                        marginTop: 12,
+                        padding: 12,
+                        background: '#f5f5f5',
+                        borderRadius: 8,
+                        fontSize: 14
+                      }}>
+                        <div style={{ 
+                          fontWeight: 600, 
+                          marginBottom: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8
+                        }}>
+                          {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
+                          {item.user_vote_is_anonymous && (
+                            <Tag style={{ 
+                              padding: '2px 6px',
+                              background: '#f0f0f0',
+                              borderRadius: 4,
+                              fontSize: 11,
+                              color: '#666',
+                              border: 'none'
+                            }}>
+                              匿名
+                            </Tag>
+                          )}
+                        </div>
+                        <div>{item.user_vote_comment}</div>
+                      </div>
+                    )}
                   </Card>
                 );
               })}
