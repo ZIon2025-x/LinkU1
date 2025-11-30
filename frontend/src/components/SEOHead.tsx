@@ -158,13 +158,18 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       return imageUrl.includes('og-') || imageUrl.includes('1200x630') || imageUrl.includes('og-default');
     };
     
+    // 检查是否是榜单详情页（URL格式：/leaderboard/custom/数字）
+    // 对于榜单详情页，useLayoutEffect 会管理微信标签，SEOHead 不覆盖
+    const isLeaderboardDetailPage = /\/leaderboard\/custom\/\d+/.test(window.location.pathname);
+    
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
     if (ogImage) {
       // 确保og:image是完整URL（微信需要绝对URL）
       let fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
       
-      // 如果图片尺寸太小，强制 fallback 到默认大图
-      if (!isValidOgImage(fullOgImage)) {
+      // 对于榜单详情页，直接使用传入的图片，不进行 fallback
+      // 对于其他页面，如果图片尺寸太小，才 fallback 到默认大图
+      if (!isLeaderboardDetailPage && !isValidOgImage(fullOgImage)) {
         fullOgImage = 'https://www.link2ur.com/static/og-default.jpg'; // 1200×630 的默认图
       }
       
@@ -184,16 +189,21 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('og:image:type', 'image/png', true);
       
       // 微信分享图片（完整URL）
-      const existingWeixinImage = document.querySelector('meta[name="weixin:image"][data-seo-head="true"]');
-      if (existingWeixinImage) {
-        existingWeixinImage.remove();
+      // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
+      if (!isLeaderboardDetailPage) {
+        const existingWeixinImage = document.querySelector('meta[name="weixin:image"][data-seo-head="true"]');
+        if (existingWeixinImage) {
+          existingWeixinImage.remove();
+        }
+        updateMetaTag('weixin:image', fullOgImage);
       }
-      updateMetaTag('weixin:image', fullOgImage);
     }
-    if (ogTitle) {
+    if (ogTitle && !isLeaderboardDetailPage) {
+      // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
       updateMetaTag('weixin:title', ogTitle);
     }
-    if (ogDescription) {
+    if (ogDescription && !isLeaderboardDetailPage) {
+      // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
       updateMetaTag('weixin:description', ogDescription);
     }
     
