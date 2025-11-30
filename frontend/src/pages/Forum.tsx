@@ -170,7 +170,7 @@ const Forum: React.FC = () => {
                 }
                 window.location.reload();
               }}
-              onLoginClick={() => {}}
+              onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
               unreadCount={messageUnreadCount}
             />

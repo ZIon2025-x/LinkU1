@@ -7414,6 +7414,24 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
+            {selectedLeaderboardForReview.cover_image && (
+              <div>
+                <strong>榜单封面图片：</strong>
+                <div style={{ marginTop: '8px' }}>
+                  <img
+                    src={selectedLeaderboardForReview.cover_image}
+                    alt="榜单封面"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '300px',
+                      borderRadius: '8px',
+                      objectFit: 'cover',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 审核意见（可选）：

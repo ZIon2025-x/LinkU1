@@ -75,23 +75,34 @@ const CustomLeaderboardDetail: React.FC = () => {
     // 分享标题：榜单名称 + 平台名称
     const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
     
-    // 强制移除所有标题和描述标签（无条件移除，确保清理干净）
+    // 强制移除所有默认描述标签（包括检查内容是否包含默认文本）
+    const removeAllDefaultDescriptions = () => {
+      const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        // 无条件移除所有描述标签，确保清理干净
+        metaTag.remove();
+      });
+    };
+    removeAllDefaultDescriptions();
+    
+    // 强制移除所有标题标签
     const allTitles = document.querySelectorAll('meta[name="weixin:title"], meta[property="og:title"], meta[name="twitter:title"]');
     allTitles.forEach(tag => tag.remove());
-    const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
-    allDescriptions.forEach(tag => tag.remove());
+    
+    // 强制更新微信分享描述（微信优先读取weixin:description）
+    // 必须最先设置，确保微信爬虫优先读取
+    const weixinDescTag = document.createElement('meta');
+    weixinDescTag.setAttribute('name', 'weixin:description');
+    weixinDescTag.content = currentShareDescription;
+    // 插入到head最前面，确保微信爬虫优先读取
+    document.head.insertBefore(weixinDescTag, document.head.firstChild);
     
     // 强制更新微信分享标题（微信优先读取weixin:title）
     const weixinTitleTag = document.createElement('meta');
     weixinTitleTag.setAttribute('name', 'weixin:title');
     weixinTitleTag.content = shareTitle;
     document.head.insertBefore(weixinTitleTag, document.head.firstChild);
-    
-    // 强制更新微信分享描述（微信优先读取weixin:description）
-    const weixinDescTag = document.createElement('meta');
-    weixinDescTag.setAttribute('name', 'weixin:description');
-    weixinDescTag.content = currentShareDescription;
-    document.head.insertBefore(weixinDescTag, document.head.firstChild);
     
     // 设置微信分享图片
     const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
@@ -100,6 +111,30 @@ const CustomLeaderboardDetail: React.FC = () => {
     weixinImageTag.setAttribute('name', 'weixin:image');
     weixinImageTag.content = shareImageUrl;
     document.head.insertBefore(weixinImageTag, document.head.firstChild);
+    
+    // 强制更新meta描述（先移除所有旧标签，再插入到head最前面）
+    const allDescriptions = document.querySelectorAll('meta[name="description"]');
+    allDescriptions.forEach(tag => tag.remove());
+    const descTag = document.createElement('meta');
+    descTag.name = 'description';
+    descTag.content = currentShareDescription;
+    document.head.insertBefore(descTag, document.head.firstChild);
+    
+    // 强制更新og:description（先移除所有旧标签，再插入到head最前面）
+    const allOgDescriptions = document.querySelectorAll('meta[property="og:description"]');
+    allOgDescriptions.forEach(tag => tag.remove());
+    const ogDescTag = document.createElement('meta');
+    ogDescTag.setAttribute('property', 'og:description');
+    ogDescTag.content = currentShareDescription;
+    document.head.insertBefore(ogDescTag, document.head.firstChild);
+    
+    // 强制更新twitter:description
+    const allTwitterDescriptions = document.querySelectorAll('meta[name="twitter:description"]');
+    allTwitterDescriptions.forEach(tag => tag.remove());
+    const twitterDescTag = document.createElement('meta');
+    twitterDescTag.name = 'twitter:description';
+    twitterDescTag.content = currentShareDescription;
+    document.head.insertBefore(twitterDescTag, document.head.firstChild);
     
     // 设置 Open Graph 标签（微信也会读取作为备选）
     const updateMetaTag = (name: string, content: string, property?: boolean) => {
@@ -117,19 +152,86 @@ const CustomLeaderboardDetail: React.FC = () => {
       document.head.insertBefore(metaTag, document.head.firstChild);
     };
     
+    // 确保 og:title 也被正确设置
+    const existingOgTitle = document.querySelector('meta[property="og:title"]');
+    if (existingOgTitle) {
+      existingOgTitle.remove();
+    }
     updateMetaTag('og:title', shareTitle, true);
-    updateMetaTag('og:description', currentShareDescription, true);
     updateMetaTag('og:image', shareImageUrl, true);
     updateMetaTag('og:url', canonicalUrl, true);
     updateMetaTag('og:type', 'website', true);
     updateMetaTag('og:site_name', 'Link²Ur', true);
+    updateMetaTag('og:locale', 'zh_CN', true);
     
     // 更新页面标题
     const pageTitle = `${shareTitle} - Link²Ur`;
     if (document.title !== pageTitle) {
       document.title = pageTitle;
     }
+    
+    // 微信分享特殊处理：将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
+    // 微信爬虫会优先读取head前面的标签
+    const moveToTop = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (element && element.parentNode) {
+        const head = document.head;
+        const firstChild = head.firstChild;
+        if (firstChild && element !== firstChild) {
+          head.insertBefore(element, firstChild);
+        }
+      }
+    };
+    
+    // 将关键标签移到前面（微信优先读取顺序：weixin:description, weixin:title, weixin:image, og:description, og:title, og:image）
+    setTimeout(() => {
+      moveToTop('meta[name="weixin:description"]');
+      moveToTop('meta[name="weixin:title"]');
+      moveToTop('meta[name="weixin:image"]');
+      moveToTop('meta[property="og:description"]');
+      moveToTop('meta[property="og:title"]');
+      moveToTop('meta[property="og:image"]');
+    }, 50);
   }, [leaderboard, canonicalUrl]);
+
+  // 立即移除默认的 meta 标签，避免微信爬虫抓取到默认值
+  useLayoutEffect(() => {
+    // 移除所有默认的描述标签（包括检查内容是否包含默认文本）
+    const removeAllDefaultDescriptions = () => {
+      // 移除所有包含默认平台描述的标签
+      const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
+      allDescriptions.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (
+          metaTag.content.includes('Professional task publishing') ||
+          metaTag.content.includes('skill matching platform') ||
+          metaTag.content.includes('linking skilled people') ||
+          metaTag.content.includes('making value creation more efficient') ||
+          metaTag.content === 'Link²Ur' ||
+          metaTag.content.includes('Link²Ur Forum')
+        )) {
+          metaTag.remove();
+        }
+      });
+      
+      // 移除默认标题
+      const allTitles = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+      allTitles.forEach(tag => {
+        const metaTag = tag as HTMLMetaElement;
+        if (metaTag.content && (metaTag.content === 'Link²Ur' || metaTag.content.includes('Link²Ur Forum'))) {
+          metaTag.remove();
+        }
+      });
+      
+      // 无条件移除所有微信相关标签（确保清理干净）
+      document.querySelectorAll('meta[name="weixin:title"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[name="weixin:description"]').forEach(tag => tag.remove());
+      document.querySelectorAll('meta[name="weixin:image"]').forEach(tag => tag.remove());
+    };
+    
+    // 立即移除所有默认标签
+    removeAllDefaultDescriptions();
+  }, []);
 
   // 立即设置微信分享的 meta 标签（使用 useLayoutEffect 确保在 DOM 渲染前执行）
   useLayoutEffect(() => {
@@ -141,6 +243,10 @@ const CustomLeaderboardDetail: React.FC = () => {
     setTimeout(() => {
       updateWeixinMetaTags();
     }, 100);
+    
+    setTimeout(() => {
+      updateWeixinMetaTags();
+    }, 500);
     
     setTimeout(() => {
       updateWeixinMetaTags();
@@ -222,7 +328,7 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   const handleVote = async (itemId: number, voteType: 'upvote' | 'downvote') => {
     if (!user) {
-      message.warning('请先登录');
+      setShowLoginModal(true);
       return;
     }
 
@@ -713,7 +819,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                 icon={<PlusOutlined />}
                 onClick={() => {
                   if (!user) {
-                    message.warning('请先登录');
+                    setShowLoginModal(true);
                     return;
                   }
                   setShowSubmitModal(true);
@@ -732,7 +838,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                 icon={<ExclamationCircleOutlined />}
                 onClick={() => {
                   if (!user) {
-                    message.warning('请先登录');
+                    setShowLoginModal(true);
                     return;
                   }
                   setShowReportModal(true);

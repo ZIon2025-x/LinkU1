@@ -717,6 +717,55 @@ async def review_leaderboard(
     
     if action == "approve":
         leaderboard.status = "active"
+        
+        # 移动临时封面图片到正式目录并更新URL（如果使用了临时目录）
+        if leaderboard.cover_image:
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_dir = Path("/data/uploads/public/images")
+            else:
+                base_dir = Path("uploads/public/images")
+            
+            # 检查是否是临时文件夹的图片
+            cover_image_url = leaderboard.cover_image
+            if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
+                try:
+                    # 从URL中提取临时路径信息
+                    # URL格式: {base_url}/uploads/images/leaderboard_covers/temp_{user_id}/{filename}
+                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/")
+                    if len(url_parts) == 2:
+                        temp_path = url_parts[1]
+                        temp_parts = temp_path.split("/")
+                        if len(temp_parts) >= 2:
+                            temp_user_id = temp_parts[0]  # temp_{user_id}
+                            filename = temp_parts[1]  # filename
+                            
+                            temp_dir = base_dir / "leaderboard_covers" / temp_user_id
+                            leaderboard_dir = base_dir / "leaderboard_covers" / str(leaderboard_id)
+                            
+                            temp_file = temp_dir / filename
+                            if temp_file.exists():
+                                # 创建榜单目录
+                                leaderboard_dir.mkdir(parents=True, exist_ok=True)
+                                
+                                # 移动文件
+                                leaderboard_file = leaderboard_dir / filename
+                                temp_file.rename(leaderboard_file)
+                                
+                                # 更新URL
+                                from app.config import Config
+                                base_url = Config.FRONTEND_URL.rstrip('/')
+                                new_url = f"{base_url}/uploads/images/leaderboard_covers/{leaderboard_id}/{filename}"
+                                leaderboard.cover_image = new_url
+                                
+                                logger.info(f"移动临时封面图片到榜单目录并更新URL: {filename} -> {new_url}")
+                            else:
+                                logger.warning(f"临时封面图片文件不存在: {temp_file}")
+                        else:
+                            logger.warning(f"无法解析临时封面图片URL路径: {temp_path}")
+                except Exception as e:
+                    logger.warning(f"移动封面图片文件失败: {e}，保持原URL")
     else:
         leaderboard.status = "rejected"
     
@@ -1323,6 +1372,7 @@ async def vote_item(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """用户对竞品投票（可附带留言）"""
+    
     if comment:
         try:
             import bleach

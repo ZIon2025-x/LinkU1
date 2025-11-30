@@ -22,6 +22,7 @@ import {
 import { fetchCurrentUser } from '../api';
 import { compressImage } from '../utils/imageCompression';
 import api from '../api';
+import LoginModal from '../components/LoginModal';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -43,6 +44,8 @@ const LeaderboardItemDetail: React.FC = () => {
   const [voteForm] = Form.useForm();
   const [reportForm] = Form.useForm();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -121,7 +124,7 @@ const LeaderboardItemDetail: React.FC = () => {
 
   const handleVote = async (voteType: 'upvote' | 'downvote') => {
     if (!user) {
-      message.warning('请先登录');
+      setShowLoginModal(true);
       return;
     }
 
@@ -191,7 +194,7 @@ const LeaderboardItemDetail: React.FC = () => {
 
   const handleLikeComment = async (voteId: number) => {
     if (!user) {
-      message.warning('请先登录');
+      setShowLoginModal(true);
       return;
     }
 
@@ -385,7 +388,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   size="large"
                   onClick={() => {
                     if (!user) {
-                      message.warning('请先登录');
+                      setShowLoginModal(true);
                       return;
                     }
                     setShowReportModal(true);
@@ -639,6 +642,25 @@ const LeaderboardItemDetail: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
 
       {/* 移动端响应式样式 */}
       <style>

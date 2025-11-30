@@ -328,6 +328,7 @@ if RAILWAY_ENVIRONMENT:
     (UPLOAD_DIR / "public" / "images" / "service_images").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "public").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "leaderboard_items").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "public" / "images" / "leaderboard_covers").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "files").mkdir(parents=True, exist_ok=True)
     # 私有目录（需要签名URL访问）
     (UPLOAD_DIR / "private").mkdir(parents=True, exist_ok=True)
@@ -353,6 +354,7 @@ else:
     (UPLOAD_DIR / "public" / "images" / "service_images").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "public").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "images" / "leaderboard_items").mkdir(parents=True, exist_ok=True)
+    (UPLOAD_DIR / "public" / "images" / "leaderboard_covers").mkdir(parents=True, exist_ok=True)
     (UPLOAD_DIR / "public" / "files").mkdir(exist_ok=True)
     # 私有目录
     (UPLOAD_DIR / "private").mkdir(exist_ok=True)

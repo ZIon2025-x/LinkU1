@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Select, Modal, Form, message, Empty, Tag, Input, Pagination, Spin } from 'antd';
-import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Select, Modal, Form, message, Empty, Tag, Input, Pagination, Spin, Upload, Image } from 'antd';
+import { PlusOutlined, TrophyOutlined, FireOutlined, ClockCircleOutlined, UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import {
@@ -9,10 +9,17 @@ import {
 } from '../api';
 import { fetchCurrentUser } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
+import LoginModal from './LoginModal';
+import { compressImage } from '../utils/imageCompression';
+import api from '../api';
 
 const { Option } = Select;
 
-const CustomLeaderboardsTab: React.FC = () => {
+interface CustomLeaderboardsTabProps {
+  onShowLogin?: () => void;
+}
+
+const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLogin }) => {
   const { t, language } = useLanguage();
   const { navigate } = useLocalizedNavigation();
   const [leaderboards, setLeaderboards] = useState<any[]>([]);
@@ -29,6 +36,10 @@ const CustomLeaderboardsTab: React.FC = () => {
     total: 0,
     hasMore: false
   });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
 
   // 防抖搜索
   const [searchTimer, setSearchTimer] = useState<NodeJS.Timeout | null>(null);
@@ -98,12 +109,84 @@ const CustomLeaderboardsTab: React.FC = () => {
     }
   };
 
+  const handleImageUpload = async (file: File): Promise<string> => {
+    try {
+      setUploadingCoverImage(true);
+      // 压缩图片
+      const compressedFile = await compressImage(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+      });
+      
+      const formData = new FormData();
+      formData.append('image', compressedFile);
+      
+      // 使用 leaderboard_cover category
+      const resourceId = user?.id ? `temp_${user.id}` : 'temp_anonymous';
+      const response = await api.post(
+        `/api/upload/public-image?category=leaderboard_cover&resource_id=${encodeURIComponent(resourceId)}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      if (response.data.success && response.data.url) {
+        return response.data.url;
+      } else {
+        throw new Error('上传失败');
+      }
+    } catch (error: any) {
+      console.error('图片上传失败:', error);
+      message.error(`图片上传失败: ${error.response?.data?.detail || error.message}`);
+      throw error;
+    } finally {
+      setUploadingCoverImage(false);
+    }
+  };
+
+  const handleCoverImageChange = async (info: any) => {
+    const { file } = info;
+    
+    if (file.status === 'uploading') {
+      return;
+    }
+    
+    if (file.status === 'done' || file.originFileObj) {
+      try {
+        const fileToUpload = file.originFileObj || file;
+        const url = await handleImageUpload(fileToUpload);
+        setCoverImageUrl(url);
+        form.setFieldsValue({ cover_image: url });
+        message.success('图片上传成功');
+      } catch (error) {
+        message.error('图片上传失败');
+      }
+    } else if (file.status === 'removed') {
+      setCoverImageUrl('');
+      form.setFieldsValue({ cover_image: '' });
+    }
+  };
+
+  const handleRemoveCoverImage = () => {
+    setCoverImageUrl('');
+    form.setFieldsValue({ cover_image: '' });
+  };
+
   const handleApply = async (values: any) => {
     try {
-      await applyCustomLeaderboard(values);
+      // 确保 cover_image 被包含在提交的数据中
+      const submitData = {
+        ...values,
+        cover_image: coverImageUrl || values.cover_image || null
+      };
+      await applyCustomLeaderboard(submitData);
       message.success('榜单申请已提交，等待审核');
       setShowApplyModal(false);
       form.resetFields();
+      setCoverImageUrl('');
       loadLeaderboards();
     } catch (error: any) {
       console.error('申请榜单失败:', error);
@@ -183,7 +266,11 @@ const CustomLeaderboardsTab: React.FC = () => {
           icon={<PlusOutlined />}
           onClick={() => {
             if (!user) {
-              message.warning('请先登录');
+              if (onShowLogin) {
+                onShowLogin();
+              } else {
+                setShowLoginModal(true);
+              }
               return;
             }
             setShowApplyModal(true);
@@ -224,25 +311,35 @@ const CustomLeaderboardsTab: React.FC = () => {
                     navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
                   }}
                 >
-                  {/* Header Section - 渐变色背景 */}
+                  {/* Header Section - 使用封面图片或渐变色背景 */}
                   <div style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: leaderboard.cover_image 
+                      ? `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${leaderboard.cover_image})`
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     padding: '20px',
-                    color: 'white'
+                    color: 'white',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
                   }}>
                     <div style={{
                       fontSize: 22,
                       fontWeight: 'bold',
-                      marginBottom: 8
+                      marginBottom: 8,
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)'
                     }}>
                       {leaderboard.name}
                     </div>
                     <div style={{
                       fontSize: 14,
-                      opacity: 0.9,
+                      opacity: 0.95,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4
+                      gap: 4,
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                     }}>
                       <span>📍</span>
                       <span>{leaderboard.location}</span>
@@ -409,7 +506,9 @@ const CustomLeaderboardsTab: React.FC = () => {
         onCancel={() => {
           setShowApplyModal(false);
           form.resetFields();
+          setCoverImageUrl('');
         }}
+        confirmLoading={uploadingCoverImage}
         onOk={() => form.submit()}
         width={600}
       >
@@ -452,8 +551,65 @@ const CustomLeaderboardsTab: React.FC = () => {
           >
             <Input.TextArea rows={3} placeholder="为什么需要创建这个榜单？" />
           </Form.Item>
+          
+          <Form.Item
+            name="cover_image"
+            label="榜单封面图片（可选）"
+            extra="上传一张图片作为榜单封面，将显示在榜单卡片顶部"
+          >
+            <Upload
+              listType="picture-card"
+              maxCount={1}
+              beforeUpload={() => false}
+              onChange={handleCoverImageChange}
+              onRemove={handleRemoveCoverImage}
+              accept="image/*"
+              fileList={coverImageUrl ? [{
+                uid: '-1',
+                name: 'cover-image.jpg',
+                status: 'done',
+                url: coverImageUrl
+              }] : []}
+            >
+              {coverImageUrl ? null : (
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8 }}>上传图片</div>
+                </div>
+              )}
+            </Upload>
+            {coverImageUrl && (
+              <div style={{ marginTop: 8 }}>
+                <Image
+                  src={coverImageUrl}
+                  alt="封面预览"
+                  style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }}
+                  preview
+                />
+              </div>
+            )}
+          </Form.Item>
         </Form>
       </Modal>
+
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
 
       {/* 移动端样式优化 */}
       <style>

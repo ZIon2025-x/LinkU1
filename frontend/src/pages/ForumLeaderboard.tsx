@@ -327,7 +327,7 @@ const ForumLeaderboard: React.FC = () => {
               } 
               key="custom"
             >
-              <CustomLeaderboardsTab />
+              <CustomLeaderboardsTab onShowLogin={() => setShowLoginModal(true)} />
             </TabPane>
           </Tabs>
         </Card>

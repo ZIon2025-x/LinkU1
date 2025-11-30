@@ -495,6 +495,7 @@ class CleanupTasks:
                 base_upload_dir / "public" / "images" / "service_images": True,
                 base_upload_dir / "public" / "images" / "public": True,  # 允许 task_id 或 temp_* 子目录
                 base_upload_dir / "public" / "images" / "leaderboard_items": True,  # 允许 item_id 或 temp_* 子目录
+                base_upload_dir / "public" / "images" / "leaderboard_covers": True,  # 允许 leaderboard_id 或 temp_* 子目录
                 # 公开文件目录
                 base_upload_dir / "public" / "files": False,  # 不允许子目录，文件直接在此目录
                 # 私密图片目录
