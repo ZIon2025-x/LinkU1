@@ -237,9 +237,10 @@ const LeaderboardItemDetail: React.FC = () => {
   const lang = language || 'zh';
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
+    <div className="item-detail-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
       {/* 返回按钮 */}
       <Button
+        className="back-button"
         icon={<ArrowLeftOutlined />}
         onClick={() => {
           const urlParams = new URLSearchParams(window.location.search);
@@ -256,13 +257,14 @@ const LeaderboardItemDetail: React.FC = () => {
       </Button>
 
       {/* 竞品详情卡片 */}
-      <Card style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: 24 }}>
+      <Card className="item-detail-card" style={{ marginBottom: 24 }}>
+        <div className="item-detail-content" style={{ display: 'flex', gap: 24 }}>
           {/* 左侧：图片 */}
           {item.images && item.images.length > 0 && (
-            <div style={{ flexShrink: 0 }}>
+            <div className="item-images-section" style={{ flexShrink: 0 }}>
               <Image.PreviewGroup>
                 <Image
+                  className="item-main-image"
                   src={item.images[0]}
                   alt={item.name}
                   width={300}
@@ -271,7 +273,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   preview
                 />
                 {item.images.length > 1 && (
-                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                  <div className="item-thumbnails" style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                     {item.images.slice(1).map((img: string, idx: number) => (
                       <Image
                         key={idx}
@@ -290,8 +292,8 @@ const LeaderboardItemDetail: React.FC = () => {
           )}
 
           {/* 右侧：信息 */}
-          <div style={{ flex: 1 }}>
-            <Title level={2} style={{ marginTop: 0 }}>
+          <div className="item-info-section" style={{ flex: 1 }}>
+            <Title className="item-title" level={2} style={{ marginTop: 0 }}>
               <TrophyOutlined style={{ marginRight: 8, color: '#ffc107' }} />
               {item.name}
             </Title>
@@ -328,36 +330,37 @@ const LeaderboardItemDetail: React.FC = () => {
             <Divider />
 
             {/* 投票统计和按钮 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Space size="large">
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
+            <div className="vote-stats-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space className="vote-stats" size="large">
+                <div className="vote-stat-item" style={{ textAlign: 'center' }}>
+                  <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
                     {item.upvotes}
                   </div>
-                  <div style={{ fontSize: 12, color: '#999' }}>点赞</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>点赞</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
+                <div className="vote-stat-item" style={{ textAlign: 'center' }}>
+                  <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
                     {item.downvotes}
                   </div>
-                  <div style={{ fontSize: 12, color: '#999' }}>点踩</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>点踩</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: item.net_votes >= 0 ? '#52c41a' : '#ff4d4f' }}>
+                <div className="vote-stat-item" style={{ textAlign: 'center' }}>
+                  <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: item.net_votes >= 0 ? '#52c41a' : '#ff4d4f' }}>
                     {item.net_votes > 0 ? '+' : ''}{item.net_votes}
                   </div>
-                  <div style={{ fontSize: 12, color: '#999' }}>净赞</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>净赞</div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#666' }}>
+                <div className="vote-stat-item" style={{ textAlign: 'center' }}>
+                  <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#666' }}>
                     {item.vote_score.toFixed(2)}
                   </div>
-                  <div style={{ fontSize: 12, color: '#999' }}>综合得分</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>综合得分</div>
                 </div>
               </Space>
 
-              <Space>
+              <Space className="vote-buttons">
                 <Button
+                  className="vote-button vote-up"
                   type={item.user_vote === 'upvote' ? 'primary' : 'default'}
                   icon={<LikeOutlined />}
                   size="large"
@@ -366,6 +369,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   点赞 {item.upvotes}
                 </Button>
                 <Button
+                  className="vote-button vote-down"
                   danger={item.user_vote === 'downvote'}
                   type={item.user_vote === 'downvote' ? 'primary' : 'default'}
                   icon={<DislikeOutlined />}
@@ -375,6 +379,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   点踩 {item.downvotes}
                 </Button>
                 <Button
+                  className="report-button"
                   danger
                   icon={<ExclamationCircleOutlined />}
                   size="large"
@@ -393,7 +398,7 @@ const LeaderboardItemDetail: React.FC = () => {
 
             {/* 用户自己的投票留言 */}
             {item.user_vote_comment && (
-              <div style={{
+              <div className="user-comment-box" style={{
                 marginTop: 16,
                 padding: 12,
                 background: item.user_vote === 'upvote' ? '#f6ffed' : '#fff1f0',
@@ -415,6 +420,7 @@ const LeaderboardItemDetail: React.FC = () => {
 
       {/* 留言列表 */}
       <Card
+        className="comments-card"
         title={
           <Space>
             <MessageOutlined />
@@ -427,7 +433,7 @@ const LeaderboardItemDetail: React.FC = () => {
             <Empty description="暂无留言，快来发表第一条留言吧！" />
           ) : votes.length > 0 ? (
             <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {votes.map((vote, index) => {
                   // 为匿名留言分配序号（按时间顺序）
                   let anonymousCount = 0;
@@ -441,10 +447,11 @@ const LeaderboardItemDetail: React.FC = () => {
                     : (vote.user_id ? `用户 ${vote.user_id}` : '未知用户');
                   
                   return (
-                  <Card key={vote.id} size="small" style={{ borderRadius: 8 }}>
-                    <div style={{ display: 'flex', gap: 12 }}>
+                  <Card key={vote.id} className="comment-card" size="small" style={{ borderRadius: 8 }}>
+                    <div className="comment-content" style={{ display: 'flex', gap: 12 }}>
                       {/* 用户头像 */}
                       <Avatar
+                        className="comment-avatar"
                         icon={<UserOutlined />}
                         style={{
                           backgroundColor: vote.is_anonymous ? '#d9d9d9' : '#1890ff'
@@ -452,8 +459,8 @@ const LeaderboardItemDetail: React.FC = () => {
                       />
 
                       {/* 留言内容 */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div className="comment-text" style={{ flex: 1 }}>
+                        <div className="comment-header" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                           <Space>
                             {vote.vote_type === 'upvote' ? (
                               <LikeOutlined style={{ color: '#52c41a' }} />
@@ -467,13 +474,13 @@ const LeaderboardItemDetail: React.FC = () => {
                               <Tag color="default" style={{ fontSize: 12 }}>匿名</Tag>
                             )}
                           </Space>
-                          <Text type="secondary" style={{ fontSize: 12 }}>
+                          <Text type="secondary" className="comment-time" style={{ fontSize: 12 }}>
                             <ClockCircleOutlined style={{ marginRight: 4 }} />
                             {formatTime(vote.created_at)}
                           </Text>
                         </div>
                         {vote.comment ? (
-                          <Paragraph style={{ margin: 0, color: '#666', whiteSpace: 'pre-wrap' }}>
+                          <Paragraph className="comment-body" style={{ margin: 0, color: '#666', whiteSpace: 'pre-wrap' }}>
                             {vote.comment}
                           </Paragraph>
                         ) : (
@@ -482,8 +489,9 @@ const LeaderboardItemDetail: React.FC = () => {
                           </Text>
                         )}
                         {/* 点赞按钮 */}
-                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="comment-actions" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                           <Button
+                            className="comment-like-button"
                             type={vote.user_liked ? 'primary' : 'default'}
                             size="small"
                             icon={<LikeOutlined />}
@@ -638,82 +646,152 @@ const LeaderboardItemDetail: React.FC = () => {
           /* 移动端适配 */
           @media (max-width: 768px) {
             /* 外层容器移动端优化 */
-            div[style*="maxWidth: 1200"] {
+            .item-detail-container {
               padding: 12px !important;
             }
 
             /* 返回按钮移动端优化 */
-            .ant-btn {
+            .back-button {
               margin-bottom: 12px !important;
               width: 100% !important;
             }
 
             /* 竞品详情卡片移动端优化 */
-            .ant-card {
-              margin-bottom: 16px !important;
+            .item-detail-card .ant-card-body {
+              padding: 16px !important;
             }
 
             /* 竞品信息布局移动端优化 */
-            div[style*="display: flex"][style*="gap: 24"] {
+            .item-detail-content {
               flex-direction: column !important;
               gap: 16px !important;
             }
 
-            /* 图片移动端优化 */
-            .ant-image {
+            /* 图片区域移动端优化 */
+            .item-images-section {
               width: 100% !important;
-              max-width: 100% !important;
             }
 
-            img[alt="${item?.name}"] {
+            .item-main-image {
               width: 100% !important;
+              max-width: 100% !important;
               height: auto !important;
             }
 
-            /* 标题移动端优化 */
-            h2.ant-typography {
-              font-size: 20px !important;
-            }
-
-            /* 投票统计移动端优化 */
-            div[style*="display: flex"][style*="justifyContent: space-between"] {
-              flex-direction: column !important;
-              gap: 16px !important;
-            }
-
-            div[style*="display: flex"][style*="size: large"] {
+            .item-thumbnails {
               flex-wrap: wrap !important;
               gap: 8px !important;
             }
 
-            div[style*="display: flex"][style*="size: large"] button {
+            .item-thumbnails .ant-image {
+              width: 80px !important;
+              height: 80px !important;
+            }
+
+            /* 信息区域移动端优化 */
+            .item-info-section {
+              width: 100% !important;
+            }
+
+            /* 标题移动端优化 */
+            .item-title {
+              font-size: 20px !important;
+              line-height: 1.4 !important;
+            }
+
+            /* 描述移动端优化 */
+            .ant-typography {
+              font-size: 14px !important;
+              line-height: 1.6 !important;
+            }
+
+            /* 投票统计和按钮区域移动端优化 */
+            .vote-stats-section {
+              flex-direction: column !important;
+              gap: 16px !important;
+              align-items: stretch !important;
+            }
+
+            /* 投票统计移动端优化 */
+            .vote-stats {
+              width: 100% !important;
+              justify-content: space-around !important;
+              flex-wrap: wrap !important;
+            }
+
+            .vote-stat-item {
+              flex: 1 1 calc(50% - 8px) !important;
+              min-width: calc(50% - 8px) !important;
+              margin-bottom: 12px !important;
+            }
+
+            .vote-stat-value {
+              font-size: 20px !important;
+            }
+
+            .vote-stat-label {
+              font-size: 11px !important;
+            }
+
+            /* 投票按钮移动端优化 */
+            .vote-buttons {
+              width: 100% !important;
+              flex-wrap: wrap !important;
+              gap: 8px !important;
+            }
+
+            .vote-button,
+            .report-button {
               flex: 1 1 calc(50% - 4px) !important;
               min-width: calc(50% - 4px) !important;
+              font-size: 13px !important;
+            }
+
+            /* 用户留言框移动端优化 */
+            .user-comment-box {
+              font-size: 13px !important;
+              padding: 10px !important;
             }
 
             /* 留言列表移动端优化 */
-            div[style*="display: flex"][style*="flexDirection: column"][style*="gap: 16"] {
+            .comments-list {
               gap: 12px !important;
             }
 
             /* 留言卡片移动端优化 */
-            .ant-card-small {
-              border-radius: 8px !important;
+            .comment-card .ant-card-body {
+              padding: 12px !important;
             }
 
-            div[style*="display: flex"][style*="gap: 12"] {
-              flex-direction: column !important;
+            .comment-content {
               gap: 8px !important;
             }
 
-            /* 留言内容移动端优化 */
-            .ant-typography {
-              font-size: 14px !important;
+            .comment-avatar {
+              flex-shrink: 0 !important;
             }
 
-            /* 点赞按钮移动端优化 */
-            div[style*="marginTop: 8"] button {
-              width: 100% !important;
+            .comment-header {
+              flex-direction: column !important;
+              align-items: flex-start !important;
+              gap: 4px !important;
+            }
+
+            .comment-time {
+              font-size: 11px !important;
+            }
+
+            .comment-body {
+              font-size: 13px !important;
+              line-height: 1.5 !important;
+            }
+
+            .comment-actions {
+              margin-top: 8px !important;
+            }
+
+            .comment-like-button {
+              font-size: 12px !important;
             }
 
             /* 分页移动端优化 */
@@ -724,35 +802,74 @@ const LeaderboardItemDetail: React.FC = () => {
 
           /* 超小屏幕优化 */
           @media (max-width: 480px) {
-            div[style*="maxWidth: 1200"] {
+            .item-detail-container {
               padding: 8px !important;
             }
 
-            h2.ant-typography {
+            .item-detail-card .ant-card-body {
+              padding: 12px !important;
+            }
+
+            .item-title {
               font-size: 18px !important;
             }
 
-            div[style*="fontSize: 24"] {
-              font-size: 20px !important;
+            .vote-stat-value {
+              font-size: 18px !important;
             }
 
-            .ant-card-body {
+            .vote-stat-label {
+              font-size: 10px !important;
+            }
+
+            .vote-button,
+            .report-button {
+              font-size: 12px !important;
+              padding: 8px 12px !important;
+            }
+
+            .item-thumbnails .ant-image {
+              width: 70px !important;
+              height: 70px !important;
+            }
+
+            .user-comment-box {
+              font-size: 12px !important;
+              padding: 8px !important;
+            }
+
+            .comment-card .ant-card-body {
               padding: 10px !important;
+            }
+
+            .comment-body {
+              font-size: 12px !important;
             }
           }
 
           /* 极小屏幕优化 */
           @media (max-width: 360px) {
-            div[style*="maxWidth: 1200"] {
+            .item-detail-container {
               padding: 6px !important;
             }
 
-            h2.ant-typography {
+            .item-title {
               font-size: 16px !important;
             }
 
-            div[style*="fontSize: 20"] {
-              font-size: 18px !important;
+            .vote-stat-value {
+              font-size: 16px !important;
+            }
+
+            .vote-button,
+            .report-button {
+              font-size: 11px !important;
+              padding: 6px 10px !important;
+            }
+
+            .item-thumbnails .ant-image {
+              width: 60px !important;
+              height: 60px !important;
             }
           }
         `}

@@ -62,7 +62,8 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   // 用于分享的描述（使用榜单描述，限制长度在200字符内，微信分享建议不超过200字符）
   const shareDescription = leaderboard ? (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200) : '';
-  const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/forum/leaderboard/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
+  // 修复：使用正确的路由路径 /leaderboard/custom/:leaderboardId
+  const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
 
   // 立即更新微信分享 meta 标签的函数
   const updateWeixinMetaTags = useCallback(() => {
@@ -71,24 +72,26 @@ const CustomLeaderboardDetail: React.FC = () => {
     // 限制描述长度在200字符内（微信分享建议不超过200字符）
     const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
     const shareImageUrl = leaderboard.cover_image || `${window.location.origin}/static/favicon.png?v=2`;
+    // 分享标题：榜单名称 + 平台名称
+    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
     
-    // 强制移除所有描述标签（无条件移除，确保清理干净）
+    // 强制移除所有标题和描述标签（无条件移除，确保清理干净）
+    const allTitles = document.querySelectorAll('meta[name="weixin:title"], meta[property="og:title"], meta[name="twitter:title"]');
+    allTitles.forEach(tag => tag.remove());
     const allDescriptions = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
     allDescriptions.forEach(tag => tag.remove());
+    
+    // 强制更新微信分享标题（微信优先读取weixin:title）
+    const weixinTitleTag = document.createElement('meta');
+    weixinTitleTag.setAttribute('name', 'weixin:title');
+    weixinTitleTag.content = shareTitle;
+    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
     
     // 强制更新微信分享描述（微信优先读取weixin:description）
     const weixinDescTag = document.createElement('meta');
     weixinDescTag.setAttribute('name', 'weixin:description');
     weixinDescTag.content = currentShareDescription;
     document.head.insertBefore(weixinDescTag, document.head.firstChild);
-    
-    // 设置微信分享标题
-    const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
-    allWeixinTitles.forEach(tag => tag.remove());
-    const weixinTitleTag = document.createElement('meta');
-    weixinTitleTag.setAttribute('name', 'weixin:title');
-    weixinTitleTag.content = leaderboard.name;
-    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
     
     // 设置微信分享图片
     const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
@@ -114,11 +117,18 @@ const CustomLeaderboardDetail: React.FC = () => {
       document.head.insertBefore(metaTag, document.head.firstChild);
     };
     
-    updateMetaTag('og:title', leaderboard.name, true);
+    updateMetaTag('og:title', shareTitle, true);
     updateMetaTag('og:description', currentShareDescription, true);
     updateMetaTag('og:image', shareImageUrl, true);
     updateMetaTag('og:url', canonicalUrl, true);
     updateMetaTag('og:type', 'website', true);
+    updateMetaTag('og:site_name', 'Link²Ur', true);
+    
+    // 更新页面标题
+    const pageTitle = `${shareTitle} - Link²Ur`;
+    if (document.title !== pageTitle) {
+      document.title = pageTitle;
+    }
   }, [leaderboard, canonicalUrl]);
 
   // 立即设置微信分享的 meta 标签（使用 useLayoutEffect 确保在 DOM 渲染前执行）
@@ -539,8 +549,9 @@ const CustomLeaderboardDetail: React.FC = () => {
       document.head.insertBefore(newWeixinDesc, document.head.firstChild);
     }, 500);
     
-    const shareUrl = `${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`;
-    const shareTitle = leaderboard.name;
+    // 修复：使用正确的路由路径
+    const shareUrl = `${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`;
+    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
     const shareText = `${shareTitle}\n\n${currentShareDescription}\n\n${shareUrl}`;
     
     // 尝试使用 Web Share API
@@ -569,7 +580,8 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   const handleCopyLink = async () => {
     if (!leaderboard) return;
-    const shareUrl = `${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`;
+    // 修复：使用正确的路由路径
+    const shareUrl = `${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
       message.success('链接已复制到剪贴板');
@@ -598,8 +610,9 @@ const CustomLeaderboardDetail: React.FC = () => {
       document.head.insertBefore(newWeixinDesc, document.head.firstChild);
     }
     
-    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`);
-    const shareTitle = encodeURIComponent(leaderboard.name);
+    // 修复：使用正确的路由路径
+    const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`);
+    const shareTitle = encodeURIComponent(`${leaderboard.name} - Link²Ur榜单`);
     const shareDescription = encodeURIComponent(currentShareDescription);
     
     let shareWindowUrl = '';
@@ -1540,7 +1553,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           {leaderboard && (
             <div style={{ textAlign: 'center' }}>
               <QRCode
-                value={`${window.location.origin}/${lang}/forum/leaderboard/${leaderboard.id}`}
+                value={`${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`}
                 size={200}
                 style={{ marginBottom: 16 }}
               />
