@@ -19,6 +19,9 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
+import SEOHead from '../components/SEOHead';
+import HreflangManager from '../components/HreflangManager';
+import BreadcrumbStructuredData from '../components/BreadcrumbStructuredData';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import styles from './ForumLeaderboard.module.css';
 
@@ -64,6 +67,22 @@ const CustomLeaderboardDetail: React.FC = () => {
   const shareDescription = leaderboard && leaderboard.description ? leaderboard.description.substring(0, 200) : '';
   // 修复：使用正确的路由路径 /leaderboard/custom/:leaderboardId
   const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
+  
+  // SEO相关变量
+  const seoTitle = leaderboard ? `${leaderboard.name} - ${leaderboard.location} | Link²Ur榜单` : 'Link²Ur榜单';
+  const seoDescription = leaderboard && leaderboard.description 
+    ? `${leaderboard.description.substring(0, 160)} | ${leaderboard.location} | ${leaderboard.item_count}个竞品`
+    : 'Link²Ur自定义榜单平台，发现和分享你所在城市的最佳推荐';
+  const seoKeywords = leaderboard 
+    ? `${leaderboard.name},${leaderboard.location},榜单,推荐,${leaderboard.location}中餐,${leaderboard.location}推荐`
+    : '榜单,推荐,城市指南';
+  
+  // 面包屑导航数据
+  const breadcrumbItems = leaderboard ? [
+    { name: '首页', url: `https://www.link2ur.com/${lang}` },
+    { name: '榜单', url: `https://www.link2ur.com/${lang}/forum/leaderboard` },
+    { name: leaderboard.name, url: canonicalUrl }
+  ] : [];
 
   // SEO优化：使用useLayoutEffect确保在DOM渲染前就设置meta标签，优先级最高
   // 参考任务分享的实现方式
@@ -79,8 +98,6 @@ const CustomLeaderboardDetail: React.FC = () => {
     if (leaderboard.cover_image) {
       // 确保图片URL是绝对路径
       const coverImageUrl = leaderboard.cover_image;
-      console.log('[微信分享] 原始封面图片URL:', coverImageUrl);
-      
       // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
       if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
         // 已经是完整URL
@@ -103,11 +120,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         // 相对路径，拼接域名
         shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
       }
-      
-      console.log('[微信分享] 处理后的分享图片URL:', shareImageUrl);
     }
-    console.log('最终分享图片URL:', shareImageUrl);
-    console.log('分享描述:', currentShareDescription);
     
     // 分享标题：榜单名称 + 平台名称
     const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
@@ -229,13 +242,18 @@ const CustomLeaderboardDetail: React.FC = () => {
     // 将重要的meta标签移动到head的前面（确保微信爬虫能读取到）
     // 微信爬虫会优先读取head前面的标签
     const moveToTop = (selector: string) => {
-      const element = document.querySelector(selector);
-      if (element && element.parentNode) {
-        const head = document.head;
-        const firstChild = head.firstChild;
-        if (firstChild && element !== firstChild) {
-          head.insertBefore(element, firstChild);
+      try {
+        const element = document.querySelector(selector);
+        if (element && element.parentNode && element.parentNode === document.head) {
+          const head = document.head;
+          const firstChild = head.firstChild;
+          if (firstChild && element !== firstChild) {
+            head.insertBefore(element, firstChild);
+          }
         }
+      } catch (error) {
+        // 忽略DOM操作错误，避免影响页面功能
+        console.debug('移动meta标签到顶部时出错:', error);
       }
     };
     
@@ -259,7 +277,17 @@ const CustomLeaderboardDetail: React.FC = () => {
       if (!weixinDesc || weixinDesc.content !== currentShareDescription || 
           weixinDesc.content.includes('Professional task publishing') ||
           weixinDesc.content.includes('skill matching platform')) {
-        if (weixinDesc) weixinDesc.remove();
+        // 移除所有现有的微信描述标签
+        const allWeixinDescs = document.querySelectorAll('meta[name="weixin:description"]');
+        allWeixinDescs.forEach(tag => {
+          try {
+            if (tag.parentNode) {
+              tag.remove();
+            }
+          } catch (e) {
+            // 忽略移除错误
+          }
+        });
         const finalWeixinDesc = document.createElement('meta');
         finalWeixinDesc.setAttribute('name', 'weixin:description');
         finalWeixinDesc.content = currentShareDescription;
@@ -270,7 +298,17 @@ const CustomLeaderboardDetail: React.FC = () => {
       const weixinTitle = document.querySelector('meta[name="weixin:title"]') as HTMLMetaElement;
       const expectedTitle = shareTitle;
       if (!weixinTitle || weixinTitle.content !== expectedTitle || weixinTitle.content === 'Link²Ur') {
-        if (weixinTitle) weixinTitle.remove();
+        // 移除所有现有的微信标题标签
+        const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+        allWeixinTitles.forEach(tag => {
+          try {
+            if (tag.parentNode) {
+              tag.remove();
+            }
+          } catch (e) {
+            // 忽略移除错误
+          }
+        });
         const finalWeixinTitle = document.createElement('meta');
         finalWeixinTitle.setAttribute('name', 'weixin:title');
         finalWeixinTitle.content = expectedTitle;
@@ -280,7 +318,17 @@ const CustomLeaderboardDetail: React.FC = () => {
       // 再次检查并确保微信图片正确
       const weixinImage = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
       if (!weixinImage || weixinImage.content !== shareImageUrl) {
-        if (weixinImage) weixinImage.remove();
+        // 移除所有现有的微信图片标签
+        const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+        allWeixinImages.forEach(tag => {
+          try {
+            if (tag.parentNode) {
+              tag.remove();
+            }
+          } catch (e) {
+            // 忽略移除错误
+          }
+        });
         const finalWeixinImage = document.createElement('meta');
         finalWeixinImage.setAttribute('name', 'weixin:image');
         finalWeixinImage.content = shareImageUrl;
@@ -695,20 +743,75 @@ const CustomLeaderboardDetail: React.FC = () => {
     // 直接使用榜单描述
     const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
+    // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (leaderboard.cover_image) {
+      const coverImageUrl = leaderboard.cover_image;
+      // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
+      if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+        shareImageUrl = coverImageUrl;
+      } else if (coverImageUrl.startsWith('//')) {
+        shareImageUrl = `https:${coverImageUrl}`;
+      } else if (coverImageUrl.startsWith('/')) {
+        shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+      } else if (coverImageUrl.includes('://')) {
+        const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
+        if (match) {
+          shareImageUrl = match[0];
+        } else {
+          shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        }
+      } else {
+        shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+      }
+    }
+    
+    // 分享标题：榜单名称 + 平台名称
+    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
+    
     // 强制移除所有描述标签（包括默认的和SEOHead创建的）
     const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
     allDescriptionTags.forEach(tag => tag.remove());
     
-    // 立即重新设置正确的描述
+    // 强制移除所有标题标签
+    const allTitleTags = document.querySelectorAll('meta[property="og:title"], meta[name="weixin:title"]');
+    allTitleTags.forEach(tag => tag.remove());
+    
+    // 强制移除所有图片标签
+    const allImageTags = document.querySelectorAll('meta[property="og:image"], meta[name="weixin:image"], meta[name="twitter:image"]');
+    allImageTags.forEach(tag => tag.remove());
+    
+    // 立即重新设置正确的微信标签（插入到head最前面）
     const finalWeixinDesc = document.createElement('meta');
     finalWeixinDesc.setAttribute('name', 'weixin:description');
     finalWeixinDesc.content = currentShareDescription;
     document.head.insertBefore(finalWeixinDesc, document.head.firstChild);
     
+    const finalWeixinTitle = document.createElement('meta');
+    finalWeixinTitle.setAttribute('name', 'weixin:title');
+    finalWeixinTitle.content = shareTitle;
+    document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
+    
+    const finalWeixinImage = document.createElement('meta');
+    finalWeixinImage.setAttribute('name', 'weixin:image');
+    finalWeixinImage.content = shareImageUrl;
+    document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+    
+    // 设置Open Graph标签
     const finalOgDesc = document.createElement('meta');
     finalOgDesc.setAttribute('property', 'og:description');
     finalOgDesc.content = currentShareDescription;
     document.head.insertBefore(finalOgDesc, document.head.firstChild);
+    
+    const finalOgTitle = document.createElement('meta');
+    finalOgTitle.setAttribute('property', 'og:title');
+    finalOgTitle.content = shareTitle;
+    document.head.insertBefore(finalOgTitle, document.head.firstChild);
+    
+    const finalOgImage = document.createElement('meta');
+    finalOgImage.setAttribute('property', 'og:image');
+    finalOgImage.content = shareImageUrl;
+    document.head.insertBefore(finalOgImage, document.head.firstChild);
     
     const finalDesc = document.createElement('meta');
     finalDesc.name = 'description';
@@ -717,26 +820,57 @@ const CustomLeaderboardDetail: React.FC = () => {
     
     // 多次更新，确保微信爬虫能读取到
     setTimeout(() => {
+      // 再次强制更新微信描述
       const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDesc.forEach(tag => tag.remove());
       const newWeixinDesc = document.createElement('meta');
       newWeixinDesc.setAttribute('name', 'weixin:description');
       newWeixinDesc.content = currentShareDescription;
       document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+      
+      // 再次强制更新微信标题
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => tag.remove());
+      const newWeixinTitle = document.createElement('meta');
+      newWeixinTitle.setAttribute('name', 'weixin:title');
+      newWeixinTitle.content = shareTitle;
+      document.head.insertBefore(newWeixinTitle, document.head.firstChild);
+      
+      // 再次强制更新微信图片
+      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImages.forEach(tag => tag.remove());
+      const newWeixinImage = document.createElement('meta');
+      newWeixinImage.setAttribute('name', 'weixin:image');
+      newWeixinImage.content = shareImageUrl;
+      document.head.insertBefore(newWeixinImage, document.head.firstChild);
     }, 100);
     
     setTimeout(() => {
+      // 最后一次强制更新
       const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDesc.forEach(tag => tag.remove());
       const newWeixinDesc = document.createElement('meta');
       newWeixinDesc.setAttribute('name', 'weixin:description');
       newWeixinDesc.content = currentShareDescription;
       document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+      
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => tag.remove());
+      const newWeixinTitle = document.createElement('meta');
+      newWeixinTitle.setAttribute('name', 'weixin:title');
+      newWeixinTitle.content = shareTitle;
+      document.head.insertBefore(newWeixinTitle, document.head.firstChild);
+      
+      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImages.forEach(tag => tag.remove());
+      const newWeixinImage = document.createElement('meta');
+      newWeixinImage.setAttribute('name', 'weixin:image');
+      newWeixinImage.content = shareImageUrl;
+      document.head.insertBefore(newWeixinImage, document.head.firstChild);
     }, 500);
     
     // 修复：使用正确的路由路径
     const shareUrl = `${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`;
-    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
     const shareText = `${shareTitle}\n\n${currentShareDescription}\n\n${shareUrl}`;
     
     // 尝试使用 Web Share API
@@ -781,6 +915,32 @@ const CustomLeaderboardDetail: React.FC = () => {
     // 直接使用榜单描述（限制在200字符内）
     const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
+    // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (leaderboard.cover_image) {
+      const coverImageUrl = leaderboard.cover_image;
+      // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
+      if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+        shareImageUrl = coverImageUrl;
+      } else if (coverImageUrl.startsWith('//')) {
+        shareImageUrl = `https:${coverImageUrl}`;
+      } else if (coverImageUrl.startsWith('/')) {
+        shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+      } else if (coverImageUrl.includes('://')) {
+        const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
+        if (match) {
+          shareImageUrl = match[0];
+        } else {
+          shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        }
+      } else {
+        shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+      }
+    }
+    
+    // 分享标题：榜单名称 + 平台名称
+    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
+    
     // 如果是微信分享（通过二维码），立即更新 meta 标签
     if (platform === 'wechat') {
       // 强制更新微信描述标签
@@ -790,24 +950,40 @@ const CustomLeaderboardDetail: React.FC = () => {
       newWeixinDesc.setAttribute('name', 'weixin:description');
       newWeixinDesc.content = currentShareDescription;
       document.head.insertBefore(newWeixinDesc, document.head.firstChild);
+      
+      // 强制更新微信标题标签
+      const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
+      allWeixinTitles.forEach(tag => tag.remove());
+      const newWeixinTitle = document.createElement('meta');
+      newWeixinTitle.setAttribute('name', 'weixin:title');
+      newWeixinTitle.content = shareTitle;
+      document.head.insertBefore(newWeixinTitle, document.head.firstChild);
+      
+      // 强制更新微信图片标签
+      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImages.forEach(tag => tag.remove());
+      const newWeixinImage = document.createElement('meta');
+      newWeixinImage.setAttribute('name', 'weixin:image');
+      newWeixinImage.content = shareImageUrl;
+      document.head.insertBefore(newWeixinImage, document.head.firstChild);
     }
     
     // 修复：使用正确的路由路径
     const shareUrl = encodeURIComponent(`${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`);
-    const shareTitle = encodeURIComponent(`${leaderboard.name} - Link²Ur榜单`);
+    const encodedShareTitle = encodeURIComponent(shareTitle);
     const shareDescription = encodeURIComponent(currentShareDescription);
     
     let shareWindowUrl = '';
     
     switch (platform) {
       case 'weibo':
-        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${shareTitle} ${shareDescription}`;
+        shareWindowUrl = `https://service.weibo.com/share/share.php?url=${shareUrl}&title=${encodedShareTitle} ${shareDescription}`;
         break;
       case 'twitter':
-        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareTitle} ${shareDescription}`;
+        shareWindowUrl = `https://twitter.com/intent/tweet?url=${shareUrl}&text=${encodedShareTitle} ${shareDescription}`;
         break;
       case 'facebook':
-        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${shareTitle} ${shareDescription}`;
+        shareWindowUrl = `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}&quote=${encodedShareTitle} ${shareDescription}`;
         break;
       default:
         return;
@@ -829,6 +1005,49 @@ const CustomLeaderboardDetail: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      {/* SEO 组件 */}
+      {leaderboard && (
+        <>
+          <SEOHead
+            title={seoTitle}
+            description={seoDescription}
+            keywords={seoKeywords}
+            canonicalUrl={canonicalUrl}
+            ogTitle={leaderboard.name}
+            ogDescription={seoDescription}
+            ogImage={leaderboard.cover_image || `https://www.link2ur.com/static/favicon.png`}
+            ogUrl={canonicalUrl}
+            twitterTitle={leaderboard.name}
+            twitterDescription={seoDescription}
+            twitterImage={leaderboard.cover_image || `https://www.link2ur.com/static/favicon.png`}
+          />
+          {/* 结构化数据 - 使用ItemList类型表示榜单 */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "ItemList",
+                "name": leaderboard.name,
+                "description": leaderboard.description || `${leaderboard.location}的${leaderboard.name}`,
+                "url": canonicalUrl,
+                "numberOfItems": leaderboard.item_count,
+                "itemListElement": items.slice(0, 10).map((item: any, index: number) => ({
+                  "@type": "ListItem",
+                  "position": index + 1,
+                  "name": item.name,
+                  "description": item.description || item.name,
+                  "url": `${canonicalUrl}#item-${item.id}`
+                }))
+              })
+            }}
+          />
+          <HreflangManager type="page" path={`/leaderboard/custom/${leaderboard.id}`} />
+          {breadcrumbItems.length > 0 && (
+            <BreadcrumbStructuredData items={breadcrumbItems} />
+          )}
+        </>
+      )}
       {/* 顶部导航栏 */}
       <header className={styles.header}>
         <div className={styles.headerContainer}>
