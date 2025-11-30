@@ -2705,4 +2705,118 @@ export const deleteFleaMarketItemAdmin = async (itemId: string) => {
   return res.data;
 };
 
+// ==================== 自定义排行榜API ====================
+
+export const applyCustomLeaderboard = async (data: {
+  name: string;
+  location: string;
+  description?: string;
+  cover_image?: string;
+  application_reason?: string;
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/custom-leaderboards/apply', data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getCustomLeaderboards = async (params?: {
+  location?: string;
+  status?: string;
+  keyword?: string;
+  sort?: 'latest' | 'hot' | 'votes' | 'items';
+  limit?: number;
+  offset?: number;
+}) => {
+  const res = await api.get('/api/custom-leaderboards', { params });
+  return res.data;
+};
+
+export const getCustomLeaderboardDetail = async (leaderboardId: number) => {
+  const res = await api.get(`/api/custom-leaderboards/${leaderboardId}`);
+  return res.data;
+};
+
+export const submitLeaderboardItem = async (data: {
+  leaderboard_id: number;
+  name: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  images?: string[];
+}) => {
+  const token = await getCSRFToken();
+  const res = await api.post('/api/custom-leaderboards/items', data, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
+export const getLeaderboardItems = async (
+  leaderboardId: number,
+  params?: {
+    sort?: 'vote_score' | 'net_votes' | 'upvotes' | 'created_at';
+    limit?: number;
+    offset?: number;
+  }
+) => {
+  const res = await api.get(`/api/custom-leaderboards/${leaderboardId}/items`, { params });
+  return res.data;
+};
+
+export const voteLeaderboardItem = async (
+  itemId: number,
+  voteType: 'upvote' | 'downvote' | 'remove',
+  comment?: string,
+  isAnonymous: boolean = false
+) => {
+  const token = await getCSRFToken();
+  const params: any = { vote_type: voteType };
+  if (comment) {
+    params.comment = comment;
+  }
+  if (isAnonymous) {
+    params.is_anonymous = true;
+  }
+  const res = await api.post(
+    `/api/custom-leaderboards/items/${itemId}/vote`,
+    null,
+    {
+      params,
+      headers: { 'X-CSRF-Token': token }
+    }
+  );
+  return res.data;
+};
+
+export const getLeaderboardItemDetail = async (itemId: number) => {
+  const res = await api.get(`/api/custom-leaderboards/items/${itemId}`);
+  return res.data;
+};
+
+export const getLeaderboardItemVotes = async (
+  itemId: number,
+  params?: {
+    limit?: number;
+    offset?: number;
+  }
+) => {
+  const res = await api.get(`/api/custom-leaderboards/items/${itemId}/votes`, { params });
+  return res.data;
+};
+
+export const likeVoteComment = async (voteId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.post(
+    `/api/custom-leaderboards/votes/${voteId}/like`,
+    null,
+    {
+      headers: { 'X-CSRF-Token': token }
+    }
+  );
+  return res.data;
+};
+
 export default api; 

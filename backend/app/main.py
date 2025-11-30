@@ -272,6 +272,10 @@ app.include_router(admin_db_tools_router, tags=["管理员-数据库工具"])
 from app.task_expert_routes import task_expert_router
 app.include_router(task_expert_router)
 
+# 添加自定义排行榜路由
+from app.custom_leaderboard_routes import router as custom_leaderboard_router
+app.include_router(custom_leaderboard_router)
+
 from app.user_service_application_routes import user_service_application_router
 app.include_router(user_service_application_router)
 

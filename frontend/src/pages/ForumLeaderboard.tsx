@@ -12,6 +12,7 @@ import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
+import CustomLeaderboardsTab from '../components/CustomLeaderboardsTab';
 import styles from './ForumLeaderboard.module.css';
 
 const { Title, Text } = Typography;
@@ -37,7 +38,7 @@ const ForumLeaderboard: React.FC = () => {
   const lang = langParam || language || 'zh';
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
-  const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'likes'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'likes' | 'custom'>('posts');
   const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,10 @@ const ForumLeaderboard: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    loadLeaderboard();
+    // 只在非custom tab时加载论坛排行榜数据
+    if (activeTab !== 'custom') {
+      loadLeaderboard();
+    }
     const loadUserData = async () => {
       try {
         const userData = await fetchCurrentUser();
@@ -62,9 +66,13 @@ const ForumLeaderboard: React.FC = () => {
   }, [activeTab, period]);
 
   const loadLeaderboard = async () => {
+    // 只在非custom tab时加载论坛排行榜数据
+    if (activeTab === 'custom') {
+      return;
+    }
     try {
       setLoading(true);
-      const response = await getForumLeaderboard(activeTab, {
+      const response = await getForumLeaderboard(activeTab as 'posts' | 'replies' | 'likes', {
         period,
         limit: 50
       });
@@ -259,16 +267,19 @@ const ForumLeaderboard: React.FC = () => {
       <div className={styles.content}>
         <Card>
           <div className={styles.toolbar}>
-            <Select
-              value={period}
-              onChange={setPeriod}
-              style={{ width: 150 }}
-            >
-              <Option value="all">{t('forum.periodAll')}</Option>
-              <Option value="today">{t('forum.periodToday')}</Option>
-              <Option value="week">{t('forum.periodWeek')}</Option>
-              <Option value="month">{t('forum.periodMonth')}</Option>
-            </Select>
+            {/* ⚠️ 重要：自定义排行榜不使用时间周期筛选，只在论坛排行榜时显示 */}
+            {activeTab !== 'custom' && (
+              <Select
+                value={period}
+                onChange={setPeriod}
+                style={{ width: 150 }}
+              >
+                <Option value="all">{t('forum.periodAll')}</Option>
+                <Option value="today">{t('forum.periodToday')}</Option>
+                <Option value="week">{t('forum.periodWeek')}</Option>
+                <Option value="month">{t('forum.periodMonth')}</Option>
+              </Select>
+            )}
           </div>
 
           <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key as any)}>
@@ -303,6 +314,17 @@ const ForumLeaderboard: React.FC = () => {
               key="likes"
             >
               {renderLeaderboardContent()}
+            </TabPane>
+
+            <TabPane 
+              tab={
+                <span>
+                  <TrophyOutlined /> 其它排行榜
+                </span>
+              } 
+              key="custom"
+            >
+              <CustomLeaderboardsTab />
             </TabPane>
           </Tabs>
         </Card>

@@ -2659,3 +2659,130 @@ class ForumStatsResponse(BaseModel):
     replies_today: int
     replies_7d: int
     replies_30d: int
+
+
+# ==================== 自定义排行榜相关 Schemas ====================
+
+class CustomLeaderboardBase(BaseModel):
+    name: str
+    location: str
+    description: Optional[str] = None
+    cover_image: Optional[str] = None
+    application_reason: Optional[str] = None
+
+
+class CustomLeaderboardCreate(CustomLeaderboardBase):
+    pass
+
+
+class CustomLeaderboardOut(CustomLeaderboardBase):
+    id: int
+    applicant_id: str
+    status: str
+    item_count: int
+    vote_count: int
+    view_count: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardItemBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    images: Optional[List[str]] = None  # 注意：数据库存储为JSON字符串，返回时需要解析
+
+
+class LeaderboardItemCreate(LeaderboardItemBase):
+    leaderboard_id: int
+
+
+class LeaderboardItemOut(LeaderboardItemBase):
+    id: int
+    leaderboard_id: int
+    submitted_by: str
+    status: str
+    upvotes: int
+    downvotes: int
+    net_votes: int
+    vote_score: float
+    user_vote: Optional[str] = None  # 当前用户的投票类型：upvote, downvote, 或 None
+    user_vote_comment: Optional[str] = None  # 当前用户的投票留言
+    user_vote_is_anonymous: Optional[bool] = None  # 当前用户的投票是否匿名
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardVoteCreate(BaseModel):
+    item_id: int
+    vote_type: str  # "upvote" or "downvote"
+    comment: Optional[str] = None  # 投票留言（可选）
+    is_anonymous: bool = False  # 是否匿名投票/留言
+
+
+class LeaderboardVoteOut(BaseModel):
+    id: int
+    item_id: int
+    user_id: Optional[str] = None  # 匿名投票时不返回user_id（管理员接口始终返回）
+    vote_type: str
+    comment: Optional[str] = None  # 投票留言
+    is_anonymous: bool  # 是否匿名
+    like_count: int = 0  # 留言点赞数
+    user_liked: Optional[bool] = None  # 当前用户是否已点赞（如果已登录）
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class LeaderboardVoteAdminOut(BaseModel):
+        """管理员专用：查看投票记录（始终返回user_id，用于审计）"""
+        id: int
+        item_id: int
+        user_id: str  # 管理员接口始终返回user_id（即使匿名）
+        vote_type: str
+        comment: Optional[str] = None  # 投票留言
+        is_anonymous: bool  # 是否匿名标识
+        created_at: datetime.datetime
+        updated_at: datetime.datetime
+        
+        class Config:
+            from_attributes = True
+
+
+# ==================== 分页响应 Schema ====================
+
+class CustomLeaderboardListResponse(BaseModel):
+    """榜单列表分页响应"""
+    items: List[CustomLeaderboardOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class LeaderboardItemListResponse(BaseModel):
+    """竞品列表分页响应"""
+    items: List[LeaderboardItemOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class LeaderboardVoteListResponse(BaseModel):
+    """投票记录列表分页响应"""
+    items: List[LeaderboardVoteOut]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool

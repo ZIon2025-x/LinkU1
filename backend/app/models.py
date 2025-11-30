@@ -2190,3 +2190,135 @@ class ForumRiskControlLog(Base):
         Index("idx_risk_control_logs_target", target_type, target_id),
         Index("idx_risk_control_logs_executed", executed_at.desc()),
     )
+
+
+# ==================== 自定义排行榜相关模型 ====================
+
+class CustomLeaderboard(Base):
+    """自定义排行榜表"""
+    __tablename__ = "custom_leaderboards"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)  # 榜单名称，如"London中餐榜"
+    location = Column(String(100), nullable=False)  # 地区，如"London", "Manchester"
+    description = Column(Text, nullable=True)  # 榜单描述
+    cover_image = Column(String(500), nullable=True)  # 封面图片
+    
+    # 申请信息
+    applicant_id = Column(String(8), ForeignKey("users.id"), nullable=False)  # 申请人ID
+    application_reason = Column(Text, nullable=True)  # 申请理由
+    
+    # 审核信息
+    status = Column(String(20), default="pending")  # pending: 待审核, active: 已激活, rejected: 已拒绝
+    reviewed_by = Column(String(5), ForeignKey("admin_users.id"), nullable=True)  # 审核人（使用String(5)匹配AdminUser.id）
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)  # 审核时间
+    review_comment = Column(Text, nullable=True)  # 审核意见
+    
+    # 统计信息
+    item_count = Column(Integer, default=0)  # 竞品数量
+    vote_count = Column(Integer, default=0)  # 历史累计投票数（按用户对竞品去重，用于统计参与度）
+    view_count = Column(Integer, default=0)  # 浏览量
+    
+    # 时间戳（使用项目统一的时间函数get_utc_time）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    applicant = relationship("User", foreign_keys=[applicant_id])
+    reviewer = relationship("AdminUser", foreign_keys=[reviewed_by])
+    items = relationship("LeaderboardItem", back_populates="leaderboard", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('name', 'location', name='uq_leaderboard_name_location'),  # 防止同名同地区重复
+        Index('idx_leaderboard_status', 'status'),
+        Index('idx_leaderboard_location', 'location'),
+        Index('idx_leaderboard_vote_count', 'vote_count'),  # 热门榜单排序优化
+    )
+
+
+class LeaderboardItem(Base):
+    """排行榜竞品表"""
+    __tablename__ = "leaderboard_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    leaderboard_id = Column(Integer, ForeignKey("custom_leaderboards.id"), nullable=False)
+    name = Column(String(200), nullable=False)  # 竞品名称，如"海底捞"
+    description = Column(Text, nullable=True)  # 竞品描述
+    address = Column(String(500), nullable=True)  # 地址
+    phone = Column(String(50), nullable=True)  # 电话
+    website = Column(String(500), nullable=True)  # 网站
+    images = Column(Text, nullable=True)  # 图片（JSON字符串，存储为List[str]的序列化结果）
+    
+    # 提交信息
+    submitted_by = Column(String(8), ForeignKey("users.id"), nullable=False)  # 提交人
+    status = Column(String(20), default="approved")  # approved: 已通过（当前版本竞品自动通过，无需审核）
+    
+    # 投票统计
+    upvotes = Column(Integer, default=0)  # 点赞数
+    downvotes = Column(Integer, default=0)  # 点踩数
+    net_votes = Column(Integer, default=0)  # 净赞数 = upvotes - downvotes
+    vote_score = Column(Float, default=0.0)  # 综合得分（用于排序）
+    
+    # 时间戳（使用项目统一的时间函数get_utc_time）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    leaderboard = relationship("CustomLeaderboard", back_populates="items")
+    submitter = relationship("User", foreign_keys=[submitted_by])
+    votes = relationship("LeaderboardVote", back_populates="item", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('leaderboard_id', 'name', name='uq_item_leaderboard_name'),  # 防止同一榜单下重复名称
+        Index('idx_item_leaderboard', 'leaderboard_id'),
+        Index('idx_item_vote_score', 'vote_score'),
+        Index('idx_item_status', 'status'),
+        CheckConstraint('upvotes >= 0', name='ck_item_upvotes_non_negative'),
+        CheckConstraint('downvotes >= 0', name='ck_item_downvotes_non_negative'),
+    )
+
+
+class LeaderboardVote(Base):
+    """投票记录表"""
+    __tablename__ = "leaderboard_votes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("leaderboard_items.id"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    vote_type = Column(String(10), nullable=False)  # upvote, downvote
+    comment = Column(Text, nullable=True)  # 投票留言（可选，最多500字）
+    is_anonymous = Column(Boolean, default=False, nullable=False)  # 是否匿名投票/留言（v2.3新增）
+    like_count = Column(Integer, default=0, nullable=False)  # 留言点赞数
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    item = relationship("LeaderboardItem", back_populates="votes")
+    user = relationship("User")
+    comment_likes = relationship("VoteCommentLike", back_populates="vote", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('item_id', 'user_id', name='uq_item_user_vote'),  # 每个用户对每个竞品只能投一票
+        Index('idx_vote_item_user', 'item_id', 'user_id'),
+        CheckConstraint('LENGTH(comment) <= 500', name='ck_vote_comment_length'),  # 留言长度限制
+        CheckConstraint('like_count >= 0', name='ck_vote_like_count_non_negative'),  # 点赞数非负
+    )
+
+
+class VoteCommentLike(Base):
+    """留言点赞记录表"""
+    __tablename__ = "vote_comment_likes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    vote_id = Column(Integer, ForeignKey("leaderboard_votes.id"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    
+    # 关系
+    vote = relationship("LeaderboardVote", back_populates="comment_likes")
+    user = relationship("User")
+    
+    __table_args__ = (
+        UniqueConstraint('vote_id', 'user_id', name='uq_vote_comment_like'),  # 每个用户对每条留言只能点一次赞
+        Index('idx_comment_like_vote_user', 'vote_id', 'user_id'),
+    )

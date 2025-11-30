@@ -97,6 +97,8 @@ const ForumMyContent = lazyWithRetry(() => import('./pages/ForumMyContent'));
 const ForumNotifications = lazyWithRetry(() => import('./pages/ForumNotifications'));
 const ForumSearch = lazyWithRetry(() => import('./pages/ForumSearch'));
 const ForumLeaderboard = lazyWithRetry(() => import('./pages/ForumLeaderboard'));
+const CustomLeaderboardDetail = lazyWithRetry(() => import('./pages/CustomLeaderboardDetail'));
+const LeaderboardItemDetail = lazyWithRetry(() => import('./pages/LeaderboardItemDetail'));
 const FleaMarketItemDetail = lazyWithRetry(() => import('./pages/FleaMarketItemDetail'));
 
 // 语言重定向组件 - 使用React Router的Navigate而不是window.location
@@ -199,6 +201,8 @@ const LanguageRoutes: React.FC = () => {
           } />
           <Route path={`/${lang}/forum/search`} element={<ForumSearch />} />
           <Route path={`/${lang}/forum/leaderboard`} element={<ForumLeaderboard />} />
+          <Route path={`/${lang}/leaderboard/custom/:leaderboardId`} element={<CustomLeaderboardDetail />} />
+          <Route path={`/${lang}/leaderboard/item/:itemId`} element={<LeaderboardItemDetail />} />
           <Route path={`/${lang}/about`} element={<About />} />
               <Route path={`/${lang}/faq`} element={<FAQ />} />
           <Route path={`/${lang}/join-us`} element={<JoinUs />} />

@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义排行榜 - LinkU</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/antd@5.12.8/dist/reset.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-item label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        select, input {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        
+        .btn-default {
+            background: white;
+            border: 1px solid #d9d9d9;
+        }
+        
+        .btn-default:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+        
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        
+        .leaderboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .leaderboard-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            border: 1px solid #e8e8e8;
+        }
+        
+        .leaderboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card-content {
+            padding: 16px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .tag-blue {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .card-stats {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+        
+        /* 榜单详情页 */
+        .detail-header {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .detail-header h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        
+        .detail-description {
+            color: #666;
+            line-height: 1.6;
+            margin-top: 16px;
+        }
+        
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .item-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+        
+        .item-rank {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffc107;
+            margin-right: 12px;
+        }
+        
+        .item-rank.top3 {
+            color: #ffc107;
+        }
+        
+        .item-rank.other {
+            color: #666;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .item-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .item-address {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+        
+        .item-images {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .item-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #e8e8e8;
+        }
+        
+        .item-image:hover {
+            border-color: #1890ff;
+            transform: scale(1.05);
+            transition: all 0.3s;
+        }
+        
+        .item-image-placeholder {
+            width: 100px;
+            height: 100px;
+            background: #f5f5f5;
+            border: 1px dashed #d9d9d9;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .vote-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+        }
+        
+        .vote-btn {
+            padding: 8px 16px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+        
+        .vote-btn:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+        }
+        
+        .vote-btn.active {
+            background: #1890ff;
+            color: white;
+            border-color: #1890ff;
+        }
+        
+        .vote-btn.danger.active {
+            background: #ff4d4f;
+            border-color: #ff4d4f;
+        }
+        
+        .vote-count {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .net-votes {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .user-comment {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .user-comment-header {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .anonymous-tag {
+            padding: 2px 6px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+        }
+        
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .sort-selector {
+            margin-bottom: 16px;
+        }
+        
+        .sort-selector select {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 榜单列表页 -->
+    <div id="leaderboard-list-page" class="container">
+        <div class="header">
+            <h1>🏆 自定义排行榜</h1>
+            <p style="color: #666; margin-bottom: 20px;">发现和分享你所在地区的最佳选择</p>
+            
+            <div class="filters">
+                <div class="filter-item">
+                    <label>城市：</label>
+                    <select id="location-filter">
+                        <option value="">全部城市</option>
+                        <option value="Online">Online</option>
+                        <option value="London">London</option>
+                        <option value="Edinburgh">Edinburgh</option>
+                        <option value="Manchester">Manchester</option>
+                        <option value="Birmingham">Birmingham</option>
+                        <option value="Glasgow">Glasgow</option>
+                        <option value="Bristol">Bristol</option>
+                        <option value="Sheffield">Sheffield</option>
+                        <option value="Leeds">Leeds</option>
+                        <option value="Nottingham">Nottingham</option>
+                        <option value="Newcastle">Newcastle</option>
+                        <option value="Southampton">Southampton</option>
+                        <option value="Liverpool">Liverpool</option>
+                        <option value="Cardiff">Cardiff</option>
+                        <option value="Coventry">Coventry</option>
+                        <option value="Exeter">Exeter</option>
+                        <option value="Leicester">Leicester</option>
+                        <option value="York">York</option>
+                        <option value="Aberdeen">Aberdeen</option>
+                        <option value="Bath">Bath</option>
+                        <option value="Dundee">Dundee</option>
+                        <option value="Reading">Reading</option>
+                        <option value="St Andrews">St Andrews</option>
+                        <option value="Belfast">Belfast</option>
+                        <option value="Brighton">Brighton</option>
+                        <option value="Durham">Durham</option>
+                        <option value="Norwich">Norwich</option>
+                        <option value="Swansea">Swansea</option>
+                        <option value="Loughborough">Loughborough</option>
+                        <option value="Lancaster">Lancaster</option>
+                        <option value="Warwick">Warwick</option>
+                        <option value="Cambridge">Cambridge</option>
+                        <option value="Oxford">Oxford</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="showApplyModal()">
+                    ➕ 申请新榜单
+                </button>
+            </div>
+        </div>
+        
+        <div class="leaderboard-grid" id="leaderboard-grid">
+            <!-- 示例卡片 -->
+            <div class="leaderboard-card" onclick="openLeaderboardDetail(1)">
+                <div class="card-content">
+                    <div class="card-title">
+                        🏆 London中餐榜
+                    </div>
+                    <div class="card-tags">
+                        <span class="tag tag-blue">London</span>
+                    </div>
+                    <div class="card-stats">
+                        25 个竞品 · 150 票 · 500 次浏览
+                    </div>
+                </div>
+            </div>
+            
+            <div class="leaderboard-card" onclick="openLeaderboardDetail(2)">
+                <div class="card-content">
+                    <div class="card-title">
+                        🏆 Manchester超市榜
+                    </div>
+                    <div class="card-tags">
+                        <span class="tag tag-blue">Manchester</span>
+                    </div>
+                    <div class="card-stats">
+                        18 个竞品 · 89 票 · 320 次浏览
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 榜单详情页（默认隐藏） -->
+    <div id="leaderboard-detail-page" class="container" style="display: none;">
+        <div class="detail-header">
+            <button class="btn btn-default" onclick="backToList()" style="margin-bottom: 16px;">← 返回列表</button>
+            <h1 id="detail-title">London中餐榜</h1>
+            <div class="card-tags">
+                <span class="tag tag-blue" id="detail-location">London</span>
+            </div>
+            <div class="detail-description" id="detail-description">
+                发现London地区最受欢迎的中餐厅，由社区投票决定排名。
+            </div>
+            <button class="btn btn-primary" onclick="showSubmitItemModal()" style="margin-top: 16px;">
+                ➕ 提交竞品
+            </button>
+        </div>
+        
+        <div class="sort-selector">
+            <label>排序方式：</label>
+            <select id="sort-selector" onchange="changeSort()">
+                <option value="vote_score">综合得分</option>
+                <option value="net_votes">净赞数</option>
+                <option value="upvotes">点赞数</option>
+                <option value="created_at">最新提交</option>
+            </select>
+        </div>
+        
+        <div class="items-list" id="items-list">
+            <!-- 示例竞品卡片 -->
+            <div class="item-card">
+                <div class="item-header">
+                    <div style="display: flex; align-items: start; flex: 1;">
+                        <span class="item-rank top3">#1</span>
+                        <div class="item-info">
+                            <div class="item-name">海底捞</div>
+                            <div class="item-description">
+                                正宗四川火锅，服务贴心，环境优雅。推荐麻辣锅底和番茄锅底。
+                            </div>
+                            <div class="item-address">📍 123 Oxford Street, London W1D 2HX</div>
+                            <div class="item-images" data-images='["https://via.placeholder.com/100x100?text=图片1", "https://via.placeholder.com/100x100?text=图片2"]'>
+                                <!-- 图片将通过JavaScript动态渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vote-section">
+                        <button class="vote-btn active" onclick="handleVote(1, 'upvote')">
+                            👍 <span class="vote-count">45</span>
+                        </button>
+                        <button class="vote-btn" onclick="handleVote(1, 'downvote')">
+                            👎 <span class="vote-count">3</span>
+                        </button>
+                        <div class="net-votes">净赞: 42</div>
+                    </div>
+                </div>
+                <div class="user-comment">
+                    <div class="user-comment-header">
+                        👍 你的留言：
+                        <span class="anonymous-tag">匿名</span>
+                    </div>
+                    <div>味道很棒，服务也很周到，强烈推荐！</div>
+                </div>
+            </div>
+            
+            <div class="item-card">
+                <div class="item-header">
+                    <div style="display: flex; align-items: start; flex: 1;">
+                        <span class="item-rank top3">#2</span>
+                        <div class="item-info">
+                            <div class="item-name">文兴酒家</div>
+                            <div class="item-description">
+                                传统粤菜，烧腊特别好吃，价格实惠。
+                            </div>
+                            <div class="item-address">📍 45 Gerrard Street, London W1D 5QJ</div>
+                            <div class="item-images" data-images='[]'>
+                                <!-- 没有图片，显示占位符 -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vote-section">
+                        <button class="vote-btn" onclick="handleVote(2, 'upvote')">
+                            👍 <span class="vote-count">38</span>
+                        </button>
+                        <button class="vote-btn" onclick="handleVote(2, 'downvote')">
+                            👎 <span class="vote-count">5</span>
+                        </button>
+                        <div class="net-votes">净赞: 33</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="item-card">
+                <div class="item-header">
+                    <div style="display: flex; align-items: start; flex: 1;">
+                        <span class="item-rank top3">#3</span>
+                        <div class="item-info">
+                            <div class="item-name">蜀香园</div>
+                            <div class="item-description">
+                                川菜馆，麻婆豆腐和宫保鸡丁都很正宗。
+                            </div>
+                            <div class="item-address">📍 78 Shaftesbury Avenue, London W1D 5EZ</div>
+                            <div class="item-images" data-images='["https://via.placeholder.com/100x100?text=蜀香园"]'>
+                                <!-- 图片将通过JavaScript动态渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vote-section">
+                        <button class="vote-btn" onclick="handleVote(3, 'upvote')">
+                            👍 <span class="vote-count">32</span>
+                        </button>
+                        <button class="vote-btn danger active" onclick="handleVote(3, 'downvote')">
+                            👎 <span class="vote-count">8</span>
+                        </button>
+                        <div class="net-votes">净赞: 24</div>
+                    </div>
+                </div>
+                <div class="user-comment">
+                    <div class="user-comment-header">
+                        👎 你的留言：
+                    </div>
+                    <div>服务态度一般，上菜速度较慢。</div>
+                </div>
+            </div>
+            
+            <div class="item-card">
+                <div class="item-header">
+                    <div style="display: flex; align-items: start; flex: 1;">
+                        <span class="item-rank other">#4</span>
+                        <div class="item-info">
+                            <div class="item-name">老北京</div>
+                            <div class="item-description">
+                                北京菜，烤鸭是招牌，需要提前预订。
+                            </div>
+                            <div class="item-address">📍 12 Wardour Street, London W1D 6PL</div>
+                            <div class="item-images" data-images='["https://via.placeholder.com/100x100?text=老北京1", "https://via.placeholder.com/100x100?text=老北京2"]'>
+                                <!-- 图片将通过JavaScript动态渲染 -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vote-section">
+                        <button class="vote-btn" onclick="handleVote(4, 'upvote')">
+                            👍 <span class="vote-count">28</span>
+                        </button>
+                        <button class="vote-btn" onclick="handleVote(4, 'downvote')">
+                            👎 <span class="vote-count">2</span>
+                        </button>
+                        <div class="net-votes">净赞: 26</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 申请榜单模态框 -->
+    <div id="apply-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">申请新榜单</div>
+            <form id="apply-form">
+                <div class="form-group">
+                    <label>榜单名称 *</label>
+                    <input type="text" name="name" placeholder="例如：London中餐榜" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>城市 *</label>
+                    <select name="location" required>
+                        <option value="">请选择</option>
+                        <option value="Online">Online</option>
+                        <option value="London">London</option>
+                        <option value="Edinburgh">Edinburgh</option>
+                        <option value="Manchester">Manchester</option>
+                        <option value="Birmingham">Birmingham</option>
+                        <option value="Glasgow">Glasgow</option>
+                        <option value="Bristol">Bristol</option>
+                        <option value="Sheffield">Sheffield</option>
+                        <option value="Leeds">Leeds</option>
+                        <option value="Nottingham">Nottingham</option>
+                        <option value="Newcastle">Newcastle</option>
+                        <option value="Southampton">Southampton</option>
+                        <option value="Liverpool">Liverpool</option>
+                        <option value="Cardiff">Cardiff</option>
+                        <option value="Coventry">Coventry</option>
+                        <option value="Exeter">Exeter</option>
+                        <option value="Leicester">Leicester</option>
+                        <option value="York">York</option>
+                        <option value="Aberdeen">Aberdeen</option>
+                        <option value="Bath">Bath</option>
+                        <option value="Dundee">Dundee</option>
+                        <option value="Reading">Reading</option>
+                        <option value="St Andrews">St Andrews</option>
+                        <option value="Belfast">Belfast</option>
+                        <option value="Brighton">Brighton</option>
+                        <option value="Durham">Durham</option>
+                        <option value="Norwich">Norwich</option>
+                        <option value="Swansea">Swansea</option>
+                        <option value="Loughborough">Loughborough</option>
+                        <option value="Lancaster">Lancaster</option>
+                        <option value="Warwick">Warwick</option>
+                        <option value="Cambridge">Cambridge</option>
+                        <option value="Oxford">Oxford</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>榜单描述</label>
+                    <textarea name="description" placeholder="描述这个榜单的目的和范围"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>申请理由 *</label>
+                    <textarea name="application_reason" placeholder="为什么需要创建这个榜单？" required></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-default" onclick="closeApplyModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">提交申请</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 提交竞品模态框 -->
+    <div id="submit-item-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">提交竞品</div>
+            <form id="submit-item-form">
+                <div class="form-group">
+                    <label>竞品名称 *</label>
+                    <input type="text" name="name" placeholder="例如：海底捞" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" placeholder="描述这个竞品的特点"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>地址</label>
+                    <input type="text" name="address" placeholder="详细地址">
+                </div>
+                
+                <div class="form-group">
+                    <label>电话</label>
+                    <input type="text" name="phone" placeholder="联系电话">
+                </div>
+                
+                <div class="form-group">
+                    <label>网站</label>
+                    <input type="url" name="website" placeholder="官方网站">
+                </div>
+                
+                <div class="form-group">
+                    <label>图片（最多5张）</label>
+                    <input type="file" name="images" multiple accept="image/*" onchange="previewImages(this)">
+                    <div id="image-preview" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;"></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-default" onclick="closeSubmitItemModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 投票留言模态框 -->
+    <div id="vote-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="vote-modal-title">点赞并留言</div>
+            <form id="vote-form">
+                <div class="form-group">
+                    <label>留言（可选，最多500字）</label>
+                    <textarea name="comment" placeholder="分享你的使用体验，例如：物美价廉，服务人员很暖心" maxlength="500"></textarea>
+                    <div style="text-align: right; font-size: 12px; color: #999; margin-top: 4px;">
+                        <span id="comment-count">0</span>/500
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="is_anonymous" id="is_anonymous">
+                        <label for="is_anonymous">匿名投票/留言</label>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-default" onclick="closeVoteModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // 页面状态
+        let currentPage = 'list'; // 'list' 或 'detail'
+        let currentLeaderboardId = null;
+        let currentVoteItemId = null;
+        let currentVoteType = null;
+        
+        // 显示申请榜单模态框
+        function showApplyModal() {
+            document.getElementById('apply-modal').classList.add('show');
+        }
+        
+        function closeApplyModal() {
+            document.getElementById('apply-modal').classList.remove('show');
+            document.getElementById('apply-form').reset();
+        }
+        
+        // 显示提交竞品模态框
+        function showSubmitItemModal() {
+            document.getElementById('submit-item-modal').classList.add('show');
+        }
+        
+        function closeSubmitItemModal() {
+            document.getElementById('submit-item-modal').classList.remove('show');
+            document.getElementById('submit-item-form').reset();
+            document.getElementById('image-preview').innerHTML = '';
+        }
+        
+        // 显示投票留言模态框
+        function showVoteModal(itemId, voteType) {
+            currentVoteItemId = itemId;
+            currentVoteType = voteType;
+            const title = voteType === 'upvote' ? '点赞并留言' : '点踩并留言';
+            document.getElementById('vote-modal-title').textContent = title;
+            document.getElementById('vote-modal').classList.add('show');
+        }
+        
+        function closeVoteModal() {
+            document.getElementById('vote-modal').classList.remove('show');
+            document.getElementById('vote-form').reset();
+            document.getElementById('comment-count').textContent = '0';
+            currentVoteItemId = null;
+            currentVoteType = null;
+        }
+        
+        // 打开榜单详情
+        function openLeaderboardDetail(id) {
+            currentLeaderboardId = id;
+            document.getElementById('leaderboard-list-page').style.display = 'none';
+            document.getElementById('leaderboard-detail-page').style.display = 'block';
+            currentPage = 'detail';
+            // 这里应该调用API加载榜单详情和竞品列表
+            loadLeaderboardDetail(id);
+        }
+        
+        // 返回列表
+        function backToList() {
+            document.getElementById('leaderboard-list-page').style.display = 'block';
+            document.getElementById('leaderboard-detail-page').style.display = 'none';
+            currentPage = 'list';
+        }
+        
+        // 加载榜单详情
+        function loadLeaderboardDetail(id) {
+            // 模拟API调用
+            console.log('加载榜单详情:', id);
+            // 实际应该调用: getCustomLeaderboardDetail(id)
+            // 渲染竞品图片
+            setTimeout(() => {
+                renderItemImages();
+            }, 100);
+        }
+        
+        // 渲染竞品图片
+        function renderItemImages() {
+            const imageContainers = document.querySelectorAll('.item-images[data-images]');
+            imageContainers.forEach(container => {
+                try {
+                    const imagesJson = container.getAttribute('data-images');
+                    const images = JSON.parse(imagesJson);
+                    
+                    if (images && images.length > 0) {
+                        container.innerHTML = '';
+                        images.forEach((imageUrl, index) => {
+                            const img = document.createElement('img');
+                            img.src = imageUrl;
+                            img.alt = `图片${index + 1}`;
+                            img.className = 'item-image';
+                            img.onerror = function() {
+                                // 图片加载失败时显示占位符
+                                this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23f5f5f5"/%3E%3Ctext x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999" font-size="12"%3E图片加载失败%3C/text%3E%3C/svg%3E';
+                            };
+                            img.onclick = function() {
+                                // 点击图片可以放大查看
+                                showImageModal(imageUrl);
+                            };
+                            container.appendChild(img);
+                        });
+                    } else {
+                        // 没有图片时显示占位符
+                        container.innerHTML = '<div class="item-image-placeholder">暂无图片</div>';
+                    }
+                } catch (e) {
+                    console.error('解析图片数据失败:', e);
+                    container.innerHTML = '<div class="item-image-placeholder">图片数据错误</div>';
+                }
+            });
+        }
+        
+        // 显示图片放大模态框
+        function showImageModal(imageUrl) {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+            modal.onclick = function() {
+                document.body.removeChild(modal);
+            };
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.cssText = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;';
+            img.onclick = function(e) {
+                e.stopPropagation();
+            };
+            
+            modal.appendChild(img);
+            document.body.appendChild(modal);
+        }
+        
+        // 处理投票
+        function handleVote(itemId, voteType) {
+            // 检查是否已登录
+            const isLoggedIn = true; // 实际应该检查登录状态
+            
+            if (!isLoggedIn) {
+                alert('请先登录');
+                return;
+            }
+            
+            // 检查是否已投票（实际应该从item数据中获取user_vote）
+            const item = getItemById(itemId);
+            if (item && item.user_vote === voteType) {
+                // 已投相同类型的票，取消投票
+                if (confirm('确定要取消投票吗？')) {
+                    // 调用API: voteLeaderboardItem(itemId, 'remove')
+                    console.log('取消投票:', itemId);
+                }
+            } else {
+                // 新投票或修改投票，显示留言输入框
+                showVoteModal(itemId, voteType);
+            }
+        }
+        
+        // 获取竞品数据（模拟）
+        function getItemById(itemId) {
+            // 实际应该从items列表中查找
+            return null;
+        }
+        
+        // 改变排序
+        function changeSort() {
+            const sort = document.getElementById('sort-selector').value;
+            console.log('改变排序:', sort);
+            // 调用API: getLeaderboardItems(currentLeaderboardId, { sort })
+        }
+        
+        // 预览图片
+        function previewImages(input) {
+            const preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            preview.style.display = 'flex';
+            
+            if (input.files && input.files.length > 0) {
+                const maxImages = Math.min(input.files.length, 5);
+                
+                for (let i = 0; i < maxImages; i++) {
+                    const file = input.files[i];
+                    
+                    // 验证文件类型
+                    if (!file.type.startsWith('image/')) {
+                        alert(`文件 ${file.name} 不是图片格式`);
+                        continue;
+                    }
+                    
+                    // 验证文件大小（5MB）
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert(`文件 ${file.name} 超过5MB限制`);
+                        continue;
+                    }
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const wrapper = document.createElement('div');
+                        wrapper.style.cssText = 'position: relative; display: inline-block;';
+                        
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.cssText = 'width: 100px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid #e8e8e8; display: block;';
+                        
+                        const removeBtn = document.createElement('button');
+                        removeBtn.textContent = '×';
+                        removeBtn.style.cssText = 'position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; background: #ff4d4f; color: white; border: none; cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;';
+                        removeBtn.onclick = function() {
+                            wrapper.remove();
+                            // 从input中移除文件
+                            const dt = new DataTransfer();
+                            const files = Array.from(input.files);
+                            files.splice(i, 1);
+                            files.forEach(f => dt.items.add(f));
+                            input.files = dt.files;
+                            if (preview.children.length === 0) {
+                                preview.style.display = 'none';
+                            }
+                        };
+                        
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(removeBtn);
+                        preview.appendChild(wrapper);
+                    };
+                    
+                    reader.onerror = function() {
+                        alert(`读取文件 ${file.name} 失败`);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+                
+                if (input.files.length > 5) {
+                    alert(`最多只能上传5张图片，已选择前5张`);
+                }
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
+        // 表单提交
+        document.getElementById('apply-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            console.log('提交申请:', Object.fromEntries(formData));
+            // 调用API: applyCustomLeaderboard(Object.fromEntries(formData))
+            alert('申请已提交，等待审核');
+            closeApplyModal();
+        });
+        
+        document.getElementById('submit-item-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            console.log('提交竞品:', Object.fromEntries(formData));
+            // 调用API: submitLeaderboardItem(formData)
+            alert('竞品提交成功');
+            closeSubmitItemModal();
+        });
+        
+        document.getElementById('vote-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const comment = formData.get('comment');
+            const isAnonymous = formData.get('is_anonymous') === 'on';
+            
+            console.log('提交投票:', {
+                itemId: currentVoteItemId,
+                voteType: currentVoteType,
+                comment,
+                isAnonymous
+            });
+            
+            // 调用API: voteLeaderboardItem(currentVoteItemId, currentVoteType, comment, isAnonymous)
+            alert('投票成功');
+            closeVoteModal();
+        });
+        
+        // 留言字数统计
+        const commentTextarea = document.getElementById('vote-form').querySelector('textarea[name="comment"]');
+        if (commentTextarea) {
+            commentTextarea.addEventListener('input', function(e) {
+                const count = e.target.value.length;
+                document.getElementById('comment-count').textContent = count;
+                if (count > 500) {
+                    e.target.value = e.target.value.substring(0, 500);
+                    document.getElementById('comment-count').textContent = '500';
+                }
+            });
+        }
+        
+        // 页面加载完成后渲染图片
+        document.addEventListener('DOMContentLoaded', function() {
+            renderItemImages();
+        });
+        
+        // 筛选功能
+        document.getElementById('location-filter').addEventListener('change', function() {
+            console.log('筛选城市:', this.value);
+            // 调用API: getCustomLeaderboards({ location: this.value })
+        });
+    </script>
+</body>
+</html>
+
