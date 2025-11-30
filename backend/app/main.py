@@ -180,13 +180,23 @@ async def custom_cors_middleware(request: Request, call_next):
         "http://localhost:8080"
     ]
     
+    def is_allowed_origin(origin: str) -> bool:
+        """检查origin是否在允许列表中"""
+        if not origin:
+            return False
+        for domain in allowed_domains:
+            if origin == domain or origin.startswith(domain):
+                return True
+        return False
+    
     def set_cors_headers(response: Response):
         """设置CORS响应头"""
-        if origin and any(origin == domain or origin.startswith(domain) for domain in allowed_domains):
+        if origin and is_allowed_origin(origin):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Session-ID"
+            response.headers["Access-Control-Max-Age"] = "86400"  # 24小时
     
     # 处理OPTIONS预检请求
     if request.method == "OPTIONS":
@@ -195,7 +205,16 @@ async def custom_cors_middleware(request: Request, call_next):
         return response
     
     # 处理实际请求
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        # 即使出现异常，也要设置CORS头
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+        set_cors_headers(response)
+        raise
     
     # 强制设置CORS头（包括错误响应）
     set_cors_headers(response)

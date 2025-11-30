@@ -154,7 +154,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         error_detail = str(exc.detail) if hasattr(exc, 'detail') and exc.detail else "无详情"
         logger.warning(f"HTTP异常: {exc.status_code} - {error_code} - {request.url} - 详情: {error_detail}")
     
-    return JSONResponse(
+    response = JSONResponse(
         status_code=exc.status_code,
         content=create_error_response(
             message=safe_message,
@@ -162,10 +162,13 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             error_code=error_code
         )
     )
+    # 确保设置CORS头
+    set_cors_headers(response, request)
+    return response
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """验证异常处理器"""
+    """验证异常处理器 - 确保CORS头被设置"""
     # 提取验证错误详情
     errors = []
     for error in exc.errors():
@@ -176,7 +179,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.warning(f"验证错误: {len(errors)}个错误 - {request.url}")
     logger.warning(f"验证错误详情: {errors}")  # 添加详细错误信息
     
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=create_error_response(
             message="输入数据验证失败",
@@ -185,6 +188,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             details={"errors": errors}
         )
     )
+    # 确保设置CORS头
+    set_cors_headers(response, request)
+    return response
 
 
 async def security_exception_handler(request: Request, exc: SecurityError) -> JSONResponse:
