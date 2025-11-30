@@ -154,12 +154,39 @@ async def get_all_leaderboards_admin(
         query = query.where(models.CustomLeaderboard.location == location)
     
     query = query.order_by(models.CustomLeaderboard.created_at.desc())
+    query = query.options(selectinload(models.CustomLeaderboard.applicant))
     query = query.offset(offset).limit(limit)
     
     result = await db.execute(query)
     leaderboards = result.scalars().all()
     
-    return leaderboards
+    # 构建申请者信息并手动构建响应对象
+    from app.forum_routes import build_user_info
+    
+    leaderboard_items = []
+    for leaderboard in leaderboards:
+        applicant_info = None
+        if leaderboard.applicant:
+            applicant_info = await build_user_info(db, leaderboard.applicant)
+        
+        leaderboard_dict = schemas.CustomLeaderboardOut(
+            id=leaderboard.id,
+            name=leaderboard.name,
+            location=leaderboard.location,
+            description=leaderboard.description,
+            cover_image=leaderboard.cover_image,
+            applicant_id=leaderboard.applicant_id,
+            applicant=applicant_info,
+            status=leaderboard.status,
+            item_count=leaderboard.item_count,
+            vote_count=leaderboard.vote_count,
+            view_count=leaderboard.view_count,
+            created_at=leaderboard.created_at,
+            updated_at=leaderboard.updated_at
+        )
+        leaderboard_items.append(leaderboard_dict)
+    
+    return leaderboard_items
 
 
 # ==================== 管理员查看投票记录 ====================
@@ -460,7 +487,37 @@ async def apply_leaderboard(
         )
     
     await db.refresh(new_leaderboard)
-    return new_leaderboard
+    
+    # 需要重新加载关系，因为 refresh 不会加载关系
+    result = await db.execute(
+        select(models.CustomLeaderboard)
+        .options(selectinload(models.CustomLeaderboard.applicant))
+        .where(models.CustomLeaderboard.id == new_leaderboard.id)
+    )
+    new_leaderboard = result.scalar_one()
+    
+    # 构建申请者信息
+    from app.forum_routes import build_user_info
+    applicant_info = None
+    if new_leaderboard.applicant:
+        applicant_info = await build_user_info(db, new_leaderboard.applicant)
+    
+    # 手动构建响应对象，避免 Pydantic 尝试访问未加载的关系
+    return schemas.CustomLeaderboardOut(
+        id=new_leaderboard.id,
+        name=new_leaderboard.name,
+        location=new_leaderboard.location,
+        description=new_leaderboard.description,
+        cover_image=new_leaderboard.cover_image,
+        applicant_id=new_leaderboard.applicant_id,
+        applicant=applicant_info,
+        status=new_leaderboard.status,
+        item_count=new_leaderboard.item_count,
+        vote_count=new_leaderboard.vote_count,
+        view_count=new_leaderboard.view_count,
+        created_at=new_leaderboard.created_at,
+        updated_at=new_leaderboard.updated_at
+    )
 
 
 # ==================== 榜单列表 ====================
