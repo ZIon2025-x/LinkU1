@@ -172,12 +172,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # 提取验证错误详情
     errors = []
     for error in exc.errors():
-        field = ".".join(str(x) for x in error["loc"][1:])  # 跳过body
-        message = error["msg"]
-        errors.append({"field": field, "message": message})
+        # 记录完整的位置信息以便调试
+        full_loc = error.get("loc", [])
+        field = ".".join(str(x) for x in full_loc[1:]) if len(full_loc) > 1 else str(full_loc[0]) if full_loc else "unknown"
+        message = error.get("msg", "Unknown error")
+        error_type = error.get("type", "unknown")
+        errors.append({"field": field, "message": message, "type": error_type, "full_location": full_loc})
     
     logger.warning(f"验证错误: {len(errors)}个错误 - {request.url}")
     logger.warning(f"验证错误详情: {errors}")  # 添加详细错误信息
+    # 记录完整的错误对象以便调试
+    for error in exc.errors():
+        logger.warning(f"完整错误对象: {error}")
     
     response = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

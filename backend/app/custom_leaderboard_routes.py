@@ -1881,13 +1881,28 @@ async def get_items_admin(
             logger.error(f"处理竞品记录 {item.id} 时出错: {e}", exc_info=True)
             continue
     
-    return {
-        "items": items_out,
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "has_more": offset + limit < total
-    }
+    # 使用 Pydantic 模型进行验证，确保类型正确
+    # 先验证每个 item，如果验证失败会抛出异常，这样我们可以捕获并记录
+    validated_items = []
+    for idx, item_dict in enumerate(items_out):
+        try:
+            # 记录第一个 item 的详细信息以便调试
+            if idx == 0 and items_out:
+                logger.debug(f"验证第一个竞品数据: leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}")
+            validated_item = schemas.LeaderboardItemOut(**item_dict)
+            validated_items.append(validated_item)
+        except Exception as e:
+            logger.error(f"验证竞品数据失败 (索引 {idx}): leaderboard_id={item_dict.get('leaderboard_id')}, 类型={type(item_dict.get('leaderboard_id'))}, 完整数据={item_dict}, 错误: {e}", exc_info=True)
+            # 跳过验证失败的记录
+            continue
+    
+    return schemas.LeaderboardItemListResponse(
+        items=validated_items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + limit < total
+    )
 
 
 # ==================== 管理员删除竞品 ====================
