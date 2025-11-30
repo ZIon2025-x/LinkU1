@@ -5528,7 +5528,7 @@ async def upload_image(
 async def upload_public_image(
     request: Request,
     image: UploadFile = File(...),
-    category: str = Query("public", description="图片类型：expert_avatar（任务达人头像）、service_image（服务图片）、public（任务相关图片）"),
+    category: str = Query("public", description="图片类型：expert_avatar（任务达人头像）、service_image（服务图片）、public（任务相关图片）、leaderboard_item（竞品图片）"),
     resource_id: str = Query(None, description="资源ID：expert_avatar时传expert_id，service_image时传expert_id，public时传task_id（任务ID，发布新任务时可省略）"),
     db: Session = Depends(get_db),
 ):
@@ -5574,7 +5574,7 @@ async def upload_public_image(
             raise HTTPException(status_code=401, detail="认证失败，请先登录")
         
         # 验证 category 参数
-        valid_categories = ["expert_avatar", "service_image", "public"]
+        valid_categories = ["expert_avatar", "service_image", "public", "leaderboard_item"]
         if category not in valid_categories:
             raise HTTPException(
                 status_code=400,
@@ -5590,6 +5590,10 @@ async def upload_public_image(
                 # 服务图片：使用当前用户ID（任务达人ID等于用户ID）
                 # 因为服务图片属于任务达人，应该按任务达人ID分类
                 resource_id = user_id
+            elif category == "leaderboard_item":
+                # 竞品图片：如果没有提供item_id，使用临时标识
+                # 注意：上传时item可能还未创建，所以使用临时标识
+                resource_id = f"temp_{user_id}"
             else:  # public
                 # 用户上传的图片都是任务相关的，需要提供task_id
                 # 如果没有提供task_id，使用临时标识（用于发布新任务时）
@@ -5671,6 +5675,11 @@ async def upload_public_image(
             filename_prefix = "service_image_"
             # 创建按任务达人ID的子文件夹（不是service_id）
             resource_subdir = resource_id
+        elif category == "leaderboard_item":
+            sub_dir = "leaderboard_items"
+            filename_prefix = "leaderboard_item_"
+            # 创建按竞品ID的子文件夹
+            resource_subdir = str(resource_id) if resource_id else f"temp_{user_id}"
         else:  # public
             sub_dir = "public"
             filename_prefix = "public_"

@@ -33,43 +33,50 @@ export async function compressImage(
     // 如果文件已经很小，直接返回
     if (file.size <= (compressionOptions.maxSizeMB || 1) * 1024 * 1024) {
       // 检查是否需要调整尺寸
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      
+      // 使用 Promise 包装，避免阻塞
       return new Promise((resolve, reject) => {
-        img.onload = async () => {
-          URL.revokeObjectURL(objectUrl);
+        // 延迟到下一个事件循环，避免阻塞 UI
+        setTimeout(() => {
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(file);
           
-          // 如果图片尺寸已经符合要求，直接返回
-          if (
-            img.width <= (compressionOptions.maxWidthOrHeight || 1920) &&
-            img.height <= (compressionOptions.maxWidthOrHeight || 1920)
-          ) {
+          img.onload = async () => {
+            URL.revokeObjectURL(objectUrl);
+            
+            // 如果图片尺寸已经符合要求，直接返回
+            if (
+              img.width <= (compressionOptions.maxWidthOrHeight || 1920) &&
+              img.height <= (compressionOptions.maxWidthOrHeight || 1920)
+            ) {
+              resolve(file);
+              return;
+            }
+            
+            // 需要压缩尺寸
+            try {
+              const compressedFile = await imageCompression(file, compressionOptions);
+              resolve(compressedFile);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            // 如果无法读取图片，返回原文件
             resolve(file);
-            return;
-          }
+          };
           
-          // 需要压缩尺寸
-          try {
-            const compressedFile = await imageCompression(file, compressionOptions);
-            resolve(compressedFile);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        
-        img.onerror = () => {
-          URL.revokeObjectURL(objectUrl);
-          // 如果无法读取图片，返回原文件
-          resolve(file);
-        };
-        
-        img.src = objectUrl;
+          img.src = objectUrl;
+        }, 0);
       });
     }
 
-    // 压缩图片
-    const compressedFile = await imageCompression(file, compressionOptions);
+    // 压缩图片 - 确保使用 Web Worker
+    const compressedFile = await imageCompression(file, {
+      ...compressionOptions,
+      useWebWorker: true, // 强制使用 Web Worker
+    });
     return compressedFile;
   } catch (error) {
     console.error('图片压缩失败:', error);

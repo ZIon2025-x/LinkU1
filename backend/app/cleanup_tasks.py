@@ -76,6 +76,7 @@ class CleanupTasks:
         self.cleanup_interval = 3600  # 1小时清理一次
         self.last_completed_tasks_cleanup_date = None  # 上次清理已完成任务的日期
         self.last_expired_tasks_cleanup_date = None  # 上次清理过期任务的日期
+        self.last_orphan_files_cleanup_date = None  # 上次清理孤立文件的日期
     
     async def start_cleanup_tasks(self):
         """启动清理任务"""
@@ -114,8 +115,11 @@ class CleanupTasks:
             # 清理过期跳蚤市场商品（每天检查一次）
             await self._cleanup_expired_flea_market_items()
             
-            # 清理未使用的临时图片（每天检查一次）
+            # 清理未使用的临时图片（每次循环都执行）
             await self._cleanup_unused_temp_images()
+            
+            # 清理孤立文件（每周检查一次）
+            await self._cleanup_orphan_files()
             
             # 清理过期时间段（每天检查一次）
             await self._cleanup_expired_time_slots()
@@ -447,6 +451,133 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理跳蚤市场临时图片失败: {e}")
+    
+    async def _cleanup_orphan_files(self):
+        """清理孤立文件（不在预期位置的文件，超过7天未使用，每周检查一次，使用分布式锁）"""
+        # 检查是否已经在本周执行过
+        today = get_utc_time().date()
+        if self.last_orphan_files_cleanup_date == today:
+            return
+        
+        lock_key = "scheduled_task:cleanup_orphan_files:lock"
+        lock_ttl = 7200  # 2小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理孤立文件：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from pathlib import Path
+            import os
+            from datetime import timedelta
+            
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_upload_dir = Path("/data/uploads")
+            else:
+                base_upload_dir = Path("uploads")
+            
+            # 计算7天前的时间
+            cutoff_time = get_utc_time() - timedelta(days=7)
+            cleaned_count = 0
+            max_files_per_run = 500  # 每次最多处理500个文件，避免IO压力过大
+            
+            # 定义预期的目录结构（允许的子目录）
+            expected_dirs = {
+                # 公开图片目录
+                base_upload_dir / "public" / "images" / "expert_avatars": True,  # 允许任意子目录
+                base_upload_dir / "public" / "images" / "service_images": True,
+                base_upload_dir / "public" / "images" / "public": True,  # 允许 task_id 或 temp_* 子目录
+                base_upload_dir / "public" / "images" / "leaderboard_items": True,  # 允许 item_id 或 temp_* 子目录
+                # 公开文件目录
+                base_upload_dir / "public" / "files": False,  # 不允许子目录，文件直接在此目录
+                # 私密图片目录
+                base_upload_dir / "private_images" / "tasks": True,
+                base_upload_dir / "private_images" / "chats": True,
+                # 私密文件目录
+                base_upload_dir / "private_files" / "tasks": True,
+                base_upload_dir / "private_files" / "chats": True,
+                # 跳蚤市场目录
+                base_upload_dir / "flea_market": True,  # 允许 item_id 或 temp_* 子目录
+            }
+            
+            # 递归扫描上传目录，找出不在预期位置的文件
+            def scan_directory(dir_path: Path, depth: int = 0, max_depth: int = 5):
+                """递归扫描目录，找出孤立文件"""
+                nonlocal cleaned_count
+                
+                if cleaned_count >= max_files_per_run:
+                    return
+                
+                if not dir_path.exists() or not dir_path.is_dir():
+                    return
+                
+                # 检查是否在预期目录中
+                is_expected = False
+                for expected_dir, allow_subdirs in expected_dirs.items():
+                    try:
+                        # 检查当前目录是否是预期目录或其子目录
+                        if dir_path == expected_dir:
+                            is_expected = True
+                            break
+                        elif allow_subdirs and expected_dir in dir_path.parents:
+                            # 在预期目录的子目录中
+                            is_expected = True
+                            break
+                    except Exception:
+                        continue
+                
+                # 如果不在预期目录中，且深度超过1，则可能是孤立文件
+                if not is_expected and depth > 0:
+                    # 检查目录中的文件
+                    try:
+                        for item in dir_path.iterdir():
+                            if cleaned_count >= max_files_per_run:
+                                return
+                            
+                            if item.is_file():
+                                # 检查文件修改时间
+                                try:
+                                    file_mtime = file_timestamp_to_utc(item.stat().st_mtime)
+                                    if file_mtime < cutoff_time:
+                                        # 超过7天未使用，删除
+                                        item.unlink()
+                                        cleaned_count += 1
+                                        logger.info(f"删除孤立文件: {item}")
+                                except Exception as e:
+                                    logger.warning(f"处理孤立文件失败 {item}: {e}")
+                            elif item.is_dir() and depth < max_depth:
+                                # 递归扫描子目录
+                                scan_directory(item, depth + 1, max_depth)
+                    except Exception as e:
+                        logger.warning(f"扫描目录失败 {dir_path}: {e}")
+                else:
+                    # 在预期目录中，正常递归扫描（但不删除）
+                    try:
+                        for item in dir_path.iterdir():
+                            if item.is_dir() and depth < max_depth:
+                                scan_directory(item, depth + 1, max_depth)
+                    except Exception as e:
+                        logger.warning(f"扫描预期目录失败 {dir_path}: {e}")
+            
+            # 从上传根目录开始扫描
+            if base_upload_dir.exists():
+                scan_directory(base_upload_dir, depth=0, max_depth=5)
+            
+            if cleaned_count > 0:
+                logger.info(f"清理了 {cleaned_count} 个孤立文件")
+                self.last_orphan_files_cleanup_date = today
+            else:
+                logger.debug("未发现需要清理的孤立文件")
+                self.last_orphan_files_cleanup_date = today
+                
+        except Exception as e:
+            logger.error(f"清理孤立文件失败: {e}", exc_info=True)
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
     
     async def _cleanup_expired_time_slots(self):
         """清理过期时间段（超过30天且任务已完成/取消的时间段，每天检查一次，使用分布式锁）"""

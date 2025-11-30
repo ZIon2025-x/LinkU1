@@ -43,6 +43,7 @@ const CustomLeaderboardDetail: React.FC = () => {
   });
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingFileList, setUploadingFileList] = useState<any[]>([]);
 
   useEffect(() => {
     if (leaderboardId) {
@@ -184,11 +185,18 @@ const CustomLeaderboardDetail: React.FC = () => {
       const formData = new FormData();
       formData.append('image', compressedFile);
       
-      const response = await api.post('/api/upload/public-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // 使用 leaderboard_item category，便于分类管理
+      // 传递 resource_id 为临时标识（因为上传时 item 还未创建）
+      const resourceId = user?.id ? `temp_${user.id}` : 'temp_anonymous';
+      const response = await api.post(
+        `/api/upload/public-image?category=leaderboard_item&resource_id=${encodeURIComponent(resourceId)}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
       
       if (response.data.success && response.data.url) {
         return response.data.url;
@@ -204,21 +212,52 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
   };
 
-  const handleImageChange = async (info: any) => {
-    const { file } = info;
+  const handleImageChange = (info: any) => {
+    const { file, fileList } = info;
     
-    if (file.status === 'uploading') {
-      return;
+    // 当用户选择新文件时
+    if (file.status === undefined && file.originFileObj) {
+      const fileToUpload = file.originFileObj;
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      
+      // 立即添加到上传列表，显示上传中状态
+      const newFile = {
+        uid: tempId,
+        name: fileToUpload.name,
+        status: 'uploading' as const,
+        url: URL.createObjectURL(fileToUpload), // 临时预览
+        originFileObj: fileToUpload
+      };
+      
+      setUploadingFileList(prev => [...prev, newFile]);
+      
+      // 延迟执行压缩和上传，避免阻塞 UI
+      setTimeout(async () => {
+        try {
+          const url = await handleImageUpload(fileToUpload);
+          
+          // 更新文件状态为完成
+          setUploadingFileList(prev => prev.map(f => 
+            f.uid === tempId 
+              ? { ...f, status: 'done' as const, url }
+              : f
+          ));
+          
+          // 添加到已上传图片列表
+          setUploadingImages(prev => [...prev, url]);
+          message.success('图片上传成功');
+        } catch (error) {
+          // 上传失败，移除该文件
+          setUploadingFileList(prev => prev.filter(f => f.uid !== tempId));
+          // 错误已在handleImageUpload中处理
+        }
+      }, 0);
     }
     
-    if (file.status === 'done' || file.originFileObj) {
-      try {
-        const url = await handleImageUpload(file.originFileObj || file);
-        setUploadingImages(prev => [...prev, url]);
-        message.success('图片上传成功');
-      } catch (error) {
-        // 错误已在handleImageUpload中处理
-      }
+    // 处理文件列表变化（删除等）
+    if (file.status === 'removed') {
+      // 从上传列表中移除
+      setUploadingFileList(prev => prev.filter(f => f.uid !== file.uid));
     }
   };
 
@@ -597,23 +636,37 @@ const CustomLeaderboardDetail: React.FC = () => {
           >
             <Upload
               listType="picture-card"
-              fileList={uploadingImages.map((url, index) => ({
-                uid: `-${index}`,
-                name: `image-${index}`,
-                status: 'done',
-                url
-              }))}
+              fileList={[
+                // 已上传完成的图片
+                ...uploadingImages.map((url, index) => ({
+                  uid: `done-${index}`,
+                  name: `image-${index}`,
+                  status: 'done' as const,
+                  url
+                })),
+                // 正在上传的图片
+                ...uploadingFileList
+              ]}
               onChange={handleImageChange}
               onRemove={(file) => {
-                const url = file.url || uploadingImages[parseInt(file.uid || '0')];
-                handleRemoveImage(url);
+                // 如果是已完成的图片
+                if (file.uid?.startsWith('done-')) {
+                  const index = parseInt(file.uid.replace('done-', ''));
+                  const url = uploadingImages[index];
+                  if (url) {
+                    handleRemoveImage(url);
+                  }
+                } else {
+                  // 如果是上传中的图片，从上传列表移除
+                  setUploadingFileList(prev => prev.filter(f => f.uid !== file.uid));
+                }
                 return false;
               }}
               beforeUpload={() => false}
               accept="image/*"
               maxCount={5}
             >
-              {uploadingImages.length < 5 && (
+              {(uploadingImages.length + uploadingFileList.length) < 5 && (
                 <div>
                   <UploadOutlined />
                   <div style={{ marginTop: 8 }}>上传图片</div>
