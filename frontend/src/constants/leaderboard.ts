@@ -4,6 +4,7 @@
 
 export const LOCATIONS = [
   'Online',
+  'UK',
   'London',
   'Edinburgh',
   'Manchester',

@@ -1764,12 +1764,17 @@ async def get_items_admin(
     """管理员专用：获取竞品列表"""
     # 处理 leaderboard_id：将空字符串转换为 None，并尝试解析为整数
     leaderboard_id_int = None
-    if leaderboard_id:
-        leaderboard_id = leaderboard_id.strip()
-        if leaderboard_id:
+    if leaderboard_id is not None:
+        # 如果是字符串，去除空格
+        if isinstance(leaderboard_id, str):
+            leaderboard_id = leaderboard_id.strip()
+            if not leaderboard_id:  # 空字符串
+                leaderboard_id = None
+        # 如果仍然有值，尝试解析为整数
+        if leaderboard_id is not None:
             try:
                 leaderboard_id_int = int(leaderboard_id)
-            except ValueError:
+            except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="榜单ID必须是有效的整数"

@@ -5705,11 +5705,21 @@ const AdminDashboard: React.FC = () => {
     setLeaderboardItemsLoading(true);
     try {
       const offset = (leaderboardItemsPage - 1) * 50;
-      const data = await getLeaderboardItemsAdmin({
-        ...leaderboardItemsFilter,
+      // 构建请求参数，确保 undefined 值不会被包含
+      const params: any = {
         limit: 50,
         offset
-      });
+      };
+      if (leaderboardItemsFilter.leaderboard_id !== undefined && leaderboardItemsFilter.leaderboard_id !== null && !isNaN(leaderboardItemsFilter.leaderboard_id)) {
+        params.leaderboard_id = leaderboardItemsFilter.leaderboard_id;
+      }
+      if (leaderboardItemsFilter.status && leaderboardItemsFilter.status !== 'all') {
+        params.status = leaderboardItemsFilter.status;
+      }
+      if (leaderboardItemsFilter.keyword) {
+        params.keyword = leaderboardItemsFilter.keyword;
+      }
+      const data = await getLeaderboardItemsAdmin(params);
       setLeaderboardItems(data.items || []);
       setLeaderboardItemsTotal(data.total || 0);
     } catch (error: any) {
@@ -7041,10 +7051,13 @@ const AdminDashboard: React.FC = () => {
             type="number"
             placeholder="榜单ID"
             value={leaderboardItemsFilter.leaderboard_id || ''}
-            onChange={(e) => setLeaderboardItemsFilter({
-              ...leaderboardItemsFilter,
-              leaderboard_id: e.target.value ? parseInt(e.target.value) : undefined
-            })}
+            onChange={(e) => {
+              const value = e.target.value.trim();
+              setLeaderboardItemsFilter({
+                ...leaderboardItemsFilter,
+                leaderboard_id: value && !isNaN(Number(value)) ? parseInt(value, 10) : undefined
+              });
+            }}
             style={{
               padding: '8px 12px',
               border: '1px solid #ddd',
