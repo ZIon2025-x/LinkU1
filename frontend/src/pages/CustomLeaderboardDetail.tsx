@@ -251,23 +251,24 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
     
     // 当用户选择新文件时
-    // beforeUpload 返回 false 时，file 可能没有 status 或 status 为 undefined
-    // 关键：检查是否有 originFileObj，这表示是新选择的文件
-    if (file.originFileObj) {
-      const fileToUpload = file.originFileObj;
-      
+    // beforeUpload 返回 false 时，file 对象本身就是 File 对象，不是包装后的对象
+    // 需要检查 file 是否是 File 实例，或者是否有 originFileObj
+    const fileToUpload = file.originFileObj || (file instanceof File ? file : null);
+    
+    if (fileToUpload) {
       // 检查是否已经在列表中（避免重复添加）
-      const existingFile = uploadingFileList.find(f => 
-        f.originFileObj === fileToUpload || 
-        (f.name === fileToUpload.name && f.size === fileToUpload.size)
-      );
+      const existingFile = uploadingFileList.find(f => {
+        const fFile = f.originFileObj || (f instanceof File ? f : null);
+        return fFile === fileToUpload || 
+               (f.name === fileToUpload.name && f.size === fileToUpload.size);
+      });
       
       if (existingFile) {
         console.log('文件已存在，跳过:', fileToUpload.name);
         return;
       }
       
-      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const tempId = file.uid || `temp-${Date.now()}-${Math.random()}`;
       
       // 创建临时预览 URL
       const previewUrl = URL.createObjectURL(fileToUpload);
@@ -332,7 +333,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         }
       }, 0);
     } else {
-      console.log('文件没有 originFileObj，跳过处理:', file);
+      console.log('无法获取文件对象，跳过处理:', file);
     }
   };
 
