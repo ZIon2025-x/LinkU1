@@ -2715,6 +2715,9 @@ class LeaderboardItemOut(LeaderboardItemBase):
     user_vote: Optional[str] = None  # 当前用户的投票类型：upvote, downvote, 或 None
     user_vote_comment: Optional[str] = None  # 当前用户的投票留言
     user_vote_is_anonymous: Optional[bool] = None  # 当前用户的投票是否匿名
+    display_comment: Optional[str] = None  # 显示的留言（用户自己的或最多赞的）
+    display_comment_type: Optional[str] = None  # 留言类型：'user'（用户自己的）或 'top'（最多赞的）
+    display_comment_info: Optional[dict] = None  # 留言的额外信息（匿名状态、点赞数等）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     

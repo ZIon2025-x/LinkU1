@@ -2884,4 +2884,25 @@ export const reviewCustomLeaderboard = async (
   return res.data;
 };
 
+// 获取竞品列表（管理员专用）
+export const getLeaderboardItemsAdmin = async (params?: {
+  leaderboard_id?: number;
+  status?: 'all' | 'approved';
+  keyword?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const res = await api.get('/api/custom-leaderboards/admin/items', { params });
+  return res.data;
+};
+
+// 删除竞品（管理员专用）
+export const deleteLeaderboardItemAdmin = async (itemId: number) => {
+  const token = await getCSRFToken();
+  const res = await api.delete(`/api/custom-leaderboards/admin/items/${itemId}`, {
+    headers: { 'X-CSRF-Token': token }
+  });
+  return res.data;
+};
+
 export default api; 

@@ -693,14 +693,15 @@ const CustomLeaderboardDetail: React.FC = () => {
                       </div>
                     </div>
                     
-                    {/* 用户留言 */}
-                    {item.user_vote_comment && (
+                    {/* 留言显示：优先显示用户自己的留言，如果没有则显示最多赞的留言 */}
+                    {item.display_comment && (
                       <div style={{
                         marginTop: 12,
                         padding: 12,
-                        background: '#f5f5f5',
+                        background: item.display_comment_type === 'user' ? '#f5f5f5' : '#fff7e6',
                         borderRadius: 8,
-                        fontSize: 14
+                        fontSize: 14,
+                        border: item.display_comment_type === 'top' ? '1px solid #ffd591' : 'none'
                       }}>
                         <div style={{ 
                           fontWeight: 600, 
@@ -709,21 +710,66 @@ const CustomLeaderboardDetail: React.FC = () => {
                           alignItems: 'center',
                           gap: 8
                         }}>
-                          {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
-                          {item.user_vote_is_anonymous && (
-                            <Tag style={{ 
-                              padding: '2px 6px',
-                              background: '#f0f0f0',
-                              borderRadius: 4,
-                              fontSize: 11,
-                              color: '#666',
-                              border: 'none'
-                            }}>
-                              匿名
-                            </Tag>
+                          {item.display_comment_type === 'user' ? (
+                            <>
+                              {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
+                              {item.user_vote_is_anonymous && (
+                                <Tag style={{ 
+                                  padding: '2px 6px',
+                                  background: '#f0f0f0',
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                  color: '#666',
+                                  border: 'none'
+                                }}>
+                                  匿名
+                                </Tag>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {item.display_comment_info?.vote_type === 'upvote' ? '👍' : '👎'} 热门留言
+                              {item.display_comment_info?.is_anonymous ? (
+                                <Tag style={{ 
+                                  padding: '2px 6px',
+                                  background: '#f0f0f0',
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                  color: '#666',
+                                  border: 'none'
+                                }}>
+                                  匿名
+                                </Tag>
+                              ) : (
+                                item.display_comment_info?.user_id && (
+                                  <Tag style={{ 
+                                    padding: '2px 6px',
+                                    background: '#e6f7ff',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    color: '#1890ff',
+                                    border: 'none'
+                                  }}>
+                                    用户 {item.display_comment_info.user_id}
+                                  </Tag>
+                                )
+                              )}
+                              {item.display_comment_info?.like_count > 0 && (
+                                <Tag style={{ 
+                                  padding: '2px 6px',
+                                  background: '#fff1f0',
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                  color: '#ff4d4f',
+                                  border: 'none'
+                                }}>
+                                  ❤️ {item.display_comment_info.like_count}
+                                </Tag>
+                              )}
+                            </>
                           )}
                         </div>
-                        <div>{item.user_vote_comment}</div>
+                        <div>{item.display_comment}</div>
                       </div>
                     )}
                   </Card>

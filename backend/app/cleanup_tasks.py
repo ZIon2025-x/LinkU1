@@ -121,6 +121,9 @@ class CleanupTasks:
             # 清理孤立文件（每周检查一次）
             await self._cleanup_orphan_files()
             
+            # 清理不存在实体的图片文件夹（每周检查一次）
+            await self._cleanup_orphan_entity_images()
+            
             # 清理过期时间段（每天检查一次）
             await self._cleanup_expired_time_slots()
             
@@ -576,6 +579,136 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理孤立文件失败: {e}", exc_info=True)
+        finally:
+            # 释放锁
+            release_redis_distributed_lock(lock_key)
+    
+    async def _cleanup_orphan_entity_images(self):
+        """清理不存在实体的图片文件夹（竞品、商品、任务），每周检查一次，使用分布式锁"""
+        # 检查是否已经在本周执行过
+        today = get_utc_time().date()
+        if self.last_orphan_files_cleanup_date == today:
+            return
+        
+        lock_key = "scheduled_task:cleanup_orphan_entity_images:lock"
+        lock_ttl = 7200  # 2小时
+        
+        # 尝试获取分布式锁
+        if not get_redis_distributed_lock(lock_key, lock_ttl):
+            logger.debug("清理不存在实体的图片文件夹：其他实例正在执行，跳过")
+            return
+        
+        try:
+            from pathlib import Path
+            import os
+            import shutil
+            from app.deps import get_sync_db
+            from app import models
+            
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_upload_dir = Path("/data/uploads")
+            else:
+                base_upload_dir = Path("uploads")
+            
+            cleaned_count = 0
+            max_dirs_per_run = 100  # 每次最多处理100个目录，避免IO压力过大
+            
+            # 获取数据库会话
+            db = next(get_sync_db())
+            try:
+                # 1. 清理不存在竞品的图片文件夹
+                leaderboard_items_dir = base_upload_dir / "public" / "images" / "leaderboard_items"
+                if leaderboard_items_dir.exists():
+                    # 获取所有存在的竞品ID
+                    from sqlalchemy import select
+                    items_result = db.execute(select(models.LeaderboardItem.id))
+                    existing_item_ids = {item_id for item_id, in items_result.all()}
+                    
+                    # 遍历目录，找出不存在的竞品ID对应的文件夹
+                    for item_dir in leaderboard_items_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if item_dir.is_dir() and not item_dir.name.startswith("temp_"):
+                            try:
+                                item_id = int(item_dir.name)
+                                if item_id not in existing_item_ids:
+                                    # 竞品不存在，删除文件夹
+                                    shutil.rmtree(item_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在竞品 {item_id} 的图片文件夹: {item_dir}")
+                            except (ValueError, Exception) as e:
+                                # 如果无法解析为整数，可能是无效的目录名，跳过
+                                logger.debug(f"跳过无效的竞品目录: {item_dir.name}: {e}")
+                                continue
+                
+                # 2. 清理不存在商品的图片文件夹
+                flea_market_dir = base_upload_dir / "flea_market"
+                if flea_market_dir.exists():
+                    # 获取所有存在的商品ID
+                    from sqlalchemy import select
+                    items_result = db.execute(select(models.FleaMarketItem.id))
+                    existing_flea_item_ids = {item_id for item_id, in items_result.all()}
+                    
+                    # 遍历目录，找出不存在的商品ID对应的文件夹
+                    for item_dir in flea_market_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if item_dir.is_dir() and not item_dir.name.startswith("temp_"):
+                            try:
+                                item_id = int(item_dir.name)
+                                if item_id not in existing_flea_item_ids:
+                                    # 商品不存在，删除文件夹
+                                    shutil.rmtree(item_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在商品 {item_id} 的图片文件夹: {item_dir}")
+                            except (ValueError, Exception) as e:
+                                # 如果无法解析为整数，可能是无效的目录名，跳过
+                                logger.debug(f"跳过无效的商品目录: {item_dir.name}: {e}")
+                                continue
+                
+                # 3. 清理不存在任务的图片文件夹
+                tasks_public_dir = base_upload_dir / "public" / "images" / "public"
+                if tasks_public_dir.exists():
+                    # 获取所有存在的任务ID
+                    from sqlalchemy import select
+                    tasks_result = db.execute(select(models.Task.id))
+                    existing_task_ids = {task_id for task_id, in tasks_result.all()}
+                    
+                    # 遍历目录，找出不存在的任务ID对应的文件夹
+                    for task_dir in tasks_public_dir.iterdir():
+                        if cleaned_count >= max_dirs_per_run:
+                            logger.info(f"已达到单次处理上限（{max_dirs_per_run}），停止处理")
+                            break
+                        
+                        if task_dir.is_dir() and not task_dir.name.startswith("temp_"):
+                            try:
+                                task_id = int(task_dir.name)
+                                if task_id not in existing_task_ids:
+                                    # 任务不存在，删除文件夹
+                                    shutil.rmtree(task_dir)
+                                    cleaned_count += 1
+                                    logger.info(f"删除不存在任务 {task_id} 的图片文件夹: {task_dir}")
+                            except (ValueError, Exception) as e:
+                                # 如果无法解析为整数，可能是无效的目录名，跳过
+                                logger.debug(f"跳过无效的任务目录: {task_dir.name}: {e}")
+                                continue
+                
+            finally:
+                db.close()
+            
+            if cleaned_count > 0:
+                logger.info(f"清理了 {cleaned_count} 个不存在实体的图片文件夹")
+            else:
+                logger.debug("未发现需要清理的不存在实体的图片文件夹")
+                
+        except Exception as e:
+            logger.error(f"清理不存在实体的图片文件夹失败: {e}", exc_info=True)
         finally:
             # 释放锁
             release_redis_distributed_lock(lock_key)

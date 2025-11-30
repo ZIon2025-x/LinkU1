@@ -858,25 +858,58 @@ async def get_leaderboard_items(
     result = await db.execute(query)
     items = result.scalars().all()
     
+    # 获取所有竞品ID
+    item_ids = [item.id for item in items]
+    
     user_votes = {}
     user_vote_comments = {}
     user_vote_is_anonymous = {}
-    if current_user:
-        item_ids = [item.id for item in items]
-        if item_ids:
-            vote_result = await db.execute(
-                select(models.LeaderboardVote).where(
-                    and_(
-                        models.LeaderboardVote.item_id.in_(item_ids),
-                        models.LeaderboardVote.user_id == current_user.id
-                    )
+    if current_user and item_ids:
+        vote_result = await db.execute(
+            select(models.LeaderboardVote).where(
+                and_(
+                    models.LeaderboardVote.item_id.in_(item_ids),
+                    models.LeaderboardVote.user_id == current_user.id
                 )
             )
-            for vote in vote_result.scalars().all():
-                user_votes[vote.item_id] = vote.vote_type
-                user_vote_is_anonymous[vote.item_id] = vote.is_anonymous
-                if vote.comment:
-                    user_vote_comments[vote.item_id] = vote.comment
+        )
+        for vote in vote_result.scalars().all():
+            user_votes[vote.item_id] = vote.vote_type
+            user_vote_is_anonymous[vote.item_id] = vote.is_anonymous
+            if vote.comment:
+                user_vote_comments[vote.item_id] = vote.comment
+    
+    # 查询每个竞品的最多赞留言（如果用户没有留言，用于显示）
+    top_comment_votes = {}
+    if item_ids:
+        # 为每个竞品查询最多赞的留言（只查询有留言的记录）
+        for item_id in item_ids:
+            # 如果用户已经有留言，跳过
+            if item_id in user_vote_comments:
+                continue
+            
+            # 查询该竞品的最多赞留言
+            top_comment_query = select(models.LeaderboardVote).where(
+                and_(
+                    models.LeaderboardVote.item_id == item_id,
+                    models.LeaderboardVote.comment.isnot(None),
+                    models.LeaderboardVote.comment != ''
+                )
+            ).order_by(
+                models.LeaderboardVote.like_count.desc(),
+                models.LeaderboardVote.created_at.desc()
+            ).limit(1)
+            
+            top_comment_result = await db.execute(top_comment_query)
+            top_comment_vote = top_comment_result.scalar_one_or_none()
+            if top_comment_vote:
+                top_comment_votes[item_id] = {
+                    "comment": top_comment_vote.comment,
+                    "vote_type": top_comment_vote.vote_type,
+                    "is_anonymous": top_comment_vote.is_anonymous,
+                    "like_count": top_comment_vote.like_count or 0,
+                    "user_id": None if top_comment_vote.is_anonymous else top_comment_vote.user_id
+                }
     
     items_out = []
     for item in items:
@@ -886,6 +919,30 @@ async def get_leaderboard_items(
                 images_list = json.loads(item.images)
             except Exception:
                 images_list = None
+        
+        # 如果用户没有留言，使用最多赞的留言
+        display_comment = None
+        display_comment_type = None  # 'user' 或 'top'
+        display_comment_info = None
+        
+        if item.id in user_vote_comments:
+            # 用户有自己的留言，显示用户的留言
+            display_comment = user_vote_comments.get(item.id)
+            display_comment_type = 'user'
+            display_comment_info = {
+                "is_anonymous": user_vote_is_anonymous.get(item.id) if item.id in user_vote_is_anonymous else None
+            }
+        elif item.id in top_comment_votes:
+            # 用户没有留言，显示最多赞的留言
+            top_comment = top_comment_votes[item.id]
+            display_comment = top_comment["comment"]
+            display_comment_type = 'top'
+            display_comment_info = {
+                "vote_type": top_comment["vote_type"],
+                "is_anonymous": top_comment["is_anonymous"],
+                "like_count": top_comment["like_count"],
+                "user_id": top_comment["user_id"]
+            }
         
         item_dict = {
             "id": item.id,
@@ -905,6 +962,9 @@ async def get_leaderboard_items(
             "user_vote": user_votes.get(item.id),
             "user_vote_comment": user_vote_comments.get(item.id),
             "user_vote_is_anonymous": user_vote_is_anonymous.get(item.id) if item.id in user_vote_is_anonymous else None,
+            "display_comment": display_comment,  # 显示的留言（用户自己的或最多赞的）
+            "display_comment_type": display_comment_type,  # 'user' 或 'top'
+            "display_comment_info": display_comment_info,  # 留言的额外信息
             "created_at": item.created_at,
             "updated_at": item.updated_at
         }
@@ -1687,4 +1747,187 @@ async def review_report(
         "message": f"举报已{action}",
         "status": action
     }
+
+
+# ==================== 管理员获取竞品列表 ====================
+
+@router.get("/admin/items", response_model=schemas.LeaderboardItemListResponse)
+async def get_items_admin(
+    leaderboard_id: Optional[int] = Query(None, description="榜单ID筛选"),
+    status: Optional[str] = Query("all", description="状态筛选：approved, all"),
+    keyword: Optional[str] = Query(None, description="关键词搜索（竞品名称、描述）"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员专用：获取竞品列表"""
+    base_query = select(models.LeaderboardItem)
+    
+    if leaderboard_id:
+        base_query = base_query.where(models.LeaderboardItem.leaderboard_id == leaderboard_id)
+    
+    if status == "approved":
+        base_query = base_query.where(models.LeaderboardItem.status == "approved")
+    # status == "all" 时显示所有
+    
+    if keyword:
+        keyword = keyword.strip()
+        if len(keyword) > 0:
+            keyword_pattern = f"%{keyword}%"
+            base_query = base_query.where(
+                or_(
+                    models.LeaderboardItem.name.ilike(keyword_pattern),
+                    models.LeaderboardItem.description.ilike(keyword_pattern)
+                )
+            )
+    
+    # 计算总数
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
+    
+    # 排序：按创建时间倒序
+    base_query = base_query.order_by(models.LeaderboardItem.created_at.desc())
+    
+    # 分页
+    query = base_query.offset(offset).limit(limit)
+    result = await db.execute(query)
+    items = result.scalars().all()
+    
+    # 构建返回数据
+    items_out = []
+    for item in items:
+        images_list = None
+        if item.images:
+            try:
+                images_list = json.loads(item.images)
+            except Exception:
+                images_list = None
+        
+        item_dict = {
+            "id": item.id,
+            "leaderboard_id": item.leaderboard_id,
+            "name": item.name,
+            "description": item.description,
+            "address": item.address,
+            "phone": item.phone,
+            "website": item.website,
+            "images": images_list,
+            "submitted_by": item.submitted_by,
+            "status": item.status,
+            "upvotes": item.upvotes,
+            "downvotes": item.downvotes,
+            "net_votes": item.net_votes,
+            "vote_score": item.vote_score,
+            "user_vote": None,
+            "user_vote_comment": None,
+            "user_vote_is_anonymous": None,
+            "display_comment": None,
+            "display_comment_type": None,
+            "display_comment_info": None,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at
+        }
+        items_out.append(item_dict)
+    
+    return {
+        "items": items_out,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + limit < total
+    }
+
+
+# ==================== 管理员删除竞品 ====================
+
+def delete_leaderboard_item_images(item_id: int):
+    """
+    删除竞品的图片文件
+    
+    Args:
+        item_id: 竞品ID
+    """
+    try:
+        # 检测部署环境
+        RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+        if RAILWAY_ENVIRONMENT:
+            base_dir = Path("/data/uploads/public/images")
+        else:
+            base_dir = Path("uploads/public/images")
+        
+        # 删除竞品图片目录
+        item_dir = base_dir / "leaderboard_items" / str(item_id)
+        if item_dir.exists():
+            shutil.rmtree(item_dir)
+            logger.info(f"删除竞品 {item_id} 的图片目录: {item_dir}")
+            return True
+        return False
+    except Exception as e:
+        logger.warning(f"删除竞品 {item_id} 的图片目录失败: {e}")
+        return False
+
+
+@router.delete("/admin/items/{item_id}")
+async def delete_item_admin(
+    item_id: int,
+    current_admin: models.AdminUser = Depends(get_current_admin_async),
+    db: AsyncSession = Depends(get_async_db_dependency),
+):
+    """管理员删除竞品（级联删除投票记录和图片文件夹，并更新榜单统计）"""
+    # 查询竞品
+    item = await db.get(models.LeaderboardItem, item_id)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="竞品不存在"
+        )
+    
+    # 查询榜单
+    leaderboard = await db.get(models.CustomLeaderboard, item.leaderboard_id)
+    if not leaderboard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="榜单不存在"
+        )
+    
+    # 查询该竞品的投票数量（用于更新榜单统计）
+    vote_count_result = await db.execute(
+        select(func.count()).select_from(
+            select(models.LeaderboardVote).where(
+                models.LeaderboardVote.item_id == item_id
+            ).subquery()
+        )
+    )
+    item_vote_count = vote_count_result.scalar() or 0
+    
+    try:
+        # 删除竞品（级联删除投票记录，因为模型中有 cascade="all, delete-orphan"）
+        await db.delete(item)
+        
+        # 更新榜单统计
+        leaderboard.item_count = max(0, leaderboard.item_count - 1)
+        leaderboard.vote_count = max(0, leaderboard.vote_count - item_vote_count)
+        
+        await db.commit()
+        
+        # 删除图片文件夹（在数据库提交成功后）
+        delete_leaderboard_item_images(item_id)
+        
+        logger.info(f"管理员 {current_admin.id} 删除竞品 {item_id}，更新榜单 {leaderboard.id} 统计：item_count={leaderboard.item_count}, vote_count={leaderboard.vote_count}")
+        
+        return {
+            "success": True,
+            "message": "竞品已删除",
+            "deleted_item_id": item_id,
+            "updated_leaderboard_id": leaderboard.id
+        }
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"删除竞品失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除竞品失败: {str(e)}"
+        )
 

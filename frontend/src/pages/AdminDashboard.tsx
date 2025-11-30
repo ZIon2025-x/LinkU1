@@ -65,7 +65,9 @@ import api, {
   deleteFleaMarketItemAdmin,
   getLeaderboardVotesAdmin,
   getCustomLeaderboardsAdmin,
-  reviewCustomLeaderboard
+  reviewCustomLeaderboard,
+  getLeaderboardItemsAdmin,
+  deleteLeaderboardItemAdmin
 } from '../api';
 import NotificationBell, { NotificationBellRef } from '../components/NotificationBell';
 import NotificationModal from '../components/NotificationModal';
@@ -369,6 +371,17 @@ const AdminDashboard: React.FC = () => {
   const [leaderboardReviewComment, setLeaderboardReviewComment] = useState('');
   const [showLeaderboardReviewModal, setShowLeaderboardReviewModal] = useState(false);
   const [selectedLeaderboardForReview, setSelectedLeaderboardForReview] = useState<any>(null);
+  
+  // 竞品管理相关状态
+  const [leaderboardItems, setLeaderboardItems] = useState<any[]>([]);
+  const [leaderboardItemsPage, setLeaderboardItemsPage] = useState(1);
+  const [leaderboardItemsTotal, setLeaderboardItemsTotal] = useState(0);
+  const [leaderboardItemsLoading, setLeaderboardItemsLoading] = useState(false);
+  const [leaderboardItemsFilter, setLeaderboardItemsFilter] = useState<{
+    leaderboard_id?: number;
+    status?: 'all' | 'approved';
+    keyword?: string;
+  }>({});
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
@@ -424,6 +437,8 @@ const AdminDashboard: React.FC = () => {
         await loadLeaderboardVotes();
       } else if (activeTab === 'leaderboard-review') {
         await loadPendingLeaderboards();
+      } else if (activeTab === 'leaderboard-items') {
+        await loadLeaderboardItems();
       }
     } catch (error: any) {
       console.error('加载数据失败:', error);
@@ -5685,6 +5700,57 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab, leaderboardsPage, loadPendingLeaderboards]);
 
+  // 加载竞品列表
+  const loadLeaderboardItems = useCallback(async () => {
+    setLeaderboardItemsLoading(true);
+    try {
+      const offset = (leaderboardItemsPage - 1) * 50;
+      const data = await getLeaderboardItemsAdmin({
+        ...leaderboardItemsFilter,
+        limit: 50,
+        offset
+      });
+      setLeaderboardItems(data.items || []);
+      setLeaderboardItemsTotal(data.total || 0);
+    } catch (error: any) {
+      console.error('加载竞品列表失败:', error);
+      message.error(error?.response?.data?.detail || '加载竞品列表失败');
+    } finally {
+      setLeaderboardItemsLoading(false);
+    }
+  }, [leaderboardItemsPage, leaderboardItemsFilter]);
+
+  // 当切换到竞品管理标签页时，自动加载数据
+  useEffect(() => {
+    if (activeTab === 'leaderboard-items') {
+      const timer = setTimeout(() => {
+        loadLeaderboardItems();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, leaderboardItemsPage, leaderboardItemsFilter, loadLeaderboardItems]);
+
+  // 删除竞品
+  const handleDeleteLeaderboardItem = async (itemId: number, itemName: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除竞品"${itemName}"吗？此操作将级联删除该竞品的所有投票记录和图片文件，且无法恢复。`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteLeaderboardItemAdmin(itemId);
+          message.success('竞品已删除');
+          await loadLeaderboardItems();
+        } catch (error: any) {
+          console.error('删除竞品失败:', error);
+          message.error(error?.response?.data?.detail || '删除竞品失败');
+        }
+      }
+    });
+  };
+
   // 打开审核弹窗
   const handleOpenReviewModal = (leaderboard: any, action: 'approve' | 'reject') => {
     setSelectedLeaderboardForReview(leaderboard);
@@ -6951,6 +7017,241 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  // 渲染竞品管理
+  const renderLeaderboardItems = () => (
+    <div>
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        padding: '20px',
+        marginBottom: '20px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
+        <h2 style={{ marginBottom: '20px', fontSize: '20px', fontWeight: '600' }}>竞品管理</h2>
+        
+        {/* 筛选条件 */}
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          <input
+            type="number"
+            placeholder="榜单ID"
+            value={leaderboardItemsFilter.leaderboard_id || ''}
+            onChange={(e) => setLeaderboardItemsFilter({
+              ...leaderboardItemsFilter,
+              leaderboard_id: e.target.value ? parseInt(e.target.value) : undefined
+            })}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              width: '120px'
+            }}
+          />
+          <select
+            value={leaderboardItemsFilter.status || 'all'}
+            onChange={(e) => setLeaderboardItemsFilter({
+              ...leaderboardItemsFilter,
+              status: e.target.value as 'all' | 'approved'
+            })}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              width: '120px'
+            }}
+          >
+            <option value="all">全部状态</option>
+            <option value="approved">已通过</option>
+          </select>
+          <input
+            type="text"
+            placeholder="搜索竞品名称或描述"
+            value={leaderboardItemsFilter.keyword || ''}
+            onChange={(e) => setLeaderboardItemsFilter({
+              ...leaderboardItemsFilter,
+              keyword: e.target.value
+            })}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '14px',
+              flex: 1,
+              minWidth: '200px'
+            }}
+          />
+          <button
+            onClick={() => {
+              setLeaderboardItemsPage(1);
+              loadLeaderboardItems();
+            }}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              background: '#007bff',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            搜索
+          </button>
+          <button
+            onClick={() => {
+              setLeaderboardItemsFilter({});
+              setLeaderboardItemsPage(1);
+              loadLeaderboardItems();
+            }}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: 'white',
+              color: '#333',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            重置
+          </button>
+        </div>
+      </div>
+
+      {/* 竞品列表 */}
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        {leaderboardItemsLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>加载中...</div>
+        ) : leaderboardItems.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>暂无竞品</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>名称</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>榜单ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>描述</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>点赞数</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>点踩数</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>得分</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>状态</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>创建时间</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #dee2e6', fontWeight: '600' }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboardItems.map((item: any) => (
+                <tr key={item.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <td style={{ padding: '12px' }}>{item.id}</td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name}
+                  </td>
+                  <td style={{ padding: '12px' }}>{item.leaderboard_id}</td>
+                  <td style={{ padding: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.description || '-'}
+                  </td>
+                  <td style={{ padding: '12px' }}>{item.upvotes || 0}</td>
+                  <td style={{ padding: '12px' }}>{item.downvotes || 0}</td>
+                  <td style={{ padding: '12px' }}>{item.vote_score?.toFixed(2) || '0.00'}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: item.status === 'approved' ? '#d4edda' : '#f8d7da',
+                      color: item.status === 'approved' ? '#155724' : '#721c24',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {item.status === 'approved' ? '已通过' : item.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>
+                    {dayjs(item.created_at).format('YYYY-MM-DD HH:mm')}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <button
+                      onClick={() => handleDeleteLeaderboardItem(item.id, item.name)}
+                      style={{
+                        padding: '4px 12px',
+                        border: '1px solid #dc3545',
+                        background: 'white',
+                        color: '#dc3545',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 分页 */}
+      {leaderboardItemsTotal > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
+          <button
+            onClick={() => {
+              if (leaderboardItemsPage > 1) {
+                setLeaderboardItemsPage(leaderboardItemsPage - 1);
+              }
+            }}
+            disabled={leaderboardItemsPage === 1}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: leaderboardItemsPage === 1 ? '#f0f0f0' : 'white',
+              color: leaderboardItemsPage === 1 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: leaderboardItemsPage === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            上一页
+          </button>
+          <span style={{ padding: '8px 16px', lineHeight: '32px' }}>
+            第 {leaderboardItemsPage} 页，共 {Math.ceil(leaderboardItemsTotal / 50)} 页
+          </span>
+          <button
+            onClick={() => {
+              if (leaderboardItems.length === 50) {
+                setLeaderboardItemsPage(leaderboardItemsPage + 1);
+              }
+            }}
+            disabled={leaderboardItems.length < 50}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              background: leaderboardItems.length < 50 ? '#f0f0f0' : 'white',
+              color: leaderboardItems.length < 50 ? '#999' : '#333',
+              borderRadius: '4px',
+              cursor: leaderboardItems.length < 50 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            下一页
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   // 渲染榜单审核管理
   const renderLeaderboardReview = () => (
     <div>
@@ -7301,6 +7602,12 @@ const AdminDashboard: React.FC = () => {
               ✅ 榜单审核
             </button>
             <button 
+              className={getTabButtonClassName(activeTab === 'leaderboard-items')}
+              onClick={() => handleTabChange('leaderboard-items')}
+            >
+              🏆 竞品管理
+            </button>
+            <button 
               className={getTabButtonClassName(activeTab === 'reports')}
               onClick={() => handleTabChange('reports')}
             >
@@ -7405,6 +7712,7 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'flea-market-items' && renderFleaMarketItems()}
             {activeTab === 'leaderboard-votes' && renderLeaderboardVotes()}
             {activeTab === 'leaderboard-review' && renderLeaderboardReview()}
+            {activeTab === 'leaderboard-items' && renderLeaderboardItems()}
           </div>
         )}
       </div>
