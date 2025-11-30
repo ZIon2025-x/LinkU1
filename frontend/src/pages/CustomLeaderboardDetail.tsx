@@ -60,8 +60,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // 用于分享的描述（使用榜单描述，限制长度在200字符内，微信分享建议不超过200字符）
-  const shareDescription = leaderboard ? (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200) : '';
+  // 用于分享的描述（直接使用榜单描述，限制长度在200字符内，微信分享建议不超过200字符）
+  const shareDescription = leaderboard && leaderboard.description ? leaderboard.description.substring(0, 200) : '';
   // 修复：使用正确的路由路径 /leaderboard/custom/:leaderboardId
   const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
 
@@ -69,8 +69,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const updateWeixinMetaTags = useCallback(() => {
     if (!leaderboard) return;
     
-    // 限制描述长度在200字符内（微信分享建议不超过200字符）
-    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    // 直接使用榜单描述，限制长度在200字符内（微信分享建议不超过200字符）
+    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     const shareImageUrl = leaderboard.cover_image || `${window.location.origin}/static/favicon.png?v=2`;
     // 分享标题：榜单名称 + 平台名称
     const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
@@ -504,8 +504,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleShare = async () => {
     if (!leaderboard) return;
     
-    // 计算分享描述
-    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    // 直接使用榜单描述
+    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
     // 立即更新微信分享 meta 标签，确保微信爬虫能读取到最新值
     updateWeixinMetaTags();
@@ -594,8 +594,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleShareToSocial = (platform: string) => {
     if (!leaderboard) return;
     
-    // 计算分享描述（限制在200字符内）
-    const currentShareDescription = (leaderboard.description || `${leaderboard.name} - ${leaderboard.location}地区热门榜单`).substring(0, 200);
+    // 直接使用榜单描述（限制在200字符内）
+    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
     // 如果是微信分享（通过二维码），立即更新 meta 标签
     if (platform === 'wechat') {
