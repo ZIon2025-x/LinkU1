@@ -415,8 +415,8 @@ const CustomLeaderboardDetail: React.FC = () => {
       allWeixinDescs.forEach(tag => tag.remove());
       const allWeixinTitles = document.querySelectorAll('meta[name="weixin:title"]');
       allWeixinTitles.forEach(tag => tag.remove());
-      const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
-      allWeixinImages.forEach(tag => tag.remove());
+      const allWeixinImagesForRemoval = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImagesForRemoval.forEach(tag => tag.remove());
       
       // 重新插入正确的榜单描述标签（只使用榜单信息）
       const finalWeixinDesc = document.createElement('meta');
@@ -442,16 +442,39 @@ const CustomLeaderboardDetail: React.FC = () => {
       // 确保图片URL添加版本号避免缓存
       const finalShareImageUrl = shareImageUrl.includes('?') ? shareImageUrl : `${shareImageUrl}?v=2`;
       
+      // 强制移除所有图片标签（包括SEOHead创建的）
+      const allWeixinImagesFinal = document.querySelectorAll('meta[name="weixin:image"]');
+      allWeixinImagesFinal.forEach(tag => tag.remove());
+      const allOgImages = document.querySelectorAll('meta[property="og:image"]');
+      allOgImages.forEach(tag => tag.remove());
+      
+      // 重新创建微信图片标签（使用榜单封面图片，替换默认图片）
       const finalWeixinImage = document.createElement('meta');
       finalWeixinImage.setAttribute('name', 'weixin:image');
-      finalWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+      finalWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片
       document.head.insertBefore(finalWeixinImage, document.head.firstChild);
       
-      // 同时更新 og:image 确保一致性
+      // 同时更新 og:image 确保一致性（使用榜单封面图片）
       const finalOgImage = document.createElement('meta');
       finalOgImage.setAttribute('property', 'og:image');
       finalOgImage.content = finalShareImageUrl; // 使用榜单封面图片
       document.head.insertBefore(finalOgImage, document.head.firstChild);
+      
+      // 同时更新 og:image 相关属性
+      const ogImageWidth = document.createElement('meta');
+      ogImageWidth.setAttribute('property', 'og:image:width');
+      ogImageWidth.content = '1200';
+      document.head.insertBefore(ogImageWidth, document.head.firstChild);
+      
+      const ogImageHeight = document.createElement('meta');
+      ogImageHeight.setAttribute('property', 'og:image:height');
+      ogImageHeight.content = '630';
+      document.head.insertBefore(ogImageHeight, document.head.firstChild);
+      
+      const ogImageType = document.createElement('meta');
+      ogImageType.setAttribute('property', 'og:image:type');
+      ogImageType.content = 'image/png';
+      document.head.insertBefore(ogImageType, document.head.firstChild);
     }, 1000); // 延迟1秒，确保在SEOHead的useEffect之后执行
   }, [leaderboard, canonicalUrl]);
 

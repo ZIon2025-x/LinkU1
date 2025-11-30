@@ -163,13 +163,13 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     const isLeaderboardDetailPage = /\/leaderboard\/custom\/\d+/.test(window.location.pathname);
     
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
-    if (ogImage) {
+    // 对于榜单详情页，不设置 og:image 和 weixin:image，让 useLayoutEffect 来管理
+    if (ogImage && !isLeaderboardDetailPage) {
       // 确保og:image是完整URL（微信需要绝对URL）
       let fullOgImage = ogImage.startsWith('http') ? ogImage : `${window.location.origin}${ogImage}`;
       
-      // 对于榜单详情页，直接使用传入的图片，不进行 fallback
       // 对于其他页面，如果图片尺寸太小，才 fallback 到默认大图
-      if (!isLeaderboardDetailPage && !isValidOgImage(fullOgImage)) {
+      if (!isValidOgImage(fullOgImage)) {
         fullOgImage = 'https://www.link2ur.com/static/og-default.jpg'; // 1200×630 的默认图
       }
       
@@ -189,14 +189,11 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       updateMetaTag('og:image:type', 'image/png', true);
       
       // 微信分享图片（完整URL）
-      // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
-      if (!isLeaderboardDetailPage) {
-        const existingWeixinImage = document.querySelector('meta[name="weixin:image"][data-seo-head="true"]');
-        if (existingWeixinImage) {
-          existingWeixinImage.remove();
-        }
-        updateMetaTag('weixin:image', fullOgImage);
+      const existingWeixinImage = document.querySelector('meta[name="weixin:image"][data-seo-head="true"]');
+      if (existingWeixinImage) {
+        existingWeixinImage.remove();
       }
+      updateMetaTag('weixin:image', fullOgImage);
     }
     if (ogTitle && !isLeaderboardDetailPage) {
       // 对于榜单详情页，不设置微信标签，让 useLayoutEffect 来管理
