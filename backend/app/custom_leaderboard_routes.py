@@ -788,6 +788,10 @@ async def submit_item(
         except Exception:
             images_list = None
     
+    # 确保 created_at 和 updated_at 不为 None（处理旧数据）
+    created_at = new_item.created_at if new_item.created_at is not None else get_utc_time()
+    updated_at = new_item.updated_at if new_item.updated_at is not None else get_utc_time()
+    
     return {
         "id": new_item.id,
         "leaderboard_id": new_item.leaderboard_id,
@@ -806,8 +810,8 @@ async def submit_item(
         "user_vote": None,
         "user_vote_comment": None,
         "user_vote_is_anonymous": None,
-        "created_at": new_item.created_at,
-        "updated_at": new_item.updated_at
+        "created_at": created_at,
+        "updated_at": updated_at
     }
 
 
@@ -944,6 +948,10 @@ async def get_leaderboard_items(
                 "user_id": top_comment["user_id"]
             }
         
+        # 确保 created_at 和 updated_at 不为 None（处理旧数据）
+        created_at = item.created_at if item.created_at is not None else get_utc_time()
+        updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
+        
         item_dict = {
             "id": item.id,
             "leaderboard_id": item.leaderboard_id,
@@ -965,8 +973,8 @@ async def get_leaderboard_items(
             "display_comment": display_comment,  # 显示的留言（用户自己的或最多赞的）
             "display_comment_type": display_comment_type,  # 'user' 或 'top'
             "display_comment_info": display_comment_info,  # 留言的额外信息
-            "created_at": item.created_at,
-            "updated_at": item.updated_at
+            "created_at": created_at,
+            "updated_at": updated_at
         }
         items_out.append(item_dict)
     
@@ -1038,6 +1046,10 @@ async def get_item_detail(
         except Exception:
             images_list = None
     
+    # 确保 created_at 和 updated_at 不为 None（处理旧数据）
+    created_at = item.created_at if item.created_at is not None else get_utc_time()
+    updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
+    
     item_dict = {
         "id": item.id,
         "leaderboard_id": item.leaderboard_id,
@@ -1056,8 +1068,8 @@ async def get_item_detail(
         "user_vote": user_vote,
         "user_vote_comment": user_vote_comment,
         "user_vote_is_anonymous": user_vote_is_anonymous,
-        "created_at": item.created_at,
-        "updated_at": item.updated_at
+        "created_at": created_at,
+        "updated_at": updated_at
     }
     
     return item_dict
@@ -1816,38 +1828,58 @@ async def get_items_admin(
     # 构建返回数据
     items_out = []
     for item in items:
-        images_list = None
-        if item.images:
+        try:
+            images_list = None
+            if item.images:
+                try:
+                    images_list = json.loads(item.images)
+                except Exception:
+                    images_list = None
+            
+            # 确保 created_at 和 updated_at 不为 None（处理旧数据）
+            created_at = item.created_at if item.created_at is not None else get_utc_time()
+            updated_at = item.updated_at if item.updated_at is not None else get_utc_time()
+            
+            # 确保所有必需字段的类型正确，特别是 leaderboard_id 必须是整数
+            # 如果转换失败，跳过这条记录并记录错误
+            if item.leaderboard_id is None:
+                logger.warning(f"跳过记录 {item.id}：leaderboard_id 为 None")
+                continue
+            
             try:
-                images_list = json.loads(item.images)
-            except Exception:
-                images_list = None
-        
-        item_dict = {
-            "id": item.id,
-            "leaderboard_id": item.leaderboard_id,
-            "name": item.name,
-            "description": item.description,
-            "address": item.address,
-            "phone": item.phone,
-            "website": item.website,
-            "images": images_list,
-            "submitted_by": item.submitted_by,
-            "status": item.status,
-            "upvotes": item.upvotes,
-            "downvotes": item.downvotes,
-            "net_votes": item.net_votes,
-            "vote_score": item.vote_score,
-            "user_vote": None,
-            "user_vote_comment": None,
-            "user_vote_is_anonymous": None,
-            "display_comment": None,
-            "display_comment_type": None,
-            "display_comment_info": None,
-            "created_at": item.created_at,
-            "updated_at": item.updated_at
-        }
-        items_out.append(item_dict)
+                leaderboard_id_int = int(item.leaderboard_id)
+            except (ValueError, TypeError) as e:
+                logger.error(f"跳过记录 {item.id}：无法将 leaderboard_id 转换为整数: {item.leaderboard_id} (类型: {type(item.leaderboard_id)}), 错误: {e}")
+                continue
+            
+            item_dict = {
+                "id": int(item.id) if item.id is not None else 0,
+                "leaderboard_id": leaderboard_id_int,
+                "name": str(item.name) if item.name else "",
+                "description": item.description if item.description else None,
+                "address": item.address if item.address else None,
+                "phone": item.phone if item.phone else None,
+                "website": item.website if item.website else None,
+                "images": images_list,
+                "submitted_by": str(item.submitted_by) if item.submitted_by else "",
+                "status": str(item.status) if item.status else "approved",
+                "upvotes": int(item.upvotes) if item.upvotes is not None else 0,
+                "downvotes": int(item.downvotes) if item.downvotes is not None else 0,
+                "net_votes": int(item.net_votes) if item.net_votes is not None else 0,
+                "vote_score": float(item.vote_score) if item.vote_score is not None else 0.0,
+                "user_vote": None,
+                "user_vote_comment": None,
+                "user_vote_is_anonymous": None,
+                "display_comment": None,
+                "display_comment_type": None,
+                "display_comment_info": None,
+                "created_at": created_at,
+                "updated_at": updated_at
+            }
+            items_out.append(item_dict)
+        except Exception as e:
+            logger.error(f"处理竞品记录 {item.id} 时出错: {e}", exc_info=True)
+            continue
     
     return {
         "items": items_out,
