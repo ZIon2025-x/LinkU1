@@ -383,6 +383,9 @@ class CleanupTasks:
             
             # 清理跳蚤市场临时图片
             await self._cleanup_flea_market_temp_images()
+            
+            # 清理榜单封面临时图片
+            await self._cleanup_leaderboard_covers_temp_images()
                 
         except Exception as e:
             logger.error(f"清理未使用临时图片失败: {e}")
@@ -454,6 +457,71 @@ class CleanupTasks:
                 
         except Exception as e:
             logger.error(f"清理跳蚤市场临时图片失败: {e}")
+    
+    async def _cleanup_leaderboard_covers_temp_images(self):
+        """清理榜单封面临时图片（超过24小时未使用的临时图片）"""
+        try:
+            from pathlib import Path
+            import os
+            import shutil
+            from datetime import timedelta
+            from app.utils.time_utils import get_utc_time, file_timestamp_to_utc
+            
+            # 检测部署环境
+            RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+            if RAILWAY_ENVIRONMENT:
+                base_dir = Path("/data/uploads/public/images")
+            else:
+                base_dir = Path("uploads/public/images")
+            
+            temp_base_dir = base_dir / "leaderboard_covers"
+            
+            # 如果临时文件夹不存在，直接返回
+            if not temp_base_dir.exists():
+                return
+            
+            # 计算24小时前的时间
+            cutoff_time = get_utc_time() - timedelta(hours=24)
+            cleaned_count = 0
+            
+            # 遍历所有临时文件夹（temp_*）
+            for temp_dir in temp_base_dir.iterdir():
+                if temp_dir.is_dir() and temp_dir.name.startswith("temp_"):
+                    try:
+                        # 检查文件夹中的文件
+                        files_deleted = False
+                        for file_path in temp_dir.iterdir():
+                            if file_path.is_file():
+                                # 获取文件的修改时间（使用统一时间工具函数）
+                                file_mtime = file_timestamp_to_utc(file_path.stat().st_mtime)
+                                
+                                # 如果文件超过24小时未修改，删除它
+                                if file_mtime < cutoff_time:
+                                    try:
+                                        file_path.unlink()
+                                        cleaned_count += 1
+                                        files_deleted = True
+                                        logger.info(f"删除未使用的榜单封面临时图片: {file_path}")
+                                    except Exception as e:
+                                        logger.warning(f"删除榜单封面临时图片失败 {file_path}: {e}")
+                        
+                        # 如果文件夹为空，尝试删除它
+                        try:
+                            if not any(temp_dir.iterdir()):
+                                temp_dir.rmdir()
+                                logger.info(f"删除空的榜单封面临时文件夹: {temp_dir}")
+                        except Exception as e:
+                            logger.debug(f"删除榜单封面临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                            
+                    except Exception as e:
+                        logger.warning(f"处理榜单封面临时文件夹失败 {temp_dir}: {e}")
+                        continue
+            
+            if cleaned_count > 0:
+                logger.info(f"清理了 {cleaned_count} 个未使用的榜单封面临时图片")
+                
+        except Exception as e:
+            logger.error(f"清理榜单封面临时图片失败: {e}")
     
     async def _cleanup_orphan_files(self):
         """清理孤立文件（不在预期位置的文件，超过7天未使用，每周检查一次，使用分布式锁）"""

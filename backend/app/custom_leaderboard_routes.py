@@ -768,6 +768,43 @@ async def review_leaderboard(
                     logger.warning(f"移动封面图片文件失败: {e}，保持原URL")
     else:
         leaderboard.status = "rejected"
+        # 如果拒绝申请，清理临时封面图片
+        if leaderboard.cover_image:
+            cover_image_url = leaderboard.cover_image
+            if "/uploads/images/leaderboard_covers/temp_" in cover_image_url:
+                try:
+                    # 检测部署环境
+                    RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+                    if RAILWAY_ENVIRONMENT:
+                        base_dir = Path("/data/uploads/public/images")
+                    else:
+                        base_dir = Path("uploads/public/images")
+                    
+                    # 从URL中提取临时路径信息
+                    url_parts = cover_image_url.split("/uploads/images/leaderboard_covers/")
+                    if len(url_parts) == 2:
+                        temp_path = url_parts[1]
+                        temp_parts = temp_path.split("/")
+                        if len(temp_parts) >= 2:
+                            temp_user_id = temp_parts[0]  # temp_{user_id}
+                            filename = temp_parts[1]  # filename
+                            
+                            temp_dir = base_dir / "leaderboard_covers" / temp_user_id
+                            temp_file = temp_dir / filename
+                            
+                            if temp_file.exists():
+                                temp_file.unlink()
+                                logger.info(f"拒绝申请，删除临时封面图片: {temp_file}")
+                                
+                                # 如果文件夹为空，尝试删除它
+                                try:
+                                    if not any(temp_dir.iterdir()):
+                                        temp_dir.rmdir()
+                                        logger.info(f"删除空的临时文件夹: {temp_dir}")
+                                except Exception as e:
+                                    logger.debug(f"删除临时文件夹失败（可能不为空）: {temp_dir}: {e}")
+                except Exception as e:
+                    logger.warning(f"清理临时封面图片失败: {e}")
     
     leaderboard.reviewed_by = current_admin.id
     leaderboard.reviewed_at = get_utc_time()

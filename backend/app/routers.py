@@ -5686,8 +5686,16 @@ async def upload_public_image(
         elif category == "leaderboard_cover":
             sub_dir = "leaderboard_covers"
             filename_prefix = "leaderboard_cover_"
-            # 创建按用户ID或临时ID的子文件夹
-            resource_subdir = str(resource_id) if resource_id else f"temp_{user_id}"
+            # 创建按用户ID的临时子文件夹（申请时使用temp_，审核批准后移动到leaderboard_id文件夹）
+            if resource_id and resource_id.startswith("temp_"):
+                # 如果resource_id是temp_开头，直接使用（前端已传入temp_{user_id}）
+                resource_subdir = resource_id
+            elif resource_id and not resource_id.startswith("temp_"):
+                # 如果resource_id不是temp_开头，说明是正式榜单ID，直接使用
+                resource_subdir = str(resource_id)
+            else:
+                # 如果没有提供resource_id，使用临时文件夹
+                resource_subdir = f"temp_{user_id}"
         else:  # public
             sub_dir = "public"
             filename_prefix = "public_"
