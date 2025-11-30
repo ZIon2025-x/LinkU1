@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -293,6 +293,10 @@ const Home: React.FC = () => {
   // 热门帖子相关状态
   const [hotPosts, setHotPosts] = useState<any[]>([]);
   const [loadingHotPosts, setLoadingHotPosts] = useState(false);
+  
+  // 热门榜单相关状态
+  const [hotLeaderboards, setHotLeaderboards] = useState<any[]>([]);
+  const [loadingHotLeaderboards, setLoadingHotLeaderboards] = useState(false);
 
   // 移动端检测
   const [isMobile, setIsMobile] = useState(false);
@@ -529,6 +533,26 @@ const Home: React.FC = () => {
         setTasks([]);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  // 获取热门榜单数据 - 显示前3个
+  useEffect(() => {
+    setLoadingHotLeaderboards(true);
+    getCustomLeaderboards({ 
+      status: 'active',
+      sort: 'hot',
+      limit: 3,
+      offset: 0
+    })
+      .then(data => {
+        const leaderboardsList = data.items || [];
+        setHotLeaderboards(leaderboardsList.slice(0, 3)); // 只取前3个
+      })
+      .catch(error => {
+        console.error('获取热门榜单数据失败:', error);
+        setHotLeaderboards([]);
+      })
+      .finally(() => setLoadingHotLeaderboards(false));
   }, []);
 
   // 获取热门帖子数据 - 显示前3个
@@ -933,6 +957,196 @@ const Home: React.FC = () => {
               <div className={styles.heroStatLabel}>{t('home.totalTasksPublished')}</div>
             </div>
           </div>
+        </div>
+      </section>
+      
+      {/* 热门榜单区域 */}
+      <section className={styles.featuresSection} style={{ background: '#fff' }}>
+        <div className={styles.featuresContainer}>
+          <div style={{ textAlign: 'center', marginBottom: '16px', position: 'relative' }}>
+            <h2 className={styles.featuresTitle} style={{ color: '#1f2937', margin: 0 }}>
+              🏆 {language === 'zh' ? '热门榜单' : 'Hot Leaderboards'}
+            </h2>
+            <button
+              onClick={() => navigate(`/${language || 'zh'}/forum/leaderboard`)}
+              style={{
+                position: isMobile ? 'relative' : 'absolute',
+                right: isMobile ? 'auto' : 0,
+                top: isMobile ? 'auto' : '50%',
+                transform: isMobile ? 'none' : 'translateY(-50%)',
+                marginTop: isMobile ? '12px' : 0,
+                padding: isMobile ? '8px 16px' : '8px 20px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: isMobile ? '13px' : '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: isMobile ? 'inline-block' : 'block'
+              }}
+              onMouseEnter={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#059669';
+                  e.currentTarget.style.transform = 'translateY(-50%) translateY(-2px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.background = '#10b981';
+                  e.currentTarget.style.transform = 'translateY(-50%)';
+                }
+              }}
+            >
+              {t('common.more') || '更多'} →
+            </button>
+          </div>
+          <p className={styles.featuresSubtitle} style={{ color: '#6b7280' }}>
+            {language === 'zh' ? '发现最受欢迎的排行榜' : 'Discover the most popular leaderboards'}
+          </p>
+          
+          {loadingHotLeaderboards ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>🔄 {t('common.loading') || '加载中...'}</div>
+            </div>
+          ) : hotLeaderboards.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6b7280' }}>
+              <div>{language === 'zh' ? '暂无热门榜单' : 'No hot leaderboards'}</div>
+            </div>
+          ) : (
+            <div className={styles.featuresGrid} style={{ 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: isMobile ? '20px' : '24px'
+            }}>
+              {hotLeaderboards.map((leaderboard: any) => {
+                return (
+                  <div
+                    key={leaderboard.id}
+                    style={{
+                      background: '#ffffff',
+                      borderRadius: isMobile ? '16px' : '24px',
+                      padding: isMobile ? '20px' : '28px',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(-5px)';
+                        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.12)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
+                      }
+                    }}
+                    onClick={() => navigate(`/${language || 'zh'}/leaderboard/custom/${leaderboard.id}`)}
+                  >
+                    {/* 封面图片 */}
+                    {leaderboard.cover_image && (
+                      <div style={{
+                        width: '100%',
+                        height: isMobile ? '120px' : '160px',
+                        marginBottom: '16px',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        background: '#f1f5f9'
+                      }}>
+                        <img
+                          src={leaderboard.cover_image}
+                          alt={leaderboard.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* 标题 */}
+                    <h3 style={{
+                      fontSize: isMobile ? '16px' : '18px',
+                      fontWeight: '700',
+                      color: '#1a202c',
+                      marginBottom: isMobile ? '12px' : '16px',
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      lineHeight: '1.4'
+                    }}>
+                      🏆 {leaderboard.name}
+                    </h3>
+                    
+                    {/* 描述 */}
+                    {leaderboard.description && (
+                      <p style={{
+                        color: '#4a5568',
+                        fontSize: isMobile ? '13px' : '14px',
+                        lineHeight: '1.6',
+                        marginBottom: isMobile ? '12px' : '16px',
+                        margin: 0,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        flex: 1
+                      }}>
+                        {leaderboard.description}
+                      </p>
+                    )}
+                    
+                    {/* 标签和统计信息 */}
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      {leaderboard.location && (
+                        <span style={{
+                          padding: '4px 10px',
+                          background: '#f1f5f9',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          color: '#475569',
+                          border: '1px solid #e2e8f0',
+                          display: 'inline-block'
+                        }}>
+                          📍 {leaderboard.location}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* 统计信息 */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: isMobile ? '12px' : '16px',
+                      paddingTop: '12px',
+                      borderTop: '1px solid #e2e8f0',
+                      fontSize: '12px',
+                      color: '#64748b'
+                    }}>
+                      <span>📦 {leaderboard.item_count || 0} {language === 'zh' ? '个竞品' : 'items'}</span>
+                      <span>👍 {leaderboard.vote_count || 0} {language === 'zh' ? '票' : 'votes'}</span>
+                      <span>👁️ {leaderboard.view_count || 0} {language === 'zh' ? '浏览' : 'views'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
       

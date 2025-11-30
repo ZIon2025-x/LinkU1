@@ -13,6 +13,7 @@ import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
+import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import styles from './ForumSearch.module.css';
@@ -65,6 +66,8 @@ const ForumSearch: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const debouncedSearchKeyword = useDebouncedValue(searchKeyword, 500);
 
@@ -159,7 +162,7 @@ const ForumSearch: React.FC = () => {
                 }
                 window.location.reload();
               }}
-              onLoginClick={() => {}}
+              onLoginClick={() => setShowLoginModal(true)}
               systemSettings={systemSettings}
               unreadCount={messageUnreadCount}
             />
@@ -291,6 +294,25 @@ const ForumSearch: React.FC = () => {
           </Card>
         )}
       </div>
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
     </div>
   );
 };

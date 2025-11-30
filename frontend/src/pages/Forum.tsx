@@ -13,6 +13,7 @@ import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
+import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
 import styles from './Forum.module.css';
 
@@ -53,6 +54,8 @@ const Forum: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
 
   useEffect(() => {
@@ -125,7 +128,7 @@ const Forum: React.FC = () => {
                   }
                   window.location.reload();
                 }}
-                onLoginClick={() => {}}
+                onLoginClick={() => setShowLoginModal(true)}
                 systemSettings={systemSettings}
                 unreadCount={messageUnreadCount}
               />
@@ -281,6 +284,25 @@ const Forum: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
     </div>
   );
 };

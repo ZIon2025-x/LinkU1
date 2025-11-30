@@ -11,17 +11,25 @@ import {
   voteLeaderboardItem,
   reportLeaderboard
 } from '../api';
-import { fetchCurrentUser } from '../api';
+import { fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
 import { compressImage } from '../utils/imageCompression';
 import api from '../api';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import NotificationButton from '../components/NotificationButton';
+import HamburgerMenu from '../components/HamburgerMenu';
+import LoginModal from '../components/LoginModal';
+import { useUnreadMessages } from '../contexts/UnreadMessageContext';
+import styles from './ForumLeaderboard.module.css';
 
 const { Option } = Select;
 
 const CustomLeaderboardDetail: React.FC = () => {
-  const { leaderboardId } = useParams<{ leaderboardId: string }>();
+  const { lang: langParam, leaderboardId } = useParams<{ lang: string; leaderboardId: string }>();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const lang = langParam || language || 'zh';
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,12 +53,19 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadingFileList, setUploadingFileList] = useState<any[]>([]);
   const previewUrlsRef = useRef<Set<string>>(new Set());
+  const [systemSettings, setSystemSettings] = useState<any>({ vip_button_visible: false });
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   useEffect(() => {
     if (leaderboardId) {
       loadData();
       fetchCurrentUser().then(setUser).catch(() => setUser(null));
     }
+    getPublicSystemSettings().then(setSystemSettings).catch(() => {
+      setSystemSettings({ vip_button_visible: false });
+    });
     
     // 组件卸载时清理所有临时预览 URL
     return () => {
@@ -399,8 +414,41 @@ const CustomLeaderboardDetail: React.FC = () => {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
-      {/* 榜单头部 */}
+    <div className={styles.container}>
+      {/* 顶部导航栏 */}
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <div className={styles.logo} onClick={() => navigate(`/${lang}/forum/leaderboard`)} style={{ cursor: 'pointer' }}>
+            Link²Ur
+          </div>
+          <div className={styles.headerActions}>
+            <LanguageSwitcher />
+            <NotificationButton 
+              user={user}
+              unreadCount={unreadCount}
+              onNotificationClick={() => navigate(`/${lang}/forum/notifications`)}
+            />
+            <HamburgerMenu 
+              user={user}
+              onLogout={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                }
+                window.location.reload();
+              }}
+              onLoginClick={() => setShowLoginModal(true)}
+              systemSettings={systemSettings}
+              unreadCount={messageUnreadCount}
+            />
+          </div>
+        </div>
+      </header>
+      <div className={styles.headerSpacer} />
+
+      <div className={styles.content}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
+          {/* 榜单头部 */}
       <Card style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
           {leaderboard.cover_image && (
@@ -1048,6 +1096,27 @@ const CustomLeaderboardDetail: React.FC = () => {
           }
         `}
       </style>
+        </div>
+      </div>
+      
+      {/* 登录弹窗 */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+        onReopen={() => {
+          setShowLoginModal(true);
+        }}
+        showForgotPassword={showForgotPasswordModal}
+        onShowForgotPassword={() => {
+          setShowForgotPasswordModal(true);
+        }}
+        onHideForgotPassword={() => {
+          setShowForgotPasswordModal(false);
+        }}
+      />
     </div>
   );
 };
