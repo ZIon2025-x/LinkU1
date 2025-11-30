@@ -71,7 +71,17 @@ const CustomLeaderboardDetail: React.FC = () => {
     
     // 直接使用榜单描述，限制长度在200字符内（微信分享建议不超过200字符）
     const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
-    const shareImageUrl = leaderboard.cover_image || `${window.location.origin}/static/favicon.png?v=2`;
+    
+    // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
+    // 参考任务分享的逻辑：优先使用任务图片，否则使用默认logo
+    let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
+    if (leaderboard.cover_image) {
+      // 确保使用完整的URL（如果已经是完整URL则直接使用，否则拼接）
+      shareImageUrl = leaderboard.cover_image.startsWith('http') 
+        ? leaderboard.cover_image 
+        : `${window.location.origin}${leaderboard.cover_image}`;
+    }
+    
     // 分享标题：榜单名称 + 平台名称
     const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
     
@@ -158,7 +168,18 @@ const CustomLeaderboardDetail: React.FC = () => {
       existingOgTitle.remove();
     }
     updateMetaTag('og:title', shareTitle, true);
+    
+    // 设置og:image及其相关属性（参考任务分享）
+    const existingOgImage = document.querySelector('meta[property="og:image"]');
+    if (existingOgImage) {
+      existingOgImage.remove();
+    }
     updateMetaTag('og:image', shareImageUrl, true);
+    updateMetaTag('og:image:width', '1200', true);
+    updateMetaTag('og:image:height', '630', true);
+    updateMetaTag('og:image:type', 'image/png', true);
+    updateMetaTag('og:image:alt', shareTitle, true);
+    
     updateMetaTag('og:url', canonicalUrl, true);
     updateMetaTag('og:type', 'website', true);
     updateMetaTag('og:site_name', 'Link²Ur', true);
@@ -788,18 +809,20 @@ const CustomLeaderboardDetail: React.FC = () => {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px' }}>
           {/* 榜单头部 */}
       <Card style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
+        <div className="leaderboard-header-container" style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
           {leaderboard.cover_image && (
-            <Image
-              src={leaderboard.cover_image}
-              alt={leaderboard.name}
-              width={200}
-              height={150}
-              style={{ objectFit: 'cover', borderRadius: 8 }}
-              preview
-            />
+            <div className="leaderboard-cover-image-wrapper">
+              <Image
+                src={leaderboard.cover_image}
+                alt={leaderboard.name}
+                width={200}
+                height={150}
+                style={{ objectFit: 'cover', borderRadius: 8 }}
+                preview
+              />
+            </div>
           )}
-          <div style={{ flex: 1 }}>
+          <div className="leaderboard-header-content" style={{ flex: 1 }}>
             <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <TrophyOutlined style={{ color: '#ffc107' }} />
               {leaderboard.name}
@@ -1396,16 +1419,34 @@ const CustomLeaderboardDetail: React.FC = () => {
             }
 
             /* 榜单头部布局移动端优化 */
-            div[style*="display: flex"][style*="alignItems: start"][style*="gap: 16"] {
+            .leaderboard-header-container {
               flex-direction: column !important;
               gap: 12px !important;
             }
 
-            /* 封面图片移动端优化 */
-            img[alt="${leaderboard?.name}"] {
+            /* 封面图片容器移动端优化 */
+            .leaderboard-cover-image-wrapper {
               width: 100% !important;
-              height: auto !important;
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+            }
+
+            /* 封面图片移动端优化 */
+            .leaderboard-cover-image-wrapper .ant-image,
+            .leaderboard-cover-image-wrapper img {
+              width: 100% !important;
               max-width: 100% !important;
+              height: auto !important;
+              min-height: 150px !important;
+              max-height: 250px !important;
+              object-fit: cover !important;
+              border-radius: 8px !important;
+            }
+
+            /* 榜单头部内容区域移动端优化 */
+            .leaderboard-header-content {
+              width: 100% !important;
             }
 
             /* 标题移动端优化 */
@@ -1538,6 +1579,13 @@ const CustomLeaderboardDetail: React.FC = () => {
               padding: 8px !important;
             }
 
+            /* 封面图片超小屏幕优化 */
+            .leaderboard-cover-image-wrapper .ant-image,
+            .leaderboard-cover-image-wrapper img {
+              min-height: 120px !important;
+              max-height: 200px !important;
+            }
+
             h1[style*="margin: 0"] {
               font-size: 18px !important;
             }
@@ -1592,6 +1640,13 @@ const CustomLeaderboardDetail: React.FC = () => {
           @media (max-width: 360px) {
             div[style*="maxWidth: 1200"] {
               padding: 6px !important;
+            }
+
+            /* 封面图片极小屏幕优化 */
+            .leaderboard-cover-image-wrapper .ant-image,
+            .leaderboard-cover-image-wrapper img {
+              min-height: 100px !important;
+              max-height: 180px !important;
             }
 
             h1[style*="margin: 0"] {
