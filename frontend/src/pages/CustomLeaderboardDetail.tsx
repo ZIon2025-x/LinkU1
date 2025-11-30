@@ -226,9 +226,34 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleImageChange = (info: any) => {
     const { file, fileList } = info;
     
-    // 当用户选择新文件时（beforeUpload 返回 false 时，file 没有 status 或 status 为 undefined）
-    // 检查是否有 originFileObj，这表示是新选择的文件
-    if (file.originFileObj && (file.status === undefined || file.status === 'uploading')) {
+    console.log('handleImageChange 触发:', {
+      fileStatus: file.status,
+      hasOriginFileObj: !!file.originFileObj,
+      fileUid: file.uid,
+      fileListLength: fileList.length
+    });
+    
+    // 处理文件删除
+    if (file.status === 'removed') {
+      // 清理预览 URL
+      if (file.url && file.url.startsWith('blob:') && previewUrlsRef.current.has(file.url)) {
+        URL.revokeObjectURL(file.url);
+        previewUrlsRef.current.delete(file.url);
+      }
+      if (file.thumbUrl && file.thumbUrl.startsWith('blob:') && previewUrlsRef.current.has(file.thumbUrl)) {
+        URL.revokeObjectURL(file.thumbUrl);
+        previewUrlsRef.current.delete(file.thumbUrl);
+      }
+      
+      // 从上传列表中移除
+      setUploadingFileList(prev => prev.filter(f => f.uid !== file.uid));
+      return;
+    }
+    
+    // 当用户选择新文件时
+    // beforeUpload 返回 false 时，file 可能没有 status 或 status 为 undefined
+    // 关键：检查是否有 originFileObj，这表示是新选择的文件
+    if (file.originFileObj) {
       const fileToUpload = file.originFileObj;
       
       // 检查是否已经在列表中（避免重复添加）
@@ -238,7 +263,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       );
       
       if (existingFile) {
-        // 文件已存在，不重复添加
+        console.log('文件已存在，跳过:', fileToUpload.name);
         return;
       }
       
@@ -247,6 +272,12 @@ const CustomLeaderboardDetail: React.FC = () => {
       // 创建临时预览 URL
       const previewUrl = URL.createObjectURL(fileToUpload);
       previewUrlsRef.current.add(previewUrl);
+      
+      console.log('创建新文件预览:', {
+        tempId,
+        fileName: fileToUpload.name,
+        previewUrl: previewUrl.substring(0, 50) + '...'
+      });
       
       // 立即添加到上传列表，显示上传中状态和预览
       const newFile = {
@@ -258,12 +289,18 @@ const CustomLeaderboardDetail: React.FC = () => {
         thumbUrl: previewUrl // 缩略图预览
       };
       
-      setUploadingFileList(prev => [...prev, newFile]);
+      setUploadingFileList(prev => {
+        const newList = [...prev, newFile];
+        console.log('更新上传列表，当前文件数:', newList.length);
+        return newList;
+      });
       
       // 延迟执行压缩和上传，避免阻塞 UI
       setTimeout(async () => {
         try {
+          console.log('开始上传图片:', fileToUpload.name);
           const url = await handleImageUpload(fileToUpload);
+          console.log('图片上传成功:', url);
           
           // 清理临时预览 URL
           if (newFile.url && previewUrlsRef.current.has(newFile.url)) {
@@ -282,6 +319,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           setUploadingImages(prev => [...prev, url]);
           message.success('图片上传成功');
         } catch (error) {
+          console.error('图片上传失败:', error);
           // 清理临时预览 URL
           if (newFile.url && previewUrlsRef.current.has(newFile.url)) {
             URL.revokeObjectURL(newFile.url);
@@ -293,22 +331,8 @@ const CustomLeaderboardDetail: React.FC = () => {
           // 错误已在handleImageUpload中处理
         }
       }, 0);
-    }
-    
-    // 处理文件列表变化（删除等）
-    if (file.status === 'removed') {
-      // 清理预览 URL
-      if (file.url && file.url.startsWith('blob:') && previewUrlsRef.current.has(file.url)) {
-        URL.revokeObjectURL(file.url);
-        previewUrlsRef.current.delete(file.url);
-      }
-      if (file.thumbUrl && file.thumbUrl.startsWith('blob:') && previewUrlsRef.current.has(file.thumbUrl)) {
-        URL.revokeObjectURL(file.thumbUrl);
-        previewUrlsRef.current.delete(file.thumbUrl);
-      }
-      
-      // 从上传列表中移除
-      setUploadingFileList(prev => prev.filter(f => f.uid !== file.uid));
+    } else {
+      console.log('文件没有 originFileObj，跳过处理:', file);
     }
   };
 
@@ -707,7 +731,8 @@ const CustomLeaderboardDetail: React.FC = () => {
                   uid: `done-${index}`,
                   name: `image-${index}`,
                   status: 'done' as const,
-                  url
+                  url,
+                  thumbUrl: url // 确保有缩略图
                 })),
                 // 正在上传的图片
                 ...uploadingFileList
