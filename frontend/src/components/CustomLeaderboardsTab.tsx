@@ -193,54 +193,190 @@ const CustomLeaderboardsTab: React.FC = () => {
           <Empty description="暂无榜单" />
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 20 }}>
               {leaderboards.map(leaderboard => (
-                <Card
+                <div
                   key={leaderboard.id}
-                  hoverable
+                  style={{
+                    background: 'white',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  }}
                   onClick={() => {
                     const lang = language || 'zh';
                     navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
                   }}
-                  cover={leaderboard.cover_image ? (
-                    <img 
-                      alt={leaderboard.name} 
-                      src={leaderboard.cover_image} 
-                      style={{ height: 150, objectFit: 'cover' }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div style={{ height: 150, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <TrophyOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />
-                    </div>
-                  )}
                 >
-                  <Card.Meta
-                    title={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <TrophyOutlined style={{ color: '#ffc107' }} />
-                        <span style={{ fontWeight: 600 }}>{leaderboard.name}</span>
+                  {/* Header Section - 渐变色背景 */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '20px',
+                    color: 'white'
+                  }}>
+                    <div style={{
+                      fontSize: 22,
+                      fontWeight: 'bold',
+                      marginBottom: 8
+                    }}>
+                      {leaderboard.name}
+                    </div>
+                    <div style={{
+                      fontSize: 14,
+                      opacity: 0.9,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      <span>📍</span>
+                      <span>{leaderboard.location}</span>
+                    </div>
+                  </div>
+
+                  {/* Content Section */}
+                  <div style={{ padding: '20px' }}>
+                    {leaderboard.description && (
+                      <div style={{
+                        fontSize: 14,
+                        color: '#666',
+                        lineHeight: 1.6,
+                        marginBottom: 20,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {leaderboard.description}
                       </div>
-                    }
-                    description={
-                      <div>
-                        <Tag color="blue">{leaderboard.location}</Tag>
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#999', display: 'flex', gap: 12 }}>
-                          <span>📦 {leaderboard.item_count} 个竞品</span>
-                          <span>👍 {leaderboard.vote_count} 票</span>
-                          <span>👁️ {leaderboard.view_count} 浏览</span>
+                    )}
+
+                    {/* Stats Grid */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: 16,
+                      marginBottom: 16
+                    }}>
+                      <div style={{
+                        textAlign: 'center',
+                        padding: 12,
+                        background: '#f5f5f5',
+                        borderRadius: 8
+                      }}>
+                        <div style={{
+                          fontSize: 20,
+                          fontWeight: 'bold',
+                          color: '#667eea',
+                          marginBottom: 4
+                        }}>
+                          {leaderboard.item_count || 0}
                         </div>
-                        {leaderboard.description && (
-                          <div style={{ marginTop: 8, fontSize: 12, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {leaderboard.description}
-                          </div>
-                        )}
+                        <div style={{
+                          fontSize: 12,
+                          color: '#999'
+                        }}>
+                          竞品数
+                        </div>
                       </div>
-                    }
-                  />
-                </Card>
+                      <div style={{
+                        textAlign: 'center',
+                        padding: 12,
+                        background: '#f5f5f5',
+                        borderRadius: 8
+                      }}>
+                        <div style={{
+                          fontSize: 20,
+                          fontWeight: 'bold',
+                          color: '#667eea',
+                          marginBottom: 4
+                        }}>
+                          {leaderboard.vote_count || 0}
+                        </div>
+                        <div style={{
+                          fontSize: 12,
+                          color: '#999'
+                        }}>
+                          投票数
+                        </div>
+                      </div>
+                      <div style={{
+                        textAlign: 'center',
+                        padding: 12,
+                        background: '#f5f5f5',
+                        borderRadius: 8
+                      }}>
+                        <div style={{
+                          fontSize: 20,
+                          fontWeight: 'bold',
+                          color: '#667eea',
+                          marginBottom: 4
+                        }}>
+                          {leaderboard.view_count || 0}
+                        </div>
+                        <div style={{
+                          fontSize: 12,
+                          color: '#999'
+                        }}>
+                          浏览量
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{
+                    padding: '16px 20px',
+                    background: '#f9f9f9',
+                    borderTop: '1px solid #eee',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    {leaderboard.applicant && (
+                      <div style={{
+                        fontSize: 12,
+                        color: '#999'
+                      }}>
+                        申请者：{leaderboard.applicant.name || leaderboard.applicant_id || '匿名'}
+                      </div>
+                    )}
+                    <button
+                      style={{
+                        padding: '6px 16px',
+                        background: '#667eea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        fontSize: 14,
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#5568d3';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#667eea';
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const lang = language || 'zh';
+                        navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
+                      }}
+                    >
+                      查看详情
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
             

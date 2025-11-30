@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>榜单卡片设计示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .example-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .example-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        /* ========== 示例1：简洁卡片 ========== */
+        .card-simple {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .card-simple:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .card-simple .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .card-simple .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .card-simple .location {
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-simple .description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-simple .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .card-simple .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ========== 示例2：图片卡片 ========== */
+        .card-image {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .card-image:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-image .cover {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .card-image .cover::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+        }
+
+        .card-image .content {
+            padding: 20px;
+        }
+
+        .card-image .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .card-image .location {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-image .description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-image .stats {
+            display: flex;
+            gap: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+
+        .card-image .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* ========== 示例3：现代渐变卡片 ========== */
+        .card-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .card-modern:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+        }
+
+        .card-modern .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card-modern .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .card-modern .location {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-modern .description {
+            font-size: 14px;
+            opacity: 0.85;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-modern .stats {
+            display: flex;
+            gap: 24px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card-modern .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .card-modern .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .card-modern .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* ========== 示例4：信息丰富卡片 ========== */
+        .card-rich {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .card-rich:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-rich .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: white;
+        }
+
+        .card-rich .title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .card-rich .location {
+            font-size: 14px;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-rich .content-section {
+            padding: 20px;
+        }
+
+        .card-rich .description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-rich .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .card-rich .stat-box {
+            text-align: center;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .card-rich .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .card-rich .stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .card-rich .footer {
+            padding: 16px 20px;
+            background: #f9f9f9;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-rich .applicant {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .card-rich .view-btn {
+            padding: 6px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .card-rich .view-btn:hover {
+            background: #5568d3;
+        }
+
+        /* ========== 示例5：极简卡片 ========== */
+        .card-minimal {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 24px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .card-minimal:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+
+        .card-minimal .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .card-minimal .location {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-minimal .description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-minimal .stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* ========== 示例6：带标签卡片 ========== */
+        .card-tags {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .card-tags:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-tags .tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .card-tags .tag {
+            padding: 4px 10px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .card-tags .tag.hot {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .card-tags .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .card-tags .location {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-tags .description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-tags .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        /* 通用图标样式 */
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 榜单卡片设计示例</h1>
+        
+        <div class="examples-grid">
+            <!-- 示例1：简洁卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例1：简洁卡片</div>
+                <div class="card-simple">
+                    <div class="header">
+                        <div>
+                            <div class="title">London中餐榜</div>
+                            <div class="location">
+                                <span>📍</span> London
+                            </div>
+                        </div>
+                    </div>
+                    <div class="description">
+                        探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                    </div>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span>🏆</span>
+                            <span>12 竞品</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>👍</span>
+                            <span>156 投票</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>👁️</span>
+                            <span>1.2k 浏览</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 示例2：图片卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例2：图片卡片</div>
+                <div class="card-image">
+                    <div class="cover">
+                        🍜 中餐榜
+                    </div>
+                    <div class="content">
+                        <div class="title">London中餐榜</div>
+                        <div class="location">
+                            <span>📍</span> London
+                        </div>
+                        <div class="description">
+                            探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                        </div>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span>🏆</span>
+                                <span>12 竞品</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>156 投票</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1.2k 浏览</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 示例3：现代渐变卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例3：现代渐变卡片</div>
+                <div class="card-modern">
+                    <div class="badge">热门榜单</div>
+                    <div class="title">London中餐榜</div>
+                    <div class="location">
+                        <span>📍</span> London
+                    </div>
+                    <div class="description">
+                        探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                    </div>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">竞品</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">156</div>
+                            <div class="stat-label">投票</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">1.2k</div>
+                            <div class="stat-label">浏览</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 示例4：信息丰富卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例4：信息丰富卡片</div>
+                <div class="card-rich">
+                    <div class="header-section">
+                        <div class="title">London中餐榜</div>
+                        <div class="location">
+                            <span>📍</span> London
+                        </div>
+                    </div>
+                    <div class="content-section">
+                        <div class="description">
+                            探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-value">12</div>
+                                <div class="stat-label">竞品数</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value">156</div>
+                                <div class="stat-label">投票数</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value">1.2k</div>
+                                <div class="stat-label">浏览量</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <div class="applicant">申请者：User123</div>
+                        <button class="view-btn">查看详情</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 示例5：极简卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例5：极简卡片</div>
+                <div class="card-minimal">
+                    <div class="title">London中餐榜</div>
+                    <div class="location">
+                        <span>📍</span> London
+                    </div>
+                    <div class="description">
+                        探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                    </div>
+                    <div class="stats">
+                        <span>🏆 12</span>
+                        <span>👍 156</span>
+                        <span>👁️ 1.2k</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 示例6：带标签卡片 -->
+            <div class="example-section">
+                <div class="example-title">示例6：带标签卡片</div>
+                <div class="card-tags">
+                    <div class="tags">
+                        <div class="tag hot">🔥 热门</div>
+                        <div class="tag">📍 London</div>
+                    </div>
+                    <div class="title">London中餐榜</div>
+                    <div class="location">
+                        <span>📍</span> London
+                    </div>
+                    <div class="description">
+                        探索伦敦最受欢迎的中餐厅，从传统粤菜到现代融合料理，发现你的下一顿美食之旅。
+                    </div>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span>🏆</span>
+                            <span>12 竞品</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>👍</span>
+                            <span>156 投票</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>👁️</span>
+                            <span>1.2k 浏览</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

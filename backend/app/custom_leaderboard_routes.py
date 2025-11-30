@@ -384,6 +384,37 @@ async def get_leaderboards(
     result = await db.execute(query)
     leaderboards = result.scalars().all()
     
+    # 计算每个榜单的浏览量（数据库值 + Redis增量）
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            # 批量获取Redis中的浏览量增量
+            for leaderboard in leaderboards:
+                redis_key = f"leaderboard:view_count:{leaderboard.id}"
+                redis_view_count = int(redis_client.get(redis_key) or 0)
+                if redis_view_count > 0:
+                    # 创建临时属性存储显示用的浏览量
+                    leaderboard.display_view_count = leaderboard.view_count + redis_view_count
+                else:
+                    leaderboard.display_view_count = leaderboard.view_count
+        else:
+            # Redis不可用，使用数据库值
+            for leaderboard in leaderboards:
+                leaderboard.display_view_count = leaderboard.view_count
+    except Exception as e:
+        # Redis操作失败，使用数据库值
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Redis view count query failed, using DB values: {e}")
+        for leaderboard in leaderboards:
+            leaderboard.display_view_count = leaderboard.view_count
+    
+    # 将display_view_count赋值给view_count，以便Schema正确序列化
+    for leaderboard in leaderboards:
+        leaderboard.view_count = getattr(leaderboard, 'display_view_count', leaderboard.view_count)
+    
     return {
         "items": leaderboards,
         "total": total,
