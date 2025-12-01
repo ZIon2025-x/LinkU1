@@ -1867,7 +1867,7 @@ const CustomLeaderboardDetail: React.FC = () => {
               reportForm.resetFields();
             } catch (error: any) {
               console.error('举报失败:', error);
-              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed'));
+              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);
