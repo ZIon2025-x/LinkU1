@@ -63,8 +63,28 @@ const CustomLeaderboardDetail: React.FC = () => {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // 用于分享的描述（直接使用榜单描述，限制长度在200字符内，微信分享建议不超过200字符）
-  const shareDescription = leaderboard && leaderboard.description ? leaderboard.description.substring(0, 200) : '';
+  // 生成分享描述（在榜单描述后追加提示文字）
+  const getShareDescription = (description: string | null | undefined): string => {
+    const appendText = "✨ 真实留学生评价，禁止刷票。欢迎在英留学生投下真实一票与真实评价，帮助新生开启更好的留学生活！";
+    const maxLength = 200;
+    
+    if (!description) {
+      return appendText.substring(0, maxLength);
+    }
+    
+    // 计算可用长度（减去追加文字和分隔符）
+    const availableLength = maxLength - appendText.length - 3; // 3个字符用于分隔符 " - "
+    
+    if (description.length <= availableLength) {
+      return `${description} - ${appendText}`;
+    } else {
+      const truncated = description.substring(0, availableLength);
+      return `${truncated}... - ${appendText}`;
+    }
+  };
+
+  // 用于分享的描述（在榜单描述后追加提示文字，限制长度在200字符内，微信分享建议不超过200字符）
+  const shareDescription = leaderboard ? getShareDescription(leaderboard.description) : '';
   // 修复：使用正确的路由路径 /leaderboard/custom/:leaderboardId
   const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
   
@@ -120,8 +140,8 @@ const CustomLeaderboardDetail: React.FC = () => {
     
     if (!leaderboard) return;
     
-    // 直接使用榜单描述，限制长度在200字符内（微信分享建议不超过200字符）
-    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
+    // 使用辅助函数生成分享描述（在榜单描述后追加提示文字）
+    const currentShareDescription = getShareDescription(leaderboard.description);
     
     // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
     // 参考任务分享的逻辑：优先使用任务图片，否则使用默认logo
@@ -886,8 +906,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleShare = async () => {
     if (!leaderboard) return;
     
-    // 直接使用榜单描述
-    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
+    // 使用辅助函数生成分享描述（在榜单描述后追加提示文字）
+    const currentShareDescription = getShareDescription(leaderboard.description);
     
     // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
     // 与 useLayoutEffect 保持一致，确保图片URL包含版本号避免缓存
@@ -1102,8 +1122,8 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleShareToSocial = (platform: string) => {
     if (!leaderboard) return;
     
-    // 直接使用榜单描述（限制在200字符内）
-    const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
+    // 使用辅助函数生成分享描述（在榜单描述后追加提示文字）
+    const currentShareDescription = getShareDescription(leaderboard.description);
     
     // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
     // 与 useLayoutEffect 和 handleShare 保持一致，确保图片URL包含版本号避免缓存
@@ -1235,7 +1255,7 @@ const CustomLeaderboardDetail: React.FC = () => {
             keywords={seoKeywords}
             canonicalUrl={canonicalUrl}
             ogTitle={`${leaderboard.name} - Link²Ur榜单`}
-            ogDescription={leaderboard.description ? leaderboard.description.substring(0, 200) : seoDescription}
+            ogDescription={getShareDescription(leaderboard.description)}
             ogImage={(() => {
               // 确保图片URL是完整的HTTPS URL
               if (!leaderboard.cover_image) {
@@ -1254,7 +1274,7 @@ const CustomLeaderboardDetail: React.FC = () => {
             })()}
             ogUrl={canonicalUrl}
             twitterTitle={leaderboard.name}
-            twitterDescription={leaderboard.description ? leaderboard.description.substring(0, 200) : seoDescription}
+            twitterDescription={getShareDescription(leaderboard.description)}
             twitterImage={(() => {
               // 确保图片URL是完整的HTTPS URL
               if (!leaderboard.cover_image) {
