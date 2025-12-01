@@ -157,8 +157,6 @@
           var allDescriptions = document.querySelectorAll('meta[name="description"]');
           allDescriptions.forEach(function(tag) { tag.remove(); });
           
-          console.log('[index.html] 已移除所有默认的微信和OG标签，等待React设置正确的标签');
-          
           // 如果是榜单详情页，立即通过API获取榜单信息并设置meta标签（用于微信爬虫）
           if (isLeaderboardDetailPage) {
             // 从URL中提取榜单ID
@@ -252,12 +250,10 @@
                     ogImageTypeTag.setAttribute('property', 'og:image:type');
                     ogImageTypeTag.content = 'image/png';
                     document.head.insertBefore(ogImageTypeTag, document.head.firstChild);
-                    
-                    console.log('[index.html] 已通过API设置榜单meta标签，图片URL:', shareImageUrl);
                   }
                 })
                 .catch(function(error) {
-                  console.warn('[index.html] 获取榜单信息失败，将等待React设置:', error);
+                  // 获取榜单信息失败，将等待React设置
                 });
             }
           }

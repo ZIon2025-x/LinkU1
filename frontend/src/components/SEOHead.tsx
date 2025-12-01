@@ -163,7 +163,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
     const isLeaderboardDetailPage = /\/leaderboard\/custom\/\d+/.test(window.location.pathname);
     
     if (isLeaderboardDetailPage) {
-      console.log('[SEOHead] 检测到榜单详情页，跳过图片设置，让 useLayoutEffect 管理');
+      // 跳过图片设置，让 useLayoutEffect 管理
     }
     
     // 更新Open Graph图片标签和微信分享标签（微信会优先读取这些标签，如果没有则使用og标签）
