@@ -158,6 +158,109 @@
           allDescriptions.forEach(function(tag) { tag.remove(); });
           
           console.log('[index.html] 已移除所有默认的微信和OG标签，等待React设置正确的标签');
+          
+          // 如果是榜单详情页，立即通过API获取榜单信息并设置meta标签（用于微信爬虫）
+          if (isLeaderboardDetailPage) {
+            // 从URL中提取榜单ID
+            var pathMatch = window.location.pathname.match(/\/leaderboard\/custom\/(\d+)/);
+            if (pathMatch && pathMatch[1]) {
+              var leaderboardId = pathMatch[1];
+              var apiUrl = 'https://api.link2ur.com/api/custom-leaderboards/' + leaderboardId;
+              
+              // 立即通过fetch获取榜单信息（同步方式，但使用异步fetch）
+              fetch(apiUrl)
+                .then(function(response) {
+                  if (response.ok) {
+                    return response.json();
+                  }
+                  throw new Error('Failed to fetch leaderboard');
+                })
+                .then(function(leaderboard) {
+                  if (leaderboard && leaderboard.cover_image) {
+                    // 处理图片URL，确保是完整的HTTPS URL
+                    var coverImageUrl = leaderboard.cover_image;
+                    var shareImageUrl = coverImageUrl;
+                    
+                    if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
+                      shareImageUrl = coverImageUrl.includes('?') ? coverImageUrl : coverImageUrl + '?v=2';
+                    } else if (coverImageUrl.startsWith('//')) {
+                      shareImageUrl = 'https:' + coverImageUrl;
+                      if (!shareImageUrl.includes('?')) {
+                        shareImageUrl = shareImageUrl + '?v=2';
+                      }
+                    } else if (coverImageUrl.startsWith('/')) {
+                      shareImageUrl = window.location.origin + coverImageUrl;
+                      if (!shareImageUrl.includes('?')) {
+                        shareImageUrl = shareImageUrl + '?v=2';
+                      }
+                    } else {
+                      shareImageUrl = window.location.origin + '/' + coverImageUrl;
+                      if (!shareImageUrl.includes('?')) {
+                        shareImageUrl = shareImageUrl + '?v=2';
+                      }
+                    }
+                    
+                    // 设置标题
+                    var shareTitle = (leaderboard.name || '榜单') + ' - Link²Ur榜单';
+                    var titleTag = document.createElement('meta');
+                    titleTag.setAttribute('property', 'og:title');
+                    titleTag.content = shareTitle;
+                    document.head.insertBefore(titleTag, document.head.firstChild);
+                    
+                    var weixinTitleTag = document.createElement('meta');
+                    weixinTitleTag.setAttribute('name', 'weixin:title');
+                    weixinTitleTag.content = shareTitle;
+                    document.head.insertBefore(weixinTitleTag, document.head.firstChild);
+                    
+                    // 设置描述
+                    var shareDescription = (leaderboard.description || '').substring(0, 200);
+                    if (shareDescription) {
+                      var descTag = document.createElement('meta');
+                      descTag.setAttribute('property', 'og:description');
+                      descTag.content = shareDescription;
+                      document.head.insertBefore(descTag, document.head.firstChild);
+                      
+                      var weixinDescTag = document.createElement('meta');
+                      weixinDescTag.setAttribute('name', 'weixin:description');
+                      weixinDescTag.content = shareDescription;
+                      document.head.insertBefore(weixinDescTag, document.head.firstChild);
+                    }
+                    
+                    // 设置图片（关键：微信爬虫会读取这个）
+                    var ogImageTag = document.createElement('meta');
+                    ogImageTag.setAttribute('property', 'og:image');
+                    ogImageTag.content = shareImageUrl;
+                    document.head.insertBefore(ogImageTag, document.head.firstChild);
+                    
+                    var weixinImageTag = document.createElement('meta');
+                    weixinImageTag.setAttribute('name', 'weixin:image');
+                    weixinImageTag.content = shareImageUrl;
+                    document.head.insertBefore(weixinImageTag, document.head.firstChild);
+                    
+                    // 设置图片属性
+                    var ogImageWidthTag = document.createElement('meta');
+                    ogImageWidthTag.setAttribute('property', 'og:image:width');
+                    ogImageWidthTag.content = '1200';
+                    document.head.insertBefore(ogImageWidthTag, document.head.firstChild);
+                    
+                    var ogImageHeightTag = document.createElement('meta');
+                    ogImageHeightTag.setAttribute('property', 'og:image:height');
+                    ogImageHeightTag.content = '630';
+                    document.head.insertBefore(ogImageHeightTag, document.head.firstChild);
+                    
+                    var ogImageTypeTag = document.createElement('meta');
+                    ogImageTypeTag.setAttribute('property', 'og:image:type');
+                    ogImageTypeTag.content = 'image/png';
+                    document.head.insertBefore(ogImageTypeTag, document.head.firstChild);
+                    
+                    console.log('[index.html] 已通过API设置榜单meta标签，图片URL:', shareImageUrl);
+                  }
+                })
+                .catch(function(error) {
+                  console.warn('[index.html] 获取榜单信息失败，将等待React设置:', error);
+                });
+            }
+          }
         }
       })();
     </script>
