@@ -51,9 +51,9 @@ const ForumPostStructuredData: React.FC<ForumPostStructuredDataProps> = ({ post,
     "dateModified": formatISO8601(post.updated_at || post.created_at),
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://www.link2ur.com/${language}/forum/posts/${post.id}`
+      "@id": `https://www.link2ur.com/${language}/forum/post/${post.id}`
     },
-    "url": `https://www.link2ur.com/${language}/forum/posts/${post.id}`,
+    "url": `https://www.link2ur.com/${language}/forum/post/${post.id}`,
     "articleSection": post.category || "Forum",
     "interactionStatistic": [
       {

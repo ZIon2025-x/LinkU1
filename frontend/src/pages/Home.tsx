@@ -1261,7 +1261,7 @@ const Home: React.FC = () => {
                         e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
                       }
                     }}
-                    onClick={() => navigate(`/forum/post/${post.id}`)}
+                    onClick={() => navigate(`/${language}/forum/post/${post.id}`)}
                   >
                     {/* 板块标签 */}
                     {post.category && (

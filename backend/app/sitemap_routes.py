@@ -7,10 +7,10 @@ import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 from app.deps import get_db
-from app.models import Task, FleaMarketItem, ForumPost
+from app.models import Task, FleaMarketItem, ForumPost, CustomLeaderboard
 from app.utils.time_utils import get_utc_time
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,8 @@ def generate_sitemap(db: Session = Depends(get_db)):
             ("/zh/flea-market", "0.8", "daily"),  # 新增
             ("/en/forum", "0.8", "daily"),        # 新增
             ("/zh/forum", "0.8", "daily"),        # 新增
+            ("/en/forum/leaderboard", "0.8", "daily"),  # 榜单列表页
+            ("/zh/forum/leaderboard", "0.8", "daily"),  # 榜单列表页
         ]
         
         for path, priority, changefreq in main_pages:
@@ -108,13 +110,32 @@ def generate_sitemap(db: Session = Depends(get_db)):
                 
                 for lang in ["en", "zh"]:
                     sitemap_lines.append(f'  <url>')
-                    sitemap_lines.append(f'    <loc>{base_url}/{lang}/forum/posts/{post.id}</loc>')
+                    sitemap_lines.append(f'    <loc>{base_url}/{lang}/forum/post/{post.id}</loc>')
                     sitemap_lines.append(f'    <lastmod>{post_lastmod}</lastmod>')
                     sitemap_lines.append(f'    <changefreq>weekly</changefreq>')
                     sitemap_lines.append(f'    <priority>0.6</priority>')
                     sitemap_lines.append(f'  </url>')
         except Exception as e:
             logger.warning(f"添加论坛帖子到sitemap失败: {e}")
+        
+        # 添加自定义榜单详情页
+        try:
+            leaderboards = db.query(CustomLeaderboard).filter(
+                CustomLeaderboard.status == "active"
+            ).all()
+            
+            for leaderboard in leaderboards:
+                leaderboard_lastmod = leaderboard.updated_at.strftime("%Y-%m-%d") if leaderboard.updated_at else leaderboard.created_at.strftime("%Y-%m-%d")
+                
+                for lang in ["en", "zh"]:
+                    sitemap_lines.append(f'  <url>')
+                    sitemap_lines.append(f'    <loc>{base_url}/{lang}/leaderboard/custom/{leaderboard.id}</loc>')
+                    sitemap_lines.append(f'    <lastmod>{leaderboard_lastmod}</lastmod>')
+                    sitemap_lines.append(f'    <changefreq>weekly</changefreq>')
+                    sitemap_lines.append(f'    <priority>0.7</priority>')
+                    sitemap_lines.append(f'  </url>')
+        except Exception as e:
+            logger.warning(f"添加自定义榜单到sitemap失败: {e}")
         
         sitemap_lines.append('</urlset>')
         sitemap_xml = '\n'.join(sitemap_lines)

@@ -37,8 +37,8 @@ const HreflangManager: React.FC<HreflangManagerProps> = ({ type, id, path }) => 
     }
     if (type === 'forum-post' && id) {
       return {
-        'en-GB': `${base}/en/forum/posts/${id}`,
-        'zh-CN': `${base}/zh/forum/posts/${id}`,
+        'en-GB': `${base}/en/forum/post/${id}`,
+        'zh-CN': `${base}/zh/forum/post/${id}`,
       };
     }
     if (type === 'page') {
