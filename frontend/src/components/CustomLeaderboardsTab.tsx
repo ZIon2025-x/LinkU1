@@ -93,16 +93,16 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       
       // 处理不同类型的错误
       if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
-        message.error('没有权限访问');
+        message.error(t('forum.noPermission'));
       } else if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
         message.warning(`请求过于频繁，请在 ${retryAfter} 秒后重试`);
       } else if (error.response?.status >= 500) {
         message.error('服务器错误，请稍后重试');
       } else {
-        message.error(error.response?.data?.detail || '加载失败，请稍后重试');
+        message.error(error.response?.data?.detail || t('forum.loadingFailed'));
       }
     } finally {
       setLoading(false);
@@ -152,8 +152,8 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       }
     } catch (error: any) {
       console.error('图片上传失败:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || '上传失败';
-      message.error(`图片上传失败: ${errorMessage}`);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || t('forum.imageUploadFailed');
+      message.error(`${t('forum.imageUploadFailed')}: ${errorMessage}`);
       throw error;
     } finally {
       setUploadingCoverImage(false);
@@ -193,7 +193,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         console.log('封面图片上传成功:', url);
         setCoverImageUrl(url);
         form.setFieldsValue({ cover_image: url });
-        message.success('图片上传成功');
+        message.success(t('forum.imageUploadSuccess'));
       } catch (error) {
         console.error('封面图片上传失败:', error);
         // 错误已在handleImageUpload中处理
@@ -216,27 +216,27 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         cover_image: coverImageUrl || values.cover_image || null
       };
       await applyCustomLeaderboard(submitData);
-      message.success('榜单申请已提交，等待审核');
+      message.success(t('forum.applySubmitted'));
       setShowApplyModal(false);
       form.resetFields();
       setCoverImageUrl('');
       loadLeaderboards();
     } catch (error: any) {
       console.error('申请榜单失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '申请失败';
+      const errorMsg = error.response?.data?.detail || error.message || t('forum.applyFailed');
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {
         if (errorMsg.includes('已存在')) {
-          message.error('该地区已存在相同名称的榜单');
+          message.error(t('forum.leaderboardExists'));
         } else {
           message.error(errorMsg);
         }
       } else if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.error(`操作过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.error(t('forum.operationTooFrequent', { retryAfter }));
       } else {
         message.error(errorMsg);
       }
@@ -253,7 +253,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       {/* 筛选、搜索和申请按钮 */}
       <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <Select
-          placeholder="选择地区"
+          placeholder={t('forum.selectLocation')}
           style={{ width: 150 }}
           allowClear
           value={selectedLocation}
@@ -271,23 +271,23 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         </Select>
         
         <Select
-          placeholder="排序方式"
+          placeholder={t('forum.sortBy')}
           style={{ width: 150 }}
           value={sortBy}
           onChange={setSortBy}
         >
           <Option value="latest">
-            <ClockCircleOutlined /> 最新
+            <ClockCircleOutlined /> {t('forum.latest')}
           </Option>
           <Option value="hot">
-            <FireOutlined /> 热门
+            <FireOutlined /> {t('forum.hot')}
           </Option>
-          <Option value="votes">投票数</Option>
-          <Option value="items">竞品数</Option>
+          <Option value="votes">{t('forum.votes')}</Option>
+          <Option value="items">{t('forum.items')}</Option>
         </Select>
         
         <Input.Search
-          placeholder="搜索榜单名称或描述"
+          placeholder={t('forum.searchLeaderboard')}
           style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
@@ -309,14 +309,14 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
             setShowApplyModal(true);
           }}
         >
-          申请新榜单
+          {t('forum.applyNewLeaderboard')}
         </Button>
       </div>
 
       {/* 榜单列表 */}
       <Spin spinning={loading}>
         {leaderboards.length === 0 && !loading ? (
-          <Empty description="暂无榜单" />
+          <Empty description={t('forum.noLeaderboards')} />
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 20 }}>
@@ -421,7 +421,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                           fontSize: 12,
                           color: '#999'
                         }}>
-                          竞品数
+                          {t('forum.itemCount')}
                         </div>
                       </div>
                       <div style={{
@@ -442,7 +442,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                           fontSize: 12,
                           color: '#999'
                         }}>
-                          投票数
+                          {t('forum.voteCount')}
                         </div>
                       </div>
                       <div style={{
@@ -463,7 +463,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                           fontSize: 12,
                           color: '#999'
                         }}>
-                          浏览量
+                          {t('forum.viewCount')}
                         </div>
                       </div>
                     </div>
@@ -482,7 +482,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                       fontSize: 12,
                       color: '#999'
                     }}>
-                      申请者：{leaderboard.applicant?.name || leaderboard.applicant_id || '匿名'}
+                      {t('forum.applicant')}：{leaderboard.applicant?.name || leaderboard.applicant_id || t('forum.anonymous')}
                     </div>
                     <button
                       style={{
@@ -507,7 +507,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                         navigate(`/${lang}/leaderboard/custom/${leaderboard.id}`);
                       }}
                     >
-                      查看详情
+                      {t('forum.viewDetails')}
                     </button>
                   </div>
                 </div>
@@ -524,7 +524,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                   onChange={handlePageChange}
                   showSizeChanger={false}
                   showQuickJumper
-                  showTotal={(total) => `共 ${total} 个榜单`}
+                  showTotal={(total) => t('forum.totalLeaderboards', { total })}
                 />
               </div>
             )}
@@ -534,7 +534,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
 
       {/* 申请榜单弹窗 */}
       <Modal
-        title="申请新榜单"
+        title={t('forum.applyNewLeaderboard')}
         open={showApplyModal}
         onCancel={() => {
           setShowApplyModal(false);
@@ -552,18 +552,18 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         >
           <Form.Item
             name="name"
-            label="榜单名称"
-            rules={[{ required: true, message: '请输入榜单名称' }]}
+            label={t('forum.leaderboardName')}
+            rules={[{ required: true, message: t('forum.enterLeaderboardName') }]}
           >
-            <Input placeholder="例如：London中餐榜" />
+            <Input placeholder={t('forum.leaderboardNamePlaceholder')} />
           </Form.Item>
           
           <Form.Item
             name="location"
-            label="地区"
-            rules={[{ required: true, message: '请选择地区' }]}
+            label={t('forum.location')}
+            rules={[{ required: true, message: t('forum.selectLocationRequired') }]}
           >
-            <Select placeholder="选择地区">
+            <Select placeholder={t('forum.selectLocationPlaceholder')}>
               {LOCATIONS.map(loc => (
                 <Option key={loc} value={loc}>{loc}</Option>
               ))}
@@ -572,23 +572,23 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
           
           <Form.Item
             name="description"
-            label="榜单描述"
+            label={t('forum.leaderboardDescription')}
           >
-            <Input.TextArea rows={4} placeholder="描述这个榜单的目的和范围" />
+            <Input.TextArea rows={4} placeholder={t('forum.leaderboardDescriptionPlaceholder')} />
           </Form.Item>
           
           <Form.Item
             name="application_reason"
-            label="申请理由"
-            rules={[{ required: true, message: '请说明申请理由' }]}
+            label={t('forum.applicationReason')}
+            rules={[{ required: true, message: t('forum.applicationReasonRequired') }]}
           >
-            <Input.TextArea rows={3} placeholder="为什么需要创建这个榜单？" />
+            <Input.TextArea rows={3} placeholder={t('forum.applicationReasonPlaceholder')} />
           </Form.Item>
           
           <Form.Item
             name="cover_image"
-            label="榜单封面图片（可选）"
-            extra="上传一张图片作为榜单封面，将显示在榜单卡片顶部"
+            label={t('forum.coverImage')}
+            extra={t('forum.coverImageExtra')}
           >
             <Upload
               listType="picture-card"
@@ -615,7 +615,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
               {coverImageUrl ? null : (
                 <div>
                   <UploadOutlined />
-                  <div style={{ marginTop: 8 }}>上传图片</div>
+                  <div style={{ marginTop: 8 }}>{t('forum.uploadImage')}</div>
                 </div>
               )}
             </Upload>
@@ -623,7 +623,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
               <div style={{ marginTop: 8 }}>
                 <Image
                   src={coverImageUrl}
-                  alt="封面预览"
+                  alt={t('forum.coverPreview')}
                   style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }}
                   preview
                 />

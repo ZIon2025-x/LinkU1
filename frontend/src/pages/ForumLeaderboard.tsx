@@ -322,7 +322,7 @@ const ForumLeaderboard: React.FC = () => {
             <TabPane 
               tab={
                 <span>
-                  <TrophyOutlined /> 其它排行榜
+                  <TrophyOutlined /> {t('forum.customLeaderboard')}
                 </span>
               } 
               key="custom"

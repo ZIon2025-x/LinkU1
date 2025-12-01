@@ -87,7 +87,7 @@ const LeaderboardItemDetail: React.FC = () => {
       }
     } catch (error: any) {
       console.error('加载失败:', error);
-      message.error(error.response?.data?.detail || '加载失败，请稍后重试');
+      message.error(error.response?.data?.detail || t('forum.loadingFailed'));
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ const LeaderboardItemDetail: React.FC = () => {
       }
     } catch (error: any) {
       console.error('加载留言失败:', error);
-      message.error('加载留言失败，请稍后重试');
+      message.error(t('forum.loadCommentsFailed'));
     } finally {
       setVotesLoading(false);
     }
@@ -131,10 +131,10 @@ const LeaderboardItemDetail: React.FC = () => {
     if (item && item.user_vote === voteType) {
       try {
         await voteLeaderboardItem(Number(itemId), 'remove');
-        message.success('投票已取消');
+        message.success(t('forum.voteCancelled'));
         loadData();
       } catch (error: any) {
-        message.error(error.response?.data?.detail || '取消投票失败');
+        message.error(error.response?.data?.detail || t('forum.cancelVoteFailed'));
       }
     } else {
       setCurrentVoteType(voteType);
@@ -153,7 +153,7 @@ const LeaderboardItemDetail: React.FC = () => {
         values.comment,
         values.is_anonymous || false
       );
-      message.success('投票成功');
+      message.success(t('forum.voteSuccess'));
       setShowVoteModal(false);
       voteForm.resetFields();
       
@@ -173,15 +173,15 @@ const LeaderboardItemDetail: React.FC = () => {
       loadVotes(1);
     } catch (error: any) {
       console.error('投票失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '投票失败';
+      const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.error(`操作过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.error(t('forum.operationTooFrequent', { retryAfter }));
       } else if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
-        message.error('没有权限执行此操作');
+        message.error(t('forum.noPermissionOperation'));
       } else {
         message.error(errorMsg);
       }
@@ -210,15 +210,15 @@ const LeaderboardItemDetail: React.FC = () => {
       ));
     } catch (error: any) {
       console.error('点赞失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '点赞失败';
+      const errorMsg = error.response?.data?.detail || error.message || t('forum.likeFailed');
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.error(`操作过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.error(t('forum.operationTooFrequent', { retryAfter }));
       } else if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
-        message.error('没有权限执行此操作');
+        message.error(t('forum.noPermissionOperation'));
       } else {
         message.error(errorMsg);
       }
@@ -234,7 +234,7 @@ const LeaderboardItemDetail: React.FC = () => {
   }
 
   if (!item) {
-    return <Empty description="竞品不存在" />;
+    return <Empty description={t('forum.itemNotExist')} />;
   }
 
   const lang = language || 'zh';
@@ -256,7 +256,7 @@ const LeaderboardItemDetail: React.FC = () => {
         }}
         style={{ marginBottom: 16 }}
       >
-        返回榜单
+        {t('forum.backToLeaderboard')}
       </Button>
 
       {/* 竞品详情卡片 */}
@@ -281,7 +281,7 @@ const LeaderboardItemDetail: React.FC = () => {
                       <Image
                         key={idx}
                         src={img}
-                        alt={`${item.name} - 图片 ${idx + 2}`}
+                        alt={`${item.name} - ${t('forum.image')} ${idx + 2}`}
                         width={80}
                         height={80}
                         style={{ objectFit: 'cover', borderRadius: 4 }}
@@ -339,25 +339,25 @@ const LeaderboardItemDetail: React.FC = () => {
                   <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
                     {item.upvotes}
                   </div>
-                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>点赞</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.upvote')}</div>
                 </div>
                 <div className="vote-stat-item" style={{ textAlign: 'center' }}>
                   <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
                     {item.downvotes}
                   </div>
-                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>点踩</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.downvote')}</div>
                 </div>
                 <div className="vote-stat-item" style={{ textAlign: 'center' }}>
                   <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: item.net_votes >= 0 ? '#52c41a' : '#ff4d4f' }}>
                     {item.net_votes > 0 ? '+' : ''}{item.net_votes}
                   </div>
-                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>净赞</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.netVotes')}</div>
                 </div>
                 <div className="vote-stat-item" style={{ textAlign: 'center' }}>
                   <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#666' }}>
                     {item.vote_score.toFixed(2)}
                   </div>
-                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>综合得分</div>
+                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.comprehensiveScore')}</div>
                 </div>
               </Space>
 
@@ -369,7 +369,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   size="large"
                   onClick={() => handleVote('upvote')}
                 >
-                  点赞 {item.upvotes}
+                  {t('forum.upvote')} {item.upvotes}
                 </Button>
                 <Button
                   className="vote-button vote-down"
@@ -379,7 +379,7 @@ const LeaderboardItemDetail: React.FC = () => {
                   size="large"
                   onClick={() => handleVote('downvote')}
                 >
-                  点踩 {item.downvotes}
+                  {t('forum.downvote')} {item.downvotes}
                 </Button>
                 <Button
                   className="report-button"
@@ -394,7 +394,7 @@ const LeaderboardItemDetail: React.FC = () => {
                     setShowReportModal(true);
                   }}
                 >
-                  举报
+                  {t('forum.report')}
                 </Button>
               </Space>
             </div>
@@ -409,9 +409,9 @@ const LeaderboardItemDetail: React.FC = () => {
                 borderRadius: 8
               }}>
                 <div style={{ fontWeight: 600, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
+                  {item.user_vote === 'upvote' ? `👍 ${t('forum.yourComment')}` : `👎 ${t('forum.yourComment')}`}
                   {item.user_vote_is_anonymous && (
-                    <Tag color="default" style={{ fontSize: 12 }}>匿名</Tag>
+                    <Tag color="default" style={{ fontSize: 12 }}>{t('forum.anonymous')}</Tag>
                   )}
                 </div>
                 <div>{item.user_vote_comment}</div>
@@ -427,13 +427,13 @@ const LeaderboardItemDetail: React.FC = () => {
         title={
           <Space>
             <MessageOutlined />
-            <span>投票留言 {pagination.total > 0 ? `(${pagination.total})` : ''}</span>
+            <span>{t('forum.voteComments')} {pagination.total > 0 ? `(${pagination.total})` : ''}</span>
           </Space>
         }
       >
         <Spin spinning={votesLoading}>
           {votes.length === 0 && !votesLoading ? (
-            <Empty description="暂无留言，快来发表第一条留言吧！" />
+            <Empty description={t('forum.noComments')} />
           ) : votes.length > 0 ? (
             <>
               <div className="comments-list" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -446,8 +446,8 @@ const LeaderboardItemDetail: React.FC = () => {
                     }
                   }
                   const displayName = vote.is_anonymous 
-                    ? `匿名用户 #${anonymousCount}` 
-                    : (vote.user_id ? `用户 ${vote.user_id}` : '未知用户');
+                    ? `${t('forum.anonymousUser')} #${anonymousCount}` 
+                    : (vote.user_id ? `${t('forum.user')} ${vote.user_id}` : t('forum.unknownUser'));
                   
                   return (
                   <Card key={vote.id} className="comment-card" size="small" style={{ borderRadius: 8 }}>
@@ -474,7 +474,7 @@ const LeaderboardItemDetail: React.FC = () => {
                               {displayName}
                             </Text>
                             {vote.is_anonymous && (
-                              <Tag color="default" style={{ fontSize: 12 }}>匿名</Tag>
+                              <Tag color="default" style={{ fontSize: 12 }}>{t('forum.anonymous')}</Tag>
                             )}
                           </Space>
                           <Text type="secondary" className="comment-time" style={{ fontSize: 12 }}>
@@ -488,7 +488,7 @@ const LeaderboardItemDetail: React.FC = () => {
                           </Paragraph>
                         ) : (
                           <Text type="secondary" style={{ fontSize: 12, fontStyle: 'italic' }}>
-                            （仅投票，无留言）
+                            {t('forum.voteOnlyNoComment')}
                           </Text>
                         )}
                         {/* 点赞按钮 */}
@@ -528,7 +528,7 @@ const LeaderboardItemDetail: React.FC = () => {
                     }}
                     showSizeChanger={false}
                     showQuickJumper
-                    showTotal={(total) => `共 ${total} 条留言`}
+                    showTotal={(total) => t('forum.totalComments', { total })}
                   />
                 </div>
               )}
@@ -539,7 +539,7 @@ const LeaderboardItemDetail: React.FC = () => {
 
       {/* 投票留言弹窗 */}
       <Modal
-        title={currentVoteType === 'upvote' ? '点赞并留言' : '点踩并留言'}
+        title={currentVoteType === 'upvote' ? t('forum.upvoteAndComment') : t('forum.downvoteAndComment')}
         open={showVoteModal}
         onCancel={() => {
           setShowVoteModal(false);
@@ -555,14 +555,14 @@ const LeaderboardItemDetail: React.FC = () => {
         >
           <Form.Item
             name="comment"
-            label="留言（可选）"
-            rules={[{ max: 500, message: '留言最多500字' }]}
+            label={t('forum.commentOptional')}
+            rules={[{ max: 500, message: t('forum.commentMaxLength') }]}
           >
             <Input.TextArea
               rows={4}
               placeholder={currentVoteType === 'upvote'
-                ? '分享你的使用体验，例如：物美价廉，服务人员很暖心'
-                : '请说明原因，帮助其他用户了解'}
+                ? t('forum.upvoteCommentPlaceholder')
+                : t('forum.downvoteCommentPlaceholder')}
               showCount
               maxLength={500}
             />
@@ -571,14 +571,14 @@ const LeaderboardItemDetail: React.FC = () => {
             name="is_anonymous"
             valuePropName="checked"
           >
-            <Checkbox>匿名投票/留言</Checkbox>
+            <Checkbox>{t('forum.anonymousVoteComment')}</Checkbox>
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 举报弹窗 */}
       <Modal
-        title="举报竞品"
+        title={t('forum.reportItem')}
         open={showReportModal}
         onCancel={() => {
           setShowReportModal(false);
@@ -596,17 +596,17 @@ const LeaderboardItemDetail: React.FC = () => {
                 reason: values.reason,
                 description: values.description
               });
-              message.success('举报已提交，我们会尽快处理');
+              message.success(t('forum.reportSubmitted'));
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
               console.error('举报失败:', error);
-              const errorMsg = error.response?.data?.detail || error.message || '举报失败';
+              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);
               } else if (error.response?.status === 401) {
-                message.error('请先登录');
+                message.error(t('forum.pleaseLogin'));
               } else {
                 message.error(errorMsg);
               }
@@ -615,27 +615,27 @@ const LeaderboardItemDetail: React.FC = () => {
         >
           <Form.Item
             name="reason"
-            label="举报原因"
+            label={t('forum.reportReason')}
             rules={[
-              { required: true, message: '请输入举报原因' },
-              { max: 500, message: '举报原因不能超过500字' }
+              { required: true, message: t('forum.enterReportReason') },
+              { max: 500, message: t('forum.reportReasonMaxLength') }
             ]}
           >
             <Input.TextArea
               rows={3}
-              placeholder="请详细说明举报原因，例如：虚假信息、恶意刷票、内容不当等"
+              placeholder={t('forum.reportItemReasonPlaceholder')}
               showCount
               maxLength={500}
             />
           </Form.Item>
           <Form.Item
             name="description"
-            label="详细描述（可选）"
-            rules={[{ max: 2000, message: '详细描述不能超过2000字' }]}
+            label={t('forum.reportDescription')}
+            rules={[{ max: 2000, message: t('forum.reportDescriptionMaxLength') }]}
           >
             <Input.TextArea
               rows={4}
-              placeholder="可以补充更多详细信息，帮助我们更好地处理您的举报"
+              placeholder={t('forum.reportDescriptionPlaceholder')}
               showCount
               maxLength={2000}
             />

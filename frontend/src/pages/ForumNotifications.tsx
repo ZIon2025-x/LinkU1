@@ -334,7 +334,7 @@ const ForumNotifications: React.FC = () => {
                             handleMarkRead(notification.id);
                           }}
                         >
-                          {t('common.markAsRead')}
+                          {t('forum.markAsRead')}
                         </Button>
                       )}
                     </div>

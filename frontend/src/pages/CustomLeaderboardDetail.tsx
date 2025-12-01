@@ -89,18 +89,18 @@ const CustomLeaderboardDetail: React.FC = () => {
   const canonicalUrl = leaderboard ? `https://www.link2ur.com/${lang}/leaderboard/custom/${leaderboard.id}` : `https://www.link2ur.com/${lang}/forum/leaderboard`;
   
   // SEO相关变量
-  const seoTitle = leaderboard ? `${leaderboard.name} - ${leaderboard.location} | Link²Ur榜单` : 'Link²Ur榜单';
+  const seoTitle = leaderboard ? `${leaderboard.name} - ${leaderboard.location} | ${t('forum.leaderboardTitle')}` : t('forum.leaderboardTitle');
   const seoDescription = leaderboard && leaderboard.description 
-    ? `${leaderboard.description.substring(0, 160)} | ${leaderboard.location} | ${leaderboard.item_count}个竞品`
-    : 'Link²Ur自定义榜单平台，发现和分享你所在城市的最佳推荐';
+    ? `${leaderboard.description.substring(0, 160)} | ${leaderboard.location} | ${leaderboard.item_count}${t('forum.itemsCount')}`
+    : t('forum.leaderboardPlatform');
   const seoKeywords = leaderboard 
-    ? `${leaderboard.name},${leaderboard.location},榜单,推荐,${leaderboard.location}中餐,${leaderboard.location}推荐`
-    : '榜单,推荐,城市指南';
+    ? `${leaderboard.name},${leaderboard.location},${t('forum.leaderboard')},${t('forum.leaderboardKeywords')}`
+    : t('forum.leaderboardKeywords');
   
   // 面包屑导航数据
   const breadcrumbItems = leaderboard ? [
-    { name: '首页', url: `https://www.link2ur.com/${lang}` },
-    { name: '榜单', url: `https://www.link2ur.com/${lang}/forum/leaderboard` },
+    { name: t('common.home'), url: `https://www.link2ur.com/${lang}` },
+    { name: t('forum.leaderboard'), url: `https://www.link2ur.com/${lang}/forum/leaderboard` },
     { name: leaderboard.name, url: canonicalUrl }
   ] : [];
 
@@ -190,7 +190,7 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
     
     // 分享标题：榜单名称 + 平台名称
-    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
+    const shareTitle = `${leaderboard.name} - ${t('forum.leaderboardTitle')}`;
     
     // 更新页面标题
     const pageTitle = `${shareTitle} - Link²Ur`;
@@ -606,18 +606,18 @@ const CustomLeaderboardDetail: React.FC = () => {
       
       // 处理不同类型的错误
       if (error.response?.status === 404) {
-        message.error('榜单不存在或已被删除');
+        message.error(t('forum.leaderboardNotExistOrDeleted'));
       } else if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
-        message.error('没有权限访问此榜单');
+        message.error(t('forum.noPermission'));
       } else if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.warning(`请求过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.warning(t('forum.rateLimitExceeded', { retryAfter }));
       } else if (error.response?.status >= 500) {
-        message.error('服务器错误，请稍后重试');
+        message.error(t('forum.serverError'));
       } else {
-        message.error(error.response?.data?.detail || '加载失败，请稍后重试');
+        message.error(error.response?.data?.detail || t('forum.loadingFailed'));
       }
     } finally {
       setLoading(false);
@@ -634,10 +634,10 @@ const CustomLeaderboardDetail: React.FC = () => {
     if (item && item.user_vote === voteType) {
       try {
         await voteLeaderboardItem(itemId, 'remove');
-        message.success('投票已取消');
+        message.success(t('forum.voteCancelled'));
         loadData();
       } catch (error: any) {
-        message.error(error.response?.data?.detail || '取消投票失败');
+        message.error(error.response?.data?.detail || t('forum.cancelVoteFailed'));
       }
     } else {
       setCurrentVoteItemId(itemId);
@@ -657,7 +657,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         values.comment,
         values.is_anonymous || false
       );
-      message.success('投票成功');
+      message.success(t('forum.voteSuccess'));
       setShowVoteModal(false);
       voteForm.resetFields();
       
@@ -680,16 +680,16 @@ const CustomLeaderboardDetail: React.FC = () => {
       }
     } catch (error: any) {
       console.error('投票失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '投票失败';
+      const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
       
       // 处理速率限制错误
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.error(`操作过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.error(t('forum.operationTooFrequent', { retryAfter }));
       } else if (error.response?.status === 401) {
-        message.error('请先登录');
+        message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
-        message.error('没有权限执行此操作');
+        message.error(t('forum.noPermissionOperation'));
       } else {
         message.error(errorMsg);
       }
@@ -724,11 +724,11 @@ const CustomLeaderboardDetail: React.FC = () => {
       if (response.data.success && response.data.url) {
         return response.data.url;
       } else {
-        throw new Error('上传失败');
+        throw new Error(t('forum.imageUploadFailed'));
       }
     } catch (error: any) {
       console.error('图片上传失败:', error);
-      message.error(`图片上传失败: ${error.response?.data?.detail || error.message}`);
+      message.error(`${t('forum.imageUploadFailed')}: ${error.response?.data?.detail || error.message}`);
       throw error;
     } finally {
       setUploading(false);
@@ -825,7 +825,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           
           // 添加到已上传图片列表
           setUploadingImages(prev => [...prev, url]);
-          message.success('图片上传成功');
+          message.success(t('forum.imageUploadSuccess'));
         } catch (error) {
           console.error('图片上传失败:', error);
           // 清理临时预览 URL
@@ -858,7 +858,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       };
       console.log('提交竞品数据:', submitData);
       await submitLeaderboardItem(submitData);
-      message.success('竞品新增成功');
+      message.success(t('forum.itemAdded'));
       setShowSubmitModal(false);
       form.resetFields();
       
@@ -881,12 +881,12 @@ const CustomLeaderboardDetail: React.FC = () => {
       loadData(1);
     } catch (error: any) {
       console.error('新增竞品失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '新增失败';
+      const errorMsg = error.response?.data?.detail || error.message || t('forum.addItemFailed');
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {
         if (errorMsg.includes('已存在')) {
-          message.error('该榜单中已存在相同名称的竞品');
+          message.error(t('forum.itemExists'));
         } else {
           message.error(errorMsg);
         }
@@ -896,7 +896,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         message.error('没有权限执行此操作');
       } else if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
-        message.error(`操作过于频繁，请在 ${retryAfter} 秒后重试`);
+        message.error(t('forum.operationTooFrequent', { retryAfter }));
       } else {
         message.error(errorMsg);
       }
@@ -954,7 +954,7 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
     
     // 分享标题：榜单名称 + 平台名称
-    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
+    const shareTitle = `${leaderboard.name} - ${t('forum.leaderboardTitle')}`;
     
     // 强制移除所有描述标签（包括默认的和SEOHead创建的）
     const allDescriptionTags = document.querySelectorAll('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"], meta[name="weixin:description"]');
@@ -1091,7 +1091,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           text: shareText,
           url: shareUrl
         });
-        message.success('分享成功');
+        message.success(t('forum.shareSuccess'));
         return;
       } catch (error: any) {
         // 用户取消分享，不做任何操作
@@ -1112,10 +1112,10 @@ const CustomLeaderboardDetail: React.FC = () => {
     const shareUrl = `${window.location.origin}/${lang}/leaderboard/custom/${leaderboard.id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      message.success('链接已复制到剪贴板');
+      message.success(t('forum.linkCopied'));
       setShowShareModal(false);
     } catch (error) {
-      message.error('复制失败');
+      message.error(t('forum.copyFailed'));
     }
   };
 
@@ -1170,7 +1170,7 @@ const CustomLeaderboardDetail: React.FC = () => {
     }
     
     // 分享标题：榜单名称 + 平台名称
-    const shareTitle = `${leaderboard.name} - Link²Ur榜单`;
+    const shareTitle = `${leaderboard.name} - ${t('forum.leaderboardTitle')}`;
     
     // 如果是微信分享（通过二维码），立即更新 meta 标签
     if (platform === 'wechat') {
@@ -1241,7 +1241,7 @@ const CustomLeaderboardDetail: React.FC = () => {
   }
 
   if (!leaderboard) {
-    return <Empty description="榜单不存在" />;
+    return <Empty description={t('forum.leaderboardNotExist')} />;
   }
 
   return (
@@ -1254,7 +1254,7 @@ const CustomLeaderboardDetail: React.FC = () => {
             description={seoDescription}
             keywords={seoKeywords}
             canonicalUrl={canonicalUrl}
-            ogTitle={`${leaderboard.name} - Link²Ur榜单`}
+            ogTitle={`${leaderboard.name} - ${t('forum.leaderboardTitle')}`}
             ogDescription={getShareDescription(leaderboard.description)}
             ogImage={(() => {
               // 确保图片URL是完整的HTTPS URL
@@ -1374,9 +1374,9 @@ const CustomLeaderboardDetail: React.FC = () => {
             </h1>
             <Space style={{ marginTop: 8 }}>
               <Tag color="blue">{leaderboard.location}</Tag>
-              <Tag>📦 {leaderboard.item_count} 个竞品</Tag>
-              <Tag>👍 {leaderboard.vote_count} 票</Tag>
-              <Tag>👁️ {leaderboard.view_count} 浏览</Tag>
+              <Tag>📦 {leaderboard.item_count} {t('forum.itemsCount')}</Tag>
+              <Tag>👍 {leaderboard.vote_count} {t('forum.votesCount')}</Tag>
+              <Tag>👁️ {leaderboard.view_count} {t('forum.viewsCount')}</Tag>
             </Space>
             {leaderboard.description && (
               <p style={{ marginTop: 16, color: '#666' }}>{leaderboard.description}</p>
@@ -1393,13 +1393,13 @@ const CustomLeaderboardDetail: React.FC = () => {
                   setShowSubmitModal(true);
                 }}
               >
-                新增竞品
+                {t('forum.addItem')}
               </Button>
               <Button
                 icon={<ShareAltOutlined />}
                 onClick={handleShare}
               >
-                分享榜单
+                {t('forum.shareLeaderboard')}
               </Button>
               <Button
                 danger
@@ -1412,7 +1412,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                   setShowReportModal(true);
                 }}
               >
-                举报榜单
+                {t('forum.reportLeaderboard')}
               </Button>
             </div>
           </div>
@@ -1429,20 +1429,20 @@ const CustomLeaderboardDetail: React.FC = () => {
           }}
           style={{ width: 200 }}
         >
-          <Option value="vote_score">综合得分</Option>
-          <Option value="net_votes">净赞数</Option>
-          <Option value="upvotes">点赞数</Option>
-          <Option value="created_at">最新添加</Option>
+          <Option value="vote_score">{t('forum.comprehensiveScore')}</Option>
+          <Option value="net_votes">{t('forum.netVotes')}</Option>
+          <Option value="upvotes">{t('forum.upvotes')}</Option>
+          <Option value="created_at">{t('forum.latestAdded')}</Option>
         </Select>
         <span style={{ color: '#999', fontSize: 14 }}>
-          共 {pagination.total} 个竞品
+          {t('forum.totalItems', { total: pagination.total })}
         </span>
       </div>
 
       {/* 竞品列表 */}
       <Spin spinning={loading}>
         {items.length === 0 && !loading ? (
-          <Empty description="暂无竞品" />
+          <Empty description={t('forum.noItems')} />
         ) : (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1549,7 +1549,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                   <Image
                                     key={imgIndex}
                                     src={imgUrl}
-                                    alt={`${item.name} - 图片 ${imgIndex + 1}`}
+                                    alt={`${item.name} - ${t('forum.image')} ${imgIndex + 1}`}
                                     width={100}
                                     height={100}
                                     style={{ 
@@ -1608,7 +1608,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                           <span style={{ fontSize: 16, fontWeight: 600 }}>{item.downvotes}</span>
                         </Button>
                         <div className="item-score" style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
-                          得分: {item.vote_score.toFixed(2)}
+                          {t('forum.comprehensiveScore')}: {item.vote_score.toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -1632,7 +1632,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                         }}>
                           {item.display_comment_type === 'user' ? (
                             <>
-                              {item.user_vote === 'upvote' ? '👍 你的留言' : '👎 你的留言'}
+                              {item.user_vote === 'upvote' ? `👍 ${t('forum.yourComment')}` : `👎 ${t('forum.yourComment')}`}
                               {item.user_vote_is_anonymous && (
                                 <Tag style={{ 
                                   padding: '2px 6px',
@@ -1642,13 +1642,13 @@ const CustomLeaderboardDetail: React.FC = () => {
                                   color: '#666',
                                   border: 'none'
                                 }}>
-                                  匿名
+                                  {t('forum.anonymous')}
                                 </Tag>
                               )}
                             </>
                           ) : (
                             <>
-                              {item.display_comment_info?.vote_type === 'upvote' ? '👍' : '👎'} 热门留言
+                              {item.display_comment_info?.vote_type === 'upvote' ? '👍' : '👎'} {t('forum.hotComment')}
                               {item.display_comment_info?.is_anonymous ? (
                                 <Tag style={{ 
                                   padding: '2px 6px',
@@ -1658,7 +1658,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                   color: '#666',
                                   border: 'none'
                                 }}>
-                                  匿名
+                                  {t('forum.anonymous')}
                                 </Tag>
                               ) : (
                                 item.display_comment_info?.user_id && (
@@ -1670,7 +1670,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                                     color: '#1890ff',
                                     border: 'none'
                                   }}>
-                                    用户 {item.display_comment_info.user_id}
+                                    {t('forum.user')} {item.display_comment_info.user_id}
                                   </Tag>
                                 )
                               )}
@@ -1710,7 +1710,7 @@ const CustomLeaderboardDetail: React.FC = () => {
                   }}
                   showSizeChanger={false}
                   showQuickJumper
-                  showTotal={(total) => `共 ${total} 个竞品`}
+                  showTotal={(total) => t('forum.totalItems', { total })}
                 />
               </div>
             )}
@@ -1720,7 +1720,7 @@ const CustomLeaderboardDetail: React.FC = () => {
 
       {/* 新增竞品弹窗 */}
       <Modal
-        title="新增竞品"
+        title={t('forum.addItem')}
         open={showSubmitModal}
         onCancel={() => {
           setShowSubmitModal(false);
@@ -1738,44 +1738,44 @@ const CustomLeaderboardDetail: React.FC = () => {
         >
           <Form.Item
             name="name"
-            label="竞品名称"
-            rules={[{ required: true, message: '请输入竞品名称' }, { max: 200, message: '名称最多200字' }]}
+            label={t('forum.itemName')}
+            rules={[{ required: true, message: t('forum.enterItemName') }, { max: 200, message: t('forum.nameMaxLength') }]}
           >
-            <Input placeholder="例如：海底捞" maxLength={200} showCount />
+            <Input placeholder={t('forum.itemNamePlaceholder')} maxLength={200} showCount />
           </Form.Item>
           
           <Form.Item
             name="description"
-            label="描述"
-            rules={[{ max: 1000, message: '描述最多1000字' }]}
+            label={t('forum.itemDescription')}
+            rules={[{ max: 1000, message: t('forum.descriptionMaxLength') }]}
           >
-            <Input.TextArea rows={4} placeholder="描述这个竞品的特点" maxLength={1000} showCount />
+            <Input.TextArea rows={4} placeholder={t('forum.itemDescriptionPlaceholder')} maxLength={1000} showCount />
           </Form.Item>
           
           <Form.Item
             name="address"
-            label="地址"
-            rules={[{ max: 500, message: '地址最多500字' }]}
+            label={t('forum.itemAddress')}
+            rules={[{ max: 500, message: t('forum.addressMaxLength') }]}
           >
-            <Input placeholder="详细地址" maxLength={500} showCount />
+            <Input placeholder={t('forum.itemAddressPlaceholder')} maxLength={500} showCount />
           </Form.Item>
           
           <Form.Item
             name="phone"
-            label="电话（可选）"
-            rules={[{ max: 50, message: '电话最多50字' }]}
+            label={t('forum.itemPhone')}
+            rules={[{ max: 50, message: t('forum.phoneMaxLength') }]}
           >
-            <Input placeholder="联系电话（可选）" maxLength={50} />
+            <Input placeholder={t('forum.itemPhonePlaceholder')} maxLength={50} />
           </Form.Item>
           
           <Form.Item
             name="website"
-            label="网站（可选）"
+            label={t('forum.itemWebsite')}
             rules={[
-              { max: 500, message: '网站地址最多500字' },
+              { max: 500, message: t('forum.websiteMaxLength') },
               {
                 type: 'url',
-                message: '请输入有效的网址',
+                message: t('forum.invalidUrl'),
                 validator: (_, value) => {
                   if (!value || value.trim() === '') {
                     return Promise.resolve(); // 允许为空
@@ -1785,18 +1785,18 @@ const CustomLeaderboardDetail: React.FC = () => {
                     new URL(value.startsWith('http') ? value : `https://${value}`);
                     return Promise.resolve();
                   } catch {
-                    return Promise.reject(new Error('请输入有效的网址'));
+                    return Promise.reject(new Error(t('forum.invalidUrl')));
                   }
                 }
               }
             ]}
           >
-            <Input placeholder="官方网站（可选，如：https://example.com）" maxLength={500} />
+            <Input placeholder={t('forum.itemWebsitePlaceholder')} maxLength={500} />
           </Form.Item>
           
           <Form.Item
-            label="图片"
-            extra="最多上传5张图片，每张不超过5MB"
+            label={t('forum.itemImages')}
+            extra={t('forum.itemImagesExtra')}
           >
             <Upload
               listType="picture-card"
@@ -1834,7 +1834,7 @@ const CustomLeaderboardDetail: React.FC = () => {
               {(uploadingImages.length + uploadingFileList.length) < 5 && (
                 <div>
                   <UploadOutlined />
-                  <div style={{ marginTop: 8 }}>上传图片</div>
+                  <div style={{ marginTop: 8 }}>{t('forum.uploadImage')}</div>
                 </div>
               )}
             </Upload>
@@ -1844,7 +1844,7 @@ const CustomLeaderboardDetail: React.FC = () => {
 
       {/* 举报弹窗 */}
       <Modal
-        title="举报榜单"
+        title={t('forum.reportLeaderboard')}
         open={showReportModal}
         onCancel={() => {
           setShowReportModal(false);
@@ -1862,12 +1862,12 @@ const CustomLeaderboardDetail: React.FC = () => {
                 reason: values.reason,
                 description: values.description
               });
-              message.success('举报已提交，我们会尽快处理');
+              message.success(t('forum.reportSubmitted'));
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
               console.error('举报失败:', error);
-              const errorMsg = error.response?.data?.detail || error.message || '举报失败';
+              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed'));
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);
@@ -1881,27 +1881,27 @@ const CustomLeaderboardDetail: React.FC = () => {
         >
           <Form.Item
             name="reason"
-            label="举报原因"
+            label={t('forum.reportReason')}
             rules={[
-              { required: true, message: '请输入举报原因' },
-              { max: 500, message: '举报原因不能超过500字' }
+              { required: true, message: t('forum.enterReportReason') },
+              { max: 500, message: t('forum.reportReasonMaxLength') }
             ]}
           >
             <Input.TextArea
               rows={3}
-              placeholder="请详细说明举报原因，例如：内容不当、虚假信息、恶意刷票等"
+              placeholder={t('forum.reportReasonPlaceholder')}
               showCount
               maxLength={500}
             />
           </Form.Item>
           <Form.Item
             name="description"
-            label="详细描述（可选）"
-            rules={[{ max: 2000, message: '详细描述不能超过2000字' }]}
+            label={t('forum.reportDescription')}
+            rules={[{ max: 2000, message: t('forum.reportDescriptionMaxLength') }]}
           >
             <Input.TextArea
               rows={4}
-              placeholder="可以补充更多详细信息，帮助我们更好地处理您的举报"
+              placeholder={t('forum.reportDescriptionPlaceholder')}
               showCount
               maxLength={2000}
             />
@@ -1911,7 +1911,7 @@ const CustomLeaderboardDetail: React.FC = () => {
 
       {/* 投票留言弹窗 */}
       <Modal
-        title={currentVoteType === 'upvote' ? '点赞并留言' : '点踩并留言'}
+        title={currentVoteType === 'upvote' ? t('forum.upvoteAndComment') : t('forum.downvoteAndComment')}
         open={showVoteModal}
         onCancel={() => {
           setShowVoteModal(false);
@@ -1927,14 +1927,14 @@ const CustomLeaderboardDetail: React.FC = () => {
         >
           <Form.Item
             name="comment"
-            label="留言（可选）"
-            rules={[{ max: 500, message: '留言最多500字' }]}
+            label={t('forum.commentOptional')}
+            rules={[{ max: 500, message: t('forum.commentMaxLength') }]}
           >
             <Input.TextArea
               rows={4}
               placeholder={currentVoteType === 'upvote'
-                ? '分享你的使用体验，例如：物美价廉，服务人员很暖心'
-                : '请说明原因，帮助其他用户了解'}
+                ? t('forum.upvoteCommentPlaceholder')
+                : t('forum.downvoteCommentPlaceholder')}
               showCount
               maxLength={500}
             />
@@ -1943,7 +1943,7 @@ const CustomLeaderboardDetail: React.FC = () => {
             name="is_anonymous"
             valuePropName="checked"
           >
-            <Checkbox>匿名投票/留言</Checkbox>
+            <Checkbox>{t('forum.anonymousVoteComment')}</Checkbox>
           </Form.Item>
         </Form>
       </Modal>
@@ -2250,7 +2250,7 @@ const CustomLeaderboardDetail: React.FC = () => {
 
       {/* 分享模态框 */}
       <Modal
-        title="分享榜单"
+        title={t('forum.shareLeaderboard')}
         open={showShareModal}
         onCancel={() => setShowShareModal(false)}
         footer={null}

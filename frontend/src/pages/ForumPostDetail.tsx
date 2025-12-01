@@ -848,8 +848,8 @@ const ForumPostDetail: React.FC = () => {
               size="small"
               icon={reply.is_liked ? <LikeFilled /> : <LikeOutlined />}
               onClick={(e) => handleReplyLike(reply.id, e)}
-              aria-label={reply.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
-              title={reply.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
+              aria-label={reply.is_liked ? t('forum.unlike') : t('forum.like')}
+              title={reply.is_liked ? t('forum.unlike') : t('forum.like')}
             >
               {reply.like_count}
             </Button>
@@ -972,15 +972,15 @@ const ForumPostDetail: React.FC = () => {
 
   const breadcrumbItems = post ? [
     { 
-      name: language === 'zh' ? '首页' : 'Home', 
+      name: t('common.home'), 
       url: `https://www.link2ur.com/${lang}` 
     },
     { 
-      name: language === 'zh' ? '论坛' : 'Forum', 
+      name: t('forum.title'), 
       url: `https://www.link2ur.com/${lang}/forum` 
     },
     { 
-      name: post.category?.name || (language === 'zh' ? '帖子' : 'Post'), 
+      name: post.category?.name || t('forum.posts'), 
       url: post.category ? `https://www.link2ur.com/${lang}/forum/category/${post.category.id}` : `https://www.link2ur.com/${lang}/forum`
     },
     { 
@@ -997,7 +997,7 @@ const ForumPostDetail: React.FC = () => {
           <SEOHead 
             title={seoTitle}
             description={seoDescription}
-            keywords={`${post.category?.name || ''},论坛,讨论,${t('forum.title') || 'Forum'}`}
+            keywords={`${post.category?.name || ''},${t('forum.title')},${t('forum.discussion')},${t('forum.title')}`}
             canonicalUrl={canonicalUrl}
             ogTitle={post.title}
             ogDescription={shareDescription}
@@ -1136,8 +1136,8 @@ const ForumPostDetail: React.FC = () => {
                 type={post.is_liked ? 'primary' : 'default'}
                 icon={post.is_liked ? <LikeFilled /> : <LikeOutlined />}
                 onClick={handleLike}
-                aria-label={post.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
-                title={post.is_liked ? t('forum.unlike') || '取消点赞' : t('forum.like') || '点赞'}
+                aria-label={post.is_liked ? t('forum.unlike') : t('forum.like')}
+                title={post.is_liked ? t('forum.unlike') : t('forum.like')}
               >
                 {post.like_count}
               </Button>
@@ -1146,8 +1146,8 @@ const ForumPostDetail: React.FC = () => {
                 type={post.is_favorited ? 'primary' : 'default'}
                 icon={post.is_favorited ? <StarFilled /> : <StarOutlined />}
                 onClick={handleFavorite}
-                aria-label={post.is_favorited ? t('forum.unfavorite') || '取消收藏' : t('forum.favorite') || '收藏'}
-                title={post.is_favorited ? t('forum.unfavorite') || '取消收藏' : t('forum.favorite') || '收藏'}
+                aria-label={post.is_favorited ? t('forum.unfavorite') : t('forum.favorite')}
+                title={post.is_favorited ? t('forum.unfavorite') : t('forum.favorite')}
               >
                 {post.favorite_count}
               </Button>
@@ -1156,7 +1156,7 @@ const ForumPostDetail: React.FC = () => {
                 type="default"
                 icon={<ShareAltOutlined />}
                 onClick={handleShare}
-                title={t('forum.share') || '分享'}
+                title={t('forum.share')}
               >
                 {t('forum.share')}
               </Button>
