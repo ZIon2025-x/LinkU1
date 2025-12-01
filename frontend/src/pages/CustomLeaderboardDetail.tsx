@@ -929,25 +929,46 @@ const CustomLeaderboardDetail: React.FC = () => {
     const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
     // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
+    // 与 useLayoutEffect 保持一致，确保图片URL包含版本号避免缓存
     let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     if (leaderboard.cover_image) {
       const coverImageUrl = leaderboard.cover_image;
       // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
       if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
-        shareImageUrl = coverImageUrl;
+        // 已经是完整URL，确保添加版本号避免缓存
+        shareImageUrl = coverImageUrl.includes('?') ? coverImageUrl : `${coverImageUrl}?v=2`;
       } else if (coverImageUrl.startsWith('//')) {
+        // 协议相对URL，需要添加https:
         shareImageUrl = `https:${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.startsWith('/')) {
+        // 绝对路径，拼接域名
         shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.includes('://')) {
+        // 包含协议但格式不标准，尝试提取
         const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
         if (match) {
           shareImageUrl = match[0];
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         } else {
           shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         }
       } else {
+        // 相对路径，拼接域名
         shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       }
     }
     
@@ -1140,25 +1161,46 @@ const CustomLeaderboardDetail: React.FC = () => {
     const currentShareDescription = leaderboard.description ? leaderboard.description.substring(0, 200) : '';
     
     // 图片优先使用榜单封面图片（cover_image），如果没有则使用默认logo
+    // 与 useLayoutEffect 和 handleShare 保持一致，确保图片URL包含版本号避免缓存
     let shareImageUrl = `${window.location.origin}/static/favicon.png?v=2`;
     if (leaderboard.cover_image) {
       const coverImageUrl = leaderboard.cover_image;
       // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
       if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
-        shareImageUrl = coverImageUrl;
+        // 已经是完整URL，确保添加版本号避免缓存
+        shareImageUrl = coverImageUrl.includes('?') ? coverImageUrl : `${coverImageUrl}?v=2`;
       } else if (coverImageUrl.startsWith('//')) {
+        // 协议相对URL，需要添加https:
         shareImageUrl = `https:${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.startsWith('/')) {
+        // 绝对路径，拼接域名
         shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.includes('://')) {
+        // 包含协议但格式不标准，尝试提取
         const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
         if (match) {
           shareImageUrl = match[0];
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         } else {
           shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         }
       } else {
+        // 相对路径，拼接域名
         shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       }
     }
     
