@@ -133,25 +133,40 @@ const CustomLeaderboardDetail: React.FC = () => {
       
       // 处理URL格式：可能是完整URL、相对路径或包含域名的路径
       if (coverImageUrl.startsWith('http://') || coverImageUrl.startsWith('https://')) {
-        // 已经是完整URL
-        shareImageUrl = coverImageUrl;
+        // 已经是完整URL，确保添加版本号避免缓存
+        shareImageUrl = coverImageUrl.includes('?') ? coverImageUrl : `${coverImageUrl}?v=2`;
       } else if (coverImageUrl.startsWith('//')) {
         // 协议相对URL，需要添加https:
         shareImageUrl = `https:${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.startsWith('/')) {
         // 绝对路径，拼接域名
         shareImageUrl = `${window.location.origin}${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       } else if (coverImageUrl.includes('://')) {
         // 包含协议但格式不标准，尝试提取
         const match = coverImageUrl.match(/https?:\/\/[^\s]+/);
         if (match) {
           shareImageUrl = match[0];
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         } else {
           shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+          if (!shareImageUrl.includes('?')) {
+            shareImageUrl = `${shareImageUrl}?v=2`;
+          }
         }
       } else {
         // 相对路径，拼接域名
         shareImageUrl = `${window.location.origin}/${coverImageUrl}`;
+        if (!shareImageUrl.includes('?')) {
+          shareImageUrl = `${shareImageUrl}?v=2`;
+        }
       }
       console.log('[微信分享] 处理后的图片URL:', shareImageUrl);
     } else {
@@ -487,6 +502,33 @@ const CustomLeaderboardDetail: React.FC = () => {
       ogImageType.setAttribute('property', 'og:image:type');
       ogImageType.content = 'image/png';
       document.head.insertBefore(ogImageType, document.head.firstChild);
+      
+      // 验证图片标签是否设置成功
+      setTimeout(() => {
+        const weixinImageCheck = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
+        const ogImageCheck = document.querySelector('meta[property="og:image"]') as HTMLMetaElement;
+        console.log('[微信分享] 1000ms延迟更新 - 验证 weixin:image:', weixinImageCheck?.content);
+        console.log('[微信分享] 1000ms延迟更新 - 验证 og:image:', ogImageCheck?.content);
+        console.log('[微信分享] 1000ms延迟更新 - 期望的图片URL:', shareImageUrl);
+        
+        // 如果图片URL不正确，强制重新设置
+        if (weixinImageCheck && weixinImageCheck.content !== shareImageUrl) {
+          console.warn('[微信分享] 检测到 weixin:image URL 不正确，强制重新设置');
+          weixinImageCheck.remove();
+          const correctWeixinImage = document.createElement('meta');
+          correctWeixinImage.setAttribute('name', 'weixin:image');
+          correctWeixinImage.content = shareImageUrl;
+          document.head.insertBefore(correctWeixinImage, document.head.firstChild);
+        }
+        if (ogImageCheck && ogImageCheck.content !== shareImageUrl) {
+          console.warn('[微信分享] 检测到 og:image URL 不正确，强制重新设置');
+          ogImageCheck.remove();
+          const correctOgImage = document.createElement('meta');
+          correctOgImage.setAttribute('property', 'og:image');
+          correctOgImage.content = shareImageUrl;
+          document.head.insertBefore(correctOgImage, document.head.firstChild);
+        }
+      }, 100);
     }, 1000); // 延迟1秒，确保在SEOHead的useEffect之后执行
   }, [leaderboard, canonicalUrl]);
 
@@ -935,13 +977,17 @@ const CustomLeaderboardDetail: React.FC = () => {
     finalWeixinTitle.content = shareTitle;
     document.head.insertBefore(finalWeixinTitle, document.head.firstChild);
     
-    // 确保图片URL添加版本号避免缓存
-    const finalShareImageUrl = shareImageUrl.includes('?') ? shareImageUrl : `${shareImageUrl}?v=2`;
+    // 与 useLayoutEffect 保持一致，直接使用 shareImageUrl（已经包含 ?v=2 如果默认图片）
+    console.log('[微信分享] handleShare - 图片URL:', shareImageUrl);
+    console.log('[微信分享] handleShare - leaderboard.cover_image:', leaderboard.cover_image);
     
+    // 强制更新微信图片标签（使用榜单封面图片）
+    // 与 useLayoutEffect 保持一致，直接使用 shareImageUrl
     const finalWeixinImage = document.createElement('meta');
     finalWeixinImage.setAttribute('name', 'weixin:image');
-    finalWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+    finalWeixinImage.content = shareImageUrl; // 使用榜单封面图片，与 useLayoutEffect 保持一致
     document.head.insertBefore(finalWeixinImage, document.head.firstChild);
+    console.log('[微信分享] handleShare - 已设置 weixin:image:', shareImageUrl);
     
     // 设置Open Graph标签
     const finalOgDesc = document.createElement('meta');
@@ -954,10 +1000,20 @@ const CustomLeaderboardDetail: React.FC = () => {
     finalOgTitle.content = shareTitle;
     document.head.insertBefore(finalOgTitle, document.head.firstChild);
     
+    // 强制更新 og:image（使用榜单封面图片）
     const finalOgImage = document.createElement('meta');
     finalOgImage.setAttribute('property', 'og:image');
-    finalOgImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+    finalOgImage.content = shareImageUrl; // 使用榜单封面图片，与 useLayoutEffect 保持一致
     document.head.insertBefore(finalOgImage, document.head.firstChild);
+    console.log('[微信分享] handleShare - 已设置 og:image:', shareImageUrl);
+    
+    // 验证图片标签是否设置成功
+    setTimeout(() => {
+      const weixinImageCheck = document.querySelector('meta[name="weixin:image"]') as HTMLMetaElement;
+      const ogImageCheck = document.querySelector('meta[property="og:image"]') as HTMLMetaElement;
+      console.log('[微信分享] handleShare - 验证 weixin:image:', weixinImageCheck?.content);
+      console.log('[微信分享] handleShare - 验证 og:image:', ogImageCheck?.content);
+    }, 50);
     
     const finalDesc = document.createElement('meta');
     finalDesc.name = 'description';
@@ -982,23 +1038,27 @@ const CustomLeaderboardDetail: React.FC = () => {
       newWeixinTitle.content = shareTitle;
       document.head.insertBefore(newWeixinTitle, document.head.firstChild);
       
-      // 确保图片URL添加版本号避免缓存
-      const finalShareImageUrl = shareImageUrl.includes('?') ? shareImageUrl : `${shareImageUrl}?v=2`;
-      
-      // 再次强制更新微信图片（使用榜单封面图片）
+      // 再次强制更新微信图片（与 useLayoutEffect 保持一致，直接使用 shareImageUrl）
       const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
       allWeixinImages.forEach(tag => tag.remove());
       const newWeixinImage = document.createElement('meta');
       newWeixinImage.setAttribute('name', 'weixin:image');
-      newWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+      newWeixinImage.content = shareImageUrl; // 使用榜单封面图片，与 useLayoutEffect 保持一致
       document.head.insertBefore(newWeixinImage, document.head.firstChild);
+      
+      // 同时更新 og:image
+      const allOgImages = document.querySelectorAll('meta[property="og:image"]');
+      allOgImages.forEach(tag => tag.remove());
+      const newOgImage = document.createElement('meta');
+      newOgImage.setAttribute('property', 'og:image');
+      newOgImage.content = shareImageUrl; // 使用榜单封面图片
+      document.head.insertBefore(newOgImage, document.head.firstChild);
+      
+      console.log('[微信分享] handleShare - 100ms延迟更新 - weixin:image:', shareImageUrl);
     }, 100);
     
     setTimeout(() => {
-      // 确保图片URL添加版本号避免缓存
-      const finalShareImageUrl = shareImageUrl.includes('?') ? shareImageUrl : `${shareImageUrl}?v=2`;
-      
-      // 最后一次强制更新
+      // 最后一次强制更新（与 useLayoutEffect 保持一致，直接使用 shareImageUrl）
       const allWeixinDesc = document.querySelectorAll('meta[name="weixin:description"]');
       allWeixinDesc.forEach(tag => tag.remove());
       const newWeixinDesc = document.createElement('meta');
@@ -1013,12 +1073,24 @@ const CustomLeaderboardDetail: React.FC = () => {
       newWeixinTitle.content = shareTitle;
       document.head.insertBefore(newWeixinTitle, document.head.firstChild);
       
+      // 强制移除所有图片标签
       const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
       allWeixinImages.forEach(tag => tag.remove());
+      const allOgImages = document.querySelectorAll('meta[property="og:image"]');
+      allOgImages.forEach(tag => tag.remove());
+      
+      // 重新设置图片标签
       const newWeixinImage = document.createElement('meta');
       newWeixinImage.setAttribute('name', 'weixin:image');
-      newWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+      newWeixinImage.content = shareImageUrl; // 使用榜单封面图片，与 useLayoutEffect 保持一致
       document.head.insertBefore(newWeixinImage, document.head.firstChild);
+      
+      const newOgImage = document.createElement('meta');
+      newOgImage.setAttribute('property', 'og:image');
+      newOgImage.content = shareImageUrl; // 使用榜单封面图片
+      document.head.insertBefore(newOgImage, document.head.firstChild);
+      
+      console.log('[微信分享] handleShare - 500ms延迟更新 - weixin:image:', shareImageUrl);
     }, 500);
     
     // 修复：使用正确的路由路径
@@ -1111,16 +1183,25 @@ const CustomLeaderboardDetail: React.FC = () => {
       newWeixinTitle.content = shareTitle;
       document.head.insertBefore(newWeixinTitle, document.head.firstChild);
       
-      // 确保图片URL添加版本号避免缓存
-      const finalShareImageUrl = shareImageUrl.includes('?') ? shareImageUrl : `${shareImageUrl}?v=2`;
+      // 与 useLayoutEffect 和 handleShare 保持一致，直接使用 shareImageUrl
+      console.log('[微信分享] handleShareToSocial - 图片URL:', shareImageUrl);
+      console.log('[微信分享] handleShareToSocial - leaderboard.cover_image:', leaderboard.cover_image);
       
       // 强制更新微信图片标签（使用榜单封面图片）
       const allWeixinImages = document.querySelectorAll('meta[name="weixin:image"]');
       allWeixinImages.forEach(tag => tag.remove());
       const newWeixinImage = document.createElement('meta');
       newWeixinImage.setAttribute('name', 'weixin:image');
-      newWeixinImage.content = finalShareImageUrl; // 使用榜单封面图片，替换默认图片
+      newWeixinImage.content = shareImageUrl; // 使用榜单封面图片，与 useLayoutEffect 和 handleShare 保持一致
       document.head.insertBefore(newWeixinImage, document.head.firstChild);
+      
+      // 同时更新 og:image 确保一致性
+      const allOgImages = document.querySelectorAll('meta[property="og:image"]');
+      allOgImages.forEach(tag => tag.remove());
+      const newOgImage = document.createElement('meta');
+      newOgImage.setAttribute('property', 'og:image');
+      newOgImage.content = shareImageUrl; // 使用榜单封面图片
+      document.head.insertBefore(newOgImage, document.head.firstChild);
     }
     
     // 修复：使用正确的路由路径
