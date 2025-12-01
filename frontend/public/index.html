@@ -210,8 +210,26 @@
                     weixinTitleTag.content = shareTitle;
                     document.head.insertBefore(weixinTitleTag, document.head.firstChild);
                     
-                    // 设置描述
-                    var shareDescription = (leaderboard.description || '').substring(0, 200);
+                    // 设置描述（在榜单描述后追加提示文字）
+                    var appendText = "✨ 真实留学生评价，禁止刷票。欢迎在英留学生投下真实一票与真实评价，帮助新生开启更好的留学生活！";
+                    var maxLength = 200;
+                    var description = leaderboard.description || '';
+                    var shareDescription;
+                    
+                    if (!description) {
+                      shareDescription = appendText.substring(0, maxLength);
+                    } else {
+                      // 计算可用长度（减去追加文字和分隔符）
+                      var availableLength = maxLength - appendText.length - 3; // 3个字符用于分隔符 " - "
+                      
+                      if (description.length <= availableLength) {
+                        shareDescription = description + ' - ' + appendText;
+                      } else {
+                        var truncated = description.substring(0, availableLength);
+                        shareDescription = truncated + '... - ' + appendText;
+                      }
+                    }
+                    
                     if (shareDescription) {
                       var descTag = document.createElement('meta');
                       descTag.setAttribute('property', 'og:description');
