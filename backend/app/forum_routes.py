@@ -536,6 +536,7 @@ async def update_category_stats(category_id: int, db: AsyncSession):
 @router.get("/categories", response_model=schemas.ForumCategoryListResponse)
 async def get_categories(
     include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
+    request: Optional[Request] = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取板块列表
@@ -657,19 +658,8 @@ async def get_categories(
             # 添加最新帖子信息（如果存在）
             latest_post_info = None
             if latest_post:
-                # 确保 author 信息存在，如果作者被删除则使用默认值
-                author_info = None
-                if latest_post.author:
-                    author_info = await build_user_info(db, latest_post.author)
-                else:
-                    # 如果作者不存在（被删除），使用默认值
-                    logger.warning(f"帖子 {latest_post.id} 的作者不存在（可能已被删除）")
-                    author_info = schemas.UserInfo(
-                        id="unknown",
-                        name="已删除用户",
-                        avatar=None,
-                        is_admin=False
-                    )
+                # 使用统一的作者信息获取函数（支持管理员和普通用户）
+                author_info = await get_post_author_info(db, latest_post, request)
                 
                 # 计算最新帖子的浏览量（数据库值 + Redis增量）
                 display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
@@ -1103,7 +1093,7 @@ async def get_post(
         title=post.title,
         content=post.content,
         category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-        author=await build_user_info(db, post.author),
+        author=await get_post_author_info(db, post, request),
         view_count=display_view_count,  # 使用包含 Redis 增量的浏览量
         reply_count=post.reply_count,
         like_count=post.like_count,
@@ -1278,21 +1268,8 @@ async def create_post(
     if db_post.admin_author_id:
         await db.refresh(db_post, ["admin_author"])
     
-    # 构建作者信息
-    if db_post.admin_author:
-        # 管理员发帖
-        author_info = await build_admin_user_info(db_post.admin_author)
-    elif db_post.author:
-        # 普通用户发帖
-        author_info = await build_user_info(db, db_post.author, request, force_admin=False)
-    else:
-        # 作者不存在（理论上不应该发生）
-        author_info = schemas.UserInfo(
-            id="unknown",
-            name="已删除用户",
-            avatar=None,
-            is_admin=False
-        )
+    # 构建作者信息（使用统一的函数，支持管理员和普通用户）
+    author_info = await get_post_author_info(db, db_post, request)
     
     return schemas.ForumPostOut(
         id=db_post.id,
@@ -3394,7 +3371,7 @@ async def get_my_favorites(
                     title=post.title,
                     content_preview=strip_markdown(post.content),
                     category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-                    author=await build_user_info(db, post.author, request),
+                    author=await get_post_author_info(db, post, request),
                     view_count=post.view_count,
                     reply_count=post.reply_count,
                     like_count=post.like_count,
