@@ -11,7 +11,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy import select, func, or_, and_, desc, asc, case, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, inspect
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
@@ -395,19 +395,52 @@ async def get_post_author_info(
         request: 请求对象（可选）
     """
     # 如果是管理员发帖
-    if post.admin_author_id and post.admin_author:
-        return await build_admin_user_info(post.admin_author)
+    if post.admin_author_id:
+        # 检查 admin_author 关系是否已加载
+        post_inspect = inspect(post)
+        admin_author_attr = post_inspect.attrs.admin_author
+        
+        # 如果关系已加载（loaded 为 True），直接使用
+        if admin_author_attr.loaded:
+            admin_author = admin_author_attr.value
+            if admin_author:
+                return await build_admin_user_info(admin_author)
+        else:
+            # 如果关系未加载，从数据库查询
+            admin_author_result = await db.execute(
+                select(models.AdminUser).where(models.AdminUser.id == post.admin_author_id)
+            )
+            admin_author = admin_author_result.scalar_one_or_none()
+            if admin_author:
+                return await build_admin_user_info(admin_author)
+    
     # 如果是普通用户发帖
-    elif post.author_id and post.author:
-        return await build_user_info(db, post.author, request, force_admin=False)
+    if post.author_id:
+        # 检查 author 关系是否已加载
+        post_inspect = inspect(post)
+        author_attr = post_inspect.attrs.author
+        
+        # 如果关系已加载（loaded 为 True），直接使用
+        if author_attr.loaded:
+            author = author_attr.value
+            if author:
+                return await build_user_info(db, author, request, force_admin=False)
+        else:
+            # 如果关系未加载，从数据库查询
+            author_result = await db.execute(
+                select(models.User).where(models.User.id == post.author_id)
+            )
+            author = author_result.scalar_one_or_none()
+            if author:
+                return await build_user_info(db, author, request, force_admin=False)
+    
     # 作者不存在
-    else:
-        return schemas.UserInfo(
-            id="unknown",
-            name="已删除用户",
-            avatar=None,
-            is_admin=False
-        )
+    return schemas.UserInfo(
+        id="unknown",
+        name="已删除用户",
+        avatar=None,
+        is_admin=False
+    )
 
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
@@ -597,7 +630,8 @@ async def get_categories(
                     )
                     .limit(1)
                     .options(
-                        selectinload(models.ForumPost.author)
+                        selectinload(models.ForumPost.author),
+                        selectinload(models.ForumPost.admin_author)
                     )
                 )
                 latest_post = latest_post_result.scalar_one_or_none()
