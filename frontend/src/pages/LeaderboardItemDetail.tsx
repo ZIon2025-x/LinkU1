@@ -264,26 +264,26 @@ const LeaderboardItemDetail: React.FC = () => {
         <div className="item-detail-content" style={{ display: 'flex', gap: 24 }}>
           {/* 左侧：图片 */}
           {item.images && item.images.length > 0 && (
-            <div className="item-images-section" style={{ flexShrink: 0 }}>
+            <div className="item-images-section" style={{ flexShrink: 0, maxWidth: '250px', boxSizing: 'border-box' }}>
               <Image.PreviewGroup>
                 <Image
                   className="item-main-image"
                   src={item.images[0]}
                   alt={item.name}
-                  width={300}
-                  height={300}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                  width={250}
+                  height={250}
+                  style={{ objectFit: 'cover', borderRadius: 8, maxWidth: '100%', width: '100%', height: 'auto' }}
                   preview
                 />
                 {item.images.length > 1 && (
-                  <div className="item-thumbnails" style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                  <div className="item-thumbnails" style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {item.images.slice(1).map((img: string, idx: number) => (
                       <Image
                         key={idx}
                         src={img}
                         alt={`${item.name} - ${t('forum.image')} ${idx + 2}`}
-                        width={80}
-                        height={80}
+                        width={70}
+                        height={70}
                         style={{ objectFit: 'cover', borderRadius: 4 }}
                         preview
                       />
@@ -346,12 +346,6 @@ const LeaderboardItemDetail: React.FC = () => {
                     {item.downvotes}
                   </div>
                   <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.downvote')}</div>
-                </div>
-                <div className="vote-stat-item" style={{ textAlign: 'center' }}>
-                  <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: item.net_votes >= 0 ? '#52c41a' : '#ff4d4f' }}>
-                    {item.net_votes > 0 ? '+' : ''}{item.net_votes}
-                  </div>
-                  <div className="vote-stat-label" style={{ fontSize: 12, color: '#999' }}>{t('forum.netVotes')}</div>
                 </div>
                 <div className="vote-stat-item" style={{ textAlign: 'center' }}>
                   <div className="vote-stat-value" style={{ fontSize: 24, fontWeight: 'bold', color: '#666' }}>
@@ -670,6 +664,10 @@ const LeaderboardItemDetail: React.FC = () => {
             /* 外层容器移动端优化 */
             .item-detail-container {
               padding: 12px !important;
+              box-sizing: border-box !important;
+              overflow-x: hidden !important;
+              width: 100% !important;
+              max-width: 100% !important;
             }
 
             /* 返回按钮移动端优化 */
@@ -687,17 +685,30 @@ const LeaderboardItemDetail: React.FC = () => {
             .item-detail-content {
               flex-direction: column !important;
               gap: 16px !important;
+              width: 100% !important;
+              box-sizing: border-box !important;
             }
 
             /* 图片区域移动端优化 */
             .item-images-section {
               width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
             }
 
             .item-main-image {
               width: 100% !important;
               max-width: 100% !important;
               height: auto !important;
+              display: block !important;
+            }
+
+            .item-main-image .ant-image-img {
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              object-fit: cover !important;
             }
 
             .item-thumbnails {
