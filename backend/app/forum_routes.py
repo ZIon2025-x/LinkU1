@@ -536,7 +536,6 @@ async def update_category_stats(category_id: int, db: AsyncSession):
 @router.get("/categories", response_model=schemas.ForumCategoryListResponse)
 async def get_categories(
     include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
-    request: Optional[Request] = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取板块列表
@@ -659,7 +658,8 @@ async def get_categories(
             latest_post_info = None
             if latest_post:
                 # 使用统一的作者信息获取函数（支持管理员和普通用户）
-                author_info = await get_post_author_info(db, latest_post, request)
+                # 注意：这里不传入 request，因为只是显示作者信息，不需要检查管理员会话
+                author_info = await get_post_author_info(db, latest_post, None)
                 
                 # 计算最新帖子的浏览量（数据库值 + Redis增量）
                 display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
