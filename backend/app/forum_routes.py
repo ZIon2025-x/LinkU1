@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy import select, func, or_, and_, desc, asc, case, update, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm.attributes import NO_VALUE
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
@@ -400,9 +401,9 @@ async def get_post_author_info(
         post_inspect = inspect(post)
         admin_author_attr = post_inspect.attrs.admin_author
         
-        # 如果关系已加载（loaded 为 True），直接使用
-        if admin_author_attr.loaded:
-            admin_author = admin_author_attr.value
+        # 如果关系已加载（loaded_value 不等于 NO_VALUE），直接使用
+        if admin_author_attr.loaded_value is not NO_VALUE:
+            admin_author = admin_author_attr.loaded_value
             if admin_author:
                 return await build_admin_user_info(admin_author)
         else:
@@ -420,9 +421,9 @@ async def get_post_author_info(
         post_inspect = inspect(post)
         author_attr = post_inspect.attrs.author
         
-        # 如果关系已加载（loaded 为 True），直接使用
-        if author_attr.loaded:
-            author = author_attr.value
+        # 如果关系已加载（loaded_value 不等于 NO_VALUE），直接使用
+        if author_attr.loaded_value is not NO_VALUE:
+            author = author_attr.loaded_value
             if author:
                 return await build_user_info(db, author, request, force_admin=False)
         else:
