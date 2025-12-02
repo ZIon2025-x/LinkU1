@@ -1940,7 +1940,8 @@ class ForumPost(Base):
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey("forum_categories.id", ondelete="CASCADE"), nullable=False)
-    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    author_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)  # 改为可空，支持管理员发帖
+    admin_author_id = Column(String(5), ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)  # 管理员作者ID
     view_count = Column(Integer, default=0, server_default=text('0'))
     reply_count = Column(Integer, default=0, server_default=text('0'))
     like_count = Column(Integer, default=0, server_default=text('0'))
@@ -1957,6 +1958,7 @@ class ForumPost(Base):
     # 关系
     category = relationship("ForumCategory", back_populates="posts")
     author = relationship("User", foreign_keys=[author_id])
+    admin_author = relationship("AdminUser", foreign_keys=[admin_author_id])
     replies = relationship("ForumReply", back_populates="post", cascade="all, delete-orphan")
     # 多态关联：使用 primaryjoin 指定连接条件（ForumLike 没有直接外键）
     likes = relationship(
@@ -1972,7 +1974,13 @@ class ForumPost(Base):
         # 这里只创建基础索引
         Index("idx_forum_posts_category", category_id, is_deleted, is_visible),
         Index("idx_forum_posts_author", author_id, is_deleted, is_visible),
+        Index("idx_forum_posts_admin_author", admin_author_id, is_deleted, is_visible),
         Index("idx_forum_posts_pinned", is_pinned, created_at),
+        # 确保至少有一个作者（普通用户或管理员）
+        CheckConstraint(
+            "(author_id IS NOT NULL) OR (admin_author_id IS NOT NULL)",
+            name="check_forum_post_has_author"
+        ),
     )
 
 

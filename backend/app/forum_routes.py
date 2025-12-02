@@ -319,7 +319,7 @@ async def get_current_admin_async(
 
 async def build_user_info(
     db: AsyncSession, 
-    user: models.User, 
+    user: Optional[models.User], 
     request: Optional[Request] = None,
     force_admin: bool = False
 ) -> schemas.UserInfo:
@@ -327,7 +327,7 @@ async def build_user_info(
     
     Args:
         db: 数据库会话
-        user: 用户对象
+        user: 用户对象（可为None）
         request: 请求对象（用于检查管理员会话）
         force_admin: 强制标记为管理员（用于管理员发帖的情况，在管理员页面操作时）
     """
@@ -367,6 +367,48 @@ async def build_user_info(
         is_admin=is_admin
     )
 
+
+async def build_admin_user_info(admin_user: models.AdminUser) -> schemas.UserInfo:
+    """构建管理员用户信息
+    
+    Args:
+        admin_user: 管理员对象
+    """
+    return schemas.UserInfo(
+        id=admin_user.id,  # 保留管理员ID用于内部识别
+        name="Link²Ur",  # 统一显示名称
+        avatar="/static/logo.png",  # 统一使用logo作为头像
+        is_admin=True  # 官方标识
+    )
+
+
+async def get_post_author_info(
+    db: AsyncSession,
+    post: models.ForumPost,
+    request: Optional[Request] = None
+) -> schemas.UserInfo:
+    """获取帖子作者信息（支持普通用户和管理员）
+    
+    Args:
+        db: 数据库会话
+        post: 帖子对象
+        request: 请求对象（可选）
+    """
+    # 如果是管理员发帖
+    if post.admin_author_id and post.admin_author:
+        return await build_admin_user_info(post.admin_author)
+    # 如果是普通用户发帖
+    elif post.author_id and post.author:
+        return await build_user_info(db, post.author, request, force_admin=False)
+    # 作者不存在
+    else:
+        return schemas.UserInfo(
+            id="unknown",
+            name="已删除用户",
+            avatar=None,
+            is_admin=False
+        )
+
 def strip_markdown(text: str, max_length: int = 200) -> str:
     """去除 Markdown 标记并截断文本"""
     # 简单的 Markdown 去除（移除常见标记）
@@ -389,14 +431,16 @@ async def get_post_with_permissions(
     post_id: int,
     current_user: Optional[models.User],
     is_admin: bool,
-    db: AsyncSession
+    db: AsyncSession,
+    current_admin: Optional[models.AdminUser] = None
 ) -> models.ForumPost:
-    """获取帖子并检查权限（处理软删除和隐藏）"""
+    """获取帖子并检查权限（处理软删除和隐藏，支持管理员作者）"""
     result = await db.execute(
         select(models.ForumPost)
         .options(
             selectinload(models.ForumPost.category),
-            selectinload(models.ForumPost.author)
+            selectinload(models.ForumPost.author),
+            selectinload(models.ForumPost.admin_author)
         )
         .where(models.ForumPost.id == post_id)
         .where(models.ForumPost.is_deleted == False)
@@ -412,7 +456,14 @@ async def get_post_with_permissions(
     
     # 检查风控隐藏：普通用户不可见，但作者和管理员可见
     if not post.is_visible:
-        if not is_admin and (not current_user or post.author_id != current_user.id):
+        # 检查是否是作者（普通用户或管理员）
+        is_author = False
+        if current_user and post.author_id == current_user.id:
+            is_author = True
+        if current_admin and post.admin_author_id == current_admin.id:
+            is_author = True
+        
+        if not is_admin and not is_author:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="帖子不存在或已被隐藏",
@@ -903,7 +954,8 @@ async def get_posts(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumPost.category),
-        selectinload(models.ForumPost.author)
+        selectinload(models.ForumPost.author),
+        selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -941,7 +993,7 @@ async def get_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await build_user_info(db, post.author),
+            author=await get_post_author_info(db, post, request),
             view_count=display_view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -978,14 +1030,15 @@ async def get_post(
     
     # 检查是否为管理员
     is_admin = False
+    current_admin = None
     try:
-        await get_current_admin_async(request, db)
+        current_admin = await get_current_admin_async(request, db)
         is_admin = True
     except HTTPException:
         pass
     
     # 获取帖子
-    post = await get_post_with_permissions(post_id, current_user, is_admin, db)
+    post = await get_post_with_permissions(post_id, current_user, is_admin, db, current_admin)
     
     # 增加浏览次数
     # 优化方案：使用 Redis 累加，定时批量落库（由 Celery 任务处理）
@@ -1070,19 +1123,54 @@ async def get_post(
 async def create_post(
     post: schemas.ForumPostCreate,
     request: Request,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """创建帖子"""
+    """创建帖子（支持管理员和普通用户）"""
+    # 首先尝试获取普通用户会话
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except HTTPException:
+        pass
+    
+    # 检查是否有管理员会话（在管理员页面操作时）
+    admin_user = None
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
+    # 如果既没有普通用户会话也没有管理员会话，返回401
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息",
+            headers={"X-Error-Code": "UNAUTHORIZED"}
+        )
+    
     # 频率限制：检查用户最近1分钟内是否发过帖子
     one_minute_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
-    recent_post_result = await db.execute(
-        select(func.count(models.ForumPost.id))
-        .where(
-            models.ForumPost.author_id == current_user.id,
-            models.ForumPost.created_at >= one_minute_ago
+    if admin_user:
+        # 管理员发帖：检查管理员最近1分钟内是否发过帖子
+        recent_post_result = await db.execute(
+            select(func.count(models.ForumPost.id))
+            .where(
+                models.ForumPost.admin_author_id == admin_user.id,
+                models.ForumPost.created_at >= one_minute_ago
+            )
         )
-    )
+    else:
+        # 普通用户发帖：检查用户最近1分钟内是否发过帖子
+        recent_post_result = await db.execute(
+            select(func.count(models.ForumPost.id))
+            .where(
+                models.ForumPost.author_id == current_user.id,
+                models.ForumPost.created_at >= one_minute_ago
+            )
+        )
     recent_post_count = recent_post_result.scalar() or 0
     if recent_post_count > 0:
         raise HTTPException(
@@ -1093,15 +1181,28 @@ async def create_post(
     
     # 重复内容检测：检查用户最近5分钟内是否发过相同标题的帖子
     five_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
-    duplicate_post_result = await db.execute(
-        select(models.ForumPost)
-        .where(
-            models.ForumPost.author_id == current_user.id,
-            models.ForumPost.title == post.title,
-            models.ForumPost.created_at >= five_minutes_ago
+    if admin_user:
+        # 管理员发帖：检查管理员最近5分钟内是否发过相同标题的帖子
+        duplicate_post_result = await db.execute(
+            select(models.ForumPost)
+            .where(
+                models.ForumPost.admin_author_id == admin_user.id,
+                models.ForumPost.title == post.title,
+                models.ForumPost.created_at >= five_minutes_ago
+            )
+            .limit(1)
         )
-        .limit(1)
-    )
+    else:
+        # 普通用户发帖：检查用户最近5分钟内是否发过相同标题的帖子
+        duplicate_post_result = await db.execute(
+            select(models.ForumPost)
+            .where(
+                models.ForumPost.author_id == current_user.id,
+                models.ForumPost.title == post.title,
+                models.ForumPost.created_at >= five_minutes_ago
+            )
+            .limit(1)
+        )
     duplicate_post = duplicate_post_result.scalar_one_or_none()
     if duplicate_post:
         raise HTTPException(
@@ -1130,15 +1231,6 @@ async def create_post(
             headers={"X-Error-Code": "CATEGORY_HIDDEN"}
         )
     
-    # 检查是否有管理员会话（在管理员页面操作时）
-    is_admin_user = False
-    try:
-        admin_user = await get_current_admin_async(request, db)
-        if admin_user:
-            is_admin_user = True
-    except HTTPException:
-        pass
-    
     # 检查板块是否禁止用户发帖
     if category.is_admin_only:
         if not is_admin_user:
@@ -1149,12 +1241,24 @@ async def create_post(
             )
     
     # 创建帖子
-    db_post = models.ForumPost(
-        title=post.title,
-        content=post.content,
-        category_id=post.category_id,
-        author_id=current_user.id
-    )
+    if admin_user:
+        # 管理员发帖：使用 admin_author_id
+        db_post = models.ForumPost(
+            title=post.title,
+            content=post.content,
+            category_id=post.category_id,
+            admin_author_id=admin_user.id,
+            author_id=None  # 管理员发帖时，author_id 为空
+        )
+    else:
+        # 普通用户发帖：使用 author_id
+        db_post = models.ForumPost(
+            title=post.title,
+            content=post.content,
+            category_id=post.category_id,
+            author_id=current_user.id,
+            admin_author_id=None
+        )
     db.add(db_post)
     await db.flush()
     
@@ -1168,14 +1272,34 @@ async def create_post(
     await db.refresh(db_post)
     
     # 加载关联数据
-    await db.refresh(db_post, ["category", "author"])
+    await db.refresh(db_post, ["category"])
+    if db_post.author_id:
+        await db.refresh(db_post, ["author"])
+    if db_post.admin_author_id:
+        await db.refresh(db_post, ["admin_author"])
+    
+    # 构建作者信息
+    if db_post.admin_author:
+        # 管理员发帖
+        author_info = await build_admin_user_info(db_post.admin_author)
+    elif db_post.author:
+        # 普通用户发帖
+        author_info = await build_user_info(db, db_post.author, request, force_admin=False)
+    else:
+        # 作者不存在（理论上不应该发生）
+        author_info = schemas.UserInfo(
+            id="unknown",
+            name="已删除用户",
+            avatar=None,
+            is_admin=False
+        )
     
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
         content=db_post.content,
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
-        author=await build_user_info(db, db_post.author, request, force_admin=is_admin_user),
+        author=author_info,
         view_count=db_post.view_count,
         reply_count=db_post.reply_count,
         like_count=db_post.like_count,
@@ -1196,16 +1320,41 @@ async def update_post(
     post_id: int,
     post: schemas.ForumPostUpdate,
     request: Request,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """更新帖子"""
+    """更新帖子（支持管理员和普通用户）"""
+    # 尝试获取普通用户会话
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except HTTPException:
+        pass
+    
+    # 检查是否有管理员会话
+    admin_user = None
+    is_admin_user = False
+    try:
+        admin_user = await get_current_admin_async(request, db)
+        if admin_user:
+            is_admin_user = True
+    except HTTPException:
+        pass
+    
+    # 如果既没有普通用户会话也没有管理员会话，返回401
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息",
+            headers={"X-Error-Code": "UNAUTHORIZED"}
+        )
+    
     # 获取帖子
     result = await db.execute(
         select(models.ForumPost)
         .options(
             selectinload(models.ForumPost.category),
-            selectinload(models.ForumPost.author)
+            selectinload(models.ForumPost.author),
+            selectinload(models.ForumPost.admin_author)
         )
         .where(models.ForumPost.id == post_id)
     )
@@ -1218,11 +1367,20 @@ async def update_post(
         )
     
     # 检查权限：只有作者可以编辑
-    if db_post.author_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="只能编辑自己的帖子"
-        )
+    if admin_user:
+        # 管理员可以编辑自己发的帖子
+        if db_post.admin_author_id != admin_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只能编辑自己的帖子"
+            )
+    else:
+        # 普通用户只能编辑自己发的帖子
+        if db_post.author_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只能编辑自己的帖子"
+            )
     
     # 检查是否已删除
     if db_post.is_deleted:
@@ -1261,34 +1419,39 @@ async def update_post(
         pass
     
     await db.commit()
-    await db.refresh(db_post, ["category", "author"])
+    await db.refresh(db_post, ["category"])
+    if db_post.author_id:
+        await db.refresh(db_post, ["author"])
+    if db_post.admin_author_id:
+        await db.refresh(db_post, ["admin_author"])
     
-    # 检查是否已点赞/收藏
+    # 检查是否已点赞/收藏（只有普通用户可以点赞/收藏）
     is_liked = False
     is_favorited = False
-    like_result = await db.execute(
-        select(models.ForumLike).where(
-            models.ForumLike.target_type == "post",
-            models.ForumLike.target_id == db_post.id,
-            models.ForumLike.user_id == current_user.id
+    if current_user:
+        like_result = await db.execute(
+            select(models.ForumLike).where(
+                models.ForumLike.target_type == "post",
+                models.ForumLike.target_id == db_post.id,
+                models.ForumLike.user_id == current_user.id
+            )
         )
-    )
-    is_liked = like_result.scalar_one_or_none() is not None
-    
-    favorite_result = await db.execute(
-        select(models.ForumFavorite).where(
-            models.ForumFavorite.post_id == db_post.id,
-            models.ForumFavorite.user_id == current_user.id
+        is_liked = like_result.scalar_one_or_none() is not None
+        
+        favorite_result = await db.execute(
+            select(models.ForumFavorite).where(
+                models.ForumFavorite.post_id == db_post.id,
+                models.ForumFavorite.user_id == current_user.id
+            )
         )
-    )
-    is_favorited = favorite_result.scalar_one_or_none() is not None
+        is_favorited = favorite_result.scalar_one_or_none() is not None
     
     return schemas.ForumPostOut(
         id=db_post.id,
         title=db_post.title,
         content=db_post.content,
         category=schemas.CategoryInfo(id=db_post.category.id, name=db_post.category.name),
-        author=await build_user_info(db, db_post.author, request, force_admin=is_admin_user),
+        author=await get_post_author_info(db, db_post, request),
         view_count=db_post.view_count,
         reply_count=db_post.reply_count,
         like_count=db_post.like_count,
@@ -1307,10 +1470,32 @@ async def update_post(
 @router.delete("/posts/{post_id}")
 async def delete_post(
     post_id: int,
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    request: Request,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """删除帖子（软删除）"""
+    """删除帖子（软删除，支持管理员和普通用户）"""
+    # 尝试获取普通用户会话
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except HTTPException:
+        pass
+    
+    # 检查是否有管理员会话
+    admin_user = None
+    try:
+        admin_user = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+    
+    # 如果既没有普通用户会话也没有管理员会话，返回401
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息",
+            headers={"X-Error-Code": "UNAUTHORIZED"}
+        )
+    
     result = await db.execute(
         select(models.ForumPost).where(models.ForumPost.id == post_id)
     )
@@ -1323,11 +1508,20 @@ async def delete_post(
         )
     
     # 检查权限：只有作者可以删除
-    if db_post.author_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="只能删除自己的帖子"
-        )
+    if admin_user:
+        # 管理员可以删除自己发的帖子
+        if db_post.admin_author_id != admin_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只能删除自己的帖子"
+            )
+    else:
+        # 普通用户只能删除自己发的帖子
+        if db_post.author_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="只能删除自己的帖子"
+            )
     
     # 检查是否已删除
     if db_post.is_deleted:
@@ -1387,7 +1581,7 @@ async def pin_post(
         db=db
     )
     
-    # 发送通知给帖子作者
+    # 发送通知给帖子作者（只通知普通用户作者，管理员作者不接收通知）
     if post.author_id:
         notification = models.ForumNotification(
             notification_type="pin_post",
@@ -1786,8 +1980,15 @@ async def get_replies(
     except HTTPException:
         pass
     
+    # 尝试获取管理员会话
+    current_admin = None
+    try:
+        current_admin = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+    
     # 验证帖子存在且可见
-    post = await get_post_with_permissions(post_id, current_user, is_admin, db)
+    post = await get_post_with_permissions(post_id, current_user, is_admin, db, current_admin)
     
     # 构建查询：只获取可见回复
     query = select(models.ForumReply).where(
@@ -1796,7 +1997,14 @@ async def get_replies(
     )
     
     # 如果不是管理员且不是作者，过滤隐藏的回复
-    if not is_admin and (not current_user or post.author_id != current_user.id):
+    # 检查是否是作者（普通用户或管理员）
+    is_author = False
+    if current_user and post.author_id == current_user.id:
+        is_author = True
+    if current_admin and post.admin_author_id == current_admin.id:
+        is_author = True
+    
+    if not is_admin and not is_author:
         query = query.where(models.ForumReply.is_visible == True)
     
     query = query.order_by(models.ForumReply.created_at.asc())
@@ -1946,6 +2154,7 @@ async def create_reply(
     
     # 检查是否有管理员会话（在管理员页面操作时）
     is_admin_user = False
+    admin_user = None
     try:
         admin_user = await get_current_admin_async(request, db)
         if admin_user:
@@ -1954,7 +2163,7 @@ async def create_reply(
         pass
     
     # 获取帖子（使用权限检查函数）
-    post = await get_post_with_permissions(post_id, current_user, is_admin_user, db)
+    post = await get_post_with_permissions(post_id, current_user, is_admin_user, db, admin_user)
     
     # 检查帖子是否锁定
     if post.is_locked:
@@ -2017,7 +2226,8 @@ async def create_reply(
     notifications_to_create = []
     
     # 通知帖子作者（如果回复者不是帖子作者）
-    if post.author_id != current_user.id:
+    # 注意：只通知普通用户作者，管理员作者不接收通知（因为通知系统只支持普通用户）
+    if post.author_id and post.author_id != current_user.id:
         notifications_to_create.append(
             models.ForumNotification(
                 notification_type="reply_post",
@@ -2034,7 +2244,10 @@ async def create_reply(
             select(models.ForumReply).where(models.ForumReply.id == reply.parent_reply_id)
         )
         parent_reply = parent_result.scalar_one()
-        if parent_reply.author_id != current_user.id and parent_reply.author_id != post.author_id:
+        # 只通知普通用户作者，管理员作者不接收通知
+        if (parent_reply.author_id and 
+            parent_reply.author_id != current_user.id and 
+            parent_reply.author_id != post.author_id):
             notifications_to_create.append(
                 models.ForumNotification(
                     notification_type="reply_reply",
@@ -2540,6 +2753,7 @@ async def search_posts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """搜索帖子（使用 pg_trgm 相似度搜索，支持中文）"""
@@ -2595,7 +2809,8 @@ async def search_posts(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumPost.category),
-        selectinload(models.ForumPost.author)
+        selectinload(models.ForumPost.author),
+        selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -2630,7 +2845,7 @@ async def search_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await build_user_info(db, post.author),
+            author=await get_post_author_info(db, post, request),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -2986,14 +3201,45 @@ async def get_unread_notification_count(
 async def get_my_posts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取我的帖子"""
-    query = select(models.ForumPost).where(
-        models.ForumPost.author_id == current_user.id,
-        models.ForumPost.is_deleted == False
-    )
+    """获取我的帖子（支持管理员和普通用户）"""
+    # 尝试获取普通用户会话
+    current_user = None
+    try:
+        current_user = await get_current_user_secure_async_csrf(request, db)
+    except HTTPException:
+        pass
+    
+    # 尝试获取管理员会话
+    admin_user = None
+    try:
+        admin_user = await get_current_admin_async(request, db)
+    except HTTPException:
+        pass
+    
+    # 如果既没有普通用户会话也没有管理员会话，返回401
+    if not current_user and not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供有效的认证信息",
+            headers={"X-Error-Code": "UNAUTHORIZED"}
+        )
+    
+    # 构建查询：支持普通用户和管理员
+    if admin_user:
+        # 管理员查看自己的帖子
+        query = select(models.ForumPost).where(
+            models.ForumPost.admin_author_id == admin_user.id,
+            models.ForumPost.is_deleted == False
+        )
+    else:
+        # 普通用户查看自己的帖子
+        query = select(models.ForumPost).where(
+            models.ForumPost.author_id == current_user.id,
+            models.ForumPost.is_deleted == False
+        )
     
     query = query.order_by(models.ForumPost.created_at.desc())
     
@@ -3009,7 +3255,8 @@ async def get_my_posts(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumPost.category),
-        selectinload(models.ForumPost.author)
+        selectinload(models.ForumPost.author),
+        selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -3023,7 +3270,7 @@ async def get_my_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await build_user_info(db, post.author),
+            author=await get_post_author_info(db, post, request),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -3572,6 +3819,7 @@ async def get_hot_posts(
     category_id: Optional[int] = Query(None, description="板块ID（可选）"),
     limit: int = Query(20, ge=1, le=100, description="返回数量"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取热门帖子（按热度排序）"""
@@ -3602,7 +3850,8 @@ async def get_hot_posts(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumPost.category),
-        selectinload(models.ForumPost.author)
+        selectinload(models.ForumPost.author),
+        selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -3637,7 +3886,7 @@ async def get_hot_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await build_user_info(db, post.author),
+            author=await get_post_author_info(db, post, request),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
@@ -3733,6 +3982,7 @@ async def get_user_hot_posts(
     user_id: str,
     limit: int = Query(3, ge=1, le=10, description="返回数量"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取用户发布的最热门帖子"""
@@ -3760,7 +4010,8 @@ async def get_user_hot_posts(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumPost.category),
-        selectinload(models.ForumPost.author)
+        selectinload(models.ForumPost.author),
+        selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -3795,7 +4046,7 @@ async def get_user_hot_posts(
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
-            author=await build_user_info(db, post.author),
+            author=await get_post_author_info(db, post, request),
             view_count=post.view_count,
             reply_count=post.reply_count,
             like_count=post.like_count,
