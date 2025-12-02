@@ -9,9 +9,9 @@ import re
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from sqlalchemy import select, func, or_, and_, desc, asc, case, update
+from sqlalchemy import select, func, or_, and_, desc, asc, case, update, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload, inspect
+from sqlalchemy.orm import selectinload, joinedload
 
 from app import models, schemas
 from app.deps import get_async_db_dependency
