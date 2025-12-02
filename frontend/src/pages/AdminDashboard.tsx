@@ -1588,15 +1588,73 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td style={{ padding: '12px' }}>
                     <button
-                      onClick={async () => {
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         try {
                           // 从数据库实时加载最新的任务达人数据
                           const expertData = await getTaskExpertForAdmin(expert.id);
-                          // 确保 is_active 和 is_featured 正确传递（数字类型）
+                          
+                          // 确保数组字段正确解析（如果后端返回的是字符串，需要解析；如果已经是数组，直接使用）
+                          const parseArrayField = (field: any): string[] => {
+                            if (!field) return [];
+                            if (Array.isArray(field)) return field;
+                            if (typeof field === 'string') {
+                              try {
+                                const parsed = JSON.parse(field);
+                                return Array.isArray(parsed) ? parsed : [];
+                              } catch {
+                                // 如果不是JSON，尝试按逗号分割
+                                return field.split(',').map((s: string) => s.trim()).filter(Boolean);
+                              }
+                            }
+                            return [];
+                          };
+                          
+                          // 处理城市字段：确保值在CITIES列表中，否则使用默认值
+                          const locationValue = expertData.location && 
+                                                typeof expertData.location === 'string' && 
+                                                expertData.location.trim() && 
+                                                CITIES.includes(expertData.location.trim())
+                            ? expertData.location.trim()
+                            : 'Online';
+                          
+                          // 处理类别字段：确保值有效
+                          const categoryValue = expertData.category && 
+                                                typeof expertData.category === 'string' && 
+                                                expertData.category.trim()
+                            ? expertData.category.trim()
+                            : 'programming';
+                          
+                          // 确保所有字段都正确设置
                           setTaskExpertForm({
-                            ...expertData,
-                            is_active: expertData.is_active ?? 0,
-                            is_featured: expertData.is_featured ?? 0
+                            id: expertData.id,
+                            user_id: expertData.user_id,
+                            name: expertData.name || '',
+                            avatar: expertData.avatar || '',
+                            user_level: expertData.user_level || 'normal',
+                            bio: expertData.bio || '',
+                            bio_en: expertData.bio_en || '',
+                            avg_rating: expertData.avg_rating || 0,
+                            completed_tasks: expertData.completed_tasks || 0,
+                            total_tasks: expertData.total_tasks || 0,
+                            completion_rate: expertData.completion_rate || 0,
+                            expertise_areas: parseArrayField(expertData.expertise_areas),
+                            expertise_areas_en: parseArrayField(expertData.expertise_areas_en),
+                            featured_skills: parseArrayField(expertData.featured_skills),
+                            featured_skills_en: parseArrayField(expertData.featured_skills_en),
+                            achievements: parseArrayField(expertData.achievements),
+                            achievements_en: parseArrayField(expertData.achievements_en),
+                            response_time: expertData.response_time || '',
+                            response_time_en: expertData.response_time_en || '',
+                            success_rate: expertData.success_rate || 0,
+                            is_verified: expertData.is_verified ? 1 : 0,
+                            is_active: expertData.is_active !== undefined ? (expertData.is_active ? 1 : 0) : 0,
+                            is_featured: expertData.is_featured !== undefined ? (expertData.is_featured ? 1 : 0) : 0,
+                            display_order: expertData.display_order || 0,
+                            category: categoryValue,
+                            location: locationValue
                           });
                           setShowTaskExpertModal(true);
                         } catch (error) {
@@ -1692,7 +1750,12 @@ const AdminDashboard: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0 }}>任务达人表单</h3>
               <button
-                onClick={() => setShowTaskExpertModal(false)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowTaskExpertModal(false);
+                }}
                 style={{
                   position: 'absolute',
                   top: '15px',
@@ -3024,6 +3087,7 @@ const AdminDashboard: React.FC = () => {
                     message.error(errorMsg);
                   }
                 }}
+                type="button"
                 disabled={!taskExpertForm.name}
                 style={{
                   padding: '10px 20px',
@@ -3038,7 +3102,12 @@ const AdminDashboard: React.FC = () => {
                 保存
               </button>
               <button
-                onClick={() => setShowTaskExpertModal(false)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowTaskExpertModal(false);
+                }}
                 style={{
                   padding: '10px 20px',
                   border: '1px solid #ddd',
@@ -3398,7 +3467,12 @@ const AdminDashboard: React.FC = () => {
 
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
-                onClick={handleReviewApplication}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleReviewApplication();
+                }}
                 style={{
                   flex: 1,
                   padding: '10px',
@@ -3414,7 +3488,10 @@ const AdminDashboard: React.FC = () => {
                 确认{reviewAction === 'approve' ? '批准' : '拒绝'}
               </button>
               <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setShowReviewModal(false);
                   setSelectedApplication(null);
                   setReviewComment('');
@@ -3533,7 +3610,12 @@ const AdminDashboard: React.FC = () => {
                 取消
               </button>
               <button
-                onClick={handleReviewProfileUpdate}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleReviewProfileUpdate();
+                }}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
@@ -3657,7 +3739,12 @@ const AdminDashboard: React.FC = () => {
 
             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setShowCreateExpertModal(false)}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCreateExpertModal(false);
+                }}
                 style={{
                   padding: '10px 20px',
                   background: '#f3f4f6',
@@ -3676,7 +3763,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates]);
+  ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates, showTaskExpertModal, taskExpertForm, expertModalTab, expertServices, expertActivities, loadingServices, loadingActivities, editingService, showServiceEditModal, serviceTimeSlotForm, editingActivity, showActivityEditModal, activityTimeSlotForm, uploadingAvatar, approvedApplications, loadingApprovedApplications, showReviewModal, showProfileUpdateReviewModal, showCreateExpertModal, selectedApplication, selectedProfileUpdate, reviewAction, reviewComment, profileUpdateReviewAction, profileUpdateReviewComment, handleReviewApplication, handleReviewProfileUpdate, loadExpertApplications, loadProfileUpdateRequests]);
 
   const renderNotifications = useCallback(() => (
     <div>
@@ -4590,13 +4677,20 @@ const AdminDashboard: React.FC = () => {
 
   // 编辑论坛帖子
   const handleEditForumPost = async (post: any) => {
-    setForumPostForm({
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      category_id: post.category_id
-    });
-    setShowForumPostModal(true);
+    try {
+      // 获取完整的帖子内容
+      const fullPost = await getForumPost(post.id);
+      setForumPostForm({
+        id: fullPost.id,
+        title: fullPost.title,
+        content: fullPost.content,
+        category_id: fullPost.category_id
+      });
+      setShowForumPostModal(true);
+    } catch (error: any) {
+      console.error('加载帖子详情失败:', error);
+      message.error('加载帖子详情失败');
+    }
   };
 
   const renderForumCategories = useCallback(() => (
