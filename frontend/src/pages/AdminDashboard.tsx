@@ -3763,7 +3763,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates, showTaskExpertModal, taskExpertForm, expertModalTab, expertServices, expertActivities, loadingServices, loadingActivities, editingService, showServiceEditModal, serviceTimeSlotForm, editingActivity, showActivityEditModal, activityTimeSlotForm, uploadingAvatar, approvedApplications, loadingApprovedApplications, showReviewModal, showProfileUpdateReviewModal, showCreateExpertModal, selectedApplication, selectedProfileUpdate, reviewAction, reviewComment, profileUpdateReviewAction, profileUpdateReviewComment, handleReviewApplication, handleReviewProfileUpdate, loadExpertApplications, loadProfileUpdateRequests]);
+  ), [taskExpertSubTab, taskExperts, currentPage, totalPages, loading, expertApplications, loadingApplications, profileUpdateRequests, loadingProfileUpdates, showTaskExpertModal, taskExpertForm, expertModalTab, expertServices, expertActivities, loadingServices, loadingActivities, editingService, showServiceEditModal, serviceTimeSlotForm, uploadingAvatar, approvedApplications, loadingApprovedApplications, showReviewModal, showProfileUpdateReviewModal, showCreateExpertModal, selectedApplication, selectedProfileUpdate, reviewAction, reviewComment, profileUpdateReviewAction, profileUpdateReviewComment, handleReviewApplication, handleReviewProfileUpdate, loadExpertApplications, loadProfileUpdateRequests]);
 
   const renderNotifications = useCallback(() => (
     <div>
