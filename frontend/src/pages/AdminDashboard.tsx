@@ -5289,15 +5289,18 @@ const AdminDashboard: React.FC = () => {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '800px',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 style={{ marginBottom: '20px' }}>{forumPostForm.id ? '编辑帖子' : '快速发帖'}</h3>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>板块</label>
@@ -5333,7 +5336,10 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setShowForumPostModal(false);
                   setForumPostForm({
                     id: undefined,
@@ -5354,7 +5360,12 @@ const AdminDashboard: React.FC = () => {
                 取消
               </button>
               <button
-                onClick={handleCreateForumPost}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCreateForumPost();
+                }}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
@@ -5371,7 +5382,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
     </div>
-  ), [forumPostFilter, forumCategories, forumPosts, forumPostsLoading, forumPostsPage, forumPostsTotal, loadForumPosts, handleEditForumPost, pinForumPost, unpinForumPost, featureForumPost, unfeatureForumPost, lockForumPost, unlockForumPost, restoreForumPost, unhideForumPost, deleteForumPost, setForumPostFilter, setForumPostsPage, setShowForumPostModal, setForumPostForm]);
+  ), [forumPostFilter, forumCategories, forumPosts, forumPostsLoading, forumPostsPage, forumPostsTotal, loadForumPosts, handleCreateForumPost, handleEditForumPost, pinForumPost, unpinForumPost, featureForumPost, unfeatureForumPost, lockForumPost, unlockForumPost, restoreForumPost, unhideForumPost, deleteForumPost, setForumPostFilter, setForumPostsPage, setShowForumPostModal, setForumPostForm]);
 
   // 加载论坛举报 - 使用useCallback优化
   const loadForumReports = useCallback(async () => {
