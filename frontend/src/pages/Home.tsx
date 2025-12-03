@@ -390,7 +390,7 @@ const Home: React.FC = () => {
             
             // 如果是401错误（未授权），说明token已过期或用户未登录
             if (status === 401) {
-                            if (interval) {
+              if (interval) {
                 clearInterval(interval);
                 interval = null;
               }
