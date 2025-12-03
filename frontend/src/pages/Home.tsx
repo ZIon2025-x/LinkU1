@@ -943,7 +943,9 @@ const Home: React.FC = () => {
               <div className={styles.heroStatLabel}>{t('profile.tasksCompleted')}</div>
             </div>
             <div className={styles.heroStatItem}>
-              <div className={styles.heroStatValue}>{roundUpApproximate(maxTaskId || 0)}</div>
+              <div className={styles.heroStatValue}>
+                {maxTaskId > 0 ? roundUpApproximate(maxTaskId) : '0'}
+              </div>
               <div className={styles.heroStatLabel}>{t('home.totalTasksPublished')}</div>
             </div>
           </div>
