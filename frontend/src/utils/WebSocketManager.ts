@@ -55,14 +55,12 @@ class WebSocketManager {
     if (this.ws && 
         this.userId === userId && 
         this.ws.readyState === WebSocket.OPEN) {
-      console.debug('WebSocket already connected to user', userId);
-      return;
+            return;
     }
 
     // 如果正在连接中，等待完成
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      console.debug('WebSocket connection in progress, waiting...');
-      return;
+            return;
     }
 
     // 如果连接到不同用户，先断开旧连接
@@ -124,17 +122,14 @@ class WebSocketManager {
             try {
               handler(msg);
             } catch (error) {
-              console.error('WebSocket消息处理错误:', error);
-            }
+                          }
           });
         } catch (error) {
-          console.error('WebSocket消息解析失败:', error);
-        }
+                  }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket错误:', error);
-      };
+              };
 
       this.ws.onclose = (event) => {
         this.cleanup();
@@ -152,8 +147,7 @@ class WebSocketManager {
         
         // 如果是新连接替换，不触发重连
         if (isNewConnectionReplacement) {
-          console.debug('WebSocket closed due to new connection replacement, no reconnect');
-          return;
+                    return;
         }
         
         // 检查是否是心跳超时（需要重连）
@@ -187,8 +181,7 @@ class WebSocketManager {
         }
       };
     } catch (error) {
-      console.error('WebSocket连接失败:', error);
-    }
+          }
   }
 
   /**
@@ -252,8 +245,7 @@ class WebSocketManager {
       this.ws.send(JSON.stringify(message));
       return true;
     }
-    console.warn('WebSocket未连接，无法发送消息');
-    return false;
+        return false;
   }
 
   /**

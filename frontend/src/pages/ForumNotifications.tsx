@@ -95,8 +95,7 @@ const ForumNotifications: React.FC = () => {
       setNotifications(response.notifications || []);
       setTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载通知失败:', error);
-      message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(error.response?.data?.detail || t('forum.error'));
     } finally {
       setLoading(false);
     }
@@ -109,8 +108,7 @@ const ForumNotifications: React.FC = () => {
       const response = await getForumUnreadNotificationCount();
       setUnreadCount(response.unread_count || 0);
     } catch (error: any) {
-      console.error('加载未读数失败:', error);
-    }
+          }
   };
 
   const handleMarkRead = async (notificationId: number) => {

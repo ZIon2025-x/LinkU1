@@ -52,8 +52,7 @@ export class TimeHandlerV2 {
       // 如果当前偏移量大于标准偏移量，说明是夏令时
       return utcOffset > standardOffset;
     } catch (error) {
-      console.warn('DST检测失败:', error);
-      return false;
+            return false;
     }
   }
 
@@ -101,8 +100,7 @@ export class TimeHandlerV2 {
       
       // 检查日期是否有效
       if (!utcTime.isValid()) {
-        console.error('无效的日期格式:', utcTimeString);
-        return utcTimeString; // 返回原始字符串
+                return utcTimeString; // 返回原始字符串
       }
       
       // 转换为用户时区
@@ -117,8 +115,7 @@ export class TimeHandlerV2 {
       
       return localTime.format(format);
     } catch (error) {
-      console.error('时间格式化错误:', error, '原始字符串:', utcTimeString);
-      return utcTimeString; // 返回原始字符串作为fallback
+            return utcTimeString; // 返回原始字符串作为fallback
     }
   }
 
@@ -203,8 +200,7 @@ export class TimeHandlerV2 {
         }
       }
     } catch (error) {
-      console.error('最后消息时间格式化错误:', error);
-      return utcTimeString;
+            return utcTimeString;
     }
   }
 
@@ -258,8 +254,7 @@ export class TimeHandlerV2 {
       
       return `${localTime.format('YYYY/MM/DD HH:mm:ss')} (${tzDisplay})`;
     } catch (error) {
-      console.error('详细时间格式化错误:', error);
-      return utcTimeString;
+            return utcTimeString;
     }
   }
 
@@ -271,8 +266,7 @@ export class TimeHandlerV2 {
       const response = await fetch('/api/users/timezone/info');
       return await response.json();
     } catch (error) {
-      console.error('获取时区信息失败:', error);
-      return null;
+            return null;
     }
   }
 
@@ -291,8 +285,7 @@ export class TimeHandlerV2 {
       if (time1.isAfter(time2)) return 1;
       return 0;
     } catch (error) {
-      console.error('时间比较错误:', error);
-      return 0;
+            return 0;
     }
   }
 }
@@ -359,8 +352,7 @@ export function formatRelativeTime(
       return localTime.format('YYYY-MM-DD');
     }
   } catch (error) {
-    console.error('相对时间格式化错误:', error);
-    return utcTimeString;
+        return utcTimeString;
   }
 }
 

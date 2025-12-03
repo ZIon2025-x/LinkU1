@@ -25,13 +25,11 @@ const CustomerServiceRoute: React.FC<CustomerServiceRouteProps> = ({ children })
           setIsAuthorized(true);
         } else {
           setIsAuthorized(false);
-          console.warn('客服认证失败:', response.status, response.statusText);
-        }
+                  }
       } catch (error) {
         // 认证失败
         setIsAuthorized(false);
-        console.error('客服认证检查失败:', error);
-      } finally {
+              } finally {
         setLoading(false);
       }
     };

@@ -35,8 +35,7 @@ const ExpertDetailModal: React.FC<ExpertDetailModalProps> = ({
       const data = await getTaskExpert(expertId);
       setExpert(data);
     } catch (err: any) {
-      console.error('Failed to load expert detail:', err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

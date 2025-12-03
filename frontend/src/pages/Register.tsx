@@ -190,29 +190,13 @@ const Register: React.FC = () => {
           suggestions: response.data.suggestions || [],
           missing_requirements: response.data.missing_requirements || []
         };
-        console.log('密码验证结果:', { 
-          password: pwd.substring(0, 5) + '...', 
-          bars: validationData.bars, 
-          strength: validationData.strength,
-          has_bars_field: 'bars' in response.data,
-          response_data: response.data
-        });
-        setPasswordValidation(validationData);
+                setPasswordValidation(validationData);
       }
     } catch (error: any) {
-      console.error('密码验证失败:', error);
-      
-      // 如果是网络错误（后端不可用），使用前端验证作为后备
+            // 如果是网络错误（后端不可用），使用前端验证作为后备
       if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-        console.log('后端不可用，使用前端验证');
-        const frontendValidation = validatePasswordFrontend(pwd);
-        console.log('前端密码验证结果:', {
-          password: pwd.substring(0, 5) + '...',
-          bars: frontendValidation.bars,
-          strength: frontendValidation.strength,
-          missing_requirements: frontendValidation.missing_requirements
-        });
-        setPasswordValidation(frontendValidation);
+                const frontendValidation = validatePasswordFrontend(pwd);
+                setPasswordValidation(frontendValidation);
         return;
       }
       
@@ -262,8 +246,7 @@ const Register: React.FC = () => {
         }, 1500);
       }
     } catch (err: any) {
-      console.error('Registration error:', err);
-      let msg = t('register.registrationError');
+            let msg = t('register.registrationError');
       
       // 处理不同的错误格式
       if (err?.response?.data) {

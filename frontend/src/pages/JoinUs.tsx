@@ -107,8 +107,7 @@ const JoinUs: React.FC = () => {
         const response = await getPublicJobPositions({ page: 1, size: 100 });
         setPositions(response.positions || []);
       } catch (error) {
-        console.error('加载岗位数据失败:', error);
-        // 如果API失败，显示空状态
+                // 如果API失败，显示空状态
         setPositions([]);
       } finally {
         setPositionsLoading(false);
@@ -131,8 +130,7 @@ const JoinUs: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知已读失败:', error);
-      alert('标记通知为已读失败，请重试');
+            alert('标记通知为已读失败，请重试');
     }
   };
 
@@ -145,8 +143,7 @@ const JoinUs: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('标记所有通知已读失败:', error);
-      alert('标记所有通知为已读失败，请重试');
+            alert('标记所有通知为已读失败，请重试');
     }
   };
 

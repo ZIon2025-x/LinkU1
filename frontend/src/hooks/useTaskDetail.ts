@@ -57,8 +57,7 @@ export const useTaskReviews = (taskId: number | null) => {
       try {
         return await getTaskReviews(taskId);
       } catch (error) {
-        console.error('获取评价失败:', error);
-        return [];
+                return [];
       }
     },
     enabled: !!taskId,

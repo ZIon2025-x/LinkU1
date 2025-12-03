@@ -65,8 +65,7 @@ export const useWebSocket = ({
           
           onMessage?.(message);
         } catch (error) {
-          console.error('WebSocket消息解析失败:', error);
-        }
+                  }
       };
 
       ws.onclose = (event) => {
@@ -90,13 +89,11 @@ export const useWebSocket = ({
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket错误:', error);
-        onError?.(error);
+                onError?.(error);
       };
 
     } catch (error) {
-      console.error('WebSocket连接失败:', error);
-    }
+          }
   }, [url, userId, onMessage, onConnect, onDisconnect, onError, reconnectInterval, maxReconnectAttempts, reconnectAttempts]);
 
   const disconnect = useCallback(() => {
@@ -123,8 +120,7 @@ export const useWebSocket = ({
       wsRef.current.send(JSON.stringify(message));
       return true;
     }
-    console.warn('WebSocket未连接，无法发送消息');
-    return false;
+        return false;
   }, []);
 
   // 初始化连接

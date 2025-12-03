@@ -35,9 +35,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // 上报错误到监控服务
-    console.error('ErrorBoundary 捕获到错误:', error, errorInfo);
-    
-    // 调用自定义错误处理函数
+        // 调用自定义错误处理函数
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }

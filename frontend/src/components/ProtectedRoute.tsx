@@ -64,15 +64,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
           // 选项1：显示骨架屏，允许用户继续使用（如果之前已认证）
           // 选项2：跳转登录页
           // 选项3：显示离线模式提示
-          console.warn('Auth check timeout, using cached state');
-          // 这里可以根据业务需求选择策略
+                    // 这里可以根据业务需求选择策略
         }
         
         // 认证失败，用户未登录（401是预期的，不需要显示错误）
         // 只在非401错误时才记录（比如网络错误）
         if (error.response?.status !== 401 && error.message !== '认证检查超时') {
-          console.debug('ProtectedRoute 认证检查失败（非401）:', error);
-        }
+                  }
         setIsAuthenticated(false);
         setLoading(false);
       }

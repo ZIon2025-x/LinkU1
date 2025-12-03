@@ -488,8 +488,7 @@ const ForumPostDetail: React.FC = () => {
       const response = await getForumPost(Number(postId));
       setPost(response);
     } catch (error: any) {
-      console.error('加载帖子失败:', error);
-      message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(error.response?.data?.detail || t('forum.error'));
     } finally {
       setLoading(false);
     }
@@ -504,8 +503,7 @@ const ForumPostDetail: React.FC = () => {
       setReplies(response.replies || []);
       setTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载回复失败:', error);
-    }
+          }
   };
 
   const handleLike = async (e: React.MouseEvent) => {

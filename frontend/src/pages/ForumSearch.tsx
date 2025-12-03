@@ -119,8 +119,7 @@ const ForumSearch: React.FC = () => {
       }
       setSearchParams(newParams);
     } catch (error: any) {
-      console.error('搜索失败:', error);
-      message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(error.response?.data?.detail || t('forum.error'));
     } finally {
       setLoading(false);
     }

@@ -72,8 +72,7 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
       return `${minutes}分钟`;
     }
   } catch (error) {
-    console.error('Remaining time calculation error:', error);
-    return t('home.taskExpired');
+        return t('home.taskExpired');
   }
 }
 
@@ -96,8 +95,7 @@ function isExpiringSoon(deadline: string) {
     
     return nowUK.isBefore(endUK) && endUK.isBefore(twoHoursLater);
   } catch (error) {
-    console.error('Expiration check error:', error);
-    return false;
+        return false;
   }
 }
 
@@ -128,8 +126,7 @@ function isExpired(deadline: string) {
     const endUK = utcTime.tz('Europe/London');
     return nowUK.isAfter(endUK);
   } catch (error) {
-    console.error('Expiration check error:', error);
-    return true; // If parsing fails, assume expired
+        return true; // If parsing fails, assume expired
   }
 }
 
@@ -360,21 +357,16 @@ const Home: React.FC = () => {
       // Get notification list - get all unread notifications and recent 10 read notifications
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
-      }).catch(error => {
-        console.error('Failed to get notifications:', error);
+      }).catch(() => {
         // If getting failed, get recent notifications
         getNotifications(20).then(notifications => {
           setNotifications(notifications);
-        }).catch(error => {
-          console.error('Failed to get notifications:', error);
-        });
+        }).catch(() => {});
       });
       // Get unread count
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
-      }).catch(error => {
-        console.error('Failed to get unread count:', error);
-      });
+      }).catch(() => {});
       
     }
   }, [user]);
@@ -398,8 +390,7 @@ const Home: React.FC = () => {
             
             // 如果是401错误（未授权），说明token已过期或用户未登录
             if (status === 401) {
-              console.warn('定期更新未读数量失败: 用户未授权，停止定时更新');
-              if (interval) {
+                            if (interval) {
                 clearInterval(interval);
                 interval = null;
               }
@@ -408,15 +399,12 @@ const Home: React.FC = () => {
             
             // 如果连续错误次数过多，停止定时器
             if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-              console.warn('定期更新未读数量连续失败，停止定时更新');
               if (interval) {
                 clearInterval(interval);
                 interval = null;
               }
               return;
             }
-            
-            console.error('定期更新未读数量失败:', error);
           });
         }
       };
@@ -441,8 +429,7 @@ const Home: React.FC = () => {
           const notificationsData = await getNotificationsWithRecentRead(10);
           setNotifications(notificationsData);
         } catch (error) {
-          console.error('刷新通知列表失败:', error);
-        }
+                  }
       };
       loadNotificationsList();
       
@@ -473,16 +460,14 @@ const Home: React.FC = () => {
         getUnreadNotificationCount().then(count => {
           setUnreadCount(count);
         }).catch(error => {
-          console.error('更新未读通知数量失败:', error);
-        });
+                  });
 
         // 如果通知面板已打开，刷新通知列表
         if (showNotifications) {
           getNotificationsWithRecentRead(10).then(notificationsData => {
             setNotifications(notificationsData);
           }).catch(error => {
-            console.error('刷新通知列表失败:', error);
-          });
+                      });
         }
       }
     });
@@ -524,8 +509,7 @@ const Home: React.FC = () => {
         setTasks(sortedTasks);
       })
       .catch(error => {
-        console.error('获取任务数据失败:', error);
-        setTasks([]);
+                setTasks([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -544,8 +528,7 @@ const Home: React.FC = () => {
         setHotLeaderboards(leaderboardsList.slice(0, 3)); // 只取前3个
       })
       .catch(error => {
-        console.error('获取热门榜单数据失败:', error);
-        setHotLeaderboards([]);
+                setHotLeaderboards([]);
       })
       .finally(() => setLoadingHotLeaderboards(false));
   }, []);
@@ -559,8 +542,7 @@ const Home: React.FC = () => {
         setHotPosts(postsList.slice(0, 3)); // 只取前3个
       })
       .catch(error => {
-        console.error('获取热门帖子数据失败:', error);
-        setHotPosts([]);
+                setHotPosts([]);
       })
       .finally(() => setLoadingHotPosts(false));
   }, []);
@@ -573,8 +555,7 @@ const Home: React.FC = () => {
         setTotalUsers(data.total_users || 0);
       })
       .catch(error => {
-        console.error('获取平台统计数据失败:', error);
-        setTotalUsers(0);
+                setTotalUsers(0);
       })
       .finally(() => {
         setLoadingStats(false);
@@ -614,8 +595,7 @@ const Home: React.FC = () => {
         setHotExperts(sortedExperts);
       })
       .catch(error => {
-        console.error('获取热门达人数据失败:', error);
-        setHotExperts([]);
+                setHotExperts([]);
       })
       .finally(() => setLoadingExperts(false));
   }, []);
@@ -653,8 +633,7 @@ const Home: React.FC = () => {
             setTasks(sortedTasks);
           })
           .catch(error => {
-            console.error('定期刷新任务列表失败:', error);
-          });
+                      });
       }
     }, 60000); // 每分钟更新一次
     return () => clearInterval(interval);
@@ -691,8 +670,7 @@ const Home: React.FC = () => {
       // 更新未读数量
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-      message.error('标记通知为已读失败，请重试');
+            message.error('标记通知为已读失败，请重试');
     }
   };
 
@@ -704,8 +682,7 @@ const Home: React.FC = () => {
       // 更新通知列表，标记所有为已读
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
-      console.error('标记所有通知为已读失败:', error);
-      message.error('标记所有通知为已读失败，请重试');
+            message.error('标记所有通知为已读失败，请重试');
     }
   };
 

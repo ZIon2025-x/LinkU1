@@ -27,8 +27,7 @@ const CustomerServiceLogin: React.FC = () => {
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       // 登录成功后立即跳转
       

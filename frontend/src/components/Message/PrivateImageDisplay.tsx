@@ -55,9 +55,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
       }
       
     } catch (err) {
-      console.error('私密图片加载错误:', err, imageId);
-      
-      // 如果是网络错误，尝试重试
+            // 如果是网络错误，尝试重试
       if (retry < 2) {
         setTimeout(() => {
           loadImage(retry + 1);
@@ -154,8 +152,7 @@ const PrivateImageDisplay: React.FC<PrivateImageDisplayProps> = ({
         height: 'auto'
       }}
       onError={() => {
-        console.error('图片显示失败:', imageId);
-        setError(true);
+                setError(true);
       }}
     />
   );

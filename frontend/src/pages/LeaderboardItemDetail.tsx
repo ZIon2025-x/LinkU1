@@ -86,8 +86,7 @@ const LeaderboardItemDetail: React.FC = () => {
         setPagination(prev => ({ ...prev, current: 1, total: votesData?.length || 0 }));
       }
     } catch (error: any) {
-      console.error('加载失败:', error);
-      message.error(error.response?.data?.detail || t('forum.loadingFailed'));
+            message.error(error.response?.data?.detail || t('forum.loadingFailed'));
     } finally {
       setLoading(false);
     }
@@ -115,8 +114,7 @@ const LeaderboardItemDetail: React.FC = () => {
         setVotes(votesData || []);
       }
     } catch (error: any) {
-      console.error('加载留言失败:', error);
-      message.error(t('forum.loadCommentsFailed'));
+            message.error(t('forum.loadCommentsFailed'));
     } finally {
       setVotesLoading(false);
     }
@@ -172,8 +170,7 @@ const LeaderboardItemDetail: React.FC = () => {
       // 重新加载留言列表
       loadVotes(1);
     } catch (error: any) {
-      console.error('投票失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
@@ -209,8 +206,7 @@ const LeaderboardItemDetail: React.FC = () => {
           : vote
       ));
     } catch (error: any) {
-      console.error('点赞失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('forum.likeFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('forum.likeFailed');
       
       if (error.response?.status === 429) {
         const retryAfter = error.response?.headers?.['retry-after'] || 60;
@@ -594,8 +590,7 @@ const LeaderboardItemDetail: React.FC = () => {
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
-              console.error('举报失败:', error);
-              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
+                            const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);

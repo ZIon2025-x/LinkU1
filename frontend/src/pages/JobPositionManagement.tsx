@@ -98,8 +98,7 @@ const JobPositionManagement: React.FC = () => {
         total: response.total || 0
       });
     } catch (error) {
-      console.error('加载岗位列表失败:', error);
-      message.error('加载岗位列表失败');
+            message.error('加载岗位列表失败');
     } finally {
       setLoading(false);
     }
@@ -134,8 +133,7 @@ const JobPositionManagement: React.FC = () => {
       form.resetFields();
       loadPositions(pagination.current, pagination.pageSize);
     } catch (error) {
-      console.error('保存岗位失败:', error);
-      message.error('保存岗位失败');
+            message.error('保存岗位失败');
     }
   };
 
@@ -146,8 +144,7 @@ const JobPositionManagement: React.FC = () => {
       message.success('岗位删除成功');
       loadPositions(pagination.current, pagination.pageSize);
     } catch (error) {
-      console.error('删除岗位失败:', error);
-      message.error('删除岗位失败');
+            message.error('删除岗位失败');
     }
   };
 
@@ -158,8 +155,7 @@ const JobPositionManagement: React.FC = () => {
       message.success('状态切换成功');
       loadPositions(pagination.current, pagination.pageSize);
     } catch (error) {
-      console.error('切换状态失败:', error);
-      message.error('切换状态失败');
+            message.error('切换状态失败');
     }
   };
 

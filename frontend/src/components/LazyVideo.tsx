@@ -66,8 +66,7 @@ const LazyVideo: React.FC<LazyVideoProps> = ({
       // 延迟播放，确保视频已加载
       const timer = setTimeout(() => {
         videoRef.current?.play().catch((error) => {
-          console.log('Autoplay prevented:', error);
-        });
+                  });
       }, 100);
       return () => clearTimeout(timer);
     }

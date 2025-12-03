@@ -81,8 +81,7 @@ const ForumLeaderboard: React.FC = () => {
       });
       setUsers(response.users || []);
     } catch (error: any) {
-      console.error('加载排行榜失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

@@ -74,8 +74,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         throw new Error('图片上传失败');
       }
     } catch (error) {
-      console.error('图片上传错误:', error);
-      alert('图片上传失败，请重试');
+            alert('图片上传失败，请重试');
     }
   }, [onSendImage, taskId, chatId]);
 

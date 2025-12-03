@@ -28,8 +28,7 @@ const NotificationBell = forwardRef<NotificationBellRef, NotificationBellProps>(
         setUnreadCount(response.unread_count || 0);
       }
     } catch (error) {
-      console.error('加载未读提醒数量失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

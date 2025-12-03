@@ -93,8 +93,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
       setTasks(response.tasks || []);
       setPagination(prev => ({ ...prev, total: response.total || 0 }));
     } catch (error) {
-      console.error('加载任务列表失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -125,8 +124,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
       setSelectedTask(response.task);
       setShowTaskDetail(true);
     } catch (error) {
-      console.error('获取任务详情失败:', error);
-    }
+          }
   };
 
   const handleEditTask = (task: Task) => {
@@ -141,8 +139,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
         await loadTasks();
         alert('任务删除成功');
       } catch (error) {
-        console.error('删除任务失败:', error);
-        alert('删除任务失败');
+                alert('删除任务失败');
       }
     }
   };
@@ -155,8 +152,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
       setShowBatchModal(false);
       await loadTasks();
     } catch (error) {
-      console.error('批量更新失败:', error);
-      alert('批量更新失败');
+            alert('批量更新失败');
     }
   };
 
@@ -168,8 +164,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
         setSelectedTasks([]);
         await loadTasks();
       } catch (error) {
-        console.error('批量删除失败:', error);
-        alert('批量删除失败');
+                alert('批量删除失败');
       }
     }
   };
@@ -517,8 +512,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onClose }) => {
               setShowEditModal(false);
               alert('任务更新成功');
             } catch (error) {
-              console.error('更新任务失败:', error);
-              alert('更新任务失败');
+                            alert('更新任务失败');
             }
           }}
         />
@@ -549,8 +543,7 @@ const TaskDetailModal: React.FC<{ task: Task; onClose: () => void }> = ({ task, 
           setParticipants(data.participants || []);
         })
         .catch((error) => {
-          console.error('加载参与者列表失败:', error);
-        })
+                  })
         .finally(() => {
           setLoadingParticipants(false);
         });
@@ -713,8 +706,7 @@ const TaskEditModal: React.FC<{
       const pointsValue = pointsReward.trim() === '' ? null : parseInt(pointsReward) || null;
       await updateTaskPointsReward(task.id, pointsValue);
     } catch (error) {
-      console.error('更新任务积分失败:', error);
-      alert('更新任务积分失败');
+            alert('更新任务积分失败');
     } finally {
       setPointsRewardSaving(false);
     }

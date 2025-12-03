@@ -131,8 +131,7 @@ const Settings: React.FC = () => {
           }
         }));
       } catch (error) {
-        console.error('加载用户偏好失败:', error);
-      }
+              }
       
       // ⚠️ 使用fetchCurrentUser，利用缓存机制（不再使用时间戳参数绕过缓存）
       try {
@@ -164,8 +163,7 @@ const Settings: React.FC = () => {
           }
         }));
       } catch (error: any) {
-        console.error('加载用户资料失败:', error);
-        if (error.response?.status === 401) {
+                if (error.response?.status === 401) {
           // 会话过期，重定向到登录页面
           navigate('/login');
           return;
@@ -173,8 +171,7 @@ const Settings: React.FC = () => {
         setUser(null);
       }
     } catch (error) {
-      console.error('加载用户设置失败:', error);
-      setUser(null);
+            setUser(null);
     } finally {
       setLoading(false);
     }
@@ -289,8 +286,7 @@ const Settings: React.FC = () => {
           language_preference: languagePreference,
         }));
       } catch (error) {
-        console.error('保存后重新加载用户数据失败:', error);
-      }
+              }
       
       // 重置验证码状态
       setEmailCodeSent(false);
@@ -308,8 +304,7 @@ const Settings: React.FC = () => {
         window.location.reload();
       }
     } catch (error) {
-      console.error('保存设置失败:', error);
-      message.error(t('settings.saveFailed'));
+            message.error(t('settings.saveFailed'));
     }
   };
 
@@ -428,8 +423,7 @@ const Settings: React.FC = () => {
       const res = await api.get('/api/secure-auth/sessions');
       setSessions(Array.isArray(res.data.sessions) ? res.data.sessions : []);
     } catch (e: any) {
-      console.error(e);
-      setSessionsError(e?.message || t('settings.loadSessionsFailed'));
+            setSessionsError(e?.message || t('settings.loadSessionsFailed'));
       setSessions([]);
     } finally {
       setSessionsLoading(false);
@@ -452,8 +446,7 @@ const Settings: React.FC = () => {
           await loadSessions();
           message.success(t('settings.loggedOutOtherDevices'));
         } catch (e: any) {
-          console.error(e);
-          setSessionsError(e?.response?.data?.detail || e?.message || t('settings.logoutOthersFailed'));
+                    setSessionsError(e?.response?.data?.detail || e?.message || t('settings.logoutOthersFailed'));
           message.error(e?.response?.data?.detail || e?.message || t('settings.logoutOthersFailed'));
         } finally {
           setSessionsLoading(false);
@@ -658,8 +651,7 @@ const Settings: React.FC = () => {
                       objectFit: 'cover'
                     }}
                     onError={(e) => {
-                      console.error('头像加载失败:', user?.avatar);
-                      // 如果加载失败，使用默认头像
+                                            // 如果加载失败，使用默认头像
                       if (e.currentTarget.src !== '/static/avatar2.png') {
                         e.currentTarget.src = '/static/avatar2.png';
                       }

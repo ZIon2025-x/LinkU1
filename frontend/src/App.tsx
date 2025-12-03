@@ -43,14 +43,12 @@ const lazyWithRetry = (componentImport: () => Promise<any>) => {
     try {
       return await componentImport();
     } catch (error) {
-      console.error('组件加载失败:', error);
-      // 如果加载失败，等待1秒后重试一次
+            // 如果加载失败，等待1秒后重试一次
       await new Promise(resolve => setTimeout(resolve, 1000));
       try {
         return await componentImport();
       } catch (retryError) {
-        console.error('组件重试加载失败:', retryError);
-        // 返回一个错误组件，而不是让应用崩溃
+                // 返回一个错误组件，而不是让应用崩溃
         // 直接返回 ErrorFallback 组件，它会在渲染时使用语言上下文
         return {
           default: ErrorFallback

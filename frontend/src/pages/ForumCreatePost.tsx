@@ -110,8 +110,7 @@ const ForumCreatePost: React.FC = () => {
       
       setCategories(filteredCategories);
     } catch (error: any) {
-      console.error('加载板块失败:', error);
-    }
+          }
   };
 
   const loadPost = async () => {

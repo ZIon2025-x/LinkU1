@@ -70,8 +70,7 @@ export const useAutoTranslate = (
       // 保存到持久化缓存（sessionStorage）
       setTranslationCache(text, translated, targetLang, detectedLang);
     } catch (error) {
-      console.error('自动翻译失败:', error);
-      setTranslatedText(null);
+            setTranslatedText(null);
     } finally {
       setIsTranslating(false);
     }

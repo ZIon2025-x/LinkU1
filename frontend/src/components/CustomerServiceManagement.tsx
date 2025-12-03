@@ -61,8 +61,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
       const response = await getAdminCustomerServiceRequests(filters);
       setRequests(response.requests || []);
     } catch (error) {
-      console.error('加载客服请求失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -73,8 +72,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
       const response = await getAdminCustomerServiceChatMessages();
       setChatMessages(response.messages || []);
     } catch (error) {
-      console.error('加载聊天记录失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -93,8 +91,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
       setSelectedRequest(response.request);
       setShowRequestDetail(true);
     } catch (error) {
-      console.error('获取请求详情失败:', error);
-    }
+          }
   };
 
   const handleUpdateRequest = async (requestId: number, updateData: any) => {
@@ -103,8 +100,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
       await loadRequests();
       alert('请求更新成功');
     } catch (error) {
-      console.error('更新请求失败:', error);
-      alert('更新请求失败');
+            alert('更新请求失败');
     }
   };
 
@@ -116,8 +112,7 @@ const CustomerServiceManagement: React.FC<CustomerServiceManagementProps> = ({ o
       setNewMessage('');
       await loadChatMessages();
     } catch (error) {
-      console.error('发送消息失败:', error);
-      alert('发送消息失败');
+            alert('发送消息失败');
     }
   };
 

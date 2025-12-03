@@ -441,8 +441,7 @@ const AdminDashboard: React.FC = () => {
         await loadLeaderboardItems();
       }
     } catch (error: any) {
-      console.error('加载数据失败:', error);
-      let errorMsg = '加载数据失败';
+            let errorMsg = '加载数据失败';
       if (error?.response?.data?.detail) {
         if (typeof error.response.data.detail === 'string') {
           errorMsg = error.response.data.detail;
@@ -474,8 +473,7 @@ const AdminDashboard: React.FC = () => {
       setExpertApplications(Array.isArray(data) ? data : (data.items || []));
     } catch (err: any) {
       message.error('加载申请列表失败');
-      console.error(err);
-    } finally {
+          } finally {
       setLoadingApplications(false);
     }
   };
@@ -488,8 +486,7 @@ const AdminDashboard: React.FC = () => {
       setProfileUpdateRequests(Array.isArray(data) ? data : (data.items || []));
     } catch (err: any) {
       message.error('加载信息修改请求列表失败');
-      console.error(err);
-    } finally {
+          } finally {
       setLoadingProfileUpdates(false);
     }
   };
@@ -533,16 +530,13 @@ const AdminDashboard: React.FC = () => {
         action: reviewAction,
         review_comment: reviewComment || undefined,
       });
-      console.log('审核结果:', result);
-      message.success(reviewAction === 'approve' ? '申请已批准' : '申请已拒绝');
+            message.success(reviewAction === 'approve' ? '申请已批准' : '申请已拒绝');
       setShowReviewModal(false);
       setSelectedApplication(null);
       setReviewComment('');
       loadExpertApplications();
     } catch (err: any) {
-      console.error('审核失败错误详情:', err);
-      console.error('错误响应:', err.response);
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || '审核失败';
+                  const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || '审核失败';
       message.error(errorMessage);
     }
   };
@@ -745,8 +739,7 @@ const AdminDashboard: React.FC = () => {
         message.error('清理失败');
       }
     } catch (error: any) {
-      console.error('清理失败:', error);
-      message.error(error.response?.data?.detail || '清理失败，请稍后重试');
+            message.error(error.response?.data?.detail || '清理失败，请稍后重试');
     } finally {
       setCleanupLoading(false);
     }
@@ -1528,8 +1521,7 @@ const AdminDashboard: React.FC = () => {
                   setShowCreateExpertModal(true);
                 } catch (err: any) {
                   message.error('加载已批准申请失败');
-                  console.error(err);
-                } finally {
+                                  } finally {
                   setLoadingApprovedApplications(false);
                 }
               }}
@@ -1658,8 +1650,7 @@ const AdminDashboard: React.FC = () => {
                           });
                           setShowTaskExpertModal(true);
                         } catch (error) {
-                          console.error('加载任务达人详情失败:', error);
-                          message.error('加载任务达人详情失败，请重试');
+                                                    message.error('加载任务达人详情失败，请重试');
                         }
                       }}
                       style={{
@@ -1688,8 +1679,7 @@ const AdminDashboard: React.FC = () => {
                               await loadDashboardData();
                               message.success('任务达人删除成功！');
                             } catch (error: any) {
-                              console.error('删除失败:', error);
-                              message.error(error.response?.data?.detail || '删除失败');
+                                                            message.error(error.response?.data?.detail || '删除失败');
                             }
                           }
                         });
@@ -1812,8 +1802,7 @@ const AdminDashboard: React.FC = () => {
                       const data = await getExpertServicesAdmin(taskExpertForm.id);
                       setExpertServices(data.services || []);
                     } catch (error: any) {
-                      console.error('加载服务列表失败:', error);
-                      message.error('加载服务列表失败');
+                                            message.error('加载服务列表失败');
                     } finally {
                       setLoadingServices(false);
                     }
@@ -1843,8 +1832,7 @@ const AdminDashboard: React.FC = () => {
                       const data = await getExpertActivitiesAdmin(taskExpertForm.id);
                       setExpertActivities(data.activities || []);
                     } catch (error: any) {
-                      console.error('加载活动列表失败:', error);
-                      message.error('加载活动列表失败');
+                                            message.error('加载活动列表失败');
                     } finally {
                       setLoadingActivities(false);
                     }
@@ -1906,8 +1894,7 @@ const AdminDashboard: React.FC = () => {
                       src={taskExpertForm.avatar}
                       alt="头像预览"
                       onError={(e) => {
-                        console.error('头像加载失败:', taskExpertForm.avatar);
-                        const img = e.currentTarget;
+                                                const img = e.currentTarget;
                         const parent = img.parentElement;
                         if (parent) {
                           parent.innerHTML = '<span style="font-size: 10px; color: #ff4d4f;">加载失败</span>';
@@ -1977,8 +1964,7 @@ const AdminDashboard: React.FC = () => {
                             message.error('图片上传失败，请重试');
                           }
                         } catch (error: any) {
-                          console.error('图片上传失败:', error);
-                          message.error(error.response?.data?.detail || '图片上传失败，请重试');
+                                                    message.error(error.response?.data?.detail || '图片上传失败，请重试');
                         } finally {
                           setUploadingAvatar(false);
                           e.target.value = '';
@@ -2314,8 +2300,7 @@ const AdminDashboard: React.FC = () => {
                             setExpertServices(data.services || []);
                             message.success('刷新成功');
                           } catch (error: any) {
-                            console.error('加载服务列表失败:', error);
-                            message.error('加载服务列表失败');
+                                                        message.error('加载服务列表失败');
                           } finally {
                             setLoadingServices(false);
                           }
@@ -2423,8 +2408,7 @@ const AdminDashboard: React.FC = () => {
                                           setShowServiceEditModal(true);
                                         }
                                       } catch (error: any) {
-                                        console.error('加载服务详情失败:', error);
-                                        message.error('加载服务详情失败');
+                                                                                message.error('加载服务详情失败');
                                       }
                                     }}
                                     style={{
@@ -2449,8 +2433,7 @@ const AdminDashboard: React.FC = () => {
                                         const data = await getExpertServicesAdmin(taskExpertForm.id);
                                         setExpertServices(data.services || []);
                                       } catch (error: any) {
-                                        console.error('更新服务状态失败:', error);
-                                        message.error(error.response?.data?.detail || '更新失败');
+                                                                                message.error(error.response?.data?.detail || '更新失败');
                                       }
                                     }}
                                     style={{
@@ -2480,8 +2463,7 @@ const AdminDashboard: React.FC = () => {
                                             const data = await getExpertServicesAdmin(taskExpertForm.id);
                                             setExpertServices(data.services || []);
                                           } catch (error: any) {
-                                            console.error('删除服务失败:', error);
-                                            message.error(error.response?.data?.detail || '删除失败');
+                                                                                        message.error(error.response?.data?.detail || '删除失败');
                                           }
                                         }
                                       });
@@ -2865,8 +2847,7 @@ const AdminDashboard: React.FC = () => {
                               const data = await getExpertServicesAdmin(taskExpertForm.id);
                               setExpertServices(data.services || []);
                             } catch (error: any) {
-                              console.error('更新时间段配置失败:', error);
-                              message.error(error.response?.data?.detail || '更新失败');
+                                                            message.error(error.response?.data?.detail || '更新失败');
                             }
                           }}
                           style={{
@@ -2927,8 +2908,7 @@ const AdminDashboard: React.FC = () => {
                             setExpertActivities(data.activities || []);
                             message.success('刷新成功');
                           } catch (error: any) {
-                            console.error('加载活动列表失败:', error);
-                            message.error('加载活动列表失败');
+                                                        message.error('加载活动列表失败');
                           } finally {
                             setLoadingActivities(false);
                           }
@@ -2989,8 +2969,7 @@ const AdminDashboard: React.FC = () => {
                                         const data = await getExpertActivitiesAdmin(taskExpertForm.id);
                                         setExpertActivities(data.activities || []);
                                       } catch (error: any) {
-                                        console.error('更新活动状态失败:', error);
-                                        message.error(error.response?.data?.detail || '更新失败');
+                                                                                message.error(error.response?.data?.detail || '更新失败');
                                       }
                                     }}
                                     style={{
@@ -3020,8 +2999,7 @@ const AdminDashboard: React.FC = () => {
                                             const data = await getExpertActivitiesAdmin(taskExpertForm.id);
                                             setExpertActivities(data.activities || []);
                                           } catch (error: any) {
-                                            console.error('删除活动失败:', error);
-                                            message.error(error.response?.data?.detail || '删除失败');
+                                                                                        message.error(error.response?.data?.detail || '删除失败');
                                           }
                                         }
                                       });
@@ -3082,8 +3060,7 @@ const AdminDashboard: React.FC = () => {
                       message.error('请输入任务达人名称');
                     }
                   } catch (error: any) {
-                    console.error('保存失败:', error);
-                    const errorMsg = error.response?.data?.detail || '操作失败，请重试';
+                                        const errorMsg = error.response?.data?.detail || '操作失败，请重试';
                     message.error(errorMsg);
                   }
                 }}
@@ -3905,8 +3882,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-      console.error('创建邀请码失败:', error);
-      const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+            const errorDetail = error.response?.data?.detail || error.message || '创建失败';
       message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     }
   };
@@ -4488,8 +4464,7 @@ const AdminDashboard: React.FC = () => {
       });
       loadDashboardData();
     } catch (error: any) {
-      console.error('创建板块失败:', error);
-      const errorDetail = error.response?.data?.detail || error.message || '创建失败';
+            const errorDetail = error.response?.data?.detail || error.message || '创建失败';
       message.error(typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail));
     }
   };
@@ -4578,8 +4553,7 @@ const AdminDashboard: React.FC = () => {
       message.success('退出登录成功');
       navigate('/admin/login');
     } catch (error: any) {
-      console.error('退出登录失败:', error);
-      document.cookie.split(";").forEach((c) => {
+            document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
@@ -4617,8 +4591,7 @@ const AdminDashboard: React.FC = () => {
       setForumPosts(response.posts || []);
       setForumPostsTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载论坛帖子失败:', error);
-      message.error('加载论坛帖子失败');
+            message.error('加载论坛帖子失败');
     } finally {
       setForumPostsLoading(false);
     }
@@ -4655,8 +4628,7 @@ const AdminDashboard: React.FC = () => {
       });
       await loadForumPosts();
     } catch (error: any) {
-      console.error('操作失败:', error);
-      message.error(error?.response?.data?.detail || '操作失败');
+            message.error(error?.response?.data?.detail || '操作失败');
     }
   };
 
@@ -4670,8 +4642,7 @@ const AdminDashboard: React.FC = () => {
       message.success('帖子删除成功');
       await loadForumPosts();
     } catch (error: any) {
-      console.error('删除失败:', error);
-      message.error(error?.response?.data?.detail || '删除失败');
+            message.error(error?.response?.data?.detail || '删除失败');
     }
   };
 
@@ -4688,8 +4659,7 @@ const AdminDashboard: React.FC = () => {
       });
       setShowForumPostModal(true);
     } catch (error: any) {
-      console.error('加载帖子详情失败:', error);
-      message.error('加载帖子详情失败');
+            message.error('加载帖子详情失败');
     }
   };
 
@@ -5490,8 +5460,7 @@ const AdminDashboard: React.FC = () => {
       setForumReports(response.reports || []);
       setForumReportsTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载论坛举报失败:', error);
-      message.error('加载论坛举报失败');
+            message.error('加载论坛举报失败');
     } finally {
       setForumReportsLoading(false);
     }
@@ -5509,8 +5478,7 @@ const AdminDashboard: React.FC = () => {
       setFleaMarketReports(response.reports || []);
       setFleaMarketReportsTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载跳蚤市场举报失败:', error);
-      message.error('加载跳蚤市场举报失败');
+            message.error('加载跳蚤市场举报失败');
     } finally {
       setFleaMarketReportsLoading(false);
     }
@@ -5561,8 +5529,7 @@ const AdminDashboard: React.FC = () => {
         });
       }
     } catch (error: any) {
-      console.error('加载目标信息失败:', error);
-      message.error('加载目标信息失败');
+            message.error('加载目标信息失败');
     } finally {
       setLoadingTargetInfo(false);
     }
@@ -5618,8 +5585,7 @@ const AdminDashboard: React.FC = () => {
       // 操作后自动处理举报
       await handleProcessReport();
     } catch (error: any) {
-      console.error('操作失败:', error);
-      message.error(error?.response?.data?.detail || '操作失败');
+            message.error(error?.response?.data?.detail || '操作失败');
     }
   };
 
@@ -5651,8 +5617,7 @@ const AdminDashboard: React.FC = () => {
         admin_comment: ''
       });
     } catch (error: any) {
-      console.error('处理举报失败:', error);
-      message.error(error?.response?.data?.detail || '处理举报失败');
+            message.error(error?.response?.data?.detail || '处理举报失败');
     }
   };
 
@@ -5759,8 +5724,7 @@ const AdminDashboard: React.FC = () => {
       // 注意：API返回的是数组，没有total字段，这里需要根据实际情况调整
       setLeaderboardVotesTotal(Array.isArray(data) ? data.length : 0);
     } catch (error: any) {
-      console.error('加载投票记录失败:', error);
-      message.error(error.response?.data?.detail || '加载投票记录失败');
+            message.error(error.response?.data?.detail || '加载投票记录失败');
     } finally {
       setLeaderboardVotesLoading(false);
     }
@@ -5788,8 +5752,7 @@ const AdminDashboard: React.FC = () => {
       });
       setPendingLeaderboards(Array.isArray(data) ? data : []);
     } catch (error: any) {
-      console.error('加载待审核榜单失败:', error);
-      message.error(error.response?.data?.detail || '加载待审核榜单失败');
+            message.error(error.response?.data?.detail || '加载待审核榜单失败');
     } finally {
       setLeaderboardsLoading(false);
     }
@@ -5828,8 +5791,7 @@ const AdminDashboard: React.FC = () => {
       setLeaderboardItems(data.items || []);
       setLeaderboardItemsTotal(data.total || 0);
     } catch (error: any) {
-      console.error('加载竞品列表失败:', error);
-      message.error(error?.response?.data?.detail || '加载竞品列表失败');
+            message.error(error?.response?.data?.detail || '加载竞品列表失败');
     } finally {
       setLeaderboardItemsLoading(false);
     }
@@ -5859,8 +5821,7 @@ const AdminDashboard: React.FC = () => {
           message.success('竞品已删除');
           await loadLeaderboardItems();
         } catch (error: any) {
-          console.error('删除竞品失败:', error);
-          message.error(error?.response?.data?.detail || '删除竞品失败');
+                    message.error(error?.response?.data?.detail || '删除竞品失败');
         }
       }
     });
@@ -5892,8 +5853,7 @@ const AdminDashboard: React.FC = () => {
       // 重新加载列表
       await loadPendingLeaderboards();
     } catch (error: any) {
-      console.error('审核失败:', error);
-      message.error(error.response?.data?.detail || '审核失败');
+            message.error(error.response?.data?.detail || '审核失败');
     } finally {
       setReviewingLeaderboard(null);
     }

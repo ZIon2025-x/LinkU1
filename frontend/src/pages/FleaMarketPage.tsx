@@ -162,14 +162,12 @@ const FleaMarketPage: React.FC = () => {
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
       }).catch(error => {
-        console.error('Failed to get notifications:', error);
-      });
+              });
       
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
       }).catch(error => {
-        console.error('Failed to get unread count:', error);
-      });
+              });
     }
   }, [user]);
 
@@ -181,8 +179,7 @@ const FleaMarketPage: React.FC = () => {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
           }).catch(error => {
-            console.error('定期更新未读数量失败:', error);
-          });
+                      });
         }
       }, 30000);
       return () => clearInterval(interval);
@@ -198,8 +195,7 @@ const FleaMarketPage: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-      message.error('标记通知为已读失败，请重试');
+            message.error('标记通知为已读失败，请重试');
     }
   }, []);
 
@@ -210,8 +206,7 @@ const FleaMarketPage: React.FC = () => {
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
-      console.error('标记所有通知为已读失败:', error);
-      message.error('标记所有通知为已读失败，请重试');
+            message.error('标记所有通知为已读失败，请重试');
     }
   }, []);
 
@@ -282,16 +277,14 @@ const FleaMarketPage: React.FC = () => {
           setFavoriteItemIds(favoriteIds);
         } catch (e) {
           // 忽略错误，不影响主流程
-          console.log('加载收藏列表失败:', e);
-        }
+                  }
       }
     } catch (error: any) {
       if (!isLoadMore) {
         setItems([]);
       }
       setHasMore(false);
-      console.error('加载商品列表失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.loadError'));
+            message.error(error.response?.data?.detail || t('fleaMarket.loadError'));
     } finally {
       if (isLoadMore) {
         setLoadingMore(false);
@@ -345,8 +338,7 @@ const FleaMarketPage: React.FC = () => {
         setMyPurchasedItems(processedPurchasedItems);
       } catch (error: any) {
         // 如果API不存在，设置为空数组
-        console.log('Purchased items API not available:', error);
-        setMyPurchasedItems([]);
+                setMyPurchasedItems([]);
       }
 
       // 获取我的收藏列表
@@ -373,8 +365,7 @@ const FleaMarketPage: React.FC = () => {
                 id: typeof itemData.id === 'string' ? parseInt(itemData.id, 10) : itemData.id
               };
             } catch (e) {
-              console.error(`加载收藏商品 ${itemId} 失败:`, e);
-              return null;
+                            return null;
             }
           });
           
@@ -388,12 +379,10 @@ const FleaMarketPage: React.FC = () => {
         }
       } catch (error: any) {
         // 如果API不存在或失败，设置为空数组
-        console.log('Favorites API not available:', error);
-        setMyFavoriteItems([]);
+                setMyFavoriteItems([]);
       }
     } catch (error: any) {
-      console.error('加载我的闲置商品失败:', error);
-      message.error(error.response?.data?.detail || '加载失败，请重试');
+            message.error(error.response?.data?.detail || '加载失败，请重试');
     } finally {
       setLoadingMyItems(false);
     }
@@ -471,8 +460,7 @@ const FleaMarketPage: React.FC = () => {
           throw new Error('上传失败');
         }
       } catch (error) {
-        console.error('图片上传失败:', error);
-        throw error;
+                throw error;
       }
     }
     
@@ -539,8 +527,7 @@ const FleaMarketPage: React.FC = () => {
         loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
       }, 500);
     } catch (error: any) {
-      console.error('提交商品失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.submitError'));
+            message.error(error.response?.data?.detail || t('fleaMarket.submitError'));
     } finally {
       setUploading(false);
     }
@@ -560,8 +547,7 @@ const FleaMarketPage: React.FC = () => {
             loadItemsRef.current(false, undefined, debouncedSearchKeyword || undefined, selectedCategory, selectedLocation);
           }, 300);
         } catch (error: any) {
-          console.error('删除商品失败:', error);
-          message.error(error.response?.data?.detail || t('fleaMarket.deleteError'));
+                    message.error(error.response?.data?.detail || t('fleaMarket.deleteError'));
         }
       }
     });
@@ -791,8 +777,7 @@ const FleaMarketPage: React.FC = () => {
             setUser(userData);
             setShowLoginModal(false);
           } catch (error) {
-            console.error('获取用户信息失败:', error);
-          }
+                      }
         }}
       />
       

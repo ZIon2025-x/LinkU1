@@ -54,8 +54,7 @@ const InstallPrompt: React.FC = () => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
-      console.log('[PWA] 收到 beforeinstallprompt 事件');
-      setDeferredPrompt(promptEvent);
+            setDeferredPrompt(promptEvent);
       
       // 延迟显示提示，给用户一些时间浏览网站
       const delay = isMobile ? 5000 : 3000; // 移动端延迟更久
@@ -69,8 +68,7 @@ const InstallPrompt: React.FC = () => {
 
     // 监听appinstalled事件（安装完成）
     const handleAppInstalled = () => {
-      console.log('[PWA] 应用已安装');
-      setIsInstalled(true);
+            setIsInstalled(true);
       setIsVisible(false);
       setDeferredPrompt(null);
       localStorage.removeItem('pwa-install-dismissed');
@@ -114,8 +112,7 @@ const InstallPrompt: React.FC = () => {
         // 使用函数形式检查状态
         setDeferredPrompt((currentPrompt) => {
           if (!currentPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('[PWA] 移动端：未收到beforeinstallprompt事件，显示手动安装提示');
-            setIsVisible(true);
+                        setIsVisible(true);
           }
           return currentPrompt;
         });
@@ -150,29 +147,23 @@ const InstallPrompt: React.FC = () => {
     if (deferredPrompt) {
       try {
         // 显示安装提示
-        console.log('[PWA] 显示安装提示...');
-        await deferredPrompt.prompt();
+                await deferredPrompt.prompt();
         
         // 等待用户选择
         const { outcome } = await deferredPrompt.userChoice;
         
-        console.log('[PWA] 用户选择:', outcome);
-        
-        if (outcome === 'accepted') {
-          console.log('[PWA] 用户接受了安装提示');
-          // 安装提示会由浏览器处理，appinstalled事件会触发并关闭提示
+                if (outcome === 'accepted') {
+                    // 安装提示会由浏览器处理，appinstalled事件会触发并关闭提示
           // 但为了保险起见，也清除deferredPrompt
           setDeferredPrompt(null);
           // 不立即关闭提示，等待appinstalled事件
         } else {
-          console.log('[PWA] 用户拒绝了安装提示');
-          // 用户拒绝后，关闭提示
+                    // 用户拒绝后，关闭提示
           setDeferredPrompt(null);
           handleDismiss();
         }
       } catch (error) {
-        console.error('[PWA] 安装提示失败:', error);
-        // 出错时也关闭提示
+                // 出错时也关闭提示
         handleDismiss();
         
         // 提供备用方案
@@ -184,9 +175,7 @@ const InstallPrompt: React.FC = () => {
     // 如果没有deferredPrompt，尝试使用Web Share API触发分享界面
     if (isMobile && navigator.share) {
       try {
-        console.log('[PWA] 移动端：使用Web Share API触发分享界面');
-        
-        // 先显示提示，告诉用户要选择"添加到主屏幕"
+                // 先显示提示，告诉用户要选择"添加到主屏幕"
         let instructionText = '';
         if (isIOS) {
           instructionText = t('pwa.iosInstallInstructions') || 
@@ -220,24 +209,19 @@ const InstallPrompt: React.FC = () => {
           } catch (shareError: any) {
             // 用户取消分享，不做任何处理
             if (shareError.name === 'AbortError') {
-              console.log('[PWA] 用户取消了分享');
-            } else {
-              console.error('[PWA] 分享失败:', shareError);
-            }
+                          } else {
+                          }
           }
         }, 300);
         
         return;
       } catch (error: any) {
-        console.error('[PWA] 分享初始化失败:', error);
-        // 如果分享失败，继续执行下面的手动指导逻辑
+                // 如果分享失败，继续执行下面的手动指导逻辑
       }
     }
 
     // 如果不支持Web Share API或分享失败，提供手动安装指导
-    console.warn('[PWA] 没有可用的安装提示事件，提供手动安装指导');
-    
-    // 尝试检测是否已经安装
+        // 尝试检测是否已经安装
     if (window.matchMedia('(display-mode: standalone)').matches) {
       alert('应用已经安装！');
       handleDismiss();

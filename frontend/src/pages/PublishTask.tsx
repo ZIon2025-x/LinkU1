@@ -66,8 +66,7 @@ const PublishTask: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (error) {
-        console.error('加载系统设置失败:', error);
-      }
+              }
     };
 
     const loadUserData = async () => {
@@ -151,8 +150,7 @@ const PublishTask: React.FC = () => {
           message.error(`图片 ${file.name} 上传失败`);
         }
       } catch (error: any) {
-        console.error('图片上传失败:', error);
-        message.error(`图片 ${file.name} 上传失败: ${error.response?.data?.detail || error.message}`);
+                message.error(`图片 ${file.name} 上传失败: ${error.response?.data?.detail || error.message}`);
       } finally {
         setUploadingImages(prev => {
           const newArr = [...prev];

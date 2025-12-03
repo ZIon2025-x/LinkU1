@@ -88,8 +88,7 @@ const FleaMarketItemDetail: React.FC = () => {
           const sellerResponse = await api.get(`/api/users/profile/${processedItem.seller_id}`);
           setSellerInfo(sellerResponse.data.user);
         } catch (e) {
-          console.error('加载卖家信息失败:', e);
-        }
+                  }
       }
       
       // 检查是否已收藏（如果已登录）
@@ -106,8 +105,7 @@ const FleaMarketItemDetail: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error('加载商品详情失败:', error);
-      message.error(error.response?.data?.detail || '加载商品详情失败');
+            message.error(error.response?.data?.detail || '加载商品详情失败');
       if (error.response?.status === 404) {
         navigate(`/${language}/flea-market`);
       }
@@ -135,8 +133,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setIsFavorited(!isFavorited);
       message.success(isFavorited ? '已取消收藏' : '收藏成功');
     } catch (error: any) {
-      console.error('收藏操作失败:', error);
-      message.error(error.response?.data?.detail || '操作失败');
+            message.error(error.response?.data?.detail || '操作失败');
     } finally {
       setFavoriteLoading(false);
     }
@@ -161,8 +158,7 @@ const FleaMarketItemDetail: React.FC = () => {
           message.success('购买成功！任务已创建');
           navigate(`/${language}/message`);
         } catch (error: any) {
-          console.error('购买失败:', error);
-          message.error(error.response?.data?.detail || '购买失败');
+                    message.error(error.response?.data?.detail || '购买失败');
         } finally {
           setPurchaseLoading(false);
         }
@@ -185,8 +181,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setProposedPrice(undefined);
       setPurchaseMessage('');
     } catch (error: any) {
-      console.error('提交购买申请失败:', error);
-      message.error(error.response?.data?.detail || '提交失败');
+            message.error(error.response?.data?.detail || '提交失败');
     } finally {
       setPurchaseLoading(false);
     }
@@ -206,8 +201,7 @@ const FleaMarketItemDetail: React.FC = () => {
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-      console.error('举报失败:', error);
-      message.error(error.response?.data?.detail || '举报失败');
+            message.error(error.response?.data?.detail || '举报失败');
     }
   }, [itemId, reportReason, reportDescription, currentUser]);
 
@@ -223,8 +217,7 @@ const FleaMarketItemDetail: React.FC = () => {
       // 重新加载商品信息以更新刷新时间
       await loadItem();
     } catch (error: any) {
-      console.error('刷新商品失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
+            message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
     } finally {
       setRefreshLoading(false);
     }

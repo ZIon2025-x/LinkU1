@@ -172,8 +172,7 @@ const ForumMyContent: React.FC = () => {
           break;
       }
     } catch (error: any) {
-      console.error('加载内容失败:', error);
-      message.error(error.response?.data?.detail || t('forum.error'));
+            message.error(error.response?.data?.detail || t('forum.error'));
     } finally {
       setLoading(false);
     }

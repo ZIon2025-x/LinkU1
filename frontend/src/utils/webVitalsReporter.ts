@@ -49,11 +49,7 @@ function sendToAnalytics(metric: any) {
 
   // 开发环境输出到控制台
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[Web Vitals] ${metric.name}:`, {
-      value: `${metric.value.toFixed(2)}${metric.name === 'CLS' ? '' : 'ms'}`,
-      rating: metric.rating || 'unknown',
-    });
-  }
+      }
 }
 
 /**
@@ -68,8 +64,7 @@ function sendToAnalytics(metric: any) {
 export function initWebVitalsMonitoring() {
   // 检查是否支持 PerformanceObserver
   if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {
-    console.warn('[Web Vitals] PerformanceObserver not supported');
-    return;
+        return;
   }
 
   try {
@@ -87,8 +82,7 @@ export function initWebVitalsMonitoring() {
     getFCP(sendToAnalytics); // First Contentful Paint
     getTTFB(sendToAnalytics); // Time to First Byte
   } catch (error) {
-    console.error('[Web Vitals] Failed to initialize monitoring:', error);
-  }
+      }
 }
 
 /**

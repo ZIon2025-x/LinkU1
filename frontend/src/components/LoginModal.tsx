@@ -260,33 +260,17 @@ const LoginModal: React.FC<LoginModalProps> = ({
           suggestions: response.data.suggestions || [],
           missing_requirements: response.data.missing_requirements || []
         };
-        console.log('密码验证结果:', { 
-          password: password.substring(0, 5) + '...', 
-          bars: validationData.bars, 
-          strength: validationData.strength,
-          has_bars_field: 'bars' in response.data,
-          response_data: response.data
-        });
-        setPasswordValidation(validationData);
+                setPasswordValidation(validationData);
       }
     } catch (error: any) {
-      console.error('密码验证失败:', error);
-      
-      // 如果是网络错误（后端不可用），使用前端验证作为后备
+            // 如果是网络错误（后端不可用），使用前端验证作为后备
       if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-        console.log('后端不可用，使用前端验证');
-        const frontendValidation = validatePasswordFrontend(
+                const frontendValidation = validatePasswordFrontend(
           password,
           formData.username,
           formData.email
         );
-        console.log('前端密码验证结果:', {
-          password: password.substring(0, 5) + '...',
-          bars: frontendValidation.bars,
-          strength: frontendValidation.strength,
-          missing_requirements: frontendValidation.missing_requirements
-        });
-        setPasswordValidation(frontendValidation);
+                setPasswordValidation(frontendValidation);
         return;
       }
       
@@ -495,8 +479,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       // 登录成功后获取用户资料，更新语言偏好
       try {
@@ -559,8 +542,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       // 登录成功后获取用户资料，更新语言偏好
       try {
@@ -652,8 +634,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         try {
           await api.get('/api/csrf/token');
         } catch (error) {
-          console.warn('获取CSRF token失败:', error);
-        }
+                  }
         
         // 登录成功后获取用户资料，更新语言偏好
         try {
@@ -731,10 +712,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
         });
       }
     } catch (err: any) {
-      console.error('注册/登录错误:', err);
-      console.error('错误响应:', err?.response?.data);
-      
-      let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
+                  let msg = isLogin ? t('auth.loginFailed') : t('auth.registerFailed');
       
       // 优先处理HTTP响应错误
       if (err?.response?.data) {

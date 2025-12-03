@@ -118,8 +118,7 @@ const NegotiationOfferNotification: React.FC<{
           });
         })
         .catch(err => {
-          console.error('获取议价token失败:', err);
-          // 如果获取失败，可能是旧数据，尝试解析 JSON
+                    // 如果获取失败，可能是旧数据，尝试解析 JSON
           try {
             const negotiationData: NegotiationContent = JSON.parse(notification.content);
             if (negotiationData.token_accept && negotiationData.token_reject) {
@@ -202,8 +201,7 @@ const NegotiationOfferNotification: React.FC<{
                 alert('已同意议价');
                 onMarkAsRead(notification.id);
               } catch (error: any) {
-                console.error('同意议价失败:', error);
-                alert(error.response?.data?.detail || '操作失败，请重试');
+                                alert(error.response?.data?.detail || '操作失败，请重试');
               }
             }}
             style={{
@@ -246,8 +244,7 @@ const NegotiationOfferNotification: React.FC<{
                 alert('已拒绝议价');
                 onMarkAsRead(notification.id);
               } catch (error: any) {
-                console.error('拒绝议价失败:', error);
-                alert(error.response?.data?.detail || '操作失败，请重试');
+                                alert(error.response?.data?.detail || '操作失败，请重试');
               }
             }}
             style={{
@@ -1207,8 +1204,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                         setReplyContent('');
                         onMarkAsRead(selectedNotification.id);
                       } catch (error: any) {
-                        console.error('回复留言失败:', error);
-                        alert(error.response?.data?.detail || '回复失败，请重试');
+                                                alert(error.response?.data?.detail || '回复失败，请重试');
                       } finally {
                         setReplying(false);
                       }

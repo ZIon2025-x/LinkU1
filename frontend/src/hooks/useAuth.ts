@@ -55,8 +55,7 @@ export const useAuth = () => {
             return;
           }
         } catch (error) {
-          console.error(`检查${check.role}认证状态失败:`, error);
-        }
+                  }
       }
 
       // 如果所有检查都失败
@@ -67,8 +66,7 @@ export const useAuth = () => {
         loading: false
       });
     } catch (error) {
-      console.error('认证状态检查失败:', error);
-      setAuthState({
+            setAuthState({
         isAuthenticated: false,
         role: null,
         user: null,
@@ -118,8 +116,7 @@ export const useAuth = () => {
           if (csrfResponse.ok) {
           }
         } catch (error) {
-          console.warn('获取CSRF token失败:', error);
-        }
+                  }
         
         // 根据角色获取用户数据
         let userData = null;
@@ -143,12 +140,10 @@ export const useAuth = () => {
         return true;
       } else {
         const errorData = await response.json();
-        console.error('登录失败:', errorData.detail || '未知错误');
-        return false;
+                return false;
       }
     } catch (error) {
-      console.error('登录时发生错误:', error);
-      return false;
+            return false;
     }
   }, []);
 
@@ -177,8 +172,7 @@ export const useAuth = () => {
         });
       }
     } catch (error) {
-      console.error('登出时发生错误:', error);
-    } finally {
+          } finally {
       setAuthState({
         isAuthenticated: false,
         role: null,

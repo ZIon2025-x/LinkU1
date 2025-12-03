@@ -126,8 +126,7 @@ const VerifyEmail: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (err) {
-        console.error('加载系统设置失败:', err);
-        setSystemSettings({ vip_button_visible: false });
+                setSystemSettings({ vip_button_visible: false });
       }
     };
 
@@ -142,21 +141,18 @@ const VerifyEmail: React.FC = () => {
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
       }).catch(error => {
-        console.error('获取通知失败:', error);
-        // 如果获取失败，获取最近的通知
+                // 如果获取失败，获取最近的通知
         getNotifications(20).then(notifications => {
           setNotifications(notifications);
         }).catch(error => {
-          console.error('获取通知失败:', error);
-        });
+                  });
       });
       
       // 获取未读数量
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
       }).catch(error => {
-        console.error('获取未读数量失败:', error);
-      });
+              });
     }
   }, [user]);
 
@@ -169,8 +165,7 @@ const VerifyEmail: React.FC = () => {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
           }).catch(error => {
-            console.error('定期更新未读数量失败:', error);
-          });
+                      });
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
@@ -190,8 +185,7 @@ const VerifyEmail: React.FC = () => {
       // 更新未读数量
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-    }
+          }
   };
 
   // 处理标记所有通知为已读
@@ -202,8 +196,7 @@ const VerifyEmail: React.FC = () => {
       // 更新通知列表，标记所有为已读
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
-      console.error('标记所有通知为已读失败:', error);
-    }
+          }
   };
 
   const handleGoToLogin = () => {

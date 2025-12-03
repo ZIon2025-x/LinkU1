@@ -97,8 +97,7 @@ const ForumPostList: React.FC = () => {
       const response = await getForumCategory(Number(categoryId));
       setCategory(response);
     } catch (error: any) {
-      console.error('加载板块失败:', error);
-    }
+          }
   };
 
   const loadPosts = async () => {
@@ -117,8 +116,7 @@ const ForumPostList: React.FC = () => {
       setPosts(response.posts || []);
       setTotal(response.total || 0);
     } catch (error: any) {
-      console.error('加载帖子失败:', error);
-      message.error(t('forum.error'));
+            message.error(t('forum.error'));
     } finally {
       setLoading(false);
     }

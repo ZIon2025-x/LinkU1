@@ -52,8 +52,7 @@ export const CookieProvider: React.FC<CookieProviderProps> = ({ children }) => {
         setPreferences(parsedPreferences);
         setHasConsented(true);
       } catch (error) {
-        console.error('Error parsing saved cookie preferences:', error);
-        setShowConsent(true);
+                setShowConsent(true);
       }
     } else {
       setShowConsent(true);

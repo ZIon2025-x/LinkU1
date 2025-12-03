@@ -64,8 +64,7 @@ const ContactList: React.FC<ContactListProps> = ({
     try {
       return TimeHandlerV2.formatLastMessageTime(timestamp, undefined, t);
     } catch (error) {
-      console.error('最后消息时间格式化错误:', error);
-      return '';
+            return '';
     }
   };
 

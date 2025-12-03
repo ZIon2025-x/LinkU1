@@ -56,8 +56,7 @@ const AdminLoginWithVerification: React.FC = () => {
         try {
           await api.get('/api/csrf/token');
         } catch (error) {
-          console.warn('获取CSRF token失败:', error);
-        }
+                  }
         
         // 跳转到管理后台
         navigate('/admin');
@@ -87,8 +86,7 @@ const AdminLoginWithVerification: React.FC = () => {
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       // 跳转到管理后台
       navigate('/admin');

@@ -44,8 +44,7 @@ const MessageList: React.FC<MessageListProps> = ({
     try {
       return TimeHandlerV2.formatMessageTime(timestamp, userTimezone);
     } catch (error) {
-      console.error('消息时间格式化错误:', error);
-      return '--:--';
+            return '--:--';
     }
   };
 

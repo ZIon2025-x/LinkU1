@@ -183,8 +183,7 @@ const UserProfile: React.FC = () => {
     } catch (err: any) {
       // 如果不是任务达人，忽略错误
       if (err.response?.status !== 404) {
-        console.error('Failed to load task expert info:', err);
-      }
+              }
       setTaskExpert(null);
       setExpertServices([]);
     } finally {

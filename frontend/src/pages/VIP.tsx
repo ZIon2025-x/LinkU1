@@ -23,8 +23,7 @@ const VIP: React.FC = () => {
         const response = await api.get('/api/users/profile/me');
         setUser(response.data);
       } catch (error) {
-        console.error('获取用户信息失败:', error);
-      } finally {
+              } finally {
         setLoading(false);
       }
     };
@@ -34,8 +33,7 @@ const VIP: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (error) {
-        console.error('加载系统设置失败:', error);
-        setSystemSettings({ 
+                setSystemSettings({ 
           vip_button_visible: true,
           vip_price_threshold: 10.0,
           super_vip_price_threshold: 50.0,

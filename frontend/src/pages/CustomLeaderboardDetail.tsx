@@ -324,8 +324,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         }
       } catch (error) {
         // 忽略DOM操作错误，避免影响页面功能
-        console.debug('移动meta标签到顶部时出错:', error);
-      }
+              }
     };
     
     // 将关键标签移到前面（微信优先读取顺序：weixin:title, weixin:description, weixin:image, og:title, og:description, og:image）
@@ -602,9 +601,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         setItems(itemsData || []);
       }
     } catch (error: any) {
-      console.error('加载失败:', error);
-      
-      // 处理不同类型的错误
+            // 处理不同类型的错误
       if (error.response?.status === 404) {
         message.error(t('forum.leaderboardNotExistOrDeleted'));
       } else if (error.response?.status === 401) {
@@ -679,8 +676,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         setItems(prev => [...prev].sort((a, b) => b.vote_score - a.vote_score));
       }
     } catch (error: any) {
-      console.error('投票失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('forum.voteFailed');
       
       // 处理速率限制错误
       if (error.response?.status === 429) {
@@ -727,8 +723,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         throw new Error(t('forum.imageUploadFailed'));
       }
     } catch (error: any) {
-      console.error('图片上传失败:', error);
-      message.error(`${t('forum.imageUploadFailed')}: ${error.response?.data?.detail || error.message}`);
+            message.error(`${t('forum.imageUploadFailed')}: ${error.response?.data?.detail || error.message}`);
       throw error;
     } finally {
       setUploading(false);
@@ -738,14 +733,7 @@ const CustomLeaderboardDetail: React.FC = () => {
   const handleImageChange = (info: any) => {
     const { file, fileList } = info;
     
-    console.log('handleImageChange 触发:', {
-      fileStatus: file.status,
-      hasOriginFileObj: !!file.originFileObj,
-      fileUid: file.uid,
-      fileListLength: fileList.length
-    });
-    
-    // 处理文件删除
+        // 处理文件删除
     if (file.status === 'removed') {
       // 清理预览 URL
       if (file.url && file.url.startsWith('blob:') && previewUrlsRef.current.has(file.url)) {
@@ -776,8 +764,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       });
       
       if (existingFile) {
-        console.log('文件已存在，跳过:', fileToUpload.name);
-        return;
+                return;
       }
       
       const tempId = file.uid || `temp-${Date.now()}-${Math.random()}`;
@@ -786,13 +773,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       const previewUrl = URL.createObjectURL(fileToUpload);
       previewUrlsRef.current.add(previewUrl);
       
-      console.log('创建新文件预览:', {
-        tempId,
-        fileName: fileToUpload.name,
-        previewUrl: previewUrl.substring(0, 50) + '...'
-      });
-      
-      // 立即添加到上传列表，显示上传中状态和预览
+            // 立即添加到上传列表，显示上传中状态和预览
       const newFile = {
         uid: tempId,
         name: fileToUpload.name,
@@ -804,8 +785,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       
       setUploadingFileList(prev => {
         const newList = [...prev, newFile];
-        console.log('更新上传列表，当前文件数:', newList.length);
-        return newList;
+                return newList;
       });
       
       // 延迟执行压缩和上传，避免阻塞 UI
@@ -827,8 +807,7 @@ const CustomLeaderboardDetail: React.FC = () => {
           setUploadingImages(prev => [...prev, url]);
           message.success(t('forum.imageUploadSuccess'));
         } catch (error) {
-          console.error('图片上传失败:', error);
-          // 清理临时预览 URL
+                    // 清理临时预览 URL
           if (newFile.url && previewUrlsRef.current.has(newFile.url)) {
             URL.revokeObjectURL(newFile.url);
             previewUrlsRef.current.delete(newFile.url);
@@ -840,8 +819,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         }
       }, 0);
     } else {
-      console.log('无法获取文件对象，跳过处理:', file);
-    }
+          }
   };
 
   const handleRemoveImage = (url: string) => {
@@ -856,8 +834,7 @@ const CustomLeaderboardDetail: React.FC = () => {
         ...values,
         images: uploadingImages.length > 0 ? uploadingImages : []
       };
-      console.log('提交竞品数据:', submitData);
-      await submitLeaderboardItem(submitData);
+            await submitLeaderboardItem(submitData);
       message.success(t('forum.itemAdded'));
       setShowSubmitModal(false);
       form.resetFields();
@@ -880,8 +857,7 @@ const CustomLeaderboardDetail: React.FC = () => {
       setPagination(prev => ({ ...prev, current: 1 }));
       loadData(1);
     } catch (error: any) {
-      console.error('新增竞品失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('forum.addItemFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('forum.addItemFailed');
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {
@@ -1866,8 +1842,7 @@ const CustomLeaderboardDetail: React.FC = () => {
               setShowReportModal(false);
               reportForm.resetFields();
             } catch (error: any) {
-              console.error('举报失败:', error);
-              const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
+                            const errorMsg = error.response?.data?.detail || error.message || t('forum.reportFailed');
               
               if (error.response?.status === 409) {
                 message.warning(errorMsg);

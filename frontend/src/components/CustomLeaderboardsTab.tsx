@@ -89,9 +89,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         setLeaderboards(response || []);
       }
     } catch (error: any) {
-      console.error('加载排行榜失败:', error);
-      
-      // 处理不同类型的错误
+            // 处理不同类型的错误
       if (error.response?.status === 401) {
         message.error(t('forum.pleaseLogin'));
       } else if (error.response?.status === 403) {
@@ -112,26 +110,19 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   const handleImageUpload = async (file: File): Promise<string> => {
     try {
       setUploadingCoverImage(true);
-      console.log('开始压缩图片:', file.name, file.size);
-      
-      // 压缩图片
+            // 压缩图片
       const compressedFile = await compressImage(file, {
         maxSizeMB: 1,
         maxWidthOrHeight: 1920,
       });
       
-      console.log('图片压缩完成:', compressedFile.name, compressedFile.size);
-      
-      const formData = new FormData();
+            const formData = new FormData();
       formData.append('image', compressedFile);
       
       // 使用 leaderboard_cover category
       const resourceId = user?.id ? `temp_${user.id}` : 'temp_anonymous';
       const uploadUrl = `/api/upload/public-image?category=leaderboard_cover&resource_id=${encodeURIComponent(resourceId)}`;
-      console.log('上传URL:', uploadUrl);
-      console.log('resourceId:', resourceId);
-      
-      const response = await api.post(
+                  const response = await api.post(
         uploadUrl,
         formData,
         {
@@ -141,18 +132,13 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         }
       );
       
-      console.log('上传响应:', response.data);
-      
-      if (response.data.success && response.data.url) {
-        console.log('上传成功，URL:', response.data.url);
-        return response.data.url;
+            if (response.data.success && response.data.url) {
+                return response.data.url;
       } else {
-        console.error('上传响应格式错误:', response.data);
-        throw new Error('上传失败：响应格式错误');
+                throw new Error('上传失败：响应格式错误');
       }
     } catch (error: any) {
-      console.error('图片上传失败:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || t('forum.imageUploadFailed');
+            const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || t('forum.imageUploadFailed');
       message.error(`${t('forum.imageUploadFailed')}: ${errorMessage}`);
       throw error;
     } finally {
@@ -163,14 +149,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   const handleCoverImageChange = async (info: any) => {
     const { file, fileList } = info;
     
-    console.log('handleCoverImageChange 触发:', {
-      fileStatus: file.status,
-      hasOriginFileObj: !!file.originFileObj,
-      fileUid: file.uid,
-      fileListLength: fileList.length
-    });
-    
-    // 处理文件删除
+        // 处理文件删除
     if (file.status === 'removed') {
       setCoverImageUrl('');
       form.setFieldsValue({ cover_image: '' });
@@ -183,24 +162,19 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
     if (fileToUpload) {
       // 检查是否已经在处理中（避免重复上传）
       if (uploadingCoverImage) {
-        console.log('正在上传中，跳过');
-        return;
+                return;
       }
       
       try {
-        console.log('开始上传封面图片:', fileToUpload.name);
-        const url = await handleImageUpload(fileToUpload);
-        console.log('封面图片上传成功:', url);
-        setCoverImageUrl(url);
+                const url = await handleImageUpload(fileToUpload);
+                setCoverImageUrl(url);
         form.setFieldsValue({ cover_image: url });
         message.success(t('forum.imageUploadSuccess'));
       } catch (error) {
-        console.error('封面图片上传失败:', error);
-        // 错误已在handleImageUpload中处理
+                // 错误已在handleImageUpload中处理
       }
     } else {
-      console.log('无法获取文件对象，跳过处理:', file);
-    }
+          }
   };
 
   const handleRemoveCoverImage = () => {
@@ -222,8 +196,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
       setCoverImageUrl('');
       loadLeaderboards();
     } catch (error: any) {
-      console.error('申请榜单失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('forum.applyFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('forum.applyFailed');
       
       // 处理不同类型的错误
       if (error.response?.status === 400) {
@@ -595,8 +568,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
               maxCount={1}
               beforeUpload={(file) => {
                 // 阻止默认上传，手动处理
-                console.log('beforeUpload 触发:', file.name);
-                return false;
+                                return false;
               }}
               onChange={handleCoverImageChange}
               onRemove={handleRemoveCoverImage}

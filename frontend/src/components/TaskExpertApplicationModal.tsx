@@ -68,8 +68,7 @@ const TaskExpertApplicationModal: React.FC<TaskExpertApplicationModalProps> = ({
     } catch (err: any) {
       // 如果没有申请记录，忽略错误
       if (err.response?.status !== 404) {
-        console.error('Failed to check existing application:', err);
-      }
+              }
     } finally {
       setLoading(false);
     }

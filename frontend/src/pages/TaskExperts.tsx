@@ -289,14 +289,12 @@ const TaskExperts: React.FC = () => {
       getNotificationsWithRecentRead(10).then(notifications => {
         setNotifications(notifications);
       }).catch(error => {
-        console.error('Failed to get notifications:', error);
-      });
+              });
       
       getUnreadNotificationCount().then(count => {
         setUnreadCount(count);
       }).catch(error => {
-        console.error('Failed to get unread count:', error);
-      });
+              });
     }
   }, [user]);
 
@@ -308,8 +306,7 @@ const TaskExperts: React.FC = () => {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
           }).catch(error => {
-            console.error('定期更新未读数量失败:', error);
-          });
+                      });
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
@@ -358,8 +355,7 @@ const TaskExperts: React.FC = () => {
       
       // 注意：城市筛选和排序在 filteredExperts 和 sortedExperts 中统一处理
       
-      console.log('加载的任务达人列表:', expertsList);
-      setExperts(expertsList);
+            setExperts(expertsList);
       
       // 并行加载每个达人的活动
       const activitiesMap: {[key: string]: any[]} = {};
@@ -379,8 +375,7 @@ const TaskExperts: React.FC = () => {
             const activities = response.data || [];
             activitiesMap[expert.id] = activities.slice(0, 3); // 只显示最近3个
           } catch (err) {
-            console.error(`加载达人 ${expert.id} 的活动失败:`, err);
-            activitiesMap[expert.id] = [];
+                        activitiesMap[expert.id] = [];
           } finally {
             loadingMap[expert.id] = false;
           }
@@ -390,9 +385,7 @@ const TaskExperts: React.FC = () => {
       setExpertActivities(activitiesMap);
       setLoadingActivities(loadingMap);
     } catch (err: any) {
-      console.error('加载任务达人列表失败:', err);
-      console.error('错误详情:', err.response?.data);
-      message.error('加载任务达人列表失败');
+                  message.error('加载任务达人列表失败');
       // 失败时使用空数组
       setExperts([]);
     } finally {
@@ -419,8 +412,7 @@ const TaskExperts: React.FC = () => {
       // 更新未读数量
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-      message.error('标记通知为已读失败，请重试');
+            message.error('标记通知为已读失败，请重试');
     }
   };
 
@@ -432,8 +424,7 @@ const TaskExperts: React.FC = () => {
       // 更新通知列表，标记所有为已读
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (error) {
-      console.error('标记所有通知为已读失败:', error);
-      message.error('标记所有通知为已读失败，请重试');
+            message.error('标记所有通知为已读失败，请重试');
     }
   };
 
@@ -497,8 +488,7 @@ const TaskExperts: React.FC = () => {
           : [];
         setActivityTimeSlots(activitySlots);
       } catch (err: any) {
-        console.error('加载活动时间段失败:', err);
-        setActivityTimeSlots([]);
+                setActivityTimeSlots([]);
       } finally {
         setLoadingActivityTimeSlots(false);
       }
@@ -1964,8 +1954,7 @@ const TaskExperts: React.FC = () => {
                         setActivityTimeSlots([]);
                         setSelectedTimeSlotId(null);
                       } catch (err: any) {
-                        console.error('申请活动失败:', err);
-                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                                                message.error(err.response?.data?.detail || '申请失败，请重试');
                       }
                     } else {
                       // 非时间段服务
@@ -1981,8 +1970,7 @@ const TaskExperts: React.FC = () => {
                         setActivityTimeSlots([]);
                         setSelectedTimeSlotId(null);
                       } catch (err: any) {
-                        console.error('申请活动失败:', err);
-                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                                                message.error(err.response?.data?.detail || '申请失败，请重试');
                       }
                     }
                   }}

@@ -79,8 +79,7 @@ function loadCacheFromStorage(): Map<string, CacheEntry> {
       });
     }
   } catch (error) {
-    console.warn('加载翻译缓存失败:', error);
-  }
+      }
   
   return cache;
 }
@@ -103,8 +102,7 @@ function saveCacheToStorage(cache: Map<string, CacheEntry>): void {
   } catch (error) {
     // sessionStorage 可能已满，清理最旧的条目
     if (error instanceof DOMException && error.code === 22) {
-      console.warn('sessionStorage 已满，清理旧缓存');
-      const entries = Array.from(cache.entries())
+            const entries = Array.from(cache.entries())
         .sort((a, b) => a[1].timestamp - b[1].timestamp);
       
       cache.clear();
@@ -121,11 +119,9 @@ function saveCacheToStorage(cache: Map<string, CacheEntry>): void {
         });
         sessionStorage.setItem(CACHE_PREFIX, JSON.stringify(data));
       } catch (retryError) {
-        console.error('保存翻译缓存失败:', retryError);
-      }
+              }
     } else {
-      console.error('保存翻译缓存失败:', error);
-    }
+          }
   }
 }
 
@@ -204,8 +200,7 @@ export function clearTranslationCache(): void {
     try {
       sessionStorage.removeItem(CACHE_PREFIX);
     } catch (error) {
-      console.error('清除翻译缓存失败:', error);
-    }
+          }
   }
 }
 

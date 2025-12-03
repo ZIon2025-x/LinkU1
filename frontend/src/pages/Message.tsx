@@ -89,8 +89,7 @@ const PrivateImageDisplay: React.FC<{
         }
         
       } catch (err) {
-        console.error('私密图片加载错误:', err, imageId);
-        setError(true);
+                setError(true);
       } finally {
         setLoading(false);
       }
@@ -156,8 +155,7 @@ const PrivateImageDisplay: React.FC<{
       }}
       onClick={onClick}
       onError={() => {
-        console.error('图片显示失败:', imageId);
-        setError(true);
+                setError(true);
       }}
     />
   );
@@ -590,8 +588,7 @@ const MessagePage: React.FC = () => {
         return newMap;
       });
     } catch (error) {
-      console.error('翻译消息失败:', error);
-    } finally {
+          } finally {
       setTranslatingMessages(prev => {
         const newSet = new Set(prev);
         newSet.delete(messageKey);
@@ -643,8 +640,7 @@ const MessagePage: React.FC = () => {
     try {
       return TimeHandlerV2.formatDetailedTime(timeString, userTimezone, t);
     } catch (error) {
-      console.error('时间格式化错误:', error);
-      return timeString;
+            return timeString;
     }
   };
 
@@ -790,8 +786,7 @@ const MessagePage: React.FC = () => {
       setInput('');
       
     } catch (error) {
-      console.error('发送图片失败:', error);
-      alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
+            alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingImage(false);
     }
@@ -890,8 +885,7 @@ const MessagePage: React.FC = () => {
       
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
-        console.error('上传失败响应:', errorText);
-        throw new Error(`文件上传失败: ${uploadResponse.status} - ${errorText}`);
+                throw new Error(`文件上传失败: ${uploadResponse.status} - ${errorText}`);
       }
       
       const uploadResult = await uploadResponse.json();
@@ -958,8 +952,7 @@ const MessagePage: React.FC = () => {
       setFilePreview(null);
       
     } catch (error) {
-      console.error('发送文件失败:', error);
-      alert(t('messages.sendFileFailed', { error: error instanceof Error ? error.message : String(error) }));
+            alert(t('messages.sendFileFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingFile(false);
     }
@@ -1044,8 +1037,7 @@ const MessagePage: React.FC = () => {
       setPreviewImageUrl('');
       setInput('');
     } catch (error) {
-      console.error('发送图片失败:', error);
-      alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
+            alert(t('messages.sendImageFailed', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setUploadingImage(false);
     }
@@ -1223,8 +1215,7 @@ const MessagePage: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('发送消息失败:', error);
-      alert(t('messages.sendMessageFailed'));
+            alert(t('messages.sendMessageFailed'));
       setInput(messageContent); // 恢复输入内容
       // 移除失败的消息
       setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
@@ -1254,11 +1245,9 @@ const MessagePage: React.FC = () => {
         const activeTasks = allTasks.filter((task: any) => task.status !== 'cancelled');
         setUserTasks(activeTasks);
       } else {
-        console.error('获取用户任务失败');
-      }
+              }
     } catch (error) {
-      console.error('获取用户任务失败:', error);
-    } finally {
+          } finally {
       setUserTasksLoading(false);
     }
   };
@@ -1337,8 +1326,7 @@ const MessagePage: React.FC = () => {
       setShowTaskCardModal(false);
       
     } catch (error) {
-      console.error('发送任务卡片失败:', error);
-      alert('发送任务卡片失败');
+            alert('发送任务卡片失败');
       // 移除失败的消息
       setMessages(prev => prev.filter(msg => msg.id !== newMessage.id));
     } finally {
@@ -1475,8 +1463,7 @@ const MessagePage: React.FC = () => {
           // 标记已读后立即刷新未读计数
           await loadUnreadCount();
         } catch (error) {
-          console.error('标记任务消息已读失败:', error);
-        }
+                  }
       }
       
       // 重新加载任务列表以更新未读计数
@@ -1486,9 +1473,7 @@ const MessagePage: React.FC = () => {
       showToast('success', t('messages.notifications.messageSent'));
       
     } catch (error: any) {
-      console.error('发送任务消息失败:', error);
-      
-      // 移除失败的消息
+            // 移除失败的消息
       setTaskMessages(prev => prev.filter(msg => msg.id !== tempId));
       setInput(messageContent); // 恢复输入内容
       
@@ -1522,19 +1507,17 @@ const MessagePage: React.FC = () => {
         try {
           // 重新加载任务信息（后台执行，不阻塞UI）
           if (loadTasksRef.current) {
-            loadTasksRef.current().catch((err: any) => console.error('重新加载任务列表失败:', err));
+            loadTasksRef.current().catch(() => {});
           }
           // 重新加载消息（包含系统消息）
           if (loadTaskMessagesRef.current && activeTaskId) {
             await loadTaskMessagesRef.current(activeTaskId);
           }
         } catch (error) {
-          console.error('重新加载数据失败:', error);
-        }
+                  }
       }, 0);
     } catch (error: any) {
-      console.error('完成任务失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
       setActionLoading(false);
     }
@@ -1564,19 +1547,17 @@ const MessagePage: React.FC = () => {
         try {
           // 重新加载任务信息（后台执行，不阻塞UI）
           if (loadTasksRef.current) {
-            loadTasksRef.current().catch((err: any) => console.error('重新加载任务列表失败:', err));
+            loadTasksRef.current().catch(() => {});
           }
           // 重新加载消息（包含系统消息）
           if (loadTaskMessagesRef.current && activeTaskId) {
             await loadTaskMessagesRef.current(activeTaskId);
           }
         } catch (error) {
-          console.error('重新加载数据失败:', error);
-        }
+                  }
       }, 0);
     } catch (error: any) {
-      console.error('确认完成失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.operationFailed');
       showToast('error', errorMsg);
       setActionLoading(false);
     }
@@ -1670,8 +1651,7 @@ const MessagePage: React.FC = () => {
         await loadTaskReviews(activeTaskId);
       }
     } catch (error: any) {
-      console.error('评价失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.reviewFailed');
+            const errorMsg = error.response?.data?.detail || error.message || t('messages.notifications.reviewFailed');
       showToast('error', errorMsg);
     } finally {
       setActionLoading(false);
@@ -1702,8 +1682,7 @@ const MessagePage: React.FC = () => {
       const reviews = await getTaskReviews(taskId);
       setTaskReviews(reviews || []);
     } catch (error) {
-      console.error('加载评价失败:', error);
-      setTaskReviews([]);
+            setTaskReviews([]);
     }
   }, []);
 
@@ -1741,8 +1720,7 @@ const MessagePage: React.FC = () => {
         localStorage.setItem(removedTasksKey, JSON.stringify(removedTasks));
       }
     } catch (error) {
-      console.error('保存已移除任务失败:', error);
-    }
+          }
     
     // 如果移除的是当前激活的任务，清除激活状态
     if (activeTaskId === taskId) {
@@ -1799,8 +1777,7 @@ const MessagePage: React.FC = () => {
       } catch (error) {
         if (!isMounted) return;
         
-        console.error('Failed to load user:', error);
-        setUser(null);
+                setUser(null);
         setLoading(false);
         setShowLoginModal(true);
       }
@@ -1825,8 +1802,7 @@ const MessagePage: React.FC = () => {
       // 获取服务器时区信息（用于后续可能的时区转换）
       await TimeHandlerV2.getTimezoneInfo();
     } catch (error) {
-      console.error('初始化时区信息失败:', error);
-    }
+          }
   }, []);
 
   // 加载任务列表
@@ -1848,8 +1824,7 @@ const MessagePage: React.FC = () => {
             removedTaskIds = JSON.parse(removedTasks);
           }
         } catch (error) {
-          console.error('读取已移除任务列表失败:', error);
-        }
+                  }
         
         // 过滤掉已取消的任务、已完成超过3天的任务、以及用户手动移除的任务
         const now = new Date();
@@ -1957,8 +1932,7 @@ const MessagePage: React.FC = () => {
               // setService(null); // 已移除service状态
             }
           } catch (error) {
-            console.error('验证对话有效性失败:', error);
-            // 验证失败，清除localStorage并重置状态
+                        // 验证失败，清除localStorage并重置状态
             localStorage.removeItem('currentCustomerServiceChat');
             setServiceConnected(false);
             setCurrentChatId(null);
@@ -1975,8 +1949,7 @@ const MessagePage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('恢复客服对话失败:', error);
-      localStorage.removeItem('currentCustomerServiceChat');
+            localStorage.removeItem('currentCustomerServiceChat');
       setServiceConnected(false);
       setCurrentChatId(null);
       setCurrentChat(null);
@@ -2104,8 +2077,7 @@ const MessagePage: React.FC = () => {
           // 标记已读后立即刷新未读计数
           await loadUnreadCount();
         } catch (error) {
-          console.error('标记任务消息已读失败:', error);
-        }
+                  }
       }
       
       // 首次加载时滚动到底部
@@ -2120,8 +2092,7 @@ const MessagePage: React.FC = () => {
         checkIfNearBottom();
       }
     } catch (error) {
-      console.error('加载任务消息失败:', error);
-    } finally {
+          } finally {
       setTaskMessagesLoading(false);
     }
   }, [isNearBottom, checkIfNearBottom, smartScrollToBottom]);
@@ -2141,9 +2112,7 @@ const MessagePage: React.FC = () => {
       const apps = data.applications || data || [];
       setApplications(apps);
     } catch (error: any) {
-      console.error('加载申请列表失败:', error);
-      console.error('错误详情:', error.response?.data || error.message);
-      setApplications([]);
+                  setApplications([]);
     } finally {
       setApplicationsLoading(false);
     }
@@ -2269,21 +2238,18 @@ const MessagePage: React.FC = () => {
                         loadUnreadCount();
                       })
                       .catch(err => {
-                        console.error('标记任务消息已读失败:', err);
-                      });
+                                              });
                   }
                   
                   // 重新加载任务列表以更新未读计数
                   loadTasks().catch(err => {
-                    console.error('重新加载任务列表失败:', err);
-                  });
+                                      });
                 }
               }
             }
           }
         } catch (error) {
-          console.error('轮询检查任务消息失败:', error);
-        }
+                  }
       }, 3000); // 每3秒检查一次
       
       return () => {
@@ -2370,8 +2336,7 @@ const MessagePage: React.FC = () => {
           // 用户需要主动点击"联系在线客服"才会恢复会话
         }
       } catch (error) {
-        console.error('检查客服对话失败:', error);
-        // 清除可能损坏的localStorage数据
+                // 清除可能损坏的localStorage数据
         localStorage.removeItem('currentCustomerServiceChat');
       }
     };
@@ -2494,8 +2459,7 @@ const MessagePage: React.FC = () => {
         document.title = t('notifications.pageTitle');
       }
     } catch (error) {
-      console.error('加载未读消息数量失败:', error);
-    }
+          }
   }, [user, t, updateUnreadCount]);
 
   // 定期更新未读消息数量（每30秒检查一次）
@@ -2674,8 +2638,7 @@ const MessagePage: React.FC = () => {
               
               // 无论是否在查看该任务，都重新加载任务列表以更新状态
               loadTasks().catch(err => {
-                console.error('重新加载任务列表失败:', err);
-              });
+                              });
               
               return; // 事件已处理，不再继续处理为普通消息
             }
@@ -2775,14 +2738,12 @@ const MessagePage: React.FC = () => {
                         loadUnreadCount();
                       })
                       .catch(err => {
-                        console.error('标记任务消息已读失败:', err);
-                      });
+                                              });
                   }
                   
                   // 重新加载任务列表以更新未读计数
                   loadTasks().catch(err => {
-                    console.error('重新加载任务列表失败:', err);
-                  });
+                                      });
                 }
                 
                 return [...prev, taskMessage];
@@ -2976,8 +2937,7 @@ const MessagePage: React.FC = () => {
         };
         
         socket.onerror = (error) => {
-          console.error('用户WebSocket连接错误:', error);
-        };
+                  };
         
         socket.onclose = (event) => {
           if (socket) {
@@ -2994,8 +2954,7 @@ const MessagePage: React.FC = () => {
           } else if (event.code === 1000) {
             // 正常关闭，不重连
           } else {
-            console.error('用户WebSocket重连失败，已达到最大重连次数');
-          }
+                      }
         };
       };
 
@@ -3045,8 +3004,7 @@ const MessagePage: React.FC = () => {
             }
           }
         } catch (error) {
-          console.error('检查客服对话状态失败:', error);
-        }
+                  }
       };
       
       // 每10秒检查一次
@@ -3122,8 +3080,7 @@ const MessagePage: React.FC = () => {
     }
       
     } catch (error) {
-      console.error('加载聊天历史失败:', error);
-    }
+          }
   }, [t]);
 
   // 滚动到底部
@@ -3340,8 +3297,7 @@ const MessagePage: React.FC = () => {
               // setService(null); // 已移除service状态
             }
           } catch (error) {
-            console.error('验证对话有效性失败:', error);
-            // 验证失败，清除localStorage并重置状态
+                        // 验证失败，清除localStorage并重置状态
             localStorage.removeItem('currentCustomerServiceChat');
             setServiceConnected(false);
             setCurrentChatId(null);
@@ -3357,8 +3313,7 @@ const MessagePage: React.FC = () => {
           // setService(null); // 已移除service状态
         }
       } catch (error) {
-        console.error('解析保存的对话失败:', error);
-        localStorage.removeItem('currentCustomerServiceChat');
+                localStorage.removeItem('currentCustomerServiceChat');
         setServiceConnected(false);
         setCurrentChatId(null);
         setCurrentChat(null);
@@ -3378,8 +3333,7 @@ const MessagePage: React.FC = () => {
         const response = await assignCustomerService();
         
         if (response.error) {
-          console.error('客服连接失败:', response.error);
-          const errorMessage: Message = {
+                    const errorMessage: Message = {
             id: Date.now(),
             from: t('messages.system'),
             content: t('messages.connectServiceFailed', { error: response.error }),
@@ -3441,8 +3395,7 @@ const MessagePage: React.FC = () => {
         }, 400);
       }
     } catch (error) {
-      console.error('连接客服失败:', error);
-      const errorMessage: Message = {
+            const errorMessage: Message = {
         id: Date.now(),
         from: t('messages.system'),
         content: t('messages.connectServiceError'),
@@ -3470,8 +3423,7 @@ const MessagePage: React.FC = () => {
       const response = await checkCustomerServiceAvailability();
       return response.available;
       } catch (error) {
-      console.error('检查客服可用性失败:', error);
-      // 如果API调用失败，返回false（无客服在线）
+            // 如果API调用失败，返回false（无客服在线）
       return false;
     }
   };
@@ -3483,8 +3435,7 @@ const MessagePage: React.FC = () => {
       const isAvailable = await checkCustomerServiceAvailabilityLocal();
       setServiceAvailable(isAvailable);
     } catch (error) {
-      console.error('检查客服状态失败:', error);
-      setServiceAvailable(false);
+            setServiceAvailable(false);
     } finally {
       setServiceStatusLoading(false);
     }
@@ -3493,8 +3444,7 @@ const MessagePage: React.FC = () => {
   // 结束客服对话
   const handleEndConversation = async () => {
     if (!currentChatId) {
-      console.error('没有活跃的客服对话');
-      const errorMessage: Message = {
+            const errorMessage: Message = {
         id: Date.now(),
         from: t('messages.system'),
         content: t('messages.noActiveChat'),
@@ -3531,9 +3481,7 @@ const MessagePage: React.FC = () => {
       setShowRatingModal(true);
       
     } catch (error: any) {
-      console.error('结束对话失败:', error);
-      
-      // 如果返回400或404，说明对话不存在或已结束，清理localStorage
+            // 如果返回400或404，说明对话不存在或已结束，清理localStorage
       if (error.response?.status === 400 || error.response?.status === 404) {
         // 保存chat_id用于评价（如果存在）
         if (currentChatId) {
@@ -3603,8 +3551,7 @@ const MessagePage: React.FC = () => {
   // 提交评价
   const handleSubmitRating = async () => {
     if (!ratingChatId) {
-      console.error('没有对话ID');
-      return;
+            return;
     }
     
     try {
@@ -3640,8 +3587,7 @@ const MessagePage: React.FC = () => {
       setMessages(prev => [...prev, thankMessage]);
       
     } catch (error) {
-      console.error('提交评价失败:', error);
-      alert(t('messages.submitRatingFailed'));
+            alert(t('messages.submitRatingFailed'));
     }
   };
 
@@ -3775,8 +3721,7 @@ const MessagePage: React.FC = () => {
                       setCurrentChat(null);
                     }
                   } catch (error) {
-                    console.error('解析保存的对话失败:', error);
-                    localStorage.removeItem('currentCustomerServiceChat');
+                                        localStorage.removeItem('currentCustomerServiceChat');
                     setServiceConnected(false);
                     setCurrentChatId(null);
                     setCurrentChat(null);
@@ -3837,8 +3782,7 @@ const MessagePage: React.FC = () => {
                   transition: 'none'
                 }} 
                 onError={(e) => {
-                  console.error('客服头像加载失败:', e.currentTarget.src);
-                  e.currentTarget.src = '/static/avatar1.png';
+                                    e.currentTarget.src = '/static/avatar1.png';
                 }}
                 />
               </div>
@@ -3922,8 +3866,7 @@ const MessagePage: React.FC = () => {
                 alt={t('messages.service')} 
                 className={styles.chatHeaderServiceAvatar}
                 onError={(e) => {
-                  console.error('客服头像加载失败:', e.currentTarget.src);
-                  e.currentTarget.src = '/static/avatar1.png';
+                                    e.currentTarget.src = '/static/avatar1.png';
                 }}
               />
               <div className={styles.chatHeaderServiceInfo}>
@@ -4206,8 +4149,7 @@ const MessagePage: React.FC = () => {
                                           await loadApplications(activeTaskId);
                                           await loadTasks();
                                         } catch (error: any) {
-                                          console.error('接受申请失败:', error);
-                                          alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
+                                                                                    alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
                                         }
                                       }}
                                       className={`${styles.applicationActionButton} ${styles.applicationActionButtonAccept}`}
@@ -4222,8 +4164,7 @@ const MessagePage: React.FC = () => {
                                           alert(t('messages.notifications.applicationRejected'));
                                           await loadApplications(activeTaskId);
                                         } catch (error: any) {
-                                          console.error('拒绝申请失败:', error);
-                                          alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
+                                                                                    alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
                                         }
                                       }}
                                       className={`${styles.applicationActionButton} ${styles.applicationActionButtonReject}`}
@@ -4480,8 +4421,7 @@ const MessagePage: React.FC = () => {
                                       setShowImagePreview(true);
                                     }
                                   } catch (error) {
-                                    console.error('生成预览URL失败:', error);
-                                  }
+                                                                      }
                                 }}
                               />
                             </div>
@@ -5966,8 +5906,7 @@ const MessagePage: React.FC = () => {
                     }
                     alert(t('messages.notifications.applicationSubmitted'));
                   } catch (error: any) {
-                    console.error('申请失败:', error);
-                    alert(error.response?.data?.detail || t('messages.notifications.applicationFailed'));
+                                        alert(error.response?.data?.detail || t('messages.notifications.applicationFailed'));
                   }
                 }}
                 style={{
@@ -6171,8 +6110,7 @@ const MessagePage: React.FC = () => {
                                 await loadTasks();
                               }
                             } catch (error: any) {
-                              console.error('接受申请失败:', error);
-                              alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
+                                                            alert(error.response?.data?.detail || t('messages.notifications.applicationAcceptedFailed'));
                             }
                           }}
                           style={{
@@ -6209,8 +6147,7 @@ const MessagePage: React.FC = () => {
                                 await loadApplications(activeTaskId);
                               }
                             } catch (error: any) {
-                              console.error('拒绝申请失败:', error);
-                              alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
+                                                            alert(error.response?.data?.detail || t('messages.notifications.applicationRejectedFailed'));
                             }
                           }}
                           style={{
@@ -6464,8 +6401,7 @@ const MessagePage: React.FC = () => {
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)'
               }}
               onError={(e) => {
-                console.error('图片加载失败:', previewImageUrl);
-                const img = e.currentTarget;
+                                const img = e.currentTarget;
                 img.style.display = 'none';
                 const errorDiv = document.createElement('div');
                 errorDiv.style.cssText = `
@@ -7015,8 +6951,7 @@ const MessagePage: React.FC = () => {
                       await loadApplications(activeTaskId);
                     }
                   } catch (error: any) {
-                    console.error('发送留言失败:', error);
-                    showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
+                                        showToast('error', error.response?.data?.detail || t('messages.notifications.sendMessageFailed'));
                   }
                 }}
                 style={{

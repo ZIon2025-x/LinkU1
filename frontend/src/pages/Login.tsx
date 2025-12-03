@@ -177,8 +177,7 @@ const Login: React.FC = () => {
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       setErrorMsg('');
       if (res.data.is_new_user) {
@@ -240,8 +239,7 @@ const Login: React.FC = () => {
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       setErrorMsg('');
       if (res.data.is_new_user) {
@@ -302,8 +300,7 @@ const Login: React.FC = () => {
       try {
         await api.get('/api/csrf/token');
       } catch (error) {
-        console.warn('获取CSRF token失败:', error);
-      }
+              }
       
       setErrorMsg(''); // 登录成功清空错误
       message.success(t('auth.loginSuccess'));

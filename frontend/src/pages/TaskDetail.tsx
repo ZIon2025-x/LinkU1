@@ -99,8 +99,7 @@ const TaskDetail: React.FC = () => {
             setNotifications(notificationsData);
             setUnreadCount(unreadCountData.unread_count);
           } catch (error) {
-            console.error('加载通知失败:', error);
-          }
+                      }
         }
       } catch (error: any) {
         setUser(null);
@@ -115,8 +114,7 @@ const TaskDetail: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (error) {
-        console.error('加载系统设置失败:', error);
-      }
+              }
     };
     loadSystemSettings();
   }, []);
@@ -325,8 +323,7 @@ const TaskDetail: React.FC = () => {
             allTasks.push(...filtered);
           }
         } catch (error) {
-          console.error('获取同城同类型任务失败:', error);
-        }
+                  }
       }
       
       // 如果同城同类型的任务不够，补充同类型的任务
@@ -346,8 +343,7 @@ const TaskDetail: React.FC = () => {
             allTasks.push(...filtered);
           }
         } catch (error) {
-          console.error('获取同类型任务失败:', error);
-        }
+                  }
       }
       
       // 如果还不够，补充同城的任务
@@ -367,8 +363,7 @@ const TaskDetail: React.FC = () => {
             allTasks.push(...filtered);
           }
         } catch (error) {
-          console.error('获取同城任务失败:', error);
-        }
+                  }
       }
       
       // 如果还不够，获取其他任务
@@ -387,15 +382,13 @@ const TaskDetail: React.FC = () => {
             allTasks.push(...filtered);
           }
         } catch (error) {
-          console.error('获取其他任务失败:', error);
-        }
+                  }
       }
       
       // 限制最多显示12个推荐任务
       setRecommendedTasks(allTasks.slice(0, 12));
     } catch (error) {
-      console.error('加载推荐任务失败:', error);
-    } finally {
+          } finally {
       setLoadingRecommendedTasks(false);
     }
   }, []);
@@ -537,9 +530,7 @@ const TaskDetail: React.FC = () => {
         }, 0);
       })
       .catch((error) => {
-        console.error('获取任务详情失败:', error);
-        console.error('错误详情:', error.response?.data);
-        setError('任务不存在');
+                        setError('任务不存在');
       })
       .finally(() => setLoading(false));
   }, [id, language, seoDescription, setMetaTags]);
@@ -935,8 +926,7 @@ const TaskDetail: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知已读失败:', error);
-      alert(t('notificationPanel.markAsReadFailed') || '标记已读失败');
+            alert(t('notificationPanel.markAsReadFailed') || '标记已读失败');
     }
   };
 
@@ -949,8 +939,7 @@ const TaskDetail: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('标记所有通知已读失败:', error);
-      alert(t('notificationPanel.markAllReadFailed') || '标记全部已读失败');
+            alert(t('notificationPanel.markAllReadFailed') || '标记全部已读失败');
     }
   };
 
@@ -1118,8 +1107,7 @@ const TaskDetail: React.FC = () => {
         setUserApplication(userApp);
       }
     } catch (error) {
-      console.error('检查用户申请状态失败:', error);
-    }
+          }
   };
   
   // 加载参与者列表（多人任务）
@@ -1131,8 +1119,7 @@ const TaskDetail: React.FC = () => {
       const participantsData = await getTaskParticipants(task.id);
       setParticipants(participantsData.participants || []);
     } catch (error) {
-      console.error('加载参与者列表失败:', error);
-    } finally {
+          } finally {
       setLoadingParticipants(false);
     }
   };
@@ -1177,8 +1164,7 @@ const TaskDetail: React.FC = () => {
       const reviewsData = await getTaskReviews(Number(id));
       setReviews(reviewsData);
     } catch (error) {
-      console.error('加载评价失败:', error);
-    }
+          }
   };
 
   const loadApplications = async () => {
@@ -1191,8 +1177,7 @@ const TaskDetail: React.FC = () => {
       const res = await getTaskApplications(Number(id));
       setApplications(res);
     } catch (error) {
-      console.error('加载申请者列表失败:', error);
-    } finally {
+          } finally {
       setLoadingApplications(false);
     }
   };
@@ -1212,8 +1197,7 @@ const TaskDetail: React.FC = () => {
       setTask(res.data);
       await loadApplications();
     } catch (error: any) {
-      console.error('批准申请者失败:', error);
-      alert(error.response?.data?.detail || '批准申请者失败');
+            alert(error.response?.data?.detail || '批准申请者失败');
     } finally {
       setActionLoading(false);
     }
@@ -1281,8 +1265,7 @@ const TaskDetail: React.FC = () => {
         await checkUserApplication();
         await loadParticipants();
       } catch (error: any) {
-        console.error('申请多人任务失败:', error);
-        alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
+                alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
       } finally {
         setActionLoading(false);
       }
@@ -1340,8 +1323,7 @@ const TaskDetail: React.FC = () => {
       setTask(res.data);
       await checkUserApplication();
     } catch (error: any) {
-      console.error('申请任务失败:', error);
-      alert(error.response?.data?.detail || '申请任务失败');
+            alert(error.response?.data?.detail || '申请任务失败');
     } finally {
       setActionLoading(false);
     }
@@ -1402,8 +1384,7 @@ const TaskDetail: React.FC = () => {
           const res = await api.get(`/api/tasks/${id}`);
           setTask(res.data);
         } catch (error) {
-          console.error('延迟刷新失败:', error);
-        }
+                  }
       }, 1000);
     } catch (error: any) {
       alert(error.response?.data?.detail || '操作失败');
@@ -1801,8 +1782,7 @@ const TaskDetail: React.FC = () => {
       const translated = await translate(task.title, targetLang, textLang);
       setTranslatedTitle(translated);
     } catch (error) {
-      console.error('翻译标题失败:', error);
-      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
+            alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingTitle(false);
     }
@@ -1832,8 +1812,7 @@ const TaskDetail: React.FC = () => {
       const translated = await translate(task.description, targetLang, textLang);
       setTranslatedDescription(translated);
     } catch (error) {
-      console.error('翻译描述失败:', error);
-      alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
+            alert('翻译失败: ' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsTranslatingDescription(false);
     }
@@ -3048,8 +3027,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                console.error('批准参与者失败:', error);
-                                alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
+                                                                alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3082,8 +3060,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                console.error('拒绝参与者失败:', error);
-                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3121,8 +3098,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                console.error('批准退出申请失败:', error);
-                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3155,8 +3131,7 @@ const TaskDetail: React.FC = () => {
                                 const res = await api.get(`/api/tasks/${id}`);
                                 setTask(res.data);
                               } catch (error: any) {
-                                console.error('拒绝退出申请失败:', error);
-                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                               } finally {
                                 setActionLoading(false);
                               }
@@ -3327,8 +3302,7 @@ const TaskDetail: React.FC = () => {
                 setTask(res.data);
                 await loadParticipants();
               } catch (error: any) {
-                console.error('开始任务失败:', error);
-                alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
+                                alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
               } finally {
                 setActionLoading(false);
               }
@@ -3386,8 +3360,7 @@ const TaskDetail: React.FC = () => {
                   const res = await api.get(`/api/tasks/${id}`);
                   setTask(res.data);
                 } catch (error: any) {
-                  console.error('提交退出申请失败:', error);
-                  alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
+                                    alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
                 } finally {
                   setActionLoading(false);
                 }
@@ -3501,8 +3474,7 @@ const TaskDetail: React.FC = () => {
                 setTask(res.data);
                 await loadParticipants();
               } catch (error: any) {
-                console.error('分配奖励失败:', error);
-                alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
+                                alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
               } finally {
                 setActionLoading(false);
               }

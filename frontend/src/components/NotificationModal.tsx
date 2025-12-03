@@ -35,8 +35,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
       setNotifications(response.notifications || []);
       setUnreadCount(response.unread_count || 0);
     } catch (error) {
-      console.error('加载提醒失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -65,8 +64,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
         onNotificationRead();
       }
     } catch (error) {
-      console.error('标记已读失败:', error);
-    }
+          }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -79,8 +77,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose, 
         onNotificationRead();
       }
     } catch (error) {
-      console.error('标记全部已读失败:', error);
-    }
+          }
   };
 
   const getNotificationIcon = (type: string) => {

@@ -24,8 +24,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
           setIsAuthorized(true);
         } else {
           setIsAuthorized(false);
-          console.warn('管理员认证失败:', response.status);
-        }
+                  }
       } catch (error) {
         // 认证失败
         setIsAuthorized(false);

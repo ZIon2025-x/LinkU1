@@ -85,8 +85,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       getTaskReviews(taskId)
         .then(setReviews)
         .catch(error => {
-          console.error('加载评价失败:', error);
-        });
+                  });
     });
   }, [taskId]);
 
@@ -115,8 +114,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       const res = await getTaskApplications(taskId);
       setApplications(res);
     } catch (error) {
-      console.error('加载申请者列表失败:', error);
-    } finally {
+          } finally {
       setLoadingApplications(false);
     }
   }, [user, task, taskId]);
@@ -160,13 +158,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         
         // 如果任务已完成，异步加载评价（非关键数据）
         if (taskRes.value.data.status === 'completed') {
-          loadTaskReviews().catch(err => console.error('加载评价失败:', err));
+          loadTaskReviews().catch(() => {});
         }
       } else {
         const error = taskRes.reason;
         if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
-          console.error('获取任务详情失败:', error);
-          setError(t('taskDetail.taskNotFound'));
+                    setError(t('taskDetail.taskNotFound'));
         }
       }
       
@@ -181,8 +178,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
         return;
       }
-      console.error('加载数据失败:', error);
-      setError(t('taskDetail.taskNotFound'));
+            setError(t('taskDetail.taskNotFound'));
     } finally {
       if (!abortController.signal.aborted) {
         setLoading(false);
@@ -280,8 +276,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         setUserApplication(userApp);
       }
     } catch (error) {
-      console.error('检查用户申请状态失败:', error);
-    }
+          }
   };
 
   // 加载参与者列表（多人任务，所有人可见）
@@ -307,13 +302,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
             // 注意：这里可能需要通过服务ID获取时间段，暂时先不实现
             // 或者可以通过后端API直接返回时间段信息
           } catch (error) {
-            console.error('获取时间段信息失败:', error);
-          }
+                      }
         }
       }
     } catch (error) {
-      console.error('加载参与者列表失败:', error);
-    } finally {
+          } finally {
       setLoadingParticipants(false);
     }
   }, [task, taskId, user]);
@@ -417,8 +410,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setTask(res.data);
       await loadApplications();
     } catch (error: any) {
-      console.error('批准申请者失败:', error);
-      alert(error.response?.data?.detail || t('taskDetail.approveFailed'));
+            alert(error.response?.data?.detail || t('taskDetail.approveFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -437,8 +429,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       // 重新加载申请者列表
       await loadApplications();
     } catch (error: any) {
-      console.error('拒绝申请者失败:', error);
-      alert(error.response?.data?.detail || t('taskDetail.rejectApplicationFailed'));
+            alert(error.response?.data?.detail || t('taskDetail.rejectApplicationFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -482,8 +473,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
         await checkUserApplication();
         await loadParticipants();
       } catch (error: any) {
-        console.error('申请多人任务失败:', error);
-        alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
+                alert(error.response?.data?.detail || (language === 'zh' ? '申请失败' : 'Application failed'));
       } finally {
         setActionLoading(false);
       }
@@ -556,15 +546,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
       setTask(previousTask);
       setHasApplied(previousHasApplied);
       
-      console.error('申请任务失败:', error);
-      
-      // 重新获取任务信息以更新状态
+            // 重新获取任务信息以更新状态
       try {
         const res = await api.get(`/api/tasks/${taskId}`);
         setTask(res.data);
       } catch (refreshError) {
-        console.error('重新获取任务信息失败:', refreshError);
-      }
+              }
       
       alert(error.response?.data?.detail || t('taskDetail.taskApplyFailed'));
     } finally {
@@ -1079,8 +1066,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                         shareData.files = [file];
                       } catch (imageError) {
                         // 如果获取图片失败，继续使用不带图片的分享
-                        console.log('获取任务图片失败，使用不带图片的分享');
-                      }
+                                              }
                     }
                     
                     await navigator.share(shareData);
@@ -1990,8 +1976,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                                     const res = await api.get(`/api/tasks/${taskId}`);
                                     setTask(res.data);
                                   } catch (error: any) {
-                                    console.error('批准参与者失败:', error);
-                                    alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
+                                                                        alert(error.response?.data?.detail || (language === 'zh' ? '批准失败' : 'Approval failed'));
                                   } finally {
                                     setActionLoading(false);
                                   }
@@ -2024,8 +2009,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                                     const res = await api.get(`/api/tasks/${taskId}`);
                                     setTask(res.data);
                                   } catch (error: any) {
-                                    console.error('拒绝参与者失败:', error);
-                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                        alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                                   } finally {
                                     setActionLoading(false);
                                   }
@@ -2063,8 +2047,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                                     const res = await api.get(`/api/tasks/${taskId}`);
                                     setTask(res.data);
                                   } catch (error: any) {
-                                    console.error('批准退出申请失败:', error);
-                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                        alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                                   } finally {
                                     setActionLoading(false);
                                   }
@@ -2097,8 +2080,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                                     const res = await api.get(`/api/tasks/${taskId}`);
                                     setTask(res.data);
                                   } catch (error: any) {
-                                    console.error('拒绝退出申请失败:', error);
-                                    alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
+                                                                        alert(error.response?.data?.detail || (language === 'zh' ? '操作失败' : 'Operation failed'));
                                   } finally {
                                     setActionLoading(false);
                                   }
@@ -2325,8 +2307,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     setTask(res.data);
                     await loadParticipants();
                   } catch (error: any) {
-                    console.error('开始任务失败:', error);
-                    alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
+                                        alert(error.response?.data?.detail || (language === 'zh' ? '开始任务失败' : 'Failed to start task'));
                   } finally {
                     setActionLoading(false);
                   }
@@ -2385,8 +2366,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     const res = await api.get(`/api/tasks/${taskId}`);
                     setTask(res.data);
                   } catch (error: any) {
-                    console.error('提交申请退出失败:', error);
-                    alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
+                                        alert(error.response?.data?.detail || (language === 'zh' ? '提交失败' : 'Submission failed'));
                   } finally {
                     setActionLoading(false);
                   }
@@ -2459,8 +2439,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                     setTask(res.data);
                     await loadParticipants();
                   } catch (error: any) {
-                    console.error('分配奖励失败:', error);
-                    alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
+                                        alert(error.response?.data?.detail || (language === 'zh' ? '分配奖励失败' : 'Failed to distribute rewards'));
                   } finally {
                     setActionLoading(false);
                   }
@@ -3360,8 +3339,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ isOpen, onClose, task
                       loadApplications();
                     }
                   } catch (error: any) {
-                    console.error('发送留言失败:', error);
-                    alert(error.response?.data?.detail || '发送留言失败，请重试');
+                                        alert(error.response?.data?.detail || '发送留言失败，请重试');
                   }
                 }}
                 style={{

@@ -149,8 +149,7 @@ const MyTasks: React.FC = () => {
         setUnreadCount(unreadCountData);
         setSystemSettings(settingsData);
       } catch (error) {
-        console.error('加载通知或系统设置失败:', error);
-      }
+              }
     }
   };
 
@@ -163,8 +162,7 @@ const MyTasks: React.FC = () => {
           getUnreadNotificationCount().then(count => {
             setUnreadCount(count);
           }).catch(error => {
-            console.error('定期更新未读数量失败:', error);
-          });
+                      });
         }
       }, 30000); // 每30秒更新一次
       return () => clearInterval(interval);
@@ -180,8 +178,7 @@ const MyTasks: React.FC = () => {
           const notificationsData = await getNotificationsWithRecentRead(10);
           setNotifications(notificationsData);
         } catch (error) {
-          console.error('刷新通知列表失败:', error);
-        }
+                  }
       };
       loadNotificationsList();
       
@@ -212,16 +209,14 @@ const MyTasks: React.FC = () => {
         getUnreadNotificationCount().then(count => {
           setUnreadCount(count);
         }).catch(error => {
-          console.error('更新未读通知数量失败:', error);
-        });
+                  });
 
         // 如果通知面板已打开，刷新通知列表
         if (showNotifications) {
           getNotificationsWithRecentRead(10).then(notificationsData => {
             setNotifications(notificationsData);
           }).catch(error => {
-            console.error('刷新通知列表失败:', error);
-          });
+                      });
         }
       }
     });
@@ -241,8 +236,7 @@ const MyTasks: React.FC = () => {
       const applicationsData = await getUserApplications();
       setApplications(applicationsData);
     } catch (error) {
-      console.error('加载申请记录失败:', error);
-    } finally {
+          } finally {
       setLoadingApplications(false);
     }
   };
@@ -260,15 +254,13 @@ const MyTasks: React.FC = () => {
       // 确保返回的数据是数组格式
       let tasksData = response.data;
       if (!Array.isArray(tasksData)) {
-        console.error('返回的数据格式不正确:', tasksData);
-        // 尝试从可能的嵌套结构中提取数组
+                // 尝试从可能的嵌套结构中提取数组
         if (tasksData && Array.isArray(tasksData.tasks)) {
           tasksData = tasksData.tasks;
         } else if (tasksData && Array.isArray(tasksData.data)) {
           tasksData = tasksData.data;
         } else {
-          console.error('无法从响应中提取任务列表');
-          tasksData = [];
+                    tasksData = [];
         }
       }
         
@@ -334,17 +326,13 @@ const MyTasks: React.FC = () => {
         // 静默处理错误
       });
     } catch (error: any) {
-      console.error('获取任务失败:', error);
-      // 显示错误信息给用户
+            // 显示错误信息给用户
       if (error.response) {
-        console.error('错误响应:', error.response.data);
-        message.error(error.response.data?.detail || '加载任务失败，请刷新页面重试');
+                message.error(error.response.data?.detail || '加载任务失败，请刷新页面重试');
       } else if (error.request) {
-        console.error('请求失败:', error.request);
-        message.error('网络错误，请检查网络连接');
+                message.error('网络错误，请检查网络连接');
       } else {
-        console.error('错误:', error.message);
-        message.error('加载任务失败，请刷新页面重试');
+                message.error('加载任务失败，请刷新页面重试');
       }
       // 设置空数组，避免显示错误
       setTasks([]);
@@ -365,8 +353,7 @@ const MyTasks: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-      // 可以添加用户提示，比如toast通知
+            // 可以添加用户提示，比如toast通知
       message.error(t('myTasks.alerts.markReadFailed'));
     }
   };
@@ -380,8 +367,7 @@ const MyTasks: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('标记所有通知已读失败:', error);
-      // 可以添加用户提示，比如toast通知
+            // 可以添加用户提示，比如toast通知
       message.error(t('myTasks.alerts.markAllReadFailed'));
     }
   };
@@ -434,8 +420,7 @@ const MyTasks: React.FC = () => {
           participantsMap[taskId] = userPart;
         }
       } catch (error) {
-        console.error(`加载任务 ${taskId} 的参与者信息失败:`, error);
-      }
+              }
     }
     setTaskParticipants(prev => ({ ...prev, ...participantsMap }));
   };
@@ -455,8 +440,7 @@ const MyTasks: React.FC = () => {
       message.success('申请退出已提交，等待任务达人审核');
       await loadTasks();
     } catch (error: any) {
-      console.error('提交申请退出失败:', error);
-      message.error(error.response?.data?.detail || '提交失败，请重试');
+            message.error(error.response?.data?.detail || '提交失败，请重试');
     } finally {
       setActionLoading(null);
     }
@@ -482,9 +466,7 @@ const MyTasks: React.FC = () => {
       
       loadTasks();
     } catch (error: any) {
-      console.error('取消任务失败:', error);
-      
-      // 检查是否是 CSRF token 错误
+            // 检查是否是 CSRF token 错误
       if (error.response?.status === 401) {
         if (error.response?.data?.detail?.includes('CSRF')) {
           message.error('验证失败，请刷新页面后重试');
@@ -674,8 +656,7 @@ const MyTasks: React.FC = () => {
       const reviews = await getTaskReviews(taskId);
       setTaskReviews(prev => ({ ...prev, [taskId]: reviews }));
     } catch (error) {
-      console.error('加载评价失败:', error);
-    }
+          }
   };
 
   const toggleTaskReviews = (taskId: number) => {

@@ -131,8 +131,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
     } catch (err: any) {
       setError('加载服务列表失败');
       message.error('加载服务列表失败');
-      console.error('Failed to load services:', err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -167,8 +166,7 @@ const ServiceListModal: React.FC<ServiceListModalProps> = ({
       const slotsArray = Array.isArray(slots) ? slots : [];
       setTimeSlots(slotsArray);
     } catch (err: any) {
-      console.error('加载时间段失败:', err);
-      message.error('加载时间段失败');
+            message.error('加载时间段失败');
     } finally {
       setLoadingTimeSlots(false);
     }

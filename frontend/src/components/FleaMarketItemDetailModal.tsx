@@ -107,8 +107,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           const sellerResponse = await api.get(`/api/users/profile/${processedItem.seller_id}`);
           setSellerInfo(sellerResponse.data.user);
         } catch (e) {
-          console.error('加载卖家信息失败:', e);
-        }
+                  }
       }
       
       // 检查是否已收藏（如果已登录）
@@ -125,8 +124,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         }
       }
     } catch (error: any) {
-      console.error('加载商品详情失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.loadItemError') || '加载商品详情失败');
+            message.error(error.response?.data?.detail || t('fleaMarket.loadItemError') || '加载商品详情失败');
       if (error.response?.status === 404) {
         onClose();
       }
@@ -144,8 +142,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       const response = await api.get(`/api/flea-market/items/${itemId}/purchase-requests`);
       setPurchaseRequests(response.data.data?.requests || []);
     } catch (error: any) {
-      console.error('加载购买申请列表失败:', error);
-      // 不显示错误消息，因为可能不是所有者
+            // 不显示错误消息，因为可能不是所有者
     } finally {
       setLoadingPurchaseRequests(false);
     }
@@ -195,8 +192,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onFavoriteChanged(itemId, newFavoritedState);
       }
     } catch (error: any) {
-      console.error('收藏操作失败:', error);
-      message.error(error.response?.data?.detail || '操作失败');
+            message.error(error.response?.data?.detail || '操作失败');
     } finally {
       setFavoriteLoading(false);
     }
@@ -222,8 +218,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           onClose();
           navigate(`/${language}/message`);
         } catch (error: any) {
-          console.error('购买失败:', error);
-          message.error(error.response?.data?.detail || '购买失败');
+                    message.error(error.response?.data?.detail || '购买失败');
         } finally {
           setPurchaseLoading(false);
         }
@@ -249,8 +244,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onItemUpdated();
       }
     } catch (error: any) {
-      console.error('提交购买申请失败:', error);
-      message.error(error.response?.data?.detail || '提交失败');
+            message.error(error.response?.data?.detail || '提交失败');
     } finally {
       setPurchaseLoading(false);
     }
@@ -274,8 +268,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-      console.error('举报失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.reportError') || '举报失败');
+            message.error(error.response?.data?.detail || t('fleaMarket.reportError') || '举报失败');
     } finally {
       setReportLoading(false);
     }
@@ -301,8 +294,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
       setCounterPrice(undefined);
       loadPurchaseRequests();
     } catch (error: any) {
-      console.error('卖家议价失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.counterOfferError') || '议价失败');
+            message.error(error.response?.data?.detail || t('fleaMarket.counterOfferError') || '议价失败');
     } finally {
       setCounterOfferLoading(false);
     }
@@ -325,8 +317,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
           message.success(t('fleaMarket.rejectPurchaseSuccess') || '购买申请已拒绝');
           loadPurchaseRequests();
         } catch (error: any) {
-          console.error('拒绝购买申请失败:', error);
-          message.error(error.response?.data?.detail || t('fleaMarket.rejectPurchaseError') || '拒绝失败');
+                    message.error(error.response?.data?.detail || t('fleaMarket.rejectPurchaseError') || '拒绝失败');
         } finally {
           setRejectLoading(null);
         }
@@ -351,8 +342,7 @@ const FleaMarketItemDetailModal: React.FC<FleaMarketItemDetailModalProps> = ({
         onItemUpdated();
       }
     } catch (error: any) {
-      console.error('刷新商品失败:', error);
-      message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
+            message.error(error.response?.data?.detail || t('fleaMarket.refreshError') || '刷新失败');
     } finally {
       setRefreshLoading(false);
     }

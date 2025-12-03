@@ -78,8 +78,7 @@ const Profile: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (error) {
-        console.error('加载系统设置失败:', error);
-        setSystemSettings({ vip_button_visible: true }); // 默认显示
+                setSystemSettings({ vip_button_visible: true }); // 默认显示
       }
       setUser(userInfo);
       
@@ -88,13 +87,11 @@ const Profile: React.FC = () => {
         const reviewsResponse = await api.get(`/api/users/${userInfo.id}/reviews`);
         setReviews(reviewsResponse.data || []);
       } catch (reviewError) {
-        console.error('加载评价数据失败:', reviewError);
-        // API调用失败时显示空评价列表
+                // API调用失败时显示空评价列表
         setReviews([]);
       }
     } catch (error) {
-      console.error('加载用户数据失败:', error);
-      setShowLoginModal(true);
+            setShowLoginModal(true);
     } finally {
       setLoading(false);
     }
@@ -109,8 +106,7 @@ const Profile: React.FC = () => {
       setUser({ ...user, avatar: newAvatar });
       setShowAvatars(false);
     } catch (error) {
-      console.error('更新头像失败:', error);
-      alert(t('profile.updateAvatarFailed'));
+            alert(t('profile.updateAvatarFailed'));
     } finally {
       setSaving(false);
     }
@@ -252,8 +248,7 @@ const Profile: React.FC = () => {
                 src={user.avatar || '/static/avatar1.png'}
                 alt={t('profile.avatar')}
                 onError={(e) => {
-                  console.error('头像加载失败:', e.currentTarget.src);
-                  e.currentTarget.src = '/static/avatar1.png';
+                                    e.currentTarget.src = '/static/avatar1.png';
                 }}
                 onLoad={(e) => {
                 }}

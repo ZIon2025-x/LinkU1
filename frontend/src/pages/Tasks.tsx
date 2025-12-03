@@ -279,8 +279,7 @@ function getRemainTime(deadline: string, t: (key: string) => string) {
       return `${minutes}${t('home.minutes')}`;
     }
   } catch (error) {
-    console.error(t('home.timeCalculationError'), error);
-    return t('home.taskExpired');
+        return t('home.taskExpired');
   }
 }
 
@@ -303,8 +302,7 @@ function isExpiringSoon(deadline: string) {
     
     return nowUK.isBefore(endUK) && endUK.isBefore(oneDayLater);
   } catch (error) {
-    console.error('过期检查错误:', error);
-    return false;
+        return false;
   }
 }
 
@@ -325,8 +323,7 @@ function isExpired(deadline: string) {
     const endUK = utcTime.tz('Europe/London');
     return nowUK.isAfter(endUK);
   } catch (error) {
-    console.error('过期检查错误:', error);
-    return true; // 如果解析失败，假设已过期
+        return true; // 如果解析失败，假设已过期
   }
 }
 
@@ -821,11 +818,9 @@ const Tasks: React.FC = () => {
           const taskIds = applications.map((app: any) => Number(app.task_id)).filter((id: number) => !isNaN(id));
           setAppliedTasks(new Set(taskIds));
         } catch (error) {
-          console.error('加载已申请任务失败:', error);
-        }
+                  }
       } catch (error: any) {
-        console.error('Tasks页面加载用户信息失败:', error);
-        // 如果获取用户信息失败，设置为未登录状态，但标记城市已初始化
+                // 如果获取用户信息失败，设置为未登录状态，但标记城市已初始化
         setUser(null);
         filters.setCityInitialized(true); // 即使加载失败，也标记为已初始化，避免无限等待
       }
@@ -852,8 +847,7 @@ const Tasks: React.FC = () => {
           setUnreadCount(unreadCountData);
           setSystemSettings(settingsData);
         } catch (error) {
-          console.error('加载通知或系统设置失败:', error);
-        }
+                  }
       }
     };
     
@@ -879,8 +873,7 @@ const Tasks: React.FC = () => {
             
             // 如果是401错误（未授权），说明token已过期或用户未登录
             if (status === 401) {
-              console.warn('定期更新未读数量失败: 用户未授权，停止定时更新');
-              if (interval) {
+                            if (interval) {
                 clearInterval(interval);
                 interval = null;
               }
@@ -889,16 +882,14 @@ const Tasks: React.FC = () => {
             
             // 如果连续错误次数过多，停止定时器
             if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-              console.warn('定期更新未读数量连续失败，停止定时更新');
-              if (interval) {
+                            if (interval) {
                 clearInterval(interval);
                 interval = null;
               }
               return;
             }
             
-            console.error('定期更新未读数量失败:', error);
-          });
+                      });
         }
       };
       
@@ -922,8 +913,7 @@ const Tasks: React.FC = () => {
           const notificationsData = await getNotificationsWithRecentRead(10);
           setNotifications(notificationsData);
         } catch (error) {
-          console.error('刷新通知列表失败:', error);
-        }
+                  }
       };
       loadNotificationsList();
       
@@ -954,16 +944,14 @@ const Tasks: React.FC = () => {
         getUnreadNotificationCount().then(count => {
           setUnreadCount(count);
         }).catch(error => {
-          console.error('更新未读通知数量失败:', error);
-        });
+                  });
 
         // 如果通知面板已打开，刷新通知列表
         if (showNotifications) {
           getNotificationsWithRecentRead(10).then(notificationsData => {
             setNotifications(notificationsData);
           }).catch(error => {
-            console.error('刷新通知列表失败:', error);
-          });
+                      });
         }
       }
     });
@@ -1236,8 +1224,7 @@ const Tasks: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知为已读失败:', error);
-    }
+          }
   };
 
   // 处理标记所有通知为已读
@@ -1249,8 +1236,7 @@ const Tasks: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('标记所有通知为已读失败:', error);
-    }
+          }
   };
 
   // 处理任务申请（显示弹窗）
@@ -1322,8 +1308,7 @@ const Tasks: React.FC = () => {
       setApplyMessage('');
       setNegotiatedPrice(undefined);
     } catch (error: any) {
-      console.error('申请任务失败:', error);
-      message.error(error.response?.data?.detail || t('tasks.acceptFailed'));
+            message.error(error.response?.data?.detail || t('tasks.acceptFailed'));
     }
   };
 
@@ -1339,8 +1324,7 @@ const Tasks: React.FC = () => {
       });
       setActivities(Array.isArray(activitiesData) ? activitiesData : []);
     } catch (error) {
-      console.error('加载活动列表失败:', error);
-      setActivities([]);
+            setActivities([]);
     } finally {
       setLoadingActivities(false);
     }
@@ -1398,8 +1382,7 @@ const Tasks: React.FC = () => {
           : [];
         setActivityTimeSlots(activitySlots);
       } catch (err: any) {
-        console.error('加载活动时间段失败:', err);
-        setActivityTimeSlots([]);
+                setActivityTimeSlots([]);
       } finally {
         setLoadingActivityTimeSlots(false);
       }
@@ -2853,8 +2836,7 @@ const Tasks: React.FC = () => {
                         // 重新加载活动列表以更新人数
                         loadActivities();
                       } catch (err: any) {
-                        console.error('申请活动失败:', err);
-                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                                                message.error(err.response?.data?.detail || '申请失败，请重试');
                       }
                     } else {
                       // 非时间段服务
@@ -2874,8 +2856,7 @@ const Tasks: React.FC = () => {
                         // 重新加载活动列表以更新人数
                         loadActivities();
                       } catch (err: any) {
-                        console.error('申请活动失败:', err);
-                        message.error(err.response?.data?.detail || '申请失败，请重试');
+                                                message.error(err.response?.data?.detail || '申请失败，请重试');
                       }
                     }
                   }}

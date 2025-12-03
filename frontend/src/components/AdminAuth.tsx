@@ -57,8 +57,7 @@ const AdminAuth: React.FC = () => {
         setAdminProfile(null);
       }
     } catch (error) {
-      console.error('检查管理员认证状态失败:', error);
-      setIsLoggedIn(false);
+            setIsLoggedIn(false);
       setAdminProfile(null);
     }
   };
@@ -97,8 +96,7 @@ const AdminAuth: React.FC = () => {
         setError(data.detail || '登录失败');
       }
     } catch (error) {
-      console.error('管理员登录失败:', error);
-      setError('登录时发生错误，请稍后重试');
+            setError('登录时发生错误，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -126,8 +124,7 @@ const AdminAuth: React.FC = () => {
         navigate('/admin/login');
       }
     } catch (error) {
-      console.error('管理员登出失败:', error);
-    }
+          }
   };
 
   const handleChangePassword = async (oldPassword: string, newPassword: string) => {
@@ -158,8 +155,7 @@ const AdminAuth: React.FC = () => {
         alert(data.detail || '密码修改失败');
       }
     } catch (error) {
-      console.error('密码修改失败:', error);
-      alert('密码修改时发生错误');
+            alert('密码修改时发生错误');
     }
   };
 

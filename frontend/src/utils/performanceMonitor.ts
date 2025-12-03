@@ -18,9 +18,7 @@ export function measurePerformance(name: string, fn: () => void) {
   const entries = performance.getEntriesByName(name);
   const measure = entries[entries.length - 1];
   
-  console.log(`${name}: ${measure.duration}ms`);
-  
-  // 清理 marks 和 measures，避免内存占用和下次统计干扰
+    // 清理 marks 和 measures，避免内存占用和下次统计干扰
   performance.clearMarks(`${name}-start`);
   performance.clearMarks(`${name}-end`);
   performance.clearMeasures(name);
@@ -44,9 +42,7 @@ export async function measureAsyncPerformance<T>(
   const entries = performance.getEntriesByName(name);
   const measure = entries[entries.length - 1];
   
-  console.log(`${name}: ${measure.duration}ms`);
-  
-  // 清理 marks 和 measures
+    // 清理 marks 和 measures
   performance.clearMarks(`${name}-start`);
   performance.clearMarks(`${name}-end`);
   performance.clearMeasures(name);

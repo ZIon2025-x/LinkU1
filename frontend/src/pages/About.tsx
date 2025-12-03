@@ -82,8 +82,7 @@ const About: React.FC = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('标记通知已读失败:', error);
-      alert(t('notificationPanel.markAsReadFailed'));
+            alert(t('notificationPanel.markAsReadFailed'));
     }
   };
 
@@ -96,8 +95,7 @@ const About: React.FC = () => {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('标记所有通知已读失败:', error);
-      alert(t('notificationPanel.markAllReadFailed'));
+            alert(t('notificationPanel.markAllReadFailed'));
     }
   };
 

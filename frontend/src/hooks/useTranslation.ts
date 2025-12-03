@@ -37,8 +37,7 @@ export const useTranslation = (): UseTranslationReturn => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || err.message || '翻译失败';
       setError(errorMsg);
-      console.error('翻译失败:', err);
-      return text; // 翻译失败时返回原文
+            return text; // 翻译失败时返回原文
     } finally {
       setIsTranslating(false);
     }
@@ -62,8 +61,7 @@ export const useTranslation = (): UseTranslationReturn => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || err.message || '批量翻译失败';
       setError(errorMsg);
-      console.error('批量翻译失败:', err);
-      return texts; // 翻译失败时返回原文
+            return texts; // 翻译失败时返回原文
     } finally {
       setIsTranslating(false);
     }

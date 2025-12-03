@@ -83,8 +83,7 @@ const MyServiceApplications: React.FC = () => {
         const settings = await getPublicSystemSettings();
         setSystemSettings(settings);
       } catch (error) {
-        console.error('加载系统设置失败:', error);
-      }
+              }
     } catch (err: any) {
       if (err.response?.status === 401) {
         setShowLoginModal(true);
@@ -107,8 +106,7 @@ const MyServiceApplications: React.FC = () => {
       setApplications(Array.isArray(data) ? data : (data.items || []));
     } catch (err: any) {
       message.error('加载申请列表失败');
-      console.error(err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

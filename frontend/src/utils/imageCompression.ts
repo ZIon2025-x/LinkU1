@@ -79,8 +79,7 @@ export async function compressImage(
     });
     return compressedFile;
   } catch (error) {
-    console.error('图片压缩失败:', error);
-    // 如果压缩失败，返回原文件
+        // 如果压缩失败，返回原文件
     return file;
   }
 }
@@ -102,8 +101,7 @@ export async function compressImages(
       const compressedFile = await compressImage(file, options);
       compressedFiles.push(compressedFile);
     } catch (error) {
-      console.error(`压缩图片失败: ${file.name}`, error);
-      // 如果压缩失败，使用原文件
+            // 如果压缩失败，使用原文件
       compressedFiles.push(file);
     }
   }

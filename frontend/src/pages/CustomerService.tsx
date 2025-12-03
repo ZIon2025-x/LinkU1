@@ -347,8 +347,7 @@ const CustomerService: React.FC = () => {
         setTimezoneInfo(serverTimezoneInfo);
       }
     } catch (error) {
-      console.error('初始化时区信息失败:', error);
-    }
+          }
   };
 
   const checkAdminStatus = async () => {
@@ -368,8 +367,7 @@ const CustomerService: React.FC = () => {
       // 如果认证失败，重定向到客服登录页面
       navigate('/en/customer-service/login');
     } catch (error) {
-      console.error('客服认证检查失败:', error);
-      navigate('/en/customer-service/login');
+            navigate('/en/customer-service/login');
     }
   };
 
@@ -392,8 +390,7 @@ const CustomerService: React.FC = () => {
         avgRating: 0
       });
     } catch (error) {
-      console.error('加载数据失败:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -456,8 +453,7 @@ const CustomerService: React.FC = () => {
         message.error('公告发送失败');
       }
     } catch (error) {
-      console.error('发送公告失败:', error);
-      message.error('发送公告失败');
+            message.error('发送公告失败');
     }
   };
 
@@ -501,12 +497,10 @@ const CustomerService: React.FC = () => {
         // 7. 跳转到登录页面
         navigate('/service/login');
       } else {
-        console.error('客服登出失败');
-        message.error('登出失败，请重试');
+                message.error('登出失败，请重试');
       }
     } catch (error) {
-      console.error('客服登出时发生错误:', error);
-      message.error('登出时发生错误，请重试');
+            message.error('登出时发生错误，请重试');
     }
   };
 
@@ -554,8 +548,7 @@ const CustomerService: React.FC = () => {
         message.error('操作失败');
       }
     } catch (error) {
-      console.error('操作失败:', error);
-      message.error('操作失败');
+            message.error('操作失败');
     }
   };
 
@@ -605,8 +598,7 @@ const CustomerService: React.FC = () => {
             message.error('任务删除失败');
           }
         } catch (error) {
-          console.error('删除任务失败:', error);
-          message.error('删除任务失败');
+                    message.error('删除任务失败');
         }
       }
     });
@@ -723,8 +715,7 @@ const CustomerService: React.FC = () => {
             // 如果正在查看该对话，立即标记为已读，不增加未读数量
             if (selectedSession.chat_id) {
               markCustomerServiceMessagesRead(selectedSession.chat_id).catch(err => {
-                console.error('标记消息为已读失败:', err);
-              });
+                              });
             }
           } else {
             // 如果不在查看该对话，才增加未读数量
@@ -740,8 +731,7 @@ const CustomerService: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('客服WebSocket消息解析错误:', error);
-      }
+              }
     };
     
     notificationSocket.onerror = (error) => {
@@ -829,12 +819,10 @@ const CustomerService: React.FC = () => {
         const messagesData = await response.json();
         setAdminChatMessages(messagesData);
       } else {
-        console.error('加载管理聊天记录失败:', response.statusText);
-        setAdminChatMessages([]);
+                setAdminChatMessages([]);
       }
     } catch (error) {
-      console.error('加载管理聊天记录失败:', error);
-      setAdminChatMessages([]);
+            setAdminChatMessages([]);
     }
   };
 
@@ -861,17 +849,13 @@ const CustomerService: React.FC = () => {
       message.success(`取消请求已${status === 'approved' ? '通过' : '拒绝'}`);
       
     } catch (error: any) {
-      console.error('审核取消请求失败:', error);
-      
-      // 处理不同的错误格式
+            // 处理不同的错误格式
       let errorMessage = '审核失败';
       
       if (error.response) {
         // 有响应，说明是服务器返回的错误
         const errorData = error.response.data;
-        console.error('审核失败响应:', errorData);
-        
-        if (errorData?.detail) {
+                if (errorData?.detail) {
           if (Array.isArray(errorData.detail)) {
             // Pydantic验证错误
             errorMessage = errorData.detail.map((err: any) => {
@@ -937,12 +921,10 @@ const CustomerService: React.FC = () => {
         alert('管理请求已提交成功');
       } else {
         const errorData = await response.json();
-        console.error('提交失败:', errorData);
-        alert('提交失败: ' + (errorData.detail || '未知错误'));
+                alert('提交失败: ' + (errorData.detail || '未知错误'));
       }
     } catch (error) {
-      console.error('提交管理请求失败:', error);
-      alert('提交失败: ' + (error instanceof Error ? error.message : '未知错误'));
+            alert('提交失败: ' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
 
@@ -976,12 +958,10 @@ const CustomerService: React.FC = () => {
         await loadAdminChatMessages(); // 重新加载聊天记录
       } else {
         const errorData = await response.json();
-        console.error('发送失败:', errorData);
-        alert('发送失败: ' + (errorData.detail || '未知错误'));
+                alert('发送失败: ' + (errorData.detail || '未知错误'));
       }
     } catch (error) {
-      console.error('发送管理消息失败:', error);
-      alert('发送失败: ' + (error instanceof Error ? error.message : '未知错误'));
+            alert('发送失败: ' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
 
@@ -1021,12 +1001,10 @@ const CustomerService: React.FC = () => {
         // 直接设置服务器返回的消息，确保只显示当前chat_id的消息
         setChatMessages(processedMessages);
       } else {
-        console.error('聊天消息数据格式错误:', messagesData);
-        setChatMessages([]);
+                setChatMessages([]);
       }
     } catch (error) {
-      console.error('加载消息失败:', error);
-      setChatMessages([]);
+            setChatMessages([]);
     }
   };
 
@@ -1046,14 +1024,12 @@ const CustomerService: React.FC = () => {
         setChatTimeoutStatus(status);
         return status;
       } else {
-        console.error('获取超时状态失败:', response.status);
-        // 如果获取超时状态失败，清除当前状态
+                // 如果获取超时状态失败，清除当前状态
         setChatTimeoutStatus(null);
         return null;
       }
     } catch (error) {
-      console.error('检查超时状态失败:', error);
-      // 如果检查失败，清除当前状态
+            // 如果检查失败，清除当前状态
       setChatTimeoutStatus(null);
       return null;
     }
@@ -1112,18 +1088,15 @@ const CustomerService: React.FC = () => {
         let errorMessage = '未知错误';
         try {
           const errorData = await response.json();
-          console.error('超时结束失败:', errorData);
-          errorMessage = errorData.detail || '未知错误';
+                    errorMessage = errorData.detail || '未知错误';
         } catch (parseError) {
-          console.error('无法解析错误响应:', response.statusText);
-          errorMessage = response.statusText || '未知错误';
+                    errorMessage = response.statusText || '未知错误';
         }
         alert('超时结束失败: ' + errorMessage);
         return null;
       }
     } catch (error) {
-      console.error('超时结束对话失败:', error);
-      alert('超时结束失败: ' + (error instanceof Error ? error.message : '未知错误'));
+            alert('超时结束失败: ' + (error instanceof Error ? error.message : '未知错误'));
       return null;
     }
   };
@@ -1197,8 +1170,7 @@ const CustomerService: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('发送消息失败:', error);
-      message.error('发送消息失败');
+            message.error('发送消息失败');
     }
   };
   
@@ -1257,8 +1229,7 @@ const CustomerService: React.FC = () => {
         }, 1000); // 延迟1秒检查，确保后端已处理消息
       }
     } catch (error) {
-      console.error('发送模板消息失败:', error);
-      message.error('发送消息失败');
+            message.error('发送消息失败');
     }
   };
   
@@ -1278,8 +1249,7 @@ const CustomerService: React.FC = () => {
         message.error('获取任务详情失败');
       }
     } catch (error) {
-      console.error('获取任务详情失败:', error);
-      message.error('获取任务详情失败');
+            message.error('获取任务详情失败');
     } finally {
       setLoadingTaskDetail(false);
     }
@@ -1346,8 +1316,7 @@ const CustomerService: React.FC = () => {
           )
         );
       } catch (error) {
-        console.error('标记消息为已读失败:', error);
-      }
+              }
     }
     
     // 如果会话未结束，启动超时检查
@@ -1500,8 +1469,7 @@ const CustomerService: React.FC = () => {
               }
             }
           } catch (error) {
-            console.error('客服WebSocket消息解析错误:', error);
-          }
+                      }
         };
         
         socket.onerror = (error) => {
@@ -1518,8 +1486,7 @@ const CustomerService: React.FC = () => {
               connectWebSocket();
             }, reconnectDelay);
           } else if (event.code !== 1000) {
-            console.error('客服WebSocket重连失败，已达到最大重连次数');
-          }
+                      }
         };
       };
 
@@ -1598,8 +1565,7 @@ const CustomerService: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('加载客服状态失败:', error);
-    }
+          }
   };
 
   const toggleOnlineStatus = async () => {
@@ -1619,8 +1585,7 @@ const CustomerService: React.FC = () => {
         setJustToggledStatus(false);
       }, 5000);
     } catch (error) {
-      console.error('切换状态失败:', error);
-      message.error('状态切换失败');
+            message.error('状态切换失败');
     }
   };
 
@@ -1977,8 +1942,7 @@ const CustomerService: React.FC = () => {
                           message.error('清理失败');
                         }
                       } catch (error) {
-                        console.error('清理旧对话失败:', error);
-                        message.error('清理失败，请重试');
+                                                message.error('清理失败，请重试');
                       }
                     }
                   });

@@ -64,8 +64,7 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       const response = await getSystemSettings();
       setSettings(response);
     } catch (error) {
-      console.error('加载系统设置失败:', error);
-      setError('加载系统设置失败');
+            setError('加载系统设置失败');
     } finally {
       setLoading(false);
     }
@@ -85,8 +84,7 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         daily_base_points: checkinData.daily_base_points || 0
       });
     } catch (error) {
-      console.error('加载积分设置失败:', error);
-    } finally {
+          } finally {
       setPointsLoading(false);
     }
   };
@@ -104,8 +102,7 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setSuccess('积分设置保存成功！');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('保存积分设置失败:', error);
-      setError('保存积分设置失败');
+            setError('保存积分设置失败');
     } finally {
       setPointsSaving(false);
     }
@@ -121,8 +118,7 @@ const SystemSettings: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setSuccess('系统设置保存成功！');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('保存系统设置失败:', error);
-      setError('保存系统设置失败');
+            setError('保存系统设置失败');
     } finally {
       setSaving(false);
     }

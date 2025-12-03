@@ -44,8 +44,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
       // 延迟播放，确保视频已加载
       const timer = setTimeout(() => {
         firstVideo.play().catch((error) => {
-          console.log('Autoplay prevented:', error);
-        });
+                  });
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -63,8 +62,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
       // 延迟播放，确保视频已加载
       const timer = setTimeout(() => {
         currentVideo.play().catch((error) => {
-          console.log('Autoplay prevented:', error);
-        });
+                  });
         // 更新视频尺寸
         if (currentVideo.videoWidth && currentVideo.videoHeight) {
           setVideoDimensions({
@@ -88,8 +86,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
     setTimeout(() => {
       if (videoRefs.current[newIndex]) {
         videoRefs.current[newIndex]?.play().catch((error) => {
-          console.log('Autoplay prevented:', error);
-        });
+                  });
       }
     }, 50);
   };
@@ -105,8 +102,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
     setTimeout(() => {
       if (videoRefs.current[newIndex]) {
         videoRefs.current[newIndex]?.play().catch((error) => {
-          console.log('Autoplay prevented:', error);
-        });
+                  });
       }
     }, 50);
   };
@@ -209,8 +205,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                     height: video.videoHeight
                   });
                   video.play().catch((error) => {
-                    console.log('Autoplay prevented:', error);
-                  });
+                                      });
                 }
               }}
             />
@@ -430,8 +425,7 @@ const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 setTimeout(() => {
                   if (videoRefs.current[index]) {
                     videoRefs.current[index]?.play().catch((error) => {
-                      console.log('Autoplay prevented:', error);
-                    });
+                                          });
                   }
                 }, 50);
               }}

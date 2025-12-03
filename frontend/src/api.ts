@@ -155,8 +155,7 @@ export async function getCSRFToken(): Promise<string> {
     csrfToken = newToken;
     return newToken;
   } catch (error) {
-    console.error('获取CSRF token失败:', error);
-    throw error;
+        throw error;
   }
 }
 
@@ -190,8 +189,7 @@ api.interceptors.request.use(async config => {
         const token = await getCSRFToken();
         config.headers['X-CSRF-Token'] = token;
       } catch (error) {
-        console.warn('无法获取CSRF token，请求可能失败:', error);
-      }
+              }
     }
   }
   
@@ -223,9 +221,7 @@ api.interceptors.response.use(
       const retryAfter = error.response.headers['retry-after'] || error.response.headers['Retry-After'];
       const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
       
-      console.warn(`速率限制：请在 ${retryAfterSeconds} 秒后重试`);
-      
-      // 可以在这里实现自动重试逻辑（可选）
+            // 可以在这里实现自动重试逻辑（可选）
       // 或者让调用方处理
       return Promise.reject({
         ...error,
@@ -243,8 +239,7 @@ api.interceptors.response.use(
       
       
       if (currentRetryCount >= MAX_RETRY_ATTEMPTS) {
-        console.error('CSRF token重试次数已达上限，停止重试');
-        retryCounters.delete(requestKey);
+                retryCounters.delete(requestKey);
         return Promise.reject(error);
       }
       
@@ -254,8 +249,7 @@ api.interceptors.response.use(
                                  error.config?.url?.includes('/cancel');
       
       if (isCriticalOperation && currentRetryCount >= 1) {
-        console.error('关键操作CSRF验证失败，减少重试次数');
-        retryCounters.delete(requestKey);
+                retryCounters.delete(requestKey);
         return Promise.reject(error);
       }
       
@@ -282,8 +276,7 @@ api.interceptors.response.use(
         retryCounters.delete(requestKey);
         return result;
       } catch (retryError) {
-        console.error('重试请求失败:', retryError);
-        return Promise.reject(retryError);
+                return Promise.reject(retryError);
       }
     }
     
@@ -307,8 +300,7 @@ api.interceptors.response.use(
       const globalRetryCount = GLOBAL_RETRY_COUNTER.get(globalKey) || 0;
       
       if (globalRetryCount >= MAX_GLOBAL_RETRIES) {
-        console.error('全局401重试次数已达上限，停止所有重试');
-        GLOBAL_RETRY_COUNTER.delete(globalKey);
+                GLOBAL_RETRY_COUNTER.delete(globalKey);
         // 清理所有重试计数器
         retryCounters.clear();
         return Promise.reject(error);
@@ -320,8 +312,7 @@ api.interceptors.response.use(
       const currentRetryCount = retryCounters.get(requestKey) || 0;
       
       if (isAcceptTaskApi && currentRetryCount >= 1) {
-        console.error('接收任务API重试次数已达上限，停止重试');
-        retryCounters.delete(requestKey);
+                retryCounters.delete(requestKey);
         return Promise.reject(error);
       }
       
@@ -465,8 +456,7 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
           resolve(res.data);
         } catch (error) {
           fetchTasksDebounceTimers.delete(cacheKey);
-          console.error('fetchTasks 请求失败:', error);
-          reject(error);
+                    reject(error);
         }
       }, 300); // 300ms防抖
       
@@ -495,8 +485,7 @@ export async function fetchTasks({ type, city, keyword, page = 1, pageSize = 10,
       return res;
     }
   } catch (error) {
-    console.error('fetchTasks 请求失败:', error);
-    throw error;
+        throw error;
   }
 }
 
@@ -837,8 +826,7 @@ export async function getMyTasks() {
     return data.data;
   }
   // 如果都不匹配，返回空数组并记录错误
-  console.error('getMyTasks: 返回的数据格式不正确:', data);
-  return [];
+    return [];
 }
 
 // 完成任务
@@ -1047,8 +1035,7 @@ export const markChatMessagesAsRead = async (contactId: string) => {
     const response = await api.post(`/api/users/messages/mark-chat-read/${contactId}`);
     return response.data;
   } catch (error) {
-    console.error('❌ 标记已读API错误:', error);
-    throw error;
+        throw error;
   }
 };
 
@@ -1069,14 +1056,7 @@ export const setCustomerServiceOnline = async () => {
     const response = await api.post('/api/customer-service/online');
     return response.data;
   } catch (error: any) {
-    console.error('❌ 客服在线API调用失败:', error);
-    console.error('错误详情:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
-    throw error;
+            throw error;
   }
 };
 
@@ -1086,14 +1066,7 @@ export const setCustomerServiceOffline = async () => {
     const response = await api.post('/api/customer-service/offline');
     return response.data;
   } catch (error: any) {
-    console.error('❌ 客服离线API调用失败:', error);
-    console.error('错误详情:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
-    throw error;
+            throw error;
   }
 };
 
@@ -1130,8 +1103,7 @@ export const getPublicStats = async () => {
     const res = await api.get('/api/stats');
     return res.data;
   } catch (error) {
-    console.error('Failed to get public stats:', error);
-    // 如果API不存在或失败，返回默认值
+        // 如果API不存在或失败，返回默认值
     return { total_users: 0 };
   }
 };
@@ -1422,8 +1394,7 @@ export const logout = async () => {
   try {
     await api.post('/api/secure-auth/logout');
   } catch (error) {
-    console.warn('登出请求失败:', error);
-  } finally {
+      } finally {
     // 新的认证系统使用HttpOnly Cookie，不需要清理localStorage
     clearCSRFToken();
     // 清理重试计数器
