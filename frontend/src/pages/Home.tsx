@@ -99,12 +99,15 @@ function isExpiringSoon(deadline: string) {
   }
 }
 
-// Convert number to rounded up approximate value (e.g., 92 -> 100+, 123 -> 200+, 2576 -> 2600+)
-// 规则：未满100按100+，超过100不到200按200+，以此类推（向上取整到最近的100）
+// Convert number to rounded up approximate value
+// 规则：150以下（包括150）显示100+，150以上才显示200+，以此类推
 function roundUpApproximate(num: number): string {
   if (num <= 0) return '100+';
   
-  // 向上取整到最近的100
+  // 150以下（包括150）显示100+
+  if (num <= 150) return '100+';
+  
+  // 150以上，向上取整到最近的100
   const rounded = Math.ceil(num / 100) * 100;
   return `${rounded}+`;
 }
