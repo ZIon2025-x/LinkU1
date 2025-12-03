@@ -1124,6 +1124,18 @@ export const customerServiceLogout = async () => {
 };
 
 // 管理后台相关API
+// 获取公开的平台统计数据（仅用户总数）
+export const getPublicStats = async () => {
+  try {
+    const res = await api.get('/api/stats');
+    return res.data;
+  } catch (error) {
+    console.error('Failed to get public stats:', error);
+    // 如果API不存在或失败，返回默认值
+    return { total_users: 0 };
+  }
+};
+
 export const getDashboardStats = async () => {
   const res = await api.get('/api/admin/dashboard/stats');
   return res.data;

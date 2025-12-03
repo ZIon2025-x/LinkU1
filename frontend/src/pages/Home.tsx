@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, customerServiceLogout, getPublicSystemSettings, logout, getPublicTaskExperts, getHotForumPosts, getCustomLeaderboards, getPublicStats } from '../api';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -101,23 +101,14 @@ function isExpiringSoon(deadline: string) {
   }
 }
 
-// Convert number to rounded up approximate value (e.g., 92 -> 100+, 123 -> 130+, 2576 -> 2600+)
+// Convert number to rounded up approximate value (e.g., 92 -> 100+, 123 -> 200+, 2576 -> 2600+)
+// 规则：未满100按100+，超过100不到200按200+，以此类推（向上取整到最近的100）
 function roundUpApproximate(num: number): string {
-  if (num === 0) return '0';
-  if (num < 100) return '100+';
+  if (num <= 0) return '100+';
   
-  // For numbers 100-999, round up to nearest 10
-  if (num < 1000) {
-    return `${Math.ceil(num / 10) * 10}+`;
-  }
-  
-  // For numbers 1000-9999, round up to nearest 100
-  if (num < 10000) {
-    return `${Math.ceil(num / 100) * 100}+`;
-  }
-  
-  // For numbers 10000+, round up to nearest 1000
-  return `${Math.ceil(num / 1000) * 1000}+`;
+  // 向上取整到最近的100
+  const rounded = Math.ceil(num / 100) * 100;
+  return `${rounded}+`;
 }
 
 // Check if task has expired - using UK time
@@ -297,6 +288,10 @@ const Home: React.FC = () => {
   // 热门榜单相关状态
   const [hotLeaderboards, setHotLeaderboards] = useState<any[]>([]);
   const [loadingHotLeaderboards, setLoadingHotLeaderboards] = useState(false);
+  
+  // 平台统计数据
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   // 移动端检测
   const [isMobile, setIsMobile] = useState(false);
@@ -568,6 +563,22 @@ const Home: React.FC = () => {
         setHotPosts([]);
       })
       .finally(() => setLoadingHotPosts(false));
+  }, []);
+
+  // 获取平台统计数据
+  useEffect(() => {
+    setLoadingStats(true);
+    getPublicStats()
+      .then(data => {
+        setTotalUsers(data.total_users || 0);
+      })
+      .catch(error => {
+        console.error('获取平台统计数据失败:', error);
+        setTotalUsers(0);
+      })
+      .finally(() => {
+        setLoadingStats(false);
+      });
   }, []);
 
   // 获取热门达人数据 - 显示前3个
@@ -945,7 +956,9 @@ const Home: React.FC = () => {
           {/* 统计数据 */}
           <div className={styles.heroStats}>
             <div className={styles.heroStatItem}>
-              <div className={styles.heroStatValue}>100+</div>
+              <div className={styles.heroStatValue}>
+                {loadingStats ? '...' : roundUpApproximate(totalUsers)}
+              </div>
               <div className={styles.heroStatLabel}>{t('about.registeredUsers')}</div>
             </div>
             <div className={styles.heroStatItem}>

@@ -4520,6 +4520,22 @@ def send_admin_chat_message(
 from app.deps import check_admin, check_admin_user_status, check_super_admin
 
 
+@router.get("/stats")
+def get_public_stats(
+    db: Session = Depends(get_db)
+):
+    """获取公开的平台统计数据（仅用户总数）"""
+    try:
+        # 只返回用户总数，不返回其他敏感信息
+        total_users = db.query(models.User).count()
+        return {
+            "total_users": total_users
+        }
+    except Exception as e:
+        logger.error(f"Error in get_public_stats: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @router.get("/admin/dashboard/stats")
 def get_dashboard_stats(
     current_admin=Depends(get_current_admin), 
