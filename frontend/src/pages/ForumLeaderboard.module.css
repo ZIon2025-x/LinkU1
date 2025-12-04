@@ -251,10 +251,16 @@
     width: 100%;
   }
 
-  .podium1,
-  .podium2,
+  .podium1 {
+    order: 1;
+  }
+
+  .podium2 {
+    order: 2;
+  }
+
   .podium3 {
-    order: 0;
+    order: 3;
   }
 
   .podium1 .podiumAvatar {
