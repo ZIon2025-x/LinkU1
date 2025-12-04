@@ -1369,8 +1369,17 @@ const Tasks: React.FC = () => {
   const handleMarkAsRead = async (notificationId: number) => {
     try {
       // 查找通知，判断是论坛通知还是任务通知
-      const notification = notifications.find(n => n.id === notificationId);
-      const isForumNotification = notification?.is_forum;
+      // 使用更精确的匹配，避免 ID 冲突
+      const notification = notifications.find(n => {
+        if (n.is_forum !== undefined) {
+          return n.id === notificationId && n.is_forum === true;
+        }
+        return n.id === notificationId && !n.is_forum;
+      });
+      
+      // 如果找不到，尝试简单匹配（向后兼容）
+      const fallbackNotification = notification || notifications.find(n => n.id === notificationId);
+      const isForumNotification = fallbackNotification?.is_forum;
       
       if (isForumNotification) {
         await markForumNotificationRead(notificationId);
@@ -1378,10 +1387,25 @@ const Tasks: React.FC = () => {
         await markNotificationRead(notificationId);
       }
       
+      // 更新本地状态，标记为已读 - 使用更精确的匹配
       setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId ? { ...notif, is_read: 1 } : notif
-        )
+        prev.map(notif => {
+          if (notif.is_forum !== undefined) {
+            // 有 is_forum 标识时，需要同时匹配 ID 和类型
+            if (notif.is_forum && isForumNotification && notif.id === notificationId) {
+              return { ...notif, is_read: 1 };
+            }
+            if (!notif.is_forum && !isForumNotification && notif.id === notificationId) {
+              return { ...notif, is_read: 1 };
+            }
+          } else {
+            // 向后兼容：只匹配 ID
+            if (notif.id === notificationId) {
+              return { ...notif, is_read: 1 };
+            }
+          }
+          return notif;
+        })
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {

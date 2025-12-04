@@ -821,8 +821,19 @@ const Home: React.FC = () => {
   const handleMarkAsRead = async (id: number) => {
     try {
       // 查找通知，判断是论坛通知还是任务通知
-      const notification = notifications.find(n => n.id === id);
-      const isForumNotification = notification?.is_forum;
+      // 使用更精确的匹配，避免 ID 冲突
+      const notification = notifications.find(n => {
+        // 如果通知有 is_forum 标识，使用它来区分
+        if (n.is_forum !== undefined) {
+          return n.id === id && n.is_forum === true;
+        }
+        // 否则是任务通知
+        return n.id === id && !n.is_forum;
+      });
+      
+      // 如果找不到，尝试简单匹配（向后兼容）
+      const fallbackNotification = notification || notifications.find(n => n.id === id);
+      const isForumNotification = fallbackNotification?.is_forum;
       
       if (isForumNotification) {
         await markForumNotificationRead(id);
@@ -830,9 +841,25 @@ const Home: React.FC = () => {
         await markNotificationRead(id);
       }
       
-      // 更新本地状态，标记为已读
+      // 更新本地状态，标记为已读 - 使用更精确的匹配
       setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, is_read: 1 } : n)
+        prev.map(n => {
+          if (n.is_forum !== undefined) {
+            // 有 is_forum 标识时，需要同时匹配 ID 和类型
+            if (n.is_forum && isForumNotification && n.id === id) {
+              return { ...n, is_read: 1 };
+            }
+            if (!n.is_forum && !isForumNotification && n.id === id) {
+              return { ...n, is_read: 1 };
+            }
+          } else {
+            // 向后兼容：只匹配 ID
+            if (n.id === id) {
+              return { ...n, is_read: 1 };
+            }
+          }
+          return n;
+        })
       );
       
       // 更新未读数量

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TimeHandlerV2 } from '../utils/timeUtils';
 import { respondNegotiation, replyApplicationMessage, getNegotiationTokens, markForumNotificationRead } from '../api';
@@ -335,6 +335,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   const [replyContent, setReplyContent] = useState('');
   const [replying, setReplying] = useState(false);
   
+  // 使用 useMemo 稳定通知列表的引用，避免不必要的重新渲染
+  const validNotifications: Notification[] = useMemo(() => {
+    return notifications.filter((n: Notification) => n && n.id && n.created_at);
+  }, [notifications]);
+  
   if (!isOpen) return null;
 
   const getNotificationIcon = (notification: Notification) => {
@@ -478,7 +483,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         maxHeight: '350px',
         overflowY: 'auto'
       }}>
-        {notifications.length === 0 ? (
+        {validNotifications.length === 0 ? (
           <div style={{
             padding: '40px 20px',
             textAlign: 'center',
@@ -489,12 +494,12 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
             暂无通知
           </div>
         ) : (
-          notifications.map((notification, index) => (
+          validNotifications.map((notification, index) => (
             <div
-              key={`${notification.is_forum ? 'forum' : 'task'}-${notification.id}`}
+              key={`${notification.is_forum ? 'forum' : 'task'}-${notification.id}-${notification.created_at}`}
               style={{
                 padding: '12px 16px',
-                borderBottom: index < notifications.length - 1 ? '1px solid #f5f5f5' : 'none',
+                borderBottom: index < validNotifications.length - 1 ? '1px solid #f5f5f5' : 'none',
                 backgroundColor: notification.is_read === 0 ? '#f0f8ff' : '#ffffff',
                 position: 'relative'
               }}
