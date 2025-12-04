@@ -335,7 +335,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   const [replyContent, setReplyContent] = useState('');
   const [replying, setReplying] = useState(false);
   
-  if (!isOpen) return <></>;
+  if (!isOpen) return null;
 
   const getNotificationIcon = (notification: Notification) => {
     // 论坛通知
@@ -491,7 +491,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         ) : (
           notifications.map((notification, index) => (
             <div
-              key={notification.id}
+              key={`${notification.is_forum ? 'forum' : 'task'}-${notification.id}`}
               style={{
                 padding: '12px 16px',
                 borderBottom: index < notifications.length - 1 ? '1px solid #f5f5f5' : 'none',

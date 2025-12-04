@@ -384,7 +384,7 @@ const ForumNotifications: React.FC = () => {
               <div className={styles.notificationsList}>
                 {notifications.map((notification) => (
                   <Card
-                    key={notification.id}
+                    key={`${notification.is_forum ? 'forum' : 'task'}-${notification.id}`}
                     className={`${styles.notificationCard} ${!notification.is_read ? styles.unread : ''}`}
                     hoverable
                     onClick={() => handleNotificationClick(notification)}

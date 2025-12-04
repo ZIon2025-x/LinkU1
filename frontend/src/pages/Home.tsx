@@ -219,12 +219,22 @@ export const CITIES = [
 
 interface Notification {
   id: number;
-  type: string;
-  title: string;
+  type?: string;
+  title?: string;
   content: string;
   related_id?: number;
   is_read: number;
   created_at: string;
+  // 论坛通知字段
+  notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
+  target_type?: 'post' | 'reply';
+  target_id?: number;
+  from_user?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  } | null;
+  is_forum?: boolean; // 标识是否为论坛通知
 }
 
 const Home: React.FC = () => {
@@ -362,18 +372,43 @@ const Home: React.FC = () => {
         getNotificationsWithRecentRead(10).catch(() => []),
         getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
       ]).then(([taskNotifications, forumResponse]) => {
-        const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
-          ...fn,
-          id: fn.id,
-          content: '', // 论坛通知不需要content字段
-          is_read: fn.is_read ? 1 : 0,
-          created_at: fn.created_at,
-          is_forum: true,
-          notification_type: fn.notification_type,
-          target_type: fn.target_type,
-          target_id: fn.target_id,
-          from_user: fn.from_user
-        }));
+        const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
+          // 生成论坛通知的显示文本
+          const userName = fn.from_user?.name || '用户';
+          let contentText = '';
+          switch (fn.notification_type) {
+            case 'reply_post':
+              contentText = `${userName} 回复了您的帖子`;
+              break;
+            case 'reply_reply':
+              contentText = `${userName} 回复了您的回复`;
+              break;
+            case 'like_post':
+              contentText = `${userName} 点赞了您的帖子`;
+              break;
+            case 'feature_post':
+              contentText = '您的帖子被设为精华';
+              break;
+            case 'pin_post':
+              contentText = '您的帖子被置顶';
+              break;
+            default:
+              contentText = '论坛通知';
+          }
+          
+          return {
+            ...fn,
+            id: fn.id,
+            content: contentText,
+            is_read: fn.is_read ? 1 : 0,
+            created_at: fn.created_at,
+            is_forum: true,
+            notification_type: fn.notification_type,
+            target_type: fn.target_type,
+            target_id: fn.target_id,
+            from_user: fn.from_user
+          };
+        });
         
         // 合并通知并按时间排序
         const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
@@ -463,18 +498,42 @@ const Home: React.FC = () => {
             getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
           ]);
           
-          const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
-            ...fn,
-            id: fn.id,
-            content: '',
-            is_read: fn.is_read ? 1 : 0,
-            created_at: fn.created_at,
-            is_forum: true,
-            notification_type: fn.notification_type,
-            target_type: fn.target_type,
-            target_id: fn.target_id,
-            from_user: fn.from_user
-          }));
+          const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
+            const userName = fn.from_user?.name || '用户';
+            let contentText = '';
+            switch (fn.notification_type) {
+              case 'reply_post':
+                contentText = `${userName} 回复了您的帖子`;
+                break;
+              case 'reply_reply':
+                contentText = `${userName} 回复了您的回复`;
+                break;
+              case 'like_post':
+                contentText = `${userName} 点赞了您的帖子`;
+                break;
+              case 'feature_post':
+                contentText = '您的帖子被设为精华';
+                break;
+              case 'pin_post':
+                contentText = '您的帖子被置顶';
+                break;
+              default:
+                contentText = '论坛通知';
+            }
+            
+            return {
+              ...fn,
+              id: fn.id,
+              content: contentText,
+              is_read: fn.is_read ? 1 : 0,
+              created_at: fn.created_at,
+              is_forum: true,
+              notification_type: fn.notification_type,
+              target_type: fn.target_type,
+              target_id: fn.target_id,
+              from_user: fn.from_user
+            };
+          });
           
           // 合并通知并按时间排序
           const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
@@ -526,18 +585,42 @@ const Home: React.FC = () => {
             getNotificationsWithRecentRead(10).catch(() => []),
             getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
           ]).then(([taskNotifications, forumResponse]) => {
-            const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
-              ...fn,
-              id: fn.id,
-              content: '',
-              is_read: fn.is_read ? 1 : 0,
-              created_at: fn.created_at,
-              is_forum: true,
-              notification_type: fn.notification_type,
-              target_type: fn.target_type,
-              target_id: fn.target_id,
-              from_user: fn.from_user
-            }));
+            const forumNotifications = (forumResponse.notifications || []).map((fn: any) => {
+              const userName = fn.from_user?.name || '用户';
+              let contentText = '';
+              switch (fn.notification_type) {
+                case 'reply_post':
+                  contentText = `${userName} 回复了您的帖子`;
+                  break;
+                case 'reply_reply':
+                  contentText = `${userName} 回复了您的回复`;
+                  break;
+                case 'like_post':
+                  contentText = `${userName} 点赞了您的帖子`;
+                  break;
+                case 'feature_post':
+                  contentText = '您的帖子被设为精华';
+                  break;
+                case 'pin_post':
+                  contentText = '您的帖子被置顶';
+                  break;
+                default:
+                  contentText = '论坛通知';
+              }
+              
+              return {
+                ...fn,
+                id: fn.id,
+                content: contentText,
+                is_read: fn.is_read ? 1 : 0,
+                created_at: fn.created_at,
+                is_forum: true,
+                notification_type: fn.notification_type,
+                target_type: fn.target_type,
+                target_id: fn.target_id,
+                from_user: fn.from_user
+              };
+            });
             
             const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
               return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
