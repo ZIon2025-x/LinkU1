@@ -418,7 +418,7 @@ TaskListItem.displayName = 'TaskListItem';
 
 const MessagePage: React.FC = () => {
   const { t } = useLanguage();
-  const { refreshUnreadCount, updateUnreadCount } = useUnreadMessages();
+  const { unreadCount: globalUnreadCount, refreshUnreadCount, updateUnreadCount } = useUnreadMessages();
   
   // 添加CSS动画样式
   React.useEffect(() => {
@@ -2446,21 +2446,37 @@ const MessagePage: React.FC = () => {
     if (!user) return;
     
     try {
-      const response = await api.get('/api/users/messages/unread/count');
-      const newCount = response.data.unread_count || 0;
-      setTotalUnreadCount(newCount);
-      // 同步更新全局Context
-      updateUnreadCount(newCount);
-      
-      // 更新页面标题
-      if (newCount > 0) {
-        document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
-      } else {
-        document.title = t('notifications.pageTitle');
-      }
+      // 使用全局的 refreshUnreadCount 确保数据一致性
+      // refreshUnreadCount 会从服务器获取最新值并更新全局 Context
+      await refreshUnreadCount();
+      // 等待 refreshUnreadCount 完成后，从全局 Context 获取最新值
+      // 使用 setTimeout 确保状态已更新
+      setTimeout(() => {
+        const newCount = globalUnreadCount;
+        setTotalUnreadCount(newCount);
+        
+        // 更新页面标题
+        if (newCount > 0) {
+          document.title = t('notifications.pageTitleWithCount').replace('{count}', newCount.toString());
+        } else {
+          document.title = t('notifications.pageTitle');
+        }
+      }, 100);
     } catch (error) {
           }
-  }, [user, t, updateUnreadCount]);
+  }, [user, t, refreshUnreadCount, globalUnreadCount]);
+  
+  // 同步全局未读数到本地状态（当全局值变化时）
+  useEffect(() => {
+    setTotalUnreadCount(globalUnreadCount);
+    
+    // 更新页面标题
+    if (globalUnreadCount > 0) {
+      document.title = t('notifications.pageTitleWithCount').replace('{count}', globalUnreadCount.toString());
+    } else {
+      document.title = t('notifications.pageTitle');
+    }
+  }, [globalUnreadCount, t]);
 
   // 定期更新未读消息数量（每30秒检查一次）
   useEffect(() => {

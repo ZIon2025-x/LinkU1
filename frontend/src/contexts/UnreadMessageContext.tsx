@@ -67,33 +67,42 @@ export const UnreadMessageProvider: React.FC<UnreadMessageProviderProps> = ({ ch
   // ⚠️ 未读数刷新解耦：不再强依赖完整Profile对象
   // 服务器用鉴权主体推断userId，前端无需传参
   const refreshUnreadCount = useCallback(async () => {
-    // 直接从user对象获取userId，不依赖localStorage（安全考虑）
-    if (!user?.id) {
+    // 检查是否在管理员/客服页面
+    if (isAdminOrServicePage()) {
       setUnreadCount(0);
       return;
     }
     
+    // 如果用户未登录，设置未读数为0
+    // 注意：这里不检查user?.id，因为API会从认证信息中获取用户ID
+    // 如果用户未登录，API会返回401错误，我们静默处理
     try {
       // ⚠️ 服务器用鉴权主体推断userId，前端无需传参
       // 即使user缓存陈旧，也能刷新未读数
       const response = await api.get('/api/users/messages/unread/count');
       const count = response.data.unread_count || 0;
       setUnreadCount(count);
-    } catch (error) {
-      // 静默处理错误
+    } catch (error: any) {
+      // 如果用户未登录（401）或其他错误，设置未读数为0
+      if (error?.response?.status === 401) {
+        setUnreadCount(0);
+      }
+      // 其他错误静默处理
     }
-  }, []); // ⚠️ 不再依赖user对象，即使user缓存陈旧也能刷新
+  }, []); // 不依赖user对象，API会从认证信息中获取用户ID
 
   // 更新未读数量（允许外部直接设置）
   const updateUnreadCount = useCallback((count: number) => {
     setUnreadCount(count);
   }, []);
 
-  // 初始加载（不再强依赖user对象）
+  // 初始加载和用户状态变化时刷新未读数
   useEffect(() => {
-    // ⚠️ 不再强依赖user对象，直接刷新未读数
-    refreshUnreadCount();
-  }, [refreshUnreadCount]);
+    // 如果不在管理员/客服页面，刷新未读数
+    if (!isAdminOrServicePage()) {
+      refreshUnreadCount();
+    }
+  }, [user, refreshUnreadCount]);
 
   // 初始化WebSocket管理器
   useEffect(() => {
