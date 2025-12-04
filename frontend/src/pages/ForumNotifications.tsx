@@ -9,7 +9,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
 import { 
   getForumNotifications, markForumNotificationRead, markAllForumNotificationsRead,
-  getForumUnreadNotificationCount, fetchCurrentUser, getPublicSystemSettings, logout
+  getForumUnreadNotificationCount, fetchCurrentUser, getPublicSystemSettings, logout,
+  getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead
 } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import { message } from 'antd';
@@ -25,16 +26,21 @@ const { Title, Text } = Typography;
 
 interface ForumNotification {
   id: number;
-  notification_type: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
-  target_type: 'post' | 'reply';
-  target_id: number;
-  from_user: {
+  notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
+  target_type?: 'post' | 'reply';
+  target_id?: number;
+  from_user?: {
     id: string;
     name: string;
     avatar?: string;
   } | null;
   is_read: boolean;
   created_at: string;
+  // 任务通知字段
+  content?: string;
+  type?: string;
+  related_id?: number;
+  is_forum?: boolean;
 }
 
 const ForumNotifications: React.FC = () => {
@@ -84,6 +90,7 @@ const ForumNotifications: React.FC = () => {
     
     try {
       setLoading(true);
+      // 同时获取论坛和任务通知
       const params: any = {
         page: currentPage,
         page_size: pageSize
@@ -91,9 +98,34 @@ const ForumNotifications: React.FC = () => {
       if (filter === 'unread') {
         params.is_read = false;
       }
-      const response = await getForumNotifications(params);
-      setNotifications(response.notifications || []);
-      setTotal(response.total || 0);
+      
+      const [forumResponse, taskNotifications] = await Promise.all([
+        getForumNotifications(params).catch(() => ({ notifications: [], total: 0 })),
+        getNotificationsWithRecentRead(10).catch(() => [])
+      ]);
+      
+      const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
+        ...fn,
+        is_forum: true
+      }));
+      
+      const taskNotificationsFormatted = taskNotifications.map((tn: any) => ({
+        id: tn.id,
+        content: tn.content,
+        is_read: tn.is_read === 1,
+        created_at: tn.created_at,
+        type: tn.type,
+        related_id: tn.related_id,
+        is_forum: false
+      }));
+      
+      // 合并通知并按时间排序
+      const allNotifications = [...forumNotifications, ...taskNotificationsFormatted].sort((a, b) => {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      
+      setNotifications(allNotifications);
+      setTotal((forumResponse.total || 0) + taskNotifications.length);
     } catch (error: any) {
             message.error(error.response?.data?.detail || t('forum.error'));
     } finally {
@@ -105,15 +137,27 @@ const ForumNotifications: React.FC = () => {
     if (!currentUser) return;
     
     try {
-      const response = await getForumUnreadNotificationCount();
-      setUnreadCount(response.unread_count || 0);
+      const [forumResponse, taskCount] = await Promise.all([
+        getForumUnreadNotificationCount().catch(() => ({ unread_count: 0 })),
+        getUnreadNotificationCount().catch(() => 0)
+      ]);
+      setUnreadCount((forumResponse.unread_count || 0) + taskCount);
     } catch (error: any) {
           }
   };
 
   const handleMarkRead = async (notificationId: number) => {
     try {
-      await markForumNotificationRead(notificationId);
+      // 查找通知，判断是论坛通知还是任务通知
+      const notification = notifications.find(n => n.id === notificationId);
+      const isForumNotification = notification?.is_forum;
+      
+      if (isForumNotification) {
+        await markForumNotificationRead(notificationId);
+      } else {
+        await markNotificationRead(notificationId);
+      }
+      
       loadNotifications();
       loadUnreadCount();
     } catch (error: any) {
@@ -123,7 +167,10 @@ const ForumNotifications: React.FC = () => {
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllForumNotificationsRead();
+      await Promise.all([
+        markAllForumNotificationsRead().catch(() => {}),
+        markAllNotificationsRead().catch(() => {})
+      ]);
       message.success(t('forum.markAllReadSuccess'));
       loadNotifications();
       loadUnreadCount();
@@ -136,11 +183,35 @@ const ForumNotifications: React.FC = () => {
     if (!notification.is_read) {
       await handleMarkRead(notification.id);
     }
-    navigate(`/${lang}/forum/post/${notification.target_id}`);
+    
+    // 如果是论坛通知，跳转到帖子页面
+    if (notification.is_forum && notification.target_id) {
+      navigate(`/${lang}/forum/post/${notification.target_id}`);
+    } else if (notification.related_id && notification.type === 'task_application') {
+      // 如果是任务申请通知，跳转到任务详情页
+      navigate(`/${lang}/task/${notification.related_id}`);
+    } else if (notification.related_id) {
+      // 其他任务通知，跳转到任务详情页
+      navigate(`/${lang}/task/${notification.related_id}`);
+    }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIcon = (notification: ForumNotification) => {
+    // 任务通知
+    if (!notification.is_forum && notification.type) {
+      switch (notification.type) {
+        case 'task_application':
+        case 'application_accepted':
+        case 'application_rejected':
+          return <MessageOutlined />;
+        case 'negotiation_offer':
+          return <LikeOutlined />;
+        default:
+          return <UserOutlined />;
+      }
+    }
+    // 论坛通知
+    switch (notification.notification_type) {
       case 'reply_post':
       case 'reply_reply':
         return <MessageOutlined />;
@@ -156,6 +227,22 @@ const ForumNotifications: React.FC = () => {
   };
 
   const getNotificationText = (notification: ForumNotification) => {
+    // 任务通知
+    if (!notification.is_forum) {
+      if (notification.content) {
+        try {
+          const content = JSON.parse(notification.content);
+          if (content.task_title) {
+            return notification.content.substring(0, 100) + (notification.content.length > 100 ? '...' : '');
+          }
+        } catch (e) {
+          // 如果不是JSON，直接显示内容
+          return notification.content.substring(0, 100) + (notification.content.length > 100 ? '...' : '');
+        }
+      }
+      return notification.type || '任务通知';
+    }
+    // 论坛通知
     const userName = notification.from_user?.name || t('forum.user');
     switch (notification.notification_type) {
       case 'reply_post':
@@ -304,14 +391,21 @@ const ForumNotifications: React.FC = () => {
                   >
                     <div className={styles.notificationHeader}>
                       <Space>
-                        <Avatar
-                          src={notification.from_user?.avatar}
-                          icon={<UserOutlined />}
-                          size="small"
-                        />
+                        {notification.is_forum ? (
+                          <Avatar
+                            src={notification.from_user?.avatar}
+                            icon={<UserOutlined />}
+                            size="small"
+                          />
+                        ) : (
+                          <Avatar
+                            icon={<UserOutlined />}
+                            size="small"
+                          />
+                        )}
                         <div className={styles.notificationContent}>
                           <Text strong={!notification.is_read}>
-                            {getNotificationIcon(notification.notification_type)}
+                            {getNotificationIcon(notification)}
                             {' '}
                             {getNotificationText(notification)}
                           </Text>

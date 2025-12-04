@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate as useRouterNavigate } from 'react-router-dom';
 import { message } from 'antd';
-import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities } from '../api';
+import api, { fetchTasks, fetchCurrentUser, getNotifications, getUnreadNotifications, getNotificationsWithRecentRead, getUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, getPublicSystemSettings, logout, getUserApplications, applyForTask, applyToActivity, getActivities, getForumNotifications, getForumUnreadNotificationCount, markForumNotificationRead, markAllForumNotificationsRead } from '../api';
 import { API_BASE_URL } from '../config';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import dayjs from 'dayjs';
@@ -836,15 +836,37 @@ const Tasks: React.FC = () => {
     const loadNotificationsAndSettings = async () => {
       if (user) {
         try {
-          // 加载通知 - 获取所有未读通知和最近10条已读通知
-          const [notificationsData, unreadCountData, settingsData] = await Promise.all([
-            getNotificationsWithRecentRead(10),
-            getUnreadNotificationCount(),
+          // 同时加载任务和论坛通知
+          const [taskNotifications, forumResponse, taskUnreadCount, forumUnreadResponse, settingsData] = await Promise.all([
+            getNotificationsWithRecentRead(10).catch(() => []),
+            getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] })),
+            getUnreadNotificationCount().catch(() => 0),
+            getForumUnreadNotificationCount().catch(() => ({ unread_count: 0 })),
             getPublicSystemSettings()
           ]);
           
-          setNotifications(notificationsData);
-          setUnreadCount(unreadCountData);
+          const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
+            ...fn,
+            id: fn.id,
+            content: '',
+            is_read: fn.is_read ? 1 : 0,
+            created_at: fn.created_at,
+            is_forum: true,
+            notification_type: fn.notification_type,
+            target_type: fn.target_type,
+            target_id: fn.target_id,
+            from_user: fn.from_user
+          }));
+          
+          // 合并通知并按时间排序
+          const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+          
+          const forumUnreadCount = forumUnreadResponse.unread_count || 0;
+          
+          setNotifications(allNotifications);
+          setUnreadCount(taskUnreadCount + forumUnreadCount);
           setSystemSettings(settingsData);
         } catch (error) {
                   }
@@ -864,8 +886,12 @@ const Tasks: React.FC = () => {
       const updateUnreadCount = () => {
         // 只在页面可见时才更新
         if (!document.hidden) {
-          getUnreadNotificationCount().then(count => {
-            setUnreadCount(count);
+          Promise.all([
+            getUnreadNotificationCount().catch(() => 0),
+            getForumUnreadNotificationCount().catch(() => ({ unread_count: 0 }))
+          ]).then(([taskCount, forumResponse]) => {
+            const forumCount = forumResponse.unread_count || 0;
+            setUnreadCount(taskCount + forumCount);
             consecutiveErrors = 0; // 成功时重置错误计数
           }).catch(error => {
             consecutiveErrors++;
@@ -910,8 +936,30 @@ const Tasks: React.FC = () => {
       // 打开时立即刷新一次
       const loadNotificationsList = async () => {
         try {
-          const notificationsData = await getNotificationsWithRecentRead(10);
-          setNotifications(notificationsData);
+          const [taskNotifications, forumResponse] = await Promise.all([
+            getNotificationsWithRecentRead(10).catch(() => []),
+            getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
+          ]);
+          
+          const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
+            ...fn,
+            id: fn.id,
+            content: '',
+            is_read: fn.is_read ? 1 : 0,
+            created_at: fn.created_at,
+            is_forum: true,
+            notification_type: fn.notification_type,
+            target_type: fn.target_type,
+            target_id: fn.target_id,
+            from_user: fn.from_user
+          }));
+          
+          // 合并通知并按时间排序
+          const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+          
+          setNotifications(allNotifications);
         } catch (error) {
                   }
       };
@@ -938,22 +986,44 @@ const Tasks: React.FC = () => {
 
     // 订阅WebSocket消息
     const unsubscribe = WebSocketManager.subscribe((msg) => {
-      // 处理通知创建事件
-      if (msg.type === 'notification_created') {
-        // 立即刷新未读通知数量
-        getUnreadNotificationCount().then(count => {
-          setUnreadCount(count);
-        }).catch(error => {
-                  });
+        // 处理通知创建事件
+        if (msg.type === 'notification_created') {
+          // 立即刷新未读通知数量（合并论坛和任务）
+          Promise.all([
+            getUnreadNotificationCount().catch(() => 0),
+            getForumUnreadNotificationCount().catch(() => ({ unread_count: 0 }))
+          ]).then(([taskCount, forumResponse]) => {
+            const forumCount = forumResponse.unread_count || 0;
+            setUnreadCount(taskCount + forumCount);
+          }).catch(() => {});
 
-        // 如果通知面板已打开，刷新通知列表
-        if (showNotifications) {
-          getNotificationsWithRecentRead(10).then(notificationsData => {
-            setNotifications(notificationsData);
-          }).catch(error => {
-                      });
+          // 如果通知面板已打开，刷新通知列表
+          if (showNotifications) {
+            Promise.all([
+              getNotificationsWithRecentRead(10).catch(() => []),
+              getForumNotifications({ page: 1, page_size: 10 }).catch(() => ({ notifications: [] }))
+            ]).then(([taskNotifications, forumResponse]) => {
+              const forumNotifications = (forumResponse.notifications || []).map((fn: any) => ({
+                ...fn,
+                id: fn.id,
+                content: '',
+                is_read: fn.is_read ? 1 : 0,
+                created_at: fn.created_at,
+                is_forum: true,
+                notification_type: fn.notification_type,
+                target_type: fn.target_type,
+                target_id: fn.target_id,
+                from_user: fn.from_user
+              }));
+              
+              const allNotifications = [...taskNotifications, ...forumNotifications].sort((a, b) => {
+                return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+              });
+              
+              setNotifications(allNotifications);
+            }).catch(() => {});
+          }
         }
-      }
     });
 
     return () => {
@@ -1213,10 +1283,19 @@ const Tasks: React.FC = () => {
   }, [showLocationDropdown, showLanguageDropdown, sorting.showRewardDropdown, sorting.showDeadlineDropdown, showLevelDropdown]);
 
 
-  // 处理通知标记为已读
+  // 处理通知标记为已读 - 支持论坛和任务通知
   const handleMarkAsRead = async (notificationId: number) => {
     try {
-      await markNotificationRead(notificationId);
+      // 查找通知，判断是论坛通知还是任务通知
+      const notification = notifications.find(n => n.id === notificationId);
+      const isForumNotification = notification?.is_forum;
+      
+      if (isForumNotification) {
+        await markForumNotificationRead(notificationId);
+      } else {
+        await markNotificationRead(notificationId);
+      }
+      
       setNotifications(prev => 
         prev.map(notif => 
           notif.id === notificationId ? { ...notif, is_read: 1 } : notif
@@ -1227,10 +1306,14 @@ const Tasks: React.FC = () => {
           }
   };
 
-  // 处理标记所有通知为已读
+  // 处理标记所有通知为已读 - 同时标记论坛和任务通知
   const handleMarkAllRead = async () => {
     try {
-      await markAllNotificationsRead();
+      await Promise.all([
+        markAllNotificationsRead().catch(() => {}),
+        markAllForumNotificationsRead().catch(() => {})
+      ]);
+      
       setNotifications(prev => 
         prev.map(notif => ({ ...notif, is_read: 1 }))
       );

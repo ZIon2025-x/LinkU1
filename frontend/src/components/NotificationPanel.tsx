@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { TimeHandlerV2 } from '../utils/timeUtils';
-import { respondNegotiation, replyApplicationMessage, getNegotiationTokens } from '../api';
+import { respondNegotiation, replyApplicationMessage, getNegotiationTokens, markForumNotificationRead } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface Notification {
@@ -10,6 +11,16 @@ interface Notification {
   created_at: string;
   type?: string;
   related_id?: number;
+  // 论坛通知字段
+  notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
+  target_type?: 'post' | 'reply';
+  target_id?: number;
+  from_user?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  } | null;
+  is_forum?: boolean; // 标识是否为论坛通知
 }
 
 interface NegotiationContent {
@@ -315,7 +326,10 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onMarkAsRead,
   onMarkAllRead
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const navigate = useNavigate();
+  const { lang: langParam } = useParams<{ lang: string }>();
+  const lang = langParam || language || 'zh';
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [replyContent, setReplyContent] = useState('');
@@ -323,8 +337,25 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   
   if (!isOpen) return <></>;
 
-  const getNotificationIcon = (type?: string) => {
-    switch (type) {
+  const getNotificationIcon = (notification: Notification) => {
+    // 论坛通知
+    if (notification.is_forum && notification.notification_type) {
+      switch (notification.notification_type) {
+        case 'reply_post':
+        case 'reply_reply':
+          return '💬';
+        case 'like_post':
+          return '👍';
+        case 'feature_post':
+          return '⭐';
+        case 'pin_post':
+          return '📌';
+        default:
+          return '🔔';
+      }
+    }
+    // 任务通知
+    switch (notification.type) {
       case 'success':
         return '✅';
       case 'warning':
@@ -333,6 +364,21 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         return '❌';
       default:
         return '🔔';
+    }
+  };
+
+  const handleForumNotificationClick = async (notification: Notification) => {
+    if (!notification.is_read && notification.is_forum) {
+      try {
+        await markForumNotificationRead(notification.id);
+        onMarkAsRead(notification.id);
+      } catch (error) {
+        // 忽略错误，继续跳转
+      }
+    }
+    if (notification.target_id) {
+      navigate(`/${lang}/forum/post/${notification.target_id}`);
+      onClose();
     }
   };
 
@@ -475,7 +521,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   marginTop: '2px',
                   flexShrink: 0
                 }}>
-                  {getNotificationIcon(notification.type)}
+                  {getNotificationIcon(notification)}
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -505,8 +551,81 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     )}
                   </div>
                   
-                  {/* 议价通知特殊处理 */}
-                  {notification.type === 'negotiation_offer' ? (
+                  {/* 论坛通知特殊处理 */}
+                  {notification.is_forum ? (() => {
+                    const forumType = notification.notification_type || '';
+                    const fromUser = notification.from_user;
+                    let text = '';
+                    
+                    switch (forumType) {
+                      case 'reply_post':
+                        text = fromUser ? `${fromUser.name} 回复了您的帖子` : '有人回复了您的帖子';
+                        break;
+                      case 'reply_reply':
+                        text = fromUser ? `${fromUser.name} 回复了您的回复` : '有人回复了您的回复';
+                        break;
+                      case 'like_post':
+                        text = fromUser ? `${fromUser.name} 点赞了您的帖子` : '有人点赞了您的帖子';
+                        break;
+                      case 'feature_post':
+                        text = '您的帖子被设为精华';
+                        break;
+                      case 'pin_post':
+                        text = '您的帖子被置顶';
+                        break;
+                      default:
+                        text = '论坛通知';
+                    }
+                    
+                    return (
+                      <div
+                        style={{
+                          cursor: 'pointer',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f5f5f5';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={() => handleForumNotificationClick(notification)}
+                      >
+                        <p style={{
+                          margin: '0 0 8px 0',
+                          fontSize: '13px',
+                          color: '#333',
+                          lineHeight: '1.4'
+                        }}>
+                          {text}
+                        </p>
+                        {notification.is_read === 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleForumNotificationClick(notification);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              border: 'none',
+                              background: '#2196F3',
+                              color: 'white',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#1976D2'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#2196F3'}
+                          >
+                            查看
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })() : notification.type === 'negotiation_offer' ? (
                     <NegotiationOfferNotification
                       notification={notification}
                       onMarkAsRead={onMarkAsRead}
