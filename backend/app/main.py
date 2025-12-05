@@ -890,8 +890,20 @@ async def startup_event():
                     # 直接读取JSON文件并初始化
                     import json
                     from pathlib import Path
-                    json_path = Path(__file__).parent.parent / "scripts" / "university_email_domains.json"
-                    if json_path.exists():
+                    # 尝试多个可能的路径（支持不同的部署环境）
+                    possible_paths = [
+                        Path(__file__).parent.parent / "scripts" / "university_email_domains.json",  # 开发环境：backend/scripts/
+                        Path(__file__).parent.parent.parent / "scripts" / "university_email_domains.json",  # 项目根目录：scripts/
+                        Path("/app/scripts/university_email_domains.json"),  # Docker/Railway部署环境
+                        Path("scripts/university_email_domains.json"),  # 相对路径
+                    ]
+                    json_path = None
+                    for path in possible_paths:
+                        if path.exists():
+                            json_path = path
+                            break
+                    
+                    if json_path and json_path.exists():
                         with open(json_path, 'r', encoding='utf-8') as f:
                             universities_data = json.load(f)
                         success_count = 0
