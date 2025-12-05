@@ -73,13 +73,29 @@ def generate_verification_token(email: str) -> tuple[str, datetime]:
     redis_client = get_redis_client()
     if redis_client:
         try:
+            token_key = f"student_verification:token:{token}"
             redis_client.setex(
-                f"student_verification:token:{token}",  # 业务前缀，便于管理和监控
+                token_key,  # 业务前缀，便于管理和监控
                 900,  # 15分钟 = 900秒
                 email_lower
             )
+            # 验证存储是否成功
+            stored_value = redis_client.get(token_key)
+            if stored_value:
+                if isinstance(stored_value, bytes):
+                    stored_value = stored_value.decode('utf-8')
+                if stored_value.lower() != email_lower:
+                    logger.error(f"Redis存储验证失败: 存储的值不匹配 - expected={email_lower}, actual={stored_value}")
+                else:
+                    logger.info(f"验证令牌已成功存储到Redis: token={token[:20]}..., email={email_lower}")
+            else:
+                logger.error(f"Redis存储验证失败: token={token[:20]}... 存储后立即读取为空")
         except Exception as e:
-            logger.error(f"存储验证令牌到Redis失败: {e}")
+            logger.error(f"存储验证令牌到Redis失败: {e}", exc_info=True)
+            # Redis存储失败不应该阻止认证流程，但应该记录警告
+            # 因为验证时如果Redis中没有token，验证会失败
+    else:
+        logger.warning("Redis客户端不可用，验证令牌将无法存储到Redis，验证可能会失败")
     
     return token, token_expires_at
 
@@ -435,6 +451,7 @@ def verify_email(
         try:
             # 使用GETDEL原子操作（Redis 6.2+）
             email_from_redis = redis_client.getdel(token_key)
+            logger.info(f"从Redis获取验证令牌: token={token[:20]}..., email_from_redis={'found' if email_from_redis else 'not found'}")
         except AttributeError:
             # Redis版本不支持GETDEL，使用Lua脚本实现原子操作
             lua_script = """
@@ -445,10 +462,40 @@ def verify_email(
             return value
             """
             email_from_redis = redis_client.eval(lua_script, 1, token_key)
+            logger.info(f"从Redis获取验证令牌(Lua脚本): token={token[:20]}..., email_from_redis={'found' if email_from_redis else 'not found'}")
         except Exception as e:
-            logger.error(f"从Redis获取验证令牌失败: {e}")
+            logger.error(f"从Redis获取验证令牌失败: {e}", exc_info=True)
+    else:
+        logger.warning(f"Redis客户端不可用，将使用数据库fallback验证: token={token[:20]}...")
     
-    if not email_from_redis:
+    # 如果Redis中没有token，尝试从数据库查找（fallback机制）
+    email = None
+    if email_from_redis:
+        # 解析邮箱
+        if isinstance(email_from_redis, bytes):
+            email_from_redis = email_from_redis.decode('utf-8')
+        email = normalize_email(email_from_redis)
+    else:
+        # Redis中没有token，尝试从数据库查找pending记录
+        logger.info(f"Redis中未找到token，尝试从数据库查找: token={token[:20]}...")
+        verification_check = db.query(models.StudentVerification).filter(
+            models.StudentVerification.verification_token == token,
+            models.StudentVerification.status == 'pending'
+        ).first()
+        
+        if verification_check:
+            # 检查token是否过期
+            now = get_utc_time()
+            if verification_check.token_expires_at and verification_check.token_expires_at > now:
+                # Token未过期，使用数据库中的邮箱
+                email = normalize_email(verification_check.email)
+                logger.info(f"从数据库找到未过期的token: token={token[:20]}..., email={email}, expires_at={verification_check.token_expires_at}")
+            else:
+                logger.warning(f"数据库中的token已过期: token={token[:20]}..., expires_at={verification_check.token_expires_at}, now={now}")
+    
+    if not email:
+        # 记录详细信息以便调试
+        logger.warning(f"验证令牌无效或已过期: token={token[:20]}..., redis_client={'available' if redis_client else 'unavailable'}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -457,12 +504,6 @@ def verify_email(
                 "error": "INVALID_TOKEN"
             }
         )
-    
-    # 解析邮箱
-    if isinstance(email_from_redis, bytes):
-        email_from_redis = email_from_redis.decode('utf-8')
-    
-    email = normalize_email(email_from_redis)
     
     # 查找对应的认证记录
     verification = db.query(models.StudentVerification).filter(
@@ -471,6 +512,15 @@ def verify_email(
     ).first()
     
     if not verification:
+        # 记录详细信息以便调试
+        # 检查是否有该token但状态不是pending的记录
+        verification_any_status = db.query(models.StudentVerification).filter(
+            models.StudentVerification.verification_token == token
+        ).first()
+        if verification_any_status:
+            logger.warning(f"找到认证记录但状态不是pending: token={token[:20]}..., status={verification_any_status.status}, user_id={verification_any_status.user_id}")
+        else:
+            logger.warning(f"数据库中未找到对应的认证记录: token={token[:20]}...")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -480,8 +530,11 @@ def verify_email(
             }
         )
     
+    logger.info(f"找到待验证的认证记录: verification_id={verification.id}, user_id={verification.user_id}, email={verification.email}")
+    
     # 验证邮箱是否匹配
     if verification.email.lower() != email:
+        logger.error(f"邮箱不匹配: Redis中的email={email}, DB中的email={verification.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -523,7 +576,21 @@ def verify_email(
     try:
         db.commit()
         db.refresh(verification)
-        logger.info(f"用户 {verification.user_id} 邮箱验证成功: {email} (认证ID: {verification.id})")
+        logger.info(f"用户 {verification.user_id} 邮箱验证成功: {email} (认证ID: {verification.id}, status={verification.status})")
+        
+        # 验证状态确实已更新
+        if verification.status != 'verified':
+            logger.error(f"验证后状态异常: verification_id={verification.id}, expected=verified, actual={verification.status}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": 500,
+                    "message": "验证状态更新失败，请稍后重试",
+                    "error": "STATUS_UPDATE_FAILED"
+                }
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"邮箱验证失败: {e}", exc_info=True)

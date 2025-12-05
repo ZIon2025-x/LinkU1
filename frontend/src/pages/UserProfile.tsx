@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts, getUserStudentVerificationStatus } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -70,17 +70,7 @@ const UserProfile: React.FC = () => {
     fetchCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
   }, []);
 
-  useEffect(() => {
-    if (userId) {
-      loadUserProfile();
-      loadTaskExpertInfo();
-      loadHotPosts();
-      // 加载学生认证状态（所有用户都可以看到）
-      loadStudentVerification();
-    }
-  }, [userId]);
-
-  const loadStudentVerification = async () => {
+  const loadStudentVerification = useCallback(async () => {
     if (!userId) return;
     try {
       const verificationResponse = await getUserStudentVerificationStatus(userId);
@@ -93,7 +83,55 @@ const UserProfile: React.FC = () => {
       setIsStudentVerified(false);
       setStudentUniversity(null);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadUserProfile();
+      loadTaskExpertInfo();
+      loadHotPosts();
+      // 加载学生认证状态（所有用户都可以看到）
+      loadStudentVerification();
+    }
+  }, [userId, loadStudentVerification]);
+
+  // 当页面重新获得焦点时刷新学生认证状态
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userId) {
+        // 页面重新可见时刷新学生认证状态
+        loadStudentVerification();
+      }
+    };
+
+    const handleFocus = () => {
+      if (userId) {
+        // 窗口获得焦点时刷新学生认证状态
+        loadStudentVerification();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [userId, loadStudentVerification]);
+
+  // 定期刷新学生认证状态（每30秒，仅在页面可见时）
+  useEffect(() => {
+    if (!userId) return;
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        loadStudentVerification();
+      }
+    }, 30000); // 每30秒刷新一次
+
+    return () => clearInterval(interval);
+  }, [userId, loadStudentVerification]);
 
   const loadUserProfile = async () => {
     if (!userId) {
