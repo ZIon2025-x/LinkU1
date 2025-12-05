@@ -25,9 +25,9 @@ BEGIN
         COMMENT ON COLUMN universities.domain_pattern IS '匹配模式（支持通配符）';
         COMMENT ON COLUMN universities.is_active IS '是否启用';
 
-        -- 创建索引
-        CREATE INDEX idx_email_domain ON universities(email_domain);
-        CREATE INDEX idx_is_active ON universities(is_active);
+        -- 创建索引（使用表名前缀确保唯一性）
+        CREATE INDEX IF NOT EXISTS idx_universities_email_domain ON universities(email_domain);
+        CREATE INDEX IF NOT EXISTS idx_universities_is_active ON universities(is_active);
     END IF;
 
     -- 2. 创建学生认证表 (student_verifications)
@@ -60,23 +60,23 @@ BEGIN
         COMMENT ON COLUMN student_verifications.revoked_reason IS '撤销原因（必填，提升审计能力）';
         COMMENT ON COLUMN student_verifications.revoked_reason_type IS '撤销原因类型（user_request, violation, account_hacked, other）';
 
-        -- 创建索引
-        CREATE INDEX idx_user_id ON student_verifications(user_id);
-        CREATE INDEX idx_university_id ON student_verifications(university_id);
-        CREATE INDEX idx_email ON student_verifications(email);
-        CREATE INDEX idx_status ON student_verifications(status);
-        CREATE INDEX idx_expires_at ON student_verifications(expires_at);
-        CREATE INDEX idx_verification_token ON student_verifications(verification_token);
-        CREATE INDEX idx_verification_user_status ON student_verifications(user_id, status);
-        CREATE INDEX idx_verification_expires_status ON student_verifications(expires_at, status);
+        -- 创建索引（使用表名前缀确保唯一性）
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_user_id ON student_verifications(user_id);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_university_id ON student_verifications(university_id);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_email ON student_verifications(email);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_status ON student_verifications(status);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_expires_at ON student_verifications(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_token ON student_verifications(verification_token);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_user_status ON student_verifications(user_id, status);
+        CREATE INDEX IF NOT EXISTS idx_student_verifications_expires_status ON student_verifications(expires_at, status);
 
         -- 创建唯一索引（验证令牌）
-        CREATE UNIQUE INDEX idx_verification_token_unique 
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_student_verifications_token_unique 
         ON student_verifications(verification_token) 
         WHERE verification_token IS NOT NULL;
 
         -- 部分唯一索引：同一用户只能有一个活跃的认证（pending或verified状态）
-        CREATE UNIQUE INDEX unique_user_active 
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_student_verifications_unique_user_active 
         ON student_verifications(user_id) 
         WHERE status IN ('verified', 'pending');
     END IF;
@@ -100,10 +100,10 @@ BEGIN
         -- 添加字段注释
         COMMENT ON COLUMN verification_history.action IS '操作: verified, expired, revoked, renewed';
 
-        -- 创建索引
-        CREATE INDEX idx_user_id ON verification_history(user_id);
-        CREATE INDEX idx_action ON verification_history(action);
-        CREATE INDEX idx_created_at ON verification_history(created_at);
+        -- 创建索引（使用表名前缀确保唯一性）
+        CREATE INDEX IF NOT EXISTS idx_verification_history_user_id ON verification_history(user_id);
+        CREATE INDEX IF NOT EXISTS idx_verification_history_action ON verification_history(action);
+        CREATE INDEX IF NOT EXISTS idx_verification_history_created_at ON verification_history(created_at);
     END IF;
 
     -- 4. 创建更新时间触发器函数（如果不存在）

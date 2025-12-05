@@ -2407,8 +2407,8 @@ class University(Base):
     verifications = relationship("StudentVerification", back_populates="university")
     
     __table_args__ = (
-        Index('idx_email_domain', 'email_domain'),
-        Index('idx_is_active', 'is_active'),
+        Index('idx_universities_email_domain', 'email_domain'),
+        Index('idx_universities_is_active', 'is_active'),
     )
 
 
@@ -2437,17 +2437,17 @@ class StudentVerification(Base):
     history_records = relationship("VerificationHistory", back_populates="verification", cascade="all, delete-orphan")
     
     __table_args__ = (
-        Index('idx_user_id', 'user_id'),
-        Index('idx_university_id', 'university_id'),
-        Index('idx_email', 'email'),
-        Index('idx_status', 'status'),
-        Index('idx_expires_at', 'expires_at'),
-        Index('idx_verification_token', 'verification_token'),
-        Index('idx_verification_user_status', 'user_id', 'status'),
-        Index('idx_verification_expires_status', 'expires_at', 'status'),
+        Index('idx_student_verifications_user_id', 'user_id'),
+        Index('idx_student_verifications_university_id', 'university_id'),
+        Index('idx_student_verifications_email', 'email'),
+        Index('idx_student_verifications_status', 'status'),
+        Index('idx_student_verifications_expires_at', 'expires_at'),
+        Index('idx_student_verifications_token', 'verification_token'),
+        Index('idx_student_verifications_user_status', 'user_id', 'status'),
+        Index('idx_student_verifications_expires_status', 'expires_at', 'status'),
         # 部分唯一索引：同一用户只能有一个活跃的认证（pending或verified状态）
         # 注意：SQLAlchemy的UniqueConstraint不支持postgresql_where，必须使用Index
-        Index('unique_user_active', 'user_id', unique=True, postgresql_where=text("status IN ('verified', 'pending')")),
+        Index('idx_student_verifications_unique_user_active', 'user_id', unique=True, postgresql_where=text("status IN ('verified', 'pending')")),
     )
 
 
@@ -2473,7 +2473,7 @@ class VerificationHistory(Base):
     university = relationship("University", foreign_keys=[university_id])
     
     __table_args__ = (
-        Index('idx_user_id', 'user_id'),
-        Index('idx_action', 'action'),
-        Index('idx_created_at', 'created_at'),
+        Index('idx_verification_history_user_id', 'user_id'),
+        Index('idx_verification_history_action', 'action'),
+        Index('idx_verification_history_created_at', 'created_at'),
     )

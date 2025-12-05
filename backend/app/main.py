@@ -852,7 +852,8 @@ async def startup_event():
         from app.models import Base
         
         logger.info("正在创建数据库表...")
-        Base.metadata.create_all(bind=sync_engine)
+        # 使用 checkfirst=True 避免重复创建已存在的对象
+        Base.metadata.create_all(bind=sync_engine, checkfirst=True)
         logger.info("数据库表创建完成！")
         
         # 验证表是否创建成功
