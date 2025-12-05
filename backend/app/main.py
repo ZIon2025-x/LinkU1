@@ -881,6 +881,7 @@ async def startup_event():
         # 自动初始化大学数据（如果表为空）
         try:
             from app.database import SessionLocal
+            from app import models
             db = SessionLocal()
             try:
                 university_count = db.query(models.University).count()
