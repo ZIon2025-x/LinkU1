@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # 复制后端应用代码
 COPY backend/ /app
 
+# 复制scripts目录（包含大学数据文件）
+COPY scripts/ /app/scripts/
+
 # 创建必要的上传目录
 RUN mkdir -p uploads/images \
     uploads/public/images \

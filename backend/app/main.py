@@ -891,16 +891,19 @@ async def startup_event():
                     import json
                     from pathlib import Path
                     # 尝试多个可能的路径（支持不同的部署环境）
+                    # 注意：在Docker中，backend/目录被复制到/app/，所以scripts/应该在/app/scripts/
                     possible_paths = [
                         Path(__file__).parent.parent / "scripts" / "university_email_domains.json",  # 开发环境：backend/scripts/
                         Path(__file__).parent.parent.parent / "scripts" / "university_email_domains.json",  # 项目根目录：scripts/
-                        Path("/app/scripts/university_email_domains.json"),  # Docker/Railway部署环境
+                        Path("/app/scripts/university_email_domains.json"),  # Docker部署：如果复制了scripts目录
+                        Path("/app/app/scripts/university_email_domains.json"),  # Docker部署：backend/scripts/ -> /app/app/scripts/
                         Path("scripts/university_email_domains.json"),  # 相对路径
                     ]
                     json_path = None
                     for path in possible_paths:
                         if path.exists():
                             json_path = path
+                            logger.info(f"找到大学数据文件: {json_path}")
                             break
                     
                     if json_path and json_path.exists():
@@ -927,8 +930,11 @@ async def startup_event():
                             success_count += 1
                         logger.info(f"大学数据自动初始化完成！成功：{success_count}，跳过：{skip_count}")
                     else:
-                        logger.warning(f"找不到大学数据文件: {json_path}")
+                        logger.warning(f"找不到大学数据文件，已尝试以下路径：")
+                        for path in possible_paths:
+                            logger.warning(f"  - {path} (存在: {path.exists()})")
                         logger.info("请手动运行: python backend/scripts/init_universities.py")
+                        logger.info("或者确保 university_email_domains.json 文件在正确的位置")
                 else:
                     logger.info(f"大学数据已存在（{university_count} 条记录），跳过初始化")
                 
