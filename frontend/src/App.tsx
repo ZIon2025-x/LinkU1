@@ -328,6 +328,7 @@ const LanguageRoutes: React.FC = () => {
       <Route path="/admin" element={<Navigate to={`/${DEFAULT_LANGUAGE}/admin`} replace />} />
       <Route path="/verify-email" element={<QueryPreservingRedirect to={`/${DEFAULT_LANGUAGE}/verify-email`} />} />
       <Route path="/reset-password/:token" element={<ParamRedirect basePath="/reset-password/:token" />} />
+      <Route path="/student-verification/verify/:token" element={<ParamRedirect basePath="/student-verification/verify/:token" />} />
       
       {/* Catch-all路由：处理未匹配的路径，重定向到首页 */}
       <Route path="*" element={<Navigate to={`/${DEFAULT_LANGUAGE}`} replace />} />

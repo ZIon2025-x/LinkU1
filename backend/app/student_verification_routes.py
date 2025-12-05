@@ -491,6 +491,7 @@ def verify_email(
     4. 更新认证状态为verified
     5. 设置过期时间
     """
+    logger.info(f"收到学生认证验证请求: token={token[:20]}..., IP={request.client.host if request.client else 'unknown'}")
     # 从Redis获取并删除令牌（原子操作）
     redis_client = get_redis_client()
     email_from_redis = None
