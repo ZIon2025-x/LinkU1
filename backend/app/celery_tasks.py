@@ -88,7 +88,8 @@ if CELERY_AVAILABLE:
         check_expired_invitation_codes,
         check_expired_points,
         check_and_end_activities_sync,
-        auto_complete_expired_time_slot_tasks
+        auto_complete_expired_time_slot_tasks,
+        process_expired_verifications
     )
     from app.crud import (
         cancel_expired_tasks,
@@ -250,6 +251,39 @@ if CELERY_AVAILABLE:
         except Exception as e:
             duration = time.time() - start_time
             logger.error(f"自动完成过期时间段任务失败: {e}", exc_info=True)
+            _record_task_metrics(task_name, "error", duration)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            if self.request.retries < self.max_retries:
+                logger.info(f"任务将重试 ({self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=e)
+            raise
+        finally:
+            db.close()
+    
+    @celery_app.task(
+        name='app.celery_tasks.process_expired_verifications_task',
+        bind=True,
+        max_retries=3,
+        default_retry_delay=60
+    )
+    def process_expired_verifications_task(self):
+        """处理过期认证 - Celery任务包装"""
+        start_time = time.time()
+        task_name = 'process_expired_verifications_task'
+        logger.info(f"🔄 开始执行定时任务: {task_name}")
+        db = SessionLocal()
+        try:
+            process_expired_verifications(db)
+            duration = time.time() - start_time
+            logger.info(f"✅ 处理过期认证完成 (耗时: {duration:.2f}秒)")
+            _record_task_metrics(task_name, "success", duration)
+            return {"status": "success", "message": "Processed expired verifications"}
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"处理过期认证失败: {e}", exc_info=True)
             _record_task_metrics(task_name, "error", duration)
             try:
                 db.rollback()

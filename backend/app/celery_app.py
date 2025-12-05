@@ -18,7 +18,8 @@ celery_app = Celery(
     backend=REDIS_URL if USE_REDIS else 'cache+memory://',
     include=[
         'app.customer_service_tasks',
-        'app.celery_tasks'
+        'app.celery_tasks',
+        'app.celery_tasks_expiry'
     ]
 )
 
@@ -90,6 +91,41 @@ celery_app.conf.beat_schedule = {
     'check-expired-points': {
         'task': 'app.celery_tasks.check_expired_points_task',
         'schedule': 3600.0,  # 1小时
+    },
+    
+    # 处理过期认证 - 每1小时执行一次（兜底任务）
+    'process-expired-verifications': {
+        'task': 'app.celery_tasks.process_expired_verifications_task',
+        'schedule': 3600.0,  # 1小时
+    },
+    
+    # ========== 学生认证过期提醒任务 ==========
+    
+    # 过期提醒邮件 - 30天前（每天凌晨2点执行）
+    'send-expiry-reminders-30-days': {
+        'task': 'app.celery_tasks_expiry.send_expiry_reminders_task',
+        'schedule': crontab(hour=2, minute=0),  # 每天凌晨2点
+        'kwargs': {'days_before': 30}
+    },
+    
+    # 过期提醒邮件 - 7天前（每天凌晨2点5分执行）
+    'send-expiry-reminders-7-days': {
+        'task': 'app.celery_tasks_expiry.send_expiry_reminders_task',
+        'schedule': crontab(hour=2, minute=5),  # 每天凌晨2点5分
+        'kwargs': {'days_before': 7}
+    },
+    
+    # 过期提醒邮件 - 1天前（每天凌晨2点10分执行）
+    'send-expiry-reminders-1-day': {
+        'task': 'app.celery_tasks_expiry.send_expiry_reminders_task',
+        'schedule': crontab(hour=2, minute=10),  # 每天凌晨2点10分
+        'kwargs': {'days_before': 1}
+    },
+    
+    # 过期通知邮件 - 过期当天（每天凌晨2点15分执行）
+    'send-expiry-notifications': {
+        'task': 'app.celery_tasks_expiry.send_expiry_notifications_task',
+        'schedule': crontab(hour=2, minute=15),  # 每天凌晨2点15分
     },
     
     # 检查并结束活动 - 每15分钟执行一次（降低频率，减少DB压力）

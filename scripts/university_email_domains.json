@@ -1,0 +1,723 @@
+[
+  {
+    "name": "University of Bristol",
+    "name_cn": "布里斯托大学",
+    "email_domain": "bristol.ac.uk",
+    "domain_pattern": "@bristol.ac.uk"
+  },
+  {
+    "name": "University of Essex",
+    "name_cn": "埃塞克斯大学",
+    "email_domain": "essex.ac.uk",
+    "domain_pattern": "@essex.ac.uk"
+  },
+  {
+    "name": "University of Glasgow",
+    "name_cn": "格拉斯哥大学",
+    "email_domain": "student.gla.ac.uk",
+    "domain_pattern": "@student.gla.ac.uk"
+  },
+  {
+    "name": "University of Oxford",
+    "name_cn": "牛津大学",
+    "email_domain": "ox.ac.uk",
+    "domain_pattern": "@*.ox.ac.uk"
+  },
+  {
+    "name": "University of Cambridge",
+    "name_cn": "剑桥大学",
+    "email_domain": "cam.ac.uk",
+    "domain_pattern": "@*.cam.ac.uk"
+  },
+  {
+    "name": "Imperial College London",
+    "name_cn": "帝国理工学院",
+    "email_domain": "imperial.ac.uk",
+    "domain_pattern": "@imperial.ac.uk"
+  },
+  {
+    "name": "London School of Economics",
+    "name_cn": "伦敦政治经济学院",
+    "email_domain": "lse.ac.uk",
+    "domain_pattern": "@lse.ac.uk"
+  },
+  {
+    "name": "University College London",
+    "name_cn": "伦敦大学学院",
+    "email_domain": "ucl.ac.uk",
+    "domain_pattern": "@ucl.ac.uk"
+  },
+  {
+    "name": "King's College London",
+    "name_cn": "伦敦国王学院",
+    "email_domain": "kcl.ac.uk",
+    "domain_pattern": "@kcl.ac.uk"
+  },
+  {
+    "name": "University of Manchester",
+    "name_cn": "曼彻斯特大学",
+    "email_domain": "manchester.ac.uk",
+    "domain_pattern": "@manchester.ac.uk"
+  },
+  {
+    "name": "University of Edinburgh",
+    "name_cn": "爱丁堡大学",
+    "email_domain": "ed.ac.uk",
+    "domain_pattern": "@*.ed.ac.uk"
+  },
+  {
+    "name": "University of Birmingham",
+    "name_cn": "伯明翰大学",
+    "email_domain": "bham.ac.uk",
+    "domain_pattern": "@bham.ac.uk"
+  },
+  {
+    "name": "University of Leeds",
+    "name_cn": "利兹大学",
+    "email_domain": "leeds.ac.uk",
+    "domain_pattern": "@leeds.ac.uk"
+  },
+  {
+    "name": "University of Liverpool",
+    "name_cn": "利物浦大学",
+    "email_domain": "liverpool.ac.uk",
+    "domain_pattern": "@liverpool.ac.uk"
+  },
+  {
+    "name": "University of Sheffield",
+    "name_cn": "谢菲尔德大学",
+    "email_domain": "sheffield.ac.uk",
+    "domain_pattern": "@sheffield.ac.uk"
+  },
+  {
+    "name": "University of Nottingham",
+    "name_cn": "诺丁汉大学",
+    "email_domain": "nottingham.ac.uk",
+    "domain_pattern": "@nottingham.ac.uk"
+  },
+  {
+    "name": "University of Southampton",
+    "name_cn": "南安普顿大学",
+    "email_domain": "soton.ac.uk",
+    "domain_pattern": "@soton.ac.uk"
+  },
+  {
+    "name": "University of Warwick",
+    "name_cn": "华威大学",
+    "email_domain": "warwick.ac.uk",
+    "domain_pattern": "@warwick.ac.uk"
+  },
+  {
+    "name": "University of York",
+    "name_cn": "约克大学",
+    "email_domain": "york.ac.uk",
+    "domain_pattern": "@york.ac.uk"
+  },
+  {
+    "name": "Durham University",
+    "name_cn": "杜伦大学",
+    "email_domain": "durham.ac.uk",
+    "domain_pattern": "@durham.ac.uk"
+  },
+  {
+    "name": "Queen Mary University of London",
+    "name_cn": "伦敦玛丽女王大学",
+    "email_domain": "qmul.ac.uk",
+    "domain_pattern": "@qmul.ac.uk"
+  },
+  {
+    "name": "Lancaster University",
+    "name_cn": "兰卡斯特大学",
+    "email_domain": "lancaster.ac.uk",
+    "domain_pattern": "@lancaster.ac.uk"
+  },
+  {
+    "name": "University of Reading",
+    "name_cn": "雷丁大学",
+    "email_domain": "reading.ac.uk",
+    "domain_pattern": "@reading.ac.uk"
+  },
+  {
+    "name": "University of Sussex",
+    "name_cn": "萨塞克斯大学",
+    "email_domain": "sussex.ac.uk",
+    "domain_pattern": "@sussex.ac.uk"
+  },
+  {
+    "name": "University of Leicester",
+    "name_cn": "莱斯特大学",
+    "email_domain": "leicester.ac.uk",
+    "domain_pattern": "@leicester.ac.uk"
+  },
+  {
+    "name": "Newcastle University",
+    "name_cn": "纽卡斯尔大学",
+    "email_domain": "ncl.ac.uk",
+    "domain_pattern": "@ncl.ac.uk"
+  },
+  {
+    "name": "University of Exeter",
+    "name_cn": "埃克塞特大学",
+    "email_domain": "exeter.ac.uk",
+    "domain_pattern": "@exeter.ac.uk"
+  },
+  {
+    "name": "Cardiff University",
+    "name_cn": "卡迪夫大学",
+    "email_domain": "cardiff.ac.uk",
+    "domain_pattern": "@cardiff.ac.uk"
+  },
+  {
+    "name": "University of Bath",
+    "name_cn": "巴斯大学",
+    "email_domain": "bath.ac.uk",
+    "domain_pattern": "@bath.ac.uk"
+  },
+  {
+    "name": "Loughborough University",
+    "name_cn": "拉夫堡大学",
+    "email_domain": "lboro.ac.uk",
+    "domain_pattern": "@lboro.ac.uk"
+  },
+  {
+    "name": "University of East Anglia",
+    "name_cn": "东英吉利大学",
+    "email_domain": "uea.ac.uk",
+    "domain_pattern": "@uea.ac.uk"
+  },
+  {
+    "name": "Royal Holloway, University of London",
+    "name_cn": "伦敦大学皇家霍洛威学院",
+    "email_domain": "rhul.ac.uk",
+    "domain_pattern": "@rhul.ac.uk"
+  },
+  {
+    "name": "University of Surrey",
+    "name_cn": "萨里大学",
+    "email_domain": "surrey.ac.uk",
+    "domain_pattern": "@surrey.ac.uk"
+  },
+  {
+    "name": "University of Strathclyde",
+    "name_cn": "斯特拉斯克莱德大学",
+    "email_domain": "strath.ac.uk",
+    "domain_pattern": "@strath.ac.uk"
+  },
+  {
+    "name": "Heriot-Watt University",
+    "name_cn": "赫瑞瓦特大学",
+    "email_domain": "hw.ac.uk",
+    "domain_pattern": "@hw.ac.uk"
+  },
+  {
+    "name": "University of Aberdeen",
+    "name_cn": "阿伯丁大学",
+    "email_domain": "abdn.ac.uk",
+    "domain_pattern": "@abdn.ac.uk"
+  },
+  {
+    "name": "University of St Andrews",
+    "name_cn": "圣安德鲁斯大学",
+    "email_domain": "st-andrews.ac.uk",
+    "domain_pattern": "@st-andrews.ac.uk"
+  },
+  {
+    "name": "University of Dundee",
+    "name_cn": "邓迪大学",
+    "email_domain": "dundee.ac.uk",
+    "domain_pattern": "@dundee.ac.uk"
+  },
+  {
+    "name": "University of Stirling",
+    "name_cn": "斯特灵大学",
+    "email_domain": "stir.ac.uk",
+    "domain_pattern": "@stir.ac.uk"
+  },
+  {
+    "name": "Aston University",
+    "name_cn": "阿斯顿大学",
+    "email_domain": "aston.ac.uk",
+    "domain_pattern": "@aston.ac.uk"
+  },
+  {
+    "name": "Brunel University London",
+    "name_cn": "布鲁内尔大学",
+    "email_domain": "brunel.ac.uk",
+    "domain_pattern": "@brunel.ac.uk"
+  },
+  {
+    "name": "City, University of London",
+    "name_cn": "伦敦城市大学",
+    "email_domain": "city.ac.uk",
+    "domain_pattern": "@city.ac.uk"
+  },
+  {
+    "name": "Coventry University",
+    "name_cn": "考文垂大学",
+    "email_domain": "coventry.ac.uk",
+    "domain_pattern": "@coventry.ac.uk"
+  },
+  {
+    "name": "De Montfort University",
+    "name_cn": "德蒙福特大学",
+    "email_domain": "dmu.ac.uk",
+    "domain_pattern": "@dmu.ac.uk"
+  },
+  {
+    "name": "Goldsmiths, University of London",
+    "name_cn": "伦敦大学金匠学院",
+    "email_domain": "gold.ac.uk",
+    "domain_pattern": "@gold.ac.uk"
+  },
+  {
+    "name": "Keele University",
+    "name_cn": "基尔大学",
+    "email_domain": "keele.ac.uk",
+    "domain_pattern": "@keele.ac.uk"
+  },
+  {
+    "name": "Kingston University",
+    "name_cn": "金斯顿大学",
+    "email_domain": "kingston.ac.uk",
+    "domain_pattern": "@kingston.ac.uk"
+  },
+  {
+    "name": "Leeds Beckett University",
+    "name_cn": "利兹贝克特大学",
+    "email_domain": "leedsbeckett.ac.uk",
+    "domain_pattern": "@leedsbeckett.ac.uk"
+  },
+  {
+    "name": "Manchester Metropolitan University",
+    "name_cn": "曼彻斯特城市大学",
+    "email_domain": "mmu.ac.uk",
+    "domain_pattern": "@mmu.ac.uk"
+  },
+  {
+    "name": "Middlesex University",
+    "name_cn": "米德塞克斯大学",
+    "email_domain": "mdx.ac.uk",
+    "domain_pattern": "@mdx.ac.uk"
+  },
+  {
+    "name": "Northumbria University",
+    "name_cn": "诺森比亚大学",
+    "email_domain": "northumbria.ac.uk",
+    "domain_pattern": "@northumbria.ac.uk"
+  },
+  {
+    "name": "Nottingham Trent University",
+    "name_cn": "诺丁汉特伦特大学",
+    "email_domain": "ntu.ac.uk",
+    "domain_pattern": "@ntu.ac.uk"
+  },
+  {
+    "name": "Oxford Brookes University",
+    "name_cn": "牛津布鲁克斯大学",
+    "email_domain": "brookes.ac.uk",
+    "domain_pattern": "@brookes.ac.uk"
+  },
+  {
+    "name": "Plymouth University",
+    "name_cn": "普利茅斯大学",
+    "email_domain": "plymouth.ac.uk",
+    "domain_pattern": "@plymouth.ac.uk"
+  },
+  {
+    "name": "Queen's University Belfast",
+    "name_cn": "贝尔法斯特女王大学",
+    "email_domain": "qub.ac.uk",
+    "domain_pattern": "@qub.ac.uk"
+  },
+  {
+    "name": "Robert Gordon University",
+    "name_cn": "罗伯特戈登大学",
+    "email_domain": "rgu.ac.uk",
+    "domain_pattern": "@rgu.ac.uk"
+  },
+  {
+    "name": "Roehampton University",
+    "name_cn": "罗汉普顿大学",
+    "email_domain": "roehampton.ac.uk",
+    "domain_pattern": "@roehampton.ac.uk"
+  },
+  {
+    "name": "Sheffield Hallam University",
+    "name_cn": "谢菲尔德哈勒姆大学",
+    "email_domain": "shu.ac.uk",
+    "domain_pattern": "@shu.ac.uk"
+  },
+  {
+    "name": "SOAS University of London",
+    "name_cn": "伦敦大学亚非学院",
+    "email_domain": "soas.ac.uk",
+    "domain_pattern": "@soas.ac.uk"
+  },
+  {
+    "name": "Swansea University",
+    "name_cn": "斯旺西大学",
+    "email_domain": "swansea.ac.uk",
+    "domain_pattern": "@swansea.ac.uk"
+  },
+  {
+    "name": "Teesside University",
+    "name_cn": "提赛德大学",
+    "email_domain": "tees.ac.uk",
+    "domain_pattern": "@tees.ac.uk"
+  },
+  {
+    "name": "University of the Arts London",
+    "name_cn": "伦敦艺术大学",
+    "email_domain": "arts.ac.uk",
+    "domain_pattern": "@*.arts.ac.uk"
+  },
+  {
+    "name": "University of the West of England",
+    "name_cn": "西英格兰大学",
+    "email_domain": "uwe.ac.uk",
+    "domain_pattern": "@uwe.ac.uk"
+  },
+  {
+    "name": "University of Westminster",
+    "name_cn": "威斯敏斯特大学",
+    "email_domain": "westminster.ac.uk",
+    "domain_pattern": "@westminster.ac.uk"
+  },
+  {
+    "name": "University of Winchester",
+    "name_cn": "温彻斯特大学",
+    "email_domain": "winchester.ac.uk",
+    "domain_pattern": "@winchester.ac.uk"
+  },
+  {
+    "name": "University of Wolverhampton",
+    "name_cn": "伍尔弗汉普顿大学",
+    "email_domain": "wlv.ac.uk",
+    "domain_pattern": "@wlv.ac.uk"
+  },
+  {
+    "name": "Bangor University",
+    "name_cn": "班戈大学",
+    "email_domain": "bangor.ac.uk",
+    "domain_pattern": "@bangor.ac.uk"
+  },
+  {
+    "name": "University of Bradford",
+    "name_cn": "布拉德福德大学",
+    "email_domain": "bradford.ac.uk",
+    "domain_pattern": "@bradford.ac.uk"
+  },
+  {
+    "name": "University of Brighton",
+    "name_cn": "布莱顿大学",
+    "email_domain": "brighton.ac.uk",
+    "domain_pattern": "@brighton.ac.uk"
+  },
+  {
+    "name": "University of Central Lancashire",
+    "name_cn": "中央兰开夏大学",
+    "email_domain": "uclan.ac.uk",
+    "domain_pattern": "@uclan.ac.uk"
+  },
+  {
+    "name": "University of Chester",
+    "name_cn": "切斯特大学",
+    "email_domain": "chester.ac.uk",
+    "domain_pattern": "@chester.ac.uk"
+  },
+  {
+    "name": "University of Chichester",
+    "name_cn": "奇切斯特大学",
+    "email_domain": "chi.ac.uk",
+    "domain_pattern": "@chi.ac.uk"
+  },
+  {
+    "name": "University of Cumbria",
+    "name_cn": "坎布里亚大学",
+    "email_domain": "cumbria.ac.uk",
+    "domain_pattern": "@cumbria.ac.uk"
+  },
+  {
+    "name": "University of Derby",
+    "name_cn": "德比大学",
+    "email_domain": "derby.ac.uk",
+    "domain_pattern": "@derby.ac.uk"
+  },
+  {
+    "name": "University of Gloucestershire",
+    "name_cn": "格洛斯特大学",
+    "email_domain": "glos.ac.uk",
+    "domain_pattern": "@glos.ac.uk"
+  },
+  {
+    "name": "University of Greenwich",
+    "name_cn": "格林威治大学",
+    "email_domain": "gre.ac.uk",
+    "domain_pattern": "@gre.ac.uk"
+  },
+  {
+    "name": "University of Hertfordshire",
+    "name_cn": "赫特福德大学",
+    "email_domain": "herts.ac.uk",
+    "domain_pattern": "@herts.ac.uk"
+  },
+  {
+    "name": "University of Huddersfield",
+    "name_cn": "哈德斯菲尔德大学",
+    "email_domain": "hud.ac.uk",
+    "domain_pattern": "@hud.ac.uk"
+  },
+  {
+    "name": "University of Hull",
+    "name_cn": "赫尔大学",
+    "email_domain": "hull.ac.uk",
+    "domain_pattern": "@hull.ac.uk"
+  },
+  {
+    "name": "University of Kent",
+    "name_cn": "肯特大学",
+    "email_domain": "kent.ac.uk",
+    "domain_pattern": "@kent.ac.uk"
+  },
+  {
+    "name": "University of Lincoln",
+    "name_cn": "林肯大学",
+    "email_domain": "lincoln.ac.uk",
+    "domain_pattern": "@lincoln.ac.uk"
+  },
+  {
+    "name": "University of Northampton",
+    "name_cn": "北安普顿大学",
+    "email_domain": "northampton.ac.uk",
+    "domain_pattern": "@northampton.ac.uk"
+  },
+  {
+    "name": "University of Portsmouth",
+    "name_cn": "朴茨茅斯大学",
+    "email_domain": "port.ac.uk",
+    "domain_pattern": "@port.ac.uk"
+  },
+  {
+    "name": "University of Salford",
+    "name_cn": "索尔福德大学",
+    "email_domain": "salford.ac.uk",
+    "domain_pattern": "@salford.ac.uk"
+  },
+  {
+    "name": "University of South Wales",
+    "name_cn": "南威尔士大学",
+    "email_domain": "southwales.ac.uk",
+    "domain_pattern": "@southwales.ac.uk"
+  },
+  {
+    "name": "University of Suffolk",
+    "name_cn": "萨福克大学",
+    "email_domain": "uos.ac.uk",
+    "domain_pattern": "@uos.ac.uk"
+  },
+  {
+    "name": "University of Sunderland",
+    "name_cn": "桑德兰大学",
+    "email_domain": "sunderland.ac.uk",
+    "domain_pattern": "@sunderland.ac.uk"
+  },
+  {
+    "name": "University of the West of Scotland",
+    "name_cn": "西苏格兰大学",
+    "email_domain": "uws.ac.uk",
+    "domain_pattern": "@uws.ac.uk"
+  },
+  {
+    "name": "University of West London",
+    "name_cn": "西伦敦大学",
+    "email_domain": "uwl.ac.uk",
+    "domain_pattern": "@uwl.ac.uk"
+  },
+  {
+    "name": "University of Worcester",
+    "name_cn": "伍斯特大学",
+    "email_domain": "worc.ac.uk",
+    "domain_pattern": "@worc.ac.uk"
+  },
+  {
+    "name": "Birkbeck, University of London",
+    "name_cn": "伦敦大学伯贝克学院",
+    "email_domain": "bbk.ac.uk",
+    "domain_pattern": "@bbk.ac.uk"
+  },
+  {
+    "name": "Courtauld Institute of Art",
+    "name_cn": "考陶尔德艺术学院",
+    "email_domain": "courtauld.ac.uk",
+    "domain_pattern": "@courtauld.ac.uk"
+  },
+  {
+    "name": "Cranfield University",
+    "name_cn": "克兰菲尔德大学",
+    "email_domain": "cranfield.ac.uk",
+    "domain_pattern": "@cranfield.ac.uk"
+  },
+  {
+    "name": "Edge Hill University",
+    "name_cn": "边山大学",
+    "email_domain": "edgehill.ac.uk",
+    "domain_pattern": "@edgehill.ac.uk"
+  },
+  {
+    "name": "Falmouth University",
+    "name_cn": "法尔茅斯大学",
+    "email_domain": "falmouth.ac.uk",
+    "domain_pattern": "@falmouth.ac.uk"
+  },
+  {
+    "name": "Harper Adams University",
+    "name_cn": "哈珀亚当斯大学",
+    "email_domain": "harper-adams.ac.uk",
+    "domain_pattern": "@harper-adams.ac.uk"
+  },
+  {
+    "name": "Liverpool Hope University",
+    "name_cn": "利物浦希望大学",
+    "email_domain": "hope.ac.uk",
+    "domain_pattern": "@hope.ac.uk"
+  },
+  {
+    "name": "Liverpool John Moores University",
+    "name_cn": "利物浦约翰摩尔斯大学",
+    "email_domain": "ljmu.ac.uk",
+    "domain_pattern": "@ljmu.ac.uk"
+  },
+  {
+    "name": "London Metropolitan University",
+    "name_cn": "伦敦都市大学",
+    "email_domain": "londonmet.ac.uk",
+    "domain_pattern": "@londonmet.ac.uk"
+  },
+  {
+    "name": "Norwich University of the Arts",
+    "name_cn": "诺里奇艺术大学",
+    "email_domain": "nua.ac.uk",
+    "domain_pattern": "@nua.ac.uk"
+  },
+  {
+    "name": "Royal Academy of Music",
+    "name_cn": "皇家音乐学院",
+    "email_domain": "ram.ac.uk",
+    "domain_pattern": "@ram.ac.uk"
+  },
+  {
+    "name": "Royal Agricultural University",
+    "name_cn": "皇家农业大学",
+    "email_domain": "rau.ac.uk",
+    "domain_pattern": "@rau.ac.uk"
+  },
+  {
+    "name": "Royal Central School of Speech and Drama",
+    "name_cn": "皇家中央演讲与戏剧学院",
+    "email_domain": "cssd.ac.uk",
+    "domain_pattern": "@cssd.ac.uk"
+  },
+  {
+    "name": "Royal Veterinary College",
+    "name_cn": "皇家兽医学院",
+    "email_domain": "rvc.ac.uk",
+    "domain_pattern": "@rvc.ac.uk"
+  },
+  {
+    "name": "St George's, University of London",
+    "name_cn": "伦敦大学圣乔治学院",
+    "email_domain": "sgul.ac.uk",
+    "domain_pattern": "@sgul.ac.uk"
+  },
+  {
+    "name": "University of the Creative Arts",
+    "name_cn": "创意艺术大学",
+    "email_domain": "uca.ac.uk",
+    "domain_pattern": "@uca.ac.uk"
+  },
+  {
+    "name": "University of the Highlands and Islands",
+    "name_cn": "高地与群岛大学",
+    "email_domain": "uhi.ac.uk",
+    "domain_pattern": "@uhi.ac.uk"
+  },
+  {
+    "name": "Wrexham Glyndwr University",
+    "name_cn": "雷克瑟姆格林多大学",
+    "email_domain": "glyndwr.ac.uk",
+    "domain_pattern": "@glyndwr.ac.uk"
+  },
+  {
+    "name": "York St John University",
+    "name_cn": "约克圣约翰大学",
+    "email_domain": "yorksj.ac.uk",
+    "domain_pattern": "@yorksj.ac.uk"
+  },
+  {
+    "name": "Bournemouth University",
+    "name_cn": "伯恩茅斯大学",
+    "email_domain": "bournemouth.ac.uk",
+    "domain_pattern": "@bournemouth.ac.uk"
+  },
+  {
+    "name": "Canterbury Christ Church University",
+    "name_cn": "坎特伯雷基督教会大学",
+    "email_domain": "canterbury.ac.uk",
+    "domain_pattern": "@canterbury.ac.uk"
+  },
+  {
+    "name": "University of East London",
+    "name_cn": "东伦敦大学",
+    "email_domain": "uel.ac.uk",
+    "domain_pattern": "@uel.ac.uk"
+  },
+  {
+    "name": "Glasgow Caledonian University",
+    "name_cn": "格拉斯哥卡利多尼安大学",
+    "email_domain": "gcu.ac.uk",
+    "domain_pattern": "@gcu.ac.uk"
+  },
+  {
+    "name": "Leeds Trinity University",
+    "name_cn": "利兹三一大学",
+    "email_domain": "leedstrinity.ac.uk",
+    "domain_pattern": "@leedstrinity.ac.uk"
+  },
+  {
+    "name": "London South Bank University",
+    "name_cn": "伦敦南岸大学",
+    "email_domain": "lsbu.ac.uk",
+    "domain_pattern": "@lsbu.ac.uk"
+  },
+  {
+    "name": "Staffordshire University",
+    "name_cn": "斯塔福德郡大学",
+    "email_domain": "staffs.ac.uk",
+    "domain_pattern": "@staffs.ac.uk"
+  },
+  {
+    "name": "University of Bolton",
+    "name_cn": "博尔顿大学",
+    "email_domain": "bolton.ac.uk",
+    "domain_pattern": "@bolton.ac.uk"
+  },
+  {
+    "name": "University of Buckingham",
+    "name_cn": "白金汉大学",
+    "email_domain": "buckingham.ac.uk",
+    "domain_pattern": "@buckingham.ac.uk"
+  },
+  {
+    "name": "University of Glamorgan",
+    "name_cn": "格拉摩根大学",
+    "email_domain": "glam.ac.uk",
+    "domain_pattern": "@glam.ac.uk"
+  },
+  {
+    "name": "University of West of England, Bristol",
+    "name_cn": "西英格兰大学布里斯托",
+    "email_domain": "uwe.ac.uk",
+    "domain_pattern": "@uwe.ac.uk"
+  }
+]
+

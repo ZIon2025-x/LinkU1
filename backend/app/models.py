@@ -2386,3 +2386,94 @@ class ItemReport(Base):
         Index('idx_item_report_status', 'status'),
         Index('idx_item_report_created_at', 'created_at'),
     )
+
+
+# ==================== 学生认证系统模型 ====================
+
+class University(Base):
+    """大学表"""
+    __tablename__ = "universities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True)  # 大学名称（英文）
+    name_cn = Column(String(255), nullable=True)  # 大学名称（中文）
+    email_domain = Column(String(255), nullable=False, unique=True)  # 邮箱域名（如 bristol.ac.uk）
+    domain_pattern = Column(String(255), nullable=False)  # 匹配模式（支持通配符）
+    is_active = Column(Boolean, default=True)  # 是否启用
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    verifications = relationship("StudentVerification", back_populates="university")
+    
+    __table_args__ = (
+        Index('idx_email_domain', 'email_domain'),
+        Index('idx_is_active', 'is_active'),
+    )
+
+
+class StudentVerification(Base):
+    """学生认证表"""
+    __tablename__ = "student_verifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    university_id = Column(Integer, ForeignKey("universities.id"), nullable=False)
+    email = Column(String(255), nullable=False)  # 验证的学生邮箱（统一小写存储）
+    status = Column(String(50), nullable=False, default='pending')  # 状态: pending, verified, expired, revoked
+    verification_token = Column(String(255), nullable=True)  # 验证令牌
+    token_expires_at = Column(DateTime(timezone=True), nullable=True)  # 令牌过期时间
+    verified_at = Column(DateTime(timezone=True), nullable=True)  # 验证通过时间
+    expires_at = Column(DateTime(timezone=True), nullable=False)  # 认证过期时间（每年10月1日）
+    revoked_at = Column(DateTime(timezone=True), nullable=True)  # 撤销时间
+    revoked_reason = Column(Text, nullable=True)  # 撤销原因（必填，提升审计能力）
+    revoked_reason_type = Column(String(50), nullable=True)  # 撤销原因类型（user_request, violation, account_hacked, other）
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
+    
+    # 关系
+    user = relationship("User", backref="student_verifications")
+    university = relationship("University", back_populates="verifications")
+    history_records = relationship("VerificationHistory", back_populates="verification", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_user_id', 'user_id'),
+        Index('idx_university_id', 'university_id'),
+        Index('idx_email', 'email'),
+        Index('idx_status', 'status'),
+        Index('idx_expires_at', 'expires_at'),
+        Index('idx_verification_token', 'verification_token'),
+        Index('idx_verification_user_status', 'user_id', 'status'),
+        Index('idx_verification_expires_status', 'expires_at', 'status'),
+        # 部分唯一索引：同一用户只能有一个活跃的认证（pending或verified状态）
+        # 注意：SQLAlchemy的UniqueConstraint不支持postgresql_where，必须使用Index
+        Index('unique_user_active', 'user_id', unique=True, postgresql_where=text("status IN ('verified', 'pending')")),
+    )
+
+
+class VerificationHistory(Base):
+    """验证历史表"""
+    __tablename__ = "verification_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    verification_id = Column(Integer, ForeignKey("student_verifications.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(8), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    university_id = Column(Integer, ForeignKey("universities.id"), nullable=False)
+    email = Column(String(255), nullable=False)
+    action = Column(String(50), nullable=False)  # 操作: verified, expired, revoked, renewed
+    previous_status = Column(String(50), nullable=True)
+    new_status = Column(String(50), nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=get_utc_time)
+    
+    # 关系
+    verification = relationship("StudentVerification", back_populates="history_records")
+    user = relationship("User", foreign_keys=[user_id])
+    university = relationship("University", foreign_keys=[university_id])
+    
+    __table_args__ = (
+        Index('idx_user_id', 'user_id'),
+        Index('idx_action', 'action'),
+        Index('idx_created_at', 'created_at'),
+    )

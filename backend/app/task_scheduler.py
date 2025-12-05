@@ -169,7 +169,8 @@ def init_scheduler():
         check_expired_invitation_codes,
         check_expired_points,
         check_and_end_activities_sync,
-        auto_complete_expired_time_slot_tasks
+        auto_complete_expired_time_slot_tasks,
+        process_expired_verifications
     )
     from app.customer_service_tasks import (
         process_customer_service_queue,
@@ -230,6 +231,13 @@ def init_scheduler():
         with_db(check_expired_points),
         interval_seconds=3600,  # 1小时（与 Celery 保持一致）
         description="检查过期积分"
+    )
+    
+    scheduler.register_task(
+        'process_expired_verifications',
+        with_db(process_expired_verifications),
+        interval_seconds=3600,  # 1小时（与 Celery 保持一致）
+        description="处理过期认证（兜底任务）"
     )
     
     scheduler.register_task(

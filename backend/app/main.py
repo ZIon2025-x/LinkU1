@@ -313,6 +313,14 @@ app.include_router(multi_participant_router)
 from app.forum_routes import router as forum_router
 app.include_router(forum_router)
 
+# 学生认证路由
+from app.student_verification_routes import router as student_verification_router
+app.include_router(student_verification_router, prefix="/api/student-verification", tags=["学生认证"])
+
+# 学生认证管理路由
+from app.admin_student_verification_routes import router as admin_student_verification_router
+app.include_router(admin_student_verification_router, prefix="/api/admin", tags=["管理员-学生认证"])
+
 # 创建上传目录
 import os
 RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
@@ -868,6 +876,60 @@ async def startup_event():
                 # 迁移失败不阻止应用启动，只记录错误
         else:
             logger.info("自动迁移已禁用（AUTO_MIGRATE=false）")
+        
+        # 自动初始化大学数据（如果表为空）
+        try:
+            from app.database import SessionLocal
+            db = SessionLocal()
+            try:
+                university_count = db.query(models.University).count()
+                if university_count == 0:
+                    logger.info("检测到大学表为空，开始自动初始化大学数据...")
+                    # 直接读取JSON文件并初始化
+                    import json
+                    from pathlib import Path
+                    json_path = Path(__file__).parent.parent / "scripts" / "university_email_domains.json"
+                    if json_path.exists():
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            universities_data = json.load(f)
+                        success_count = 0
+                        skip_count = 0
+                        for uni_data in universities_data:
+                            existing = db.query(models.University).filter(
+                                models.University.email_domain == uni_data['email_domain']
+                            ).first()
+                            if existing:
+                                skip_count += 1
+                                continue
+                            university = models.University(
+                                name=uni_data['name'],
+                                name_cn=uni_data.get('name_cn'),
+                                email_domain=uni_data['email_domain'],
+                                domain_pattern=uni_data.get('domain_pattern', f"@{uni_data['email_domain']}"),
+                                is_active=True
+                            )
+                            db.add(university)
+                            db.commit()
+                            success_count += 1
+                        logger.info(f"大学数据自动初始化完成！成功：{success_count}，跳过：{skip_count}")
+                    else:
+                        logger.warning(f"找不到大学数据文件: {json_path}")
+                        logger.info("请手动运行: python backend/scripts/init_universities.py")
+                else:
+                    logger.info(f"大学数据已存在（{university_count} 条记录），跳过初始化")
+                
+                # 初始化大学匹配器（加载到内存）
+                try:
+                    from app.university_matcher import _university_matcher
+                    _university_matcher.initialize(db)
+                    logger.info("大学匹配器初始化完成")
+                except Exception as e:
+                    logger.warning(f"初始化大学匹配器失败: {e}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"自动初始化大学数据时出错: {e}")
+            logger.info("请手动运行: python backend/scripts/init_universities.py")
         
     except Exception as e:
         logger.error(f"数据库初始化失败: {e}")

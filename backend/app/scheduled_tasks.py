@@ -287,6 +287,192 @@ def check_and_end_activities_sync(db: Session):
         return 0
 
 
+def process_expired_verifications(db: Session):
+    """
+    批量处理过期的认证（兜底任务）
+    
+    重要说明：此任务仅作为兜底和批量处理，不用于实现"立即释放"机制。
+    真正的"立即释放"在 check_email_uniqueness 函数中实现，每次操作时实时检查过期。
+    
+    执行频率：每小时执行一次
+    
+    作用：
+    - 批量处理可能遗漏的过期记录（兜底机制）
+    - 批量更新过期记录的状态为 expired（用于统计和审计）
+    - 清理历史数据
+    
+    幂等性保证：
+    - 只处理状态为 'verified' 且已过期的记录
+    - 如果因为宕机漏跑，下次执行时只会处理仍过期的记录
+    - 已处理为 'expired' 状态的记录不会重复处理
+    - 确保任务可以安全地重复执行
+    
+    注意：即使此任务不运行，过期邮箱也会在下次操作时被实时释放（通过 check_email_uniqueness）
+    """
+    try:
+        now = get_utc_time()
+        
+        # 查询所有已过期但状态仍为verified的记录（幂等性：只处理verified状态）
+        expired_verifications = db.query(models.StudentVerification).filter(
+            models.StudentVerification.status == 'verified',
+            models.StudentVerification.expires_at <= now
+        ).all()
+        
+        for verification in expired_verifications:
+            # 更新状态
+            verification.status = 'expired'
+            verification.updated_at = now
+            
+            # 记录历史
+            history = models.VerificationHistory(
+                verification_id=verification.id,
+                user_id=verification.user_id,
+                university_id=verification.university_id,
+                email=verification.email,
+                action='expired',
+                previous_status='verified',
+                new_status='expired'
+            )
+            db.add(history)
+        
+        db.commit()
+        logger.info(f"处理了 {len(expired_verifications)} 个过期认证")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"处理过期认证失败: {e}", exc_info=True)
+        raise
+
+
+def send_expiry_reminders(db: Session, days_before: int):
+    """
+    发送过期提醒邮件
+    
+    Args:
+        db: 数据库会话
+        days_before: 过期前多少天发送提醒（30、7、1）
+    """
+    try:
+        from datetime import timedelta
+        from app.utils.time_utils import format_iso_utc
+        from app.student_verification_utils import calculate_renewable_from, calculate_days_remaining
+        from app.email_templates_student_verification import get_student_expiry_reminder_email
+        from app.email_utils import send_email
+        from app.config import Config
+        
+        now = get_utc_time()
+        target_date = now + timedelta(days=days_before)
+        
+        # 查询即将在指定天数后过期的已验证认证
+        # 使用日期范围查询（当天0点到23:59:59）
+        start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        expiring_verifications = db.query(models.StudentVerification).filter(
+            models.StudentVerification.status == 'verified',
+            models.StudentVerification.expires_at >= start_of_day,
+            models.StudentVerification.expires_at <= end_of_day
+        ).all()
+        
+        sent_count = 0
+        failed_count = 0
+        
+        for verification in expiring_verifications:
+            try:
+                # 计算剩余天数和续期开始时间
+                days_remaining = calculate_days_remaining(verification.expires_at, now)
+                renewable_from = calculate_renewable_from(verification.expires_at)
+                
+                # 获取用户信息（用于语言偏好）
+                user = db.query(models.User).filter(models.User.id == verification.user_id).first()
+                language = 'zh' if user and user.language == 'zh' else 'en'
+                
+                # 生成续期URL
+                renewal_url = f"{Config.FRONTEND_URL}/student-verification/renew" if Config.FRONTEND_URL else None
+                
+                # 生成邮件
+                subject, body = get_student_expiry_reminder_email(
+                    language=language,
+                    days_remaining=days_remaining,
+                    expires_at=format_iso_utc(verification.expires_at),
+                    renewable_from=format_iso_utc(renewable_from),
+                    renewal_url=renewal_url
+                )
+                
+                # 发送邮件
+                send_email(verification.email, subject, body)
+                sent_count += 1
+                logger.info(f"已发送过期提醒邮件给 {verification.email}（{days_remaining}天后过期）")
+                
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"发送过期提醒邮件失败 {verification.email}: {e}", exc_info=True)
+        
+        logger.info(f"过期提醒邮件发送完成：成功 {sent_count}，失败 {failed_count}（{days_before}天前提醒）")
+        
+    except Exception as e:
+        logger.error(f"发送过期提醒邮件失败: {e}", exc_info=True)
+        raise
+
+
+def send_expiry_notifications(db: Session):
+    """
+    发送过期通知邮件（过期当天）
+    """
+    try:
+        from datetime import timedelta
+        from app.utils.time_utils import format_iso_utc
+        from app.email_templates_student_verification import get_student_expiry_notification_email
+        from app.email_utils import send_email
+        from app.config import Config
+        
+        now = get_utc_time()
+        
+        # 查询今天过期的已验证认证
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        expired_today = db.query(models.StudentVerification).filter(
+            models.StudentVerification.status == 'verified',
+            models.StudentVerification.expires_at >= start_of_day,
+            models.StudentVerification.expires_at <= end_of_day
+        ).all()
+        
+        sent_count = 0
+        failed_count = 0
+        
+        for verification in expired_today:
+            try:
+                # 获取用户信息（用于语言偏好）
+                user = db.query(models.User).filter(models.User.id == verification.user_id).first()
+                language = 'zh' if user and user.language == 'zh' else 'en'
+                
+                # 生成续期URL
+                renewal_url = f"{Config.FRONTEND_URL}/student-verification/renew" if Config.FRONTEND_URL else None
+                
+                # 生成邮件
+                subject, body = get_student_expiry_notification_email(
+                    language=language,
+                    expires_at=format_iso_utc(verification.expires_at),
+                    renewal_url=renewal_url
+                )
+                
+                # 发送邮件
+                send_email(verification.email, subject, body)
+                sent_count += 1
+                logger.info(f"已发送过期通知邮件给 {verification.email}")
+                
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"发送过期通知邮件失败 {verification.email}: {e}", exc_info=True)
+        
+        logger.info(f"过期通知邮件发送完成：成功 {sent_count}，失败 {failed_count}")
+        
+    except Exception as e:
+        logger.error(f"发送过期通知邮件失败: {e}", exc_info=True)
+        raise
+
+
 def run_scheduled_tasks():
     """运行所有定时任务"""
     from app.state import is_app_shutting_down
@@ -308,6 +494,12 @@ def run_scheduled_tasks():
         check_expired_coupons(db)
         check_expired_invitation_codes(db)
         check_expired_points(db)
+        
+        # 处理过期认证（每小时执行一次，这里作为兜底）
+        try:
+            process_expired_verifications(db)
+        except Exception as e:
+            logger.error(f"处理过期认证失败: {e}", exc_info=True)
         
         # 检查并结束活动
         try:
