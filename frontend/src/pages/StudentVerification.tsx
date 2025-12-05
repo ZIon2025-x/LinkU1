@@ -34,6 +34,7 @@ interface VerificationStatus {
   can_renew: boolean;
   renewable_from: string | null;
   email_locked: boolean;
+  token_expired?: boolean;
 }
 
 interface University {
@@ -99,6 +100,10 @@ const StudentVerification: React.FC = () => {
       const response = await getStudentVerificationStatus();
       if (response.code === 200) {
         setStatus(response.data);
+        // 如果token过期，显示提示信息
+        if (response.data.token_expired) {
+          message.warning(t('settings.tokenExpired') || '验证链接已过期，请重新提交认证');
+        }
       }
     } catch (error: any) {
       console.error('加载认证状态失败:', error);

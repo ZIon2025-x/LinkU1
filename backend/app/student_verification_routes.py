@@ -226,12 +226,61 @@ def get_verification_status(
             }
         }
     
-    # 检查邮箱是否被锁定（pending状态且未过期）
+    # 检查token是否过期（pending状态）
     now = get_utc_time()
     email_locked = False
+    token_expired = False
+    
     if verification.status == 'pending':
-        if verification.token_expires_at and verification.token_expires_at > now:
-            email_locked = True
+        if verification.token_expires_at:
+            if verification.token_expires_at > now:
+                email_locked = True
+            else:
+                # Token已过期，清除pending状态，允许重新提交
+                token_expired = True
+                logger.info(f"用户 {current_user.id} 的pending认证token已过期，清除状态以允许重新提交")
+                # 删除过期的pending记录
+                db.delete(verification)
+                db.commit()
+                # 返回空状态，让用户可以重新提交
+                return {
+                    "code": 200,
+                    "data": {
+                        "is_verified": False,
+                        "status": None,
+                        "university": None,
+                        "email": None,
+                        "verified_at": None,
+                        "expires_at": None,
+                        "days_remaining": None,
+                        "can_renew": False,
+                        "renewable_from": None,
+                        "email_locked": False,
+                        "token_expired": True
+                    }
+                }
+        else:
+            # 没有token_expires_at，视为已过期
+            token_expired = True
+            logger.info(f"用户 {current_user.id} 的pending认证没有token过期时间，清除状态")
+            db.delete(verification)
+            db.commit()
+            return {
+                "code": 200,
+                "data": {
+                    "is_verified": False,
+                    "status": None,
+                    "university": None,
+                    "email": None,
+                    "verified_at": None,
+                    "expires_at": None,
+                    "days_remaining": None,
+                    "can_renew": False,
+                    "renewable_from": None,
+                    "email_locked": False,
+                    "token_expired": True
+                }
+            }
     
     # 计算过期相关信息
     days_remaining = None
@@ -264,7 +313,8 @@ def get_verification_status(
             "days_remaining": days_remaining,
             "can_renew": can_renew_flag,
             "renewable_from": format_iso_utc(renewable_from) if renewable_from else None,
-            "email_locked": email_locked
+            "email_locked": email_locked,
+            "token_expired": False
         }
     }
 
