@@ -475,7 +475,8 @@ const Settings: React.FC = () => {
     { id: 'preferences', label: t('settings.preferences'), icon: '🎯' },
     { id: 'notifications', label: t('settings.notifications'), icon: '🔔' },
     { id: 'privacy', label: t('settings.privacy'), icon: '🔒' },
-    { id: 'security', label: t('settings.security'), icon: '🛡️' }
+    { id: 'security', label: t('settings.security'), icon: '🛡️' },
+    { id: 'studentVerification', label: t('settings.studentVerification'), icon: '🎓' }
   ];
 
   return (
@@ -1798,6 +1799,63 @@ const Settings: React.FC = () => {
                       删除账户
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'studentVerification' && (
+              <div>
+                <h2 style={{
+                  color: '#333',
+                  marginBottom: isMobile ? '16px' : '20px',
+                  fontSize: isMobile ? '18px' : '20px'
+                }}>
+                  🎓 {t('settings.studentVerification')}
+                </h2>
+
+                <div style={{
+                  background: '#f8f9fa',
+                  borderRadius: '12px',
+                  padding: isMobile ? '16px' : '20px',
+                  border: '1px solid #e9ecef',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{
+                    color: '#666',
+                    fontSize: '14px',
+                    marginBottom: '20px'
+                  }}>
+                    {t('settings.studentVerificationDesc')}
+                  </p>
+                  <button
+                    onClick={() => {
+                      const lang = localStorage.getItem('language') || 'en';
+                      navigate(`/${lang}/student-verification`);
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '25px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                      transition: 'all 0.3s ease',
+                      width: isMobile ? '100%' : 'auto'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.3)';
+                    }}
+                  >
+                    {t('settings.startVerification')}
+                  </button>
                 </div>
               </div>
             )}

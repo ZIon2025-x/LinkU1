@@ -2888,4 +2888,57 @@ export const deleteLeaderboardItemAdmin = async (itemId: number) => {
   return res.data;
 };
 
+// ==================== 学生认证 API ====================
+
+// 查询认证状态
+export const getStudentVerificationStatus = async () => {
+  const res = await api.get('/api/student-verification/status');
+  return res.data;
+};
+
+// 提交认证申请
+export const submitStudentVerification = async (email: string) => {
+  const res = await api.post('/api/student-verification/submit', null, {
+    params: { email }
+  });
+  return res.data;
+};
+
+// 验证邮箱（通过token）
+export const verifyStudentEmail = async (token: string) => {
+  const res = await api.get(`/api/student-verification/verify/${token}`);
+  return res.data;
+};
+
+// 申请续期
+export const renewStudentVerification = async (email: string) => {
+  const res = await api.post('/api/student-verification/renew', null, {
+    params: { email }
+  });
+  return res.data;
+};
+
+// 更换邮箱
+export const changeStudentEmail = async (newEmail: string) => {
+  const res = await api.post('/api/student-verification/change-email', null, {
+    params: { new_email: newEmail }
+  });
+  return res.data;
+};
+
+// 获取大学列表
+export const getUniversities = async (params?: {
+  search?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  const res = await api.get('/api/student-verification/universities', { params });
+  return res.data;
+};
+
+export const getUserStudentVerificationStatus = async (userId: string) => {
+  const res = await api.get(`/api/student-verification/user/${userId}/status`);
+  return res.data;
+};
+
 export default api; 

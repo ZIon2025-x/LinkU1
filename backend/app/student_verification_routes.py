@@ -830,6 +830,55 @@ def change_email(
     }
 
 
+@router.get("/user/{user_id}/status")
+@rate_limit("60/minute")  # 60次/分钟/IP
+def get_user_verification_status(
+    request: Request,
+    user_id: str,
+    db: Session = Depends(get_sync_db),
+):
+    """
+    查询指定用户的学生认证状态（公开信息）
+    
+    返回指定用户的学生认证状态，只包含公开信息：
+    - 是否已验证
+    - 大学信息（不包含邮箱等敏感信息）
+    """
+    # 查询用户的最新认证记录（只查询verified状态）
+    verification = db.query(models.StudentVerification).filter(
+        models.StudentVerification.user_id == user_id,
+        models.StudentVerification.status == 'verified'
+    ).order_by(
+        models.StudentVerification.created_at.desc()
+    ).first()
+    
+    if not verification:
+        return {
+            "code": 200,
+            "data": {
+                "is_verified": False,
+                "university": None
+            }
+        }
+    
+    # 获取大学信息（公开信息）
+    university_info = None
+    if verification.university:
+        university_info = {
+            "id": verification.university.id,
+            "name": verification.university.name,
+            "name_cn": verification.university.name_cn
+        }
+    
+    return {
+        "code": 200,
+        "data": {
+            "is_verified": True,
+            "university": university_info
+        }
+    }
+
+
 @router.get("/universities")
 @rate_limit("60/minute")  # 60次/分钟/IP
 def get_universities(

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts } from '../api';
+import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts, getUserStudentVerificationStatus } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
 import { message } from 'antd';
@@ -62,6 +62,8 @@ const UserProfile: React.FC = () => {
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [hotPosts, setHotPosts] = useState<any[]>([]);
   const [loadingHotPosts, setLoadingHotPosts] = useState(false);
+  const [isStudentVerified, setIsStudentVerified] = useState(false);
+  const [studentUniversity, setStudentUniversity] = useState<{name: string; name_cn: string} | null>(null);
 
   useEffect(() => {
     // 直接获取用户信息，HttpOnly Cookie会自动发送
@@ -73,8 +75,25 @@ const UserProfile: React.FC = () => {
       loadUserProfile();
       loadTaskExpertInfo();
       loadHotPosts();
+      // 加载学生认证状态（所有用户都可以看到）
+      loadStudentVerification();
     }
   }, [userId]);
+
+  const loadStudentVerification = async () => {
+    if (!userId) return;
+    try {
+      const verificationResponse = await getUserStudentVerificationStatus(userId);
+      if (verificationResponse.code === 200 && verificationResponse.data) {
+        setIsStudentVerified(verificationResponse.data.is_verified || false);
+        setStudentUniversity(verificationResponse.data.university || null);
+      }
+    } catch (error) {
+      // 静默失败，不影响主流程
+      setIsStudentVerified(false);
+      setStudentUniversity(null);
+    }
+  };
 
   const loadUserProfile = async () => {
     if (!userId) {
@@ -313,15 +332,43 @@ const UserProfile: React.FC = () => {
             </div>
             
             {/* 用户名显示 */}
-            <h1 style={{ 
-              fontSize: 32,
-              fontWeight: 700,
-              color: '#333',
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
               marginBottom: 16,
-              textAlign: 'center'
+              flexWrap: 'wrap'
             }}>
-              {profile.user.name}
-            </h1>
+              <h1 style={{ 
+                fontSize: 32,
+                fontWeight: 700,
+                color: '#333',
+                margin: 0,
+                textAlign: 'center'
+              }}>
+                {profile.user.name}
+              </h1>
+              {isStudentVerified && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                  color: '#fff',
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                }}
+                title={studentUniversity ? `${studentUniversity.name} (${studentUniversity.name_cn})` : t('settings.isVerified')}
+                >
+                  <span>🎓</span>
+                  <span>{t('profile.student') || '学生'}</span>
+                </div>
+              )}
+            </div>
 
             <div style={{ 
               display: 'flex', 

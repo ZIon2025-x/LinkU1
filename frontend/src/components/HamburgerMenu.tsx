@@ -212,6 +212,14 @@ const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
 
                   <button
                     className="menu-item"
+                    onClick={() => handleNavigation('/student-verification')}
+                  >
+                    <span className="menu-icon">🎓</span>
+                    {t('settings.studentVerification')}
+                  </button>
+
+                  <button
+                    className="menu-item"
                     onClick={() => handleNavigation('/wallet')}
                   >
                     <span className="menu-icon">💰</span>

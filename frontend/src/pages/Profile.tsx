@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCurrentUser, updateAvatar, getPublicSystemSettings } from '../api';
+import { fetchCurrentUser, updateAvatar, getPublicSystemSettings, getStudentVerificationStatus } from '../api';
 import api from '../api';
 import LoginModal from '../components/LoginModal';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -52,6 +52,8 @@ const Profile: React.FC = () => {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [systemSettings, setSystemSettings] = useState({ vip_button_visible: true });
   const [isMobile, setIsMobile] = useState(false);
+  const [isStudentVerified, setIsStudentVerified] = useState(false);
+  const [studentUniversity, setStudentUniversity] = useState<{name: string; name_cn: string} | null>(null);
 
   useEffect(() => {
     loadUserData();
@@ -89,6 +91,19 @@ const Profile: React.FC = () => {
       } catch (reviewError) {
                 // API调用失败时显示空评价列表
         setReviews([]);
+      }
+      
+      // 加载学生认证状态
+      try {
+        const verificationResponse = await getStudentVerificationStatus();
+        if (verificationResponse.code === 200 && verificationResponse.data) {
+          setIsStudentVerified(verificationResponse.data.is_verified || false);
+          setStudentUniversity(verificationResponse.data.university || null);
+        }
+      } catch (error) {
+        // 静默失败，不影响主流程
+        setIsStudentVerified(false);
+        setStudentUniversity(null);
       }
     } catch (error) {
             setShowLoginModal(true);
@@ -485,6 +500,44 @@ const Profile: React.FC = () => {
             </button>
           </div>
           
+          {/* 用户名和学生标识 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            marginBottom: '20px',
+            flexWrap: 'wrap'
+          }}>
+            <h2 style={{
+              fontSize: isMobile ? '24px' : '28px',
+              fontWeight: '700',
+              color: '#1e293b',
+              margin: '0'
+            }}>
+              {user.name || `用户${user.id}`}
+            </h2>
+            {isStudentVerified && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: '#fff',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '14px',
+                fontWeight: '600',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              }}
+              title={studentUniversity ? `${studentUniversity.name} (${studentUniversity.name_cn})` : t('settings.isVerified')}
+              >
+                <span>🎓</span>
+                <span>{t('profile.student') || '学生'}</span>
+              </div>
+            )}
+          </div>
+
           <div style={{
             display: 'flex',
             justifyContent: 'center',

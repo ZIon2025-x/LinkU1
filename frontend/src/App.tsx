@@ -86,6 +86,8 @@ const Partners = lazyWithRetry(() => import('./pages/Partners'));
 const MerchantCooperation = lazyWithRetry(() => import('./pages/MerchantCooperation'));
 const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 const ResetPassword = lazyWithRetry(() => import('./pages/ResetPassword'));
+const StudentVerification = lazyWithRetry(() => import('./pages/StudentVerification'));
+const VerifyStudentEmail = lazyWithRetry(() => import('./pages/VerifyStudentEmail'));
 const FleaMarketPage = lazyWithRetry(() => import('./pages/FleaMarketPage'));
 const Forum = lazyWithRetry(() => import('./pages/Forum'));
 const ForumPostList = lazyWithRetry(() => import('./pages/ForumPostList'));
@@ -258,6 +260,12 @@ const LanguageRoutes: React.FC = () => {
           <Route path={`/${lang}/service/login`} element={<ServiceAuth />} />
           <Route path={`/${lang}/verify-email`} element={<VerifyEmail />} />
           <Route path={`/${lang}/reset-password/:token`} element={<ResetPassword />} />
+          <Route path={`/${lang}/student-verification`} element={
+            <ProtectedRoute>
+              <StudentVerification />
+            </ProtectedRoute>
+          } />
+          <Route path={`/${lang}/student-verification/verify/:token`} element={<VerifyStudentEmail />} />
           <Route path={`/${lang}/admin/auth`} element={
             <AdminRoute>
               <AdminAuth />
