@@ -891,6 +891,7 @@ async def update_category_stats(category_id: int, db: AsyncSession):
 async def get_visible_forums(
     include_all: bool = Query(False, description="管理员查看全部板块"),
     view_as: Optional[str] = Query(None, description="管理员以指定用户视角查看（需管理员权限）"),
+    include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency)
@@ -929,6 +930,82 @@ async def get_visible_forums(
                         .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
                     )
                     forums = forums_result.scalars().all()
+                    
+                    # 如果需要包含最新帖子信息
+                    if include_latest_post:
+                        category_list = []
+                        for category in forums:
+                            # 实时统计可见帖子数
+                            post_count_result = await db.execute(
+                                select(func.count(models.ForumPost.id))
+                                .where(
+                                    models.ForumPost.category_id == category.id,
+                                    models.ForumPost.is_deleted == False,
+                                    models.ForumPost.is_visible == True
+                                )
+                            )
+                            real_post_count = post_count_result.scalar() or 0
+                            
+                            # 获取最新可见帖子
+                            latest_post = None
+                            try:
+                                latest_post_result = await db.execute(
+                                    select(models.ForumPost)
+                                    .where(
+                                        models.ForumPost.category_id == category.id,
+                                        models.ForumPost.is_deleted == False,
+                                        models.ForumPost.is_visible == True
+                                    )
+                                    .order_by(
+                                        func.coalesce(
+                                            models.ForumPost.last_reply_at,
+                                            models.ForumPost.created_at
+                                        ).desc()
+                                    )
+                                    .limit(1)
+                                    .options(
+                                        selectinload(models.ForumPost.author),
+                                        selectinload(models.ForumPost.admin_author)
+                                    )
+                                )
+                                latest_post = latest_post_result.scalar_one_or_none()
+                            except Exception as e:
+                                logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                                latest_post = None
+                            
+                            # 添加最新帖子信息
+                            latest_post_info = None
+                            if latest_post:
+                                author_info = await get_post_author_info(db, latest_post, request)
+                                display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                                
+                                latest_post_info = schemas.LatestPostInfo(
+                                    id=latest_post.id,
+                                    title=latest_post.title,
+                                    author=author_info,
+                                    last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                                    reply_count=latest_post.reply_count,
+                                    view_count=display_view_count
+                                )
+                            
+                            category_out = schemas.ForumCategoryOut(
+                                id=category.id,
+                                name=category.name,
+                                description=category.description,
+                                icon=category.icon,
+                                sort_order=category.sort_order,
+                                is_visible=category.is_visible,
+                                is_admin_only=getattr(category, 'is_admin_only', False),
+                                type=getattr(category, 'type', 'general'),
+                                country=getattr(category, 'country', None),
+                                university_code=getattr(category, 'university_code', None),
+                                post_count=real_post_count,
+                                latest_post=latest_post_info
+                            )
+                            category_list.append(category_out)
+                        
+                        return {"categories": category_list}
+                    
                     return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
                 
                 # 返回该用户可见的板块（用户可以查看，但不能发帖）
@@ -951,6 +1028,81 @@ async def get_visible_forums(
                 all_forums = list(school_forums) + list(general_forums)
                 all_forums.sort(key=lambda x: (x.sort_order, x.created_at))
                 
+                # 如果需要包含最新帖子信息
+                if include_latest_post:
+                    category_list = []
+                    for category in all_forums:
+                        # 实时统计可见帖子数
+                        post_count_result = await db.execute(
+                            select(func.count(models.ForumPost.id))
+                            .where(
+                                models.ForumPost.category_id == category.id,
+                                models.ForumPost.is_deleted == False,
+                                models.ForumPost.is_visible == True
+                            )
+                        )
+                        real_post_count = post_count_result.scalar() or 0
+                        
+                        # 获取最新可见帖子
+                        latest_post = None
+                        try:
+                            latest_post_result = await db.execute(
+                                select(models.ForumPost)
+                                .where(
+                                    models.ForumPost.category_id == category.id,
+                                    models.ForumPost.is_deleted == False,
+                                    models.ForumPost.is_visible == True
+                                )
+                                .order_by(
+                                    func.coalesce(
+                                        models.ForumPost.last_reply_at,
+                                        models.ForumPost.created_at
+                                    ).desc()
+                                )
+                                .limit(1)
+                                .options(
+                                    selectinload(models.ForumPost.author),
+                                    selectinload(models.ForumPost.admin_author)
+                                )
+                            )
+                            latest_post = latest_post_result.scalar_one_or_none()
+                        except Exception as e:
+                            logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                            latest_post = None
+                        
+                        # 添加最新帖子信息
+                        latest_post_info = None
+                        if latest_post:
+                            author_info = await get_post_author_info(db, latest_post, request)
+                            display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                            
+                            latest_post_info = schemas.LatestPostInfo(
+                                id=latest_post.id,
+                                title=latest_post.title,
+                                author=author_info,
+                                last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                                reply_count=latest_post.reply_count,
+                                view_count=display_view_count
+                            )
+                        
+                        category_out = schemas.ForumCategoryOut(
+                            id=category.id,
+                            name=category.name,
+                            description=category.description,
+                            icon=category.icon,
+                            sort_order=category.sort_order,
+                            is_visible=category.is_visible,
+                            is_admin_only=getattr(category, 'is_admin_only', False),
+                            type=getattr(category, 'type', 'general'),
+                            country=getattr(category, 'country', None),
+                            university_code=getattr(category, 'university_code', None),
+                            post_count=real_post_count,
+                            latest_post=latest_post_info
+                        )
+                        category_list.append(category_out)
+                    
+                    return {"categories": category_list}
+                
                 return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in all_forums]}
         except HTTPException:
             # 非管理员使用 view_as 参数应被忽略
@@ -967,7 +1119,85 @@ async def get_visible_forums(
                     .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
                 )
                 forums = forums_result.scalars().all()
-                # 添加 can_manage 字段（通过扩展 schema 或直接返回字典）
+                
+                # 如果需要包含最新帖子信息
+                if include_latest_post:
+                    category_list = []
+                    for category in forums:
+                        # 实时统计可见帖子数
+                        post_count_result = await db.execute(
+                            select(func.count(models.ForumPost.id))
+                            .where(
+                                models.ForumPost.category_id == category.id,
+                                models.ForumPost.is_deleted == False,
+                                models.ForumPost.is_visible == True
+                            )
+                        )
+                        real_post_count = post_count_result.scalar() or 0
+                        
+                        # 获取最新可见帖子
+                        latest_post = None
+                        try:
+                            latest_post_result = await db.execute(
+                                select(models.ForumPost)
+                                .where(
+                                    models.ForumPost.category_id == category.id,
+                                    models.ForumPost.is_deleted == False,
+                                    models.ForumPost.is_visible == True
+                                )
+                                .order_by(
+                                    func.coalesce(
+                                        models.ForumPost.last_reply_at,
+                                        models.ForumPost.created_at
+                                    ).desc()
+                                )
+                                .limit(1)
+                                .options(
+                                    selectinload(models.ForumPost.author),
+                                    selectinload(models.ForumPost.admin_author)
+                                )
+                            )
+                            latest_post = latest_post_result.scalar_one_or_none()
+                        except Exception as e:
+                            logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                            latest_post = None
+                        
+                        # 添加最新帖子信息
+                        latest_post_info = None
+                        if latest_post:
+                            author_info = await get_post_author_info(db, latest_post, request)
+                            display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                            
+                            latest_post_info = schemas.LatestPostInfo(
+                                id=latest_post.id,
+                                title=latest_post.title,
+                                author=author_info,
+                                last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                                reply_count=latest_post.reply_count,
+                                view_count=display_view_count
+                            )
+                        
+                        category_out = schemas.ForumCategoryOut(
+                            id=category.id,
+                            name=category.name,
+                            description=category.description,
+                            icon=category.icon,
+                            sort_order=category.sort_order,
+                            is_visible=category.is_visible,
+                            is_admin_only=getattr(category, 'is_admin_only', False),
+                            type=getattr(category, 'type', 'general'),
+                            country=getattr(category, 'country', None),
+                            university_code=getattr(category, 'university_code', None),
+                            post_count=real_post_count,
+                            latest_post=latest_post_info
+                        )
+                        category_dict = category_out.model_dump()
+                        category_dict["can_manage"] = True
+                        category_list.append(category_dict)
+                    
+                    return {"categories": category_list}
+                
+                # 不需要最新帖子信息，直接返回
                 categories = []
                 for forum in forums:
                     forum_dict = schemas.ForumCategoryOut.model_validate(forum).model_dump()
@@ -991,6 +1221,82 @@ async def get_visible_forums(
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
         )
         forums = forums_result.scalars().all()
+        
+        # 如果需要包含最新帖子信息
+        if include_latest_post:
+            category_list = []
+            for category in forums:
+                # 实时统计可见帖子数
+                post_count_result = await db.execute(
+                    select(func.count(models.ForumPost.id))
+                    .where(
+                        models.ForumPost.category_id == category.id,
+                        models.ForumPost.is_deleted == False,
+                        models.ForumPost.is_visible == True
+                    )
+                )
+                real_post_count = post_count_result.scalar() or 0
+                
+                # 获取最新可见帖子
+                latest_post = None
+                try:
+                    latest_post_result = await db.execute(
+                        select(models.ForumPost)
+                        .where(
+                            models.ForumPost.category_id == category.id,
+                            models.ForumPost.is_deleted == False,
+                            models.ForumPost.is_visible == True
+                        )
+                        .order_by(
+                            func.coalesce(
+                                models.ForumPost.last_reply_at,
+                                models.ForumPost.created_at
+                            ).desc()
+                        )
+                        .limit(1)
+                        .options(
+                            selectinload(models.ForumPost.author),
+                            selectinload(models.ForumPost.admin_author)
+                        )
+                    )
+                    latest_post = latest_post_result.scalar_one_or_none()
+                except Exception as e:
+                    logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                    latest_post = None
+                
+                # 添加最新帖子信息
+                latest_post_info = None
+                if latest_post:
+                    author_info = await get_post_author_info(db, latest_post, request)
+                    display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                    
+                    latest_post_info = schemas.LatestPostInfo(
+                        id=latest_post.id,
+                        title=latest_post.title,
+                        author=author_info,
+                        last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                        reply_count=latest_post.reply_count,
+                        view_count=display_view_count
+                    )
+                
+                category_out = schemas.ForumCategoryOut(
+                    id=category.id,
+                    name=category.name,
+                    description=category.description,
+                    icon=category.icon,
+                    sort_order=category.sort_order,
+                    is_visible=category.is_visible,
+                    is_admin_only=getattr(category, 'is_admin_only', False),
+                    type=getattr(category, 'type', 'general'),
+                    country=getattr(category, 'country', None),
+                    university_code=getattr(category, 'university_code', None),
+                    post_count=real_post_count,
+                    latest_post=latest_post_info
+                )
+                category_list.append(category_out)
+            
+            return {"categories": category_list}
+        
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
     
     # 检查是否为学生认证用户
@@ -1007,6 +1313,82 @@ async def get_visible_forums(
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
         )
         forums = forums_result.scalars().all()
+        
+        # 如果需要包含最新帖子信息
+        if include_latest_post:
+            category_list = []
+            for category in forums:
+                # 实时统计可见帖子数
+                post_count_result = await db.execute(
+                    select(func.count(models.ForumPost.id))
+                    .where(
+                        models.ForumPost.category_id == category.id,
+                        models.ForumPost.is_deleted == False,
+                        models.ForumPost.is_visible == True
+                    )
+                )
+                real_post_count = post_count_result.scalar() or 0
+                
+                # 获取最新可见帖子
+                latest_post = None
+                try:
+                    latest_post_result = await db.execute(
+                        select(models.ForumPost)
+                        .where(
+                            models.ForumPost.category_id == category.id,
+                            models.ForumPost.is_deleted == False,
+                            models.ForumPost.is_visible == True
+                        )
+                        .order_by(
+                            func.coalesce(
+                                models.ForumPost.last_reply_at,
+                                models.ForumPost.created_at
+                            ).desc()
+                        )
+                        .limit(1)
+                        .options(
+                            selectinload(models.ForumPost.author),
+                            selectinload(models.ForumPost.admin_author)
+                        )
+                    )
+                    latest_post = latest_post_result.scalar_one_or_none()
+                except Exception as e:
+                    logger.error(f"查询板块 {category.id} 的最新帖子时出错: {e}", exc_info=True)
+                    latest_post = None
+                
+                # 添加最新帖子信息
+                latest_post_info = None
+                if latest_post:
+                    author_info = await get_post_author_info(db, latest_post, request)
+                    display_view_count = await get_post_display_view_count(latest_post.id, latest_post.view_count)
+                    
+                    latest_post_info = schemas.LatestPostInfo(
+                        id=latest_post.id,
+                        title=latest_post.title,
+                        author=author_info,
+                        last_reply_at=latest_post.last_reply_at or latest_post.created_at,
+                        reply_count=latest_post.reply_count,
+                        view_count=display_view_count
+                    )
+                
+                category_out = schemas.ForumCategoryOut(
+                    id=category.id,
+                    name=category.name,
+                    description=category.description,
+                    icon=category.icon,
+                    sort_order=category.sort_order,
+                    is_visible=category.is_visible,
+                    is_admin_only=getattr(category, 'is_admin_only', False),
+                    type=getattr(category, 'type', 'general'),
+                    country=getattr(category, 'country', None),
+                    university_code=getattr(category, 'university_code', None),
+                    post_count=real_post_count,
+                    latest_post=latest_post_info
+                )
+                category_list.append(category_out)
+            
+            return {"categories": category_list}
+        
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
     
     # 已认证学生：返回普通板块 + 可见的学校板块（用户可以查看，但不能发帖）

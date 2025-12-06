@@ -2234,10 +2234,11 @@ export const completeTaskAndDistributeRewardsCustom = async (
 // 板块相关
 // 注意：应使用 getVisibleForums 获取用户可见的板块列表（包含权限控制）
 // getForumCategories 仅用于管理员查看全部板块
-export const getVisibleForums = async (includeAll: boolean = false, viewAs?: string) => {
+export const getVisibleForums = async (includeAll: boolean = false, viewAs?: string, includeLatestPost: boolean = true) => {
   const res = await api.get('/api/forum/forums/visible', {
     params: { 
       include_all: includeAll,
+      include_latest_post: includeLatestPost,
       ...(viewAs && { view_as: viewAs })
     }
   });
