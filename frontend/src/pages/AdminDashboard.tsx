@@ -296,8 +296,13 @@ const AdminDashboard: React.FC = () => {
     icon: '',
     sort_order: 0,
     is_visible: true,
-    is_admin_only: false
+    is_admin_only: false,
+    // 学校板块访问控制字段
+    type: 'general' as 'general' | 'root' | 'university',
+    country: '',
+    university_code: ''
   });
+  const [universities, setUniversities] = useState<any[]>([]);
 
   // 论坛内容管理相关状态
   const [forumPosts, setForumPosts] = useState<any[]>([]);
@@ -463,6 +468,18 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    // 加载大学列表（用于创建学校板块时选择）
+    const loadUniversities = async () => {
+      try {
+        const res = await api.get('/api/student-verification/universities', {
+          params: { page: 1, page_size: 1000 }
+        });
+        setUniversities(res.data?.data?.items || []);
+      } catch (error) {
+        console.error('加载大学列表失败:', error);
+      }
+    };
+    loadUniversities();
   }, [loadDashboardData]);
 
   // 加载任务达人申请列表
@@ -4449,7 +4466,11 @@ const AdminDashboard: React.FC = () => {
         icon: forumCategoryForm.icon || undefined,
         sort_order: forumCategoryForm.sort_order || 0,
         is_visible: forumCategoryForm.is_visible,
-        is_admin_only: forumCategoryForm.is_admin_only
+        is_admin_only: forumCategoryForm.is_admin_only,
+        // 学校板块访问控制字段
+        type: forumCategoryForm.type,
+        country: forumCategoryForm.country || undefined,
+        university_code: forumCategoryForm.university_code || undefined
       });
       message.success('板块创建成功！');
       setShowForumCategoryModal(false);
@@ -4460,7 +4481,11 @@ const AdminDashboard: React.FC = () => {
         icon: '',
         sort_order: 0,
         is_visible: true,
-        is_admin_only: false
+        is_admin_only: false,
+        // 学校板块访问控制字段
+        type: 'general',
+        country: '',
+        university_code: ''
       });
       loadDashboardData();
     } catch (error: any) {
@@ -4479,7 +4504,11 @@ const AdminDashboard: React.FC = () => {
         icon: forumCategoryForm.icon || undefined,
         sort_order: forumCategoryForm.sort_order !== undefined ? forumCategoryForm.sort_order : undefined,
         is_visible: forumCategoryForm.is_visible,
-        is_admin_only: forumCategoryForm.is_admin_only
+        is_admin_only: forumCategoryForm.is_admin_only,
+        // 学校板块访问控制字段
+        type: forumCategoryForm.type,
+        country: forumCategoryForm.country || undefined,
+        university_code: forumCategoryForm.university_code || undefined
       });
       message.success('板块更新成功！');
       setShowForumCategoryModal(false);
@@ -4490,7 +4519,11 @@ const AdminDashboard: React.FC = () => {
         icon: '',
         sort_order: 0,
         is_visible: true,
-        is_admin_only: false
+        is_admin_only: false,
+        // 学校板块访问控制字段
+        type: 'general',
+        country: '',
+        university_code: ''
       });
       loadDashboardData();
     } catch (error: any) {
@@ -4524,7 +4557,11 @@ const AdminDashboard: React.FC = () => {
       icon: category.icon || '',
       sort_order: category.sort_order || 0,
       is_visible: category.is_visible !== undefined ? category.is_visible : true,
-      is_admin_only: category.is_admin_only !== undefined ? category.is_admin_only : false
+      is_admin_only: category.is_admin_only !== undefined ? category.is_admin_only : false,
+      // 学校板块访问控制字段
+      type: category.type || 'general',
+      country: category.country || '',
+      university_code: category.university_code || ''
     });
     setShowForumCategoryModal(true);
   };
@@ -4676,7 +4713,11 @@ const AdminDashboard: React.FC = () => {
               icon: '',
               sort_order: 0,
               is_visible: true,
-              is_admin_only: false
+              is_admin_only: false,
+              // 学校板块访问控制字段
+              type: 'general',
+              country: '',
+              university_code: ''
             });
             setShowForumCategoryModal(true);
           }}
@@ -4929,6 +4970,98 @@ const AdminDashboard: React.FC = () => {
               </small>
             </div>
 
+            {/* 学校板块访问控制字段 */}
+            <div style={{ marginBottom: '15px', padding: '15px', background: '#f5f5f5', borderRadius: '4px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#333' }}>
+                板块类型 <span style={{ color: 'red' }}>*</span>
+              </label>
+              <select
+                value={forumCategoryForm.type}
+                onChange={(e) => {
+                  const newType = e.target.value as 'general' | 'root' | 'university';
+                  setForumCategoryForm({
+                    ...forumCategoryForm,
+                    type: newType,
+                    // 切换类型时清空相关字段
+                    country: newType === 'root' ? forumCategoryForm.country : '',
+                    university_code: newType === 'university' ? forumCategoryForm.university_code : ''
+                  });
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
+                }}
+              >
+                <option value="general">普通板块（所有用户可见）</option>
+                <option value="root">国家/地区级大板块（如"英国留学生"）</option>
+                <option value="university">大学级小板块（如"布里斯托大学"）</option>
+              </select>
+              <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                选择板块类型以启用相应的访问控制
+              </small>
+            </div>
+
+            {/* 国家代码字段（仅 root 类型显示） */}
+            {forumCategoryForm.type === 'root' && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  国家代码 <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={forumCategoryForm.country}
+                  onChange={(e) => setForumCategoryForm({...forumCategoryForm, country: e.target.value.toUpperCase()})}
+                  placeholder="如：UK（英国）"
+                  maxLength={10}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '5px'
+                  }}
+                />
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                  国家代码（如 UK），用于标识该大板块所属的国家
+                </small>
+              </div>
+            )}
+
+            {/* 大学编码字段（仅 university 类型显示） */}
+            {forumCategoryForm.type === 'university' && (
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  大学编码 <span style={{ color: 'red' }}>*</span>
+                </label>
+                <select
+                  value={forumCategoryForm.university_code}
+                  onChange={(e) => setForumCategoryForm({...forumCategoryForm, university_code: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginTop: '5px'
+                  }}
+                >
+                  <option value="">请选择大学</option>
+                  {universities
+                    .filter((u: any) => u.code) // 只显示有编码的大学
+                    .map((u: any) => (
+                      <option key={u.id} value={u.code}>
+                        {u.name_cn || u.name} ({u.code})
+                      </option>
+                    ))}
+                </select>
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                  选择对应的大学，该板块将仅对该大学的学生可见
+                </small>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => {
@@ -4940,7 +5073,11 @@ const AdminDashboard: React.FC = () => {
                     icon: '',
                     sort_order: 0,
                     is_visible: true,
-                    is_admin_only: false
+                    is_admin_only: false,
+                    // 学校板块访问控制字段
+                    type: 'general',
+                    country: '',
+                    university_code: ''
                   });
                 }}
                 style={{

@@ -316,6 +316,317 @@ async def get_current_admin_async(
     return admin
 
 
+# ==================== 学校板块访问控制函数 ====================
+
+def invalidate_forum_visibility_cache(user_id: str):
+    """
+    清除用户可见板块的缓存
+    
+    当学生认证状态变更时（verified -> expired/revoked，或大学变更），
+    需要清除该用户的可见板块缓存，确保下次查询时获取最新数据。
+    
+    缓存键格式：visible_forums:v2:{user_id}
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            cache_key = f"visible_forums:v2:{user_id}"
+            redis_client.delete(cache_key)
+            logger.debug(f"已清除用户 {user_id} 的可见板块缓存: {cache_key}")
+    except Exception as e:
+        # 缓存失效失败不影响主流程，只记录日志
+        logger.warning(f"清除用户 {user_id} 的可见板块缓存失败: {e}")
+
+
+def clear_all_forum_visibility_cache(reason: str = "板块信息变更"):
+    """
+    清除所有用户的可见板块缓存
+    
+    当板块信息发生变更（创建、更新、删除）时，需要清除所有用户的缓存，
+    确保所有用户下次查询时获取最新的板块可见性信息。
+    
+    注意：此操作在生产环境中可能影响性能，应谨慎使用。
+    对于大量用户的情况，考虑使用更细粒度的缓存清理策略。
+    
+    参数:
+        reason: 清理原因（用于日志记录）
+    """
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if not redis_client:
+            return
+        
+        # 使用 SCAN 命令替代 KEYS 命令，避免阻塞 Redis
+        # SCAN 是游标迭代，不会阻塞 Redis 服务器
+        pattern = "visible_forums:v2:*"
+        deleted_count = 0
+        
+        # 使用 SCAN 迭代所有匹配的键
+        cursor = 0
+        while True:
+            cursor, keys = redis_client.scan(cursor, match=pattern, count=100)
+            if keys:
+                # 批量删除，提高效率
+                redis_client.delete(*keys)
+                deleted_count += len(keys)
+            
+            # 如果游标为 0，说明已经扫描完所有键
+            if cursor == 0:
+                break
+        
+        if deleted_count > 0:
+            logger.info(f"已清理 {deleted_count} 个用户的可见板块缓存（原因：{reason}）")
+        else:
+            logger.debug(f"没有找到需要清理的可见板块缓存（原因：{reason}）")
+            
+    except Exception as e:
+        # 缓存清理失败不影响主流程，只记录警告日志
+        logger.warning(f"清理所有用户的可见板块缓存失败（原因：{reason}）: {e}")
+
+
+def is_uk_university(university: models.University) -> bool:
+    """
+    判断是否为英国大学
+    
+    实现方式（按优先级）：
+    1. 如果 universities 表有 country 字段：return university.country == 'UK'
+    2. 否则通过 email_domain 判断：return university.email_domain.endswith('.ac.uk')
+    
+    重要：必须与《英国留学生认证系统文档》中"判断是否英国大学"的逻辑 100% 保持一致。
+    任何修改都需要同步更新认证系统的判断逻辑，避免权限判断不一致。
+    """
+    # 方案1：使用 country 字段（推荐）
+    if hasattr(university, 'country') and university.country:
+        return university.country == 'UK'
+    
+    # 方案2：通过 email_domain 判断（备用方案）
+    if hasattr(university, 'email_domain') and university.email_domain:
+        return university.email_domain.endswith('.ac.uk')
+    
+    return False
+
+
+async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[int]:
+    """
+    获取用户可见的【学校相关板块】ID 列表（不包含 type='general' 的普通板块）
+    
+    返回值：
+    - 已认证英国留学生：返回 [英国留学生大板块ID, 自己大学的板块ID]
+    - 其他用户（包括非 UK 大学认证用户）：返回空列表 []
+    
+    注意：
+    - 此函数不返回 type='general' 的普通板块，调用方需自行合并。
+    - 重要：此函数应在 require_student_verified(country="UK") 依赖之后调用，或确保传入的用户已通过 UK 学生认证。
+    """
+    if not user:
+        return []
+    
+    # 先尝试从缓存读取
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            cache_key = f"visible_forums:v2:{user.id}"
+            cached_data = redis_client.get(cache_key)
+            if cached_data:
+                import json
+                forums = json.loads(cached_data)
+                logger.debug(f"从缓存读取用户 {user.id} 的可见板块: {forums}")
+                return forums
+    except Exception as e:
+        # 缓存读取失败不影响主流程，继续查询数据库
+        logger.debug(f"读取可见板块缓存失败: {e}")
+    
+    # 缓存未命中，查询数据库
+    # 获取用户认证信息（一次性查询，避免重复）
+    # 注意：这里只查询 verified 状态，UK 判断在下方显式进行
+    # 使用 selectinload 预加载 university 关系，避免额外的查询
+    verification_result = await db.execute(
+        select(models.StudentVerification)
+        .options(selectinload(models.StudentVerification.university))
+        .join(models.University)
+        .where(
+            models.StudentVerification.user_id == user.id,
+            models.StudentVerification.status == 'verified',
+            models.StudentVerification.expires_at > func.now(),
+            models.University.is_active == True
+        )
+    )
+    verification = verification_result.scalar_one_or_none()
+    
+    if not verification:
+        return []
+    
+    university = verification.university
+    
+    # 显式判断：是否为英国大学，非 UK 大学认证用户不开放学校板块访问
+    # 防御性编程：即使调用方没走 require_student_verified，也要在这里二次判断非UK大学
+    # 这是最后一道防线，确保非 UK 大学认证用户无法访问学校板块
+    if not is_uk_university(university):
+        return []
+    
+    # 获取 university_code
+    university_code = None
+    if hasattr(university, 'code') and university.code:
+        university_code = university.code
+    # 如果没有 code 字段，可通过 email_domain 映射（需实现映射函数）
+    # 当前版本暂不支持，需要先填充 universities.code 字段
+    
+    forums = []
+    # 1. 添加英国留学生大板块（type='root', country='UK'）
+    # 注意：同一国家只应有一个 root 板块，使用 scalar_one_or_none() 确保唯一性
+    root_forum_result = await db.execute(
+        select(models.ForumCategory.id)
+        .where(
+            models.ForumCategory.type == 'root',
+            models.ForumCategory.country == 'UK',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    root_id = root_forum_result.scalar_one_or_none()
+    if root_id:
+        forums.append(root_id)
+    
+    # 2. 添加用户所属大学的板块
+    if university_code:
+        university_forum_result = await db.execute(
+            select(models.ForumCategory.id)
+            .where(
+                models.ForumCategory.type == 'university',
+                models.ForumCategory.university_code == university_code,
+                models.ForumCategory.is_visible == True
+            )
+        )
+        uni_id = university_forum_result.scalar_one_or_none()
+        if uni_id:
+            forums.append(uni_id)
+    
+    # 缓存结果（默认启用缓存）
+    try:
+        from app.redis_cache import get_redis_client
+        redis_client = get_redis_client()
+        
+        if redis_client:
+            cache_key = f"visible_forums:v2:{user.id}"
+            import json
+            # 缓存5分钟（300秒）
+            redis_client.setex(cache_key, 300, json.dumps(forums))
+            logger.debug(f"已缓存用户 {user.id} 的可见板块: {forums}")
+    except Exception as e:
+        # 缓存写入失败不影响主流程
+        logger.debug(f"写入可见板块缓存失败: {e}")
+    
+    return forums
+
+
+async def assert_forum_visible(
+    user: Optional[models.User], 
+    forum_id: int, 
+    db: AsyncSession,
+    raise_exception: bool = True
+) -> bool:
+    """
+    校验用户是否有权限访问指定板块
+    
+    注意：此函数应在 require_student_verified(country="UK") 依赖之后调用，
+    或确保传入的用户已通过 UK 学生认证。否则非 UK 大学认证用户也会被允许访问。
+    """
+    # 当前版本：管理员/版主全局越权；如需细分，改为"版主-板块映射"校验
+    # 检查是否为管理员（通过检查是否有管理员会话）
+    # 注意：这里简化处理，实际应该检查用户是否为管理员
+    # 由于 User 模型没有直接的 is_admin 属性，这里暂时跳过管理员检查
+    # 管理员权限检查应在调用此函数之前完成
+    
+    # 获取板块信息
+    forum_result = await db.execute(
+        select(models.ForumCategory).where(models.ForumCategory.id == forum_id)
+    )
+    forum = forum_result.scalar_one_or_none()
+    
+    if not forum:
+        if raise_exception:
+            raise HTTPException(status_code=404, detail="Forum not found")
+        return False
+    
+    # 普通板块（type='general'）所有用户都可访问
+    if forum.type == 'general':
+        return True
+    
+    # 学校板块（type='root' 或 type='university'）需要权限校验
+    if not user:
+        if raise_exception:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        return False
+    
+    visible_ids = await visible_forums(user, db)
+    if forum_id in visible_ids:
+        return True
+    
+    if raise_exception:
+        # 对外默认 404 隐藏存在性；内部/管理接口可配置为 403
+        raise HTTPException(status_code=404, detail="Forum not found")
+    return False
+
+
+async def require_student_verified(
+    country: str = "UK",
+    current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    db: AsyncSession = Depends(get_async_db_dependency)
+) -> models.User:
+    """
+    确保用户已通过指定国家的学生认证
+    
+    重要：此依赖用于学校板块相关接口，确保只允许 UK 学生访问。
+    """
+    verification_result = await db.execute(
+        select(models.StudentVerification)
+        .join(models.University)
+        .where(
+            models.StudentVerification.user_id == current_user.id,
+            models.StudentVerification.status == 'verified',
+            models.StudentVerification.expires_at > func.now(),
+            models.University.is_active == True
+        )
+    )
+    verification = verification_result.scalar_one_or_none()
+    
+    if not verification:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Student verification required"
+        )
+    
+    # 检查国家
+    university = verification.university
+    if country == "UK" and not is_uk_university(university):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: UK student verification required"
+        )
+    
+    return current_user
+
+
+async def check_forum_visibility(
+    forum_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_async_db_dependency)
+) -> int:
+    """
+    FastAPI 依赖：校验板块可见性
+    
+    注意：对于学校板块（type='root' 或 type='university'），
+    应配合 require_student_verified(country="UK") 使用，确保只允许 UK 学生访问。
+    """
+    await assert_forum_visible(current_user, forum_id, db, raise_exception=True)
+    return forum_id
+
+
 # ==================== 工具函数 ====================
 
 async def build_user_info(
@@ -567,6 +878,157 @@ async def update_category_stats(category_id: int, db: AsyncSession):
 
 # ==================== 板块 API ====================
 
+@router.get("/forums/visible", response_model=schemas.ForumCategoryListResponse)
+async def get_visible_forums(
+    include_all: bool = Query(False, description="管理员查看全部板块"),
+    view_as: Optional[str] = Query(None, description="管理员以指定用户视角查看（需管理员权限）"),
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
+    db: AsyncSession = Depends(get_async_db_dependency)
+):
+    """
+    获取当前用户可见的板块列表
+    
+    参数说明：
+    - include_all: 管理员查看全部板块（带 can_manage=true 字段）
+    - view_as: 管理员以指定用户ID视角查看可见板块（用于客服/排错场景）
+    
+    重要：前端必须使用此接口获取板块列表，禁止硬编码或直接查询所有板块。
+    """
+    # 管理员特殊处理：以指定用户视角查看
+    if view_as:
+        # 检查是否为管理员
+        try:
+            admin_user = await get_current_admin_async(request, db)
+            if admin_user:
+                target_user_result = await db.execute(
+                    select(models.User).where(models.User.id == view_as)
+                )
+                target_user = target_user_result.scalar_one_or_none()
+                if not target_user:
+                    raise HTTPException(status_code=404, detail="User not found")
+                
+                visible_ids = await visible_forums(target_user, db)
+                if not visible_ids:
+                    # 返回普通板块（排除 is_admin_only 的板块）
+                    forums_result = await db.execute(
+                        select(models.ForumCategory)
+                        .where(
+                            models.ForumCategory.type == 'general',
+                            models.ForumCategory.is_visible == True,
+                            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                        )
+                        .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
+                    )
+                    forums = forums_result.scalars().all()
+                    return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
+                
+                # 返回该用户可见的板块（排除 is_admin_only 的板块）
+                school_forums_result = await db.execute(
+                    select(models.ForumCategory).where(
+                        models.ForumCategory.id.in_(visible_ids),
+                        models.ForumCategory.is_visible == True,
+                        models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                    )
+                )
+                general_forums_result = await db.execute(
+                    select(models.ForumCategory).where(
+                        models.ForumCategory.type == 'general',
+                        models.ForumCategory.is_visible == True,
+                        models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                    )
+                )
+                school_forums = school_forums_result.scalars().all()
+                general_forums = general_forums_result.scalars().all()
+                
+                # 合并并排序
+                all_forums = list(school_forums) + list(general_forums)
+                all_forums.sort(key=lambda x: (x.sort_order, x.created_at))
+                
+                return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in all_forums]}
+        except HTTPException:
+            # 非管理员使用 view_as 参数应被忽略
+            pass
+    
+    # 管理员特殊处理：查看全部板块
+    if include_all:
+        try:
+            admin_user = await get_current_admin_async(request, db)
+            if admin_user:
+                forums_result = await db.execute(
+                    select(models.ForumCategory)
+                    .where(models.ForumCategory.is_visible == True)
+                    .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
+                )
+                forums = forums_result.scalars().all()
+                # 添加 can_manage 字段（通过扩展 schema 或直接返回字典）
+                categories = []
+                for forum in forums:
+                    forum_dict = schemas.ForumCategoryOut.model_validate(forum).model_dump()
+                    forum_dict["can_manage"] = True
+                    categories.append(forum_dict)
+                return {"categories": categories}
+        except HTTPException:
+            # 非管理员使用 include_all 参数应被忽略
+            pass
+    
+    # 普通用户：根据身份返回可见板块
+    if not current_user:
+        # 未登录：仅返回普通板块（排除 is_admin_only 的板块）
+        forums_result = await db.execute(
+            select(models.ForumCategory)
+            .where(
+                models.ForumCategory.type == 'general',
+                models.ForumCategory.is_visible == True,
+                models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+            )
+            .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
+        )
+        forums = forums_result.scalars().all()
+        return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
+    
+    # 检查是否为学生认证用户
+    visible_ids = await visible_forums(current_user, db)
+    
+    if not visible_ids:
+        # 未学生认证：仅返回普通板块（排除 is_admin_only 的板块）
+        forums_result = await db.execute(
+            select(models.ForumCategory)
+            .where(
+                models.ForumCategory.type == 'general',
+                models.ForumCategory.is_visible == True,
+                models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+            )
+            .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
+        )
+        forums = forums_result.scalars().all()
+        return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
+    
+    # 已认证学生：返回普通板块 + 可见的学校板块（排除 is_admin_only 的板块）
+    school_forums_result = await db.execute(
+        select(models.ForumCategory).where(
+            models.ForumCategory.id.in_(visible_ids),
+            models.ForumCategory.is_visible == True,
+            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+        )
+    )
+    general_forums_result = await db.execute(
+        select(models.ForumCategory).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True,
+            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+        )
+    )
+    school_forums = school_forums_result.scalars().all()
+    general_forums = general_forums_result.scalars().all()
+    
+    # 合并并排序
+    all_forums = list(school_forums) + list(general_forums)
+    all_forums.sort(key=lambda x: (x.sort_order, x.created_at))
+    
+    return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in all_forums]}
+
+
 @router.get("/categories", response_model=schemas.ForumCategoryListResponse)
 async def get_categories(
     include_latest_post: bool = Query(False, description="是否包含每个板块的最新帖子信息"),
@@ -738,9 +1200,19 @@ async def get_categories(
 @router.get("/categories/{category_id}", response_model=schemas.ForumCategoryOut)
 async def get_category(
     category_id: int,
+    current_user: Optional[models.User] = Depends(get_current_user_optional),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取板块详情"""
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
     result = await db.execute(
         select(models.ForumCategory).where(models.ForumCategory.id == category_id)
     )
@@ -751,6 +1223,10 @@ async def get_category(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="板块不存在"
         )
+    
+    # 检查板块可见性（学校板块需要权限，管理员可以绕过）
+    if not is_admin:
+        await assert_forum_visible(current_user, category_id, db, raise_exception=True)
     
     return category
 
@@ -773,9 +1249,56 @@ async def create_category(
             detail="板块名称已存在"
         )
     
+    # 验证学校板块字段
+    category_type = category.type or 'general'
+    if category_type == 'university':
+        if not category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块必须提供university_code"
+            )
+        # 验证大学编码是否存在
+        university = await db.execute(
+            select(models.University).where(models.University.code == category.university_code)
+        )
+        if not university.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"大学编码 '{category.university_code}' 不存在"
+            )
+        # university类型板块不应有country字段
+        if category.country:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块不应设置country字段"
+            )
+    elif category_type == 'root':
+        if not category.country:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块必须提供country字段"
+            )
+        # root类型板块不应有university_code字段
+        if category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块不应设置university_code字段"
+            )
+    else:  # general
+        # general类型板块不应有country和university_code字段
+        if category.country or category.university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="general类型板块不应设置country或university_code字段"
+            )
+    
     db_category = models.ForumCategory(**category.model_dump())
     db.add(db_category)
     await db.flush()
+    
+    # 如果创建的是学校板块或 is_admin_only 板块，清理所有用户的可见板块缓存
+    if (db_category.type in ('root', 'university') or db_category.is_admin_only):
+        clear_all_forum_visibility_cache(f"新板块 {db_category.id} 已创建")
     
     # 记录管理员操作日志
     await log_admin_operation(
@@ -825,6 +1348,60 @@ async def update_category(
                 detail="板块名称已存在"
             )
     
+    # 确定板块类型（如果更新了type，使用新值；否则使用当前值）
+    category_type = category.type if category.type is not None else db_category.type
+    
+    # 验证学校板块字段
+    if category_type == 'university':
+        university_code = category.university_code if category.university_code is not None else db_category.university_code
+        if not university_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块必须提供university_code"
+            )
+        # 验证大学编码是否存在
+        university = await db.execute(
+            select(models.University).where(models.University.code == university_code)
+        )
+        if not university.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"大学编码 '{university_code}' 不存在"
+            )
+        # university类型板块不应有country字段
+        if category.country is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="university类型板块不应设置country字段"
+            )
+    elif category_type == 'root':
+        country = category.country if category.country is not None else db_category.country
+        if not country:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块必须提供country字段"
+            )
+        # root类型板块不应有university_code字段
+        if category.university_code is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="root类型板块不应设置university_code字段"
+            )
+    else:  # general
+        # general类型板块不应有country和university_code字段
+        if category.country is not None or category.university_code is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="general类型板块不应设置country或university_code字段"
+            )
+    
+    # 记录更新前的类型、is_admin_only 和 is_visible（用于判断是否需要清理缓存）
+    old_type = db_category.type
+    old_university_code = db_category.university_code
+    old_country = db_category.country
+    old_is_admin_only = db_category.is_admin_only
+    old_is_visible = db_category.is_visible
+    
     # 更新字段
     update_data = category.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -832,6 +1409,21 @@ async def update_category(
     
     db_category.updated_at = get_utc_time()
     await db.flush()
+    
+    # 如果板块类型、关联信息、is_admin_only 或 is_visible 发生变化，需要清理所有相关用户的缓存
+    new_type = db_category.type
+    new_university_code = db_category.university_code
+    new_country = db_category.country
+    new_is_admin_only = db_category.is_admin_only
+    new_is_visible = db_category.is_visible
+    
+    if (old_type != new_type or 
+        old_university_code != new_university_code or 
+        old_country != new_country or
+        old_is_admin_only != new_is_admin_only or
+        old_is_visible != new_is_visible):
+        # 清理所有用户的可见板块缓存（因为板块可见性可能已改变）
+        clear_all_forum_visibility_cache(f"板块 {category_id} 信息变更")
     
     # 记录管理员操作日志
     await log_admin_operation(
@@ -869,6 +1461,10 @@ async def delete_category(
             detail="板块不存在"
         )
     
+    # 记录删除前的类型和 is_admin_only（用于判断是否需要清理缓存）
+    category_type = category.type
+    category_is_admin_only = category.is_admin_only
+    
     # 记录管理员操作日志（在删除前记录）
     await log_admin_operation(
         operator_id=current_admin.id,
@@ -882,6 +1478,10 @@ async def delete_category(
     
     await db.delete(category)
     await db.commit()
+    
+    # 如果删除的是学校板块或 is_admin_only 板块，清理所有用户的可见板块缓存
+    if category_type in ('root', 'university') or category_is_admin_only:
+        clear_all_forum_visibility_cache(f"板块 {category_id} 已删除")
     
     return {"message": "板块删除成功"}
 
@@ -933,6 +1533,8 @@ async def get_posts(
     
     # 板块筛选
     if category_id:
+        # 检查板块可见性（学校板块需要权限）
+        await assert_forum_visible(current_user, category_id, db, raise_exception=True)
         query = query.where(models.ForumPost.category_id == category_id)
     
     # 搜索关键词（简单 LIKE 查询）
@@ -1064,6 +1666,9 @@ async def get_post(
     
     # 获取帖子
     post = await get_post_with_permissions(post_id, current_user, is_admin, db, current_admin)
+    
+    # 检查帖子所属板块的可见性（学校板块需要权限）
+    await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
     
     # 增加浏览次数
     # 优化方案：使用 Redis 累加，定时批量落库（由 Celery 任务处理）
@@ -1236,7 +1841,8 @@ async def create_post(
             headers={"X-Error-Code": "DUPLICATE_POST"}
         )
     
-    # 验证板块是否存在
+    # 验证板块是否存在并检查权限
+    # 对于学校板块，需要学生认证；对于普通板块，所有用户都可以发帖
     category_result = await db.execute(
         select(models.ForumCategory).where(models.ForumCategory.id == post.category_id)
     )
@@ -1247,6 +1853,11 @@ async def create_post(
             detail="板块不存在",
             headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
         )
+    
+    # 检查板块可见性（学校板块需要权限）
+    # 管理员可以绕过权限检查
+    if not is_admin_user:
+        await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
     
     # 检查板块是否可见
     if not category.is_visible:
@@ -1406,6 +2017,43 @@ async def update_post(
     old_category_id = db_post.category_id
     old_is_visible = db_post.is_visible
     
+    # 如果更新了板块，需要检查新板块的权限（学校板块需要权限）
+    if "category_id" in update_data and update_data["category_id"] != old_category_id:
+        new_category_id = update_data["category_id"]
+        # 验证新板块是否存在
+        new_category_result = await db.execute(
+            select(models.ForumCategory).where(models.ForumCategory.id == new_category_id)
+        )
+        new_category = new_category_result.scalar_one_or_none()
+        if not new_category:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="目标板块不存在",
+                headers={"X-Error-Code": "CATEGORY_NOT_FOUND"}
+            )
+        
+        # 检查新板块的可见性（学校板块需要权限）
+        # 管理员可以绕过权限检查
+        if not is_admin_user:
+            await assert_forum_visible(current_user, new_category_id, db, raise_exception=True)
+        
+        # 检查新板块是否可见
+        if not new_category.is_visible:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="目标板块已隐藏",
+                headers={"X-Error-Code": "CATEGORY_HIDDEN"}
+            )
+        
+        # 检查新板块是否禁止用户发帖
+        if new_category.is_admin_only:
+            if not is_admin_user:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="目标板块只允许管理员发帖",
+                    headers={"X-Error-Code": "ADMIN_ONLY_CATEGORY"}
+                )
+    
     for field, value in update_data.items():
         setattr(db_post, field, value)
     
@@ -1420,15 +2068,6 @@ async def update_post(
         # 更新新板块统计
         if db_post.category_id:
             await update_category_stats(db_post.category_id, db)
-    
-    # 检查是否有管理员会话（在管理员页面操作时）
-    is_admin_user = False
-    try:
-        admin_user = await get_current_admin_async(request, db)
-        if admin_user:
-            is_admin_user = True
-    except HTTPException:
-        pass
     
     await db.commit()
     await db.refresh(db_post, ["category"])
@@ -2177,6 +2816,11 @@ async def create_reply(
     # 获取帖子（使用权限检查函数）
     post = await get_post_with_permissions(post_id, current_user, is_admin_user, db, admin_user)
     
+    # 检查帖子所属板块的可见性（学校板块需要权限）
+    # 管理员可以绕过权限检查
+    if not is_admin_user:
+        await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
+    
     # 检查帖子是否锁定
     if post.is_locked:
         raise HTTPException(
@@ -2324,18 +2968,31 @@ async def update_reply(
             detail="回复已删除"
         )
     
+    # 检查回复所属帖子所属板块的可见性（学校板块需要权限）
+    # 确保用户有权限访问该回复所属的板块
+    post_result = await db.execute(
+        select(models.ForumPost).where(models.ForumPost.id == db_reply.post_id)
+    )
+    post = post_result.scalar_one_or_none()
+    
+    if post:
+        # 检查是否有管理员会话
+        is_admin_user = False
+        try:
+            admin_user = await get_current_admin_async(request, db)
+            if admin_user:
+                is_admin_user = True
+        except HTTPException:
+            pass
+        
+        # 检查帖子所属板块的可见性（学校板块需要权限）
+        # 管理员可以绕过权限检查
+        if not is_admin_user:
+            await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
+    
     # 更新内容
     db_reply.content = reply.content
     db_reply.updated_at = get_utc_time()
-    
-    # 检查是否有管理员会话（在管理员页面操作时）
-    is_admin_user = False
-    try:
-        admin_user = await get_current_admin_async(request, db)
-        if admin_user:
-            is_admin_user = True
-    except HTTPException:
-        pass
     
     await db.commit()
     await db.refresh(db_reply, ["author"])
@@ -2517,9 +3174,13 @@ async def toggle_like(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="帖子不存在或已删除"
             )
+        # 检查帖子所属板块的可见性（学校板块需要权限）
+        await assert_forum_visible(current_user, target.category_id, db, raise_exception=True)
     else:  # reply
         result = await db.execute(
-            select(models.ForumReply).where(models.ForumReply.id == like.target_id)
+            select(models.ForumReply)
+            .options(selectinload(models.ForumReply.post))
+            .where(models.ForumReply.id == like.target_id)
         )
         target = result.scalar_one_or_none()
         if not target or target.is_deleted:
@@ -2527,6 +3188,8 @@ async def toggle_like(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="回复不存在或已删除"
             )
+        # 检查回复所属帖子所属板块的可见性（学校板块需要权限）
+        await assert_forum_visible(current_user, target.post.category_id, db, raise_exception=True)
     
     # 检查是否已点赞
     existing_like = await db.execute(
@@ -2724,6 +3387,9 @@ async def toggle_favorite(
             detail="帖子不存在或已删除"
         )
     
+    # 检查帖子所属板块的可见性（学校板块需要权限）
+    await assert_forum_visible(current_user, post.category_id, db, raise_exception=True)
+    
     # 检查是否已收藏
     existing_favorite = await db.execute(
         select(models.ForumFavorite).where(
@@ -2771,15 +3437,53 @@ async def search_posts(
     """搜索帖子（使用 pg_trgm 相似度搜索，支持中文）"""
     from app.config import Config
     
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
     # 构建基础查询
     query = select(models.ForumPost).where(
         models.ForumPost.is_deleted == False,
         models.ForumPost.is_visible == True
     )
     
-    # 板块筛选
+    # 板块筛选和权限检查
     if category_id:
+        # 检查板块可见性（学校板块需要权限）
+        if not is_admin:
+            await assert_forum_visible(current_user, category_id, db, raise_exception=True)
         query = query.where(models.ForumPost.category_id == category_id)
+    else:
+        # 如果没有指定板块，需要过滤掉用户无权限访问的学校板块
+        if not is_admin:
+            # 获取用户可见的板块ID列表
+            visible_category_ids = []
+            
+            # 1. 添加所有普通板块
+            general_forums_result = await db.execute(
+                select(models.ForumCategory.id).where(
+                    models.ForumCategory.type == 'general',
+                    models.ForumCategory.is_visible == True
+                )
+            )
+            general_ids = [row[0] for row in general_forums_result.all()]
+            visible_category_ids.extend(general_ids)
+            
+            # 2. 如果用户已登录，添加可见的学校板块
+            if current_user:
+                school_ids = await visible_forums(current_user, db)
+                visible_category_ids.extend(school_ids)
+            
+            # 3. 只搜索可见板块的帖子
+            if visible_category_ids:
+                query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+            else:
+                # 如果用户没有任何可见板块（理论上不应该发生），返回空结果
+                query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
     # 搜索条件（使用 pg_trgm 相似度搜索）
     if Config.USE_PG_TRGM:
@@ -2884,13 +3588,24 @@ async def search_posts(
 async def create_report(
     report: schemas.ForumReportCreate,
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """创建举报"""
-    # 验证目标存在
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
+    # 验证目标存在并检查权限
     if report.target_type == "post":
         result = await db.execute(
-            select(models.ForumPost).where(models.ForumPost.id == report.target_id)
+            select(models.ForumPost)
+            .options(selectinload(models.ForumPost.category))
+            .where(models.ForumPost.id == report.target_id)
         )
         target = result.scalar_one_or_none()
         if not target:
@@ -2898,9 +3613,14 @@ async def create_report(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="帖子不存在"
             )
+        # 检查用户是否有权限访问该帖子所属的板块（学校板块需要权限）
+        if not is_admin:
+            await assert_forum_visible(current_user, target.category_id, db, raise_exception=True)
     else:  # reply
         result = await db.execute(
-            select(models.ForumReply).where(models.ForumReply.id == report.target_id)
+            select(models.ForumReply)
+            .options(selectinload(models.ForumReply.post).selectinload(models.ForumPost.category))
+            .where(models.ForumReply.id == report.target_id)
         )
         target = result.scalar_one_or_none()
         if not target:
@@ -2908,6 +3628,9 @@ async def create_report(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="回复不存在"
             )
+        # 检查用户是否有权限访问该回复所属帖子所属的板块（学校板块需要权限）
+        if not is_admin:
+            await assert_forum_visible(current_user, target.post.category_id, db, raise_exception=True)
     
     # 检查是否已举报（pending 状态）
     existing_report = await db.execute(
@@ -3091,19 +3814,8 @@ async def get_notifications(
     
     query = query.order_by(models.ForumNotification.created_at.desc())
     
-    # 获取总数和未读数
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar() or 0
-    
-    unread_count_result = await db.execute(
-        select(func.count(models.ForumNotification.id))
-        .where(
-            models.ForumNotification.to_user_id == current_user.id,
-            models.ForumNotification.is_read == False
-        )
-    )
-    unread_count = unread_count_result.scalar() or 0
+    # 注意：总数和未读数会在过滤后重新计算，因为需要过滤学校板块
+    # 这里先查询原始数据，实际统计会在过滤后重新计算
     
     # 分页
     offset = (page - 1) * page_size
@@ -3117,22 +3829,98 @@ async def get_notifications(
     result = await db.execute(query)
     notifications = result.scalars().all()
     
-    notification_list = [
-        schemas.ForumNotificationOut(
-            id=n.id,
-            notification_type=n.notification_type,
-            target_type=n.target_type,
-            target_id=n.target_id,
-            from_user=schemas.UserInfo(
-                id=n.from_user.id,
-                name=n.from_user.name,
-                avatar=n.from_user.avatar or None
-            ) if n.from_user else None,
-            is_read=n.is_read,
-            created_at=n.created_at
+    # 获取用户可见的板块ID列表（用于过滤学校板块的通知）
+    visible_category_ids = []
+    general_forums_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
         )
-        for n in notifications
-    ]
+    )
+    general_ids = [row[0] for row in general_forums_result.all()]
+    visible_category_ids.extend(general_ids)
+    
+    # 添加可见的学校板块
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+    
+    # 过滤通知：只返回用户有权限访问的板块的通知
+    # 优化：批量查询所有通知目标的 category_id，避免 N+1 查询问题
+    notification_list = []
+    
+    if notifications:
+        # 分离 post 和 reply 类型的通知
+        post_notifications = [n for n in notifications if n.target_type == "post"]
+        reply_notifications = [n for n in notifications if n.target_type == "reply"]
+        
+        # 批量查询所有 post 的 category_id
+        post_category_map = {}
+        if post_notifications:
+            post_ids = [n.target_id for n in post_notifications]
+            post_category_result = await db.execute(
+                select(models.ForumPost.id, models.ForumPost.category_id)
+                .where(models.ForumPost.id.in_(post_ids))
+            )
+            post_category_map = {row[0]: row[1] for row in post_category_result.all()}
+        
+        # 批量查询所有 reply 的 post_id，然后批量查询 post 的 category_id
+        reply_post_map = {}
+        reply_category_map = {}
+        if reply_notifications:
+            reply_ids = [n.target_id for n in reply_notifications]
+            reply_post_result = await db.execute(
+                select(models.ForumReply.id, models.ForumReply.post_id)
+                .where(models.ForumReply.id.in_(reply_ids))
+            )
+            reply_post_map = {row[0]: row[1] for row in reply_post_result.all()}
+            
+            # 批量查询这些 post 的 category_id
+            if reply_post_map:
+                post_ids_from_replies = list(reply_post_map.values())
+                reply_post_category_result = await db.execute(
+                    select(models.ForumPost.id, models.ForumPost.category_id)
+                    .where(models.ForumPost.id.in_(post_ids_from_replies))
+                )
+                post_id_to_category = {row[0]: row[1] for row in reply_post_category_result.all()}
+                # 构建 reply_id -> category_id 映射
+                reply_category_map = {
+                    reply_id: post_id_to_category.get(post_id)
+                    for reply_id, post_id in reply_post_map.items()
+                    if post_id in post_id_to_category
+                }
+        
+        # 过滤通知
+        for n in notifications:
+            has_permission = False
+            
+            if n.target_type == "post":
+                category_id = post_category_map.get(n.target_id)
+                if category_id and category_id in visible_category_ids:
+                    has_permission = True
+            elif n.target_type == "reply":
+                category_id = reply_category_map.get(n.target_id)
+                if category_id and category_id in visible_category_ids:
+                    has_permission = True
+            
+            # 只添加有权限访问的通知
+            if has_permission:
+                notification_list.append(schemas.ForumNotificationOut(
+                    id=n.id,
+                    notification_type=n.notification_type,
+                    target_type=n.target_type,
+                    target_id=n.target_id,
+                    from_user=schemas.UserInfo(
+                        id=n.from_user.id,
+                        name=n.from_user.name,
+                        avatar=n.from_user.avatar or None
+                    ) if n.from_user else None,
+                    is_read=n.is_read,
+                    created_at=n.created_at
+                ))
+    
+    # 重新计算总数和未读数（因为过滤了部分通知）
+    total = len(notification_list)
+    unread_count = sum(1 for n in notification_list if not n.is_read)
     
     return {
         "notifications": notification_list,
@@ -3194,15 +3982,92 @@ async def get_unread_notification_count(
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取未读通知数量"""
-    unread_count_result = await db.execute(
-        select(func.count(models.ForumNotification.id))
+    """获取未读通知数量（只统计用户有权限访问的板块的通知）"""
+    # 获取用户可见的板块ID列表
+    visible_category_ids = []
+    general_forums_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    general_ids = [row[0] for row in general_forums_result.all()]
+    visible_category_ids.extend(general_ids)
+    
+    # 添加可见的学校板块
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+    
+    # 查询未读通知
+    notifications_result = await db.execute(
+        select(models.ForumNotification)
         .where(
             models.ForumNotification.to_user_id == current_user.id,
             models.ForumNotification.is_read == False
         )
     )
-    unread_count = unread_count_result.scalar() or 0
+    notifications = notifications_result.scalars().all()
+    
+    # 过滤：只统计用户有权限访问的板块的通知
+    # 优化：批量查询所有通知目标的 category_id，避免 N+1 查询问题
+    unread_count = 0
+    
+    if notifications:
+        # 分离 post 和 reply 类型的通知
+        post_notifications = [n for n in notifications if n.target_type == "post"]
+        reply_notifications = [n for n in notifications if n.target_type == "reply"]
+        
+        # 批量查询所有 post 的 category_id
+        post_category_map = {}
+        if post_notifications:
+            post_ids = [n.target_id for n in post_notifications]
+            post_category_result = await db.execute(
+                select(models.ForumPost.id, models.ForumPost.category_id)
+                .where(models.ForumPost.id.in_(post_ids))
+            )
+            post_category_map = {row[0]: row[1] for row in post_category_result.all()}
+        
+        # 批量查询所有 reply 的 post_id，然后批量查询 post 的 category_id
+        reply_post_map = {}
+        reply_category_map = {}
+        if reply_notifications:
+            reply_ids = [n.target_id for n in reply_notifications]
+            reply_post_result = await db.execute(
+                select(models.ForumReply.id, models.ForumReply.post_id)
+                .where(models.ForumReply.id.in_(reply_ids))
+            )
+            reply_post_map = {row[0]: row[1] for row in reply_post_result.all()}
+            
+            # 批量查询这些 post 的 category_id
+            if reply_post_map:
+                post_ids_from_replies = list(reply_post_map.values())
+                reply_post_category_result = await db.execute(
+                    select(models.ForumPost.id, models.ForumPost.category_id)
+                    .where(models.ForumPost.id.in_(post_ids_from_replies))
+                )
+                post_id_to_category = {row[0]: row[1] for row in reply_post_category_result.all()}
+                # 构建 reply_id -> category_id 映射
+                reply_category_map = {
+                    reply_id: post_id_to_category.get(post_id)
+                    for reply_id, post_id in reply_post_map.items()
+                    if post_id in post_id_to_category
+                }
+        
+        # 统计有权限的通知数量
+        for n in notifications:
+            has_permission = False
+            
+            if n.target_type == "post":
+                category_id = post_category_map.get(n.target_id)
+                if category_id and category_id in visible_category_ids:
+                    has_permission = True
+            elif n.target_type == "reply":
+                category_id = reply_category_map.get(n.target_id)
+                if category_id and category_id in visible_category_ids:
+                    has_permission = True
+            
+            if has_permission:
+                unread_count += 1
     
     return {"unread_count": unread_count}
 
@@ -3239,6 +4104,9 @@ async def get_my_posts(
             headers={"X-Error-Code": "UNAUTHORIZED"}
         )
     
+    # 检查是否为管理员
+    is_admin_user = admin_user is not None
+    
     # 构建查询：支持普通用户和管理员
     if admin_user:
         # 管理员查看自己的帖子
@@ -3274,9 +4142,35 @@ async def get_my_posts(
     result = await db.execute(query)
     posts = result.scalars().all()
     
-    # 转换为列表项格式
+    # 转换为列表项格式，并过滤掉用户无权限访问的学校板块
     post_items = []
+    # 获取用户可见的板块ID列表（用于过滤）
+    visible_category_ids = None
+    # 检查是否为管理员
+    is_admin_user = admin_user is not None
+    if not is_admin_user:
+        visible_category_ids = []
+        # 添加所有普通板块
+        general_forums_result = await db.execute(
+            select(models.ForumCategory.id).where(
+                models.ForumCategory.type == 'general',
+                models.ForumCategory.is_visible == True
+            )
+        )
+        general_ids = [row[0] for row in general_forums_result.all()]
+        visible_category_ids.extend(general_ids)
+        
+        # 如果用户已登录，添加可见的学校板块
+        if current_user:
+            school_ids = await visible_forums(current_user, db)
+            visible_category_ids.extend(school_ids)
+    
     for post in posts:
+        # 如果不是管理员，过滤掉无权限访问的学校板块
+        if not is_admin_user and visible_category_ids is not None:
+            if post.category_id not in visible_category_ids:
+                continue
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
@@ -3294,6 +4188,25 @@ async def get_my_posts(
             created_at=post.created_at,
             last_reply_at=post.last_reply_at
         ))
+    
+    # 重新计算总数（因为过滤了部分帖子）
+    if not is_admin_user and visible_category_ids is not None:
+        # 重新查询过滤后的总数
+        filtered_query = select(models.ForumPost)
+        if admin_user:
+            filtered_query = filtered_query.where(
+                models.ForumPost.admin_author_id == admin_user.id,
+                models.ForumPost.is_deleted == False
+            )
+        else:
+            filtered_query = filtered_query.where(
+                models.ForumPost.author_id == current_user.id,
+                models.ForumPost.is_deleted == False
+            )
+        filtered_query = filtered_query.where(models.ForumPost.category_id.in_(visible_category_ids))
+        filtered_count_query = select(func.count()).select_from(filtered_query.subquery())
+        filtered_total_result = await db.execute(filtered_count_query)
+        total = filtered_total_result.scalar() or 0
     
     return {
         "posts": post_items,
@@ -3336,9 +4249,28 @@ async def get_my_replies(
     result = await db.execute(query)
     replies = result.scalars().all()
     
-    # 转换为输出格式
+    # 获取用户可见的板块ID列表（用于过滤学校板块）
+    visible_category_ids = []
+    general_forums_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    general_ids = [row[0] for row in general_forums_result.all()]
+    visible_category_ids.extend(general_ids)
+    
+    # 添加可见的学校板块
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+    
+    # 转换为输出格式，并过滤掉用户无权限访问的学校板块的回复
     reply_list = []
     for reply in replies:
+        # 检查回复所属帖子所属板块是否有权限访问
+        if reply.post.category_id not in visible_category_ids:
+            continue
+        
         reply_list.append(schemas.ForumReplyOut(
             id=reply.id,
             content=reply.content,
@@ -3393,12 +4325,29 @@ async def get_my_favorites(
     result = await db.execute(query)
     favorites = result.scalars().all()
     
-    # 转换为输出格式
+    # 获取用户可见的板块ID列表（用于过滤学校板块）
+    visible_category_ids = []
+    general_forums_result = await db.execute(
+        select(models.ForumCategory.id).where(
+            models.ForumCategory.type == 'general',
+            models.ForumCategory.is_visible == True
+        )
+    )
+    general_ids = [row[0] for row in general_forums_result.all()]
+    visible_category_ids.extend(general_ids)
+    
+    # 添加可见的学校板块
+    school_ids = await visible_forums(current_user, db)
+    visible_category_ids.extend(school_ids)
+    
+    # 转换为输出格式，并过滤掉用户无权限访问的学校板块
     favorite_list = []
     for favorite in favorites:
         post = favorite.post
-        # 只返回可见的帖子
-        if post.is_deleted == False and post.is_visible == True:
+        # 只返回可见的帖子，且用户有权限访问的板块
+        if (post.is_deleted == False and 
+            post.is_visible == True and 
+            post.category_id in visible_category_ids):
             favorite_list.append(schemas.ForumFavoriteOut(
                 id=favorite.id,
                 post=schemas.ForumPostListItem(
@@ -3835,15 +4784,53 @@ async def get_hot_posts(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取热门帖子（按热度排序）"""
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
     # 构建基础查询
     query = select(models.ForumPost).where(
         models.ForumPost.is_deleted == False,
         models.ForumPost.is_visible == True
     )
     
-    # 板块筛选
+    # 板块筛选和权限检查
     if category_id:
+        # 检查板块可见性（学校板块需要权限）
+        if not is_admin:
+            await assert_forum_visible(current_user, category_id, db, raise_exception=True)
         query = query.where(models.ForumPost.category_id == category_id)
+    else:
+        # 如果没有指定板块，需要过滤掉用户无权限访问的学校板块
+        if not is_admin:
+            # 获取用户可见的板块ID列表
+            visible_category_ids = []
+            
+            # 1. 添加所有普通板块
+            general_forums_result = await db.execute(
+                select(models.ForumCategory.id).where(
+                    models.ForumCategory.type == 'general',
+                    models.ForumCategory.is_visible == True
+                )
+            )
+            general_ids = [row[0] for row in general_forums_result.all()]
+            visible_category_ids.extend(general_ids)
+            
+            # 2. 如果用户已登录，添加可见的学校板块
+            if current_user:
+                school_ids = await visible_forums(current_user, db)
+                visible_category_ids.extend(school_ids)
+            
+            # 3. 只搜索可见板块的帖子
+            if visible_category_ids:
+                query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+            else:
+                # 如果用户没有任何可见板块，返回空结果
+                query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
     # 热度排序：综合评分公式
     hot_score = (
@@ -3998,12 +4985,47 @@ async def get_user_hot_posts(
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取用户发布的最热门帖子"""
+    # 检查是否为管理员
+    is_admin = False
+    try:
+        await get_current_admin_async(request, db)
+        is_admin = True
+    except HTTPException:
+        pass
+    
     # 构建查询：获取指定用户的帖子
     query = select(models.ForumPost).where(
         models.ForumPost.author_id == user_id,
         models.ForumPost.is_deleted == False,
         models.ForumPost.is_visible == True
     )
+    
+    # 如果不是管理员，需要过滤掉用户无权限访问的学校板块
+    if not is_admin:
+        # 获取用户可见的板块ID列表
+        visible_category_ids = []
+        
+        # 1. 添加所有普通板块
+        general_forums_result = await db.execute(
+            select(models.ForumCategory.id).where(
+                models.ForumCategory.type == 'general',
+                models.ForumCategory.is_visible == True
+            )
+        )
+        general_ids = [row[0] for row in general_forums_result.all()]
+        visible_category_ids.extend(general_ids)
+        
+        # 2. 如果用户已登录，添加可见的学校板块
+        if current_user:
+            school_ids = await visible_forums(current_user, db)
+            visible_category_ids.extend(school_ids)
+        
+        # 3. 只返回可见板块的帖子
+        if visible_category_ids:
+            query = query.where(models.ForumPost.category_id.in_(visible_category_ids))
+        else:
+            # 如果用户没有任何可见板块，返回空结果
+            query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
     # 热度排序：综合评分公式
     hot_score = (

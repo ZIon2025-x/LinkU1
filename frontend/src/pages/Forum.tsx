@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import { getForumCategories, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
+import { getVisibleForums, fetchCurrentUser, getPublicSystemSettings, logout } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -72,20 +72,20 @@ const Forum: React.FC = () => {
     getPublicSystemSettings().then(setSystemSettings).catch(() => {
       setSystemSettings({ vip_button_visible: false });
     });
-  }, []);
+  }, [currentUser]); // 当用户登录/退出时刷新板块列表
 
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const response = await getForumCategories(true); // 包含最新帖子信息
-            const categoriesData = response.categories || [];
-            // 调试：检查每个板块的 latest_post
-      categoriesData.forEach((cat: ForumCategory) => {
-              });
+      // 使用新的可见板块接口，自动根据用户身份返回可见板块
+      const response = await getVisibleForums(false);
+      const categoriesData = response.categories || [];
       
       setCategories(categoriesData);
     } catch (error: any) {
-            // API失败时设置为空数组，显示"暂无板块"提示
+      // API失败时设置为空数组，显示"暂无板块"提示
+      // 如果是权限错误（404），也显示空数组（隐藏学校板块存在性）
+      console.error('加载板块列表失败:', error);
       setCategories([]);
     } finally {
       setLoading(false);

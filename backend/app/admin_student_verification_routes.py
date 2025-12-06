@@ -177,6 +177,16 @@ def revoke_verification(
     db.commit()
     db.refresh(verification)
     
+    # 清除用户的论坛可见板块缓存（认证状态变更）
+    try:
+        from app.forum_routes import invalidate_forum_visibility_cache
+        invalidate_forum_visibility_cache(verification.user_id)
+    except Exception as e:
+        # 缓存失效失败不影响主流程
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"清除用户 {verification.user_id} 的论坛可见板块缓存失败: {e}")
+    
     # 异步发送撤销通知邮件
     background_tasks.add_task(
         send_revocation_notification_email,

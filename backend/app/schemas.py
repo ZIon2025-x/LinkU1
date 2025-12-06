@@ -2307,6 +2307,10 @@ class ForumCategoryBase(BaseModel):
     sort_order: int = Field(0, ge=0)
     is_visible: bool = True
     is_admin_only: bool = False
+    # 学校板块访问控制字段
+    type: Optional[str] = Field('general', description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
+    university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
 
 
 class ForumCategoryCreate(ForumCategoryBase):
@@ -2320,6 +2324,10 @@ class ForumCategoryUpdate(BaseModel):
     sort_order: Optional[int] = Field(None, ge=0)
     is_visible: Optional[bool] = None
     is_admin_only: Optional[bool] = None
+    # 学校板块访问控制字段
+    type: Optional[str] = Field(None, description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
+    university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
 
 
 class ForumCategoryOut(ForumCategoryBase):
@@ -2329,6 +2337,10 @@ class ForumCategoryOut(ForumCategoryBase):
     created_at: datetime.datetime
     updated_at: datetime.datetime
     latest_post: Optional["LatestPostInfo"] = None  # 最新帖子信息（可选，仅在 include_latest_post=True 时包含）
+    # 学校板块访问控制字段
+    type: Optional[str] = Field(None, description="板块类型: general(普通), root(国家/地区级大板块), university(大学级小板块)")
+    country: Optional[str] = Field(None, description="国家代码（如 UK），仅 type=root 时使用")
+    university_code: Optional[str] = Field(None, description="大学编码（如 UOB），仅 type=university 时使用")
     
     class Config:
         from_attributes = True

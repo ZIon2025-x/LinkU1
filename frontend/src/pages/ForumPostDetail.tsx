@@ -485,10 +485,21 @@ const ForumPostDetail: React.FC = () => {
   const loadPost = async () => {
     try {
       setLoading(true);
+      // 注意：如果帖子属于学校板块，后端会自动进行权限校验
+      // 无权限时会返回404，这里会被catch捕获
       const response = await getForumPost(Number(postId));
       setPost(response);
     } catch (error: any) {
-            message.error(error.response?.data?.detail || t('forum.error'));
+      // 如果是404错误，可能是权限问题（学校板块对普通用户不可见）
+      if (error.response?.status === 404) {
+        message.error('帖子不存在或无访问权限，请确认您已通过学生认证');
+        // 延迟跳转，让用户看到错误提示
+        setTimeout(() => {
+          navigate(`/${lang}/forum`);
+        }, 2000);
+      } else {
+        message.error(error.response?.data?.detail || t('forum.error'));
+      }
     } finally {
       setLoading(false);
     }

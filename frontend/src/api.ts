@@ -2232,6 +2232,19 @@ export const completeTaskAndDistributeRewardsCustom = async (
 // ==================== 论坛 API ====================
 
 // 板块相关
+// 注意：应使用 getVisibleForums 获取用户可见的板块列表（包含权限控制）
+// getForumCategories 仅用于管理员查看全部板块
+export const getVisibleForums = async (includeAll: boolean = false, viewAs?: string) => {
+  const res = await api.get('/api/forum/forums/visible', {
+    params: { 
+      include_all: includeAll,
+      ...(viewAs && { view_as: viewAs })
+    }
+  });
+  return res.data;
+};
+
+// 获取所有板块（管理员专用，已废弃，建议使用 getVisibleForums(includeAll=true)）
 export const getForumCategories = async (includeLatestPost: boolean = false) => {
   const res = await api.get('/api/forum/categories', {
     params: { include_latest_post: includeLatestPost }
@@ -2252,6 +2265,10 @@ export const createForumCategory = async (category: {
   sort_order?: number;
   is_visible?: boolean;
   is_admin_only?: boolean;
+  // 学校板块访问控制字段
+  type?: 'general' | 'root' | 'university';
+  country?: string;
+  university_code?: string;
 }) => {
   const res = await api.post('/api/forum/categories', category);
   return res.data;
@@ -2265,6 +2282,10 @@ export const updateForumCategory = async (categoryId: number, category: {
   sort_order?: number;
   is_visible?: boolean;
   is_admin_only?: boolean;
+  // 学校板块访问控制字段
+  type?: 'general' | 'root' | 'university';
+  country?: string;
+  university_code?: string;
 }) => {
   const res = await api.put(`/api/forum/categories/${categoryId}`, category);
   return res.data;

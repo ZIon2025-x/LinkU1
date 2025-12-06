@@ -4,7 +4,7 @@ import { Card, Form, Input, Button, Select, message, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useCurrentUser } from '../contexts/AuthContext';
-import api, { getForumCategories, createForumPost, updateForumPost, getForumPost, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
+import api, { getVisibleForums, createForumPost, updateForumPost, getForumPost, fetchCurrentUser, getPublicSystemSettings, logout, getForumUnreadNotificationCount } from '../api';
 import { useUnreadMessages } from '../contexts/UnreadMessageContext';
 import SEOHead from '../components/SEOHead';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -88,29 +88,20 @@ const ForumCreatePost: React.FC = () => {
 
   const loadCategories = async () => {
     try {
-      const response = await getForumCategories();
-      const allCategories = response.categories || [];
+      // 使用新的可见板块接口，自动根据用户身份返回可见板块（包括权限控制）
+      // 注意：此接口会自动过滤掉用户无权限访问的学校板块
+      const response = await getVisibleForums(false);
+      const visibleCategories = response.categories || [];
       
-      // 检查用户是否为管理员
-      let isAdmin = false;
-      try {
-        // 尝试获取管理员信息来判断是否为管理员
-        const adminCheck = await api.get('/api/admin/me');
-        if (adminCheck.data) {
-          isAdmin = true;
-        }
-      } catch (error) {
-        // 不是管理员，忽略错误
-      }
-      
-      // 如果不是管理员，过滤掉禁止用户发帖的板块
-      const filteredCategories = isAdmin 
-        ? allCategories 
-        : allCategories.filter((cat: any) => !cat.is_admin_only);
+      // 过滤掉 is_admin_only 的板块（普通用户不能在这些板块发帖）
+      // 注意：后端接口应该已经过滤了，这里作为双重保险
+      const filteredCategories = visibleCategories.filter((cat: any) => !cat.is_admin_only);
       
       setCategories(filteredCategories);
     } catch (error: any) {
-          }
+      console.error('加载板块列表失败:', error);
+      setCategories([]);
+    }
   };
 
   const loadPost = async () => {

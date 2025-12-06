@@ -7222,9 +7222,26 @@ def delete_expert_activity_admin(
         if related_tasks:
             # 先删除任务的时间段关联，避免 task_id 置空触发 NOT NULL 约束
             task_ids = [t.id for t in related_tasks]
+            
+            # 清理任务相关的历史/审计/奖励/参与者，防止外键约束阻止删除
+            db.query(models.TaskHistory).filter(
+                models.TaskHistory.task_id.in_(task_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.TaskAuditLog).filter(
+                models.TaskAuditLog.task_id.in_(task_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.TaskParticipantReward).filter(
+                models.TaskParticipantReward.task_id.in_(task_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.TaskParticipant).filter(
+                models.TaskParticipant.task_id.in_(task_ids)
+            ).delete(synchronize_session=False)
             db.query(models.TaskTimeSlotRelation).filter(
                 models.TaskTimeSlotRelation.task_id.in_(task_ids)
             ).delete(synchronize_session=False)
+            
+            # 确保子表删除语句立即执行，避免后续删除任务时触发外键约束
+            db.flush()
             
             for task in related_tasks:
                 db.delete(task)

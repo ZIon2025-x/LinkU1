@@ -97,7 +97,15 @@ const ForumPostList: React.FC = () => {
       const response = await getForumCategory(Number(categoryId));
       setCategory(response);
     } catch (error: any) {
-          }
+      // 如果是404错误，可能是权限问题（学校板块对普通用户不可见）
+      if (error.response?.status === 404) {
+        // 显示友好提示并跳转回论坛首页
+        message.error('板块不存在或无访问权限');
+        navigate(`/${lang}/forum`);
+      } else {
+        console.error('加载板块失败:', error);
+      }
+    }
   };
 
   const loadPosts = async () => {
@@ -116,7 +124,16 @@ const ForumPostList: React.FC = () => {
       setPosts(response.posts || []);
       setTotal(response.total || 0);
     } catch (error: any) {
-            message.error(t('forum.error'));
+      // 如果是404错误，可能是权限问题（学校板块对普通用户不可见）
+      if (error.response?.status === 404) {
+        message.error('板块不存在或无访问权限，请确认您已通过学生认证');
+        // 延迟跳转，让用户看到错误提示
+        setTimeout(() => {
+          navigate(`/${lang}/forum`);
+        }, 2000);
+      } else {
+        message.error(t('forum.error'));
+      }
     } finally {
       setLoading(false);
     }

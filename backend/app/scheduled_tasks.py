@@ -323,6 +323,14 @@ def process_expired_verifications(db: Session):
             verification.status = 'expired'
             verification.updated_at = now
             
+            # 清除用户的论坛可见板块缓存（认证状态变更）
+            try:
+                from app.forum_routes import invalidate_forum_visibility_cache
+                invalidate_forum_visibility_cache(verification.user_id)
+            except Exception as e:
+                # 缓存失效失败不影响主流程
+                logger.warning(f"清除用户 {verification.user_id} 的论坛可见板块缓存失败: {e}")
+            
             # 记录历史
             history = models.VerificationHistory(
                 verification_id=verification.id,

@@ -1921,6 +1921,10 @@ class ForumCategory(Base):
     is_admin_only = Column(Boolean, default=False, server_default=text('false'))
     post_count = Column(Integer, default=0, server_default=text('0'))
     last_post_at = Column(DateTime(timezone=True), nullable=True)
+    # 学校板块访问控制字段
+    type = Column(String(20), default='general', server_default=text("'general'"))  # general, root, university
+    country = Column(String(10), nullable=True)  # 国家代码（如 UK），仅 type=root 时使用
+    university_code = Column(String(50), nullable=True)  # 大学编码（如 UOB），仅 type=university 时使用
     created_at = Column(DateTime(timezone=True), default=get_utc_time, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time, server_default=func.now())
     
@@ -1929,6 +1933,8 @@ class ForumCategory(Base):
     
     __table_args__ = (
         Index("idx_forum_categories_visible", is_visible, sort_order),
+        Index("idx_forum_categories_type_country", type, country),
+        Index("idx_forum_categories_university_code", university_code),
     )
 
 
@@ -2400,6 +2406,9 @@ class University(Base):
     email_domain = Column(String(255), nullable=False, unique=True)  # 邮箱域名（如 bristol.ac.uk）
     domain_pattern = Column(String(255), nullable=False)  # 匹配模式（支持通配符）
     is_active = Column(Boolean, default=True)  # 是否启用
+    # 学校板块访问控制字段
+    country = Column(String(10), nullable=True)  # 国家代码（如 UK），用于判断是否英国大学
+    code = Column(String(50), nullable=True, unique=True)  # 大学编码（如 UOB），用于与 forum_categories.university_code 关联
     created_at = Column(DateTime(timezone=True), default=get_utc_time)
     updated_at = Column(DateTime(timezone=True), default=get_utc_time, onupdate=get_utc_time)
     
@@ -2409,6 +2418,8 @@ class University(Base):
     __table_args__ = (
         Index('idx_universities_email_domain', 'email_domain'),
         Index('idx_universities_is_active', 'is_active'),
+        Index('idx_universities_country', 'country'),
+        Index('idx_universities_code', 'code'),
     )
 
 
