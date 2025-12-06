@@ -7220,9 +7220,15 @@ def delete_expert_activity_admin(
         
         deleted_tasks_count = len(related_tasks)
         if related_tasks:
+            # 先删除任务的时间段关联，避免 task_id 置空触发 NOT NULL 约束
+            task_ids = [t.id for t in related_tasks]
+            db.query(models.TaskTimeSlotRelation).filter(
+                models.TaskTimeSlotRelation.task_id.in_(task_ids)
+            ).delete(synchronize_session=False)
+            
             for task in related_tasks:
                 db.delete(task)
-            logger.info(f"管理员 {current_admin.id} 删除活动 {activity_id} 时级联删除了 {deleted_tasks_count} 个关联任务")
+            logger.info(f"管理员 {current_admin.id} 删除活动 {activity_id} 时级联删除了 {deleted_tasks_count} 个关联任务（含时间段关联）")
         
         # 删除活动
         db.delete(activity)
