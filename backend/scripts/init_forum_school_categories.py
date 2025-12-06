@@ -41,7 +41,7 @@ UNIVERSITY_CODE_MAP = {
     'ucl.ac.uk': 'UCL',
     'kcl.ac.uk': 'KCL',
     'manchester.ac.uk': 'UOM',
-    'ed.ac.uk': 'UOE',
+    'ed.ac.uk': 'UOE',  # Edinburgh
     'bham.ac.uk': 'UOBH',
     'leeds.ac.uk': 'UOL',
     'liverpool.ac.uk': 'UOLP',
@@ -51,7 +51,7 @@ UNIVERSITY_CODE_MAP = {
     'warwick.ac.uk': 'UOW',
     'york.ac.uk': 'UOY',
     'durham.ac.uk': 'UDU',
-    'essex.ac.uk': 'UOE',
+    'essex.ac.uk': 'UOES',  # Essex，避免与 Edinburgh (UOE) 冲突
     'student.gla.ac.uk': 'UOG',  # Glasgow
     'gla.ac.uk': 'UOG',  # Glasgow 备用
 }
@@ -116,44 +116,99 @@ def init_university_codes(db: Session):
     updated_count = 0
     skipped_count = 0
     
+    # 第一遍：收集所有需要更新的大学和它们的编码
+    pending_updates = []
+    used_codes = set()
+    
     for uni in universities:
         # 如果已有编码，跳过
         if uni.code:
             logger.debug(f"大学 {uni.name} ({uni.email_domain}) 已有编码: {uni.code}")
+            used_codes.add(uni.code)
             skipped_count += 1
             continue
         
         # 生成编码
         code = generate_university_code(uni.email_domain, uni.name)
         
-        # 检查编码是否已存在（唯一性约束）
+        # 检查编码是否已被使用
+        if code in used_codes:
+            # 如果编码冲突，添加后缀
+            counter = 1
+            original_code = code
+            while code in used_codes:
+                code = f"{original_code}{counter}"
+                counter += 1
+            logger.warning(f"编码冲突，使用新编码: {uni.name} -> {code} (原: {original_code})")
+        
+        # 检查数据库中是否已存在该编码
         existing = db.query(models.University).filter(
             models.University.code == code,
             models.University.id != uni.id
         ).first()
         
         if existing:
-            # 如果编码冲突，添加后缀
+            # 如果数据库中已存在，添加后缀
             counter = 1
             original_code = code
             while existing:
                 code = f"{original_code}{counter}"
-                existing = db.query(models.University).filter(
-                    models.University.code == code,
-                    models.University.id != uni.id
-                ).first()
+                # 同时检查是否在待更新列表中
+                if code not in used_codes:
+                    existing = db.query(models.University).filter(
+                        models.University.code == code,
+                        models.University.id != uni.id
+                    ).first()
+                else:
+                    existing = True  # 在待更新列表中，继续循环
                 counter += 1
-            logger.warning(f"编码冲突，使用新编码: {uni.name} -> {code} (原: {original_code})")
+            logger.warning(f"编码冲突（数据库），使用新编码: {uni.name} -> {code} (原: {original_code})")
         
-        # 更新编码
-        uni.code = code
-        if not uni.country:
-            uni.country = 'UK'
-        
-        updated_count += 1
-        logger.info(f"✓ {uni.name} ({uni.email_domain}) -> {code}")
+        # 添加到待更新列表
+        used_codes.add(code)
+        pending_updates.append((uni, code))
     
-    db.commit()
+    # 第二遍：逐个更新，避免批量更新时的冲突
+    for uni, code in pending_updates:
+        try:
+            uni.code = code
+            if not uni.country:
+                uni.country = 'UK'
+            db.commit()
+            updated_count += 1
+            logger.info(f"✓ {uni.name} ({uni.email_domain}) -> {code}")
+        except Exception as e:
+            db.rollback()
+            # 如果仍然冲突，尝试添加后缀
+            counter = 1
+            original_code = code
+            success = False
+            while counter <= 100:  # 防止无限循环
+                new_code = f"{original_code}{counter}"
+                try:
+                    # 先检查新编码是否可用
+                    existing = db.query(models.University).filter(
+                        models.University.code == new_code
+                    ).first()
+                    if existing:
+                        counter += 1
+                        continue
+                    
+                    uni.code = new_code
+                    if not uni.country:
+                        uni.country = 'UK'
+                    db.commit()
+                    updated_count += 1
+                    logger.warning(f"编码冲突（提交时），使用新编码: {uni.name} -> {new_code} (原: {original_code})")
+                    success = True
+                    break
+                except Exception as commit_err:
+                    db.rollback()
+                    counter += 1
+            
+            if not success:
+                logger.error(f"无法为 {uni.name} ({uni.email_domain}) 生成唯一编码，跳过。错误: {e}")
+    
     logger.info(f"✅ 大学编码初始化完成: 更新 {updated_count} 个，跳过 {skipped_count} 个")
 
 
