@@ -474,6 +474,9 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
     university_code = None
     if hasattr(university, 'code') and university.code:
         university_code = university.code
+        logger.debug(f"用户 {user.id} 的大学 {university.name} 编码: {university_code}")
+    else:
+        logger.warning(f"用户 {user.id} 的大学 {university.name} ({university.email_domain}) 缺少 code 字段，无法显示大学板块。请运行 init_forum_school_categories.py 脚本初始化大学编码。")
     # 如果没有 code 字段，可通过 email_domain 映射（需实现映射函数）
     # 当前版本暂不支持，需要先填充 universities.code 字段
     
@@ -491,6 +494,7 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
     root_id = root_forum_result.scalar_one_or_none()
     if root_id:
         forums.append(root_id)
+        logger.debug(f"添加英国留学生大板块 ID: {root_id}")
     
     # 2. 添加用户所属大学的板块
     if university_code:
@@ -505,6 +509,11 @@ async def visible_forums(user: Optional[models.User], db: AsyncSession) -> List[
         uni_id = university_forum_result.scalar_one_or_none()
         if uni_id:
             forums.append(uni_id)
+            logger.debug(f"添加大学板块 ID: {uni_id} (university_code: {university_code})")
+        else:
+            logger.warning(f"未找到 university_code='{university_code}' 的大学板块。请运行 init_forum_school_categories.py 脚本创建大学板块。")
+    else:
+        logger.debug(f"用户 {user.id} 的大学没有编码，跳过大学板块查询")
     
     # 缓存结果（默认启用缓存）
     try:
@@ -910,32 +919,29 @@ async def get_visible_forums(
                 
                 visible_ids = await visible_forums(target_user, db)
                 if not visible_ids:
-                    # 返回普通板块（排除 is_admin_only 的板块）
+                    # 返回普通板块（用户可以查看，但不能发帖）
                     forums_result = await db.execute(
                         select(models.ForumCategory)
                         .where(
                             models.ForumCategory.type == 'general',
-                            models.ForumCategory.is_visible == True,
-                            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                            models.ForumCategory.is_visible == True
                         )
                         .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
                     )
                     forums = forums_result.scalars().all()
                     return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
                 
-                # 返回该用户可见的板块（排除 is_admin_only 的板块）
+                # 返回该用户可见的板块（用户可以查看，但不能发帖）
                 school_forums_result = await db.execute(
                     select(models.ForumCategory).where(
                         models.ForumCategory.id.in_(visible_ids),
-                        models.ForumCategory.is_visible == True,
-                        models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                        models.ForumCategory.is_visible == True
                     )
                 )
                 general_forums_result = await db.execute(
                     select(models.ForumCategory).where(
                         models.ForumCategory.type == 'general',
-                        models.ForumCategory.is_visible == True,
-                        models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                        models.ForumCategory.is_visible == True
                     )
                 )
                 school_forums = school_forums_result.scalars().all()
@@ -973,14 +979,14 @@ async def get_visible_forums(
             pass
     
     # 普通用户：根据身份返回可见板块
+    # 注意：is_admin_only 只控制发帖权限，不影响查看权限，所以这里不过滤 is_admin_only
     if not current_user:
-        # 未登录：仅返回普通板块（排除 is_admin_only 的板块）
+        # 未登录：仅返回普通板块（用户可以查看，但不能发帖）
         forums_result = await db.execute(
             select(models.ForumCategory)
             .where(
                 models.ForumCategory.type == 'general',
-                models.ForumCategory.is_visible == True,
-                models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                models.ForumCategory.is_visible == True
             )
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
         )
@@ -991,32 +997,29 @@ async def get_visible_forums(
     visible_ids = await visible_forums(current_user, db)
     
     if not visible_ids:
-        # 未学生认证：仅返回普通板块（排除 is_admin_only 的板块）
+        # 未学生认证：仅返回普通板块（用户可以查看，但不能发帖）
         forums_result = await db.execute(
             select(models.ForumCategory)
             .where(
                 models.ForumCategory.type == 'general',
-                models.ForumCategory.is_visible == True,
-                models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+                models.ForumCategory.is_visible == True
             )
             .order_by(models.ForumCategory.sort_order, models.ForumCategory.created_at)
         )
         forums = forums_result.scalars().all()
         return {"categories": [schemas.ForumCategoryOut.model_validate(f) for f in forums]}
     
-    # 已认证学生：返回普通板块 + 可见的学校板块（排除 is_admin_only 的板块）
+    # 已认证学生：返回普通板块 + 可见的学校板块（用户可以查看，但不能发帖）
     school_forums_result = await db.execute(
         select(models.ForumCategory).where(
             models.ForumCategory.id.in_(visible_ids),
-            models.ForumCategory.is_visible == True,
-            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+            models.ForumCategory.is_visible == True
         )
     )
     general_forums_result = await db.execute(
         select(models.ForumCategory).where(
             models.ForumCategory.type == 'general',
-            models.ForumCategory.is_visible == True,
-            models.ForumCategory.is_admin_only == False  # 排除仅管理员可发帖的板块
+            models.ForumCategory.is_visible == True
         )
     )
     school_forums = school_forums_result.scalars().all()
