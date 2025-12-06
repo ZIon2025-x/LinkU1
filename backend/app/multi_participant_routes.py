@@ -915,6 +915,106 @@ def distribute_rewards_equal(
 # 任务达人API：创建达人多人任务
 # ===========================================
 
+def is_activity_expired(activity: Activity, db: Session) -> bool:
+    """
+    检查活动是否已过期
+    
+    判断逻辑：
+    1. 对于时间段服务：
+       - 检查 activity_end_date（在 ActivityTimeSlotRelation 中）
+       - 检查最后一个时间段是否已结束
+       - 如果有重复规则且 auto_add_new_slots 为 True，还需要检查是否有未来的时间段
+    2. 对于非时间段服务：
+       - 检查 deadline 是否已过期
+    
+    Returns:
+        True: 活动已过期
+        False: 活动未过期
+    """
+    from datetime import date, timedelta
+    from datetime import datetime as dt_datetime, time as dt_time
+    from app.utils.time_utils import parse_local_as_utc, LONDON
+    
+    current_time = get_utc_time()
+    
+    # 时间段服务：检查活动结束日期和时间段
+    if activity.has_time_slots:
+        # 查询重复规则关联
+        recurring_relation = db.query(ActivityTimeSlotRelation).filter(
+            ActivityTimeSlotRelation.activity_id == activity.id,
+            ActivityTimeSlotRelation.relation_mode == "recurring"
+        ).first()
+        
+        # 检查是否达到截至日期
+        if recurring_relation and recurring_relation.activity_end_date:
+            today = date.today()
+            if today > recurring_relation.activity_end_date:
+                return True
+        
+        # 查询所有固定时间段关联
+        fixed_relations = db.query(ActivityTimeSlotRelation).filter(
+            ActivityTimeSlotRelation.activity_id == activity.id,
+            ActivityTimeSlotRelation.relation_mode == "fixed"
+        ).all()
+        
+        if fixed_relations:
+            # 获取所有关联的时间段ID
+            time_slot_ids = [r.time_slot_id for r in fixed_relations if r.time_slot_id]
+            if time_slot_ids:
+                # 查询所有时间段，按结束时间降序排列
+                time_slots = db.query(ServiceTimeSlot).filter(
+                    ServiceTimeSlot.id.in_(time_slot_ids)
+                ).order_by(ServiceTimeSlot.slot_end_datetime.desc()).all()
+                
+                if time_slots:
+                    # 获取最后一个时间段
+                    last_slot = time_slots[0]
+                    
+                    # 检查最后一个时间段是否已结束
+                    if last_slot.slot_end_datetime < current_time:
+                        # 如果活动有重复规则且auto_add_new_slots为True，检查是否有未来的时间段
+                        if recurring_relation and recurring_relation.auto_add_new_slots:
+                            # 检查是否还有未到期的匹配时间段（未来30天内）
+                            future_date = date.today() + timedelta(days=30)
+                            future_utc = parse_local_as_utc(
+                                dt_datetime.combine(future_date, dt_time(23, 59, 59)),
+                                LONDON
+                            )
+                            
+                            # 查询服务是否有未来的时间段
+                            service = db.query(TaskExpertService).filter(
+                                TaskExpertService.id == activity.expert_service_id
+                            ).first()
+                            
+                            if service:
+                                future_slot = db.query(ServiceTimeSlot).filter(
+                                    ServiceTimeSlot.service_id == service.id,
+                                    ServiceTimeSlot.slot_start_datetime > current_time,
+                                    ServiceTimeSlot.slot_start_datetime <= future_utc,
+                                    ServiceTimeSlot.is_manually_deleted == False
+                                ).first()
+                                
+                                if not future_slot:
+                                    # 没有未来的时间段，活动已过期
+                                    return True
+                        else:
+                            # 没有重复规则或auto_add_new_slots为False，最后一个时间段结束就过期
+                            return True
+        
+        # 检查活动本身的 activity_end_date（如果设置了）
+        if activity.activity_end_date:
+            today = date.today()
+            if today > activity.activity_end_date:
+                return True
+    
+    # 非时间段服务：检查截止日期
+    if not activity.has_time_slots and activity.deadline:
+        if current_time > activity.deadline:
+            return True
+    
+    return False
+
+
 @router.get("/activities", response_model=List[ActivityOut])
 def get_activities(
     expert_id: Optional[str] = None,
@@ -925,6 +1025,8 @@ def get_activities(
 ):
     """
     获取活动列表
+    
+    注意：已过期的活动会自动过滤，不在任务大厅显示
     """
     from app.models import Task, TaskParticipant
     from sqlalchemy import func
@@ -941,9 +1043,18 @@ def get_activities(
     
     activities = query.order_by(Activity.created_at.desc()).offset(offset).limit(limit).all()
     
-    # 计算每个活动的当前参与者数量
+    # 计算每个活动的当前参与者数量，并过滤已过期的活动
     result = []
+    
     for activity in activities:
+        # 实时检查活动是否已过期（即使状态还是 open）
+        # 如果活动已过期，不显示在任务大厅
+        # 注意：如果用户查看自己的活动（通过 expert_id 参数），即使已过期也显示
+        if not expert_id and activity.status == "open" and is_activity_expired(activity, db):
+            # 活动已过期，跳过不显示（除非是查看自己的活动）
+            # 注意：这里不更新数据库状态，由定时任务统一处理
+            continue
+        
         # 统计该活动关联的任务中，状态为 accepted, in_progress, completed 的参与者数量
         # 1. 多人任务的参与者（通过TaskParticipant表）
         # 只统计任务状态不是cancelled的任务中的参与者

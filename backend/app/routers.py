@@ -7191,7 +7191,13 @@ def delete_expert_activity_admin(
     current_admin=Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """删除任务达人的活动（管理员）"""
+    """
+    删除任务达人的活动（管理员）- 级联删除
+    
+    管理员权限：
+    - 可以删除任何状态的活动
+    - 级联删除：会自动删除该活动关联的所有任务（无论任务状态如何）
+    """
     try:
         # 验证任务达人是否存在
         expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
@@ -7206,58 +7212,28 @@ def delete_expert_activity_admin(
         if not activity:
             raise HTTPException(status_code=404, detail="活动不存在")
         
-        # 检查活动是否已结束
-        from app.utils.time_utils import get_utc_time
-        current_utc = get_utc_time()
-        is_expired = False
-        expiration_reason = ""
-        
-        # 检查截止日期（非时间段服务）
-        if activity.deadline:
-            if current_utc > activity.deadline:
-                is_expired = True
-                expiration_reason = "截止日期已过"
-        
-        # 检查活动结束日期（时间段服务）
-        if not is_expired and activity.activity_end_date:
-            from datetime import date
-            if current_utc.date() > activity.activity_end_date:
-                is_expired = True
-                expiration_reason = "活动结束日期已过"
-        
-        # 检查是否有任务正在使用这个活动（检查所有状态，因为数据库外键约束是 RESTRICT）
-        # 注意：数据库层面的 RESTRICT 约束会阻止删除任何引用此活动的任务，无论状态如何
-        all_tasks_using_activity = db.query(models.Task).filter(
+        # 级联删除逻辑：先删除所有关联的任务
+        # 注意：Task.participants 和 Task.time_slot_relations 配置了 cascade="all, delete-orphan"，会自动删除
+        related_tasks = db.query(models.Task).filter(
             models.Task.parent_activity_id == activity_id
-        ).count()
+        ).all()
         
-        if all_tasks_using_activity > 0:
-            # 如果活动已结束，只检查是否有已完成或进行中的任务（这些任务不应该被删除）
-            if is_expired:
-                active_tasks = db.query(models.Task).filter(
-                    models.Task.parent_activity_id == activity_id,
-                    models.Task.status.in_(["in_progress", "completed"])
-                ).count()
-                
-                if active_tasks > 0:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"无法删除活动，虽然活动已结束（{expiration_reason}），但有 {active_tasks} 个进行中或已完成的任务。请先处理相关任务后再删除。"
-                    )
-            else:
-                # 活动未结束，检查所有相关任务
-                if all_tasks_using_activity > 0:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"无法删除活动，活动尚未结束，且有 {all_tasks_using_activity} 个任务正在使用此活动。请先处理相关任务后再删除。"
-                    )
+        deleted_tasks_count = len(related_tasks)
+        if related_tasks:
+            for task in related_tasks:
+                db.delete(task)
+            logger.info(f"管理员 {current_admin.id} 删除活动 {activity_id} 时级联删除了 {deleted_tasks_count} 个关联任务")
         
+        # 删除活动
         db.delete(activity)
         db.commit()
         
         logger.info(f"管理员 {current_admin.id} 删除任务达人 {expert_id} 的活动 {activity_id}")
         
-        return {"message": "活动删除成功"}
+        return {
+            "message": "活动及关联任务删除成功",
+            "deleted_tasks_count": deleted_tasks_count
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -7267,7 +7243,7 @@ def delete_expert_activity_admin(
         if "foreign key constraint" in str(e).lower() or "referenced" in str(e).lower():
             raise HTTPException(
                 status_code=400,
-                detail="无法删除活动，因为有任务正在使用此活动。请先处理相关任务后再删除。"
+                detail=f"删除失败（外键约束）：{str(e)}"
             )
         raise HTTPException(status_code=500, detail=f"删除活动失败: {str(e)}")
 
