@@ -29,6 +29,7 @@ interface ForumNotification {
   notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
   target_type?: 'post' | 'reply';
   target_id?: number;
+  post_id?: number; // 帖子ID（当target_type="reply"时，表示该回复所属的帖子ID）
   from_user?: {
     id: string;
     name: string;
@@ -185,8 +186,13 @@ const ForumNotifications: React.FC = () => {
     }
     
     // 如果是论坛通知，跳转到帖子页面
-    if (notification.is_forum && notification.target_id) {
-      navigate(`/${lang}/forum/post/${notification.target_id}`);
+    if (notification.is_forum) {
+      // 如果有 post_id，使用 post_id（回复通知的情况）
+      // 否则使用 target_id（帖子通知的情况）
+      const postId = notification.post_id || notification.target_id;
+      if (postId) {
+        navigate(`/${lang}/forum/post/${postId}`);
+      }
     } else if (notification.related_id && notification.type === 'task_application') {
       // 如果是任务申请通知，跳转到任务详情页
       navigate(`/${lang}/task/${notification.related_id}`);

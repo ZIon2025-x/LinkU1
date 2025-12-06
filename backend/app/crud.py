@@ -1607,7 +1607,14 @@ def delete_task_safely(db: Session, task_id: int):
         # 5. 删除相关的任务历史
         db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
 
-        # 5. 查找并删除任务相关的消息、图片和文件
+        # 5.5. 删除相关的 TaskTimeSlotRelation 记录（必须在删除任务之前）
+        # 注意：虽然外键有 CASCADE，但显式删除可以避免 SQLAlchemy 尝试将 task_id 设置为 None
+        from app.models import TaskTimeSlotRelation
+        db.query(TaskTimeSlotRelation).filter(
+            TaskTimeSlotRelation.task_id == task_id
+        ).delete(synchronize_session=False)
+
+        # 6. 查找并删除任务相关的消息、图片和文件
         # 获取与任务相关的所有消息
         task_messages = db.query(Message).filter(Message.task_id == task_id).all()
         
@@ -1692,12 +1699,12 @@ def delete_task_safely(db: Session, task_id: int):
         # 删除消息记录（现在可以安全删除了，因为所有外键引用都已删除）
         db.query(Message).filter(Message.task_id == task_id).delete()
 
-        # 6. 最后删除任务本身（现在所有外键引用都已删除）
+        # 7. 最后删除任务本身（现在所有外键引用都已删除）
         db.delete(task)
 
         db.commit()
 
-        # 7. 更新相关用户的统计信息
+        # 8. 更新相关用户的统计信息
         update_user_statistics(db, poster_id)
         if taker_id:
             update_user_statistics(db, taker_id)

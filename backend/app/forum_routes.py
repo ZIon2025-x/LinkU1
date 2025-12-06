@@ -4299,11 +4299,19 @@ async def get_notifications(
             
             # 只添加有权限访问的通知
             if has_permission:
+                # 如果是回复类型的通知，需要添加帖子ID
+                post_id = None
+                if n.target_type == "reply":
+                    post_id = reply_post_map.get(n.target_id)
+                elif n.target_type == "post":
+                    post_id = n.target_id
+                
                 notification_list.append(schemas.ForumNotificationOut(
                     id=n.id,
                     notification_type=n.notification_type,
                     target_type=n.target_type,
                     target_id=n.target_id,
+                    post_id=post_id,
                     from_user=schemas.UserInfo(
                         id=n.from_user.id,
                         name=n.from_user.name,

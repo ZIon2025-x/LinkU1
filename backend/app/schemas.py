@@ -2548,6 +2548,7 @@ class ForumNotificationOut(BaseModel):
     notification_type: str
     target_type: str
     target_id: int
+    post_id: Optional[int] = None  # 帖子ID（当target_type="reply"时，表示该回复所属的帖子ID）
     from_user: Optional[UserInfo] = None
     is_read: bool
     created_at: datetime.datetime

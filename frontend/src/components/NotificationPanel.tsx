@@ -15,6 +15,7 @@ interface Notification {
   notification_type?: 'reply_post' | 'reply_reply' | 'like_post' | 'feature_post' | 'pin_post';
   target_type?: 'post' | 'reply';
   target_id?: number;
+  post_id?: number; // 帖子ID（当target_type="reply"时，表示该回复所属的帖子ID）
   from_user?: {
     id: string;
     name: string;
@@ -381,8 +382,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         // 忽略错误，继续跳转
       }
     }
-    if (notification.target_id) {
-      navigate(`/${lang}/forum/post/${notification.target_id}`);
+    // 如果有 post_id，使用 post_id（回复通知的情况）
+    // 否则使用 target_id（帖子通知的情况）
+    const postId = notification.post_id || notification.target_id;
+    if (postId) {
+      navigate(`/${lang}/forum/post/${postId}`);
       onClose();
     }
   };
