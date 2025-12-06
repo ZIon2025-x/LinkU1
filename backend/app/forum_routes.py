@@ -4714,7 +4714,8 @@ async def get_my_favorites(
     # 加载关联数据
     query = query.options(
         selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.category),
-        selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.author)
+        selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.author),
+        selectinload(models.ForumFavorite.post).selectinload(models.ForumPost.admin_author)
     )
     
     result = await db.execute(query)
@@ -4779,6 +4780,7 @@ async def get_my_likes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: models.User = Depends(get_current_user_secure_async_csrf),
+    request: Request = None,
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
     """获取我赞过的内容"""
@@ -4813,11 +4815,15 @@ async def get_my_likes(
                 .where(models.ForumPost.id == like.target_id)
                 .options(
                     selectinload(models.ForumPost.category),
-                    selectinload(models.ForumPost.author)
+                    selectinload(models.ForumPost.author),
+                    selectinload(models.ForumPost.admin_author)
                 )
             )
             post = post_result.scalar_one_or_none()
             if post and post.is_deleted == False and post.is_visible == True:
+                # 使用统一的作者信息获取函数（支持管理员和普通用户）
+                author_info = await get_post_author_info(db, post, request)
+                
                 like_list.append({
                     "target_type": "post",
                     "post": {
@@ -4829,9 +4835,9 @@ async def get_my_likes(
                             "name": post.category.name
                         },
                         "author": {
-                            "id": post.author.id,
-                            "name": post.author.name,
-                            "avatar": post.author.avatar or None
+                            "id": author_info.id,
+                            "name": author_info.name,
+                            "avatar": author_info.avatar or None
                         },
                         "view_count": post.view_count,
                         "reply_count": post.reply_count,
@@ -5518,11 +5524,17 @@ async def get_top_posts_leaderboard(
         start_time = None
     
     # 构建查询
+    # 只统计普通板块（type='general'）的帖子，确保公平性
     query = select(
         models.ForumPost.author_id,
         func.count(models.ForumPost.id).label("post_count")
+    ).join(
+        models.ForumCategory,
+        models.ForumPost.category_id == models.ForumCategory.id
     ).where(
-        models.ForumPost.is_deleted == False
+        models.ForumPost.is_deleted == False,
+        models.ForumPost.is_visible == True,
+        models.ForumCategory.type == 'general'  # 只统计普通板块
     )
     
     if start_time:
@@ -5535,6 +5547,7 @@ async def get_top_posts_leaderboard(
     
     # 获取用户信息
     user_list = []
+    rank = 1
     for user_id, post_count in top_users:
         user_result = await db.execute(
             select(models.User).where(models.User.id == user_id)
@@ -5547,8 +5560,10 @@ async def get_top_posts_leaderboard(
                     name=user.name,
                     avatar=user.avatar or None
                 ),
-                "post_count": post_count
+                "count": post_count,
+                "rank": rank
             })
+            rank += 1
     
     return {
         "period": period,
@@ -5556,13 +5571,13 @@ async def get_top_posts_leaderboard(
     }
 
 
-@router.get("/leaderboard/replies")
-async def get_top_replies_leaderboard(
+@router.get("/leaderboard/favorites")
+async def get_top_favorites_leaderboard(
     period: str = Query("all", regex="^(all|today|week|month)$", description="统计周期：all/today/week/month"),
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db_dependency),
 ):
-    """获取回复排行榜"""
+    """获取收藏排行榜（统计用户发布的帖子被收藏的总数）"""
     now = datetime.now(timezone.utc)
     
     # 根据周期设置时间范围
@@ -5575,38 +5590,48 @@ async def get_top_replies_leaderboard(
     else:  # all
         start_time = None
     
-    # 构建查询
+    # 构建查询：统计用户发布的帖子被收藏的总数
+    # 只统计普通板块（type='general'）的帖子，确保公平性
     query = select(
-        models.ForumReply.author_id,
-        func.count(models.ForumReply.id).label("reply_count")
+        models.ForumPost.author_id,
+        func.sum(models.ForumPost.favorite_count).label("favorite_count")
+    ).join(
+        models.ForumCategory,
+        models.ForumPost.category_id == models.ForumCategory.id
     ).where(
-        models.ForumReply.is_deleted == False
+        models.ForumPost.is_deleted == False,
+        models.ForumPost.is_visible == True,
+        models.ForumCategory.type == 'general'  # 只统计普通板块
     )
     
     if start_time:
-        query = query.where(models.ForumReply.created_at >= start_time)
+        query = query.where(models.ForumPost.created_at >= start_time)
     
-    query = query.group_by(models.ForumReply.author_id).order_by(func.count(models.ForumReply.id).desc()).limit(limit)
+    query = query.group_by(models.ForumPost.author_id).order_by(func.sum(models.ForumPost.favorite_count).desc()).limit(limit)
     
     result = await db.execute(query)
     top_users = result.all()
     
     # 获取用户信息
     user_list = []
-    for user_id, reply_count in top_users:
-        user_result = await db.execute(
-            select(models.User).where(models.User.id == user_id)
-        )
-        user = user_result.scalar_one_or_none()
-        if user:
-            user_list.append({
-                "user": schemas.UserInfo(
-                    id=user.id,
-                    name=user.name,
-                    avatar=user.avatar or None
-                ),
-                "reply_count": reply_count
-            })
+    rank = 1
+    for user_id, favorite_count in top_users:
+        if user_id:  # 排除管理员发帖（admin_author_id）
+            user_result = await db.execute(
+                select(models.User).where(models.User.id == user_id)
+            )
+            user = user_result.scalar_one_or_none()
+            if user:
+                user_list.append({
+                    "user": schemas.UserInfo(
+                        id=user.id,
+                        name=user.name,
+                        avatar=user.avatar or None
+                    ),
+                    "count": favorite_count or 0,
+                    "rank": rank
+                })
+                rank += 1
     
     return {
         "period": period,
@@ -5674,6 +5699,7 @@ async def get_top_likes_leaderboard(
     
     # 获取用户信息
     user_list = []
+    rank = 1
     for user_id, likes_count in sorted_users:
         user_result = await db.execute(
             select(models.User).where(models.User.id == user_id)
@@ -5686,8 +5712,10 @@ async def get_top_likes_leaderboard(
                     name=user.name,
                     avatar=user.avatar or None
                 ),
-                "likes_received": likes_count
+                "count": likes_count,
+                "rank": rank
             })
+            rank += 1
     
     return {
         "period": period,

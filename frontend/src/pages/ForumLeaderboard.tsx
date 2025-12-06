@@ -39,7 +39,7 @@ const ForumLeaderboard: React.FC = () => {
   const lang = langParam || language || 'zh';
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   
-  const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'likes' | 'custom'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'favorites' | 'likes' | 'custom'>('posts');
   const [period, setPeriod] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +75,7 @@ const ForumLeaderboard: React.FC = () => {
     }
     try {
       setLoading(true);
-      const response = await getForumLeaderboard(activeTab as 'posts' | 'replies' | 'likes', {
+      const response = await getForumLeaderboard(activeTab as 'posts' | 'favorites' | 'likes', {
         period,
         limit: 50
       });
@@ -208,8 +208,8 @@ const ForumLeaderboard: React.FC = () => {
     switch (type) {
       case 'posts':
         return <MessageOutlined />;
-      case 'replies':
-        return <MessageOutlined />;
+      case 'favorites':
+        return <StarOutlined />;
       case 'likes':
         return <LikeOutlined />;
       default:
@@ -221,8 +221,8 @@ const ForumLeaderboard: React.FC = () => {
     switch (type) {
       case 'posts':
         return t('forum.leaderboardPosts');
-      case 'replies':
-        return t('forum.leaderboardReplies');
+      case 'favorites':
+        return t('forum.leaderboardFavorites');
       case 'likes':
         return t('forum.leaderboardLikes');
       default:
@@ -299,10 +299,10 @@ const ForumLeaderboard: React.FC = () => {
             <TabPane 
               tab={
                 <span>
-                  {getTabIcon('replies')} {t('forum.leaderboardReplies')}
+                  {getTabIcon('favorites')} {t('forum.leaderboardFavorites')}
                 </span>
               } 
-              key="replies"
+              key="favorites"
             >
               {renderLeaderboardContent()}
             </TabPane>

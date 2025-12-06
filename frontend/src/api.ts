@@ -2538,7 +2538,7 @@ export const getHotForumPosts = async (params?: {
 };
 
 // 排行榜
-export const getForumLeaderboard = async (type: 'posts' | 'replies' | 'likes', params?: {
+export const getForumLeaderboard = async (type: 'posts' | 'favorites' | 'likes', params?: {
   period?: 'all' | 'today' | 'week' | 'month';
   limit?: number;
 }) => {
