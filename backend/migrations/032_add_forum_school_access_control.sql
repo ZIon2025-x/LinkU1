@@ -53,11 +53,16 @@ ON forum_categories(university_code)
 WHERE university_code IS NOT NULL;
 
 -- 1.5 创建"英国留学生"大板块（如果不存在）
-INSERT INTO forum_categories (name, description, type, country, sort_order, is_visible)
-SELECT '英国留学生', '英国留学生交流讨论区', 'root', 'UK', 0, true
+INSERT INTO forum_categories (name, description, type, country, sort_order, is_visible, icon)
+SELECT '英国留学生', '英国留学生交流讨论区', 'root', 'UK', 0, true, '🇬🇧'
 WHERE NOT EXISTS (
     SELECT 1 FROM forum_categories WHERE name = '英国留学生'
 );
+
+-- 1.6 更新已存在的"英国留学生"板块，添加icon（如果还没有）
+UPDATE forum_categories 
+SET icon = '🇬🇧'
+WHERE name = '英国留学生' AND (icon IS NULL OR icon = '');
 
 -- ==================== 2. universities 表新增字段 ====================
 

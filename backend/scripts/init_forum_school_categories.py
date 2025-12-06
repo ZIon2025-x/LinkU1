@@ -161,6 +161,34 @@ def init_forum_categories(db: Session):
     """为每个英国大学创建对应的论坛板块"""
     logger.info("开始初始化论坛学校板块...")
     
+    # 首先确保"英国留学生"大板块存在且有icon
+    uk_root_category = db.query(models.ForumCategory).filter(
+        models.ForumCategory.name == '英国留学生',
+        models.ForumCategory.type == 'root',
+        models.ForumCategory.country == 'UK'
+    ).first()
+    
+    if not uk_root_category:
+        # 创建"英国留学生"大板块
+        uk_root_category = models.ForumCategory(
+            name='英国留学生',
+            description='英国留学生交流讨论区',
+            type='root',
+            country='UK',
+            sort_order=0,
+            is_visible=True,
+            is_admin_only=False,
+            icon='🇬🇧'
+        )
+        db.add(uk_root_category)
+        db.commit()
+        logger.info("✓ 创建'英国留学生'大板块（带icon）")
+    elif not uk_root_category.icon or uk_root_category.icon == '':
+        # 如果已存在但没有icon，更新icon
+        uk_root_category.icon = '🇬🇧'
+        db.commit()
+        logger.info("✓ 更新'英国留学生'大板块icon")
+    
     # 查询所有有编码的英国大学
     universities = db.query(models.University).filter(
         models.University.country == 'UK',

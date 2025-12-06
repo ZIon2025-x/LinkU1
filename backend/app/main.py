@@ -945,6 +945,108 @@ async def startup_event():
                     logger.info("大学匹配器初始化完成")
                 except Exception as e:
                     logger.warning(f"初始化大学匹配器失败: {e}")
+                
+                # 自动初始化论坛学校板块（如果还没有初始化）
+                try:
+                    # 检查是否已经有大学板块
+                    university_category_count = db.query(models.ForumCategory).filter(
+                        models.ForumCategory.type == 'university'
+                    ).count()
+                    
+                    # 检查是否已经有英国大学编码
+                    uk_university_with_code_count = db.query(models.University).filter(
+                        models.University.country == 'UK',
+                        models.University.code.isnot(None)
+                    ).count()
+                    
+                    if university_category_count == 0:
+                        logger.info("检测到需要初始化论坛学校板块，开始自动初始化...")
+                        # 导入初始化函数（使用相对导入或直接调用脚本函数）
+                        try:
+                            import sys
+                            from pathlib import Path
+                            
+                            # 添加项目根目录到路径（脚本需要从项目根目录导入 app）
+                            project_root = Path(__file__).parent.parent.parent
+                            if str(project_root) not in sys.path:
+                                sys.path.insert(0, str(project_root))
+                            
+                            # 添加 scripts 目录到路径
+                            scripts_path = Path(__file__).parent.parent / "scripts"
+                            if scripts_path.exists() and str(scripts_path) not in sys.path:
+                                sys.path.insert(0, str(scripts_path))
+                            
+                            # 尝试导入初始化函数
+                            from init_forum_school_categories import (
+                                init_university_codes,
+                                init_forum_categories,
+                                verify_consistency
+                            )
+                            
+                            # 1. 初始化大学编码（如果还没有）
+                            if uk_university_with_code_count == 0:
+                                logger.info("开始初始化大学编码...")
+                                init_university_codes(db)
+                            
+                            # 2. 初始化论坛板块
+                            logger.info("开始初始化论坛板块...")
+                            init_forum_categories(db)
+                            
+                            # 3. 验证一致性（不阻止启动，只记录警告）
+                            try:
+                                is_consistent = verify_consistency(db)
+                                if is_consistent:
+                                    logger.info("✅ 论坛学校板块自动初始化完成！")
+                                else:
+                                    logger.warning("⚠️  论坛学校板块初始化完成，但发现数据不一致问题，请检查日志")
+                            except Exception as e:
+                                logger.warning(f"验证数据一致性时出错: {e}")
+                        except ImportError as import_err:
+                            logger.warning(f"无法导入论坛学校板块初始化函数: {import_err}")
+                            logger.info("将尝试直接运行脚本...")
+                            # 备用方案：直接运行脚本
+                            import subprocess
+                            try:
+                                # 确保 project_root 已定义
+                                if 'project_root' not in locals():
+                                    project_root = Path(__file__).parent.parent.parent
+                                
+                                script_path = Path(__file__).parent.parent / "scripts" / "init_forum_school_categories.py"
+                                if script_path.exists():
+                                    logger.info(f"运行初始化脚本: {script_path}")
+                                    result = subprocess.run(
+                                        [sys.executable, str(script_path)],
+                                        capture_output=True,
+                                        text=True,
+                                        timeout=60,
+                                        cwd=str(project_root)
+                                    )
+                                    if result.returncode == 0:
+                                        logger.info("✅ 论坛学校板块自动初始化完成（通过脚本）！")
+                                        if result.stdout:
+                                            logger.debug(f"脚本输出: {result.stdout}")
+                                    else:
+                                        logger.warning(f"脚本执行失败 (返回码: {result.returncode})")
+                                        if result.stderr:
+                                            logger.warning(f"错误输出: {result.stderr}")
+                                        if result.stdout:
+                                            logger.debug(f"标准输出: {result.stdout}")
+                                else:
+                                    logger.warning(f"找不到脚本文件: {script_path}")
+                            except subprocess.TimeoutExpired:
+                                logger.warning("脚本执行超时（60秒）")
+                            except Exception as script_err:
+                                logger.warning(f"运行初始化脚本失败: {script_err}")
+                                import traceback
+                                logger.debug(f"详细错误: {traceback.format_exc()}")
+                                logger.info("请手动运行: python backend/scripts/init_forum_school_categories.py")
+                    elif university_category_count > 0:
+                        logger.info(f"论坛学校板块已存在（{university_category_count} 个大学板块），跳过初始化")
+                except Exception as e:
+                    logger.warning(f"自动初始化论坛学校板块时出错: {e}")
+                    import traceback
+                    logger.debug(f"详细错误: {traceback.format_exc()}")
+                    logger.info("请手动运行: python backend/scripts/init_forum_school_categories.py")
             finally:
                 db.close()
         except Exception as e:
