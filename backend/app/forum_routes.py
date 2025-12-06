@@ -1000,7 +1000,9 @@ async def get_visible_forums(
                                 country=getattr(category, 'country', None),
                                 university_code=getattr(category, 'university_code', None),
                                 post_count=real_post_count,
-                                latest_post=latest_post_info
+                                latest_post=latest_post_info,
+                                created_at=category.created_at,
+                                updated_at=category.updated_at
                             )
                             category_list.append(category_out)
                         
@@ -1097,7 +1099,9 @@ async def get_visible_forums(
                             country=getattr(category, 'country', None),
                             university_code=getattr(category, 'university_code', None),
                             post_count=real_post_count,
-                            latest_post=latest_post_info
+                            latest_post=latest_post_info,
+                            created_at=category.created_at,
+                            updated_at=category.updated_at
                         )
                         category_list.append(category_out)
                     
@@ -1189,7 +1193,9 @@ async def get_visible_forums(
                             country=getattr(category, 'country', None),
                             university_code=getattr(category, 'university_code', None),
                             post_count=real_post_count,
-                            latest_post=latest_post_info
+                            latest_post=latest_post_info,
+                            created_at=category.created_at,
+                            updated_at=category.updated_at
                         )
                         category_dict = category_out.model_dump()
                         category_dict["can_manage"] = True
@@ -1291,7 +1297,9 @@ async def get_visible_forums(
                     country=getattr(category, 'country', None),
                     university_code=getattr(category, 'university_code', None),
                     post_count=real_post_count,
-                    latest_post=latest_post_info
+                    latest_post=latest_post_info,
+                    created_at=category.created_at,
+                    updated_at=category.updated_at
                 )
                 category_list.append(category_out)
             
@@ -1383,7 +1391,9 @@ async def get_visible_forums(
                     country=getattr(category, 'country', None),
                     university_code=getattr(category, 'university_code', None),
                     post_count=real_post_count,
-                    latest_post=latest_post_info
+                    latest_post=latest_post_info,
+                    created_at=category.created_at,
+                    updated_at=category.updated_at
                 )
                 category_list.append(category_out)
             
