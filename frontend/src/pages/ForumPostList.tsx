@@ -296,7 +296,7 @@ const ForumPostList: React.FC = () => {
               {posts.map((post) => (
                 <Card
                   key={post.id}
-                  className={styles.postCard}
+                  className={`${styles.postCard} ${post.is_featured ? styles.featuredPostCard : ''}`}
                   hoverable
                   onClick={() => handlePostClick(post.id)}
                 >
@@ -308,9 +308,10 @@ const ForumPostList: React.FC = () => {
                         </Tag>
                       )}
                       {post.is_featured && (
-                        <Tag color="gold" icon={<StarOutlined />}>
-                          {t('forum.featured')}
-                        </Tag>
+                        <div className={styles.featuredBadge}>
+                          <span className={styles.featuredIcon}>✨</span>
+                          <span className={styles.featuredText}>{t('forum.featured')}</span>
+                        </div>
                       )}
                       <Title 
                         level={5} 

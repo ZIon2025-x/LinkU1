@@ -115,10 +115,38 @@ async def get_task_chat_list(
                 "total": 0
             }
         
-        # 查询所有相关任务
-        tasks_query = select(models.Task).where(
-            models.Task.id.in_(list(task_ids_set))
-        ).order_by(models.Task.created_at.desc())
+        # 先批量查询所有任务的最后消息时间（用于排序）
+        # 使用 LEFT JOIN 确保即使没有消息的任务也会被包含
+        last_message_time_subquery = (
+            select(
+                models.Message.task_id,
+                func.max(models.Message.created_at).label('last_message_time')
+            )
+            .where(
+                and_(
+                    models.Message.task_id.in_(list(task_ids_set)),
+                    models.Message.conversation_type == 'task'
+                )
+            )
+            .group_by(models.Message.task_id)
+            .subquery()
+        )
+        
+        # 查询所有相关任务，按最后消息时间排序（如果没有消息则按创建时间）
+        sort_time_expr = func.coalesce(
+            last_message_time_subquery.c.last_message_time,
+            models.Task.created_at
+        )
+        
+        tasks_query = (
+            select(models.Task)
+            .outerjoin(
+                last_message_time_subquery,
+                models.Task.id == last_message_time_subquery.c.task_id
+            )
+            .where(models.Task.id.in_(list(task_ids_set)))
+            .order_by(desc(sort_time_expr))
+        )
         
         # 分页
         tasks_query = tasks_query.offset(offset).limit(limit)

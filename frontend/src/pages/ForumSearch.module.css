@@ -81,6 +81,35 @@
   transform: translateY(-2px);
 }
 
+/* 加精帖子样式 - 示例5: 淡金色背景 + 图标 */
+.featuredPostCard {
+  background: #fffbf0 !important;
+  border: 1px solid #ffd700 !important;
+}
+
+.featuredPostCard:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25);
+  border-color: #ffd700 !important;
+}
+
+.featuredBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.featuredIcon {
+  color: #ff8c00;
+  font-size: 18px;
+}
+
+.featuredText {
+  color: #ff8c00;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .postHeader {
   margin-bottom: 12px;
 }

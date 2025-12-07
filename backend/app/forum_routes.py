@@ -2019,27 +2019,49 @@ async def get_posts(
         )
     
     # 排序
+    # 注意：只有置顶帖子需要优先显示，加精帖子不改变排序顺序
+    # 排序优先级：置顶帖子 > 普通帖子（包括加精帖子）
+    # 非置顶帖子按照综合热度排序，考虑点赞、收藏、评论和最近活跃度
+    
+    # 改进的热度算法：综合考虑点赞、收藏、评论和最近活跃度
+    # 使用 last_reply_at 作为时间因子（如果存在），否则使用 created_at
+    # 时间衰减：最近活跃的帖子权重更高
+    active_time = func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at)
+    hours_since_active = func.extract('epoch', func.now() - active_time) / 3600.0
+    
+    # 综合热度分数 = (点赞数*权重 + 收藏数*权重 + 评论数*权重 + 浏览量*权重) / 时间衰减因子
+    # 时间衰减：使用对数衰减，让最近活跃的帖子有更高的权重
+    # 公式：score = interaction_score / (1 + hours_since_active / decay_factor)^decay_power
+    # 其中 decay_factor 控制衰减速度，decay_power 控制衰减曲线
+    hot_score = (
+        models.ForumPost.like_count * 5.0 +      # 点赞权重：5
+        models.ForumPost.favorite_count * 4.0 +  # 收藏权重：4（收藏表示深度兴趣）
+        models.ForumPost.reply_count * 3.0 +     # 评论权重：3
+        models.ForumPost.view_count * 0.1        # 浏览量权重：0.1（较低，因为浏览不代表互动）
+    ) / func.pow(
+        (hours_since_active / 24.0) + 1.0,  # 以天为单位，+1避免除零
+        1.2  # 衰减指数，值越大衰减越快
+    )
+    
     if sort == "latest":
-        query = query.order_by(models.ForumPost.created_at.desc())
-    elif sort == "last_reply":
+        # 置顶优先，然后按创建时间降序
         query = query.order_by(
-            func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at).desc()
+            models.ForumPost.is_pinned.desc(),  # 置顶帖子优先
+            models.ForumPost.created_at.desc()  # 最后按创建时间
         )
-    elif sort == "hot":
-        # 热度排序：综合评分公式
-        hot_score = (
-            models.ForumPost.like_count * 5.0 +
-            models.ForumPost.reply_count * 3.0 +
-            models.ForumPost.view_count * 0.1
-        ) / func.pow(
-            func.extract('epoch', func.now() - models.ForumPost.created_at) / 3600.0 + 2.0,
-            1.5
+    elif sort == "last_reply":
+        # 置顶优先，然后按最后回复时间降序
+        query = query.order_by(
+            models.ForumPost.is_pinned.desc(),  # 置顶帖子优先
+            func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at).desc()  # 最后按最后回复时间
         )
-        query = query.order_by(hot_score.desc())
-    elif sort == "replies":
-        query = query.order_by(models.ForumPost.reply_count.desc())
-    elif sort == "likes":
-        query = query.order_by(models.ForumPost.like_count.desc())
+    else:
+        # 其他排序方式（hot, replies, likes）都使用综合热度排序
+        # 置顶优先，然后按综合热度排序
+        query = query.order_by(
+            models.ForumPost.is_pinned.desc(),  # 置顶帖子优先
+            hot_score.desc()  # 最后按综合热度排序
+        )
     
     # 先获取总数
     count_query = select(func.count()).select_from(query.subquery())
@@ -5318,16 +5340,27 @@ async def get_hot_posts(
                 # 如果用户没有任何可见板块，返回空结果
                 query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
-    # 热度排序：综合评分公式
+    # 改进的热度算法：综合考虑点赞、收藏、评论和最近活跃度
+    # 使用 last_reply_at 作为时间因子（如果存在），否则使用 created_at
+    active_time = func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at)
+    hours_since_active = func.extract('epoch', func.now() - active_time) / 3600.0
+    
+    # 综合热度分数 = (点赞数*权重 + 收藏数*权重 + 评论数*权重 + 浏览量*权重) / 时间衰减因子
     hot_score = (
-        models.ForumPost.like_count * 5.0 +
-        models.ForumPost.reply_count * 3.0 +
-        models.ForumPost.view_count * 0.1
+        models.ForumPost.like_count * 5.0 +      # 点赞权重：5
+        models.ForumPost.favorite_count * 4.0 +  # 收藏权重：4（收藏表示深度兴趣）
+        models.ForumPost.reply_count * 3.0 +     # 评论权重：3
+        models.ForumPost.view_count * 0.1        # 浏览量权重：0.1（较低，因为浏览不代表互动）
     ) / func.pow(
-        func.extract('epoch', func.now() - models.ForumPost.created_at) / 3600.0 + 2.0,
-        1.5
+        (hours_since_active / 24.0) + 1.0,  # 以天为单位，+1避免除零
+        1.2  # 衰减指数，值越大衰减越快
     )
-    query = query.order_by(hot_score.desc())
+    
+    # 置顶优先，然后按热度排序
+    query = query.order_by(
+        models.ForumPost.is_pinned.desc(),  # 置顶帖子优先
+        hot_score.desc()  # 最后按热度
+    )
     
     # 限制数量
     query = query.limit(limit)
@@ -5513,14 +5546,20 @@ async def get_user_hot_posts(
             # 如果用户没有任何可见板块，返回空结果
             query = query.where(models.ForumPost.category_id == -1)  # 不存在的ID
     
-    # 热度排序：综合评分公式
+    # 改进的热度算法：综合考虑点赞、收藏、评论和最近活跃度
+    # 使用 last_reply_at 作为时间因子（如果存在），否则使用 created_at
+    active_time = func.coalesce(models.ForumPost.last_reply_at, models.ForumPost.created_at)
+    hours_since_active = func.extract('epoch', func.now() - active_time) / 3600.0
+    
+    # 综合热度分数 = (点赞数*权重 + 收藏数*权重 + 评论数*权重 + 浏览量*权重) / 时间衰减因子
     hot_score = (
-        models.ForumPost.like_count * 5.0 +
-        models.ForumPost.reply_count * 3.0 +
-        models.ForumPost.view_count * 0.1
+        models.ForumPost.like_count * 5.0 +      # 点赞权重：5
+        models.ForumPost.favorite_count * 4.0 +  # 收藏权重：4（收藏表示深度兴趣）
+        models.ForumPost.reply_count * 3.0 +     # 评论权重：3
+        models.ForumPost.view_count * 0.1        # 浏览量权重：0.1（较低，因为浏览不代表互动）
     ) / func.pow(
-        func.extract('epoch', func.now() - models.ForumPost.created_at) / 3600.0 + 2.0,
-        1.5
+        (hours_since_active / 24.0) + 1.0,  # 以天为单位，+1避免除零
+        1.2  # 衰减指数，值越大衰减越快
     )
     query = query.order_by(hot_score.desc())
     

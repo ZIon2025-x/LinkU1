@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加精帖子卡片样式示例</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .example-section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .example-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .normal-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>加精帖子卡片样式示例</h1>
+    
+    <!-- 示例1: 金色边框 + 渐变背景 -->
+    <div class="example-section">
+        <div class="example-title">示例1: 金色边框 + 渐变背景</div>
+        <div style="background: linear-gradient(135deg, #fff9e6 0%, #fff 100%); border: 2px solid #ffd700; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;">
+            <div style="position: absolute; top: 12px; right: 12px; background: #ffd700; color: #333; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">⭐ 精华</div>
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例2: 左侧金色竖条 -->
+    <div class="example-section">
+        <div class="example-title">示例2: 左侧金色竖条</div>
+        <div style="background: white; border-left: 4px solid #ffd700; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(255,215,0,0.2);">
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="background: #ffd700; color: #333; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-right: 8px;">精华</span>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            </div>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例3: 顶部金色标签带 -->
+    <div class="example-section">
+        <div class="example-title">示例3: 顶部金色标签带</div>
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; margin-bottom: 12px;">
+            <div style="background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%); padding: 6px 16px; font-size: 12px; font-weight: 600; color: #333; text-align: center;">
+                ⭐ 精华帖子
+            </div>
+            <div style="padding: 16px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+                <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                    <span>作者名 · 2小时前</span>
+                    <span>👍 10 · 💬 5 · 👁 100</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例4: 金色图标徽章 -->
+    <div class="example-section">
+        <div class="example-title">示例4: 金色图标徽章</div>
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;">
+            <div style="position: absolute; top: -8px; right: 12px; background: #ffd700; color: #333; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 4px rgba(255,215,0,0.3);">⭐</div>
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例5: 淡金色背景 + 图标 -->
+    <div class="example-section">
+        <div class="example-title">示例5: 淡金色背景 + 图标</div>
+        <div style="background: #fffbf0; border: 1px solid #ffd700; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                <span style="color: #ff8c00; font-size: 18px; margin-right: 6px;">✨</span>
+                <span style="color: #ff8c00; font-size: 12px; font-weight: 600;">精华</span>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例6: 金色角标 -->
+    <div class="example-section">
+        <div class="example-title">示例6: 金色角标</div>
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative;">
+            <div style="position: absolute; top: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 40px 40px 0; border-color: transparent #ffd700 transparent transparent;"></div>
+            <div style="position: absolute; top: 4px; right: 4px; color: #333; font-size: 12px; font-weight: 600; transform: rotate(45deg);">精</div>
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例7: 金色光晕效果 -->
+    <div class="example-section">
+        <div class="example-title">示例7: 金色光晕效果</div>
+        <div style="background: white; border: 1px solid #ffd700; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 0 0 1px rgba(255,215,0,0.1), 0 4px 12px rgba(255,215,0,0.15);">
+            <div style="display: inline-block; background: linear-gradient(135deg, #ffd700, #ffed4e); color: #333; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 8px;">
+                ⭐ 精华
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 示例8: 简洁金色标签 -->
+    <div class="example-section">
+        <div class="example-title">示例8: 简洁金色标签</div>
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="flex-shrink: 0; width: 3px; height: 100%; background: linear-gradient(180deg, #ffd700, #ffed4e); border-radius: 2px; margin-top: 2px;"></div>
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="color: #ff8c00; font-weight: 600; font-size: 12px;">🏆 精华</span>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+                    </div>
+                    <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，加精帖子会有特殊的视觉效果...</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                        <span>作者名 · 2小时前</span>
+                        <span>👍 10 · 💬 5 · 👁 100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对比：普通帖子 -->
+    <div class="example-section">
+        <div class="example-title">对比：普通帖子（无样式）</div>
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #333;">帖子标题示例</h3>
+            <p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">这是帖子的内容预览，普通帖子没有特殊样式...</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #999;">
+                <span>作者名 · 2小时前</span>
+                <span>👍 10 · 💬 5 · 👁 100</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
