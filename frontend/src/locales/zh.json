@@ -2541,7 +2541,10 @@
     "reject": "拒绝",
     "reportSubmitted": "举报已提交，我们会尽快处理",
     "loadItemError": "加载商品详情失败",
-    "reportError": "举报失败，请重试"
+    "reportError": "举报失败，请重试",
+    "refreshItem": "刷新商品",
+    "refreshSuccess": "商品刷新成功，已更新刷新时间",
+    "refreshError": "刷新失败"
   },
   "pwa": {
     "installTitle": "安装 Link²Ur",

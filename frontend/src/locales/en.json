@@ -2652,7 +2652,10 @@
     "reject": "Reject",
     "reportSubmitted": "Report submitted, we will process it as soon as possible",
     "loadItemError": "Failed to load item details",
-    "reportError": "Failed to submit report, please try again"
+    "reportError": "Failed to submit report, please try again",
+    "refreshItem": "Refresh Item",
+    "refreshSuccess": "Item refreshed successfully, refresh time updated",
+    "refreshError": "Failed to refresh"
   },
   "pwa": {
     "installTitle": "Install Link²Ur",
