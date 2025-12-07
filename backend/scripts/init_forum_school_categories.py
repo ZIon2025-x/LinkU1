@@ -266,7 +266,13 @@ def init_forum_categories(db: Session):
         ).first()
         
         if existing_category:
-            logger.debug(f"板块已存在: {uni.name} ({uni.code})")
+            # 如果板块已存在但没有icon，更新icon
+            if not existing_category.icon or existing_category.icon == '':
+                existing_category.icon = '🏫'
+                db.commit()
+                logger.info(f"✓ 更新板块icon: {category_name} ({uni.code})")
+            else:
+                logger.debug(f"板块已存在: {uni.name} ({uni.code})")
             skipped_count += 1
             continue
         
@@ -285,7 +291,8 @@ def init_forum_categories(db: Session):
             university_code=uni.code,
             sort_order=sort_order,
             is_visible=True,
-            is_admin_only=False
+            is_admin_only=False,
+            icon='🏫'  # 统一使用学校图标
         )
         
         db.add(category)
