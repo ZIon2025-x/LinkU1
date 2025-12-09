@@ -1610,9 +1610,15 @@ def delete_task_safely(db: Session, task_id: int):
         # 5.5. 删除相关的 TaskTimeSlotRelation 记录（必须在删除任务之前）
         # 注意：虽然外键有 CASCADE，但显式删除可以避免 SQLAlchemy 尝试将 task_id 设置为 None
         from app.models import TaskTimeSlotRelation
-        db.query(TaskTimeSlotRelation).filter(
+        # 先刷新 session 确保状态一致
+        db.flush()
+        # 查询并删除关系记录，如果不存在也不会报错
+        relations = db.query(TaskTimeSlotRelation).filter(
             TaskTimeSlotRelation.task_id == task_id
-        ).delete(synchronize_session=False)
+        ).all()
+        for relation in relations:
+            db.delete(relation)
+        db.flush()  # 确保删除操作已提交
 
         # 6. 查找并删除任务相关的消息、图片和文件
         # 获取与任务相关的所有消息
