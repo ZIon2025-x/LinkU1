@@ -11,7 +11,7 @@ interface ForumPostStructuredDataProps {
     };
     created_at: string;
     updated_at?: string;
-    view_count?: number;
+    view_count?: string | number;  // 格式化后的浏览量（支持模糊显示）或原始数字
     like_count?: number;
     category?: string;
   };
@@ -59,7 +59,7 @@ const ForumPostStructuredData: React.FC<ForumPostStructuredDataProps> = ({ post,
       {
         "@type": "InteractionCounter",
         "interactionType": "https://schema.org/ViewAction",
-        "userInteractionCount": post.view_count || 0
+        "userInteractionCount": typeof post.view_count === 'string' ? parseInt(post.view_count) || 0 : (post.view_count || 0)
       },
       {
         "@type": "InteractionCounter",

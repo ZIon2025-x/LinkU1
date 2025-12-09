@@ -35,7 +35,7 @@ interface ForumPost {
     avatar?: string;
     is_admin?: boolean;
   };
-  view_count: number;
+  view_count: string;  // 格式化后的浏览量（支持模糊显示）
   reply_count: number;
   like_count: number;
   is_pinned: boolean;

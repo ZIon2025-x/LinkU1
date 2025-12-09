@@ -36,7 +36,7 @@ interface ForumCategory {
     };
     last_reply_at: string;
     reply_count: number;
-    view_count: number;
+    view_count: string;  // 格式化后的浏览量（支持模糊显示）
   } | null;
 }
 

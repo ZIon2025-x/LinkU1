@@ -32,7 +32,7 @@ interface ForumPost {
     id: number;
     name: string;
   };
-  view_count: number;
+  view_count: string;  // 格式化后的浏览量（支持模糊显示）
   reply_count: number;
   like_count: number;
   created_at: string;
@@ -76,7 +76,7 @@ interface ForumFavorite {
       id: number;
       name: string;
     };
-    view_count: number;
+    view_count: string;  // 格式化后的浏览量（支持模糊显示）
     reply_count: number;
     like_count: number;
     created_at: string;
