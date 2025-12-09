@@ -5436,13 +5436,16 @@ async def get_hot_posts(
             )
             is_favorited = favorite_result.scalar_one_or_none() is not None
         
+        # 计算帖子的浏览量（数据库值 + Redis增量）
+        display_view_count = await get_post_display_view_count(post.id, post.view_count)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
-            view_count=post.view_count,
+            view_count=format_view_count(display_view_count),
             reply_count=post.reply_count,
             like_count=post.like_count,
             is_pinned=post.is_pinned,
@@ -5637,13 +5640,16 @@ async def get_user_hot_posts(
             )
             is_favorited = favorite_result.scalar_one_or_none() is not None
         
+        # 计算帖子的浏览量（数据库值 + Redis增量）
+        display_view_count = await get_post_display_view_count(post.id, post.view_count)
+        
         post_items.append(schemas.ForumPostListItem(
             id=post.id,
             title=post.title,
             content_preview=strip_markdown(post.content),
             category=schemas.CategoryInfo(id=post.category.id, name=post.category.name),
             author=await get_post_author_info(db, post, request),
-            view_count=post.view_count,
+            view_count=format_view_count(display_view_count),
             reply_count=post.reply_count,
             like_count=post.like_count,
             is_pinned=post.is_pinned,
