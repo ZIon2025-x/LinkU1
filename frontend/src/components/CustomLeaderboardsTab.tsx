@@ -224,9 +224,10 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
   return (
     <div>
       {/* 筛选、搜索和申请按钮 */}
-      <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="leaderboard-filters" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <Select
           placeholder={t('forum.selectLocation')}
+          className="filter-select"
           style={{ width: 150 }}
           allowClear
           value={selectedLocation}
@@ -245,6 +246,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         
         <Select
           placeholder={t('forum.sortBy')}
+          className="filter-select"
           style={{ width: 150 }}
           value={sortBy}
           onChange={setSortBy}
@@ -261,6 +263,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         
         <Input.Search
           placeholder={t('forum.searchLeaderboard')}
+          className="filter-search"
           style={{ flex: 1, minWidth: 200, maxWidth: 400 }}
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
@@ -270,6 +273,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
         <Button
           type="primary"
           icon={<PlusOutlined />}
+          className="apply-button"
           onClick={() => {
             if (!user) {
               if (onShowLogin) {
@@ -292,7 +296,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
           <Empty description={t('forum.noLeaderboards')} />
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 20 }}>
+            <div className="leaderboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 20 }}>
               {leaderboards.map(leaderboard => (
                 <div
                   key={leaderboard.id}
@@ -663,6 +667,44 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
             .ant-select-clear-icon:active {
               background-color: rgba(0, 0, 0, 0.06) !important;
               border-radius: 50% !important;
+            }
+
+            /* 移动端筛选器优化 */
+            .leaderboard-filters {
+              flex-direction: column !important;
+              gap: 10px !important;
+            }
+
+            .filter-select,
+            .filter-search {
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 100% !important;
+            }
+
+            .apply-button {
+              width: 100% !important;
+            }
+
+            /* 移动端网格优化 */
+            .leaderboard-grid {
+              grid-template-columns: 1fr !important;
+              gap: 16px !important;
+            }
+
+            .leaderboard-card {
+              border-radius: 12px !important;
+            }
+          }
+
+          /* 超小屏幕优化 */
+          @media (max-width: 480px) {
+            .leaderboard-filters {
+              gap: 8px !important;
+            }
+
+            .leaderboard-grid {
+              gap: 12px !important;
             }
           }
         `}

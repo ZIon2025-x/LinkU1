@@ -243,12 +243,17 @@
   .podiumContainer {
     flex-direction: column;
     align-items: center;
-    gap: 30px;
+    gap: 24px;
+    padding: 16px;
+    margin: 24px 0;
   }
 
   .podiumItem {
     max-width: 100%;
     width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .podium1 {
@@ -287,11 +292,17 @@
 
   .listItem {
     padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
   }
 
   .listRank {
     width: 40px;
     font-size: 14px;
+  }
+
+  .listAvatar {
+    margin-right: 10px;
   }
 
   .headerContainer {
@@ -343,8 +354,13 @@
   }
 
   .podiumContainer {
-    gap: 20px;
-    padding: 16px;
+    gap: 16px;
+    padding: 12px;
+    margin: 20px 0;
+  }
+
+  .podiumItem {
+    border-radius: 10px;
   }
 
   .podium1 .podiumAvatar {
@@ -365,8 +381,22 @@
     font-size: 18px;
   }
 
+  .podium1 .podiumBase {
+    height: 90px;
+  }
+
+  .podium2 .podiumBase {
+    height: 70px;
+  }
+
+  .podium3 .podiumBase {
+    height: 50px;
+  }
+
   .listItem {
     padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
   }
 
   .listRank {
@@ -380,6 +410,10 @@
 
   .listCount {
     font-size: 14px;
+  }
+
+  .listAvatar {
+    margin-right: 8px;
   }
 }
 
@@ -397,7 +431,44 @@
   }
 
   .podiumContainer {
-    padding: 12px;
+    padding: 10px;
+    margin: 16px 0;
+    gap: 12px;
+  }
+
+  .podium1 .podiumAvatar {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .podiumAvatar {
+    width: 45px !important;
+    height: 45px !important;
+  }
+
+  .podiumName {
+    font-size: 12px;
+  }
+
+  .podiumCount {
+    font-size: 16px;
+  }
+
+  .listItem {
+    padding: 8px;
+  }
+
+  .listRank {
+    width: 30px;
+    font-size: 12px;
+  }
+
+  .listName {
+    font-size: 12px;
+  }
+
+  .listCount {
+    font-size: 13px;
   }
 }
 

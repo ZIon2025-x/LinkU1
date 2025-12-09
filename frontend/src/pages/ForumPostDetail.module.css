@@ -168,6 +168,12 @@
 
   .postCard {
     margin-bottom: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .postCard .ant-card-body {
+    padding: 16px !important;
   }
 
   .postHeader {
@@ -184,6 +190,7 @@
   .postTitleRow h2 {
     font-size: 20px !important;
     line-height: 1.4 !important;
+    word-break: break-word;
   }
 
   .postMeta {
@@ -196,6 +203,21 @@
     line-height: 1.7;
     margin-bottom: 12px;
     padding-bottom: 35px;
+    word-break: break-word;
+  }
+
+  .postContent img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .postContent pre {
+    overflow-x: auto;
+    font-size: 13px;
+  }
+
+  .postContent code {
+    font-size: 13px;
   }
 
   .postContent > div[style*="position: absolute"] {
@@ -242,7 +264,8 @@
 
   .replyItem {
     padding: 12px;
-    border-radius: 6px;
+    border-radius: 8px;
+    border-left-width: 3px;
   }
 
   .replyHeader {
@@ -254,6 +277,21 @@
   .replyContent {
     font-size: 14px;
     line-height: 1.6;
+    word-break: break-word;
+  }
+
+  .replyContent img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .replyContent pre {
+    overflow-x: auto;
+    font-size: 12px;
+  }
+
+  .replyContent code {
+    font-size: 12px;
   }
 
   .nestedReplies {
@@ -303,6 +341,10 @@
     font-size: 12px;
   }
 
+  .postCard .ant-card-body {
+    padding: 14px !important;
+  }
+
   .postContent {
     font-size: 14px;
     padding-bottom: 30px;
@@ -329,10 +371,16 @@
 
   .replyItem {
     padding: 10px;
+    border-radius: 6px;
   }
 
   .replyContent {
     font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .repliesCard .ant-card-body {
+    padding: 12px !important;
   }
 }
 
@@ -349,8 +397,24 @@
     padding: 10px 6px;
   }
 
+  .postCard .ant-card-body {
+    padding: 12px !important;
+  }
+
   .postTitleRow h2 {
     font-size: 16px !important;
+  }
+
+  .postContent {
+    font-size: 13px;
+  }
+
+  .replyItem {
+    padding: 8px;
+  }
+
+  .replyContent {
+    font-size: 12px;
   }
 }
 

@@ -231,18 +231,45 @@
 
   .postCard {
     margin-bottom: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .postCard .ant-card-body {
+    padding: 14px !important;
   }
 
   .postTitle {
     font-size: 16px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 8px !important;
   }
 
   .postMeta {
     font-size: 11px;
+    margin-bottom: 10px;
   }
 
   .postStats {
     font-size: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .postStats .ant-space-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .postHeader {
+    margin-bottom: 10px;
+  }
+
+  .postActions {
+    margin-top: 8px;
   }
 }
 
@@ -268,12 +295,31 @@
     padding: 10px;
   }
 
+  .postCard .ant-card-body {
+    padding: 12px !important;
+  }
+
   .postTitle {
-    font-size: 14px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
   }
 
   .postMeta {
     font-size: 10px;
+    margin-bottom: 8px;
+  }
+
+  .postStats {
+    font-size: 11px;
+    gap: 10px;
+  }
+
+  .toolbar {
+    padding: 8px;
+  }
+
+  .searchAndSort {
+    gap: 6px;
   }
 }
 
@@ -288,6 +334,19 @@
 
   .content {
     padding: 10px 6px;
+  }
+
+  .postCard .ant-card-body {
+    padding: 10px !important;
+  }
+
+  .postTitle {
+    font-size: 14px !important;
+  }
+
+  .postStats {
+    font-size: 10px;
+    gap: 8px;
   }
 }
 
