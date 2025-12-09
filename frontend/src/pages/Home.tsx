@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import { formatViewCount } from '../utils/formatUtils';
 import LoginModal from '../components/LoginModal';
 import TaskDetailModal from '../components/TaskDetailModal';
 import TaskTitle from '../components/TaskTitle';
@@ -1331,7 +1332,7 @@ const Home: React.FC = () => {
                     }}>
                       <span>📦 {leaderboard.item_count || 0} {language === 'zh' ? '个竞品' : 'items'}</span>
                       <span>👍 {leaderboard.vote_count || 0} {language === 'zh' ? '票' : 'votes'}</span>
-                      <span>👁️ {leaderboard.view_count || 0} {language === 'zh' ? '浏览' : 'views'}</span>
+                      <span>👁️ {formatViewCount(leaderboard.view_count || 0)} {language === 'zh' ? '浏览' : 'views'}</span>
                     </div>
                   </div>
                 );
@@ -1561,7 +1562,7 @@ const Home: React.FC = () => {
                       fontSize: '12px',
                       color: '#64748b'
                     }}>
-                      <span>👁️ {post.view_count || 0}</span>
+                      <span>👁️ {formatViewCount(post.view_count || 0)}</span>
                       <span>💬 {post.reply_count || 0}</span>
                       <span>❤️ {post.like_count || 0}</span>
                       {post.created_at && (

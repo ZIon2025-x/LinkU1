@@ -7247,7 +7247,13 @@ def delete_expert_activity_admin(
                 db.delete(task)
             logger.info(f"管理员 {current_admin.id} 删除活动 {activity_id} 时级联删除了 {deleted_tasks_count} 个关联任务（含时间段关联）")
         
-        # 删除活动
+        # 删除活动与时间段的关联关系（虽然外键有CASCADE，但显式删除更清晰）
+        # 注意：这里只删除关联关系，不会删除时间段本身（ServiceTimeSlot），因为时间段是服务的资源
+        db.query(models.ActivityTimeSlotRelation).filter(
+            models.ActivityTimeSlotRelation.activity_id == activity_id
+        ).delete(synchronize_session=False)
+        
+        # 删除活动（ActivityTimeSlotRelation 会通过外键 CASCADE 自动删除，但上面已经显式删除）
         db.delete(activity)
         db.commit()
         
@@ -7269,6 +7275,194 @@ def delete_expert_activity_admin(
                 detail=f"删除失败（外键约束）：{str(e)}"
             )
         raise HTTPException(status_code=500, detail=f"删除活动失败: {str(e)}")
+
+
+@router.post("/admin/task-expert/{expert_id}/services/{service_id}/time-slots/batch-create")
+def batch_create_service_time_slots_admin(
+    expert_id: str,
+    service_id: int,
+    start_date: str = Query(..., description="开始日期，格式：YYYY-MM-DD"),
+    end_date: str = Query(..., description="结束日期，格式：YYYY-MM-DD"),
+    price_per_participant: float = Query(..., description="每个参与者的价格"),
+    current_admin=Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """批量创建服务时间段（管理员）"""
+    try:
+        # 验证任务达人是否存在
+        expert = db.query(models.TaskExpert).filter(models.TaskExpert.id == expert_id).first()
+        if not expert:
+            raise HTTPException(status_code=404, detail="任务达人不存在")
+        
+        # 验证服务是否存在且属于该任务达人
+        service = db.query(models.TaskExpertService).filter(
+            models.TaskExpertService.id == service_id,
+            models.TaskExpertService.expert_id == expert_id
+        ).first()
+        if not service:
+            raise HTTPException(status_code=404, detail="服务不存在")
+        
+        # 验证服务是否启用了时间段
+        if not service.has_time_slots:
+            raise HTTPException(status_code=400, detail="该服务未启用时间段功能")
+        
+        # 检查配置：优先使用 weekly_time_slot_config，否则使用旧的 time_slot_start_time/time_slot_end_time
+        has_weekly_config = service.weekly_time_slot_config and isinstance(service.weekly_time_slot_config, dict)
+        
+        if not has_weekly_config:
+            # 使用旧的配置方式（向后兼容）
+            if not service.time_slot_start_time or not service.time_slot_end_time or not service.time_slot_duration_minutes or not service.participants_per_slot:
+                raise HTTPException(status_code=400, detail="服务的时间段配置不完整")
+        else:
+            # 使用新的按周几配置
+            if not service.time_slot_duration_minutes or not service.participants_per_slot:
+                raise HTTPException(status_code=400, detail="服务的时间段配置不完整（缺少时间段时长或参与者数量）")
+        
+        # 解析日期
+        from datetime import date, timedelta, time as dt_time, datetime as dt_datetime
+        from decimal import Decimal
+        from app.utils.time_utils import parse_local_as_utc, LONDON
+        
+        try:
+            start = date.fromisoformat(start_date)
+            end = date.fromisoformat(end_date)
+            if start > end:
+                raise HTTPException(status_code=400, detail="开始日期必须早于或等于结束日期")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="日期格式错误，应为YYYY-MM-DD")
+        
+        # 生成时间段（使用UTC时间存储）
+        created_slots = []
+        current_date = start
+        duration_minutes = service.time_slot_duration_minutes
+        price_decimal = Decimal(str(price_per_participant))
+        
+        # 周几名称映射（Python的weekday(): 0=Monday, 6=Sunday）
+        weekday_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        
+        while current_date <= end:
+            # 获取当前日期是周几（0=Monday, 6=Sunday）
+            weekday = current_date.weekday()
+            weekday_name = weekday_names[weekday]
+            
+            # 确定该日期的时间段配置
+            if has_weekly_config:
+                # 使用按周几配置
+                day_config = service.weekly_time_slot_config.get(weekday_name, {})
+                if not day_config.get('enabled', False):
+                    # 该周几未启用，跳过
+                    current_date += timedelta(days=1)
+                    continue
+                
+                slot_start_time_str = day_config.get('start_time', '09:00:00')
+                slot_end_time_str = day_config.get('end_time', '18:00:00')
+                
+                # 解析时间字符串
+                try:
+                    slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                    slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+                except ValueError:
+                    # 如果格式不对，尝试添加秒数
+                    if len(slot_start_time_str) == 5:  # HH:MM
+                        slot_start_time_str += ':00'
+                    if len(slot_end_time_str) == 5:  # HH:MM
+                        slot_end_time_str += ':00'
+                    slot_start_time = dt_time.fromisoformat(slot_start_time_str)
+                    slot_end_time = dt_time.fromisoformat(slot_end_time_str)
+            else:
+                # 使用旧的统一配置
+                slot_start_time = service.time_slot_start_time
+                slot_end_time = service.time_slot_end_time
+            
+            # 检查该日期是否被手动删除（跳过手动删除的日期）
+            start_local = dt_datetime.combine(current_date, dt_time(0, 0, 0))
+            end_local = dt_datetime.combine(current_date, dt_time(23, 59, 59))
+            start_utc = parse_local_as_utc(start_local, LONDON)
+            end_utc = parse_local_as_utc(end_local, LONDON)
+            
+            # 检查该日期是否有手动删除的时间段
+            deleted_check = db.query(models.ServiceTimeSlot).filter(
+                models.ServiceTimeSlot.service_id == service_id,
+                models.ServiceTimeSlot.slot_start_datetime >= start_utc,
+                models.ServiceTimeSlot.slot_start_datetime <= end_utc,
+                models.ServiceTimeSlot.is_manually_deleted == True,
+            ).first()
+            if deleted_check:
+                # 该日期已被手动删除，跳过
+                current_date += timedelta(days=1)
+                continue
+            
+            # 计算该日期的时间段
+            current_time = slot_start_time
+            while current_time < slot_end_time:
+                # 计算结束时间
+                total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+                end_hour = total_minutes // 60
+                end_minute = total_minutes % 60
+                if end_hour >= 24:
+                    break  # 超出一天，跳过
+                
+                slot_end = dt_time(end_hour, end_minute)
+                if slot_end > slot_end_time:
+                    break  # 超出服务允许的结束时间
+                
+                # 将英国时间的日期+时间组合，然后转换为UTC
+                slot_start_local = dt_datetime.combine(current_date, current_time)
+                slot_end_local = dt_datetime.combine(current_date, slot_end)
+                
+                # 转换为UTC时间
+                slot_start_utc = parse_local_as_utc(slot_start_local, LONDON)
+                slot_end_utc = parse_local_as_utc(slot_end_local, LONDON)
+                
+                # 检查是否已存在且未被手动删除
+                existing = db.query(models.ServiceTimeSlot).filter(
+                    models.ServiceTimeSlot.service_id == service_id,
+                    models.ServiceTimeSlot.slot_start_datetime == slot_start_utc,
+                    models.ServiceTimeSlot.slot_end_datetime == slot_end_utc,
+                    models.ServiceTimeSlot.is_manually_deleted == False,
+                ).first()
+                if not existing:
+                    # 创建新时间段（使用UTC时间）
+                    new_slot = models.ServiceTimeSlot(
+                        service_id=service_id,
+                        slot_start_datetime=slot_start_utc,
+                        slot_end_datetime=slot_end_utc,
+                        price_per_participant=price_decimal,
+                        max_participants=service.participants_per_slot,
+                        current_participants=0,
+                        is_available=True,
+                        is_manually_deleted=False,
+                    )
+                    db.add(new_slot)
+                    created_slots.append(new_slot)
+                
+                # 移动到下一个时间段
+                total_minutes = current_time.hour * 60 + current_time.minute + duration_minutes
+                next_hour = total_minutes // 60
+                next_minute = total_minutes % 60
+                if next_hour >= 24:
+                    break
+                current_time = dt_time(next_hour, next_minute)
+            
+            # 移动到下一天
+            current_date += timedelta(days=1)
+        
+        db.commit()
+        
+        logger.info(f"管理员 {current_admin.id} 为任务达人 {expert_id} 的服务 {service_id} 批量创建了 {len(created_slots)} 个时间段")
+        
+        return {
+            "message": f"成功创建 {len(created_slots)} 个时间段",
+            "created_count": len(created_slots),
+            "service_id": service_id,
+            "expert_id": expert_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"批量创建时间段失败: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"批量创建时间段失败: {str(e)}")
 
 
 # 公开 API - 获取任务达人列表（前端使用）

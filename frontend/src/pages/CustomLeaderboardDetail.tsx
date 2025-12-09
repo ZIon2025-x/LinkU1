@@ -4,6 +4,7 @@ import { Card, Button, Input, Space, Tag, Spin, Empty, Modal, Form, message, Che
 import { LikeOutlined, DislikeOutlined, PlusOutlined, TrophyOutlined, PhoneOutlined, GlobalOutlined, EnvironmentOutlined, UploadOutlined, DeleteOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined } from '@ant-design/icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TimeHandlerV2 } from '../utils/timeUtils';
+import { formatViewCount } from '../utils/formatUtils';
 import {
   getCustomLeaderboardDetail,
   getLeaderboardItems,
@@ -1352,7 +1353,7 @@ const CustomLeaderboardDetail: React.FC = () => {
               <Tag color="blue">{leaderboard.location}</Tag>
               <Tag>📦 {leaderboard.item_count} {t('forum.itemsCount')}</Tag>
               <Tag>👍 {leaderboard.vote_count} {t('forum.votesCount')}</Tag>
-              <Tag>👁️ {leaderboard.view_count} {t('forum.viewsCount')}</Tag>
+              <Tag>👁️ {formatViewCount(leaderboard.view_count)} {t('forum.viewsCount')}</Tag>
             </Space>
             {leaderboard.description && (
               <p style={{ marginTop: 16, color: '#666' }}>{leaderboard.description}</p>

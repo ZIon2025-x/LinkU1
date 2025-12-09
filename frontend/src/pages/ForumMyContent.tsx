@@ -20,6 +20,7 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { formatViewCount } from '../utils/formatUtils';
 import styles from './ForumMyContent.module.css';
 
 const { Title, Text } = Typography;
@@ -32,7 +33,7 @@ interface ForumPost {
     id: number;
     name: string;
   };
-  view_count: string;  // 格式化后的浏览量（支持模糊显示）
+  view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
   like_count: number;
   created_at: string;
@@ -76,7 +77,7 @@ interface ForumFavorite {
       id: number;
       name: string;
     };
-    view_count: string;  // 格式化后的浏览量（支持模糊显示）
+    view_count: number;  // 浏览量（前端负责格式化显示）
     reply_count: number;
     like_count: number;
     created_at: string;
@@ -335,7 +336,7 @@ const ForumMyContent: React.FC = () => {
                           <Space split="|">
                             <Tag>{post.category.name}</Tag>
                             <span>
-                              <EyeOutlined /> {post.view_count}
+                              <EyeOutlined /> {formatViewCount(post.view_count)}
                             </span>
                             <span>
                               <MessageOutlined /> {post.reply_count}
@@ -521,7 +522,7 @@ const ForumMyContent: React.FC = () => {
                           <Space split="|">
                             <Tag>{favorite.post.category.name}</Tag>
                             <span>
-                              <EyeOutlined /> {favorite.post.view_count}
+                              <EyeOutlined /> {formatViewCount(favorite.post.view_count)}
                             </span>
                             <span>
                               <MessageOutlined /> {favorite.post.reply_count}

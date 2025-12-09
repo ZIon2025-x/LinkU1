@@ -15,6 +15,7 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { formatViewCount } from '../utils/formatUtils';
 import styles from './Forum.module.css';
 
 const { Title, Text } = Typography;
@@ -36,7 +37,7 @@ interface ForumCategory {
     };
     last_reply_at: string;
     reply_count: number;
-    view_count: string;  // 格式化后的浏览量（支持模糊显示）
+    view_count: number;  // 浏览量（前端负责格式化显示）
   } | null;
 }
 
@@ -257,7 +258,7 @@ const Forum: React.FC = () => {
                           <MessageOutlined /> {category.latest_post.reply_count}
                         </span>
                         <span>
-                          <EyeOutlined /> {category.latest_post.view_count}
+                          <EyeOutlined /> {formatViewCount(category.latest_post.view_count)}
                         </span>
                       </Space>
                     </div>

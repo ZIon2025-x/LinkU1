@@ -2395,7 +2395,7 @@ class LatestPostInfo(BaseModel):
     author: Optional["UserInfo"] = None
     last_reply_at: Optional[datetime.datetime] = None
     reply_count: int = 0
-    view_count: str = "0"  # 格式化后的浏览量（支持模糊显示）
+    view_count: int = 0  # 浏览量（前端负责格式化显示）
     
     class Config:
         from_attributes = True
@@ -2408,7 +2408,7 @@ class ForumPostOut(BaseModel):
     content: str
     category: CategoryInfo
     author: UserInfo
-    view_count: str  # 格式化后的浏览量（支持模糊显示）
+    view_count: int  # 浏览量（前端负责格式化显示）
     reply_count: int
     like_count: int
     favorite_count: int
@@ -2432,7 +2432,7 @@ class ForumPostListItem(BaseModel):
     content_preview: str  # 内容预览（前200字符）
     category: CategoryInfo
     author: UserInfo
-    view_count: str  # 格式化后的浏览量（支持模糊显示）
+    view_count: int  # 浏览量（前端负责格式化显示）
     reply_count: int
     like_count: int
     is_pinned: bool
@@ -2695,7 +2695,7 @@ class CustomLeaderboardOut(CustomLeaderboardBase):
     status: str
     item_count: int
     vote_count: int
-    view_count: str  # 格式化后的浏览量（支持模糊显示）
+    view_count: int  # 浏览量（前端负责格式化显示）
     created_at: datetime.datetime
     updated_at: datetime.datetime
     

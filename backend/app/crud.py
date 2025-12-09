@@ -1607,6 +1607,28 @@ def delete_task_safely(db: Session, task_id: int):
         # 5. 删除相关的任务历史
         db.query(TaskHistory).filter(TaskHistory.task_id == task_id).delete()
 
+        # 5.3. 删除相关的任务取消请求（必须在删除任务之前）
+        from app.models import TaskCancelRequest
+        db.query(TaskCancelRequest).filter(
+            TaskCancelRequest.task_id == task_id
+        ).delete(synchronize_session=False)
+
+        # 5.4. 删除相关的任务参与者记录（必须在删除任务之前）
+        # 虽然外键有 CASCADE，但显式删除可以避免 SQLAlchemy 状态不一致
+        from app.models import TaskParticipant, TaskParticipantReward, TaskAuditLog
+        # 先删除参与者奖励（因为外键引用 task_participants）
+        db.query(TaskParticipantReward).filter(
+            TaskParticipantReward.task_id == task_id
+        ).delete(synchronize_session=False)
+        # 删除审计日志
+        db.query(TaskAuditLog).filter(
+            TaskAuditLog.task_id == task_id
+        ).delete(synchronize_session=False)
+        # 删除参与者记录
+        db.query(TaskParticipant).filter(
+            TaskParticipant.task_id == task_id
+        ).delete(synchronize_session=False)
+
         # 5.5. 删除相关的 TaskTimeSlotRelation 记录（必须在删除任务之前）
         # 注意：虽然外键有 CASCADE，但显式删除可以避免 SQLAlchemy 尝试将 task_id 设置为 None
         from app.models import TaskTimeSlotRelation

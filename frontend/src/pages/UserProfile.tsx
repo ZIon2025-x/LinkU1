@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getUserProfile, fetchCurrentUser, getTaskExpert, getTaskExpertServices, getUserHotPosts, getUserStudentVerificationStatus } from '../api';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedNavigation } from '../hooks/useLocalizedNavigation';
+import { formatViewCount } from '../utils/formatUtils';
 import { message } from 'antd';
 import ServiceDetailModal from '../components/ServiceDetailModal';
 
@@ -1063,7 +1064,7 @@ const UserProfile: React.FC = () => {
                       alignItems: 'center',
                       gap: 16
                     }}>
-                      <span>👁️ {post.view_count}</span>
+                      <span>👁️ {formatViewCount(post.view_count)}</span>
                       <span>💬 {post.reply_count}</span>
                       <span>❤️ {post.like_count}</span>
                       {post.category && (

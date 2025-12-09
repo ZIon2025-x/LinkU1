@@ -17,6 +17,7 @@ import NotificationButton from '../components/NotificationButton';
 import HamburgerMenu from '../components/HamburgerMenu';
 import LoginModal from '../components/LoginModal';
 import { formatRelativeTime } from '../utils/timeUtils';
+import { formatViewCount } from '../utils/formatUtils';
 import styles from './ForumPostList.module.css';
 
 const { Title, Text } = Typography;
@@ -37,7 +38,7 @@ interface ForumPost {
     avatar?: string;
     is_admin?: boolean;
   };
-  view_count: string;  // 格式化后的浏览量（支持模糊显示）
+  view_count: number;  // 浏览量（前端负责格式化显示）
   reply_count: number;
   like_count: number;
   favorite_count: number;
@@ -360,7 +361,7 @@ const ForumPostList: React.FC = () => {
                   <div className={styles.postStats}>
                     <Space size="large">
                       <span>
-                        <EyeOutlined /> {post.view_count}
+                        <EyeOutlined /> {formatViewCount(post.view_count)}
                       </span>
                       <span>
                         <MessageOutlined /> {post.reply_count}

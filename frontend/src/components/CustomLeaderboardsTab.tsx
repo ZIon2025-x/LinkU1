@@ -11,6 +11,7 @@ import { fetchCurrentUser } from '../api';
 import { LOCATIONS } from '../constants/leaderboard';
 import LoginModal from './LoginModal';
 import { compressImage } from '../utils/imageCompression';
+import { formatViewCount } from '../utils/formatUtils';
 import api from '../api';
 
 const { Option } = Select;
@@ -434,7 +435,7 @@ const CustomLeaderboardsTab: React.FC<CustomLeaderboardsTabProps> = ({ onShowLog
                           color: '#667eea',
                           marginBottom: 4
                         }}>
-                          {leaderboard.view_count || 0}
+                          {formatViewCount(leaderboard.view_count || 0)}
                         </div>
                         <div style={{
                           fontSize: 12,
